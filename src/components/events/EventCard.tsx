@@ -1,19 +1,20 @@
 "use client";
 
-/**
- * Event card component for displaying event previews
- * TODO: Add event image, styling, hover effects, and save button
- */
-
 import Link from "next/link";
 import Image from "next/image";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
-import type { Event } from "@/types";
+import { type Event } from "@/types";
 import { Calendar, Clock, MapPin, Heart } from "lucide-react";
+import { useState } from "react";
 
 interface EventCardProps {
   event: Event;
@@ -22,16 +23,35 @@ interface EventCardProps {
   isSaved?: boolean;
 }
 
+// TODO: Import user authentication state to determine if save button should be shown
+
 export function EventCard({
   event,
   onClick,
-  showSaveButton = false,
-  isSaved = false,
+  showSaveButton = true, //Should be something like userLoggedIn boolean
+  isSaved: initialIsSaved = false, // Should be fetched from user's saved events
 }: EventCardProps) {
-  const handleSave = (e: React.MouseEvent) => {
+  const [isSaved, setIsSaved] = useState(initialIsSaved);
+
+  const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     // TODO: Implement save event logic
+    try {
+      const response = await fetch(`/api/events/${event.id}/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // body: JSON.stringify({user: {id: user.id}}), TODO: Pass actual user data
+      });
+      if (!response.ok) throw new Error("Failed to save event");
+
+      const data = await response.json();
+      console.log(data.saved);
+      console.log(`${!isSaved ? "Saved" : "Unsaved"} event ${event.id}`);
+      setIsSaved(data.saved);
+    } catch (error) {
+      console.error("Error saving event:", error);
+    }
   };
 
   return (
@@ -58,7 +78,9 @@ export function EventCard({
 
         <CardHeader>
           <div className="flex items-start justify-between">
-            <h3 className="text-lg font-semibold line-clamp-2">{event.title}</h3>
+            <h3 className="text-lg font-semibold line-clamp-2">
+              {event.title}
+            </h3>
             {showSaveButton && (
               <Button
                 variant="ghost"
@@ -115,4 +137,3 @@ export function EventCard({
     </Link>
   );
 }
-

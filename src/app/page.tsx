@@ -8,8 +8,37 @@
 import { EventSearch } from "@/components/events/EventSearch";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
-import { useEvents } from "@/hooks/useEvents";
 import { Suspense } from "react";
+import { EventCard } from "@/components/events/EventCard";
+import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
+import { EventTag } from "@/types";
+import { type Event } from "@/types";
+
+const event: Event = {
+  id: "1",
+  title: "Sample Event",
+  description: "This is a sample event description.",
+  event_date: "2024-06-01",
+  event_time: "18:00",
+  location: "Sample Location",
+  image_url: "",
+  tags: [EventTag.ACADEMIC],
+  club: {
+    id: "1",
+    name: "Sample Club",
+    instagram_handle: "sampleclub",
+    logo_url: "",
+    description: "This is a sample club description.",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  club_id: "",
+  created_at: "",
+  updated_at: "",
+  status: "pending",
+  approved_by: null,
+  approved_at: null
+};
 
 export default function HomePage() {
   // TODO: Implement state management for filters and search
@@ -38,6 +67,8 @@ export default function HomePage() {
 
       {/* Events Grid */}
       <Suspense fallback={<div>Loading events...</div>}>
+      <EventCardSkeleton />
+      <EventCard event={event}/>
         {/* TODO: Replace with actual event data */}
         <EventGrid events={[]} loading={false} />
       </Suspense>
