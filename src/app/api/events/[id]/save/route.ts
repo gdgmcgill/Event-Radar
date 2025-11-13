@@ -60,7 +60,7 @@ export async function POST(
     //   return NextResponse.json({ saved: true });
     // }
 
-    return NextResponse.json({ saved: true });
+    return NextResponse.json({ saved: true }); // Placeholder response
   } catch (error) {
     console.error("Error saving event:", error);
     return NextResponse.json(
