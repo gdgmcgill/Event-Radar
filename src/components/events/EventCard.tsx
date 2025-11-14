@@ -25,6 +25,7 @@ interface EventCardProps {
 
 // TODO: Import user authentication state to determine if save button should be shown
 
+
 export function EventCard({
   event,
   onClick,
@@ -36,7 +37,6 @@ export function EventCard({
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // TODO: Implement save event logic
     try {
       const response = await fetch(`/api/events/${event.id}/save`, {
         method: "POST",
@@ -71,7 +71,12 @@ export function EventCard({
             />
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
-              No Image
+              <Image
+                src="/placeholder-event.jpg"
+                alt="No Image"
+                fill
+                className="object-cover"
+              />
             </div>
           )}
         </div>
