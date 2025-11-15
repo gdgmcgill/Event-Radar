@@ -27,6 +27,11 @@ export function SignInButton() {
         scopes: 'email'
       },
     });
+    if (error) {
+      console.error("Error during sign in:", error);
+    }
+    
+    
   };
 
   return (
