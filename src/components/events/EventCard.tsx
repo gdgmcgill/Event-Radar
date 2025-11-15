@@ -23,14 +23,11 @@ interface EventCardProps {
   isSaved?: boolean;
 }
 
-// TODO: Import user authentication state to determine if save button should be shown
-
-
 export function EventCard({
   event,
   onClick,
-  showSaveButton = true, //Should be something like userLoggedIn boolean
-  isSaved: initialIsSaved = false, // Should be fetched from user's saved events
+  showSaveButton = false,
+  isSaved: initialIsSaved = false,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
 
@@ -41,7 +38,6 @@ export function EventCard({
       const response = await fetch(`/api/events/${event.id}/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // body: JSON.stringify({user: {id: user.id}}), TODO: Pass actual user data
       });
       if (!response.ok) throw new Error("Failed to save event");
 
@@ -60,7 +56,6 @@ export function EventCard({
         className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]"
         onClick={onClick}
       >
-
         <div className="relative h-48 w-full overflow-hidden rounded-t-lg bg-muted">
           {event.image_url ? (
             <Image
@@ -128,7 +123,6 @@ export function EventCard({
         </CardContent>
 
         <CardFooter className="flex flex-wrap gap-2">
-
           {event.tags.slice(0, 3).map((tag) => {
             const category = EVENT_CATEGORIES[tag];
             return (
