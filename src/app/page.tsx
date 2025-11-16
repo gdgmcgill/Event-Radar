@@ -16,25 +16,6 @@ export default function HomePage() {
   // TODO: Implement state management for filters and search
   // TODO: Use useEvents hook to fetch events
   // TODO: Add calendar view toggle
-  
-  const user = true; // TODO: Replace with actual user authentication state
-
-  const event: Event = {
-    id: "1",
-    title: "Sample Event",
-    description: "This is a sample event description.",
-    event_date: "2024-07-15",
-    event_time: "18:00",
-    location: "123 Campus St, Montreal, QC",
-    image_url: "", // Updated placeholder image path
-    tags: [EventTag.ACADEMIC],
-    club_id: "club1",
-    created_at: "2024-06-01T12:00:00Z",
-    updated_at: "2024-06-01T12:00:00Z",
-    status: "approved",
-    approved_by: null,
-    approved_at: null,
-  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -58,7 +39,6 @@ export default function HomePage() {
 
       {/* Events Grid */}
       <Suspense fallback={<div>Loading events...</div>}>
-      <EventCard event={event} showSaveButton={user} />
         {/* TODO: Replace with actual event data */}
         <EventGrid events={[]} loading={false} />
       </Suspense>
