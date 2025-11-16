@@ -1,3 +1,4 @@
+// src/components/events/EventCard.tsx
 "use client";
 
 /**
@@ -34,13 +35,19 @@ export function EventCard({
     // TODO: Implement save event logic
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (onClick) {
+      // Use modal behavior instead of navigation
+      e.preventDefault();
+      e.stopPropagation();
+      onClick();
+    }
+    // if no onClick, let Link handle normal navigation
+  };
+
   return (
-    <Link href={`/events/${event.id}`}>
-      <Card
-        className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]"
-        onClick={onClick}
-      >
-        {/* TODO: Add event image with Next.js Image component */}
+    <Link href={`/events/${event.id}`} onClick={handleCardClick}>
+      <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]">
         <div className="relative h-48 w-full overflow-hidden rounded-t-lg bg-muted">
           {event.image_url ? (
             <Image
@@ -101,7 +108,6 @@ export function EventCard({
         </CardContent>
 
         <CardFooter className="flex flex-wrap gap-2">
-          {/* TODO: Add event tags as badges */}
           {event.tags.slice(0, 3).map((tag) => {
             const category = EVENT_CATEGORIES[tag];
             return (
@@ -115,4 +121,3 @@ export function EventCard({
     </Link>
   );
 }
-
