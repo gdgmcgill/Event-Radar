@@ -23,6 +23,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <div className="flex min-h-screen">
+          {/* Side Navigation Bar - LEFT SIDE, desktop only */}
+          <SideNavBar />
+          
           {/* Main Content Area - takes full width on mobile, adjusted for sidebar on desktop */}
           <div className="flex flex-col flex-1">
             {/* Header - contains mobile menu */}
@@ -30,9 +33,6 @@ export default function RootLayout({
             <main className="flex-1 p-6">{children}</main>
             <Footer />
           </div>
-          
-          {/* Side Navigation Bar - RIGHT SIDE, desktop only */}
-          <SideNavBar />
         </div>
       </body>
     </html>
