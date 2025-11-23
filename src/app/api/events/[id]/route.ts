@@ -14,6 +14,29 @@ interface RouteParams {
   }>;
 }
 
+/**
+ * @swagger
+ * /api/events/{id}:
+ *   get:
+ *    summary: Fetch a single event by ID
+ *    description: Fetch a single event by ID
+ *    tags:
+ *      - Events
+ *    parameters:
+ *      - name: id
+ *        description: Event ID
+ *        in: path
+ *        required: true
+ *        schema:
+ *          type: string
+ *    responses:
+ *      200:
+ *        description: Event fetched successfully
+ *      404:
+ *        description: Event not found
+ *      500:
+ *        description: Internal server error
+ */
 export async function GET(
   request: NextRequest,
   { params }: RouteParams
