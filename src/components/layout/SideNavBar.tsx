@@ -3,59 +3,35 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Home,
-  Search,
-  Calendar,
-  Tag,
-  Bookmark,
-  Bell,
-  User,
-  LogOut,
-  LogIn,
-  Info,
-  Plus,
-} from "lucide-react";
+import { User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { guestNavItems, authenticatedNavItems } from "./navItems";
+import { useUser } from "@/hooks/useUser";
 
-// Mock user - replace with actual auth later
-const MOCK_USER: { name?: string; email?: string } | null = null;
-// const MOCK_USER: { name?: string; email?: string } | null = { name: "John Doe", email: "john@mcgill.ca" };
+// useUser will provide real user state; leave a null mock for now
 
 export function SideNavBar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const pathname = usePathname();
-  const isAuthenticated = !!MOCK_USER;
-
-  // Navigation items for guest users
-  const guestNavItems = [
-    { name: "Home", path: "/", icon: Home },
-    { name: "Search", path: "/search", icon: Search },
-    { name: "Calendar", path: "/calendar", icon: Calendar },
-    { name: "Categories", path: "/categories", icon: Tag },
-    { name: "About", path: "/about", icon: Info },
-  ];
-
-  // Navigation items for authenticated users
-  const authenticatedNavItems = [
-    { name: "Home", path: "/", icon: Home },
-    { name: "Search", path: "/search", icon: Search },
-    { name: "Calendar", path: "/calendar", icon: Calendar },
-    { name: "Categories", path: "/categories", icon: Tag },
-    { name: "My Events", path: "/my-events", icon: Bookmark },
-    { name: "Create Event", path: "/create-event", icon: Plus },
-    { name: "Notifications", path: "/notifications", icon: Bell },
-  ];
+  const { user } = useUser();
+  const isAuthenticated = !!user;
 
   const navItems = isAuthenticated ? authenticatedNavItems : guestNavItems;
 
   return (
     <>
-      {/* Desktop Side Navigation Bar - RIGHT SIDE, HIDDEN ON MOBILE */}
-      <div className="hidden lg:block fixed top-0 right-0 h-full bg-white border-l border-gray-200 w-20 z-50 shadow-lg">
+      {/* Desktop Side Navigation Bar - HIDDEN ON MOBILE */}
+      <div
+        className={cn(
+          "hidden lg:block fixed top-0 left-0 h-full bg-white border-r border-gray-200 transition-all duration-300 ease-in-out z-50 shadow-lg",
+          isHovered ? "w-64" : "w-20"
+        )}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <div className="flex flex-col h-full">
           {/* Navigation Items */}
-          <nav className="flex-1 py-4 overflow-y-auto">
+          <nav className="flex-1 py-4">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.path;
@@ -65,59 +41,76 @@ export function SideNavBar() {
                   key={item.path}
                   href={item.path}
                   className={cn(
-                    "flex items-center px-4 py-3 mx-2 my-1 rounded-lg transition-all group relative",
+                    "flex items-center px-4 py-3 mx-2 my-1 rounded-lg transition-all",
                     isActive
                       ? "bg-primary text-white font-semibold"
                       : "text-gray-700 hover:bg-primary/10 hover:text-primary"
                   )}
-                  title={item.name}
                 >
-                  <Icon className="w-5 h-5 mx-auto flex-shrink-0" />
-
-                  {/* Tooltip on hover - appears on LEFT side */}
-                  <div className="absolute right-full mr-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
-                    {item.name}
-                  </div>
+                  <Icon
+                    className={cn(
+                      "w-5 h-5 flex-shrink-0",
+                      isHovered ? "mr-3" : "mx-auto"
+                    )}
+                  />
+                  {isHovered && <span className="whitespace-nowrap">{item.name}</span>}
                 </Link>
               );
             })}
           </nav>
 
-          {/* User Section - Bottom */}
-          <div className="border-t border-gray-200 p-4">
-            {isAuthenticated ? (
-              <button
-                onClick={() => console.log("Sign out clicked")}
-                className="w-full p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors group relative"
-                title="Sign Out"
-              >
-                <LogOut className="w-5 h-5 mx-auto" />
+          {/* User Section - Bottom (only show logout if authenticated) */}
+          {isAuthenticated && (
+            <div className="border-t border-gray-200 p-4">
+              {isHovered ? (
+                <div className="space-y-3">
+                  {/* User Info */}
+                  <div className="px-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                          {user?.full_name || user?.email || "User"}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {user?.email || "user@mcgill.ca"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Tooltip */}
-                <div className="absolute right-full mr-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 bottom-0 pointer-events-none">
-                  Sign Out
+                  {/* Sign Out Button */}
+                  <button
+                    onClick={() => console.log("Sign out clicked")}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </button>
                 </div>
-              </button>
-            ) : (
-              <Link
-                href="/auth/signin"
-                className="w-full p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors group relative"
-                title="Sign In with McGill"
-              >
-                <LogIn className="w-5 h-5 mx-auto" />
-
-                {/* Tooltip */}
-                <div className="absolute right-full mr-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 bottom-0 pointer-events-none">
-                  Sign In with McGill
-                </div>
-              </Link>
-            )}
-          </div>
+              ) : (
+                <button
+                  onClick={() => console.log("Sign out clicked")}
+                  className="w-full p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-5 h-5 mx-auto" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Spacer for desktop to prevent content from going under the navbar */}
-      <div className="hidden lg:block w-20 flex-shrink-0" />
+      {/* Spacer to prevent content from going under the navbar */}
+      <div
+        className={cn(
+          "hidden lg:block transition-all duration-300 flex-shrink-0",
+          isHovered ? "w-64" : "w-20"
+        )}
+      />
     </>
   );
 }
