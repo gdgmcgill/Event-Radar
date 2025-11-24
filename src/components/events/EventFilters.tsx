@@ -95,3 +95,6 @@ export function EventFilters({ onFilterChange }: EventFiltersProps) {
   );
 }
 
+
+
+
