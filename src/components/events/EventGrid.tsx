@@ -27,7 +27,7 @@ export function EventGrid({
 }: EventGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {Array.from({ length: 6 }).map((_, i) => (
           <EventCardSkeleton key={i} />
         ))}
@@ -37,31 +37,31 @@ export function EventGrid({
 
   if (events.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-lg font-semibold mb-2">No events found</p>
-        <p className="text-sm text-muted-foreground">
-          Try adjusting your filters or check back later.
+      <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
+        <p className="text-xl font-semibold mb-2 text-foreground">No events found</p>
+        <p className="text-base text-muted-foreground max-w-md">
+          Try adjusting your filters or check back later for more upcoming experiences.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {events.map((event) => (
-        <EventCard
-          key={event.id}
-          event={event}
-          showSaveButton={showSaveButton}
-          isSaved={savedEventIds.has(event.id)}
-          onClick={onEventClick ? () => onEventClick(event) : undefined}
-        />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
+      {events.map((event, index) => (
+        <div 
+          key={event.id} 
+          className="animate-in slide-in-from-bottom-4 duration-500"
+          style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}
+        >
+          <EventCard
+            event={event}
+            showSaveButton={showSaveButton}
+            isSaved={savedEventIds.has(event.id)}
+            onClick={onEventClick ? () => onEventClick(event) : undefined}
+          />
+        </div>
       ))}
     </div>
   );
 }
-
-
-
-
-
