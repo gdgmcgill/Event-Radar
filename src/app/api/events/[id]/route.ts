@@ -9,9 +9,9 @@ import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function GET(
@@ -19,13 +19,14 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
 
     // TODO: Fetch event with relations
     // const { data, error } = await supabase
     //   .from('events')
     //   .select('*, club:clubs(*)')
-    //   .eq('id', params.id)
+    //   .eq('id', id)
     //   .eq('status', 'approved')
     //   .single();
 

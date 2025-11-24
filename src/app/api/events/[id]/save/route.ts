@@ -9,13 +9,14 @@ import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
     // TODO: Get current user
     // const {
