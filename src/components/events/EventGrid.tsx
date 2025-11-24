@@ -1,3 +1,4 @@
+// src/components/events/EventGrid.tsx
 "use client";
 
 /**
@@ -14,6 +15,7 @@ interface EventGridProps {
   loading?: boolean;
   showSaveButton?: boolean;
   savedEventIds?: Set<string>;
+  onEventClick?: (event: Event) => void;
 }
 
 export function EventGrid({
@@ -21,6 +23,7 @@ export function EventGrid({
   loading = false,
   showSaveButton = false,
   savedEventIds = new Set(),
+  onEventClick,
 }: EventGridProps) {
   if (loading) {
     return (
@@ -51,6 +54,7 @@ export function EventGrid({
           event={event}
           showSaveButton={showSaveButton}
           isSaved={savedEventIds.has(event.id)}
+          onClick={onEventClick ? () => onEventClick(event) : undefined}
         />
       ))}
     </div>

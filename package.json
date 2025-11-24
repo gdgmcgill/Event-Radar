@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.0.2",
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.0",
@@ -31,7 +32,6 @@
     "eslint-config-next": "^14.2.0",
     "postcss": "^8.4.35",
     "prettier": "^3.2.5",
-    "supabase": "^2.58.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.4.0"
   }

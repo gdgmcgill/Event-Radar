@@ -2,20 +2,57 @@
 
 /**
  * Home page - Main event calendar/browse view
- * TODO: Implement event fetching, filtering, search, and calendar view
+ * NOTE: Currently uses mock events until Supabase integration is ready.
  */
+
+import { useState } from "react";
+import type { Event } from "@/types";
+import { EventTag } from "@/types";
 
 import { EventSearch } from "@/components/events/EventSearch";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
-import { Suspense } from "react";
-import { EventCard } from "@/components/events/EventCard";
-import { EventTag, type Event } from "@/types";
+import { EventDetailsModal } from "@/components/events/EventDetailsModal";
+
+// Temporary mock data so we can build and test the UI without Supabase
+const mockEvents: Event[] = [
+  {
+    id: "1",
+    title: "GDG McGill Kickoff",
+    description: "Come meet the Uni-Verse team, learn about the project, and grab some pizza.",
+    event_date: "2025-11-25",
+    event_time: "18:00",
+    location: "McConnell Engineering Building, Room 437",
+    club_id: "club_1",
+    tags: [EventTag.SOCIAL],          // ✅ enum value, not string
+    image_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    status: "approved",
+    approved_by: null,
+    approved_at: null,
+    club: {
+      id: "club_1",
+      name: "GDG McGill",
+      instagram_handle: "gdgmcgill",
+      logo_url: null,
+      description: "Google Developer Group at McGill University",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    saved_by_users: [],
+  },
+];
 
 export default function HomePage() {
-  // TODO: Implement state management for filters and search
-  // TODO: Use useEvents hook to fetch events
-  // TODO: Add calendar view toggle
+  const [events] = useState<Event[]>(mockEvents);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -38,11 +75,21 @@ export default function HomePage() {
       </div>
 
       {/* Events Grid */}
-      <Suspense fallback={<div>Loading events...</div>}>
-        {/* TODO: Replace with actual event data */}
-        <EventGrid events={[]} loading={false} />
-      </Suspense>
+      <EventGrid
+        events={events}
+        loading={false}
+        onEventClick={handleEventClick}
+      />
+
+      {/* Event Details Modal */}
+      <EventDetailsModal
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) setSelectedEvent(null);
+        }}
+        event={selectedEvent}
+      />
     </div>
   );
 }
-

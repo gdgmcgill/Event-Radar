@@ -1,3 +1,4 @@
+// src/components/events/EventCard.tsx
 "use client";
 
 import Link from "next/link";
@@ -50,12 +51,19 @@ export function EventCard({
     }
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (onClick) {
+      // Use modal behavior instead of navigation
+      e.preventDefault();
+      e.stopPropagation();
+      onClick();
+    }
+    // if no onClick, let Link handle normal navigation
+  };
+
   return (
-    <Link href={`/events/${event.id}`}>
-      <Card
-        className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]"
-        onClick={onClick}
-      >
+    <Link href={`/events/${event.id}`} onClick={handleCardClick}>
+      <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]">
         <div className="relative h-48 w-full overflow-hidden rounded-t-lg bg-muted">
           {event.image_url ? (
             <Image

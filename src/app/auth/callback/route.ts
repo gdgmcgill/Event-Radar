@@ -59,3 +59,5 @@ export async function GET(request: NextRequest) {
   // TODO: Handle error cases
   return NextResponse.redirect(new URL(next, requestUrl.origin));
 }
+
+
