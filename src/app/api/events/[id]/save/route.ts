@@ -60,7 +60,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     //    if (error) throw error;
     //    return NextResponse.json({ saved: true });
     //  }
-return NextResponse.json({saved : true});
+return NextResponse.json({saved: true});
 
   } catch (error) {
     console.error("Error saving event:", error);

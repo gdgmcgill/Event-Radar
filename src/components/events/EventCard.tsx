@@ -67,7 +67,7 @@ export function EventCard({
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
               <Image
-                src="/placeholder-event.jpg"
+                src="/placeholder-event.png"
                 alt="No Image"
                 fill
                 className="object-cover"
