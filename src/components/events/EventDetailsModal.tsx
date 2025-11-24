@@ -1,8 +1,10 @@
 // src/components/events/EventDetailsModal.tsx
 "use client";
 
-import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { formatDate, formatTime } from "@/lib/utils";
+import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event } from "@/types";
 
 type EventDetailsModalProps = {
@@ -14,7 +16,7 @@ type EventDetailsModalProps = {
 export function EventDetailsModal({ open, onOpenChange, event }: EventDetailsModalProps) {
   if (!event) return null;
 
-  const dateTimeString = `${format(new Date(event.event_date), "EEE, MMM d")} • ${event.event_time}`;
+  const dateTimeString = `${formatDate(event.event_date)} • ${formatTime(event.event_time)}`;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     event.location,
   )}`;
@@ -43,14 +45,14 @@ export function EventDetailsModal({ open, onOpenChange, event }: EventDetailsMod
 
           {event.tags && event.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {event.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-muted px-3 py-1 text-xs capitalize"
-                >
-                  {tag}
-                </span>
-              ))}
+              {event.tags.map((tag) => {
+                const category = EVENT_CATEGORIES[tag];
+                return (
+                  <Badge key={tag} variant="secondary" className={category.color}>
+                    {category.label}
+                  </Badge>
+                );
+              })}
             </div>
           )}
 
