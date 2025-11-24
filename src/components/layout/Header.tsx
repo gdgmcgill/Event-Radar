@@ -7,6 +7,7 @@ import { useUser } from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { Menu, X } from "lucide-react";
+import Image from "next/image";
 import { guestNavItems, authenticatedNavItems } from "./navItems";
 import { cn } from "@/lib/utils";
 
@@ -39,12 +40,21 @@ export function Header() {
               )}
             </button>
 
-            {/* Title - left-aligned, next to burger on mobile */}
+            {/* Logo and Title - left-aligned, next to burger on mobile */}
             <Link
               href="/"
-              className="text-lg md:text-xl font-bold text-primary"
+              className="flex items-center space-x-2"
             >
-              UNI-VERSE
+              <Image
+                src="/gdg_logo.png"
+                alt="GDG McGill Logo"
+                width={32}
+                height={32}
+                className="h-8 w-8"
+              />
+              <span className="text-lg md:text-xl font-bold text-primary">
+                UNI-VERSE
+              </span>
             </Link>
           </div>
 
