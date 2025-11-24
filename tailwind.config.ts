@@ -8,6 +8,13 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",
@@ -16,7 +23,7 @@ const config: Config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#ED1B2F",
+          DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -43,9 +50,13 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Custom palette extensions
         mcgill: {
-          red: "#ED1B2F",
-          grey: "#7f7f7f",
+          burgundy: "#561c24",
+          red: "#ED1B2F", // Original McGill Red
+          mutedRed: "#6d2932",
+          sage: "#c7c7a3",
+          cream: "#e8d8c4",
         },
       },
       borderRadius: {
@@ -53,11 +64,12 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+      },
     },
   },
-  plugins: [require("@tailwindcss/typography")],
+  plugins: [require("@tailwindcss/typography"), require("tailwindcss-animate")],
 };
 
 export default config;
-
-
