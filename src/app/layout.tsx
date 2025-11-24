@@ -5,7 +5,7 @@ import { SideNavBar } from "@/components/layout/SideNavBar";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Uni-Verse - Campus Event Discovery for McGill University",
@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
         <div className="flex min-h-screen">
           {/* Side Navigation Bar - LEFT SIDE, desktop only */}
           <SideNavBar />

@@ -11,26 +11,22 @@ import Image from "next/image";
 import { guestNavItems, authenticatedNavItems } from "./navItems";
 import { cn } from "@/lib/utils";
 
-// (no local mock here) useUser provides auth state
-// const MOCK_USER: { name?: string; email?: string } | null = { name: "John Doe", email: "john@mcgill.ca" };
-
 export function Header() {
   const { user, loading } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const isAuthenticated = !!user;
-  // const isAuthenticated = !!MOCK_USER
   const navItems = isAuthenticated ? authenticatedNavItems : guestNavItems;
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/60">
         <div className="container flex items-center justify-between h-16 px-4">
           {/* Left: Burger Menu (Mobile Only) + Title */}
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-primary/10 transition-colors text-gray-700 hover:text-primary"
+              className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors text-foreground hover:text-primary"
               aria-label="Toggle Menu"
             >
               {isMobileMenuOpen ? (
@@ -40,19 +36,19 @@ export function Header() {
               )}
             </button>
 
-            {/* Logo and Title - left-aligned, next to burger on mobile */}
+            {/* Logo and Title */}
             <Link
               href="/"
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-3 transition-opacity hover:opacity-90"
             >
               <Image
                 src="/gdg_logo.png"
                 alt="GDG McGill Logo"
                 width={32}
                 height={32}
-                className="h-8 w-8"
+                className="h-8 w-8 object-contain"
               />
-              <span className="text-lg md:text-xl font-bold text-primary">
+              <span className="text-xl font-bold text-foreground tracking-tight">
                 UNI-VERSE
               </span>
             </Link>
@@ -65,7 +61,7 @@ export function Header() {
             ) : isAuthenticated ? (
               <button
                 onClick={() => console.log("Sign out clicked")}
-                className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
+                className="text-sm font-medium text-muted-foreground hover:text-destructive transition-colors"
               >
                 Sign Out
               </button>
@@ -77,8 +73,8 @@ export function Header() {
 
         {/* Mobile Menu Dropdown (Mobile Only) */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 bg-white">
-            <nav className="container px-4 py-4 grid grid-cols-4 gap-4">
+          <div className="lg:hidden border-t border-border bg-card">
+            <nav className="container px-4 py-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.path;
@@ -89,14 +85,14 @@ export function Header() {
                     href={item.path}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-lg transition-all",
+                      "flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-200",
                       isActive
-                        ? "bg-primary text-white"
-                        : "text-gray-700 hover:bg-primary/10 hover:text-primary"
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    <Icon className="w-6 h-6 mb-1" />
-                    <span className="text-xs font-medium">{item.name}</span>
+                    <Icon className="w-6 h-6 mb-2" />
+                    <span className="text-sm font-medium">{item.name}</span>
                   </Link>
                 );
               })}
@@ -108,7 +104,7 @@ export function Header() {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 top-16"
+          className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40 top-16"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
