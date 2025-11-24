@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { SideNavBar } from "@/components/layout/SideNavBar";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
@@ -21,14 +22,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
+        <div className="flex min-h-screen">
+          {/* Side Navigation Bar - LEFT SIDE, desktop only */}
+          <SideNavBar />
+          
+          {/* Main Content Area - takes full width on mobile, adjusted for sidebar on desktop */}
+          <div className="flex flex-col flex-1">
+            {/* Header - contains mobile menu */}
+            <Header />
+            <main className="flex-1 p-6">{children}</main>
+            <Footer />
+          </div>
         </div>
       </body>
     </html>
   );
 }
-
-
