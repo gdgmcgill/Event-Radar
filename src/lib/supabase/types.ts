@@ -152,5 +152,3 @@ export interface Database {
     };
   };
 }
-
-

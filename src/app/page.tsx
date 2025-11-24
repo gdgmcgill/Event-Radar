@@ -8,8 +8,9 @@
 import { EventSearch } from "@/components/events/EventSearch";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
-import { useEvents } from "@/hooks/useEvents";
 import { Suspense } from "react";
+import { EventCard } from "@/components/events/EventCard";
+import { EventTag, type Event } from "@/types";
 
 export default function HomePage() {
   // TODO: Implement state management for filters and search

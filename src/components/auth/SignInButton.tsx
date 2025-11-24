@@ -20,12 +20,18 @@ export function SignInButton() {
     // 4. Handle callback in /auth/callback route
 
     // Example:
-    // const { data, error } = await supabase.auth.signInWithOAuth({
-    //   provider: 'google',
-    //   options: {
-    //     redirectTo: `${window.location.origin}/auth/callback`,
-    //   },
-    // });
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'azure',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        scopes: 'email'
+      },
+    });
+    if (error) {
+      console.error("Error during sign in:", error);
+    }
+    
+    
   };
 
   return (
