@@ -16,6 +16,7 @@ import { EVENT_CATEGORIES } from "@/lib/constants";
 import { type Event } from "@/types";
 import { Calendar, Clock, MapPin, Heart } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface EventCardProps {
   event: Event;
@@ -43,8 +44,6 @@ export function EventCard({
       if (!response.ok) throw new Error("Failed to save event");
 
       const data = await response.json();
-      console.log(data.saved);
-      console.log(`${!isSaved ? "Saved" : "Unsaved"} event ${event.id}`);
       setIsSaved(data.saved);
     } catch (error) {
       console.error("Error saving event:", error);
@@ -53,95 +52,108 @@ export function EventCard({
 
   const handleCardClick = (e: React.MouseEvent) => {
     if (onClick) {
-      // Use modal behavior instead of navigation
       e.preventDefault();
       e.stopPropagation();
       onClick();
     }
-    // if no onClick, let Link handle normal navigation
   };
 
   return (
-    <Link href={`/events/${event.id}`} onClick={handleCardClick}>
-      <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]">
-        <div className="relative h-48 w-full overflow-hidden rounded-t-lg bg-muted">
+    <Link href={`/events/${event.id}`} onClick={handleCardClick} className="block h-full group">
+      <Card className="h-full overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card rounded-2xl flex flex-col">
+        {/* Image Section */}
+        <div className="relative h-52 w-full overflow-hidden bg-secondary/20">
           {event.image_url ? (
             <Image
               src={event.image_url}
               alt={event.title}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
+            <div className="flex h-full items-center justify-center text-muted-foreground/40 bg-secondary/30">
               <Image
                 src="/placeholder-event.png"
                 alt="No Image"
                 fill
-                className="object-cover"
+                className="object-cover opacity-80 transition-transform duration-700 group-hover:scale-105"
               />
             </div>
           )}
+          
+          {/* Gradient Overlay for Text Readability if needed, mostly stylistic here */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+          {/* Floating Save Button */}
+          {showSaveButton && (
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={handleSave}
+              className={cn(
+                "absolute top-3 right-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-white/20 transition-all duration-300 hover:scale-110",
+                isSaved 
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                  : "bg-white/90 text-muted-foreground hover:text-primary hover:bg-white"
+              )}
+            >
+              <Heart className={cn("h-4 w-4", isSaved && "fill-current")} />
+            </Button>
+          )}
         </div>
 
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <h3 className="text-lg font-semibold line-clamp-2">
+        {/* Content Section */}
+        <div className="flex flex-col flex-grow p-5 gap-3">
+          <div className="space-y-1">
+            {event.club && (
+              <p className="text-xs font-semibold text-primary uppercase tracking-wider">
+                {event.club.name}
+              </p>
+            )}
+            <h3 className="text-lg font-bold leading-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
               {event.title}
             </h3>
-            {showSaveButton && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSave}
-                className="ml-2"
-              >
-                <Heart
-                  className={`h-5 w-5 ${isSaved ? "fill-red-500 text-red-500" : ""}`}
-                />
-              </Button>
-            )}
           </div>
-        </CardHeader>
 
-        <CardContent>
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
             {event.description}
           </p>
 
-          <div className="space-y-2">
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Calendar className="mr-2 h-4 w-4" />
-              {formatDate(event.event_date)}
+          <div className="mt-auto pt-4 space-y-2.5 text-sm text-muted-foreground/80 font-medium">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary/80" />
+              <span>{formatDate(event.event_date)}</span>
             </div>
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Clock className="mr-2 h-4 w-4" />
-              {formatTime(event.event_time)}
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary/80" />
+              <span>{formatTime(event.event_time)}</span>
             </div>
-            <div className="flex items-center text-sm text-muted-foreground">
-              <MapPin className="mr-2 h-4 w-4" />
-              {event.location}
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary/80" />
+              <span className="line-clamp-1">{event.location}</span>
             </div>
-            {event.club && (
-              <div className="text-sm text-muted-foreground">
-                By {event.club.name}
-              </div>
-            )}
           </div>
-        </CardContent>
+        </div>
 
-        <CardFooter className="flex flex-wrap gap-2">
+        {/* Footer / Tags */}
+        <div className="px-5 pb-5 pt-0 flex flex-wrap gap-2">
           {event.tags.slice(0, 3).map((tag) => {
             const category = EVENT_CATEGORIES[tag];
             return (
-              <Badge key={tag} variant="secondary" className={category.color}>
-                {category.label}
+              <Badge 
+                key={tag} 
+                variant="secondary" 
+                className={cn(
+                  "px-2.5 py-0.5 text-xs font-medium transition-colors bg-secondary/50 text-secondary-foreground hover:bg-secondary",
+                  // category?.color // Keeping it cleaner with consistent secondary styling
+                )}
+              >
+                {category?.label || tag}
               </Badge>
             );
           })}
-        </CardFooter>
+        </div>
       </Card>
     </Link>
   );
 }
-
