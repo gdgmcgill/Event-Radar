@@ -14,6 +14,36 @@ interface RouteParams {
   }>;
 }
 
+/**
+ * @swagger
+ * /api/events/{id}/save:
+ *   post:
+ *     summary: /api/events/{id}/save
+ *     description: Save an event for the current user
+ *     tags:
+ *      - Events
+ *     parameters:
+ *       - name: id
+ *         description: Event ID
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 saved:
+ *                   type: boolean
+ *         description: Event saved successfully
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;

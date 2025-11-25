@@ -18,7 +18,7 @@ interface RouteParams {
  * @swagger
  * /api/events/{id}:
  *   get:
- *    summary: Fetch a single event by ID
+ *    summary: /api/events/{id}
  *    description: Fetch a single event by ID
  *    tags:
  *      - Events
@@ -31,6 +31,40 @@ interface RouteParams {
  *          type: string
  *    responses:
  *      200:
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              properties:
+ *                event:
+ *                  type: object
+ *                  properties:
+ *                    id:
+ *                      type: string
+ *                    title:
+ *                      type: string
+ *                    description:
+ *                      type: string
+ *                    event_date:
+ *                      type: string
+ *                    event_time:
+ *                      type: string
+ *                    location:
+ *                      type: string
+ *                    club_id:
+ *                      type: string
+ *                    tags:
+ *                      type: array
+ *                      items:
+ *                        type: string
+ *                    image_url:
+ *                      type: string
+ *                    status:
+ *                      type: string
+ *                    approved_by:
+ *                      type: string
+ *                    approved_at:
+ *                      type: string
  *        description: Event fetched successfully
  *      404:
  *        description: Event not found

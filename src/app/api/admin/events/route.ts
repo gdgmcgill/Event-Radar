@@ -8,6 +8,73 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 
+/**
+ * @swagger
+ * /api/admin/events:
+ *   post:
+ *     summary: /api/admin/events
+ *     description: Create or update an event (admin only)
+ *     parameters:
+ *       - name: title
+ *         description: Event title
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: description
+ *         description: Event description
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: event_date
+ *         description: Event date
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: event_time
+ *         description: Event time
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: location
+ *         description: Event location
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: club_id
+ *         description: Event club ID
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: tags
+ *         description: Event tags
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *       - name: image_url
+ *         description: Event image URL
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Event created or updated successfully
+ *       400:
+ *         description: Missing required fields
+ *       403:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
