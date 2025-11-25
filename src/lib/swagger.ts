@@ -5,7 +5,7 @@ export const getApiDocs = async () => {
     const spec = createSwaggerSpec({
         apiFolder: "src/app/api", // define api folder under app folder
         definition: {
-            openapi: "3.1.0",
+            openapi: "3.0.0",
             info: {
                 title: "Event Radar API Documentation",
                 version: "1.0",
