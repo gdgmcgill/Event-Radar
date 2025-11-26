@@ -140,6 +140,26 @@ export interface Database {
           created_at?: string;
         };
       };
+      user_saved_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          saved_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          saved_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          saved_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
