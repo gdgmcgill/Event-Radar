@@ -1,74 +1,132 @@
 /**
  * POST /api/events/:id/save
- * Save an event for the current user
- * TODO: Implement save/unsave event functionality
+ * Persist a saved event entry for the authenticated user.
  */
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/types";
 import type { NextRequest } from "next/server";
 
-interface RouteParams {
-  params: Promise<{
+interface RouteContext {
+  params: {
     id: string;
-  }>;
+  };
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+type UserSavedEventRow = Database["public"]["Tables"]["user_saved_events"]["Row"];
+type UserSavedEventInsert = Database["public"]["Tables"]["user_saved_events"]["Insert"];
+
+/**
+ * Handle POST /api/events/:id/save.
+ *
+ * @param request - Incoming Next.js request containing `user_id` in the JSON body.
+ * @param params - Route params object with the event `id` to save.
+ * @returns JSON response indicating success, duplicate save, or error conditions.
+ */
+export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
-    const { id } = await params;
     const supabase = await createClient();
-    // TODO: Get current user
-    // const {
-    //   data: { user },
-    // } = await supabase.auth.getUser();
-    // if (!user) {
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // }
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    // // TODO: Check if event is already saved
-    // const { data: existing, error: existingError } = await supabase
-    //   .from('saved_events')
-    //   .select('id')
-    //   .eq('user_id', user.id)
-    //   .eq('event_id', params.id)
-    //   .single();
+    if (authError) {
+      console.error("Error retrieving user:", authError);
+      return NextResponse.json({ error: "Failed to authenticate" }, { status: 500 });
+    }
 
-    // if (existingError) {
-    //   console.error("Error checking existing saved event:", existingError);
-    //   return NextResponse.json(
-    //     { error: "Failed to check saved event" },
-    //     { status: 500 }
-    //   );
-    // }
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    // // TODO: Save or unsave event
-    //  if (existing) {
-    //    // Unsave
-    //    await supabase
-    //      .from('saved_events')
-    //      .delete()
-    //      .eq('id', existing.id);
-    //    return NextResponse.json({ saved: false });
-    //  } else {
-    //    // Save
-    //    const { error } = await supabase
-    //      .from('saved_events')
-    //      .insert({
-    //        user_id: user.id,
-    //        event_id: params.id,
-    //      });
-    //    if (error) throw error;
-    //    return NextResponse.json({ saved: true });
-    //  }
-return NextResponse.json({saved: true});
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
 
-  } catch (error) {
-    console.error("Error saving event:", error);
+    const userIdFromBody = (body as { user_id?: string }).user_id;
+    if (!userIdFromBody) {
+      return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+    }
+
+    if (userIdFromBody !== user.id) {
+      return NextResponse.json({ error: "user_id does not match authenticated user" }, { status: 403 });
+    }
+
+    const eventId = params.id;
+
+    const { data: eventExists, error: eventError } = await supabase
+      .from("events")
+      .select("id")
+      .eq("id", eventId)
+      .maybeSingle();
+
+    if (eventError) {
+      console.error("Error looking up event:", eventError);
+      return NextResponse.json({ error: "Failed to verify event" }, { status: 500 });
+    }
+
+    if (!eventExists) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    const { data: existingData, error: existingError } = await (supabase
+      .from("user_saved_events") as any)
+      .select("id, saved_at")
+      .eq("user_id", user.id)
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error("Error checking saved event:", existingError);
+      return NextResponse.json(
+        { error: "Failed to check saved event" },
+        { status: 500 }
+      );
+    }
+
+    const existing = existingData as UserSavedEventRow | null;
+
+    if (existing) {
+      return NextResponse.json(
+        { message: "Event already saved", saved_at: existing.saved_at },
+        { status: 200 }
+      );
+    }
+
+    const insertPayload: UserSavedEventInsert = {
+      user_id: user.id,
+      event_id: eventId,
+      saved_at: new Date().toISOString(),
+    };
+
+    const { data: insertedData, error: insertError } = await (supabase
+      .from("user_saved_events") as any)
+      .insert(insertPayload)
+      .select("saved_at")
+      .single();
+
+    if (insertError) {
+      console.error("Save event error:", insertError);
+      return NextResponse.json(
+        { error: "Failed to save event" },
+        { status: 500 }
+      );
+    }
+
+    const savedRecord = insertedData as UserSavedEventRow;
+
     return NextResponse.json(
-      { error: "Failed to save event" },
-      { status: 500 }
+      { success: true, saved_at: savedRecord.saved_at },
+      { status: 201 }
     );
+  } catch (error) {
+    console.error("Unexpected error saving event:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
