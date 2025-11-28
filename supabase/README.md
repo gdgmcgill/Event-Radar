@@ -78,6 +78,8 @@ supabase status
 supabase logs
 ```
 
+Full documentation [here](https://supabase.com/docs/reference/cli/introduction)
+
 ## Edge Functions
 
 Edge functions are located in `functions/`. To test locally:
@@ -85,7 +87,30 @@ Edge functions are located in `functions/`. To test locally:
 supabase functions serve
 ```
 
+
+Supabase uses a secrets store for environment variables like API keys and webhook secrets. To set a secret so it's available to your Edge Functions and other Supabase services, run:
+
+```bash
+supabase secrets set WEBHOOK_SECRET=your-secret-key-here --project-ref your-project-ref
+```
+
+If your CLI is already linked to your project, you can omit `--project-ref`:
+
+```bash
+supabase secrets set WEBHOOK_SECRET=your-secret-key-here
+```
+
+You can view all stored secrets with:
+
+```bash
+supabase secrets list
+```
+
+Your Edge Functions can then securely access these secrets through the standard environment variable interface (e.g., `Deno.env.get("WEBHOOK_SECRET")` in TypeScript).
+
+Secrets set via the CLI are available to your deployed services on Supabase and will **not** be committed to version control.
+
+
 ## Notes
 - Migrations are in the `migrations/` folder
 - Always run `supabase db pull` before making schema changes to sync with remote
-
