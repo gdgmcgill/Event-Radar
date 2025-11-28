@@ -64,3 +64,4 @@ export function isMcGillEmail(email: string): boolean {
   return email.endsWith("@mail.mcgill.ca") || email.endsWith("@mcgill.ca");
 }
 
+

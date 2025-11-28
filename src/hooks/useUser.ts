@@ -1,47 +1,94 @@
 "use client";
 
 /**
- * Custom hook for managing user session and authentication
- * TODO: Implement user session management with Supabase auth
+ * Custom hook for fetching and managing current user authentication state
+ * Uses Supabase client to get the authenticated user
  */
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/types";
 
-export function useUser() {
+interface UseUserReturn {
+  user: User | null;
+  loading: boolean;
+}
+
+export function useUser(): UseUserReturn {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
+    // Get initial user
+    supabase.auth.getUser().then(({ data: { user: authUser }, error }) => {
+      if (error || !authUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
 
-    // TODO: Implement user session fetching
-    // 1. Get current session from Supabase
-    // 2. Fetch user profile from database
-    // 3. Handle loading and error states
-    // 4. Update user state
+      // Fetch user profile from database
+      supabase
+        .from("users")
+        .select("*")
+        .eq("id", authUser.id)
+        .single()
+        .then(({ data, error: profileError }) => {
+          if (profileError || !data) {
+            // If profile doesn't exist, create a basic user object from auth
+            setUser({
+              id: authUser.id,
+              email: authUser.email || "",
+              full_name: authUser.user_metadata?.full_name || null,
+              interest_tags: [],
+              created_at: authUser.created_at,
+              updated_at: authUser.updated_at || authUser.created_at,
+            });
+          } else {
+            setUser(data as User);
+          }
+          setLoading(false);
+        });
+    });
 
-    // TODO: Set up auth state change listener
-    // supabase.auth.onAuthStateChange((event, session) => {
-    //   // Handle auth state changes
-    // });
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        // Fetch user profile when auth state changes
+        supabase
+          .from("users")
+          .select("*")
+          .eq("id", session.user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (error || !data) {
+              setUser({
+                id: session.user.id,
+                email: session.user.email || "",
+                full_name: session.user.user_metadata?.full_name || null,
+                interest_tags: [],
+                created_at: session.user.created_at,
+                updated_at: session.user.updated_at || session.user.created_at,
+              });
+            } else {
+              setUser(data as User);
+            }
+            setLoading(false);
+          });
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
 
-    setLoading(false);
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const signOut = async () => {
-    // TODO: Implement sign out logic
-    const supabase = createClient();
-    // await supabase.auth.signOut();
-  };
-
-  return {
-    user,
-    loading,
-    error,
-    signOut,
-  };
+  return { user, loading };
 }
 
