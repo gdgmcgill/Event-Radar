@@ -105,6 +105,7 @@ interface DatabaseEvent {
   tags: string[];
   image_url: string | null;
   organizer: string | null;
+  status: "pending" | "approved" | "rejected";
 }
 
 /**
@@ -165,6 +166,7 @@ function mapEventToDatabase(
     tags: [...new Set(tags)], // Remove duplicates
     image_url: event.image_url || null,
     organizer: event.organizer?.trim() || null,
+    status: "pending",
   };
 
   return { event: dbEvent, errors };

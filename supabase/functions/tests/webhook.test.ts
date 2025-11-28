@@ -3,8 +3,9 @@
 /**
  * Tests for the events-webhook Edge Function
  * 
- * First need to serve the functions locally with .env.test `npx supabase functions serve --env-file .env.test`
- * Run with: deno test --allow-net --allow-env --allow-read supabase/functions/tests/webhook.test.ts
+ * First need to serve the functions locally with .env.test `npx supabase functions serve --env-file .env.example`
+ * also ensure that your db is up to date with any schema changes that you are testing
+ * Run with: deno test --allow-net --allow-env --allow-read supabase/functions/tests/webhook.test.ts --env-file=supabase/functions/.env.example
  * 
  * 
  * Prerequisites:
