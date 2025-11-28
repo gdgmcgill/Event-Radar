@@ -7,6 +7,8 @@
 // Setup type definitions for built-in Supabase Runtime APIs
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
+import { Buffer } from "node:buffer";
+import crypto from "node:crypto";
 
 /**
  * Webhook event payload structure
@@ -14,12 +16,12 @@ import { createClient } from "@supabase/supabase-js"
 interface WebhookEvent {
   title: string;
   description: string;
-  "event-type": string; // Will be mapped to tags
+  category?: string; // Will be mapped to category and tags
   date: string; // ISO date string or date string
   time?: string; // Optional time string (HH:mm format)
+  duration?: number; // Optional duration in minutes (defaults to 60 if not provided)
   location: string;
-  club_id?: string; // Optional club ID
-  club_name?: string; // Optional club name (will need to resolve to club_id)
+  organizer?: string; // Optional organizer name
   image_url?: string;
   tags?: string[]; // Additional tags
   capacity?: number;
@@ -35,47 +37,16 @@ interface WebhookPayload {
 }
 
 /**
- * Verify HMAC signature using Web Crypto API (Deno)
+ * Verify HMAC signature using Node.js crypto
  */
-async function verifyHMAC(
+function verifyHMAC(
   payload: string,
   signature: string,
   secret: string
-): Promise<boolean> {
-  try {
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(secret);
-    const payloadData = encoder.encode(payload);
-
-    // Import the secret key for HMAC
-    const key = await crypto.subtle.importKey(
-      "raw",
-      keyData,
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-
-    // Compute HMAC
-    const signatureBuffer = await crypto.subtle.sign("HMAC", key, payloadData);
-    const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-
-    // Constant-time comparison to prevent timing attacks
-    if (signature.length !== expectedSignature.length) {
-      return false;
-    }
-
-    let result = 0;
-    for (let i = 0; i < signature.length; i++) {
-      result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
-    }
-    return result === 0;
-  } catch (error) {
-    console.error("HMAC verification error:", error);
-    return false;
-  }
+): boolean {
+  const expectedSignature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+  const isValid = crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+  return isValid;
 }
 
 /**
@@ -92,8 +63,8 @@ function validateEvent(event: WebhookEvent): { valid: boolean; errors: string[] 
     errors.push("description is required and must be a non-empty string");
   }
 
-  if (!event["event-type"] || typeof event["event-type"] !== "string") {
-    errors.push("event-type is required and must be a string");
+  if (event.category && typeof event.category !== "string") {
+    errors.push("category must be a string if provided");
   }
 
   if (!event.date || typeof event.date !== "string") {
@@ -122,34 +93,36 @@ function validateEvent(event: WebhookEvent): { valid: boolean; errors: string[] 
 
 /**
  * Database event structure for insertion
+ * Matches the actual schema: start_date, end_date, category, organizer (no club_id, event_date, event_time, status)
  */
 interface DatabaseEvent {
   title: string;
   description: string;
-  event_date: string;
-  event_time: string;
+  start_date: string; // ISO timestamp
+  end_date: string; // ISO timestamp
   location: string;
-  club_id: string;
+  category: string | null; // From category field (optional)
   tags: string[];
   image_url: string | null;
-  status: "approved";
+  organizer: string | null;
 }
 
 /**
  * Map webhook event to database event format
- * @param supabase - Supabase client instance (using any to avoid complex type inference issues)
+ * Maps to actual schema: start_date, end_date, category, organizer
  */
-async function mapEventToDatabase(
-  event: WebhookEvent,
-  // deno-lint-ignore no-explicit-any
-  supabase: any
-): Promise<{ event: DatabaseEvent; errors: string[] }> {
+function mapEventToDatabase(
+  event: WebhookEvent
+): { event: DatabaseEvent; errors: string[] } {
   const errors: string[] = [];
   const tags: string[] = [];
 
-  // Add event-type as a tag
-  if (event["event-type"]) {
-    tags.push(event["event-type"].toLowerCase());
+  // Use category field (optional)
+  const category = event.category || null;
+
+  // Add category as a tag if provided
+  if (event.category) {
+    tags.push(event.category.toLowerCase());
   }
 
   // Add additional tags if provided
@@ -157,8 +130,13 @@ async function mapEventToDatabase(
     tags.push(...event.tags.map((tag) => tag.toLowerCase()));
   }
 
-  // Parse date and time
+  // Parse date and time to create start_date and end_date
   const eventDate = new Date(event.date);
+  if (isNaN(eventDate.getTime())) {
+    errors.push("Invalid date format");
+    return { event: {} as DatabaseEvent, errors };
+  }
+
   const eventTime = event.time || "00:00"; // Default to midnight if no time provided
 
   // Validate time format (HH:mm)
@@ -167,40 +145,26 @@ async function mapEventToDatabase(
     errors.push(`Invalid time format: ${eventTime}. Expected HH:mm format`);
   }
 
-  // Resolve club_id if club_name is provided
-  let clubId: string | undefined = event.club_id;
-  if (!clubId && event.club_name) {
-    const { data: club, error: clubError } = await supabase
-      .from("clubs")
-      .select("id")
-      .eq("name", event.club_name)
-      .single();
+  // Parse time into hours and minutes
+  const [hours, minutes] = eventTime.split(":").map(Number);
+  const startDate = new Date(eventDate);
+  startDate.setHours(hours, minutes, 0, 0);
 
-    if (clubError || !club) {
-      errors.push(`Club not found: ${event.club_name}`);
-    } else {
-      // Type assertion needed due to generic type inference limitations
-      clubId = (club as { id: string }).id;
-    }
-  }
-
-  if (!clubId) {
-    errors.push("club_id or club_name is required");
-    // Return early with errors if no club_id
-    return { event: {} as DatabaseEvent, errors };
-  }
+  // Calculate end_date (default duration is 60 minutes if not provided)
+  const durationMinutes = event.duration || 60;
+  const endDate = new Date(startDate);
+  endDate.setMinutes(endDate.getMinutes() + durationMinutes);
 
   const dbEvent: DatabaseEvent = {
     title: event.title.trim(),
     description: event.description.trim(),
-    event_date: eventDate.toISOString().split("T")[0], // YYYY-MM-DD format
-    event_time: eventTime,
+    start_date: startDate.toISOString(),
+    end_date: endDate.toISOString(),
     location: event.location.trim(),
-    club_id: clubId,
+    category: category,
     tags: [...new Set(tags)], // Remove duplicates
     image_url: event.image_url || null,
-    status: "approved", // Webhook events are auto-approved
-    // Additional metadata can be stored in a JSONB column if needed
+    organizer: event.organizer?.trim() || null,
   };
 
   return { event: dbEvent, errors };
@@ -222,23 +186,10 @@ Deno.serve(async (req) => {
   try {
     // Get HMAC secret from environment
     const webhookSecret = Deno.env.get("WEBHOOK_SECRET");
-    if (!webhookSecret) {
-      console.error("WEBHOOK_SECRET environment variable is not set");
-      return new Response(
-        JSON.stringify({ error: "Webhook secret not configured" }),
-        { 
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Get Supabase URL and service role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || Deno.env.get("SUPABASE_SERVICE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Supabase configuration missing");
+    if (!supabaseUrl || !supabaseServiceKey || !webhookSecret) {
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
         { 
@@ -268,7 +219,7 @@ Deno.serve(async (req) => {
     const rawBody = await req.text();
 
     // Verify HMAC signature
-    const isValid = await verifyHMAC(rawBody, signature, webhookSecret);
+    const isValid = verifyHMAC(rawBody, signature, webhookSecret);
     if (!isValid) {
       return new Response(
         JSON.stringify({ error: "Invalid signature" }),
@@ -361,7 +312,7 @@ Deno.serve(async (req) => {
     for (let i = 0; i < payload.events.length; i++) {
       const event = payload.events[i];
       const { event: dbEvent, errors: mappingErrors } =
-        await mapEventToDatabase(event, supabase);
+        mapEventToDatabase(event);
 
       if (mappingErrors.length > 0) {
         errors.push({
@@ -438,8 +389,7 @@ Deno.serve(async (req) => {
         }
       );
     }
-  } catch (error) {
-    console.error("Error processing webhook:", error);
+  } catch (_error) {
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { 
@@ -468,11 +418,11 @@ Deno.serve(async (req) => {
       "events": [{
         "title": "Test Event",
         "description": "Test Description",
-        "event-type": "workshop",
+        "category": "workshop",
         "date": "2024-12-31",
         "time": "14:00",
         "location": "Test Location",
-        "club_id": "your-club-id"
+        "organizer": "Test Organizer"
       }]
     }'
 
