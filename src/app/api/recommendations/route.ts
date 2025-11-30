@@ -8,8 +8,60 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const FLASK_BASE_URL = process.env.FLASK_BASE_URL || "http://localhost:5000";
-const SAMPLE_USER_TAGS = ["academic", "wellness", "sports"]; // TODO: replace with logged-in user's interest tags
-
+const SAMPLE_USER_TAGS = ["academic", "wellness"]; // TODO: replace with logged-in user's interest tags
+/**
+ * @swagger
+ * /api/recommendations:
+ *   get:
+ *    summary: Get personalized event recommendations
+ *    description: Returns events scored by cosine similarity against the user's interest tags (sample tags used when unauthenticated).
+ *    tags:
+ *      - Recommendations
+ *    responses:
+ *      200:
+ *        description: Recommendations fetched successfully
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              properties:
+ *                recommendations:
+ *                  type: array
+ *                  items:
+ *                    type: object
+ *                    properties:
+ *                      id:
+ *                        type: string
+ *                      title:
+ *                        type: string
+ *                      description:
+ *                        type: string
+ *                      event_date:
+ *                        type: string
+ *                      event_time:
+ *                        type: string
+ *                      location:
+ *                        type: string
+ *                      club_id:
+ *                        type: string
+ *                      tags:
+ *                        type: array
+ *                        items:
+ *                          type: string
+ *                      image_url:
+ *                        type: string
+ *                      status:
+ *                        type: string
+ *                      approved_by:
+ *                        type: string
+ *                      approved_at:
+ *                        type: string
+ *                      score:
+ *                        type: number
+ *                        description: Cosine similarity score between user preferences and event tags
+ *      500:
+ *        description: Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
     // TODO: Get current user
@@ -89,6 +141,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
 
 
