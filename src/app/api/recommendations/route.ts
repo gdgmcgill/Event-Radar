@@ -5,39 +5,57 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
+
+const FLASK_BASE_URL = process.env.FLASK_BASE_URL || "http://localhost:5000";
+const SAMPLE_USER_TAGS = ["academic", "wellness", "sports"]; // TODO: replace with logged-in user's interest tags
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    // Fetch events from existing events API
+    const eventsRes = await fetch(`${request.nextUrl.origin}/api/events`, {
+      cache: "no-store",
+    });
+    if (!eventsRes.ok) {
+      return NextResponse.json(
+        { error: "Failed to fetch events" },
+        { status: 500 }
+      );
+    }
+    const eventsData = await eventsRes.json();
+    const events = Array.isArray(eventsData) ? eventsData : eventsData.events || [];
 
-    // TODO: Get current user
-    // const {
-    //   data: { user },
-    // } = await supabase.auth.getUser();
+    // TODO: Use real user context and tags from Supabase auth/profile
+    // TODO: When events come from DB, ensure tags align with CATEGORY_ORDER in Flask
 
-    // if (!user) {
-    //   return NextResponse.json(
-    //     { error: 'Unauthorized' },
-    //     { status: 401 }
-    //   );
-    // }
+    // Score events via Flask
+    const scoreRes = await fetch(`${FLASK_BASE_URL}/similarity/events-score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_tags: SAMPLE_USER_TAGS,
+        events: events.map((evt: any) => ({ id: evt.id, tags: evt.tags || [] })),
+      }),
+    });
 
-    // TODO: Fetch user profile with interest tags
-    // const { data: userProfile } = await supabase
-    //   .from('users')
-    //   .select('interest_tags')
-    //   .eq('id', user.id)
-    //   .single();
+    if (!scoreRes.ok) {
+      return NextResponse.json(
+        { error: "Failed to score events" },
+        { status: 500 }
+      );
+    }
 
-    // TODO: Fetch events matching user interests
-    // - Filter by user's interest_tags
-    // - Exclude already saved events
-    // - Order by relevance (tag matches, date proximity, etc.)
-    // - Limit to top N recommendations
+    const scoreData = await scoreRes.json();
+    const scoreMap: Record<string, number> = {};
+    for (const ev of scoreData.events || []) {
+      scoreMap[ev.id] = ev.score;
+    }
 
-    return NextResponse.json({ recommendations: [] });
+    const recommendations = events
+      .map((evt: any) => ({ ...evt, score: scoreMap[evt.id] }))
+      .sort((a: any, b: any) => (b.score ?? -1) - (a.score ?? -1));
+
+    return NextResponse.json({ recommendations });
   } catch (error) {
     console.error("Error fetching recommendations:", error);
     return NextResponse.json(
