@@ -7,7 +7,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Event } from "@/types";
 
-import { EventSearch } from "@/components/events/EventSearch";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
