@@ -1,5 +1,5 @@
 import { getApiDocs } from "@/lib/swagger";
-import ReactSwagger from "@/components/swagger/SwaggerUI";
+import ReactSwagger from "@/components/redoc/RedocUI";
 
 export default async function IndexPage() {
     const spec = await getApiDocs();
