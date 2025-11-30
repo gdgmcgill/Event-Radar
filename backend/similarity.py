@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
+CATEGORY_ORDER = ["academic", "social", "sports", "career", "cultural", "wellness"]
+
 
 def cosine_score(vec_a: list[float] | np.ndarray, vec_b: list[float] | np.ndarray) -> float:
     a = np.asarray(vec_a, dtype=float).reshape(-1)
@@ -21,3 +23,8 @@ def cosine_scores(user_vec: list[float] | np.ndarray, event_vecs: list[list[floa
     for event_vec in event_vecs:
         scores.append(cosine_score(user_vec, event_vec))
     return scores
+
+
+def tags_to_vector(tags: list[str]) -> list[int]:
+    tag_set = {t.lower() for t in tags}
+    return [1 if cat in tag_set else 0 for cat in CATEGORY_ORDER]

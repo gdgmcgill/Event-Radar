@@ -4,7 +4,7 @@
  * Home page - Main event calendar/browse view
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Event } from "@/types";
 
 import { EventFilters } from "@/components/events/EventFilters";
@@ -23,10 +23,39 @@ import {
 
 export default function HomePage() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [scoredEvents, setScoredEvents] = useState<(Event & { score?: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const userPreferenceTags = useMemo(() => ["academic", "wellness"], []);
+
+  const scoreEvents = useCallback(
+    async (eventList: Event[]) => {
+      try {
+        const payload = {
+          user_tags: userPreferenceTags,
+          events: eventList.map((evt) => ({ id: evt.id, tags: evt.tags })),
+        };
+        const res = await fetch("/api/similarity-events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) return eventList;
+        const data = await res.json();
+        const scoreMap: Record<string, number> = {};
+        for (const ev of data.events || []) {
+          scoreMap[ev.id] = ev.score;
+        }
+        return eventList.map((evt) => ({ ...evt, score: scoreMap[evt.id] }));
+      } catch (err) {
+      console.error("Error scoring events:", err);
+      return eventList;
+    }
+  },
+  [userPreferenceTags]
+);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -42,17 +71,31 @@ export default function HomePage() {
       // Handle both array response or { events: [] } format
       const eventList = Array.isArray(data) ? data : data.events || [];
       setEvents(eventList);
+      const scored = await scoreEvents(eventList);
+      setScoredEvents(scored);
     } catch (err) {
       console.error("Error fetching events:", err);
       setError("Failed to load events. Please try again later.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scoreEvents]);
 
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  const displayEvents = useMemo(
+    () => {
+      if (scoredEvents.length) {
+        return [...scoredEvents].sort(
+          (a, b) => (b.score ?? -1) - (a.score ?? -1)
+        );
+      }
+      return events;
+    },
+    [scoredEvents, events]
+  );
 
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
@@ -159,7 +202,7 @@ export default function HomePage() {
               </div>
             ) : (
               <EventGrid
-                events={events}
+                events={displayEvents}
                 loading={loading}
                 onEventClick={handleEventClick}
               />
