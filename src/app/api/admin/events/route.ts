@@ -138,11 +138,113 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * @swagger
+ * /api/admin/events:
+ *   put:
+ *    summary: /api/admin/events
+ *    description: Update an event (admin only)
+ *    tags:
+ *      - Admin - Events
+ *    parameters:
+ *      - name: id
+ *        description: Event ID
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *      - name: title
+ *        description: Event title
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *      - name: description
+ *        description: Event description
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *      - name: event_date
+ *        description: Event date
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *      - name: event_time
+ *        description: Event time
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *      - name: location
+ *        description: Event location
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *      - name: club_id
+ *        description: Event club ID
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *      - name: tags
+ *        description: Event tags
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: array
+ *          items:
+ *            type: string
+ *      - name: image_url
+ *        description: Event image URL
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *    responses:
+ *      200:
+ *        description: Event updated successfully
+ *      400:
+ *        description: Missing required fields
+ *      403:
+ *        description: Unauthorized
+ *      500:
+ *        description: Internal server error
+ *      501:
+ *        description: Not implemented
+ */
 export async function PUT(request: NextRequest) {
   // TODO: Implement event update
   return NextResponse.json({ error: "Not implemented" }, { status: 501 });
 }
 
+/**
+ * @swagger
+ * /api/admin/events:
+ *   delete:
+ *    summary: /api/admin/events
+ *    description: Delete an event (admin only)
+ *    tags:
+ *      - Admin - Events
+ *    parameters:
+ *      - name: id
+ *        description: Event ID
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *    responses:
+ *      200:
+ *        description: Event deleted successfully
+ *      403:
+ *        description: Unauthorized
+ *      500:
+ *        description: Internal server error
+ *      501:
+ *        description: Not implemented
+ */
 export async function DELETE(request: NextRequest) {
   // TODO: Implement event deletion
   return NextResponse.json({ error: "Not implemented" }, { status: 501 });
