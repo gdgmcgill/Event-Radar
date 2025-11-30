@@ -14,3 +14,10 @@ def cosine_score(vec_a: list[float] | np.ndarray, vec_b: list[float] | np.ndarra
 
     score = cosine_similarity(a.reshape(1, -1), b.reshape(1, -1))[0][0]
     return float(score)
+
+
+def cosine_scores(user_vec: list[float] | np.ndarray, event_vecs: list[list[float]] | np.ndarray) -> list[float]:
+    scores: list[float] = []
+    for event_vec in event_vecs:
+        scores.append(cosine_score(user_vec, event_vec))
+    return scores
