@@ -258,12 +258,36 @@ const tagMapping: Record<string, EventTag> = {
  *                          type: string
  *                      image_url:
  *                        type: string
+ *                      created_at:
+ *                        type: string
+ *                      updated_at:
+ *                        type: string
  *                      status:
  *                        type: string
+ *                        example: approved
  *                      approved_by:
  *                        type: string
  *                      approved_at:
  *                        type: string
+ *                      club:
+ *                        type: object
+ *                        properties:
+ *                          id:
+ *                            type: string
+ *                          name:
+ *                            type: string
+ *                          instagram_handle:
+ *                            type: string
+ *                          logo_url:
+ *                            type: string
+ *                          description:
+ *                            type: string
+ *                          created_at:
+ *                            type: string
+ *                          updated_at:
+ *                            type: string
+ *                      saved_by_users:
+ *                        type: array
  *                total:
  *                  type: integer
  *                page:

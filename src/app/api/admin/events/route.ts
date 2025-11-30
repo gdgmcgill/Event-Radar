@@ -14,6 +14,8 @@ import type { NextRequest } from "next/server";
  *   post:
  *     summary: /api/admin/events
  *     description: Create or update an event (admin only)
+ *     tags:
+ *       - Admin - Events
  *     parameters:
  *       - name: title
  *         description: Event title
