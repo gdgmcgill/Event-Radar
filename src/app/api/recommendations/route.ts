@@ -12,6 +12,26 @@ const SAMPLE_USER_TAGS = ["academic", "wellness", "sports"]; // TODO: replace wi
 
 export async function GET(request: NextRequest) {
   try {
+    // TODO: Get current user
+    // const supabase = await createClient();
+    // const {
+    //   data: { user },
+    // } = await supabase.auth.getUser();
+    //
+    // if (!user) {
+    //   return NextResponse.json(
+    //     { error: "Unauthorized" },
+    //     { status: 401 }
+    //   );
+    // }
+    //
+    // TODO: Fetch user profile with interest tags
+    // const { data: userProfile } = await supabase
+    //   .from("users")
+    //   .select("interest_tags")
+    //   .eq("id", user.id)
+    //   .single();
+
     // Fetch events from existing events API
     const eventsRes = await fetch(`${request.nextUrl.origin}/api/events`, {
       cache: "no-store",
@@ -27,8 +47,13 @@ export async function GET(request: NextRequest) {
 
     // TODO: Use real user context and tags from Supabase auth/profile
     // TODO: When events come from DB, ensure tags align with CATEGORY_ORDER in Flask
+    // TODO: Apply filters before scoring:
+    // - Filter by user's interest_tags
+    // - Exclude already saved events
+    // - Order by relevance (tag matches, date proximity, etc.)
+    // - Limit to top N recommendations (e.g., 10)
 
-    // Score events via Flask
+    // Score events via Flask (cosine similarity)
     const scoreRes = await fetch(`${FLASK_BASE_URL}/similarity/events-score`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -64,8 +89,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-
 
 
 
