@@ -5,6 +5,7 @@ CATEGORY_ORDER = ["academic", "social", "sports", "career", "cultural", "wellnes
 
 
 def cosine_score(vec_a: list[float] | np.ndarray, vec_b: list[float] | np.ndarray) -> float:
+    """Compute cosine similarity between two equal-length vectors, returning 0 if either is all zeros."""
     a = np.asarray(vec_a, dtype=float).reshape(-1)
     b = np.asarray(vec_b, dtype=float).reshape(-1)
 
@@ -19,6 +20,7 @@ def cosine_score(vec_a: list[float] | np.ndarray, vec_b: list[float] | np.ndarra
 
 
 def cosine_scores(user_vec: list[float] | np.ndarray, event_vecs: list[list[float]] | np.ndarray) -> list[float]:
+    """Compute cosine similarity between one user vector and a list of event vectors."""
     scores: list[float] = []
     for event_vec in event_vecs:
         scores.append(cosine_score(user_vec, event_vec))
@@ -26,5 +28,6 @@ def cosine_scores(user_vec: list[float] | np.ndarray, event_vecs: list[list[floa
 
 
 def tags_to_vector(tags: list[str]) -> list[int]:
+    """Map a list of tag strings to a binary vector following CATEGORY_ORDER."""
     tag_set = {t.lower() for t in tags}
     return [1 if cat in tag_set else 0 for cat in CATEGORY_ORDER]
