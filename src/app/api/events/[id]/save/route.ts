@@ -1,6 +1,13 @@
 /**
  * POST /api/events/:id/save
  * Persist a saved event entry for the authenticated user.
+ * 
+ * Testing without auth (before auth is implemented):
+ * 1. Uncomment service role client lines below (lines 37-41) and comment out line 33
+ * 2. Ensure SUPABASE_SERVICE_ROLE_KEY is in .env.local
+ * 3. Create test.json: @"{"user_id":"<valid-user-id>"}"@ | Out-File -Encoding utf8 -NoNewline test.json
+ * 4. Run: curl.exe "http://localhost:3000/api/events/<event-id>/save" -X POST -H "Content-Type: application/json" -d "@test.json"
+ * 5. Re-comment service role lines before committing
  */
 
 import { NextResponse } from "next/server";
@@ -9,13 +16,13 @@ import type { Database } from "@/lib/supabase/types";
 import type { NextRequest } from "next/server";
 
 interface RouteContext {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-type UserSavedEventRow = Database["public"]["Tables"]["user_saved_events"]["Row"];
-type UserSavedEventInsert = Database["public"]["Tables"]["user_saved_events"]["Insert"];
+type UserSavedEventRow = Database["public"]["Tables"]["saved_events"]["Row"];
+type UserSavedEventInsert = Database["public"]["Tables"]["saved_events"]["Insert"];
 
 /**
  * Handle POST /api/events/:id/save.
@@ -23,10 +30,20 @@ type UserSavedEventInsert = Database["public"]["Tables"]["user_saved_events"]["I
  * @param request - Incoming Next.js request containing `user_id` in the JSON body.
  * @param params - Route params object with the event `id` to save.
  * @returns JSON response indicating success, duplicate save, or error conditions.
+ * @author Julien
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
+    const { id: eventId } = await params;
     const supabase = await createClient();
+    
+    // For testing without auth, uncomment below and comment out line above:
+    // const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
+    // const supabase = createSupabaseClient(
+    //   process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    //   process.env.SUPABASE_SERVICE_ROLE_KEY!
+    // );
+    
     const {
       data: { user },
       error: authError,
@@ -57,8 +74,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "user_id does not match authenticated user" }, { status: 403 });
     }
 
-    const eventId = params.id;
-
     const { data: eventExists, error: eventError } = await supabase
       .from("events")
       .select("id")
@@ -75,8 +90,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     const { data: existingData, error: existingError } = await (supabase
-      .from("user_saved_events") as any)
-      .select("id, saved_at")
+      .from("saved_events") as any)
+      .select("id, created_at")
       .eq("user_id", user.id)
       .eq("event_id", eventId)
       .maybeSingle();
@@ -93,7 +108,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     if (existing) {
       return NextResponse.json(
-        { message: "Event already saved", saved_at: existing.saved_at },
+        { message: "Event already saved", saved_at: existing.created_at },
         { status: 200 }
       );
     }
@@ -101,13 +116,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const insertPayload: UserSavedEventInsert = {
       user_id: user.id,
       event_id: eventId,
-      saved_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
 
     const { data: insertedData, error: insertError } = await (supabase
-      .from("user_saved_events") as any)
+      .from("saved_events") as any)
       .insert(insertPayload)
-      .select("saved_at")
+      .select("created_at")
       .single();
 
     if (insertError) {
@@ -121,7 +136,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const savedRecord = insertedData as UserSavedEventRow;
 
     return NextResponse.json(
-      { success: true, saved_at: savedRecord.saved_at },
+      { success: true, saved_at: savedRecord.created_at },
       { status: 201 }
     );
   } catch (error) {
