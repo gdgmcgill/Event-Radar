@@ -151,6 +151,9 @@ The project uses Tailwind CSS with shadcn/ui components. Custom colors are defin
 - **McGill Red**: `#ED1B2F`
 - **McGill Grey**: `#7f7f7f`
 
+The project allows users to toggle between light/dark theme.
+When adding a new UI element, make sure it has [dark theme](https://github.com/gdgmcgill/Event-Radar/wiki/Theming-&-Dark-Mode-%E2%80%94-Guide) 
+
 ## 🔐 Authentication
 
 Authentication is handled through Supabase Auth. Users must sign in with a McGill email address (`@mail.mcgill.ca` or `@mcgill.ca`).
