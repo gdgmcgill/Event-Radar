@@ -54,9 +54,15 @@ export const API_ENDPOINTS = {
   ADMIN_EVENTS: "/api/admin/events",
 } as const;
 
+/**
+ * McGill brand colors
+ * Used for theming and semantic color definitions
+ */
 export const MCGILL_COLORS = {
-  RED: "#ED1B2F",
-  GREY: "#7f7f7f",
+  RED: "#ED1B2F",      // Primary McGill Red
+  GREY: "#7f7f7f",     // McGill Grey (used in dark theme)
+  DARK_BG: "#1f1f1f",  // Dark theme background
+  DARK_CARD: "#2d2d2d", // Dark theme card background
 } as const;
 
 
