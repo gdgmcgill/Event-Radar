@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
+import ThemeToggle from "./ThemeToggle";
 import { guestNavItems, authenticatedNavItems } from "./navItems";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,8 @@ export function Header() {
             ) : (
               <SignInButton />
             )}
+            {/* Theme Toggle */}
+            <ThemeToggle />
           </div>
         </div>
 

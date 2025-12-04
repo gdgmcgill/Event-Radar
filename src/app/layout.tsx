@@ -7,6 +7,21 @@ import { Footer } from "@/components/layout/Footer";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
+const themeScript = `
+  (function() {
+    try {
+      const theme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      if (theme === 'dark' || (!theme && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {}
+  })()
+`;
+
 export const metadata: Metadata = {
   title: "Uni-Verse - Campus Event Discovery for McGill University",
   description:
@@ -21,6 +36,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
         <div className="flex min-h-screen">
           {/* Side Navigation Bar - LEFT SIDE, desktop only */}
