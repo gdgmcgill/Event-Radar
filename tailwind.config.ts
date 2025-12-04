@@ -50,13 +50,14 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Custom palette extensions
+        // McGill brand palette (extensible for multiple brand themes)
         mcgill: {
           burgundy: "#561c24",
-          red: "#ED1B2F", // Original McGill Red
+          red: "#ED1B2F", // Primary McGill Red
           mutedRed: "#6d2932",
           sage: "#c7c7a3",
           cream: "#e8d8c4",
+          grey: "#7f7f7f", // McGill Grey for dark mode
         },
       },
       borderRadius: {
