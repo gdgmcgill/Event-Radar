@@ -8,6 +8,56 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 
+/**
+ * @swagger
+ * /api/recommendations:
+ *   get:
+ *    summary: /api/recommendations
+ *    description: Get personalized event recommendations for the current user
+ *    tags:
+ *      - Recommendations
+ *    responses:
+ *      200:
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              properties:
+ *                recommendations:
+ *                  type: array
+ *                  items:
+ *                    type: object
+ *                    properties:
+ *                      id:
+ *                        type: string
+ *                      title:
+ *                        type: string
+ *                      description:
+ *                        type: string
+ *                      event_date:
+ *                        type: string
+ *                      event_time:
+ *                        type: string
+ *                      location:
+ *                        type: string
+ *                      club_id:
+ *                        type: string
+ *                      tags:
+ *                        type: array
+ *                        items:
+ *                          type: string
+ *                      image_url:
+ *                        type: string
+ *                      status:
+ *                        type: string
+ *                      approved_by:
+ *                        type: string
+ *                      approved_at:
+ *                        type: string
+ *        description: Recommendations fetched successfully
+ *      500:
+ *        description: Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
