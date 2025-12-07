@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 
 export default function UserProfilePage() {
-  const { user, loading, error } = useUser();
+  const { user, loading } = useUser();
 
   if (loading) {
     return (
@@ -23,14 +23,6 @@ export default function UserProfilePage() {
           Sign in to view your profile
         </p>
         <SignInButton />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container px-4 py-8 text-red-500">
-        Couldn't load profile. Please try again.
       </div>
     );
   }
