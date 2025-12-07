@@ -91,4 +91,3 @@ export function useUser(): UseUserReturn {
 
   return { user, loading };
 }
-
