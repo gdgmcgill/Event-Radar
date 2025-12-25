@@ -42,13 +42,15 @@ export interface Club {
   updated_at: string;
 }
 
+// Matches public.users table schema
 export interface User {
   id: string;
   email: string;
-  full_name: string | null;
-  interest_tags: EventTag[];
-  created_at: string;
-  updated_at: string;
+  name: string | null;
+  avatar_url: string | null;
+  interest_tags: string[];
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface SavedEvent {
@@ -70,5 +72,3 @@ export interface EventFilter {
   searchQuery?: string;
   clubId?: string;
 }
-
-
