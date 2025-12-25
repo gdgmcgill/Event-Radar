@@ -3,15 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, LogOut } from "lucide-react";
+import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { guestNavItems, authenticatedNavItems } from "./navItems";
-import { useUser } from "@/hooks/useUser";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export function SideNavBar() {
   const [isHovered, setIsHovered] = useState(false);
   const pathname = usePathname();
-  const { user } = useUser();
+  const { user } = useAuthStore();
   const isAuthenticated = !!user;
 
   const navItems = isAuthenticated ? authenticatedNavItems : guestNavItems;
@@ -21,15 +21,47 @@ export function SideNavBar() {
       {/* Desktop Side Navigation Bar - HIDDEN ON MOBILE */}
       <div
         className={cn(
-          "hidden lg:flex flex-col fixed top-0 left-0 h-full bg-card border-r border-border transition-all duration-300 ease-out z-40 pt-16 shadow-sm",
+          "hidden lg:flex flex-col fixed top-0 left-0 h-full bg-card transition-all duration-300 ease-out z-40 shadow-sm",
           isHovered ? "w-64" : "w-20"
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="flex flex-col h-full py-6">
+        <div className="flex flex-col h-full">
+          {/* User Info - Top (only shown when authenticated) */}
+          {isAuthenticated && (
+            <div className="p-3 pt-2 pb-0">
+              <Link
+                href="/profile"
+                className={cn(
+                  "flex items-center p-2 rounded-lg transition-colors hover:bg-muted",
+                  pathname === "/profile" && "bg-primary/10"
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0",
+                    !isHovered && "mx-auto"
+                  )}
+                >
+                  <User className="w-5 h-5 text-primary" />
+                </div>
+                {isHovered && (
+                  <div className="ml-3 flex-1 min-w-0 animate-in fade-in duration-300">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {user?.name || "User"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user?.email}
+                    </p>
+                  </div>
+                )}
+              </Link>
+            </div>
+          )}
+
           {/* Navigation Items */}
-          <nav className="flex-1 px-3 space-y-1">
+          <nav className="flex-1 px-3 space-y-1 py-4">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.path;
@@ -48,7 +80,9 @@ export function SideNavBar() {
                   <Icon
                     className={cn(
                       "w-5 h-5 flex-shrink-0 transition-colors",
-                      isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
+                      isActive
+                        ? "text-primary"
+                        : "text-muted-foreground group-hover:text-foreground",
                       isHovered ? "mr-3" : "mx-auto"
                     )}
                   />
@@ -65,55 +99,11 @@ export function SideNavBar() {
             })}
           </nav>
 
-          {/* User Section - Bottom */}
-          {isAuthenticated && (
-            <div className="p-3 mt-auto border-t border-border">
-              {isHovered ? (
-                <div className="space-y-4 px-1 animate-in fade-in duration-300">
-                  {/* User Info */}
-                  <div className="flex items-center space-x-3 p-2 rounded-lg bg-muted/50">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {user?.full_name || "User"}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {user?.email}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Sign Out Button */}
-                  <button
-                    onClick={() => console.log("Sign out clicked")}
-                    className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-destructive bg-destructive/10 rounded-lg hover:bg-destructive/20 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center" title={user?.email}>
-                    <User className="w-5 h-5 text-primary" />
-                  </div>
-                  <button
-                    onClick={() => console.log("Sign out clicked")}
-                    className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    title="Sign Out"
-                  >
-                    <LogOut className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          {/* (Profile moved to top) */}
         </div>
       </div>
 
-      {/* Spacer */}
+      {/* Spacer to push content */}
       <div
         className={cn(
           "hidden lg:block transition-all duration-300 flex-shrink-0",
