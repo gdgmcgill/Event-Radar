@@ -3,16 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUser } from "@/hooks/useUser";
-import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/store/useAuthStore";
 import { SignInButton } from "@/components/auth/SignInButton";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import { guestNavItems, authenticatedNavItems } from "./navItems";
 import { cn } from "@/lib/utils";
 
 export function Header() {
-  const { user, loading } = useUser();
+  const { user, loading } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const isAuthenticated = !!user;
@@ -54,19 +54,14 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Right: Sign In with McGill (always visible) */}
-          <div className="flex items-center space-x-4">
+          {/* Right: Auth Button */}
+          <div className="flex items-center">
             {loading ? (
-              <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
+              <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
             ) : isAuthenticated ? (
-              <button
-                onClick={() => console.log("Sign out clicked")}
-                className="text-sm font-medium text-muted-foreground hover:text-destructive transition-colors"
-              >
-                Sign Out
-              </button>
+              <SignOutButton variant="outline" />
             ) : (
-              <SignInButton />
+              <SignInButton variant="default" />
             )}
           </div>
         </div>
