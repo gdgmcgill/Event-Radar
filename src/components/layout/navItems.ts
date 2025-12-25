@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Home,
   Search,
@@ -11,11 +10,11 @@ import {
   User,
 } from "lucide-react";
 
-export type NavItem = {
+export interface NavItem {
   name: string;
   path: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-};
+  icon: LucideIcon;
+}
 
 export const guestNavItems: NavItem[] = [
   { name: "Home", path: "/", icon: Home },
