@@ -46,3 +46,4 @@ EVENT_METADATA_PATH = DATA_DIR / "event_metadata.json"
 EVENT_TOWER_PATH = MODELS_DIR / "event_tower.pt"
 USER_TOWER_PATH = MODELS_DIR / "user_tower.pt"
 
+
