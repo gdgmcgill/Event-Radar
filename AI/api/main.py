@@ -310,3 +310,4 @@ async def global_exception_handler(request, exc):
         content={"error": "Internal server error", "detail": str(exc)}
     )
 
+

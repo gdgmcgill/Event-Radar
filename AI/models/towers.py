@@ -208,3 +208,4 @@ class UserTower(nn.Module):
         """
         return np.mean(embeddings, axis=0)
 
+

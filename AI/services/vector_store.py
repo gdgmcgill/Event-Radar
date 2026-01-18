@@ -346,3 +346,4 @@ class VectorStore:
         """Number of events in the store."""
         return self.index.ntotal
 
+

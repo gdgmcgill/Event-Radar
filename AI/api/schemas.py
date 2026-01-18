@@ -238,3 +238,4 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error message")
     detail: Optional[str] = Field(default=None, description="Additional details")
 
+

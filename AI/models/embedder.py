@@ -89,3 +89,4 @@ class Embedder:
         embeddings = self.encode(texts, batch_size, normalize)
         return torch.from_numpy(embeddings).float()
 
+
