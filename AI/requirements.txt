@@ -1,0 +1,19 @@
+# Two-Tower Recommendation Service Dependencies
+# CPU-only, lightweight deployment
+
+# Web framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.6.0
+
+# ML & Embeddings
+sentence-transformers>=2.3.0
+# Note: Install PyTorch separately with: pip install torch --index-url https://download.pytorch.org/whl/cpu
+numpy>=1.26.0
+
+# Vector similarity search
+faiss-cpu>=1.9.0
+
+# Utilities
+python-dotenv>=1.0.0
+
