@@ -59,3 +59,4 @@ export const MCGILL_COLORS = {
   GREY: "#7f7f7f",
 } as const;
 
+
