@@ -11,11 +11,11 @@ import { EventCardSkeleton } from "./EventCardSkeleton";
 import type { Event } from "@/types";
 
 interface EventGridProps {
-  events: Event[];
+  events: (Event & { score?: number })[];
   loading?: boolean;
   showSaveButton?: boolean;
   savedEventIds?: Set<string>;
-  onEventClick?: (event: Event) => void;
+  onEventClick?: (event: Event & { score?: number }) => void;
 }
 
 export function EventGrid({

@@ -7,7 +7,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Event } from "@/types";
 
-import { EventSearch } from "@/components/events/EventSearch";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
@@ -22,8 +21,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+type ScoredEvent = Event & { score?: number };
+
 export default function HomePage() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<ScoredEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -33,19 +34,20 @@ export default function HomePage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/api/events");
+      const response = await fetch("/api/recommendations");
       
       if (!response.ok) {
-        throw new Error("Failed to fetch events");
+        throw new Error("Failed to fetch recommendations");
       }
 
       const data = await response.json();
-      // Handle both array response or { events: [] } format
-      const eventList = Array.isArray(data) ? data : data.events || [];
-      setEvents(eventList);
+      const recs = Array.isArray(data.recommendations)
+        ? data.recommendations
+        : [];
+      setEvents(recs);
     } catch (err) {
-      console.error("Error fetching events:", err);
-      setError("Failed to load events. Please try again later.");
+      console.error("Error fetching recommendations:", err);
+      setError("Failed to load recommendations. Please try again later.");
     } finally {
       setLoading(false);
     }
