@@ -34,20 +34,35 @@ export default function HomePage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/api/recommendations");
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch recommendations");
+
+      // Try recommendations first (for authenticated users)
+      const recResponse = await fetch("/api/recommendations");
+
+      if (recResponse.ok) {
+        const data = await recResponse.json();
+        const recs = Array.isArray(data.recommendations)
+          ? data.recommendations
+          : [];
+        setEvents(recs);
+        return;
       }
 
-      const data = await response.json();
-      const recs = Array.isArray(data.recommendations)
-        ? data.recommendations
-        : [];
-      setEvents(recs);
+      // Fall back to regular events for unauthenticated users
+      if (recResponse.status === 401) {
+        const eventsResponse = await fetch("/api/events");
+        if (!eventsResponse.ok) {
+          throw new Error("Failed to fetch events");
+        }
+        const data = await eventsResponse.json();
+        const eventsList = Array.isArray(data.events) ? data.events : [];
+        setEvents(eventsList);
+        return;
+      }
+
+      throw new Error("Failed to fetch recommendations");
     } catch (err) {
-      console.error("Error fetching recommendations:", err);
-      setError("Failed to load recommendations. Please try again later.");
+      console.error("Error fetching events:", err);
+      setError("Failed to load events. Please try again later.");
     } finally {
       setLoading(false);
     }

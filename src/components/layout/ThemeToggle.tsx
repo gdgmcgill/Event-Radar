@@ -5,20 +5,25 @@ import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") return "light";
-    try {
-      const saved = localStorage.getItem("theme");
-      if (saved === "dark" || saved === "light") return saved as any;
-      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    } catch (e) {
-      return "light";
-    }
-  });
+  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
+    setMounted(true);
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved === "dark" || saved === "light") {
+        setTheme(saved);
+      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        setTheme("dark");
+      }
+    } catch (e) {
+      // noop
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     try {
       if (theme === "dark") {
         document.documentElement.classList.add("dark");
@@ -29,7 +34,16 @@ export default function ThemeToggle() {
     } catch (e) {
       // noop
     }
-  }, [theme]);
+  }, [theme, mounted]);
+
+  // Render placeholder during SSR to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="sm" aria-label="Toggle color scheme">
+        <Moon className="w-5 h-5" />
+      </Button>
+    );
+  }
 
   return (
     <Button
