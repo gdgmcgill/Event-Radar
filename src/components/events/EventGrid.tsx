@@ -8,7 +8,7 @@
 
 import { EventCard } from "./EventCard";
 import { EventCardSkeleton } from "./EventCardSkeleton";
-import type { Event } from "@/types";
+import type { Event, InteractionSource } from "@/types";
 
 interface EventGridProps {
   events: (Event & { score?: number })[];
@@ -16,6 +16,8 @@ interface EventGridProps {
   showSaveButton?: boolean;
   savedEventIds?: Set<string>;
   onEventClick?: (event: Event & { score?: number }) => void;
+  /** Source context for tracking (e.g., 'home', 'search', 'recommendation') */
+  trackingSource?: InteractionSource;
 }
 
 export function EventGrid({
@@ -24,6 +26,7 @@ export function EventGrid({
   showSaveButton = false,
   savedEventIds = new Set(),
   onEventClick,
+  trackingSource,
 }: EventGridProps) {
   if (loading) {
     return (
@@ -59,6 +62,7 @@ export function EventGrid({
             showSaveButton={showSaveButton}
             isSaved={savedEventIds.has(event.id)}
             onClick={onEventClick ? () => onEventClick(event) : undefined}
+            trackingSource={trackingSource}
           />
         </div>
       ))}

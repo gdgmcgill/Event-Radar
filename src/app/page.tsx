@@ -180,6 +180,7 @@ export default function HomePage() {
                 events={events}
                 loading={loading}
                 onEventClick={handleEventClick}
+                trackingSource="home"
               />
             )}
           </div>
@@ -194,6 +195,7 @@ export default function HomePage() {
           if (!open) setSelectedEvent(null);
         }}
         event={selectedEvent}
+        trackingSource="home"
       />
     </div>
   );

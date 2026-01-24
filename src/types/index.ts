@@ -72,3 +72,80 @@ export interface EventFilter {
   searchQuery?: string;
   clubId?: string;
 }
+
+// =============================================
+// User Interaction Tracking Types
+// =============================================
+
+export type InteractionType = 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
+
+export type InteractionSource = 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal';
+
+export interface UserInteraction {
+  id: string;
+  user_id: string | null;
+  event_id: string;
+  interaction_type: InteractionType;
+  session_id: string | null;
+  source: InteractionSource | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface TrackInteractionPayload {
+  event_id: string;
+  interaction_type: InteractionType;
+  source?: InteractionSource;
+  session_id?: string;
+  metadata?: Record<string, unknown>;
+}
+
+// =============================================
+// Event Popularity Types
+// =============================================
+
+export interface EventPopularityScore {
+  event_id: string;
+  view_count: number;
+  click_count: number;
+  save_count: number;
+  share_count: number;
+  calendar_add_count: number;
+  unique_viewers: number;
+  popularity_score: number;
+  trending_score: number;
+  last_calculated_at: string;
+}
+
+export interface PopularEventsResponse {
+  events: (Event & { popularity?: EventPopularityScore })[];
+  total: number;
+}
+
+// =============================================
+// User Engagement Types
+// =============================================
+
+export interface TagCount {
+  tag: string;
+  count: number;
+}
+
+export interface ClubCount {
+  club_id: string;
+  count: number;
+}
+
+export interface UserEngagementSummary {
+  user_id: string;
+  total_views: number;
+  total_clicks: number;
+  total_saves: number;
+  total_shares: number;
+  total_calendar_adds: number;
+  favorite_tags: TagCount[];
+  favorite_clubs: ClubCount[];
+  last_active_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

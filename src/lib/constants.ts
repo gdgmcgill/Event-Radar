@@ -52,6 +52,11 @@ export const API_ENDPOINTS = {
   SAVE_EVENT: (id: string) => `/api/events/${id}/save`,
   RECOMMENDATIONS: "/api/recommendations",
   ADMIN_EVENTS: "/api/admin/events",
+  // Tracking & Popularity endpoints
+  INTERACTIONS: "/api/interactions",
+  POPULAR_EVENTS: "/api/events/popular",
+  USER_ENGAGEMENT: "/api/user/engagement",
+  ADMIN_CALCULATE_POPULARITY: "/api/admin/calculate-popularity",
 } as const;
 
 /**

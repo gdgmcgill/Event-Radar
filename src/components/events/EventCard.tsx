@@ -13,16 +13,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
-import { type Event } from "@/types";
+import { type Event, type InteractionSource } from "@/types";
 import { Calendar, Clock, MapPin, Heart } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTracking } from "@/hooks/useTracking";
 
 interface EventCardProps {
   event: Event;
   onClick?: () => void;
   showSaveButton?: boolean;
   isSaved?: boolean;
+  /** Source context for tracking (e.g., 'home', 'search', 'recommendation') */
+  trackingSource?: InteractionSource;
 }
 
 export function EventCard({
@@ -30,8 +33,10 @@ export function EventCard({
   onClick,
   showSaveButton = false,
   isSaved: initialIsSaved = false,
+  trackingSource,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
+  const { trackClick, trackSave, trackUnsave } = useTracking({ source: trackingSource });
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -45,12 +50,22 @@ export function EventCard({
 
       const data = await response.json();
       setIsSaved(data.saved);
+
+      // Track save/unsave interaction
+      if (data.saved) {
+        trackSave(event.id);
+      } else {
+        trackUnsave(event.id);
+      }
     } catch (error) {
       console.error("Error saving event:", error);
     }
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
+    // Track click interaction
+    trackClick(event.id);
+
     if (onClick) {
       e.preventDefault();
       e.stopPropagation();
