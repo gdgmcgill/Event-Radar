@@ -2,10 +2,9 @@
 
 /**
  * Filter bar component for events
- * TODO: Implement filter logic, tag selection, date range picker, and club filter
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
@@ -19,22 +18,34 @@ interface EventFiltersProps {
     dateRange?: { start: Date; end: Date };
     clubId?: string;
   }) => void;
+  initialTags?: EventTag[];
 }
 
-export function EventFilters({ onFilterChange }: EventFiltersProps) {
-  const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
+export function EventFilters({ onFilterChange, initialTags = [] }: EventFiltersProps) {
+  const [selectedTags, setSelectedTags] = useState<EventTag[]>(initialTags);
+
+  // Sync with initial tags if they change
+  useEffect(() => {
+    setSelectedTags(initialTags);
+  }, [initialTags]);
 
   const toggleTag = (tag: EventTag) => {
     const newTags = selectedTags.includes(tag)
       ? selectedTags.filter((t) => t !== tag)
       : [...selectedTags, tag];
     setSelectedTags(newTags);
-    // TODO: Call onFilterChange with updated filters
+
+    // Notify parent of filter change
+    onFilterChange?.({
+      tags: newTags.length > 0 ? newTags : undefined,
+    });
   };
 
   const clearFilters = () => {
     setSelectedTags([]);
-    // TODO: Reset all filters and call onFilterChange
+    onFilterChange?.({
+      tags: undefined,
+    });
   };
 
   return (
@@ -59,8 +70,8 @@ export function EventFilters({ onFilterChange }: EventFiltersProps) {
                 onClick={() => toggleTag(tag)}
                 className={cn(
                   "rounded-full px-4 transition-all duration-200",
-                  isSelected 
-                    ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90" 
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
                     : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 )}
               >
@@ -76,9 +87,9 @@ export function EventFilters({ onFilterChange }: EventFiltersProps) {
         <div className="pt-4 border-t border-border/50">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-foreground">Active filters:</span>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={clearFilters}
               className="h-auto p-0 text-xs text-muted-foreground hover:text-destructive"
             >
@@ -107,9 +118,6 @@ export function EventFilters({ onFilterChange }: EventFiltersProps) {
           </div>
         </div>
       )}
-
-      {/* TODO: Add date range picker */}
-      {/* TODO: Add club filter dropdown */}
     </div>
   );
 }
