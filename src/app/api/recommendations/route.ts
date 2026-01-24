@@ -9,6 +9,7 @@ import type { NextRequest } from "next/server";
 
 const FLASK_BASE_URL = process.env.FLASK_BASE_URL || "http://localhost:5000";
 const SAMPLE_USER_TAGS = ["academic", "wellness"]; // TODO: replace with logged-in user's interest tags
+
 /**
  * @swagger
  * /api/recommendations:
@@ -141,5 +142,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-

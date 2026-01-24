@@ -181,6 +181,125 @@ const tagMapping: Record<string, EventTag> = {
   'technology': EventTag.ACADEMIC,
 };
 
+/**
+ * @swagger
+ * /api/events:
+ *   get:
+ *    summary: /api/events
+ *    description: Fetch events with optional filters
+ *    tags:
+ *      - Events
+ *    parameters:
+ *      - name: tags
+ *        description: Comma-separated list of tags
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: search
+ *        description: Search query
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: dateFrom
+ *        description: Start date for filtering
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: dateTo
+ *        description: End date for filtering
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: page
+ *        description: Page number for pagination
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: integer
+ *      - name: limit
+ *        description: Number of events per page
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: integer
+ *    responses:
+ *      200:
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              properties:
+ *                events:
+ *                  type: array
+ *                  items:
+ *                    type: object
+ *                    properties:
+ *                      id:
+ *                        type: string
+ *                      title:
+ *                        type: string
+ *                      description:
+ *                        type: string
+ *                      event_date:
+ *                        type: string
+ *                      event_time:
+ *                        type: string
+ *                      location:
+ *                        type: string
+ *                      club_id:
+ *                        type: string
+ *                      tags:
+ *                        type: array
+ *                        items:
+ *                          type: string
+ *                      image_url:
+ *                        type: string
+ *                      created_at:
+ *                        type: string
+ *                      updated_at:
+ *                        type: string
+ *                      status:
+ *                        type: string
+ *                        example: approved
+ *                      approved_by:
+ *                        type: string
+ *                      approved_at:
+ *                        type: string
+ *                      club:
+ *                        type: object
+ *                        properties:
+ *                          id:
+ *                            type: string
+ *                          name:
+ *                            type: string
+ *                          instagram_handle:
+ *                            type: string
+ *                          logo_url:
+ *                            type: string
+ *                          description:
+ *                            type: string
+ *                          created_at:
+ *                            type: string
+ *                          updated_at:
+ *                            type: string
+ *                      saved_by_users:
+ *                        type: array
+ *                total:
+ *                  type: integer
+ *                page:
+ *                  type: integer
+ *                limit:
+ *                  type: integer
+ *                totalPages:
+ *                  type: integer
+ *        description: Events fetched successfully
+ *      500:
+ *        description: Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
     // Temporary: return sample events to drive UI with category tags
