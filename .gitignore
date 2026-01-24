@@ -40,7 +40,19 @@ next-env.d.ts
 
 # python virtual environment
 .venv
+venv/
+env/
+ENV/
 
 # python cache
 __pycache__/
 *.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# AI recommendation service data
+AI/data/*.faiss
+AI/data/*.json
+AI/models/*.pt
