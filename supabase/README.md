@@ -41,7 +41,7 @@ If this command outputs version info, Docker is set up correctly.
 
 4. **Start local development**
    ```bash
-   supabase start
+   npx supabase start
    ```
    This will start all Supabase services locally (database, API, Studio, etc.)
 
