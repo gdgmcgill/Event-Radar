@@ -24,7 +24,7 @@
     "next-swagger-doc": "^0.4.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "redoc": "^2.5.2",
+    "redoc": "^2.5.1",
     "swagger-ui-react": "^5.30.2",
     "swr": "^2.3.7",
     "tailwind-merge": "^2.2.1",
