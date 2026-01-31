@@ -1,0 +1,124 @@
+[
+  {
+    "event_id": "evt-001",
+    "title": "Introduction to Machine Learning Workshop",
+    "description": "Join us for a hands-on workshop covering the fundamentals of machine learning. Learn about supervised learning, neural networks, and practical applications. Perfect for beginners with basic Python knowledge.",
+    "tags": ["academic", "technology", "workshop"],
+    "hosting_club": "AI Club",
+    "category": "workshop"
+  },
+  {
+    "event_id": "evt-002",
+    "title": "Spring Career Fair 2024",
+    "description": "Connect with over 100 employers from various industries including tech, finance, healthcare, and consulting. Bring your resume and dress professionally. Open to all students.",
+    "tags": ["career", "networking"],
+    "hosting_club": "Career Services",
+    "category": "career"
+  },
+  {
+    "event_id": "evt-003",
+    "title": "Cultural Night: Celebrate Diversity",
+    "description": "Experience the rich cultural heritage of our diverse student body through performances, food, and art. Featuring traditional dances, music, and cuisine from around the world.",
+    "tags": ["cultural", "social"],
+    "hosting_club": "International Student Association",
+    "category": "cultural"
+  },
+  {
+    "event_id": "evt-004",
+    "title": "Intramural Basketball Tournament",
+    "description": "Sign up your team for our annual basketball tournament. All skill levels welcome. Great prizes for the winning team. Registration closes one week before the event.",
+    "tags": ["sports", "social"],
+    "hosting_club": "Recreation Center",
+    "category": "sports"
+  },
+  {
+    "event_id": "evt-005",
+    "title": "Startup Pitch Competition",
+    "description": "Watch student entrepreneurs pitch their startup ideas to a panel of investors and industry experts. Cash prizes available. Great networking opportunity for aspiring founders.",
+    "tags": ["career", "academic"],
+    "hosting_club": "Entrepreneurship Club",
+    "category": "competition"
+  },
+  {
+    "event_id": "evt-006",
+    "title": "Photography Walk: Campus at Sunset",
+    "description": "Explore the beautiful campus while learning photography techniques. Bring your camera or smartphone. Led by professional photographer. All skill levels welcome.",
+    "tags": ["social", "wellness"],
+    "hosting_club": "Photography Club",
+    "category": "social"
+  },
+  {
+    "event_id": "evt-007",
+    "title": "Mental Health Awareness Week Kickoff",
+    "description": "Join us to start Mental Health Awareness Week. Learn about campus mental health resources, coping strategies, and how to support friends. Free stress relief activities included.",
+    "tags": ["wellness", "social"],
+    "hosting_club": "Counseling Services",
+    "category": "wellness"
+  },
+  {
+    "event_id": "evt-008",
+    "title": "Hackathon: Build for Good",
+    "description": "24-hour coding competition focused on creating solutions for social good. Form teams, build projects, and win prizes. Meals and snacks provided. All skill levels welcome.",
+    "tags": ["academic", "technology"],
+    "hosting_club": "Computer Science Society",
+    "category": "competition"
+  },
+  {
+    "event_id": "evt-009",
+    "title": "Resume Workshop",
+    "description": "Learn how to craft a winning resume that gets noticed by recruiters. One-on-one feedback sessions available. Bring a draft of your resume for personalized tips.",
+    "tags": ["career"],
+    "hosting_club": "Career Services",
+    "category": "workshop"
+  },
+  {
+    "event_id": "evt-010",
+    "title": "Open Mic Night",
+    "description": "Show off your talents at our monthly open mic night. Singers, comedians, poets, and musicians all welcome. Sign up at the door or email in advance to reserve a slot.",
+    "tags": ["social", "cultural"],
+    "hosting_club": "Student Activities Board",
+    "category": "entertainment"
+  },
+  {
+    "event_id": "evt-011",
+    "title": "Data Science Study Group",
+    "description": "Weekly study group for students interested in data science. We cover statistics, Python, SQL, and machine learning concepts. Great for exam prep and project help.",
+    "tags": ["academic", "technology"],
+    "hosting_club": "Data Science Club",
+    "category": "academic"
+  },
+  {
+    "event_id": "evt-012",
+    "title": "Yoga in the Park",
+    "description": "Start your weekend right with outdoor yoga. All levels welcome, mats provided. Focus on stress relief and mindfulness. Ends with a guided meditation session.",
+    "tags": ["wellness", "sports"],
+    "hosting_club": "Wellness Club",
+    "category": "wellness"
+  },
+  {
+    "event_id": "evt-013",
+    "title": "Finance Club: Stock Market Basics",
+    "description": "New to investing? Learn the fundamentals of the stock market, how to read financial statements, and strategies for building a portfolio. Free pizza provided.",
+    "tags": ["academic", "career"],
+    "hosting_club": "Finance Club",
+    "category": "educational"
+  },
+  {
+    "event_id": "evt-014",
+    "title": "Volunteer Day: Beach Cleanup",
+    "description": "Help keep our local beach clean! Transportation provided. Gloves and bags supplied. Great opportunity for community service hours and meeting new friends.",
+    "tags": ["social", "wellness"],
+    "hosting_club": "Environmental Club",
+    "category": "volunteer"
+  },
+  {
+    "event_id": "evt-015",
+    "title": "Gaming Tournament: Super Smash Bros",
+    "description": "Compete in our Super Smash Bros Ultimate tournament. Single elimination bracket. Entry fee covers snacks and prizes. Bring your own controller for best experience.",
+    "tags": ["social", "sports"],
+    "hosting_club": "Gaming Club",
+    "category": "competition"
+  }
+]
+
+

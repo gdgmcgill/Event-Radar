@@ -13,16 +13,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
-import { type Event } from "@/types";
+import { type Event, type InteractionSource } from "@/types";
 import { Calendar, Clock, MapPin, Heart } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTracking } from "@/hooks/useTracking";
 
 interface EventCardProps {
   event: Event;
   onClick?: () => void;
   showSaveButton?: boolean;
   isSaved?: boolean;
+  /** Source context for tracking (e.g., 'home', 'search', 'recommendation') */
+  trackingSource?: InteractionSource;
 }
 
 export function EventCard({
@@ -30,8 +33,10 @@ export function EventCard({
   onClick,
   showSaveButton = false,
   isSaved: initialIsSaved = false,
+  trackingSource,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
+  const { trackClick, trackSave, trackUnsave } = useTracking({ source: trackingSource });
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -45,12 +50,22 @@ export function EventCard({
 
       const data = await response.json();
       setIsSaved(data.saved);
+
+      // Track save/unsave interaction
+      if (data.saved) {
+        trackSave(event.id);
+      } else {
+        trackUnsave(event.id);
+      }
     } catch (error) {
       console.error("Error saving event:", error);
     }
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
+    // Track click interaction
+    trackClick(event.id);
+
     if (onClick) {
       e.preventDefault();
       e.stopPropagation();
@@ -82,19 +97,19 @@ export function EventCard({
           )}
           
           {/* Gradient Overlay for Text Readability if needed, mostly stylistic here */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 dark:from-white/6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
           {/* Floating Save Button */}
-          {showSaveButton && (
+            {showSaveButton && (
             <Button
               variant="secondary"
               size="icon"
               onClick={handleSave}
               className={cn(
-                "absolute top-3 right-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-white/20 transition-all duration-300 hover:scale-110",
+                "absolute top-3 right-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
                 isSaved 
                   ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                  : "bg-white/90 text-muted-foreground hover:text-primary hover:bg-white"
+                  : "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
               )}
             >
               <Heart className={cn("h-4 w-4", isSaved && "fill-current")} />

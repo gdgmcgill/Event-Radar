@@ -8,6 +8,165 @@ import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import { EventTag } from "@/types";
 
+const SAMPLE_EVENTS = [
+  {
+    id: "evt-acad-1",
+    title: "AI Research Colloquium",
+    description: "Talks and posters on the latest ML research from campus labs.",
+    event_date: "2025-12-05",
+    event_time: "17:00",
+    location: "Engineering Hall 201",
+    club_id: "cs-society",
+    tags: [EventTag.ACADEMIC],
+    image_url: null,
+    created_at: "2025-11-30T00:00:00.000Z",
+    updated_at: "2025-11-30T00:00:00.000Z",
+    status: "approved",
+    approved_by: null,
+    approved_at: null,
+    club: {
+      id: "cs-society",
+      name: "CS Society",
+      instagram_handle: null,
+      logo_url: null,
+      description: null,
+      created_at: "2025-01-01T00:00:00.000Z",
+      updated_at: "2025-11-30T00:00:00.000Z",
+    },
+    saved_by_users: [],
+  },
+  {
+    id: "evt-social-1",
+    title: "Campus Mixer Night",
+    description: "Meet students across faculties with music and snacks.",
+    event_date: "2025-12-06",
+    event_time: "19:30",
+    location: "Student Center Atrium",
+    club_id: "student-union",
+    tags: [EventTag.SOCIAL],
+    image_url: null,
+    created_at: "2025-11-30T00:00:00.000Z",
+    updated_at: "2025-11-30T00:00:00.000Z",
+    status: "approved",
+    approved_by: null,
+    approved_at: null,
+    club: {
+      id: "student-union",
+      name: "Student Union",
+      instagram_handle: null,
+      logo_url: null,
+      description: null,
+      created_at: "2025-01-01T00:00:00.000Z",
+      updated_at: "2025-11-30T00:00:00.000Z",
+    },
+    saved_by_users: [],
+  },
+  {
+    id: "evt-sport-1",
+    title: "Intramural Soccer Finals",
+    description: "Championship match under the lights.",
+    event_date: "2025-12-08",
+    event_time: "20:00",
+    location: "North Field",
+    club_id: "athletics",
+    tags: [EventTag.SPORTS],
+    image_url: null,
+    created_at: "2025-11-30T00:00:00.000Z",
+    updated_at: "2025-11-30T00:00:00.000Z",
+    status: "approved",
+    approved_by: null,
+    approved_at: null,
+    club: {
+      id: "athletics",
+      name: "Athletics",
+      instagram_handle: null,
+      logo_url: null,
+      description: null,
+      created_at: "2025-01-01T00:00:00.000Z",
+      updated_at: "2025-11-30T00:00:00.000Z",
+    },
+    saved_by_users: [],
+  },
+  {
+    id: "evt-career-1",
+    title: "Tech Careers Fair",
+    description: "Meet recruiters from startups and FAANG.",
+    event_date: "2025-12-10",
+    event_time: "13:00",
+    location: "Main Hall",
+    club_id: "career-center",
+    tags: [EventTag.CAREER],
+    image_url: null,
+    created_at: "2025-11-30T00:00:00.000Z",
+    updated_at: "2025-11-30T00:00:00.000Z",
+    status: "approved",
+    approved_by: null,
+    approved_at: null,
+    club: {
+      id: "career-center",
+      name: "Career Center",
+      instagram_handle: null,
+      logo_url: null,
+      description: null,
+      created_at: "2025-01-01T00:00:00.000Z",
+      updated_at: "2025-11-30T00:00:00.000Z",
+    },
+    saved_by_users: [],
+  },
+  {
+    id: "evt-cultural-1",
+    title: "Global Cultures Showcase",
+    description: "Food, dance, and music from student cultural clubs.",
+    event_date: "2025-12-12",
+    event_time: "18:00",
+    location: "Quad",
+    club_id: "international-club",
+    tags: [EventTag.CULTURAL],
+    image_url: null,
+    created_at: "2025-11-30T00:00:00.000Z",
+    updated_at: "2025-11-30T00:00:00.000Z",
+    status: "approved",
+    approved_by: null,
+    approved_at: null,
+    club: {
+      id: "international-club",
+      name: "International Club",
+      instagram_handle: null,
+      logo_url: null,
+      description: null,
+      created_at: "2025-01-01T00:00:00.000Z",
+      updated_at: "2025-11-30T00:00:00.000Z",
+    },
+    saved_by_users: [],
+  },
+  {
+    id: "evt-wellness-1",
+    title: "Mindfulness & Yoga",
+    description: "Guided session to de-stress during finals.",
+    event_date: "2025-12-13",
+    event_time: "09:00",
+    location: "Wellness Center Studio",
+    club_id: "wellness-club",
+    tags: [EventTag.WELLNESS, EventTag.ACADEMIC],
+    image_url: null,
+    created_at: "2025-11-30T00:00:00.000Z",
+    updated_at: "2025-11-30T00:00:00.000Z",
+    status: "approved",
+    approved_by: null,
+    approved_at: null,
+    club: {
+      id: "wellness-club",
+      name: "Wellness Club",
+      instagram_handle: null,
+      logo_url: null,
+      description: null,
+      created_at: "2025-01-01T00:00:00.000Z",
+      updated_at: "2025-11-30T00:00:00.000Z",
+    },
+    saved_by_users: [],
+  },
+];
+
 // Mapping from database tags to EventTag enum
 const tagMapping: Record<string, EventTag> = {
   'coding': EventTag.ACADEMIC,
@@ -22,8 +181,136 @@ const tagMapping: Record<string, EventTag> = {
   'technology': EventTag.ACADEMIC,
 };
 
+/**
+ * @swagger
+ * /api/events:
+ *   get:
+ *    summary: /api/events
+ *    description: Fetch events with optional filters
+ *    tags:
+ *      - Events
+ *    parameters:
+ *      - name: tags
+ *        description: Comma-separated list of tags
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: search
+ *        description: Search query
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: dateFrom
+ *        description: Start date for filtering
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: dateTo
+ *        description: End date for filtering
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: page
+ *        description: Page number for pagination
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: integer
+ *      - name: limit
+ *        description: Number of events per page
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: integer
+ *    responses:
+ *      200:
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              properties:
+ *                events:
+ *                  type: array
+ *                  items:
+ *                    type: object
+ *                    properties:
+ *                      id:
+ *                        type: string
+ *                      title:
+ *                        type: string
+ *                      description:
+ *                        type: string
+ *                      event_date:
+ *                        type: string
+ *                      event_time:
+ *                        type: string
+ *                      location:
+ *                        type: string
+ *                      club_id:
+ *                        type: string
+ *                      tags:
+ *                        type: array
+ *                        items:
+ *                          type: string
+ *                      image_url:
+ *                        type: string
+ *                      created_at:
+ *                        type: string
+ *                      updated_at:
+ *                        type: string
+ *                      status:
+ *                        type: string
+ *                        example: approved
+ *                      approved_by:
+ *                        type: string
+ *                      approved_at:
+ *                        type: string
+ *                      club:
+ *                        type: object
+ *                        properties:
+ *                          id:
+ *                            type: string
+ *                          name:
+ *                            type: string
+ *                          instagram_handle:
+ *                            type: string
+ *                          logo_url:
+ *                            type: string
+ *                          description:
+ *                            type: string
+ *                          created_at:
+ *                            type: string
+ *                          updated_at:
+ *                            type: string
+ *                      saved_by_users:
+ *                        type: array
+ *                total:
+ *                  type: integer
+ *                page:
+ *                  type: integer
+ *                limit:
+ *                  type: integer
+ *                totalPages:
+ *                  type: integer
+ *        description: Events fetched successfully
+ *      500:
+ *        description: Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
+    // Temporary: return sample events to drive UI with category tags
+    return NextResponse.json({
+      events: SAMPLE_EVENTS,
+      total: SAMPLE_EVENTS.length,
+      page: 1,
+      limit: SAMPLE_EVENTS.length,
+      totalPages: 1,
+    });
+
     const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;
 

@@ -52,11 +52,22 @@ export const API_ENDPOINTS = {
   SAVE_EVENT: (id: string) => `/api/events/${id}/save`,
   RECOMMENDATIONS: "/api/recommendations",
   ADMIN_EVENTS: "/api/admin/events",
+  // Tracking & Popularity endpoints
+  INTERACTIONS: "/api/interactions",
+  POPULAR_EVENTS: "/api/events/popular",
+  USER_ENGAGEMENT: "/api/user/engagement",
+  ADMIN_CALCULATE_POPULARITY: "/api/admin/calculate-popularity",
 } as const;
 
+/**
+ * McGill brand colors
+ * Used for theming and semantic color definitions
+ */
 export const MCGILL_COLORS = {
-  RED: "#ED1B2F",
-  GREY: "#7f7f7f",
+  RED: "#ED1B2F",      // Primary McGill Red
+  GREY: "#7f7f7f",     // McGill Grey (used in dark theme)
+  DARK_BG: "#1f1f1f",  // Dark theme background
+  DARK_CARD: "#2d2d2d", // Dark theme card background
 } as const;
 
 

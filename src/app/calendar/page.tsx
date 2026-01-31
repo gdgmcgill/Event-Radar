@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTracking } from "@/hooks/useTracking";
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -90,7 +91,10 @@ export default function CalendarPage() {
     calendarDays.push(new Date(year, month, day));
   }
 
+  const { trackClick } = useTracking({ source: "calendar" });
+
   const handleEventClick = (event: Event) => {
+    trackClick(event.id);
     setSelectedEvent(event);
     setIsModalOpen(true);
   };
@@ -240,6 +244,7 @@ export default function CalendarPage() {
           if (!open) setSelectedEvent(null);
         }}
         event={selectedEvent}
+        trackingSource="calendar"
       />
     </div>
   );

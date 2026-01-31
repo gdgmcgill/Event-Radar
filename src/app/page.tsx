@@ -7,7 +7,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Event } from "@/types";
 
-import { EventSearch } from "@/components/events/EventSearch";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
@@ -22,8 +21,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+type ScoredEvent = Event & { score?: number };
+
 export default function HomePage() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<ScoredEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -33,16 +34,32 @@ export default function HomePage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/api/events");
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch events");
+
+      // Try recommendations first (for authenticated users)
+      const recResponse = await fetch("/api/recommendations");
+
+      if (recResponse.ok) {
+        const data = await recResponse.json();
+        const recs = Array.isArray(data.recommendations)
+          ? data.recommendations
+          : [];
+        setEvents(recs);
+        return;
       }
 
-      const data = await response.json();
-      // Handle both array response or { events: [] } format
-      const eventList = Array.isArray(data) ? data : data.events || [];
-      setEvents(eventList);
+      // Fall back to regular events for unauthenticated users
+      if (recResponse.status === 401) {
+        const eventsResponse = await fetch("/api/events");
+        if (!eventsResponse.ok) {
+          throw new Error("Failed to fetch events");
+        }
+        const data = await eventsResponse.json();
+        const eventsList = Array.isArray(data.events) ? data.events : [];
+        setEvents(eventsList);
+        return;
+      }
+
+      throw new Error("Failed to fetch recommendations");
     } catch (err) {
       console.error("Error fetching events:", err);
       setError("Failed to load events. Please try again later.");
@@ -163,6 +180,7 @@ export default function HomePage() {
                 events={events}
                 loading={loading}
                 onEventClick={handleEventClick}
+                trackingSource="home"
               />
             )}
           </div>
@@ -177,6 +195,7 @@ export default function HomePage() {
           if (!open) setSelectedEvent(null);
         }}
         event={selectedEvent}
+        trackingSource="home"
       />
     </div>
   );

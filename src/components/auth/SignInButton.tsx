@@ -1,48 +1,46 @@
 "use client";
 
 /**
- * Sign in button component for McGill OAuth
- * TODO: Implement Supabase OAuth flow with McGill email validation
+ * Sign in button component for McGill OAuth via Microsoft Azure
  */
 
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { LogIn } from "lucide-react";
+import { useState } from "react";
 
 export function SignInButton() {
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleSignIn = async () => {
-    const supabase = createClient();
+    setIsLoading(true);
 
-    // TODO: Implement OAuth sign in
-    // 1. Configure OAuth provider (Google, etc.)
-    // 2. Validate email domain (@mail.mcgill.ca or @mcgill.ca)
-    // 3. Redirect to OAuth provider
-    // 4. Handle callback in /auth/callback route
+    try {
+      const supabase = createClient();
 
-    // Example:
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'azure',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        scopes: 'email'
-      },
-    });
-    if (error) {
-      console.error("Error during sign in:", error);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "azure",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: "openid profile email",
+        },
+      });
+
+      if (error) {
+        console.error("Sign in error:", error.message);
+        setIsLoading(false);
+      }
+      // If successful, user will be redirected - no need to reset loading
+    } catch (err) {
+      console.error("Unexpected sign in error:", err);
+      setIsLoading(false);
     }
-    
-    
   };
 
   return (
-    <Button onClick={handleSignIn} variant="default">
+    <Button onClick={handleSignIn} variant="default" disabled={isLoading}>
       <LogIn className="mr-2 h-4 w-4" />
-      Sign In with McGill Email
+      {isLoading ? "Redirecting..." : "Sign In with McGill Email"}
     </Button>
   );
 }
-
-
-
-
-

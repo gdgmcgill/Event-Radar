@@ -6,16 +6,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
-import type { Event } from "@/types";
+import type { Event, InteractionSource } from "@/types";
 import { MapPin, Calendar, Clock, ExternalLink } from "lucide-react";
+import { useTrackEventModal, useTracking } from "@/hooks/useTracking";
 
 type EventDetailsModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: Event | null;
+  /** Source context for tracking */
+  trackingSource?: InteractionSource;
 };
 
-export function EventDetailsModal({ open, onOpenChange, event }: EventDetailsModalProps) {
+export function EventDetailsModal({ open, onOpenChange, event, trackingSource }: EventDetailsModalProps) {
+  // Track modal view when opened
+  useTrackEventModal(event?.id || null, open, trackingSource);
+  const { trackCalendarAdd } = useTracking({ source: trackingSource });
+
   if (!event) return null;
 
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -57,6 +64,9 @@ export function EventDetailsModal({ open, onOpenChange, event }: EventDetailsMod
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    // Track calendar add interaction
+    trackCalendarAdd(event.id);
   };
 
   return (
