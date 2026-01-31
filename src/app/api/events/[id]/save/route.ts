@@ -154,12 +154,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const { data: insertedData, error: insertError } = await supabase
+    const insertPayload: Database["public"]["Tables"]["saved_events"]["Insert"] = {
+      user_id: user.id,
+      event_id: eventId,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: insertedData, error: insertError } = await (supabase as any)
       .from("saved_events")
-      .insert({
-        user_id: user.id,
-        event_id: eventId,
-      })
+      .insert(insertPayload)
       .select("created_at")
       .single();
 
