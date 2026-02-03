@@ -1,158 +1,127 @@
-/**
- * POST /api/recommendations
- * Get personalized event recommendations for the current user
- * Calls the Two-Tower Recommendation Service
- */
+// GET /api/recommendations
+// Get personalized event recommendations for the current user
+// Implement recommendation algorithm based on user interests and past events
 
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { EventTag, type Event } from "@/types";
+import { kMeans, type UserPoint, type Vector } from "@/lib/kmeans";
+import type { Database } from "@/lib/supabase/types";
 
-// Recommendation service URL (configurable via environment variable)
-const RECOMMENDATION_API_URL =
-  process.env.RECOMMENDATION_API_URL || "http://localhost:8000";
+type DbUser = Database["public"]["Tables"]["users"]["Row"];
+type DbSavedEvent = Database["public"]["Tables"]["saved_events"]["Row"];
+type DbEventRow = Database["public"]["Tables"]["events"]["Row"] & {
+  start_date?: string | null;
+  end_date?: string | null;
+  organizer?: string | null;
+  tags?: string[] | null;
+};
 
-interface UserPayload {
-  major: string;
-  year_of_study: string;
-  clubs_or_interests: string[];
-  attended_events?: string[];
-}
+// Order the tags that are used to build vectors
+const TAG_ORDER: EventTag[] = [
+  EventTag.ACADEMIC,
+  EventTag.SOCIAL,
+  EventTag.SPORTS,
+  EventTag.CAREER,
+  EventTag.CULTURAL,
+  EventTag.WELLNESS,
+];
 
-interface RecommendRequest {
-  user: UserPayload;
-  top_k?: number;
-  exclude_event_ids?: string[];
-}
+// Quick lookup for "tag -> index in vector"
+const TAG_INDEX = new Map<EventTag, number>(
+  TAG_ORDER.map((tag, index) => [tag, index])
+);
 
-interface RecommendationItem {
-  event_id: string;
-  score: number;
-  title: string;
-  description: string;
-  tags: string[];
-  hosting_club: string | null;
-  category: string | null;
-}
+// Map any messy DB tags to our official EventTag enumeration
+// This mirrors the mapping in /api/events for consistency
+const TAG_MAPPING: Record<string, EventTag> = {
+  coding: EventTag.ACADEMIC,
+  networking: EventTag.SOCIAL,
+// Do we want to keep networking as social or do we want it to be academic?
+  hackathon: EventTag.ACADEMIC,
+  career: EventTag.CAREER,
+  sports: EventTag.SPORTS,
+  wellness: EventTag.WELLNESS,
+  cultural: EventTag.CULTURAL,
+  social: EventTag.SOCIAL,
+  academic: EventTag.ACADEMIC,
+  technology: EventTag.ACADEMIC,
+};
 
-interface RecommendResponse {
-  recommendations: RecommendationItem[];
-  total_events: number;
-}
-
-/**
- * @swagger
- * /api/recommendations:
- *   get:
- *    summary: Get personalized event recommendations
- *    description: Returns events scored using Two-Tower neural network recommendation system
- *    tags:
- *      - Recommendations
- *    parameters:
- *      - name: top_k
- *        in: query
- *        description: Number of recommendations to return
- *        schema:
- *          type: integer
- *          default: 10
- *    responses:
- *      200:
- *        description: Recommendations fetched successfully
- *      401:
- *        description: Unauthorized
- *      500:
- *        description: Internal server error
- *   post:
- *    summary: Get recommendations with custom user payload
- *    description: Returns recommendations using provided user profile data
- *    tags:
- *      - Recommendations
- *    requestBody:
- *      required: true
- *      content:
- *        application/json:
- *          schema:
- *            type: object
- *            properties:
- *              user:
- *                type: object
- *                properties:
- *                  major:
- *                    type: string
- *                  year_of_study:
- *                    type: string
- *                  clubs_or_interests:
- *                    type: array
- *                    items:
- *                      type: string
- *              top_k:
- *                type: integer
- *              exclude_event_ids:
- *                type: array
- *                items:
- *                  type: string
- *    responses:
- *      200:
- *        description: Recommendations fetched successfully
- *      400:
- *        description: Missing user payload
- *      500:
- *        description: Internal server error
- */
-
-/**
- * POST handler - Get recommendations with user payload
- */
-export async function POST(request: NextRequest) {
-  try {
-    const body: RecommendRequest = await request.json();
-
-    // Validate request
-    if (!body.user) {
-      return NextResponse.json(
-        { error: "Missing user payload" },
-        { status: 400 }
-      );
+// Normalize raw tag strings into EventTag enums (unique only)
+function normalizeTags(tags: string[] | null | undefined): EventTag[] {
+  const normalized: EventTag[] = [];
+  for (const tag of tags ?? []) {
+    const mapped = TAG_MAPPING[tag.toLowerCase()];
+    if (mapped && !normalized.includes(mapped)) {
+      normalized.push(mapped);
     }
+  }
+  return normalized;
+}
 
-    // Call the recommendation service
-    const response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Recommendation service error:", errorText);
-      return NextResponse.json(
-        { error: "Recommendation service error", detail: errorText },
-        { status: response.status }
-      );
+// Convert a list of tags into a numeric vector
+function vectorFromTags(tags: EventTag[]): Vector {
+  const vector = new Array(TAG_ORDER.length).fill(0);
+  for (const tag of tags) {
+    const index = TAG_INDEX.get(tag);
+    if (index !== undefined) {
+      vector[index] += 1;
     }
+  }
+  return vector;
+}
 
-    const data: RecommendResponse = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Error fetching recommendations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch recommendations" },
-      { status: 500 }
-    );
+// Add tags into an existing vector (optionally with weight)
+function addTagsToVector(vector: Vector, tags: EventTag[], weight = 1) {
+  for (const tag of tags) {
+    const index = TAG_INDEX.get(tag);
+    if (index !== undefined) {
+      vector[index] += weight;
+    }
   }
 }
 
-/**
- * GET handler - Get recommendations for the authenticated user
- * Automatically fetches user profile and interaction data from Supabase
- */
-export async function GET(request: NextRequest) {
+// Get a usable Date for an event from start_date (schema source of truth).
+function getEventStartDate(event: DbEventRow): Date | null {
+  const startDate = event.start_date ?? undefined;
+  if (!startDate) {
+    return null;
+  }
+  return new Date(startDate);
+}
+
+// Shape DB event rows into the frontend Event type
+function mapEventToResponse(event: DbEventRow): Event {
+  const startDate = getEventStartDate(event) ?? new Date(0);
+  const tags = normalizeTags(event.tags ?? []);
+  const derivedTime = startDate.toTimeString().slice(0, 5);
+  return {
+    id: String(event.id),
+    title: String(event.title ?? "Untitled"),
+    description: String(event.description ?? ""),
+    event_date: startDate.toISOString().split("T")[0],
+    event_time: derivedTime,
+    location: String(event.location ?? ""),
+    club_id: String(event.club_id ?? event.organizer ?? "unknown"),
+    tags,
+    image_url: event.image_url ?? null,
+    created_at: String(event.created_at ?? new Date(0).toISOString()),
+    updated_at: String(event.updated_at ?? new Date(0).toISOString()),
+    status: "approved",
+    approved_by: null,
+    approved_at: null,
+    club: undefined,
+    saved_by_users: [],
+  };
+}
+
+export async function GET() {
   try {
+    // Create a server-side Supabase client (uses auth cookies)
     const supabase = await createClient();
 
-    // Get current user
+    // Find the current user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -161,113 +130,197 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch user profile with interest tags
-    interface UserProfileRow {
-      interest_tags: string[];
-      full_name: string | null;
-    }
-    const { data: profileData } = await supabase
+    // Fetch the current user's profile (interest tags are stored here)
+    const { data: userProfileData, error: userError } = await supabase
       .from("users")
-      .select("interest_tags, full_name")
-      .eq("id", user.id)
+      .select("id, interest_tags")
+      .filter("id", "eq", user.id)
       .single();
 
-    const userProfile = profileData as UserProfileRow | null;
-
-    // Fetch user's saved events to exclude
-    interface SavedEventRow {
-      event_id: string;
+    if (userError) {
+      console.error("Supabase error fetching user profile:", userError);
+      return NextResponse.json(
+        { error: "Failed to fetch user profile" },
+        { status: 500 }
+      );
     }
-    const { data: savedData } = await supabase
+
+    // Fetch all users so we can cluster everyone
+    const { data: usersDataResult, error: usersError } = await supabase
+      .from("users")
+      .select("id, interest_tags");
+
+    if (usersError) {
+      console.error("Supabase error fetching users:", usersError);
+      return NextResponse.json(
+        { error: "Failed to fetch users" },
+        { status: 500 }
+      );
+    }
+
+    // Fetch all saved events so we can learn from actual behavior
+    const { data: savedEventsResult, error: savedError } = await supabase
       .from("saved_events")
-      .select("event_id")
-      .eq("user_id", user.id);
+      .select("user_id, event_id");
 
-    const savedEvents = (savedData || []) as unknown as SavedEventRow[];
-    const excludeEventIds = savedEvents.map((se) => se.event_id);
-
-    // Fetch high-intent interactions to use as "attended_events" for the model
-    // High-intent = save, click, calendar_add (indicates strong interest)
-    interface InteractionRow {
-      event_id: string;
-    }
-    const { data: highIntentData } = await supabase
-      .from("user_interactions")
-      .select("event_id")
-      .eq("user_id", user.id)
-      .in("interaction_type", ["save", "click", "calendar_add"])
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    const highIntentInteractions = (highIntentData || []) as unknown as InteractionRow[];
-
-    // Get unique event IDs from high-intent interactions
-    const attendedEventIds = [...new Set(highIntentInteractions.map((i) => i.event_id))];
-
-    // Fetch user's engagement summary for additional personalization
-    interface EngagementRow {
-      favorite_tags: { tag: string; count: number }[];
-      favorite_clubs: { club_id: string; count: number }[];
-    }
-    const { data: engagementData } = await supabase
-      .from("user_engagement_summary")
-      .select("favorite_tags, favorite_clubs")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const engagementSummary = engagementData as EngagementRow | null;
-
-    // Combine interest tags from profile and favorite tags from engagement
-    const interestTags = userProfile?.interest_tags || [];
-    const favoriteTags = engagementSummary?.favorite_tags || [];
-
-    // Extract tag names from favorite_tags and combine with profile interests
-    const engagedTags = Array.isArray(favoriteTags)
-      ? favoriteTags.map((t) => t.tag)
-      : [];
-
-    // Merge and deduplicate interests
-    const combinedInterests = [...new Set([...interestTags, ...engagedTags])];
-
-    // Build user payload from profile and interaction data
-    const userPayload: UserPayload = {
-      major: "General Studies", // Default if not in profile
-      year_of_study: "Student",
-      clubs_or_interests: combinedInterests,
-      attended_events: attendedEventIds,
-    };
-
-    // Get top_k from query params
-    const searchParams = request.nextUrl.searchParams;
-    const topK = parseInt(searchParams.get("top_k") || "10", 10);
-
-    // Call the recommendation service
-    const response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user: userPayload,
-        top_k: topK,
-        exclude_event_ids: excludeEventIds,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Recommendation service error:", errorText);
-
-      // Fallback: return empty recommendations if service is unavailable
-      return NextResponse.json({
-        recommendations: [],
-        total_events: 0,
-        fallback: true,
-      });
+    if (savedError) {
+      console.error("Supabase error fetching saved events:", savedError);
+      return NextResponse.json(
+        { error: "Failed to fetch saved events" },
+        { status: 500 }
+      );
     }
 
-    const data: RecommendResponse = await response.json();
-    return NextResponse.json(data);
+    // Build a vector per user + track which events each user saved
+    const userVectors = new Map<string, Vector>();
+    const userSavedEventIds = new Map<string, Set<string>>();
+
+    const userProfile = userProfileData as unknown as DbUser | null;
+    const usersData = usersDataResult as unknown as DbUser[] | null;
+    const savedEventsData = savedEventsResult as unknown as DbSavedEvent[] | null;
+
+    for (const profile of usersData ?? []) {
+      userVectors.set(
+        profile.id,
+        vectorFromTags(normalizeTags(profile.interest_tags))
+      );
+      userSavedEventIds.set(profile.id, new Set());
+    }
+
+    // Collect all event IDs that appear in saved_events
+    const savedEventIds = new Set<string>();
+    for (const saved of savedEventsData ?? []) {
+      savedEventIds.add(saved.event_id);
+      if (!userSavedEventIds.has(saved.user_id)) {
+        userSavedEventIds.set(saved.user_id, new Set());
+      }
+      userSavedEventIds.get(saved.user_id)?.add(saved.event_id);
+    }
+
+    // Pull events once and reuse for saved-event enrichment + recommendations.
+    const { data: allEventsResult, error: allEventsError } = await supabase
+      .from("events")
+      .select("*");
+
+    if (allEventsError) {
+      console.error("Supabase error fetching events:", allEventsError);
+      return NextResponse.json(
+        { error: "Failed to fetch events" },
+        { status: 500 }
+      );
+    }
+
+    const allEvents = allEventsResult as unknown as DbEventRow[] | null;
+    let eventsById = new Map<string, DbEventRow>();
+    if (savedEventIds.size > 0) {
+      eventsById = new Map((allEvents ?? []).map((event) => [event.id, event]));
+    }
+
+    // Make each user's vector better with tags from other saved events
+    for (const saved of savedEventsData ?? []) {
+      const event = eventsById.get(saved.event_id);
+      const tags = normalizeTags(event?.tags as string[] | null | undefined);
+      if (!userVectors.has(saved.user_id)) {
+        userVectors.set(saved.user_id, new Array(TAG_ORDER.length).fill(0));
+      }
+      addTagsToVector(userVectors.get(saved.user_id)!, tags, 1);
+    }
+
+    // Convert to input format expected by kMean
+    const points: UserPoint[] = Array.from(userVectors.entries()).map(
+      ([userId, vector]) => ({ userId, vector })
+    );
+
+    const currentUserVector = userVectors.get(user.id);
+    if (!currentUserVector) {
+      // If we couldn't build a vector, return an empty recommendation set
+      return NextResponse.json({ recommendations: [] });
+    }
+
+    // Cluster users (k is small to avoid overfitting)
+    const k = Math.min(3, points.length);
+    let assignments = k > 0 ? kMeans(points, k) : [];
+    const currentCluster = assignments.find(
+      (assignment) => assignment.userId === user.id
+    )?.cluster;
+
+    // Build recommendation candidates from users in the same cluster
+    const currentUserSaved = userSavedEventIds.get(user.id) ?? new Set();
+    const candidateCounts = new Map<string, number>();
+
+    if (currentCluster !== undefined) {
+      for (const assignment of assignments) {
+        if (assignment.cluster !== currentCluster) continue;
+        const savedIds = userSavedEventIds.get(assignment.userId);
+        if (!savedIds) continue;
+        for (const eventId of savedIds) {
+          if (currentUserSaved.has(eventId)) continue;
+          candidateCounts.set(eventId, (candidateCounts.get(eventId) ?? 0) + 1);
+        }
+      }
+    }
+
+    // Fetch event records for candidate IDs and rank them
+    const candidateIds = Array.from(candidateCounts.keys());
+    const now = new Date();
+    let recommendations: Event[] = [];
+
+    if (candidateIds.length > 0) {
+      const candidateIdSet = new Set(candidateIds);
+      const candidateEvents = (allEvents ?? []).filter((event) =>
+        candidateIdSet.has(event.id)
+      );
+      recommendations = (candidateEvents ?? [])
+        .filter((event) => {
+          const startDate = getEventStartDate(event);
+          return !startDate || startDate >= now;
+        })
+        .sort((a, b) => {
+          // Primary sort: how many similar users saved it
+          const countDiff =
+            (candidateCounts.get(b.id) ?? 0) -
+            (candidateCounts.get(a.id) ?? 0);
+          if (countDiff !== 0) return countDiff;
+          // Secondary sort: soonest event date
+          const dateA = getEventStartDate(a)?.getTime() ?? Number.MAX_VALUE;
+          const dateB = getEventStartDate(b)?.getTime() ?? Number.MAX_VALUE;
+          return dateA - dateB;
+        })
+        .map(mapEventToResponse)
+        .slice(0, 20);
+    }
+
+    // Fallback: if clustering isn't helpful, recommend by interest tags
+    if (recommendations.length === 0) {
+      const interestTags = normalizeTags(userProfile?.interest_tags);
+      let fallbackQuery = supabase.from("events").select("*");
+
+      if (interestTags.length > 0) {
+        fallbackQuery = fallbackQuery.overlaps("tags", interestTags);
+      }
+
+      const { data: fallbackEventsResult, error: fallbackError } =
+        await fallbackQuery.order("event_date", { ascending: true }).limit(20);
+
+      if (fallbackError) {
+        console.error("Supabase error fetching fallback events:", fallbackError);
+        return NextResponse.json(
+          { error: "Failed to fetch recommendations" },
+          { status: 500 }
+        );
+      }
+
+      const fallbackEvents =
+        fallbackEventsResult as unknown as DbEventRow[] | null;
+      recommendations = (fallbackEvents ?? [])
+        .filter((event) => {
+          const startDate = getEventStartDate(event);
+          return !startDate || startDate >= now;
+        })
+        .map(mapEventToResponse);
+    }
+
+    return NextResponse.json({ recommendations });
   } catch (error) {
     console.error("Error fetching recommendations:", error);
     return NextResponse.json(
