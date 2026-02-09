@@ -98,8 +98,6 @@ export function SideNavBar() {
               );
             })}
           </nav>
-
-          {/* (Profile moved to top) */}
         </div>
       </div>
 
