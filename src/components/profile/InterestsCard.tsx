@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
+import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
-import { cn } from "@/lib/utils";
 import { Pencil, Save, X, Sparkles } from "lucide-react";
+import InterestTagSelector from "@/components/profile/InterestTagSelector";
 
 type InterestsCardProps = {
   userId?: string;
@@ -32,13 +32,6 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const toggleTag = (tag: EventTag) => {
-    setEditingTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-    setError(null);
-  };
 
   const handleEdit = () => {
     setEditingTags(selectedTags);
@@ -108,31 +101,13 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
         {isEditing ? (
           <div className="space-y-5">
             {/* Editing Mode - Tag Grid */}
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Select the topics you&apos;re interested in:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {EVENT_TAGS.map((tag) => {
-                  const category = EVENT_CATEGORIES[tag];
-                  const isSelected = editingTags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={cn(
-                        "px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border",
-                        isSelected
-                          ? "bg-primary text-primary-foreground border-primary shadow-sm scale-105"
-                          : "bg-secondary/50 text-secondary-foreground border-border hover:bg-secondary hover:border-primary/30"
-                      )}
-                    >
-                      {category.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <InterestTagSelector
+              selected={editingTags}
+              onChange={(tags) => {
+                setEditingTags(tags);
+                setError(null);
+              }}
+            />
 
             {/* Error Display */}
             {error && (
@@ -161,11 +136,6 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
                 <X className="h-4 w-4" />
                 Cancel
               </Button>
-              {editingTags.length > 0 && (
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {editingTags.length} selected
-                </span>
-              )}
             </div>
           </div>
         ) : (
