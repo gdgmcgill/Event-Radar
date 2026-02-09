@@ -7,6 +7,7 @@ import {
   Bell,
   Plus,
   Info,
+  User,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -25,6 +26,7 @@ export const guestNavItems: NavItem[] = [
 ];
 
 export const authenticatedNavItems: NavItem[] = [
+  { name: "Profile", path: "/profile", icon: User },
   { name: "Home", path: "/", icon: Home },
   { name: "Search", path: "/search", icon: Search },
   { name: "Calendar", path: "/calendar", icon: Calendar },
