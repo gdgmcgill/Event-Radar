@@ -62,7 +62,7 @@ export function SideNavBar() {
 
           {/* Navigation Items */}
           <nav className="flex-1 px-3 space-y-1 py-4">
-            {navItems.map((item) => {
+            {navItems.filter((item) => item.path !== "/profile").map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.path;
 
@@ -98,8 +98,6 @@ export function SideNavBar() {
               );
             })}
           </nav>
-
-          {/* (Profile moved to top) */}
         </div>
       </div>
 

@@ -9,6 +9,7 @@ import {
   Info,
   User,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export interface NavItem {
   name: string;
@@ -25,6 +26,7 @@ export const guestNavItems: NavItem[] = [
 ];
 
 export const authenticatedNavItems: NavItem[] = [
+  { name: "Profile", path: "/profile", icon: User },
   { name: "Home", path: "/", icon: Home },
   { name: "Search", path: "/search", icon: Search },
   { name: "Calendar", path: "/calendar", icon: Calendar },
@@ -32,10 +34,4 @@ export const authenticatedNavItems: NavItem[] = [
   { name: "My Events", path: "/my-events", icon: Bookmark },
   { name: "Create Event", path: "/create-event", icon: Plus },
   { name: "Notifications", path: "/notifications", icon: Bell },
-  { name: "Profile", path: "/user-profile", icon: User },
 ];
-
-export default {
-  guestNavItems,
-  authenticatedNavItems,
-};

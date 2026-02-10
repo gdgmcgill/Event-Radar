@@ -7,6 +7,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import { EventTag } from "@/types";
+import type { Database } from "@/lib/supabase/types";
+
+type EventRow = Database["public"]["Tables"]["events"]["Row"];
 
 const SAMPLE_EVENTS = [
   {
@@ -302,15 +305,6 @@ const tagMapping: Record<string, EventTag> = {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Temporary: return sample events to drive UI with category tags
-    return NextResponse.json({
-      events: SAMPLE_EVENTS,
-      total: SAMPLE_EVENTS.length,
-      page: 1,
-      limit: SAMPLE_EVENTS.length,
-      totalPages: 1,
-    });
-
     const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;
 
@@ -360,15 +354,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform events to match frontend expectations
-    const events = (eventsData || []).map(event => {
+    const events = ((eventsData || []) as EventRow[]).map(event => {
       const startDate = new Date(event.start_date);
       const endDate = event.end_date ? new Date(event.end_date) : null;
-      
+
       // Map database tags to EventTag enum values
       const mappedTags = (event.tags || []).map((tag: string) => {
         const lowerTag = tag.toLowerCase();
         return tagMapping[lowerTag] || EventTag.SOCIAL; // Default to SOCIAL if no mapping
-      }).filter((tag, index, self) => self.indexOf(tag) === index); // Remove duplicates
+      }).filter((tag: EventTag, index: number, self: EventTag[]) => self.indexOf(tag) === index); // Remove duplicates
       
       return {
         id: event.id,
@@ -377,17 +371,17 @@ export async function GET(request: NextRequest) {
         event_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD
         event_time: startDate.toTimeString().slice(0, 5), // HH:MM
         location: event.location,
-        club_id: event.organizer || 'unknown',
+        club_id: event.club_id || 'unknown',
         tags: mappedTags,
         image_url: event.image_url,
         created_at: event.created_at,
         updated_at: event.updated_at,
-        status: 'approved', // Default since column doesn't exist
-        approved_by: null,
-        approved_at: null,
-        club: event.organizer ? {
-          id: event.organizer,
-          name: event.organizer,
+        status: event.status,
+        approved_by: event.approved_by,
+        approved_at: event.approved_at,
+        club: event.club_id ? {
+          id: event.club_id,
+          name: event.club_id,
           instagram_handle: null,
           logo_url: null,
           description: null,

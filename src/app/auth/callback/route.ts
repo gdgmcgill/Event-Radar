@@ -6,6 +6,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import type { Database } from "@/lib/supabase/types";
 
 // Valid McGill email domains
 const VALID_DOMAINS = ["@mcgill.ca", "@mail.mcgill.ca"] as const;
@@ -77,14 +78,15 @@ export async function GET(request: NextRequest) {
   const avatarUrl = (metadata.avatar_url as string) ?? null;
 
   // Upsert user profile into public.users table
-  const { error: upsertError } = await supabase.from("users").upsert(
-    {
-      id: user.id,
-      email,
-      name,
-      avatar_url: avatarUrl,
-      updated_at: new Date().toISOString(),
-    },
+  const upsertPayload: Database["public"]["Tables"]["users"]["Insert"] = {
+    id: user.id,
+    email,
+    full_name: name,
+    updated_at: new Date().toISOString(),
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: upsertError } = await (supabase as any).from("users").upsert(
+    upsertPayload,
     {
       onConflict: "id",
       ignoreDuplicates: false,

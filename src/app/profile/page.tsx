@@ -69,6 +69,8 @@ export default async function ProfilePage() {
           name={displayData.name}
           email={displayData.email}
           avatarUrl={displayData.avatar_url}
+          userId={displayData.id}
+          editable
         />
 
         {/* Divider */}

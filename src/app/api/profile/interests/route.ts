@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import { EventTag } from "@/types";
+import type { Database } from "@/lib/supabase/types";
 
 export async function PUT(request: NextRequest) {
   try {
@@ -45,12 +46,14 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update user's interest_tags in the database
-    const { data, error } = await supabase
+    const updatePayload: Database["public"]["Tables"]["users"]["Update"] = {
+      interest_tags,
+      updated_at: new Date().toISOString(),
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from("users")
-      .update({
-        interest_tags,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", user.id)
       .select()
       .single();
