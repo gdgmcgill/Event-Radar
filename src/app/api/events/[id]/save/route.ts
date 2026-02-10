@@ -292,7 +292,6 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     }
 
     // Delete from saved_events table
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: deleteError } = await (supabase as any)
       .from("saved_events")
       .delete()
