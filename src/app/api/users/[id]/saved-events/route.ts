@@ -114,52 +114,84 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "50", 10) || 50));
     const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10) || 0);
 
-    // Query saved events with full event details via JOIN
+    // Step 1: Get saved event rows for this user (with count for pagination)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error: queryError, count } = await (supabase as any)
+    const { data: savedRows, error: savedError, count } = await (supabase as any)
       .from("saved_events")
-      .select(
-        `
-        created_at,
-        event:events (
-          id,
-          title,
-          description,
-          start_date,
-          end_date,
-          location,
-          image_url,
-          tags,
-          club:clubs (
-            id,
-            name,
-            logo_url
-          )
-        )
-      `,
-        { count: "exact" }
-      )
+      .select("event_id, created_at", { count: "exact" })
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (queryError) {
-      console.error("Fetch saved events error:", queryError);
+    if (savedError) {
+      console.error("Fetch saved events error:", savedError);
       return NextResponse.json(
         { error: "Failed to fetch saved events" },
         { status: 500 }
       );
     }
 
-    // Flatten the structure: merge event fields with saved_at timestamp
-    const savedEvents =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (data as any[] | null)?.map((item: any) => ({
-        ...item.event,
-        saved_at: item.created_at,
-      })) || [];
-
     const total = (count as number) || 0;
+
+    if (!savedRows || savedRows.length === 0) {
+      return NextResponse.json({
+        events: [],
+        total,
+        limit,
+        offset,
+        has_more: false,
+      });
+    }
+
+    // Build a map of event_id -> saved_at timestamp
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const savedAtMap = new Map<string, string>(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      savedRows.map((row: any) => [row.event_id, row.created_at])
+    );
+    const eventIds = Array.from(savedAtMap.keys());
+
+    // Step 2: Fetch full event details with club info
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: eventsData, error: eventsError } = await (supabase as any)
+      .from("events")
+      .select(
+        `
+        id,
+        title,
+        description,
+        start_date,
+        end_date,
+        location,
+        image_url,
+        tags,
+        club:clubs (
+          id,
+          name,
+          logo_url
+        )
+      `
+      )
+      .in("id", eventIds);
+
+    if (eventsError) {
+      console.error("Fetch event details error:", eventsError);
+      return NextResponse.json(
+        { error: "Failed to fetch event details" },
+        { status: 500 }
+      );
+    }
+
+    // Merge saved_at and preserve the saved order (newest first)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const eventsById = new Map((eventsData as any[]).map((e: any) => [e.id, e]));
+    const savedEvents = eventIds
+      .map((id) => {
+        const event = eventsById.get(id);
+        if (!event) return null;
+        return { ...event, saved_at: savedAtMap.get(id) };
+      })
+      .filter(Boolean);
 
     return NextResponse.json({
       events: savedEvents,
