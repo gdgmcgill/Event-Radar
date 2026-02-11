@@ -300,7 +300,7 @@ export async function GET() {
       }
 
       const { data: fallbackEventsResult, error: fallbackError } =
-        await fallbackQuery.order("event_date", { ascending: true }).limit(20);
+        await fallbackQuery.order("start_date", { ascending: true }).limit(20);
 
       if (fallbackError) {
         console.error("Supabase error fetching fallback events:", fallbackError);
