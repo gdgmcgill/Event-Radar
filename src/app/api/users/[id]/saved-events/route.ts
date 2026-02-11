@@ -151,7 +151,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     );
     const eventIds = Array.from(savedAtMap.keys());
 
-    // Step 2: Fetch full event details with club info
+    // Step 2: Fetch full event details
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: eventsData, error: eventsError } = await (supabase as any)
       .from("events")
@@ -165,11 +165,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         location,
         image_url,
         tags,
-        club:clubs (
-          id,
-          name,
-          logo_url
-        )
+        category,
+        organizer,
+        rsvp_count,
+        status
       `
       )
       .in("id", eventIds);
