@@ -23,14 +23,14 @@ export interface Database {
           start_date: string;
           end_date: string | null;
           location: string;
-          club_id: string | null;
+          category: string | null;
           tags: string[];
           image_url: string | null;
+          organizer: string | null;
+          rsvp_count: number;
           created_at: string;
           updated_at: string;
-          status: "pending" | "approved" | "rejected";
-          approved_by: string | null;
-          approved_at: string | null;
+          status: string;
         };
         Insert: {
           id?: string;
@@ -39,14 +39,14 @@ export interface Database {
           start_date: string;
           end_date?: string | null;
           location: string;
-          club_id?: string | null;
+          category?: string | null;
           tags?: string[];
           image_url?: string | null;
+          organizer?: string | null;
+          rsvp_count?: number;
           created_at?: string;
           updated_at?: string;
-          status?: "pending" | "approved" | "rejected";
-          approved_by?: string | null;
-          approved_at?: string | null;
+          status?: string;
         };
         Update: {
           id?: string;
@@ -55,14 +55,14 @@ export interface Database {
           start_date?: string;
           end_date?: string | null;
           location?: string;
-          club_id?: string | null;
+          category?: string | null;
           tags?: string[];
           image_url?: string | null;
+          organizer?: string | null;
+          rsvp_count?: number;
           created_at?: string;
           updated_at?: string;
-          status?: "pending" | "approved" | "rejected";
-          approved_by?: string | null;
-          approved_at?: string | null;
+          status?: string;
         };
       };
       clubs: {

@@ -103,7 +103,7 @@ function mapEventToResponse(event: DbEventRow): Event {
     event_date: startDate.toISOString().split("T")[0],
     event_time: derivedTime,
     location: String(event.location ?? ""),
-    club_id: String(event.club_id ?? event.organizer ?? "unknown"),
+    club_id: String(event.organizer ?? "unknown"),
     tags,
     image_url: event.image_url ?? null,
     created_at: String(event.created_at ?? new Date(0).toISOString()),
