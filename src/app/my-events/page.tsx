@@ -217,6 +217,7 @@ export default function MyEventsPage() {
           events={events}
           showSaveButton={true}
           savedEventIds={savedEventIds}
+          onUnsave={handleUnsave}
           onEventClick={undefined}
           trackingSource="home"
         />
