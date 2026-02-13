@@ -305,6 +305,12 @@ const tagMapping: Record<string, EventTag> = {
  */
 export async function GET(request: NextRequest) {
   try {
+    const delayParam = request.nextUrl.searchParams.get("delay");
+    const delayMs = delayParam ? Math.min(Math.max(parseInt(delayParam, 10) || 0, 0), 5000) : 0;
+    if (delayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+
     const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;
 
