@@ -79,6 +79,7 @@ export default function CalendarPage() {
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
+  const showSkeleton = loading && events.length === 0;
 
   // Create calendar grid
   const calendarDays = [];
@@ -115,7 +116,7 @@ export default function CalendarPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={goToToday} className="rounded-xl">
+            <Button variant="outline" onClick={goToToday} className="rounded-xl" disabled={loading}>
               Today
             </Button>
             <div className="flex items-center gap-2">
@@ -124,17 +125,22 @@ export default function CalendarPage() {
                 size="icon"
                 onClick={() => navigateMonth('prev')}
                 className="rounded-xl"
+                disabled={loading}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="min-w-[180px] text-center">
                 <span className="text-lg font-semibold text-foreground">{monthName}</span>
+                {loading && !showSkeleton && (
+                  <span className="ml-2 inline-flex h-4 w-4 animate-spin rounded-full border-2 border-primary/30 border-t-primary align-[-2px]" />
+                )}
               </div>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => navigateMonth('next')}
                 className="rounded-xl"
+                disabled={loading}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -158,7 +164,20 @@ export default function CalendarPage() {
 
           {/* Calendar days */}
           <div className="grid grid-cols-7 auto-rows-fr">
-            {calendarDays.map((date, index) => {
+            {showSkeleton
+              ? Array.from({ length: calendarDays.length }).map((_, index) => (
+                  <div
+                    key={`skeleton-${index}`}
+                    className="border-r border-b border-border/50 min-h-[120px] p-2"
+                  >
+                    <div className="h-full flex flex-col gap-2">
+                      <div className="h-5 w-5 rounded-full bg-muted animate-pulse" />
+                      <div className="h-4 w-3/4 rounded-md bg-muted animate-pulse" />
+                      <div className="h-4 w-2/3 rounded-md bg-muted animate-pulse" />
+                    </div>
+                  </div>
+                ))
+              : calendarDays.map((date, index) => {
               if (!date) {
                 return <div key={`empty-${index}`} className="border-r border-b border-border/50 min-h-[120px] bg-secondary/5" />;
               }
@@ -234,6 +253,11 @@ export default function CalendarPage() {
             <span>Event</span>
           </div>
         </div>
+        {!loading && events.length === 0 && (
+          <div className="mt-6 text-sm text-muted-foreground text-center">
+            No events found for this month.
+          </div>
+        )}
       </div>
 
       {/* Event Details Modal */}
