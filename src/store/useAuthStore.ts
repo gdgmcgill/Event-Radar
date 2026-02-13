@@ -35,9 +35,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       created_at: string;
       updated_at?: string;
     }) => {
-      console.log("[Auth] Building user from auth data (skipping DB fetch for now)");
+      console.log("[Auth] Building user from auth data, fetching is_admin from DB");
 
-      // Skip the database query for now - just use auth user data
+      // Fetch is_admin from public.users
+      const { data: profile } = await supabase
+        .from("users")
+        .select("is_admin")
+        .eq("id", authUser.id)
+        .single();
+
       const finalUser: AppUser = {
         id: authUser.id,
         email: authUser.email ?? "",
@@ -47,11 +53,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           null,
         avatar_url: (authUser.user_metadata?.avatar_url as string) ?? null,
         interest_tags: [],
+        is_admin: profile?.is_admin ?? false,
         created_at: authUser.created_at,
         updated_at: authUser.updated_at ?? authUser.created_at,
       };
 
-      console.log("[Auth] Setting user:", finalUser.email);
+      console.log("[Auth] Setting user:", finalUser.email, "is_admin:", finalUser.is_admin);
       set({ user: finalUser, loading: false });
       console.log("[Auth] State updated, loading should be false now");
     };
@@ -97,7 +104,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         return;
       }
 
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         await fetchAndSetUser(session.user);
       }
     });

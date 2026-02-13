@@ -49,6 +49,7 @@ export interface User {
   name: string | null;
   avatar_url: string | null;
   interest_tags: string[];
+  is_admin: boolean;
   created_at: string | null;
   updated_at: string | null;
 }
