@@ -6,24 +6,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
-import { EventTag } from "@/types";
 import type { Database } from "@/lib/supabase/types";
+import { transformEventFromDB } from "@/lib/tagMapping";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"];
-
-// Mapping from database tags to EventTag enum
-const tagMapping: Record<string, EventTag> = {
-  'coding': EventTag.ACADEMIC,
-  'networking': EventTag.SOCIAL,
-  'hackathon': EventTag.ACADEMIC,
-  'career': EventTag.CAREER,
-  'sports': EventTag.SPORTS,
-  'wellness': EventTag.WELLNESS,
-  'cultural': EventTag.CULTURAL,
-  'social': EventTag.SOCIAL,
-  'academic': EventTag.ACADEMIC,
-  'technology': EventTag.ACADEMIC,
-};
 
 /**
  * @swagger
@@ -146,12 +132,6 @@ const tagMapping: Record<string, EventTag> = {
  */
 export async function GET(request: NextRequest) {
   try {
-    const delayParam = request.nextUrl.searchParams.get("delay");
-    const delayMs = delayParam ? Math.min(Math.max(parseInt(delayParam, 10) || 0, 0), 5000) : 0;
-    if (delayMs > 0) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-
     const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;
 
@@ -201,46 +181,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: eventsError.message }, { status: 500 });
     }
 
-    // Transform events to match frontend Event type
-    const events = ((eventsData || []) as EventRow[]).map(event => {
-      const startDate = new Date(event.start_date);
+    // Transform events using shared utility
+    const events = ((eventsData || []) as EventRow[]).map(event =>
+      transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
+    );
 
-      // Map database tags to EventTag enum values
-      const mappedTags = (event.tags || []).map((tag: string) => {
-        const lowerTag = tag.toLowerCase();
-        return tagMapping[lowerTag] || EventTag.SOCIAL; // Default to SOCIAL if no mapping
-      }).filter((tag: EventTag, index: number, self: EventTag[]) => self.indexOf(tag) === index); // Remove duplicates
-
-      return {
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        event_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD
-        event_time: startDate.toTimeString().slice(0, 5), // HH:MM
-        location: event.location,
-        club_id: event.organizer || 'unknown',
-        tags: mappedTags,
-        image_url: event.image_url,
-        created_at: event.created_at,
-        updated_at: event.updated_at,
-        status: event.status,
-        approved_by: null,
-        approved_at: null,
-        club: event.organizer ? {
-          id: event.organizer,
-          name: event.organizer,
-          instagram_handle: null,
-          logo_url: null,
-          description: null,
-          created_at: event.created_at,
-          updated_at: event.updated_at,
-        } : null,
-        saved_by_users: []
-      };
-    });
-
-    return NextResponse.json({ 
-      events, 
+    return NextResponse.json({
+      events,
       total: count || 0,
       page,
       limit,

@@ -9,25 +9,8 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { EventTag } from "@/types";
 import type { NextRequest } from "next/server";
-import type { Database } from "@/lib/supabase/types";
-
-type EventRow = Database["public"]["Tables"]["events"]["Row"];
-
-// Mapping from database tags to EventTag enum
-const tagMapping: Record<string, EventTag> = {
-  coding: EventTag.ACADEMIC,
-  networking: EventTag.SOCIAL,
-  hackathon: EventTag.ACADEMIC,
-  career: EventTag.CAREER,
-  sports: EventTag.SPORTS,
-  wellness: EventTag.WELLNESS,
-  cultural: EventTag.CULTURAL,
-  social: EventTag.SOCIAL,
-  academic: EventTag.ACADEMIC,
-  technology: EventTag.ACADEMIC,
-};
+import { transformEventFromDB } from "@/lib/tagMapping";
 
 /**
  * @swagger
@@ -120,53 +103,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Transform events to match frontend Event type
+    // Transform events using shared utility and add saved_at
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const events = ((eventsData || []) as any[]).map((event: any) => {
-      const startDate = new Date(event.start_date);
-      // DB uses "organizer" but types may still have "club_id" — handle both
-      const organizer = event.organizer || event.club_id || "unknown";
-
-      const mappedTags = (event.tags || [])
-        .map((tag: string) => {
-          const lowerTag = tag.toLowerCase();
-          return tagMapping[lowerTag] || EventTag.SOCIAL;
-        })
-        .filter(
-          (tag: EventTag, index: number, self: EventTag[]) =>
-            self.indexOf(tag) === index
-        );
-
-      return {
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        event_date: startDate.toISOString().split("T")[0],
-        event_time: startDate.toTimeString().slice(0, 5),
-        location: event.location,
-        club_id: organizer,
-        tags: mappedTags,
-        image_url: event.image_url,
-        created_at: event.created_at,
-        updated_at: event.updated_at,
-        status: event.status,
-        approved_by: null,
-        approved_at: null,
-        club: organizer !== "unknown"
-          ? {
-              id: organizer,
-              name: organizer,
-              instagram_handle: null,
-              logo_url: null,
-              description: null,
-              created_at: event.created_at,
-              updated_at: event.updated_at,
-            }
-          : null,
-        saved_by_users: [],
-        saved_at: savedAtMap.get(event.id),
-      };
-    });
+    const events = ((eventsData || []) as any[]).map((event: any) => ({
+      ...transformEventFromDB(event),
+      saved_at: savedAtMap.get(event.id),
+    }));
 
     // Sort events
     if (sort === "date") {

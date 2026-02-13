@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { EventTag, type Event } from "@/types";
 import { kMeans, type UserPoint, type Vector } from "@/lib/kmeans";
+import { mapTags, transformEventFromDB, tagMapping } from "@/lib/tagMapping";
 import type { Database } from "@/lib/supabase/types";
 
 type DbUser = Database["public"]["Tables"]["users"]["Row"];
@@ -32,32 +33,9 @@ const TAG_INDEX = new Map<EventTag, number>(
   TAG_ORDER.map((tag, index) => [tag, index])
 );
 
-// Map any messy DB tags to our official EventTag enumeration
-// This mirrors the mapping in /api/events for consistency
-const TAG_MAPPING: Record<string, EventTag> = {
-  coding: EventTag.ACADEMIC,
-  networking: EventTag.SOCIAL,
-// Do we want to keep networking as social or do we want it to be academic?
-  hackathon: EventTag.ACADEMIC,
-  career: EventTag.CAREER,
-  sports: EventTag.SPORTS,
-  wellness: EventTag.WELLNESS,
-  cultural: EventTag.CULTURAL,
-  social: EventTag.SOCIAL,
-  academic: EventTag.ACADEMIC,
-  technology: EventTag.ACADEMIC,
-};
-
 // Normalize raw tag strings into EventTag enums (unique only)
 function normalizeTags(tags: string[] | null | undefined): EventTag[] {
-  const normalized: EventTag[] = [];
-  for (const tag of tags ?? []) {
-    const mapped = TAG_MAPPING[tag.toLowerCase()];
-    if (mapped && !normalized.includes(mapped)) {
-      normalized.push(mapped);
-    }
-  }
-  return normalized;
+  return mapTags(tags ?? []);
 }
 
 // Convert a list of tags into a numeric vector
@@ -91,29 +69,9 @@ function getEventStartDate(event: DbEventRow): Date | null {
   return new Date(startDate);
 }
 
-// Shape DB event rows into the frontend Event type
+// Shape DB event rows into the frontend Event type using shared utility
 function mapEventToResponse(event: DbEventRow): Event {
-  const startDate = getEventStartDate(event) ?? new Date(0);
-  const tags = normalizeTags(event.tags ?? []);
-  const derivedTime = startDate.toTimeString().slice(0, 5);
-  return {
-    id: String(event.id),
-    title: String(event.title ?? "Untitled"),
-    description: String(event.description ?? ""),
-    event_date: startDate.toISOString().split("T")[0],
-    event_time: derivedTime,
-    location: String(event.location ?? ""),
-    club_id: String(event.organizer ?? "unknown"),
-    tags,
-    image_url: event.image_url ?? null,
-    created_at: String(event.created_at ?? new Date(0).toISOString()),
-    updated_at: String(event.updated_at ?? new Date(0).toISOString()),
-    status: "approved",
-    approved_by: null,
-    approved_at: null,
-    club: undefined,
-    saved_by_users: [],
-  };
+  return transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0]);
 }
 
 export async function GET() {
@@ -297,7 +255,7 @@ export async function GET() {
 
       // Build list of raw DB tags that map to the user's normalized interests
       if (interestTags.length > 0) {
-        const rawTags = Object.entries(TAG_MAPPING)
+        const rawTags = Object.entries(tagMapping)
           .filter(([, mapped]) => interestTags.includes(mapped))
           .map(([raw]) => raw);
         if (rawTags.length > 0) {
