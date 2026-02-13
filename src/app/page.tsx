@@ -4,13 +4,14 @@
  * Home page - Main event calendar/browse view
  */
 
-import { useState, useEffect, useCallback } from "react";
-import type { Event } from "@/types";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import type { Event, EventTag } from "@/types";
 
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
-import { Search, Filter, RefreshCcw, AlertCircle } from "lucide-react";
+import { EventSearch } from "@/components/events/EventSearch";
+import { Filter, RefreshCcw, AlertCircle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -25,15 +26,36 @@ type ScoredEvent = Event & { score?: number };
 
 export default function HomePage() {
   const [events, setEvents] = useState<ScoredEvent[]>([]);
+  const [pastEvents, setPastEvents] = useState<ScoredEvent[]>([]);
+  const [pastExpanded, setPastExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+
+      const today = new Date().toISOString().split("T")[0];
+
+      const splitPast = (allEvents: ScoredEvent[]) => {
+        const past = allEvents
+          .filter((e) => e.event_date < today)
+          .sort((a, b) => b.event_date.localeCompare(a.event_date));
+        setPastEvents(past);
+      };
+
+      // Always fetch all events (needed for past section)
+      const allEventsPromise = fetch("/api/events").then(async (res) => {
+        if (!res.ok) throw new Error("Failed to fetch events");
+        const data = await res.json();
+        return Array.isArray(data.events) ? (data.events as ScoredEvent[]) : [];
+      });
 
       // Try recommendations first (for authenticated users)
       const recResponse = await fetch("/api/recommendations");
@@ -44,18 +66,17 @@ export default function HomePage() {
           ? data.recommendations
           : [];
         setEvents(recs);
+        const allEvents = await allEventsPromise;
+        splitPast(allEvents);
         return;
       }
 
       // Fall back to regular events for unauthenticated users
       if (recResponse.status === 401) {
-        const eventsResponse = await fetch("/api/events");
-        if (!eventsResponse.ok) {
-          throw new Error("Failed to fetch events");
-        }
-        const data = await eventsResponse.json();
-        const eventsList = Array.isArray(data.events) ? data.events : [];
-        setEvents(eventsList);
+        const allEvents = await allEventsPromise;
+        const upcoming = allEvents.filter((e) => e.event_date >= today);
+        setEvents(upcoming);
+        splitPast(allEvents);
         return;
       }
 
@@ -72,10 +93,74 @@ export default function HomePage() {
     fetchEvents();
   }, [fetchEvents]);
 
+  // Global "/" keyboard shortcut to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+      if (e.key === "/") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const applyFilters = useCallback(
+    (list: ScoredEvent[]) => {
+      let result = list;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        result = result.filter(
+          (e) =>
+            e.title.toLowerCase().includes(q) ||
+            e.description.toLowerCase().includes(q)
+        );
+      }
+      if (selectedTags.length > 0) {
+        result = result.filter((e) =>
+          e.tags.some((tag) => selectedTags.includes(tag))
+        );
+      }
+      return result;
+    },
+    [searchQuery, selectedTags]
+  );
+
+  const filteredEvents = useMemo(
+    () => applyFilters(events),
+    [events, applyFilters]
+  );
+
+  const filteredPastEvents = useMemo(
+    () => applyFilters(pastEvents),
+    [pastEvents, applyFilters]
+  );
+
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
+
+  const handleFilterChange = useCallback(
+    (filters: { tags?: EventTag[]; dateRange?: { start: Date; end: Date }; clubId?: string }) => {
+      setSelectedTags(filters.tags ?? []);
+    },
+    []
+  );
+
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
     setIsModalOpen(true);
   };
+
+  const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-sans">
@@ -89,34 +174,26 @@ export default function HomePage() {
             </span>
             Live on Campus
           </div>
-          
+
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-foreground mb-6 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 leading-[1.1]">
             Find your next <span className="text-primary">experience.</span>
           </h1>
-          
+
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200 leading-relaxed">
             Discover workshops, hackathons, and social events happening right now at McGill University.
           </p>
-          
+
           {/* Centralized Search */}
-          <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500"></div>
-              <div className="relative bg-card rounded-2xl shadow-xl border border-border/50 p-2 flex items-center transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20">
-                <Search className="ml-4 h-5 w-5 text-muted-foreground" />
-                <input 
-                  type="text" 
-                  placeholder="Search events, clubs, or categories..." 
-                  className="flex-1 bg-transparent border-none outline-none px-4 py-3.5 text-foreground placeholder:text-muted-foreground/70 text-base md:text-lg"
-                />
-                <button className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
-                  Search
-                </button>
-              </div>
-            </div>
+          <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 flex justify-center">
+            <EventSearch
+              ref={searchInputRef}
+              onSearchChange={handleSearchChange}
+              variant="hero"
+              placeholder="Search events, clubs, or categories..."
+            />
           </div>
         </div>
-        
+
         {/* Decorative Background Elements */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute -top-[30%] -left-[10%] w-[60%] h-[60%] rounded-full bg-primary/5 blur-[120px]"></div>
@@ -126,22 +203,27 @@ export default function HomePage() {
 
       <div className="container mx-auto px-4 py-12 -mt-16 relative z-20">
         <div className="flex flex-col gap-8">
-          
+
           {/* Header & Filters */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/40">
             <h2 className="text-3xl font-bold text-foreground tracking-tight">Upcoming Events</h2>
-            
+
             <div className="flex items-center gap-3">
               <div className="hidden md:block">
                 {/* We can place refined quick filters here or keep them in the modal/sidebar */}
               </div>
-              
+
               {/* Mobile/Desktop Filter Toggle */}
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" className="gap-2 rounded-xl border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary transition-all shadow-sm">
                     <Filter className="h-4 w-4" />
                     Filters
+                    {selectedTags.length > 0 && (
+                      <span className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                        {selectedTags.length}
+                      </span>
+                    )}
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[300px] sm:w-[400px] border-l-border/60">
@@ -152,12 +234,25 @@ export default function HomePage() {
                     </SheetDescription>
                   </SheetHeader>
                   <div className="py-6">
-                    <EventFilters />
+                    <EventFilters onFilterChange={handleFilterChange} initialTags={selectedTags} />
                   </div>
                 </SheetContent>
               </Sheet>
             </div>
           </div>
+
+          {/* Result count feedback */}
+          {isFiltering && !loading && !error && (
+            <div className="text-sm text-muted-foreground">
+              Showing {filteredEvents.length + filteredPastEvents.length} event{filteredEvents.length + filteredPastEvents.length !== 1 ? "s" : ""}
+              {searchQuery.trim() && (
+                <> for &ldquo;{searchQuery.trim()}&rdquo;</>
+              )}
+              {selectedTags.length > 0 && (
+                <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
+              )}
+            </div>
+          )}
 
           {/* Main Content */}
           <div className="min-h-[500px]">
@@ -177,13 +272,41 @@ export default function HomePage() {
               </div>
             ) : (
               <EventGrid
-                events={events}
+                events={filteredEvents}
                 loading={loading}
                 onEventClick={handleEventClick}
                 trackingSource="home"
               />
             )}
           </div>
+
+          {/* Past Events (collapsible) */}
+          {!loading && !error && filteredPastEvents.length > 0 && (
+            <div className="border-t border-border/40 pt-6">
+              <button
+                type="button"
+                onClick={() => setPastExpanded((prev) => !prev)}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronDown
+                  className={`h-5 w-5 transition-transform duration-200 ${pastExpanded ? "rotate-180" : ""}`}
+                />
+                <span className="text-lg font-semibold">
+                  Past Events ({filteredPastEvents.length})
+                </span>
+              </button>
+              {pastExpanded && (
+                <div className="mt-6 opacity-60">
+                  <EventGrid
+                    events={filteredPastEvents}
+                    loading={false}
+                    onEventClick={handleEventClick}
+                    trackingSource="home"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
