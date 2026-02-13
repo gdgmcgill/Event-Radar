@@ -273,7 +273,7 @@ export async function GET() {
       recommendations = (candidateEvents ?? [])
         .filter((event) => {
           const startDate = getEventStartDate(event);
-          return !startDate || startDate >= now;
+          return startDate != null && startDate >= now;
         })
         .sort((a, b) => {
           // Primary sort: how many similar users saved it
@@ -295,8 +295,14 @@ export async function GET() {
       const interestTags = normalizeTags(userProfile?.interest_tags);
       let fallbackQuery = supabase.from("events").select("*");
 
+      // Build list of raw DB tags that map to the user's normalized interests
       if (interestTags.length > 0) {
-        fallbackQuery = fallbackQuery.overlaps("tags", interestTags);
+        const rawTags = Object.entries(TAG_MAPPING)
+          .filter(([, mapped]) => interestTags.includes(mapped))
+          .map(([raw]) => raw);
+        if (rawTags.length > 0) {
+          fallbackQuery = fallbackQuery.overlaps("tags", rawTags);
+        }
       }
 
       const { data: fallbackEventsResult, error: fallbackError } =
@@ -315,7 +321,7 @@ export async function GET() {
       recommendations = (fallbackEvents ?? [])
         .filter((event) => {
           const startDate = getEventStartDate(event);
-          return !startDate || startDate >= now;
+          return startDate != null && startDate >= now;
         })
         .map(mapEventToResponse);
     }
