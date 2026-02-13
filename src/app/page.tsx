@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Event, EventTag } from "@/types";
+import { useAuthStore } from "@/store/useAuthStore";
 
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
@@ -35,6 +36,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const user = useAuthStore((s) => s.user);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -50,44 +52,41 @@ export default function HomePage() {
         setPastEvents(past);
       };
 
-      // Always fetch all events (needed for past section)
+      // Always fetch all events (needed for past section + fallback)
       const allEventsPromise = fetch("/api/events").then(async (res) => {
         if (!res.ok) throw new Error("Failed to fetch events");
         const data = await res.json();
         return Array.isArray(data.events) ? (data.events as ScoredEvent[]) : [];
       });
 
-      // Try recommendations first (for authenticated users)
-      const recResponse = await fetch("/api/recommendations");
+      // Only try recommendations if authenticated
+      if (user) {
+        const recResponse = await fetch("/api/recommendations");
 
-      if (recResponse.ok) {
-        const data = await recResponse.json();
-        const recs = Array.isArray(data.recommendations)
-          ? data.recommendations
-          : [];
-        setEvents(recs);
-        const allEvents = await allEventsPromise;
-        splitPast(allEvents);
-        return;
+        if (recResponse.ok) {
+          const data = await recResponse.json();
+          const recs = Array.isArray(data.recommendations)
+            ? data.recommendations
+            : [];
+          setEvents(recs);
+          const allEvents = await allEventsPromise;
+          splitPast(allEvents);
+          return;
+        }
       }
 
-      // Fall back to regular events for unauthenticated users
-      if (recResponse.status === 401) {
-        const allEvents = await allEventsPromise;
-        const upcoming = allEvents.filter((e) => e.event_date >= today);
-        setEvents(upcoming);
-        splitPast(allEvents);
-        return;
-      }
-
-      throw new Error("Failed to fetch recommendations");
+      // Unauthenticated or recommendations failed — show all upcoming events
+      const allEvents = await allEventsPromise;
+      const upcoming = allEvents.filter((e) => e.event_date >= today);
+      setEvents(upcoming);
+      splitPast(allEvents);
     } catch (err) {
       console.error("Error fetching events:", err);
       setError("Failed to load events. Please try again later.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchEvents();
