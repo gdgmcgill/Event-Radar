@@ -1,7 +1,5 @@
 /**
  * Supabase database types
- * TODO: Generate these types using Supabase CLI:
- * npx supabase gen types typescript --project-id jnlbrvejjjgtjhlajfss > src/lib/supabase/types.ts
  */
 
 export type Json =
@@ -12,7 +10,10 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export interface Database {
+export type Database = {
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5";
+  };
   public: {
     Tables: {
       events: {
@@ -64,6 +65,7 @@ export interface Database {
           updated_at?: string;
           status?: string;
         };
+        Relationships: [];
       };
       clubs: {
         Row: {
@@ -93,6 +95,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       users: {
         Row: {
@@ -125,6 +128,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       saved_events: {
         Row: {
@@ -145,6 +149,22 @@ export interface Database {
           event_id?: string;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "saved_events_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "saved_events_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_interactions: {
         Row: {
@@ -177,6 +197,7 @@ export interface Database {
           metadata?: Record<string, unknown>;
           created_at?: string;
         };
+        Relationships: [];
       };
       event_popularity_scores: {
         Row: {
@@ -215,6 +236,7 @@ export interface Database {
           trending_score?: number;
           last_calculated_at?: string;
         };
+        Relationships: [];
       };
       user_engagement_summary: {
         Row: {
@@ -256,6 +278,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: {
@@ -290,4 +313,4 @@ export interface Database {
       [_ in never]: never;
     };
   };
-}
+};

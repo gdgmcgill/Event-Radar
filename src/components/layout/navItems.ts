@@ -8,6 +8,11 @@ import {
   Plus,
   Info,
   User,
+  LayoutDashboard,
+  FileQuestion,
+  List,
+  Users,
+  Building2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -34,4 +39,12 @@ export const authenticatedNavItems: NavItem[] = [
   { name: "My Events", path: "/my-events", icon: Bookmark },
   { name: "Create Event", path: "/create-event", icon: Plus },
   { name: "Notifications", path: "/notifications", icon: Bell },
+];
+
+export const adminNavItems: NavItem[] = [
+  { name: "Dashboard", path: "/admin", icon: LayoutDashboard },
+  { name: "Pending", path: "/admin/pending", icon: FileQuestion },
+  { name: "All Events", path: "/admin/events", icon: List },
+  { name: "Users", path: "/admin/users", icon: Users },
+  { name: "Clubs", path: "/admin/clubs", icon: Building2 },
 ];
