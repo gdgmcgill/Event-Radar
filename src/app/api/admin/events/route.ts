@@ -1,256 +1,78 @@
-/**
- * POST /api/admin/events
- * Create or update an event (admin only)
- * TODO: Implement event creation/update with admin validation
- */
-
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
+import { verifyAdmin } from "@/lib/admin";
 
-/**
- * @swagger
- * /api/admin/events:
- *   post:
- *     summary: /api/admin/events
- *     description: Create or update an event (admin only)
- *     tags:
- *       - Admin - Events
- *     parameters:
- *       - name: title
- *         description: Event title
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *       - name: description
- *         description: Event description
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *       - name: event_date
- *         description: Event date
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *       - name: event_time
- *         description: Event time
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *       - name: location
- *         description: Event location
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *       - name: club_id
- *         description: Event club ID
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *       - name: tags
- *         description: Event tags
- *         in: query
- *         required: true
- *         schema:
- *           type: array
- *           items:
- *             type: string
- *       - name: image_url
- *         description: Event image URL
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       201:
- *         description: Event created or updated successfully
- *       400:
- *         description: Missing required fields
- *       403:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
+export async function GET(request: NextRequest) {
+  const { supabase, isAdmin } = await verifyAdmin();
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const searchParams = request.nextUrl.searchParams;
+  const status = searchParams.get("status");
+  const search = searchParams.get("search");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
+  const offset = parseInt(searchParams.get("offset") || "0", 10);
+
+  let query = supabase
+    .from("events")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (status && status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  if (search) {
+    query = query.ilike("title", `%${search}%`);
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ events: data, total: count ?? 0 });
+}
+
 export async function POST(request: NextRequest) {
-  try {
-    const supabase = await createClient();
+  const { supabase, user, isAdmin } = await verifyAdmin();
+  if (!isAdmin || !user) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-    // TODO: Get current user and verify admin status
-    // const {
-    //   data: { user },
-    // } = await supabase.auth.getUser();
+  const body = await request.json();
+  const { title, description, start_date, end_date, location, organizer, tags, image_url, category } = body;
 
-    // if (!user || !isAdmin(user.id)) {
-    //   return NextResponse.json(
-    //     { error: 'Unauthorized' },
-    //     { status: 403 }
-    //   );
-    // }
-
-    // TODO: Parse request body
-    // const body = await request.json();
-    // const { title, description, event_date, event_time, location, club_id, tags, image_url } = body;
-
-    // TODO: Validate required fields
-    // if (!title || !description || !event_date || !event_time || !location || !club_id) {
-    //   return NextResponse.json(
-    //     { error: 'Missing required fields' },
-    //     { status: 400 }
-    //   );
-    // }
-
-    // TODO: Create or update event
-    // const { data, error } = await supabase
-    //   .from('events')
-    //   .insert({
-    //     title,
-    //     description,
-    //     event_date,
-    //     event_time,
-    //     location,
-    //     club_id,
-    //     tags,
-    //     image_url,
-    //     status: 'approved', // Admin-created events are auto-approved
-    //     approved_by: user.id,
-    //     approved_at: new Date().toISOString(),
-    //   })
-    //   .select()
-    //   .single();
-
-    // if (error) {
-    //   return NextResponse.json({ error: error.message }, { status: 500 });
-    // }
-
-    return NextResponse.json({ event: null }, { status: 201 });
-  } catch (error) {
-    console.error("Error creating event:", error);
+  if (!title || !start_date || !end_date) {
     return NextResponse.json(
-      { error: "Failed to create event" },
-      { status: 500 }
+      { error: "title, start_date, and end_date are required" },
+      { status: 400 }
     );
   }
+
+  const { data, error } = await supabase
+    .from("events")
+    .insert({
+      title,
+      description: description || "",
+      start_date,
+      end_date,
+      location: location || "",
+      organizer: organizer || null,
+      tags: tags || [],
+      image_url: image_url || null,
+      category: category || null,
+      status: "approved",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ event: data }, { status: 201 });
 }
-
-/**
- * @swagger
- * /api/admin/events:
- *   put:
- *    summary: /api/admin/events
- *    description: Update an event (admin only)
- *    tags:
- *      - Admin - Events
- *    parameters:
- *      - name: id
- *        description: Event ID
- *        in: query
- *        required: true
- *        schema:
- *          type: string
- *      - name: title
- *        description: Event title
- *        in: query
- *        required: true
- *        schema:
- *          type: string
- *      - name: description
- *        description: Event description
- *        in: query
- *        required: true
- *        schema:
- *          type: string
- *      - name: event_date
- *        description: Event date
- *        in: query
- *        required: true
- *        schema:
- *          type: string
- *      - name: event_time
- *        description: Event time
- *        in: query
- *        required: true
- *        schema:
- *          type: string
- *      - name: location
- *        description: Event location
- *        in: query
- *        required: true
- *        schema:
- *          type: string
- *      - name: club_id
- *        description: Event club ID
- *        in: query
- *        required: true
- *        schema:
- *          type: string
- *      - name: tags
- *        description: Event tags
- *        in: query
- *        required: true
- *        schema:
- *          type: array
- *          items:
- *            type: string
- *      - name: image_url
- *        description: Event image URL
- *        in: query
- *        required: true
- *        schema:
- *          type: string
- *    responses:
- *      200:
- *        description: Event updated successfully
- *      400:
- *        description: Missing required fields
- *      403:
- *        description: Unauthorized
- *      500:
- *        description: Internal server error
- *      501:
- *        description: Not implemented
- */
-export async function PUT(request: NextRequest) {
-  // TODO: Implement event update
-  return NextResponse.json({ error: "Not implemented" }, { status: 501 });
-}
-
-/**
- * @swagger
- * /api/admin/events:
- *   delete:
- *    summary: /api/admin/events
- *    description: Delete an event (admin only)
- *    tags:
- *      - Admin - Events
- *    parameters:
- *      - name: id
- *        description: Event ID
- *        in: query
- *        required: true
- *        schema:
- *          type: string
- *    responses:
- *      200:
- *        description: Event deleted successfully
- *      403:
- *        description: Unauthorized
- *      500:
- *        description: Internal server error
- *      501:
- *        description: Not implemented
- */
-export async function DELETE(request: NextRequest) {
-  // TODO: Implement event deletion
-  return NextResponse.json({ error: "Not implemented" }, { status: 501 });
-}
-
-
-
-
-
