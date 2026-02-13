@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
   const upsertPayload: Database["public"]["Tables"]["users"]["Insert"] = {
     id: user.id,
     email,
-    full_name: name,
+    name,
     updated_at: new Date().toISOString(),
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
