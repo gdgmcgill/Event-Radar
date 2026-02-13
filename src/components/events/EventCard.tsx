@@ -24,6 +24,8 @@ interface EventCardProps {
   onClick?: () => void;
   showSaveButton?: boolean;
   isSaved?: boolean;
+  /** Called when the user unsaves an event. If provided, overrides the default toggle behavior for unsaving. */
+  onUnsave?: (eventId: string) => void;
   /** Source context for tracking (e.g., 'home', 'search', 'recommendation') */
   trackingSource?: InteractionSource;
 }
@@ -33,6 +35,7 @@ export function EventCard({
   onClick,
   showSaveButton = false,
   isSaved: initialIsSaved = false,
+  onUnsave,
   trackingSource,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
@@ -41,6 +44,14 @@ export function EventCard({
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // If the event is saved and an onUnsave callback is provided, delegate to it
+    if (isSaved && onUnsave) {
+      trackUnsave(event.id);
+      onUnsave(event.id);
+      return;
+    }
+
     try {
       const response = await fetch(`/api/events/${event.id}/save`, {
         method: "POST",

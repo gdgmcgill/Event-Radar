@@ -16,6 +16,8 @@ interface EventGridProps {
   showSaveButton?: boolean;
   savedEventIds?: Set<string>;
   onEventClick?: (event: Event & { score?: number }) => void;
+  /** Called when a user unsaves an event */
+  onUnsave?: (eventId: string) => void;
   /** Source context for tracking (e.g., 'home', 'search', 'recommendation') */
   trackingSource?: InteractionSource;
 }
@@ -26,6 +28,7 @@ export function EventGrid({
   showSaveButton = false,
   savedEventIds = new Set(),
   onEventClick,
+  onUnsave,
   trackingSource,
 }: EventGridProps) {
   if (loading) {
@@ -61,6 +64,7 @@ export function EventGrid({
             event={event}
             showSaveButton={showSaveButton}
             isSaved={savedEventIds.has(event.id)}
+            onUnsave={onUnsave}
             onClick={onEventClick ? () => onEventClick(event) : undefined}
             trackingSource={trackingSource}
           />

@@ -73,6 +73,55 @@ type UserSavedEventRow = Database["public"]["Tables"]["saved_events"]["Row"];
  *       500:
  *         description: Internal server error
  */
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
+  try {
+    const { id: eventId } = await params;
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) {
+      console.error("Error retrieving user:", authError);
+      return NextResponse.json({ error: "Failed to authenticate" }, { status: 500 });
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+
+    const userIdFromBody = (body as { user_id?: string }).user_id;
+    if (userIdFromBody && userIdFromBody !== user.id) {
+      return NextResponse.json({ error: "user_id does not match authenticated user" }, { status: 403 });
+    }
+
+    const { error: deleteError } = await supabase
+      .from("saved_events")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("event_id", eventId);
+
+    if (deleteError) {
+      console.error("Error deleting saved event:", deleteError);
+      return NextResponse.json({ error: "Failed to unsave event" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error("Unexpected error unsaving event:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
     const { id: eventId } = await params;
