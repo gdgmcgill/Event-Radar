@@ -1,6 +1,5 @@
 import {
   Home,
-  Search,
   Calendar,
   Tag,
   Bookmark,
@@ -24,7 +23,6 @@ export interface NavItem {
 
 export const guestNavItems: NavItem[] = [
   { name: "Home", path: "/", icon: Home },
-  { name: "Search", path: "/search", icon: Search },
   { name: "Calendar", path: "/calendar", icon: Calendar },
   { name: "Categories", path: "/categories", icon: Tag },
   { name: "About", path: "/about", icon: Info },
@@ -33,7 +31,6 @@ export const guestNavItems: NavItem[] = [
 export const authenticatedNavItems: NavItem[] = [
   { name: "Profile", path: "/profile", icon: User },
   { name: "Home", path: "/", icon: Home },
-  { name: "Search", path: "/search", icon: Search },
   { name: "Calendar", path: "/calendar", icon: Calendar },
   { name: "Categories", path: "/categories", icon: Tag },
   { name: "My Events", path: "/my-events", icon: Bookmark },
