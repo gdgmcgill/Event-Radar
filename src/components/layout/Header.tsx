@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
@@ -55,16 +56,18 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Right: Auth Button */}
-          <div className="flex items-center">
+          {/* Right: Auth Button + Notifications */}
+          <div className="flex items-center gap-1">
             {loading ? (
               <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
             ) : isAuthenticated ? (
-              <SignOutButton variant="outline" />
+              <>
+                <NotificationBell />
+                <SignOutButton variant="outline" />
+              </>
             ) : (
               <SignInButton variant="default" />
             )}
-            {/* Theme Toggle */}
             <ThemeToggle />
           </div>
         </div>
