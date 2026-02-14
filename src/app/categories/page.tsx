@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import type { Event, EventTag } from "@/types";
 import { EVENT_TAGS } from "@/lib/constants";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useSavedEvents } from "@/hooks/useSavedEvents";
 import { CategorySection, CategorySectionSkeleton } from "@/components/events/CategorySection";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { AlertCircle, RefreshCcw, Tag } from "lucide-react";
@@ -14,6 +16,8 @@ export default function CategoriesPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const { savedEventIds } = useSavedEvents(!!user);
 
   const fetchEvents = async () => {
     try {
@@ -98,6 +102,8 @@ export default function CategoriesPage() {
                 tag={tag}
                 events={eventsByTag[tag] || []}
                 onEventClick={handleEventClick}
+                showSaveButton={!!user}
+                savedEventIds={savedEventIds}
               />
             ))}
           </div>
