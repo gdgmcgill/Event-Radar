@@ -1,8 +1,6 @@
-/**
- * Supabase database types
- * TODO: Generate these types using Supabase CLI:
- * npx supabase gen types typescript --project-id jnlbrvejjjgtjhlajfss > src/lib/supabase/types.ts
- */
+// Automatically generated using:
+// npx supabase login
+// npx supabase gen types typescript --project-id <ProjectID> src/lib/supabase/types.ts
 
 export type Json =
   | string
@@ -10,281 +8,394 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   public: {
     Tables: {
       events: {
         Row: {
-          id: string;
-          title: string;
-          description: string;
-          start_date: string;
-          end_date: string | null;
-          location: string;
-          category: string | null;
-          tags: string[];
-          image_url: string | null;
-          organizer: string | null;
-          rsvp_count: number;
-          created_at: string;
-          updated_at: string;
-          status: string;
-        };
+          category: string | null
+          created_at: string | null
+          description: string | null
+          end_date: string
+          id: string
+          image_url: string | null
+          location: string | null
+          organizer: string | null
+          rsvp_count: number | null
+          start_date: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
         Insert: {
-          id?: string;
-          title: string;
-          description: string;
-          start_date: string;
-          end_date?: string | null;
-          location: string;
-          category?: string | null;
-          tags?: string[];
-          image_url?: string | null;
-          organizer?: string | null;
-          rsvp_count?: number;
-          created_at?: string;
-          updated_at?: string;
-          status?: string;
-        };
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          rsvp_count?: number | null
+          start_date: string
+          status?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
         Update: {
-          id?: string;
-          title?: string;
-          description?: string;
-          start_date?: string;
-          end_date?: string | null;
-          location?: string;
-          category?: string | null;
-          tags?: string[];
-          image_url?: string | null;
-          organizer?: string | null;
-          rsvp_count?: number;
-          created_at?: string;
-          updated_at?: string;
-          status?: string;
-        };
-      };
-      clubs: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          rsvp_count?: number | null
+          start_date?: string
+          status?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      events_tests: {
         Row: {
-          id: string;
-          name: string;
-          instagram_handle: string | null;
-          logo_url: string | null;
-          description: string | null;
-          created_at: string;
-          updated_at: string;
-        };
+          category: string | null
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          location: string | null
+          organizer: string | null
+          rsvp_count: string | null
+          start_date: string | null
+          status: string | null
+          tags: Json | null
+          title: string | null
+          updated_at: string | null
+        }
         Insert: {
-          id?: string;
-          name: string;
-          instagram_handle?: string | null;
-          logo_url?: string | null;
-          description?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id: string
+          image_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          rsvp_count?: string | null
+          start_date?: string | null
+          status?: string | null
+          tags?: Json | null
+          title?: string | null
+          updated_at?: string | null
+        }
         Update: {
-          id?: string;
-          name?: string;
-          instagram_handle?: string | null;
-          logo_url?: string | null;
-          description?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      users: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          rsvp_count?: string | null
+          start_date?: string | null
+          status?: string | null
+          tags?: Json | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      recommendation_feedback: {
         Row: {
-          id: string;
-          email: string;
-          name: string | null;
-          avatar_url: string | null;
-          interest_tags: string[];
-          created_at: string;
-          updated_at: string;
-        };
+          action: string
+          created_at: string
+          event_id: string
+          id: string
+          recommendation_rank: number
+          session_id: string | null
+          user_id: string
+        }
         Insert: {
-          id?: string;
-          email: string;
-          name?: string | null;
-          avatar_url?: string | null;
-          interest_tags?: string[];
-          created_at?: string;
-          updated_at?: string;
-        };
+          action: string
+          created_at?: string
+          event_id: string
+          id?: string
+          recommendation_rank: number
+          session_id?: string | null
+          user_id: string
+        }
         Update: {
-          id?: string;
-          email?: string;
-          name?: string | null;
-          avatar_url?: string | null;
-          interest_tags?: string[];
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
+          action?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          recommendation_rank?: number
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      rsvps: {
+        Row: {
+          created_at: string | null
+          event_id: string | null
+          id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rsvps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_events: {
         Row: {
-          id: string;
-          user_id: string;
-          event_id: string;
-          created_at: string;
-        };
+          created_at: string | null
+          event_id: string | null
+          id: string
+          user_id: string | null
+        }
         Insert: {
-          id?: string;
-          user_id: string;
-          event_id: string;
-          created_at?: string;
-        };
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
         Update: {
-          id?: string;
-          user_id?: string;
-          event_id?: string;
-          created_at?: string;
-        };
-      };
-      user_interactions: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
         Row: {
-          id: string;
-          user_id: string | null;
-          event_id: string;
-          interaction_type: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
-          session_id: string | null;
-          source: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | null;
-          metadata: Record<string, unknown>;
-          created_at: string;
-        };
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          id: string
+          interest_tags: string[] | null
+          is_admin: boolean
+          name: string | null
+          updated_at: string | null
+        }
         Insert: {
-          id?: string;
-          user_id?: string | null;
-          event_id: string;
-          interaction_type: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
-          session_id?: string | null;
-          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | null;
-          metadata?: Record<string, unknown>;
-          created_at?: string;
-        };
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          interest_tags?: string[] | null
+          is_admin?: boolean
+          name?: string | null
+          updated_at?: string | null
+        }
         Update: {
-          id?: string;
-          user_id?: string | null;
-          event_id?: string;
-          interaction_type?: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
-          session_id?: string | null;
-          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | null;
-          metadata?: Record<string, unknown>;
-          created_at?: string;
-        };
-      };
-      event_popularity_scores: {
-        Row: {
-          event_id: string;
-          view_count: number;
-          click_count: number;
-          save_count: number;
-          share_count: number;
-          calendar_add_count: number;
-          unique_viewers: number;
-          popularity_score: number;
-          trending_score: number;
-          last_calculated_at: string;
-        };
-        Insert: {
-          event_id: string;
-          view_count?: number;
-          click_count?: number;
-          save_count?: number;
-          share_count?: number;
-          calendar_add_count?: number;
-          unique_viewers?: number;
-          popularity_score?: number;
-          trending_score?: number;
-          last_calculated_at?: string;
-        };
-        Update: {
-          event_id?: string;
-          view_count?: number;
-          click_count?: number;
-          save_count?: number;
-          share_count?: number;
-          calendar_add_count?: number;
-          unique_viewers?: number;
-          popularity_score?: number;
-          trending_score?: number;
-          last_calculated_at?: string;
-        };
-      };
-      user_engagement_summary: {
-        Row: {
-          user_id: string;
-          total_views: number;
-          total_clicks: number;
-          total_saves: number;
-          total_shares: number;
-          total_calendar_adds: number;
-          favorite_tags: { tag: string; count: number }[];
-          favorite_clubs: { club_id: string; count: number }[];
-          last_active_at: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          user_id: string;
-          total_views?: number;
-          total_clicks?: number;
-          total_saves?: number;
-          total_shares?: number;
-          total_calendar_adds?: number;
-          favorite_tags?: { tag: string; count: number }[];
-          favorite_clubs?: { club_id: string; count: number }[];
-          last_active_at?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          user_id?: string;
-          total_views?: number;
-          total_clicks?: number;
-          total_saves?: number;
-          total_shares?: number;
-          total_calendar_adds?: number;
-          favorite_tags?: { tag: string; count: number }[];
-          favorite_clubs?: { club_id: string; count: number }[];
-          last_active_at?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-    };
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          interest_tags?: string[] | null
+          is_admin?: boolean
+          name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
-      update_event_popularity: {
-        Args: { p_event_id: string };
-        Returns: void;
-      };
-      update_user_engagement: {
-        Args: { p_user_id: string };
-        Returns: void;
-      };
-      calculate_popularity_score: {
-        Args: {
-          p_view_count: number;
-          p_click_count: number;
-          p_save_count: number;
-          p_share_count: number;
-          p_calendar_add_count: number;
-          p_unique_viewers: number;
-        };
-        Returns: number;
-      };
-      calculate_trending_score: {
-        Args: { p_event_id: string };
-        Returns: number;
-      };
-    };
+      [_ in never]: never
+    }
     Enums: {
-      [_ in never]: never;
-    };
-  };
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

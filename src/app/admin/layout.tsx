@@ -1,12 +1,11 @@
 /**
  * Admin layout - Protected layout for admin pages
- * TODO: Implement admin authentication check and navigation
  */
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/supabase/admin";
 import { LayoutDashboard, FileQuestion, Settings } from "lucide-react";
 
 export default async function AdminLayout({
@@ -14,15 +13,14 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // Check if user is admin, redirect if not
+  const userIsAdmin = await isAdmin();
+  
+  if (!userIsAdmin) {
+    redirect('/');
+  }
 
-  // TODO: Check if user is admin
-  // if (!session || !isAdmin) {
-  //   redirect('/');
-  // }
+
 
   return (
     <div className="container mx-auto px-4 py-8">
