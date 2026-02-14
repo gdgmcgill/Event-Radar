@@ -28,9 +28,11 @@ interface CategorySectionProps {
   tag: EventTag;
   events: Event[];
   onEventClick: (event: Event) => void;
+  showSaveButton?: boolean;
+  savedEventIds?: Set<string>;
 }
 
-export function CategorySection({ tag, events, onEventClick }: CategorySectionProps) {
+export function CategorySection({ tag, events, onEventClick, showSaveButton = false, savedEventIds = new Set() }: CategorySectionProps) {
   const category = EVENT_CATEGORIES[tag];
   const Icon = iconMap[category.icon] || Heart;
 
@@ -64,6 +66,8 @@ export function CategorySection({ tag, events, onEventClick }: CategorySectionPr
               <EventCard
                 event={event}
                 onClick={() => onEventClick(event)}
+                showSaveButton={showSaveButton}
+                isSaved={savedEventIds.has(event.id)}
                 trackingSource="home"
               />
             </div>
