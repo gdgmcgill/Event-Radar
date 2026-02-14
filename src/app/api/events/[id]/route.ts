@@ -104,8 +104,8 @@ export async function GET(
       );
     }
 
-    // Transform event to frontend format
-    const event = transformEventFromDB(data);
+    // Transform event to frontend format (cast needed: clubs relation may not exist in DB types)
+    const event = transformEventFromDB(data as unknown as Parameters<typeof transformEventFromDB>[0]);
 
     return NextResponse.json({ event });
   } catch (error) {

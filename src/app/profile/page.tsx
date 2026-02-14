@@ -81,7 +81,7 @@ export default async function ProfilePage() {
           {/* Interests Card */}
           <InterestsCard
             userId={displayData.id}
-            initialTags={displayData.interest_tags ?? []}
+            initialTags={(displayData.interest_tags ?? []) as import("@/types").EventTag[]}
           />
 
         {/* Account Info Card and other Info*/}

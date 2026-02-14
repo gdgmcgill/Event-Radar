@@ -60,7 +60,7 @@ interface DBEvent {
   end_date?: string | null;
   location: string;
   club_id?: string | null;
-  organizer?: string; // Legacy field
+  organizer?: string | null; // Legacy field
   tags: string[];
   image_url?: string | null;
   created_at: string;
