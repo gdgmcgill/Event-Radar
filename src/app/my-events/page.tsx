@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { EventGrid } from "@/components/events/EventGrid";
-import { useUser } from "@/hooks/useUser";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Button } from "@/components/ui/button";
 import { SignInButton } from "@/components/auth/SignInButton";
 import {
@@ -28,7 +28,7 @@ const SORT_LABELS: Record<SortOption, string> = {
 };
 
 export default function MyEventsPage() {
-  const { user, loading: authLoading } = useUser();
+  const { user, loading: authLoading } = useAuthStore();
   const [events, setEvents] = useState<Event[]>([]);
   const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
