@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Event, EventTag } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSavedEvents } from "@/hooks/useSavedEvents";
 
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
@@ -37,6 +38,7 @@ export default function HomePage() {
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((s) => s.user);
+  const { savedEventIds } = useSavedEvents(!!user);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -274,6 +276,8 @@ export default function HomePage() {
                 events={filteredEvents}
                 loading={loading}
                 onEventClick={handleEventClick}
+                showSaveButton={!!user}
+                savedEventIds={savedEventIds}
                 trackingSource="home"
               />
             )}
@@ -300,6 +304,8 @@ export default function HomePage() {
                     events={filteredPastEvents}
                     loading={false}
                     onEventClick={handleEventClick}
+                    showSaveButton={!!user}
+                    savedEventIds={savedEventIds}
                     trackingSource="home"
                   />
                 </div>
