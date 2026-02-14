@@ -35,16 +35,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       created_at: string;
       updated_at?: string;
     }) => {
-      console.log("[Auth] Building user from auth data, fetching is_admin from DB");
+      console.log("[Auth] Building user from auth data");
 
-      // Fetch is_admin from public.users
-      const { data: profile } = await supabase
-        .from("users")
-        .select("is_admin")
-        .eq("id", authUser.id)
-        .single();
-
-      const finalUser: AppUser = {
+      // Set user immediately so the UI renders without waiting for DB
+      const basicUser: AppUser = {
         id: authUser.id,
         email: authUser.email ?? "",
         name:
@@ -53,14 +47,31 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           null,
         avatar_url: (authUser.user_metadata?.avatar_url as string) ?? null,
         interest_tags: [],
-        is_admin: profile?.is_admin ?? false,
+        is_admin: false,
         created_at: authUser.created_at,
         updated_at: authUser.updated_at ?? authUser.created_at,
       };
 
-      console.log("[Auth] Setting user:", finalUser.email, "is_admin:", finalUser.is_admin);
-      set({ user: finalUser, loading: false });
-      console.log("[Auth] State updated, loading should be false now");
+      set({ user: basicUser, loading: false });
+      console.log("[Auth] User set immediately:", basicUser.email);
+
+      // Fetch is_admin from public.users in the background
+      try {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("is_admin")
+          .eq("id", authUser.id)
+          .single();
+
+        if (profile?.is_admin) {
+          set((state) => ({
+            user: state.user ? { ...state.user, is_admin: true } : state.user,
+          }));
+          console.log("[Auth] Updated is_admin: true");
+        }
+      } catch (err) {
+        console.error("[Auth] Failed to fetch is_admin:", err);
+      }
     };
 
     // Initial fetch
@@ -91,12 +102,23 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
     };
 
-    // Run initial fetch
-    initialFetch();
+    // Use onAuthStateChange as the single source of truth.
+    // INITIAL_SESSION fires immediately if a session exists, replacing initialFetch.
+    let initialSessionHandled = false;
 
-    // Listen for auth changes
     supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("[Auth] onAuthStateChange:", event, session?.user?.email);
+
+      if (event === "INITIAL_SESSION") {
+        initialSessionHandled = true;
+        if (!session?.user) {
+          console.log("[Auth] No initial session, setting loading: false");
+          set({ user: null, loading: false });
+          return;
+        }
+        await fetchAndSetUser(session.user);
+        return;
+      }
 
       if (event === "SIGNED_OUT" || !session?.user) {
         console.log("[Auth] Signed out, clearing user");
@@ -104,10 +126,18 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         return;
       }
 
-      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         await fetchAndSetUser(session.user);
       }
     });
+
+    // Fallback: if INITIAL_SESSION hasn't fired after 3s, run manual fetch
+    setTimeout(async () => {
+      if (!initialSessionHandled) {
+        console.log("[Auth] INITIAL_SESSION timeout, running fallback fetch");
+        initialFetch();
+      }
+    }, 3000);
   },
 
   signOut: async () => {
