@@ -142,8 +142,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   signOut: async () => {
     console.log("[Auth] Signing out...");
-    const supabase = createClient();
-    await supabase.auth.signOut();
+
+    // Sign out via server route so cookies are properly cleared.
+    // The browser client's signOut() hangs with @supabase/ssr,
+    // leaving auth cookies intact and the user still logged in on refresh.
+    await fetch("/auth/signout", { method: "POST", redirect: "manual" });
+
     set({ user: null, loading: false });
   },
 }));

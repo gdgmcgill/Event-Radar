@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
 import { LogOut } from "lucide-react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface SignOutButtonProps {
@@ -30,7 +29,6 @@ export function SignOutButton({
 }: SignOutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const signOut = useAuthStore((state) => state.signOut);
-  const router = useRouter();
 
   const handleSignOut = async () => {
     setIsLoading(true);
@@ -40,9 +38,8 @@ export function SignOutButton({
       // session and the store state atomically
       await signOut();
 
-      // Navigate to home and refresh server state
-      router.push("/");
-      router.refresh();
+      // Hard navigate so the browser picks up the cleared cookies
+      window.location.href = "/";
     } catch (err) {
       console.error("Unexpected sign out error:", err);
       // Fallback: force a full reload to clear all state
