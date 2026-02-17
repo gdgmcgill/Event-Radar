@@ -109,7 +109,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("[Auth] onAuthStateChange:", event, session?.user?.email);
 
-      if (event === "INITIAL_SESSION") {
+      if (event === "INITIAL_SESSION" || (event === "SIGNED_IN" && !initialSessionHandled)) {
         initialSessionHandled = true;
         if (!session?.user) {
           console.log("[Auth] No initial session, setting loading: false");
@@ -131,10 +131,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
     });
 
-    // Fallback: if INITIAL_SESSION hasn't fired after 3s, run manual fetch
+    // Fallback: if no auth event has fired after 3s, run manual fetch
     setTimeout(async () => {
       if (!initialSessionHandled) {
-        console.log("[Auth] INITIAL_SESSION timeout, running fallback fetch");
+        console.log("[Auth] Auth event timeout, running fallback fetch");
+        initialSessionHandled = true;
         initialFetch();
       }
     }, 3000);
