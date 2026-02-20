@@ -136,7 +136,10 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
   if (loading && events.length === 0) {
     return (
       <div className="mb-12">
-        <h2 className="text-3xl font-bold text-foreground tracking-tight mb-6">Popular This Week</h2>
+        <div className="mb-6">
+          <h2 className="text-3xl font-bold text-foreground tracking-tight">Popular This Week</h2>
+          <p className="text-muted-foreground mt-1">See what's popular between McGill students this week</p>
+        </div>
         <Carousel className="w-full">
           <CarouselContent className="-ml-4">
             {[1, 2, 3].map((i) => (
@@ -169,7 +172,10 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
 
   return (
     <div className="mb-12">
-      <h2 className="text-3xl font-bold text-foreground tracking-tight mb-6">Popular This Week</h2>
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold text-foreground tracking-tight">Popular This Week</h2>
+        <p className="text-muted-foreground mt-1">See what's popular between McGill students this week</p>
+      </div>
       
       <Carousel
         opts={{
