@@ -299,16 +299,15 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
       setLoading(true);
       setError(null);
 
-      // DEMO MODE: using mock data for team demo instead of fetching from API
-      // const res = await fetch("/api/recommendations");
-      // if (!res.ok) {
-      //   throw new Error("Failed to fetch recommendations");
-      // }
-      // const data = await res.json();
-      // const fetchedEvents = Array.isArray(data.recommendations) ? data.recommendations : [];
+      const res = await fetch("/api/recommendations");
+      if (!res.ok) {
+        throw new Error("Failed to fetch recommendations");
+      }
+      const data = await res.json();
+      const apiEvents = Array.isArray(data.recommendations) ? data.recommendations : [];
 
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network latency
-      const fetchedEvents = generateDummyEvents();
+      const dummyEvents = generateDummyEvents();
+      const fetchedEvents = [...apiEvents, ...dummyEvents];
       
       if (fetchedEvents.length === 0) {
         // Fallback to Popular events if no recommendations found
