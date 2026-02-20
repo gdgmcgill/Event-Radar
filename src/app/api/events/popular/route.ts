@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { transformEventFromDB } from "@/lib/tagMapping";
 
 /**
  * @swagger
@@ -131,7 +132,13 @@ export async function GET(request: NextRequest) {
       .filter((event) => event._score >= minScore)
       .sort((a, b) => b._score - a._score)
       .slice(offset, offset + limit)
-      .map(({ _score, ...event }) => event); // Remove internal _score field
+      .map(({ _score, ...event }) => {
+        const transformed = transformEventFromDB(event as any);
+        return {
+          ...transformed,
+          popularity: event.popularity,
+        };
+      });
 
     // Get total count for pagination
     const totalWithScores = events.filter((event) => {

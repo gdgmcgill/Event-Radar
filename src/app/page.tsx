@@ -9,6 +9,7 @@ import type { Event, EventTag } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 
+import { PopularEventsSection } from "@/components/events/PopularEventsSection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
@@ -38,7 +39,9 @@ export default function HomePage() {
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((s) => s.user);
-  const { savedEventIds } = useSavedEvents(!!user);
+  const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
+
+  const hasEnoughSavedEvents = savedEventIds.size >= 3;
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -62,7 +65,7 @@ export default function HomePage() {
       });
 
       // Only try recommendations if authenticated
-      if (user) {
+      if (user && !isSavedLoading && hasEnoughSavedEvents) {
         const recResponse = await fetch("/api/recommendations");
 
         if (recResponse.ok) {
@@ -77,7 +80,7 @@ export default function HomePage() {
         }
       }
 
-      // Unauthenticated or recommendations failed — show all upcoming events
+      // Unauthenticated, loading, or not enough saved events — show all upcoming events
       const allEvents = await allEventsPromise;
       const upcoming = allEvents.filter((e) => e.event_date >= today);
       setEvents(upcoming);
@@ -88,7 +91,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, isSavedLoading, hasEnoughSavedEvents]);
 
   useEffect(() => {
     fetchEvents();
@@ -207,7 +210,11 @@ export default function HomePage() {
 
           {/* Header & Filters */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/40">
-            <h2 className="text-3xl font-bold text-foreground tracking-tight">Upcoming Events</h2>
+            <h2 className="text-3xl font-bold text-foreground tracking-tight">
+              {user && !isSavedLoading && hasEnoughSavedEvents && !isFiltering
+                ? "Recommended for You"
+                : "Upcoming Events"}
+            </h2>
 
             <div className="flex items-center gap-3">
               <div className="hidden md:block">
@@ -253,6 +260,11 @@ export default function HomePage() {
                 <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
               )}
             </div>
+          )}
+
+          {/* Popular Events Section */}
+          {!isFiltering && (!user || (!isSavedLoading && !hasEnoughSavedEvents)) && (
+            <PopularEventsSection />
           )}
 
           {/* Main Content */}
