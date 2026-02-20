@@ -2,6 +2,16 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // If Supabase env vars are missing, pass through without auth
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.next({ request });
+  }
+
+  try {
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -10,8 +20,8 @@ export async function middleware(request: NextRequest) {
   let sessionRefreshed = false;
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -46,7 +56,6 @@ export async function middleware(request: NextRequest) {
   // Set-Cookie headers — running the cleanup in that case would
   // incorrectly delete every auth cookie chunk.
   if (user && sessionRefreshed) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
     const cookiePrefix = `sb-${projectRef}-auth-token`;
 
@@ -89,6 +98,12 @@ export async function middleware(request: NextRequest) {
   }
 
   return supabaseResponse;
+
+  } catch (e) {
+    // If middleware fails, pass through rather than 500ing the entire site
+    console.error("[Middleware] Error:", e);
+    return NextResponse.next({ request });
+  }
 }
 
 export const config = {
