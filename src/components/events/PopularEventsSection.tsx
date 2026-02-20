@@ -5,6 +5,13 @@ import { type Event, EventTag } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 
@@ -130,11 +137,15 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
     return (
       <div className="mb-12">
         <h2 className="text-3xl font-bold text-foreground tracking-tight mb-6">Popular This Week</h2>
-        <div className="flex overflow-x-auto gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-3 snap-x snap-mandatory pb-4">
-          {[1, 2, 3].map((i) => (
-             <div key={i} className="min-w-[280px] w-[85vw] sm:w-auto sm:min-w-0 snap-center h-[380px] rounded-2xl bg-secondary/20 animate-pulse border border-border/40" />
-          ))}
-        </div>
+        <Carousel className="w-full">
+          <CarouselContent className="-ml-4">
+            {[1, 2, 3].map((i) => (
+              <CarouselItem key={i} className="pl-4 basis-[85vw] sm:basis-1/2 lg:basis-1/3">
+                <div className="h-[380px] w-full rounded-2xl bg-secondary/20 animate-pulse border border-border/40" />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
       </div>
     );
   }
@@ -160,20 +171,31 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
     <div className="mb-12">
       <h2 className="text-3xl font-bold text-foreground tracking-tight mb-6">Popular This Week</h2>
       
-      {/* Mobile: Horizontal snap scroll. Desktop: Grid */}
-      <div className="flex overflow-x-auto gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-3 snap-x snap-mandatory pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-        {events.map((event) => (
-          <div key={event.id} className="min-w-[280px] w-[85vw] sm:w-auto sm:min-w-0 snap-center">
-             <EventCard
-                event={event}
-                showSaveButton={!!user}
-                isSaved={savedEventIds.has(event.id)}
-                trackingSource="home"
-                onClick={onEventClick ? () => onEventClick(event) : undefined}
-              />
-          </div>
-        ))}
-      </div>
+      <Carousel
+        opts={{
+          align: "start",
+          loop: false,
+        }}
+        className="w-full"
+      >
+        <CarouselContent className="-ml-4">
+          {events.map((event) => (
+            <CarouselItem key={event.id} className="pl-4 basis-[85vw] sm:basis-1/2 lg:basis-1/3">
+              <EventCard
+                 event={event}
+                 showSaveButton={!!user}
+                 isSaved={savedEventIds.has(event.id)}
+                 trackingSource="home"
+                 onClick={onEventClick ? () => onEventClick(event) : undefined}
+               />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <div className="hidden sm:block">
+          <CarouselPrevious />
+          <CarouselNext />
+        </div>
+      </Carousel>
     </div>
   );
 }
