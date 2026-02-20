@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Event } from "@/types";
+import { type Event, EventTag } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,90 @@ export function PopularEventsSection() {
       const data = await res.json();
       
       const evt = Array.isArray(data.events) ? (data.events as Event[]) : [];
-      setEvents(evt);
+      
+      // Inject dummy events for UI testing
+      const dummyEvents: Event[] = [
+        {
+          id: "dummy-1",
+          title: "McGill Robotics Showcase",
+          description: "Come see our fully autonomous mars rover prototype.",
+          event_date: "2026-03-12",
+          event_time: "14:00",
+          location: "McConnell Engineering",
+          club_id: "McGill Robotics",
+          tags: [EventTag.ACADEMIC, EventTag.CAREER],
+          image_url: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          status: "approved",
+          approved_by: null,
+          approved_at: null,
+          club: {
+            id: "McGill Robotics",
+            name: "McGill Robotics",
+            instagram_handle: "mcgillrobotics",
+            logo_url: null,
+            description: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          saved_by_users: []
+        },
+        {
+          id: "dummy-2",
+          title: "Spring Formal Gala",
+          description: "Annual spring formal event for all students. Dress to impress!",
+          event_date: "2026-05-01",
+          event_time: "19:00",
+          location: "Le Centre Sheraton",
+          club_id: "SSMU",
+          tags: [EventTag.SOCIAL, EventTag.CULTURAL],
+          image_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=800",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          status: "approved",
+          approved_by: null,
+          approved_at: null,
+          club: {
+            id: "SSMU",
+            name: "SSMU",
+            instagram_handle: "ssmu_events",
+            logo_url: null,
+            description: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          saved_by_users: []
+        },
+        {
+          id: "dummy-3",
+          title: "Beginner Yoga Session",
+          description: "De-stress before midterms with a friendly yoga session.",
+          event_date: "2026-02-28",
+          event_time: "10:00",
+          location: "SSMU Studio",
+          club_id: "Yoga Club",
+          tags: [EventTag.WELLNESS, EventTag.SPORTS],
+          image_url: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          status: "approved",
+          approved_by: null,
+          approved_at: null,
+          club: {
+            id: "Yoga Club",
+            name: "Yoga Club",
+            instagram_handle: "mcgillyoga",
+            logo_url: null,
+            description: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          saved_by_users: []
+        }
+      ];
+
+      setEvents([...evt, ...dummyEvents]);
     } catch (err) {
       console.error("Error fetching popular events:", err);
       setError("Failed to load popular events.");

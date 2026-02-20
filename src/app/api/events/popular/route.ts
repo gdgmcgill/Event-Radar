@@ -93,12 +93,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Query events with their popularity scores
-    // We join events with event_popularity_scores
     const { data: eventsData, error: eventsError } = await supabase
       .from("events")
       .select(`
         *,
-        club:clubs(*),
         popularity:event_popularity_scores(*)
       `)
       .eq("status", "approved")
@@ -108,7 +106,7 @@ export async function GET(request: NextRequest) {
     if (eventsError) {
       console.error("Error fetching events:", eventsError);
       return NextResponse.json(
-        { error: "Failed to fetch events" },
+        { error: "Failed to fetch events", details: eventsError },
         { status: 500 }
       );
     }
@@ -157,10 +155,10 @@ export async function GET(request: NextRequest) {
       offset,
       sort: sortBy,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error fetching popular events:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error?.message, stack: error?.stack },
       { status: 500 }
     );
   }
