@@ -43,7 +43,7 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
         {
           id: "dummy-1",
           title: "McGill Robotics Showcase",
-          description: "Come see our fully autonomous mars rover prototype.",
+          description: "Come see our fully autonomous mars rover prototype. THIS IS DUMMY DATA TO BE REMOVED FROM PopularEventsSection.tsx",
           event_date: "2026-03-12",
           event_time: "14:00",
           location: "McConnell Engineering",
@@ -69,7 +69,7 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
         {
           id: "dummy-2",
           title: "Spring Formal Gala",
-          description: "Annual spring formal event for all students. Dress to impress!",
+          description: "Annual spring formal event for all students. Dress to impress! THIS IS DUMMY DATA TO BE REMOVED FROM PopularEventsSection.tsx",
           event_date: "2026-05-01",
           event_time: "19:00",
           location: "Le Centre Sheraton",
@@ -95,7 +95,7 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
         {
           id: "dummy-3",
           title: "Beginner Yoga Session",
-          description: "De-stress before midterms with a friendly yoga session.",
+          description: "De-stress before midterms with a friendly yoga session. THIS IS DUMMY DATA TO BE REMOVED FROM PopularEventsSection.tsx",
           event_date: "2026-02-28",
           event_time: "10:00",
           location: "SSMU Studio",
