@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Event } from "@/types";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
@@ -101,8 +102,9 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <ErrorBoundary fallbackMessage="We couldn't load the calendar right now.">
+      <div className="flex flex-col min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
@@ -261,16 +263,17 @@ export default function CalendarPage() {
       </div>
 
       {/* Event Details Modal */}
-      <EventDetailsModal
-        open={isModalOpen}
-        onOpenChange={(open) => {
-          setIsModalOpen(open);
-          if (!open) setSelectedEvent(null);
-        }}
-        event={selectedEvent}
-        trackingSource="calendar"
-      />
-    </div>
+        <EventDetailsModal
+          open={isModalOpen}
+          onOpenChange={(open) => {
+            setIsModalOpen(open);
+            if (!open) setSelectedEvent(null);
+          }}
+          event={selectedEvent}
+          trackingSource="calendar"
+        />
+      </div>
+    </ErrorBoundary>
   );
 }
 
