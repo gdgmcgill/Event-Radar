@@ -13,11 +13,5 @@
         }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/send-reminders",
-      "schedule": "0 8 * * *"
-    }
   ]
 }
