@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import type { Event, EventTag } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
@@ -13,9 +14,16 @@ import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
-import { Filter, RefreshCcw, AlertCircle, ChevronDown } from "lucide-react";
+import { Filter, RefreshCcw, AlertCircle, ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  not_mcgill: "Please sign in with a McGill email (@mcgill.ca or @mail.mcgill.ca).",
+  auth_failed: "Authentication failed. Please try again.",
+  no_code: "Authentication error. Please try again.",
+  not_authenticated: "Could not verify your account. Please try again.",
+};
 import {
   Sheet,
   SheetContent,
@@ -37,9 +45,21 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
+  const [authError, setAuthError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((s) => s.user);
   const { savedEventIds } = useSavedEvents(!!user);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Read auth error from URL query params
+  useEffect(() => {
+    const errorCode = searchParams.get("error");
+    if (errorCode && AUTH_ERROR_MESSAGES[errorCode]) {
+      setAuthError(AUTH_ERROR_MESSAGES[errorCode]);
+      router.replace("/");
+    }
+  }, [searchParams, router]);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -167,6 +187,26 @@ export default function HomePage() {
   return (
     <ErrorBoundary fallbackMessage="We couldn't load events right now.">
       <div className="flex flex-col min-h-screen bg-background font-sans">
+        {/* Auth Error Banner */}
+        {authError && (
+          <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-3">
+            <div className="container mx-auto flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAuthError(null)}
+                className="text-destructive/70 hover:text-destructive transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <section className="relative w-full pt-24 pb-32 md:pt-32 md:pb-40 overflow-hidden bg-secondary/30">
           <div className="container mx-auto px-4 relative z-10 flex flex-col items-center text-center">
