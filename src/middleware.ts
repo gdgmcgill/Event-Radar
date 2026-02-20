@@ -72,6 +72,22 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  // Onboarding guard: redirect to /onboarding if cookie is set
+  const needsOnboarding = request.cookies.get("needs_onboarding")?.value === "1";
+  const path = request.nextUrl.pathname;
+
+  if (
+    needsOnboarding &&
+    user &&
+    path !== "/onboarding" &&
+    !path.startsWith("/api/") &&
+    !path.startsWith("/auth/")
+  ) {
+    const onboardingUrl = request.nextUrl.clone();
+    onboardingUrl.pathname = "/onboarding";
+    return NextResponse.redirect(onboardingUrl);
+  }
+
   return supabaseResponse;
 }
 
