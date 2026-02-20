@@ -13,6 +13,8 @@ import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event } from "@/types";
 import { Calendar, Clock, MapPin, Heart, ArrowLeft } from "lucide-react";
+import { RsvpButton } from "@/components/events/RsvpButton";
+import { createClient } from "@/lib/supabase/server";
 
 interface EventDetailPageProps {
   params: {
@@ -28,6 +30,18 @@ async function getEvent(id: string): Promise<Event | null> {
   return null;
 }
 
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function EventDetailPage({
   params,
 }: EventDetailPageProps) {
@@ -36,6 +50,8 @@ export default async function EventDetailPage({
   if (!event) {
     notFound();
   }
+
+  const userId = await getCurrentUserId();
 
   const handleSave = () => {
     // TODO: Implement save event logic
@@ -119,6 +135,11 @@ export default async function EventDetailPage({
                   );
                 })}
               </div>
+
+              {/* RSVP */}
+              <div className="pt-4 border-t">
+                <RsvpButton eventId={event.id} userId={userId} />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -132,8 +153,3 @@ export default async function EventDetailPage({
     </div>
   );
 }
-
-
-
-
-

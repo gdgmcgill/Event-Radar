@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -37,12 +39,14 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/swagger-ui-react": "^5.18.0",
+    "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.4.17",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.3",
     "postcss": "^8.4.35",
     "prettier": "^3.2.5",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^4.0.18"
   }
 }
