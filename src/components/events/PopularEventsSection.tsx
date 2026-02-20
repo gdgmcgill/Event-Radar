@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 
-export function PopularEventsSection() {
+interface PopularEventsSectionProps {
+  onEventClick?: (event: Event) => void;
+}
+
+export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -165,6 +169,7 @@ export function PopularEventsSection() {
                 showSaveButton={!!user}
                 isSaved={savedEventIds.has(event.id)}
                 trackingSource="home"
+                onClick={onEventClick ? () => onEventClick(event) : undefined}
               />
           </div>
         ))}

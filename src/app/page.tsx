@@ -264,7 +264,7 @@ export default function HomePage() {
 
           {/* Popular Events Section */}
           {!isFiltering && (!user || (!isSavedLoading && !hasEnoughSavedEvents)) && (
-            <PopularEventsSection />
+            <PopularEventsSection onEventClick={handleEventClick} />
           )}
 
           {/* Main Content */}
