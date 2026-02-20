@@ -4,7 +4,7 @@
  * Home page - Main event calendar/browse view
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Event, EventTag } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -36,6 +36,14 @@ import {
 type ScoredEvent = Event & { score?: number };
 
 export default function HomePage() {
+  return (
+    <Suspense>
+      <HomePageContent />
+    </Suspense>
+  );
+}
+
+function HomePageContent() {
   const [events, setEvents] = useState<ScoredEvent[]>([]);
   const [pastEvents, setPastEvents] = useState<ScoredEvent[]>([]);
   const [pastExpanded, setPastExpanded] = useState(false);
