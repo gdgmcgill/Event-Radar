@@ -6,7 +6,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
-import { LogOut } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -34,18 +34,20 @@ export function SignOutButton({
     setIsLoading(true);
 
     try {
-      // Use the auth store's signOut which clears both the Supabase
-      // session and the store state atomically
-      await signOut();
+      // Ensure users can perceive loading feedback before redirect.
+      await Promise.all([
+        signOut(),
+        new Promise((resolve) => setTimeout(resolve, 500)),
+      ]);
 
-      // Hard navigate so the browser picks up the cleared cookies
-      window.location.href = "/";
+      // Route through server sign-out to clear HttpOnly auth cookies too
+      window.location.replace("/auth/signout");
+      return;
     } catch (err) {
       console.error("Unexpected sign out error:", err);
       // Fallback: force a full reload to clear all state
-      window.location.href = "/";
-    } finally {
-      setIsLoading(false);
+      window.location.replace("/auth/signout");
+      return;
     }
   };
 
@@ -59,7 +61,11 @@ export function SignOutButton({
         className={cn("text-muted-foreground hover:text-destructive", className)}
         title={title ?? "Sign out"}
       >
-        <LogOut className="h-5 w-5" />
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <LogOut className="h-5 w-5" />
+        )}
       </Button>
     );
   }
@@ -72,8 +78,12 @@ export function SignOutButton({
       className={className}
       title={title}
     >
-      <LogOut className="mr-2 h-4 w-4" />
-      {isLoading ? "Signing out..." : "Sign out"}
+      {isLoading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <LogOut className="mr-2 h-4 w-4" />
+      )}
+      {isLoading ? "Signing out.." : "Sign out"}
     </Button>
   );
 }

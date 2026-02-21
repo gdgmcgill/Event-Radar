@@ -150,15 +150,24 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   signOut: async () => {
     console.log("[Auth] Signing out...");
-    // Clear store state immediately so UI updates without waiting for network
-    set({ user: null, loading: false });
+    // Keep current user state briefly so UI can show sign-out loading feedback.
+    // User state is cleared by auth state change events or the sign-out redirect flow.
 
     const supabase = createClient();
-    // Use 'local' scope to clear cookies without a network request that can
-    // hang indefinitely.  The server-side session expires via token expiry.
-    const { error } = await supabase.auth.signOut({ scope: "local" });
-    if (error) {
-      console.error("[Auth] Sign out error:", error.message);
+
+    void supabase.auth.signOut({ scope: "global" }).then(({ error }) => {
+      if (error) {
+        console.error("[Auth] Global sign out error:", error.message);
+      }
+    });
+
+    // Clear any stale auth cache keys left in browser storage
+    if (typeof window !== "undefined") {
+      Object.keys(window.localStorage).forEach((key) => {
+        if (key.startsWith("sb-") && key.endsWith("-auth-token")) {
+          window.localStorage.removeItem(key);
+        }
+      });
     }
   },
 }));
