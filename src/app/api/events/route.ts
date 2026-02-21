@@ -11,6 +11,45 @@ import { transformEventFromDB } from "@/lib/tagMapping";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"];
 
+type SortField = "start_date" | "created_at" | "popularity_score" | "trending_score";
+type SortDirection = "asc" | "desc";
+
+type CursorPayload = {
+  sortValue: string | number;
+  id: string;
+};
+
+type EventWithPopularity = EventRow & {
+  popularity?: Array<{
+    popularity_score: number | null;
+    trending_score: number | null;
+  }>;
+};
+
+const SORT_FIELDS = new Set<SortField>([
+  "start_date",
+  "created_at",
+  "popularity_score",
+  "trending_score",
+]);
+const MAX_LIMIT = 100;
+
+const decodeCursor = (cursor: string): CursorPayload | null => {
+  try {
+    const decoded = Buffer.from(cursor, "base64").toString("utf-8");
+    const payload = JSON.parse(decoded) as CursorPayload;
+    if (!payload || typeof payload.id !== "string") {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+};
+
+const encodeCursor = (payload: CursorPayload): string =>
+  Buffer.from(JSON.stringify(payload)).toString("base64");
+
 /**
  * @swagger
  * /api/events:
@@ -140,38 +179,103 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const sortParam = (searchParams.get("sort") || "start_date") as SortField;
+    const directionParam = (searchParams.get("direction") || "asc") as SortDirection;
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = Math.min(
+      Math.max(parseInt(searchParams.get("limit") || "50", 10), 1),
+      MAX_LIMIT
+    );
+    const cursor = searchParams.get("cursor");
+    const before = searchParams.get("before");
+
+    if (!SORT_FIELDS.has(sortParam)) {
+      return NextResponse.json(
+        { error: "sort must be one of: start_date, created_at, popularity_score, trending_score" },
+        { status: 400 }
+      );
+    }
+
+    if (directionParam !== "asc" && directionParam !== "desc") {
+      return NextResponse.json(
+        { error: "direction must be 'asc' or 'desc'" },
+        { status: 400 }
+      );
+    }
+
+    if (cursor && before) {
+      return NextResponse.json(
+        { error: "cursor and before cannot be used together" },
+        { status: 400 }
+      );
+    }
+
+    const sort = sortParam;
+    const direction = directionParam;
+    const cursorToken = before || cursor;
+    const cursorPayload = cursorToken ? decodeCursor(cursorToken) : null;
+    if (cursorToken && !cursorPayload) {
+      return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
+    }
 
     // Build Supabase query for approved events only
+    const isPopularitySort =
+      sort === "popularity_score" || sort === "trending_score";
+    const selectClause = isPopularitySort
+      ? "*, popularity:event_popularity_scores!inner(popularity_score, trending_score)"
+      : "*";
+    const isAsc = direction === "asc";
+    const queryAscending = before ? !isAsc : isAsc;
+
     let eventsQuery = supabase
-      .from('events')
-      .select('*', { count: 'exact' })
-      .eq('status', 'approved')
-      .order('start_date', { ascending: true });
+      .from("events")
+      .select(selectClause, { count: "exact" })
+      .eq("status", "approved");
 
     // Apply filters
     if (tags) {
       const tagArray = tags.split(',').map(tag => tag.trim());
-      eventsQuery = eventsQuery.overlaps('tags', tagArray);
+      eventsQuery = eventsQuery.overlaps("tags", tagArray);
     }
 
     if (search) {
-      eventsQuery = eventsQuery.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+      eventsQuery = eventsQuery.or(
+        `title.ilike.%${search}%,description.ilike.%${search}%`
+      );
     }
 
     if (dateFrom) {
-      eventsQuery = eventsQuery.gte('start_date', dateFrom);
+      eventsQuery = eventsQuery.gte("start_date", dateFrom);
     }
 
     if (dateTo) {
-      eventsQuery = eventsQuery.lte('start_date', dateTo);
+      eventsQuery = eventsQuery.lte("start_date", dateTo);
     }
 
+    if (isPopularitySort) {
+      eventsQuery = eventsQuery.order(sort, {
+        ascending: queryAscending,
+        foreignTable: "event_popularity_scores",
+      });
+    } else {
+      eventsQuery = eventsQuery.order(sort, { ascending: queryAscending });
+    }
+    eventsQuery = eventsQuery.order("id", { ascending: queryAscending });
+
     // Apply pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    eventsQuery = eventsQuery.range(from, to);
+    if (cursorPayload) {
+      const sortColumn = isPopularitySort
+        ? `event_popularity_scores.${sort}`
+        : sort;
+      const op = queryAscending ? "gt" : "lt";
+      const sortValue = cursorPayload.sortValue;
+      const orFilter = `${sortColumn}.${op}.${sortValue},and(${sortColumn}.eq.${sortValue},id.${op}.${cursorPayload.id})`;
+      eventsQuery = eventsQuery.or(orFilter).limit(limit + 1);
+    } else {
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      eventsQuery = eventsQuery.range(from, to);
+    }
 
     // Execute events query
     const { data: eventsData, error: eventsError, count } = await eventsQuery;
@@ -182,16 +286,60 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform events using shared utility
-    const events = ((eventsData || []) as EventRow[]).map(event =>
+    let rawEvents = (eventsData || []) as EventWithPopularity[];
+    const hasExtra = cursorPayload ? rawEvents.length > limit : false;
+    if (cursorPayload && hasExtra) {
+      rawEvents = rawEvents.slice(0, limit);
+    }
+    if (before) {
+      rawEvents = rawEvents.reverse();
+    }
+
+    const getSortValue = (event: EventWithPopularity): string | number => {
+      if (sort === "popularity_score" || sort === "trending_score") {
+        const score = event.popularity?.[0]?.[sort];
+        return typeof score === "number" ? score : 0;
+      }
+      return event[sort] ?? "";
+    };
+
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (rawEvents.length > 0) {
+      const first = rawEvents[0];
+      const last = rawEvents[rawEvents.length - 1];
+
+      const firstCursor = encodeCursor({
+        sortValue: getSortValue(first),
+        id: first.id,
+      });
+      const lastCursor = encodeCursor({
+        sortValue: getSortValue(last),
+        id: last.id,
+      });
+
+      if (before) {
+        prevCursor = hasExtra ? firstCursor : null;
+        nextCursor = lastCursor;
+      } else {
+        prevCursor = cursorPayload ? firstCursor : null;
+        nextCursor = hasExtra ? lastCursor : null;
+      }
+    }
+
+    const events = rawEvents.map(event =>
       transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
     );
 
     return NextResponse.json({
       events,
       total: count || 0,
-      page,
+      page: cursorPayload ? undefined : page,
       limit,
-      totalPages: Math.ceil((count || 0) / limit)
+      totalPages: cursorPayload ? undefined : Math.ceil((count || 0) / limit),
+      nextCursor,
+      prevCursor,
     });
   } catch (error) {
     console.error("Error fetching events:", error);
