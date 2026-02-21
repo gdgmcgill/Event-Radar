@@ -69,6 +69,38 @@ function HomePageContent() {
     }
   }, [searchParams, router]);
 
+  const fetchAllEvents = useCallback(async (): Promise<ScoredEvent[]> => {
+    const all: ScoredEvent[] = [];
+    let cursor: string | null = null;
+    let hasMore = true;
+
+    while (hasMore) {
+      const params = new URLSearchParams({
+        limit: "200",
+        sort: "start_date",
+        direction: "asc",
+      });
+      if (cursor) {
+        params.set("cursor", cursor);
+      }
+
+      const res = await fetch(`/api/events?${params.toString()}`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch events");
+      }
+      const data = await res.json();
+      const pageEvents = Array.isArray(data.events)
+        ? (data.events as ScoredEvent[])
+        : [];
+
+      all.push(...pageEvents);
+      cursor = data.nextCursor ?? null;
+      hasMore = Boolean(cursor && pageEvents.length > 0);
+    }
+
+    return all;
+  }, []);
+
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
@@ -84,11 +116,7 @@ function HomePageContent() {
       };
 
       // Always fetch all events (needed for past section + fallback)
-      const allEventsPromise = fetch("/api/events").then(async (res) => {
-        if (!res.ok) throw new Error("Failed to fetch events");
-        const data = await res.json();
-        return Array.isArray(data.events) ? (data.events as ScoredEvent[]) : [];
-      });
+      const allEventsPromise = fetchAllEvents();
 
       // Only try recommendations if authenticated
       if (user) {
@@ -117,7 +145,7 @@ function HomePageContent() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [fetchAllEvents, user]);
 
   useEffect(() => {
     fetchEvents();
