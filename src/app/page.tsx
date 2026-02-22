@@ -9,6 +9,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import type { Event, EventTag } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
+import { useEvents } from "@/hooks/useEvents";
 
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
@@ -62,6 +63,13 @@ function HomePageContent() {
 
   const NUMBER_OF_EVENTS_PER_BATCH = 20;
 
+  const { fetchPage } = useEvents({
+    enabled: false,
+    limit: NUMBER_OF_EVENTS_PER_BATCH,
+    sort: "start_date",
+    direction: "asc",
+  });
+
   // Read auth error from URL query params
   useEffect(() => {
     const errorCode = searchParams.get("error");
@@ -73,28 +81,24 @@ function HomePageContent() {
 
   const fetchUpcomingEventsPage = useCallback(
     async (cursor: string | null = null): Promise<{ events: ScoredEvent[]; nextCursor: string | null }> => {
-      const today = new Date().toISOString().split("T")[0];
+      const dateOnly = new Date().toISOString().split("T")[0];
+      const dateFrom = new Date(dateOnly);
 
-      const params = new URLSearchParams({
-        limit: NUMBER_OF_EVENTS_PER_BATCH.toString(),
-        sort: "start_date",
-        direction: "asc",
-        dateFrom: today,
+      const { events, nextCursor } = await fetchPage({
+        filters: {
+          dateRange: {
+            start: dateFrom,
+          },
+        },
+        cursor,
       });
-      if (cursor) {
-        params.set("cursor", cursor);
-      }
 
-      const res = await fetch(`/api/events?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch events");
-
-      const data = await res.json();
       return {
-        events: (data.events ?? []) as ScoredEvent[],
-        nextCursor: data.nextCursor ?? null,
+        events: events as ScoredEvent[],
+        nextCursor,
       };
     },
-    []
+    [fetchPage]
   );
 
   const loadMore = useCallback(async () => {
