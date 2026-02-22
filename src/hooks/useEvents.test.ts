@@ -500,6 +500,18 @@ describe("useEvents Hook", () => {
         "Failed to fetch events"
       );
     });
+
+    it("should include clubId when provided in fetchPage filters", async () => {
+      const events = [createMockEvent("1")];
+      mockFetch.mockResolvedValueOnce(mockApiResponse(events, 1));
+
+      const { result } = renderHook(() => useEvents({ enabled: false }));
+
+      await result.current.fetchPage({ filters: { clubId: "club-456" } });
+
+      const callUrl = mockFetch.mock.calls[0][0];
+      expect(callUrl).toContain("clubId=club-456");
+    });
   });
 
   describe("Sort Options", () => {

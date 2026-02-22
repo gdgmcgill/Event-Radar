@@ -4,6 +4,8 @@
 
 Fetch approved events with optional filters and cursor-based pagination.
 
+When sorting by `popularity_score` or `trending_score`, events without scores are included and treated as score 0.
+
 - **Authentication:** Not required
 - **Query Parameters:**
   - `cursor` (string, optional) - Cursor for the next page
