@@ -13,6 +13,7 @@ import { useSavedEvents } from "@/hooks/useSavedEvents";
 import { PopularEventsSection } from "@/components/events/PopularEventsSection";
 import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { EventFilters } from "@/components/events/EventFilters";
+import { FilterSidebar } from "@/components/events/FilterSidebar";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
@@ -20,6 +21,7 @@ import { Filter, RefreshCcw, AlertCircle, ChevronDown, X, Sparkles } from "lucid
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SignInButton } from "@/components/auth/SignInButton";
+import { cn } from "@/lib/utils";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   not_mcgill: "Please sign in with a McGill email (@mcgill.ca or @mail.mcgill.ca).",
@@ -57,6 +59,7 @@ function HomePageContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((s) => s.user);
@@ -256,15 +259,32 @@ function HomePageContent() {
                 Upcoming Events
               </h2>
 
-              <div className="flex items-center gap-3">
+                {/* Desktop Quick Filters Toggle */}
                 <div className="hidden md:block">
-                  {/* We can place refined quick filters here or keep them in the modal/sidebar */}
+                  <Button
+                    variant={isDesktopFilterOpen ? "secondary" : "outline"}
+                    className={cn(
+                      "gap-2 rounded-xl transition-all shadow-sm",
+                      isDesktopFilterOpen 
+                        ? "bg-secondary text-secondary-foreground" 
+                        : "border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary"
+                    )}
+                    onClick={() => setIsDesktopFilterOpen(!isDesktopFilterOpen)}
+                  >
+                    <Filter className="h-4 w-4" />
+                    Filters
+                    {selectedTags.length > 0 && (
+                      <span className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                        {selectedTags.length}
+                      </span>
+                    )}
+                  </Button>
                 </div>
 
-                {/* Mobile/Desktop Filter Toggle */}
+                {/* Mobile Filter Toggle */}
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="outline" className="gap-2 rounded-xl border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary transition-all shadow-sm">
+                    <Button variant="outline" className="md:hidden gap-2 rounded-xl border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary transition-all shadow-sm">
                       <Filter className="h-4 w-4" />
                       Filters
                       {selectedTags.length > 0 && (
@@ -286,7 +306,6 @@ function HomePageContent() {
                     </div>
                   </SheetContent>
                 </Sheet>
-              </div>
             </div>
 
             {/* Result count feedback */}
@@ -302,8 +321,21 @@ function HomePageContent() {
               </div>
             )}
 
-            {/* Guest CTA Banner */}
-            {!user && !isFiltering && (
+            <div className="flex items-start gap-0">
+              {/* Desktop Filter Sidebar */}
+              <div className="hidden md:block">
+                <FilterSidebar 
+                  isOpen={isDesktopFilterOpen}
+                  onToggle={() => setIsDesktopFilterOpen(!isDesktopFilterOpen)}
+                  onFilterChange={handleFilterChange}
+                  initialTags={selectedTags}
+                />
+              </div>
+
+              {/* Main Content Area */}
+              <div className="flex-1 min-w-0 flex flex-col gap-8">
+                {/* Guest CTA Banner */}
+                {!user && !isFiltering && (
               <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
                 <div className="shrink-0 rounded-full bg-primary/10 p-2.5">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -386,6 +418,9 @@ function HomePageContent() {
                 )}
               </div>
             )}
+            
+              </div>
+            </div>
           </div>
         </div>
 
