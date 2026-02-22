@@ -47,7 +47,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           null,
         avatar_url: (authUser.user_metadata?.avatar_url as string) ?? null,
         interest_tags: [],
-        is_admin: false,
+        roles: ["user"],
         created_at: authUser.created_at,
         updated_at: authUser.updated_at ?? authUser.created_at,
       };
@@ -55,11 +55,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ user: basicUser, loading: false });
       console.log("[Auth] User set immediately:", basicUser.email);
 
-      // Fetch is_admin and interest_tags from public.users in the background
+      // Fetch roles and interest_tags from public.users in the background
       try {
         const { data: profile } = await supabase
           .from("users")
-          .select("is_admin, interest_tags")
+          .select("roles, interest_tags")
           .eq("id", authUser.id)
           .single();
 
@@ -68,13 +68,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             user: state.user
               ? {
                   ...state.user,
-                  is_admin: profile.is_admin ?? false,
+                  roles: (profile.roles as AppUser["roles"]) ?? ["user"],
                   interest_tags: (profile.interest_tags as string[]) ?? [],
                 }
               : state.user,
           }));
-          console.log("[Auth] Updated profile: is_admin=%s, interest_tags=%d",
-            profile.is_admin, (profile.interest_tags as string[] | null)?.length ?? 0);
+          console.log("[Auth] Updated profile: roles=%o, interest_tags=%d",
+            profile.roles, (profile.interest_tags as string[] | null)?.length ?? 0);
         }
       } catch (err) {
         console.error("[Auth] Failed to fetch profile:", err);

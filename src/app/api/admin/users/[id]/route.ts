@@ -18,8 +18,8 @@ export async function PATCH(
     updated_at: new Date().toISOString(),
   };
 
-  if ("is_admin" in body) {
-    updateData.is_admin = body.is_admin;
+  if ("roles" in body) {
+    updateData.roles = body.roles;
   }
   if ("name" in body) {
     updateData.name = body.name;

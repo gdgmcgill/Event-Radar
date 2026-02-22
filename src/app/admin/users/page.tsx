@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Shield, ShieldOff, Search } from "lucide-react";
+import type { UserRole } from "@/types";
 
 interface AdminUser {
   id: string;
@@ -12,7 +13,7 @@ interface AdminUser {
   name: string | null;
   avatar_url: string | null;
   interest_tags: string[] | null;
-  is_admin: boolean;
+  roles: UserRole[];
   created_at: string | null;
 }
 
@@ -34,17 +35,24 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, []);
 
-  const toggleAdmin = async (userId: string, currentValue: boolean) => {
+  const toggleAdmin = async (userId: string, currentlyAdmin: boolean) => {
     setToggling(userId);
+    const targetUser = users.find((u) => u.id === userId);
+    if (!targetUser) { setToggling(null); return; }
+
+    const newRoles: UserRole[] = currentlyAdmin
+      ? targetUser.roles.filter((r) => r !== "admin")
+      : [...targetUser.roles.filter((r) => r !== "admin"), "admin"];
+
     const res = await fetch(`/api/admin/users/${userId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_admin: !currentValue }),
+      body: JSON.stringify({ roles: newRoles }),
     });
     if (res.ok) {
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === userId ? { ...u, is_admin: !currentValue } : u
+          u.id === userId ? { ...u, roles: newRoles } : u
         )
       );
     }
@@ -115,18 +123,18 @@ export default function AdminUsersPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    {user.is_admin && (
+                    {user.roles.includes("admin") && (
                       <Badge className="bg-primary/10 text-primary border-0">
                         Admin
                       </Badge>
                     )}
                     <Button
                       size="sm"
-                      variant={user.is_admin ? "destructive" : "outline"}
-                      onClick={() => toggleAdmin(user.id, user.is_admin)}
+                      variant={user.roles.includes("admin") ? "destructive" : "outline"}
+                      onClick={() => toggleAdmin(user.id, user.roles.includes("admin"))}
                       disabled={toggling === user.id}
                     >
-                      {user.is_admin ? (
+                      {user.roles.includes("admin") ? (
                         <>
                           <ShieldOff className="mr-1.5 h-3.5 w-3.5" />
                           Remove Admin

@@ -99,7 +99,7 @@ export function SideNavBar() {
             })}
 
             {/* Admin Nav Items */}
-            {user?.is_admin && (
+            {user?.roles?.includes("admin") && (
               <>
                 <div className="pt-4 pb-1">
                   <span
