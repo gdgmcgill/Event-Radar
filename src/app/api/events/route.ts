@@ -278,6 +278,8 @@ export async function GET(request: NextRequest) {
       eventsQuery = eventsQuery.range(from, to);
     }
 
+    eventsQuery = eventsQuery.returns<EventWithPopularity[]>();
+
     // Execute events query
     const { data: eventsData, error: eventsError, count } = await eventsQuery;
 
@@ -287,7 +289,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform events using shared utility
-    let rawEvents = (eventsData || []) as EventWithPopularity[];
+    let rawEvents = eventsData ?? [];
     const hasExtra = rawEvents.length > limit;
     if (hasExtra) {
       rawEvents = rawEvents.slice(0, limit);
