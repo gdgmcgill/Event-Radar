@@ -59,6 +59,32 @@ const encodeCursor = (payload: CursorPayload): string =>
  *    tags:
  *      - Events
  *    parameters:
+ *      - name: cursor
+ *        description: Cursor for the next page
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: before
+ *        description: Cursor for the previous page
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: sort
+ *        description: Sort field for pagination
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *          enum: [start_date, created_at, popularity_score, trending_score]
+ *      - name: direction
+ *        description: Sort direction for pagination
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *          enum: [asc, desc]
  *      - name: tags
  *        description: Comma-separated list of tags
  *        in: query
@@ -165,6 +191,12 @@ const encodeCursor = (payload: CursorPayload): string =>
  *                  type: integer
  *                totalPages:
  *                  type: integer
+ *                nextCursor:
+ *                  type: string
+ *                  nullable: true
+ *                prevCursor:
+ *                  type: string
+ *                  nullable: true
  *        description: Events fetched successfully
  *      500:
  *        description: Internal server error
@@ -188,6 +220,11 @@ export async function GET(request: NextRequest) {
     );
     const cursor = searchParams.get("cursor");
     const before = searchParams.get("before");
+    const usesLegacyPagination = searchParams.has("page") && !cursor && !before;
+
+    if (usesLegacyPagination) {
+      console.warn("Deprecated pagination: use cursor or before instead of page.");
+    }
 
     if (!SORT_FIELDS.has(sortParam)) {
       return NextResponse.json(
