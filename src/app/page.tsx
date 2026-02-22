@@ -12,7 +12,6 @@ import { useSavedEvents } from "@/hooks/useSavedEvents";
 
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
-import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
 import { Filter, RefreshCcw, AlertCircle, ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,8 +48,6 @@ function HomePageContent() {
   const [pastExpanded, setPastExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -184,11 +181,6 @@ function HomePageContent() {
     },
     []
   );
-
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setIsModalOpen(true);
-  };
 
   const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
 
@@ -325,7 +317,6 @@ function HomePageContent() {
                 <EventGrid
                   events={filteredEvents}
                   loading={loading}
-                  onEventClick={handleEventClick}
                   showSaveButton={!!user}
                   savedEventIds={savedEventIds}
                   trackingSource="home"
@@ -353,7 +344,6 @@ function HomePageContent() {
                     <EventGrid
                       events={filteredPastEvents}
                       loading={false}
-                      onEventClick={handleEventClick}
                       showSaveButton={!!user}
                       savedEventIds={savedEventIds}
                       trackingSource="home"
@@ -365,16 +355,7 @@ function HomePageContent() {
           </div>
         </div>
 
-        {/* Event Details Modal */}
-        <EventDetailsModal
-          open={isModalOpen}
-          onOpenChange={(open) => {
-            setIsModalOpen(open);
-            if (!open) setSelectedEvent(null);
-          }}
-          event={selectedEvent}
-          trackingSource="home"
-        />
+
       </div>
     </ErrorBoundary>
   );
