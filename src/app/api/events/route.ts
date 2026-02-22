@@ -109,6 +109,12 @@ const encodeCursor = (payload: CursorPayload): string =>
  *        required: false
  *        schema:
  *          type: string
+ *      - name: clubId
+ *        description: Filter by club id
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
  *      - name: page
  *        description: Page number for pagination (deprecated; use cursor/before)
  *        in: query
@@ -214,6 +220,7 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get('dateTo');
     const sortParam = (searchParams.get("sort") || "start_date") as SortField;
     const directionParam = (searchParams.get("direction") || "asc") as SortDirection;
+    const clubId = searchParams.get("clubId");
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = Math.min(
       Math.max(parseInt(searchParams.get("limit") || "50", 10), 1),
@@ -260,7 +267,7 @@ export async function GET(request: NextRequest) {
     const isPopularitySort =
       sort === "popularity_score" || sort === "trending_score";
     const selectClause = isPopularitySort
-      ? "*, popularity:event_popularity_scores!inner(popularity_score, trending_score)"
+      ? "*, popularity:event_popularity_scores(popularity_score, trending_score)"
       : "*";
     const isAsc = direction === "asc";
     const queryAscending = before ? !isAsc : isAsc;
@@ -290,10 +297,15 @@ export async function GET(request: NextRequest) {
       eventsQuery = eventsQuery.lte("start_date", dateTo);
     }
 
+    if (clubId) {
+      eventsQuery = eventsQuery.eq("club_id", clubId);
+    }
+
     if (isPopularitySort) {
       eventsQuery = eventsQuery.order(sort, {
         ascending: queryAscending,
         foreignTable: "event_popularity_scores",
+        nullsFirst: queryAscending,
       });
     } else {
       eventsQuery = eventsQuery.order(sort, { ascending: queryAscending });
@@ -307,7 +319,10 @@ export async function GET(request: NextRequest) {
         : sort;
       const op = queryAscending ? "gt" : "lt";
       const sortValue = cursorPayload.sortValue;
-      const orFilter = `${sortColumn}.${op}.${sortValue},and(${sortColumn}.eq.${sortValue},id.${op}.${cursorPayload.id})`;
+      const orFilterBase = `${sortColumn}.${op}.${sortValue},and(${sortColumn}.eq.${sortValue},id.${op}.${cursorPayload.id})`;
+      const orFilter = !queryAscending
+        ? `${orFilterBase},${sortColumn}.is.null`
+        : orFilterBase;
       eventsQuery = eventsQuery.or(orFilter).limit(limit + 1);
     } else {
       // For first page, still fetch limit + 1 to detect if nextCursor exists
