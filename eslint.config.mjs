@@ -1,5 +1,8 @@
 import coreWebVitals from "eslint-config-next/core-web-vitals";
 
-const eslintConfig = [...coreWebVitals];
+const eslintConfig = [
+  { ignores: [".claude/**"] },
+  ...coreWebVitals,
+];
 
 export default eslintConfig;
