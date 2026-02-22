@@ -65,10 +65,15 @@ export default function CategoriesPage() {
       setLoading(true);
       setError(null);
 
-      const results = await Promise.all(EVENT_TAGS.map((tag) => fetchCategoryPage(tag)));
+      const results = await Promise.all(
+        EVENT_TAGS.map((tag) => fetchCategoryPage(tag).catch((err) => {
+          console.error(`Error fetching ${tag} events:`, err);
+          return { events: [], nextCursor: null, total: 0, prevCursor: null };
+        }))
+      );
+
       const nextEvents = buildEmptyEvents();
       const nextCursors = buildEmptyCursors();
-      const nextLoading = buildEmptyLoading();
 
       results.forEach((result, index) => {
         const tag = EVENT_TAGS[index];
@@ -78,7 +83,7 @@ export default function CategoriesPage() {
 
       setEventsByTag(nextEvents);
       setNextCursorByTag(nextCursors);
-      setLoadingByTag(nextLoading);
+      setLoadingByTag(buildEmptyLoading());
     } catch (err) {
       console.error("Error fetching events:", err);
       setError("Failed to load events. Please try again later.");
@@ -90,8 +95,13 @@ export default function CategoriesPage() {
   const handleLoadMore = useCallback(
     async (tag: EventTag) => {
       const cursor = nextCursorByTag[tag];
-      if (!cursor || loadingByTag[tag]) return;
-      setLoadingByTag((prev) => ({ ...prev, [tag]: true }));
+      if (!cursor) return;
+
+      // Prevent double-loading
+      setLoadingByTag((prev) => {
+        if (prev[tag]) return prev;
+        return { ...prev, [tag]: true };
+      });
 
       try {
         const { events, nextCursor } = await fetchCategoryPage(tag, cursor);
@@ -101,12 +111,12 @@ export default function CategoriesPage() {
         }));
         setNextCursorByTag((prev) => ({ ...prev, [tag]: nextCursor }));
       } catch (err) {
-        console.error("Error loading more events:", err);
+        console.error(`Error loading more ${tag} events:`, err);
       } finally {
         setLoadingByTag((prev) => ({ ...prev, [tag]: false }));
       }
     },
-    [fetchCategoryPage, loadingByTag, nextCursorByTag]
+    [fetchCategoryPage, nextCursorByTag]
   );
 
   useEffect(() => {
