@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
 import { transformEventFromDB } from "@/lib/tagMapping";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"];
 
@@ -131,6 +132,16 @@ type EventRow = Database["public"]["Tables"]["events"]["Row"];
  *        description: Internal server error
  */
 export async function GET(request: NextRequest) {
+  const rateLimited = enforceRateLimit(request, {
+    keyPrefix: "public:events:get",
+    limit: 100,
+    windowMs: 60_000,
+  });
+
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   try {
     const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;

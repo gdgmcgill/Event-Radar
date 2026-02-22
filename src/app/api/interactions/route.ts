@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { TrackInteractionPayload } from "@/types";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 /**
  * @swagger
@@ -51,6 +52,16 @@ import type { TrackInteractionPayload } from "@/types";
  *         description: Internal server error
  */
 export async function POST(request: NextRequest) {
+  const rateLimited = enforceRateLimit(request, {
+    keyPrefix: "public:interactions:post",
+    limit: 30,
+    windowMs: 60_000,
+  });
+
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   try {
     const body: TrackInteractionPayload = await request.json();
 
