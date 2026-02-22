@@ -6,7 +6,7 @@
     "dev": "cross-env NODE_OPTIONS=--max-http-header-size=32768 next dev",
     "build": "next build",
     "start": "cross-env NODE_OPTIONS=--max-http-header-size=32768 next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test": "vitest",
     "test:run": "vitest run"
   },
