@@ -60,13 +60,13 @@ const encodeCursor = (payload: CursorPayload): string =>
  *      - Events
  *    parameters:
  *      - name: cursor
- *        description: Cursor for the next page
+ *        description: Cursor for the next page (do not combine with before)
  *        in: query
  *        required: false
  *        schema:
  *          type: string
  *      - name: before
- *        description: Cursor for the previous page
+ *        description: Cursor for the previous page (do not combine with cursor)
  *        in: query
  *        required: false
  *        schema:
@@ -110,9 +110,10 @@ const encodeCursor = (payload: CursorPayload): string =>
  *        schema:
  *          type: string
  *      - name: page
- *        description: Page number for pagination
+ *        description: Page number for pagination (deprecated; use cursor/before)
  *        in: query
  *        required: false
+ *        deprecated: true
  *        schema:
  *          type: integer
  *      - name: limit

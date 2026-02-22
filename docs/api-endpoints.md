@@ -1,5 +1,52 @@
 # API Endpoints
 
+## GET /api/events
+
+Fetch approved events with optional filters and cursor-based pagination.
+
+- **Authentication:** Not required
+- **Query Parameters:**
+  - `cursor` (string, optional) - Cursor for the next page
+  - `before` (string, optional) - Cursor for the previous page
+  - `sort` (string, optional) - One of `start_date`, `created_at`, `popularity_score`, `trending_score`
+  - `direction` (string, optional) - `asc` or `desc`
+  - `tags` (string, optional) - Comma-separated list of tags
+  - `search` (string, optional) - Search query
+  - `dateFrom` (string, optional) - ISO start date
+  - `dateTo` (string, optional) - ISO end date
+  - `clubId` (string, optional) - Filter by club id
+  - `limit` (integer, optional) - Page size (default 50, max 100)
+  - `page` (integer, optional) - Legacy pagination; deprecated
+- **Responses:**
+  - `200 OK` - `{ "events": [...], "total": 123, "nextCursor": "...", "prevCursor": "..." }`
+  - `400 Bad Request` - `{ "error": "Invalid cursor" }` or validation errors
+  - `500 Internal Server Error` - `{ "error": "Internal server error" }`
+
+### Example Request
+
+```http
+GET /api/events?tags=music,community&sort=start_date&direction=asc&limit=20 HTTP/1.1
+```
+
+### Example Success Response (200)
+
+```json
+{
+  "events": [
+    {
+      "id": "44a6be58-533b-4b15-bd15-631919439803",
+      "title": "Campus Jazz Night",
+      "start_date": "2026-02-28T19:00:00.000Z",
+      "location": "Redpath Hall",
+      "tags": ["music", "community"]
+    }
+  ],
+  "total": 42,
+  "nextCursor": "eyJzb3J0VmFsdWUiOiIyMDI2LTAyLTI4VDE5OjAwOjAwLjAwMFoiLCJpZCI6IjQ0YTZiZTU4LTUzM2ItNGIxNS1iZDE1LTYzMTkxOTQzOTgwMyJ9",
+  "prevCursor": null
+}
+```
+
 ## POST /api/events/:id/save
 
 Save an event to the authenticated user's saved list.
