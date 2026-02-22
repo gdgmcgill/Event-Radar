@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { EventFilters } from "@/components/events/EventFilters";
 import type { EventTag } from "@/types";
 import { cn } from "@/lib/utils";
@@ -26,13 +25,6 @@ export function FilterSidebar({
   onToggle,
   className,
 }: FilterSidebarProps) {
-  // Use a small delay for mounting content to allow animation to feel smoother
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <div
       className={cn(
@@ -42,9 +34,7 @@ export function FilterSidebar({
       )}
     >
       <div className={cn("w-[280px] lg:w-[320px] transition-opacity duration-300", isOpen ? "opacity-100" : "opacity-0")}>
-        {mounted && (
-          <EventFilters onFilterChange={onFilterChange} initialTags={initialTags} />
-        )}
+        <EventFilters onFilterChange={onFilterChange} initialTags={initialTags} />
       </div>
     </div>
   );
