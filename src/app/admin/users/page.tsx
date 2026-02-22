@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,18 +22,17 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [toggling, setToggling] = useState<string | null>(null);
 
-  const fetchUsers = useCallback(async () => {
-    const res = await fetch("/api/admin/users");
-    if (res.ok) {
-      const data = await res.json();
-      setUsers(data.users ?? []);
-    }
-    setLoading(false);
-  }, []);
-
   useEffect(() => {
+    async function fetchUsers() {
+      const res = await fetch("/api/admin/users");
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users ?? []);
+      }
+      setLoading(false);
+    }
     fetchUsers();
-  }, [fetchUsers]);
+  }, []);
 
   const toggleAdmin = async (userId: string, currentValue: boolean) => {
     setToggling(userId);

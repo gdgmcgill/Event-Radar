@@ -112,7 +112,7 @@ function HomePageContent() {
     } finally {
       setLoading(false);
     }
-  }, [user, isSavedLoading, hasEnoughSavedEvents]);
+  }, []);
 
   useEffect(() => {
     fetchEvents();

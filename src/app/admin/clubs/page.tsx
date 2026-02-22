@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
@@ -18,18 +18,17 @@ export default function AdminClubsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const fetchClubs = useCallback(async () => {
-    const res = await fetch("/api/admin/clubs");
-    if (res.ok) {
-      const data = await res.json();
-      setClubs(data.clubs ?? []);
-    }
-    setLoading(false);
-  }, []);
-
   useEffect(() => {
+    async function fetchClubs() {
+      const res = await fetch("/api/admin/clubs");
+      if (res.ok) {
+        const data = await res.json();
+        setClubs(data.clubs ?? []);
+      }
+      setLoading(false);
+    }
     fetchClubs();
-  }, [fetchClubs]);
+  }, []);
 
   const filtered = clubs.filter((c) => {
     if (!searchQuery) return true;

@@ -57,7 +57,7 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
       <div className="mb-12">
         <div className="mb-6">
           <h2 className="text-3xl font-bold text-foreground tracking-tight">Popular This Week</h2>
-          <p className="text-muted-foreground mt-1">See what's popular between McGill students this week</p>
+          <p className="text-muted-foreground mt-1">See what&apos;s popular between McGill students this week</p>
         </div>
         <Carousel className="w-full">
           <CarouselContent className="-ml-4">
@@ -93,7 +93,7 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
     <div className="mb-12">
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-foreground tracking-tight">Popular This Week</h2>
-        <p className="text-muted-foreground mt-1">See what's popular between McGill students this week</p>
+        <p className="text-muted-foreground mt-1">See what&apos;s popular between McGill students this week</p>
       </div>
       
       <Carousel
