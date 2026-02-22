@@ -16,9 +16,10 @@ import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
-import { Filter, RefreshCcw, AlertCircle, ChevronDown, X } from "lucide-react";
+import { Filter, RefreshCcw, AlertCircle, ChevronDown, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SignInButton } from "@/components/auth/SignInButton";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   not_mcgill: "Please sign in with a McGill email (@mcgill.ca or @mail.mcgill.ca).",
@@ -65,11 +66,15 @@ function HomePageContent() {
 
   const hasEnoughSavedEvents = savedEventIds.size >= 3;
 
-  // Read auth error from URL query params
+  // Read auth error / sign-in required from URL query params
   useEffect(() => {
     const errorCode = searchParams.get("error");
+    const signinRequired = searchParams.get("signin");
     if (errorCode && AUTH_ERROR_MESSAGES[errorCode]) {
       setAuthError(AUTH_ERROR_MESSAGES[errorCode]);
+      router.replace("/");
+    } else if (signinRequired === "required") {
+      setAuthError("Please sign in to access that page.");
       router.replace("/");
     }
   }, [searchParams, router]);
@@ -294,6 +299,21 @@ function HomePageContent() {
                 {selectedTags.length > 0 && (
                   <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
                 )}
+              </div>
+            )}
+
+            {/* Guest CTA Banner */}
+            {!user && !isFiltering && (
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                <div className="shrink-0 rounded-full bg-primary/10 p-2.5">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    Sign in with your McGill email to save events and get personalized recommendations.
+                  </p>
+                </div>
+                <SignInButton variant="outline" />
               </div>
             )}
 
