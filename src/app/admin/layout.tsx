@@ -18,11 +18,12 @@ export default async function AdminLayout({
   // Check admin status
   const { data: profile } = await supabase
     .from("users")
-    .select("is_admin")
+    .select("roles")
     .eq("id", user.id)
     .single();
 
-  if (!profile?.is_admin) {
+  const roles: string[] = profile?.roles ?? [];
+  if (!roles.includes("admin")) {
     redirect("/");
   }
 

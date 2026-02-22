@@ -90,9 +90,10 @@ export function useTracking(options: UseTrackingOptions = {}): UseTrackingResult
 
   // Cleanup timers on unmount
   useEffect(() => {
+    const timers = viewTimersRef.current;
     return () => {
-      viewTimersRef.current.forEach((timer) => clearTimeout(timer));
-      viewTimersRef.current.clear();
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
     };
   }, []);
 

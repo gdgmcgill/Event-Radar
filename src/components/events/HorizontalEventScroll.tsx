@@ -52,9 +52,10 @@ export function HorizontalEventScroll({
   }, [checkScroll]);
 
   // Reset trigger when children change (new items loaded)
+  const childCount = Children.count(children);
   useEffect(() => {
     nearEndTriggeredRef.current = false;
-  }, [Children.count(children)]);
+  }, [childCount]);
 
   const scroll = (direction: "left" | "right") => {
     const el = scrollRef.current;

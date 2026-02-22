@@ -8,14 +8,17 @@ import { useState, useEffect } from "react";
  */
 export function useSavedEvents(enabled: boolean) {
   const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(enabled);
 
   useEffect(() => {
     if (!enabled) {
       setSavedEventIds(new Set());
+      setIsLoading(false);
       return;
     }
 
     const fetchSaved = async () => {
+      setIsLoading(true);
       try {
         const res = await fetch("/api/users/saved-events");
         if (!res.ok) return;
@@ -23,11 +26,13 @@ export function useSavedEvents(enabled: boolean) {
         setSavedEventIds(new Set(data.savedEventIds || []));
       } catch {
         // Silently fail - hearts just won't show initial saved state
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchSaved();
   }, [enabled]);
 
-  return { savedEventIds };
+  return { savedEventIds, isLoading };
 }

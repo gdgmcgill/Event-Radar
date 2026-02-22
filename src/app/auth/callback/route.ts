@@ -18,8 +18,18 @@ import type { Database } from "@/lib/supabase/types";
 // Valid McGill email domains
 const VALID_DOMAINS = ["@mcgill.ca", "@mail.mcgill.ca"] as const;
 
+// Hardcoded admin emails — only these accounts can have the admin role
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 function isMcGillEmail(email: string): boolean {
   return VALID_DOMAINS.some((domain) => email.toLowerCase().endsWith(domain));
+}
+
+function isAdminEmail(email: string): boolean {
+  return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
 export async function GET(request: NextRequest) {
@@ -28,10 +38,6 @@ export async function GET(request: NextRequest) {
   const next = requestUrl.searchParams.get("next") ?? "/";
   const errorParam = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
-
-  console.log("[Callback] Starting OAuth callback handler");
-  console.log("[Callback] Request cookies count:", request.cookies.getAll().length);
-  console.log("[Callback] Request cookie names:", request.cookies.getAll().map(c => c.name).join(", "));
 
   // Handle OAuth provider errors
   if (errorParam) {
@@ -48,8 +54,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  console.log("[Callback] Got authorization code, exchanging...");
-
   // Accumulate ALL cookies across multiple setAll calls
   const allCookies = new Map<string, { name: string; value: string; options: Record<string, unknown> }>();
 
@@ -62,9 +66,6 @@ export async function GET(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          console.log("[Callback] setAll called with", cookiesToSet.length, "cookies:",
-            cookiesToSet.map(c => `${c.name} (${c.value.length} chars)`).join(", "));
-
           // Update request cookies so subsequent reads see the new values
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
@@ -90,8 +91,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  console.log("[Callback] Code exchange succeeded. Accumulated cookies so far:", allCookies.size);
-
   // Get the authenticated user
   const {
     data: { user },
@@ -104,8 +103,6 @@ export async function GET(request: NextRequest) {
       new URL(`/?error=not_authenticated`, requestUrl.origin)
     );
   }
-
-  console.log("[Callback] Got user:", user.email);
 
   const email = user.email ?? "";
 
@@ -149,18 +146,28 @@ export async function GET(request: NextRequest) {
   }
 
   // Check if user needs onboarding (no interest_tags set)
+  // Also fetch current roles for admin auto-assignment
   let needsOnboarding = false;
   try {
     const { data: profile } = await (supabase as any)
       .from("users")
-      .select("interest_tags")
+      .select("interest_tags, roles")
       .eq("id", user.id)
       .single();
 
     const tags = profile?.interest_tags as string[] | null;
     needsOnboarding = !tags || tags.length === 0;
-    console.log("[Callback] Onboarding check: interest_tags=%d, needsOnboarding=%s",
-      tags?.length ?? 0, needsOnboarding);
+
+    // Auto-assign admin role if email is in the hardcoded list
+    const currentRoles = (profile?.roles as string[]) ?? ["user"];
+    if (isAdminEmail(email) && !currentRoles.includes("admin")) {
+      const newRoles = [...currentRoles, "admin"];
+      await (supabase as any)
+        .from("users")
+        .update({ roles: newRoles })
+        .eq("id", user.id);
+      console.log("[Callback] Auto-assigned admin role to:", email);
+    }
   } catch (err) {
     console.error("[Callback] Failed to check onboarding status:", err);
   }
@@ -171,11 +178,7 @@ export async function GET(request: NextRequest) {
     : new URL(next, requestUrl.origin);
   const response = NextResponse.redirect(redirectUrl);
 
-  console.log("[Callback] Building redirect to:", redirectUrl.toString());
-  console.log("[Callback] Setting", allCookies.size, "cookies on redirect response");
-
-  for (const [cookieName, { value, options }] of allCookies) {
-    console.log("[Callback] Setting cookie:", cookieName, "length:", value.length);
+  for (const [, { name: cookieName, value, options }] of allCookies) {
     response.cookies.set(cookieName, value, options);
   }
 
@@ -187,17 +190,7 @@ export async function GET(request: NextRequest) {
       path: "/",
       maxAge: 3600, // 1 hour auto-expiry
     });
-    console.log("[Callback] Set needs_onboarding cookie");
   }
 
-  // Log the final Set-Cookie headers for debugging
-  const setCookieHeaders = response.headers.getSetCookie();
-  console.log("[Callback] Response Set-Cookie headers count:", setCookieHeaders.length);
-  setCookieHeaders.forEach((header, i) => {
-    const name = header.split("=")[0];
-    console.log(`[Callback]   ${i}: ${name} (${header.length} chars)`);
-  });
-
-  console.log("[Callback] Returning redirect response");
   return response;
 }

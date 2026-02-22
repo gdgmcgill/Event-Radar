@@ -11,13 +11,16 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 import { useEvents } from "@/hooks/useEvents";
 
+import { PopularEventsSection } from "@/components/events/PopularEventsSection";
+import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
-import { Filter, RefreshCcw, AlertCircle, X } from "lucide-react";
+import { Filter, RefreshCcw, AlertCircle, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SignInButton } from "@/components/auth/SignInButton";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   not_mcgill: "Please sign in with a McGill email (@mcgill.ca or @mail.mcgill.ca).",
@@ -45,17 +48,28 @@ export default function HomePage() {
 }
 
 function HomePageContent() {
-  const [recommendedEvents, setRecommendedEvents] = useState<ScoredEvent[] | null>(null);
+  const [recommendationFailed, setRecommendationFailed] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
-  const [authError, setAuthError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((s) => s.user);
-  const { savedEventIds } = useSavedEvents(!!user);
+  const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Derive auth error from search params (avoiding setState in effect)
+  const authError = useMemo(() => {
+    const errorCode = searchParams.get("error");
+    const signinRequired = searchParams.get("signin");
+    if (errorCode && AUTH_ERROR_MESSAGES[errorCode]) {
+      return AUTH_ERROR_MESSAGES[errorCode];
+    } else if (signinRequired === "required") {
+      return "Please sign in to access that page.";
+    }
+    return null;
+  }, [searchParams]);
 
   const NUMBER_OF_EVENTS_PER_BATCH = 20;
 
@@ -88,49 +102,14 @@ function HomePageContent() {
     direction: "asc",
   });
 
-  // Read auth error from URL query params
+  const canShowRecommendations = savedEventIds.size >= 3;
+
+  // Clear query params when auth error is present
   useEffect(() => {
-    const errorCode = searchParams.get("error");
-    if (errorCode && AUTH_ERROR_MESSAGES[errorCode]) {
-      setAuthError(AUTH_ERROR_MESSAGES[errorCode]);
+    if (authError) {
       router.replace("/");
     }
-  }, [searchParams, router]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const fetchRecommendations = async () => {
-      if (!user) {
-        setRecommendedEvents(null);
-        return;
-      }
-
-      try {
-        const recResponse = await fetch("/api/recommendations");
-        if (!recResponse.ok) {
-          return;
-        }
-
-        const data = await recResponse.json();
-        const recs = Array.isArray(data.recommendations)
-          ? (data.recommendations as ScoredEvent[])
-          : [];
-
-        if (isActive) {
-          setRecommendedEvents(recs.length > 0 ? recs : null);
-        }
-      } catch (err) {
-        console.error("Recommendations failed:", err);
-      }
-    };
-
-    fetchRecommendations();
-
-    return () => {
-      isActive = false;
-    };
-  }, [user]);
+  }, [authError, router]);
 
   // Global "/" keyboard shortcut to focus search
   useEffect(() => {
@@ -173,14 +152,9 @@ function HomePageContent() {
     [searchQuery, selectedTags]
   );
 
-  const displayedEvents = useMemo(
-    () => (recommendedEvents && recommendedEvents.length > 0 ? recommendedEvents : events),
-    [recommendedEvents, events]
-  );
-
   const filteredEvents = useMemo(
-    () => applyFilters(displayedEvents),
-    [displayedEvents, applyFilters]
+    () => applyFilters(events),
+    [events, applyFilters]
   );
 
   const handleSearchChange = useCallback((query: string) => {
@@ -200,8 +174,8 @@ function HomePageContent() {
   };
 
   const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
-  const canLoadMore = !recommendedEvents?.length && !!nextCursor;
-  const errorMessage = error?.message || null;
+  const canLoadMore = !!nextCursor;
+  const errorMessage = typeof error === 'string' ? error : error?.message || null;
 
   return (
     <ErrorBoundary fallbackMessage="We couldn't load events right now.">
@@ -216,7 +190,7 @@ function HomePageContent() {
               </div>
               <button
                 type="button"
-                onClick={() => setAuthError(null)}
+                onClick={() => router.replace("/")}
                 className="text-destructive/70 hover:text-destructive transition-colors"
                 aria-label="Dismiss"
               >
@@ -268,7 +242,9 @@ function HomePageContent() {
 
             {/* Header & Filters */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/40">
-              <h2 className="text-3xl font-bold text-foreground tracking-tight">Upcoming Events</h2>
+              <h2 className="text-3xl font-bold text-foreground tracking-tight">
+                Upcoming Events
+              </h2>
 
               <div className="flex items-center gap-3">
                 <div className="hidden md:block">
@@ -314,6 +290,33 @@ function HomePageContent() {
                   <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
                 )}
               </div>
+            )}
+
+            {/* Guest CTA Banner */}
+            {!user && !isFiltering && (
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                <div className="shrink-0 rounded-full bg-primary/10 p-2.5">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    Sign in with your McGill email to save events and get personalized recommendations.
+                  </p>
+                </div>
+                <SignInButton variant="outline" />
+              </div>
+            )}
+
+            {/* Popular / Recommended Section */}
+            {!isFiltering && (
+              (!user || (!isSavedLoading && !canShowRecommendations) || recommendationFailed) ? (
+                <PopularEventsSection onEventClick={handleEventClick} />
+              ) : (user && !isSavedLoading && canShowRecommendations && !recommendationFailed) ? (
+                <RecommendedEventsSection
+                  onEventClick={handleEventClick}
+                  onEmpty={() => setRecommendationFailed(true)}
+                />
+              ) : null
             )}
 
             {/* Main Content */}

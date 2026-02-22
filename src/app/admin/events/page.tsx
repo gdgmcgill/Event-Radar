@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,24 +27,23 @@ export default function AdminEventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const fetchEvents = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (statusFilter !== "all") params.set("status", statusFilter);
-    if (searchQuery) params.set("search", searchQuery);
-
-    const res = await fetch(`/api/admin/events?${params}`);
-    if (res.ok) {
-      const data = await res.json();
-      setEvents(data.events ?? []);
-      setTotal(data.total ?? 0);
-    }
-    setLoading(false);
-  }, [statusFilter, searchQuery]);
-
   useEffect(() => {
+    async function fetchEvents() {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (searchQuery) params.set("search", searchQuery);
+
+      const res = await fetch(`/api/admin/events?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setEvents(data.events ?? []);
+        setTotal(data.total ?? 0);
+      }
+      setLoading(false);
+    }
     fetchEvents();
-  }, [fetchEvents]);
+  }, [statusFilter, searchQuery]);
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/admin/events/${id}`, { method: "DELETE" });

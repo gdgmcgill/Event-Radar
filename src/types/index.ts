@@ -25,8 +25,11 @@ export interface Event {
   created_at: string;
   updated_at: string;
   status: "pending" | "approved" | "rejected";
+  created_by: string | null;
   approved_by: string | null;
   approved_at: string | null;
+  source?: "manual" | "instagram" | "admin";
+  source_url?: string | null;
   // Relations
   club?: Club;
   saved_by_users?: string[]; // Array of user IDs who saved this event
@@ -42,6 +45,12 @@ export interface Club {
   updated_at: string;
 }
 
+// =============================================
+// User Roles
+// =============================================
+
+export type UserRole = 'user' | 'club_organizer' | 'admin';
+
 // Matches public.users table schema
 export interface User {
   id: string;
@@ -49,9 +58,32 @@ export interface User {
   name: string | null;
   avatar_url: string | null;
   interest_tags: string[];
-  is_admin: boolean;
+  roles: UserRole[];
   created_at: string | null;
   updated_at: string | null;
+}
+
+export interface ClubMember {
+  id: string;
+  user_id: string;
+  club_id: string;
+  role: string;
+  created_at: string;
+  club?: Club;
+  user?: User;
+}
+
+export interface OrganizerRequest {
+  id: string;
+  user_id: string;
+  club_id: string;
+  message: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+  club?: Club;
+  user?: User;
 }
 
 export interface SavedEvent {
@@ -80,7 +112,7 @@ export interface EventFilter {
 
 export type InteractionType = 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
 
-export type InteractionSource = 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal';
+export type InteractionSource = 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events';
 
 export interface UserInteraction {
   id: string;
@@ -149,4 +181,33 @@ export interface UserEngagementSummary {
   last_active_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// =============================================
+// RSVP Types
+// =============================================
+
+export type RsvpStatus = 'going' | 'interested' | 'cancelled';
+
+export interface Rsvp {
+  id: string;
+  user_id: string;
+  event_id: string;
+  status: RsvpStatus;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  event?: Event;
+  user?: User;
+}
+
+export interface RsvpCountSummary {
+  going: number;
+  interested: number;
+  total: number;
+}
+
+export interface EventRsvpInfo {
+  counts: RsvpCountSummary;
+  user_rsvp: Rsvp | null;
 }

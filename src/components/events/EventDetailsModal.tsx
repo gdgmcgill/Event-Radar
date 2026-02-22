@@ -135,14 +135,28 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
               </a>
             </Button>
             
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5"
               onClick={handleAddToCalendar}
             >
               <Calendar className="mr-2 h-4 w-4" />
               Add to Calendar
             </Button>
+
+            {event.source_url && (
+              <Button asChild variant="outline" className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5">
+                <a
+                  href={event.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View on Instagram
+                </a>
+              </Button>
+            )}
           </div>
 
           {event.club && (

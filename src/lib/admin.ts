@@ -8,9 +8,10 @@ export async function verifyAdmin() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("is_admin")
+    .select("roles")
     .eq("id", user.id)
     .single();
 
-  return { supabase, user, isAdmin: profile?.is_admin ?? false };
+  const roles: string[] = profile?.roles ?? [];
+  return { supabase, user, isAdmin: roles.includes("admin") };
 }

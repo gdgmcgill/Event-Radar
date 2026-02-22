@@ -50,7 +50,12 @@ interface FormErrors {
   tags?: string;
 }
 
-export function CreateEventForm() {
+interface CreateEventFormProps {
+  clubId?: string;
+  onSuccess?: () => void;
+}
+
+export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
   const [formData, setFormData] = useState<FormData>({
     title: "",
     description: "",
@@ -174,6 +179,7 @@ export function CreateEventForm() {
           tags: formData.tags,
           image_url: imageUrl,
           category: formData.tags[0],
+          club_id: clubId,
         }),
       });
 
@@ -184,6 +190,7 @@ export function CreateEventForm() {
       }
 
       setSuccess(true);
+      onSuccess?.();
       // Reset form
       setFormData({
         title: "",
@@ -362,6 +369,7 @@ export function CreateEventForm() {
         </label>
         {imagePreview ? (
           <div className="relative w-full max-w-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
             <img
               src={imagePreview}
               alt="Preview"

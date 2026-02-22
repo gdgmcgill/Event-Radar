@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * POST /functions/v1/events-webhook
  * Webhook endpoint for receiving events from external resources
@@ -5,10 +6,11 @@
  */
 
 // Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts"
-import { createClient } from "@supabase/supabase-js"
+import "@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "@supabase/supabase-js";
 import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
+
 
 /**
  * Webhook event payload structure

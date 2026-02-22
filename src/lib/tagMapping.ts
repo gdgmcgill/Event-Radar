@@ -66,6 +66,7 @@ interface DBEvent {
   created_at: string;
   updated_at: string;
   status?: string;
+  created_by?: string | null;
   approved_by?: string | null;
   approved_at?: string | null;
   club?: DBClub | null;
@@ -128,6 +129,7 @@ export function transformEventFromDB(dbEvent: DBEvent): Event {
     created_at: dbEvent.created_at,
     updated_at: dbEvent.updated_at,
     status: (dbEvent.status as "pending" | "approved" | "rejected") || "approved",
+    created_by: dbEvent.created_by || null,
     approved_by: dbEvent.approved_by || null,
     approved_at: dbEvent.approved_at || null,
     club,

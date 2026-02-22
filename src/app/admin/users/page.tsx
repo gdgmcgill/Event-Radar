@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, ShieldOff, Search } from "lucide-react";
+import { Shield, Search, UserPlus, UserMinus } from "lucide-react";
+import type { UserRole } from "@/types";
 
 interface AdminUser {
   id: string;
@@ -12,7 +13,7 @@ interface AdminUser {
   name: string | null;
   avatar_url: string | null;
   interest_tags: string[] | null;
-  is_admin: boolean;
+  roles: UserRole[];
   created_at: string | null;
 }
 
@@ -22,30 +23,36 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [toggling, setToggling] = useState<string | null>(null);
 
-  const fetchUsers = useCallback(async () => {
-    const res = await fetch("/api/admin/users");
-    if (res.ok) {
-      const data = await res.json();
-      setUsers(data.users ?? []);
+  useEffect(() => {
+    async function fetchUsers() {
+      const res = await fetch("/api/admin/users");
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users ?? []);
+      }
+      setLoading(false);
     }
-    setLoading(false);
+    fetchUsers();
   }, []);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  const toggleAdmin = async (userId: string, currentValue: boolean) => {
+  const toggleOrganizer = async (userId: string, currentlyOrganizer: boolean) => {
     setToggling(userId);
+    const targetUser = users.find((u) => u.id === userId);
+    if (!targetUser) { setToggling(null); return; }
+
+    const newRoles: UserRole[] = currentlyOrganizer
+      ? targetUser.roles.filter((r) => r !== "club_organizer")
+      : [...targetUser.roles.filter((r) => r !== "club_organizer"), "club_organizer"];
+
     const res = await fetch(`/api/admin/users/${userId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_admin: !currentValue }),
+      body: JSON.stringify({ roles: newRoles }),
     });
     if (res.ok) {
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === userId ? { ...u, is_admin: !currentValue } : u
+          u.id === userId ? { ...u, roles: newRoles } : u
         )
       );
     }
@@ -116,26 +123,32 @@ export default function AdminUsersPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    {user.is_admin && (
+                    {user.roles.includes("admin") && (
                       <Badge className="bg-primary/10 text-primary border-0">
+                        <Shield className="mr-1 h-3 w-3" />
                         Admin
+                      </Badge>
+                    )}
+                    {user.roles.includes("club_organizer") && (
+                      <Badge className="bg-blue-500/10 text-blue-600 border-0">
+                        Organizer
                       </Badge>
                     )}
                     <Button
                       size="sm"
-                      variant={user.is_admin ? "destructive" : "outline"}
-                      onClick={() => toggleAdmin(user.id, user.is_admin)}
+                      variant={user.roles.includes("club_organizer") ? "destructive" : "outline"}
+                      onClick={() => toggleOrganizer(user.id, user.roles.includes("club_organizer"))}
                       disabled={toggling === user.id}
                     >
-                      {user.is_admin ? (
+                      {user.roles.includes("club_organizer") ? (
                         <>
-                          <ShieldOff className="mr-1.5 h-3.5 w-3.5" />
-                          Remove Admin
+                          <UserMinus className="mr-1.5 h-3.5 w-3.5" />
+                          Remove Organizer
                         </>
                       ) : (
                         <>
-                          <Shield className="mr-1.5 h-3.5 w-3.5" />
-                          Make Admin
+                          <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                          Make Organizer
                         </>
                       )}
                     </Button>
