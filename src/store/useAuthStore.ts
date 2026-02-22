@@ -55,22 +55,29 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ user: basicUser, loading: false });
       console.log("[Auth] User set immediately:", basicUser.email);
 
-      // Fetch is_admin from public.users in the background
+      // Fetch is_admin and interest_tags from public.users in the background
       try {
         const { data: profile } = await supabase
           .from("users")
-          .select("is_admin")
+          .select("is_admin, interest_tags")
           .eq("id", authUser.id)
           .single();
 
-        if (profile?.is_admin) {
+        if (profile) {
           set((state) => ({
-            user: state.user ? { ...state.user, is_admin: true } : state.user,
+            user: state.user
+              ? {
+                  ...state.user,
+                  is_admin: profile.is_admin ?? false,
+                  interest_tags: (profile.interest_tags as string[]) ?? [],
+                }
+              : state.user,
           }));
-          console.log("[Auth] Updated is_admin: true");
+          console.log("[Auth] Updated profile: is_admin=%s, interest_tags=%d",
+            profile.is_admin, (profile.interest_tags as string[] | null)?.length ?? 0);
         }
       } catch (err) {
-        console.error("[Auth] Failed to fetch is_admin:", err);
+        console.error("[Auth] Failed to fetch profile:", err);
       }
     };
 
@@ -109,7 +116,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("[Auth] onAuthStateChange:", event, session?.user?.email);
 
-      if (event === "INITIAL_SESSION") {
+      if (event === "INITIAL_SESSION" || (event === "SIGNED_IN" && !initialSessionHandled)) {
         initialSessionHandled = true;
         if (!session?.user) {
           console.log("[Auth] No initial session, setting loading: false");
@@ -131,10 +138,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
     });
 
-    // Fallback: if INITIAL_SESSION hasn't fired after 3s, run manual fetch
+    // Fallback: if no auth event has fired after 3s, run manual fetch
     setTimeout(async () => {
       if (!initialSessionHandled) {
-        console.log("[Auth] INITIAL_SESSION timeout, running fallback fetch");
+        console.log("[Auth] Auth event timeout, running fallback fetch");
+        initialSessionHandled = true;
         initialFetch();
       }
     }, 3000);
@@ -147,8 +155,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // The browser client's signOut() hangs with @supabase/ssr,
     // leaving auth cookies intact and the user still logged in on refresh.
     await fetch("/auth/signout", { method: "POST", redirect: "manual" });
-
-    set({ user: null, loading: false });
   },
 }));
 
