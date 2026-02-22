@@ -24,9 +24,10 @@ import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventPopularityScore } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink, Share2, Check } from "lucide-react";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { RelatedEventCard } from "@/components/events/RelatedEventCard";
+import { useTracking } from "@/hooks/useTracking";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -41,6 +42,9 @@ export default function EventDetailClient() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [popularity, setPopularity] = useState<EventPopularityScore | null>(null);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  const { trackShare } = useTracking({ source: "direct" });
 
   useEffect(() => {
     if (!id) return;
@@ -144,6 +148,18 @@ export default function EventDetailClient() {
     fetchRelated();
   }, [event]);
 
+  const handleShare = useCallback(async () => {
+    const url = `${window.location.origin}/events/${id}`;
+    trackShare(id);
+    if (navigator.share) {
+      await navigator.share({ title: event?.title, text: event?.description, url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [id, event, trackShare]);
+
   const handleSave = useCallback(async () => {
     if (!user) {
       setShowSignInPrompt(true);
@@ -237,18 +253,29 @@ export default function EventDetailClient() {
             <CardHeader>
               <div className="flex items-start justify-between gap-3">
                 <CardTitle className="text-xl sm:text-2xl md:text-3xl">{event.title}</CardTitle>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleSave}
-                  disabled={savingInProgress}
-                  title={saved ? "Unsave event" : "Save event"}
-                  className="shrink-0"
-                >
-                  <Heart
-                    className={`h-5 w-5 transition-colors ${saved ? "fill-red-500 text-red-500" : ""}`}
-                  />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleShare}
+                    title="Share event"
+                    className="shrink-0"
+                  >
+                    {copied ? <Check className="h-5 w-5 text-green-500" /> : <Share2 className="h-5 w-5" />}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleSave}
+                    disabled={savingInProgress}
+                    title={saved ? "Unsave event" : "Save event"}
+                    className="shrink-0"
+                  >
+                    <Heart
+                      className={`h-5 w-5 transition-colors ${saved ? "fill-red-500 text-red-500" : ""}`}
+                    />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
