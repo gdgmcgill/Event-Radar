@@ -280,7 +280,7 @@ export async function GET(request: NextRequest) {
       recommendations = (fallbackEvents ?? [])
         .filter((event) => {
           const startDate = getEventStartDate(event);
-          return startDate != null && startDate >= now;
+          return startDate != null && startDate >= now && !currentUserSaved.has(event.id);
         })
         .map(mapEventToResponse);
     }
