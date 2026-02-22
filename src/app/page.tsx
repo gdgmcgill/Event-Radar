@@ -14,7 +14,6 @@ import { PopularEventsSection } from "@/components/events/PopularEventsSection";
 import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
-import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
 import { Filter, RefreshCcw, AlertCircle, ChevronDown, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -53,8 +52,6 @@ function HomePageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recommendationFailed, setRecommendationFailed] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -179,11 +176,6 @@ function HomePageContent() {
     },
     []
   );
-
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setIsModalOpen(true);
-  };
 
   const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
 
@@ -320,10 +312,9 @@ function HomePageContent() {
             {/* Popular / Recommended Section */}
             {!isFiltering && (
               (!user || (!isSavedLoading && !hasEnoughSavedEvents) || recommendationFailed) ? (
-                <PopularEventsSection onEventClick={handleEventClick} />
+                <PopularEventsSection />
               ) : (user && !isSavedLoading && hasEnoughSavedEvents && !recommendationFailed) ? (
                 <RecommendedEventsSection
-                  onEventClick={handleEventClick}
                   onEmpty={() => setRecommendationFailed(true)}
                 />
               ) : null
@@ -349,7 +340,6 @@ function HomePageContent() {
                 <EventGrid
                   events={filteredEvents}
                   loading={loading}
-                  onEventClick={handleEventClick}
                   showSaveButton={!!user}
                   savedEventIds={savedEventIds}
                   trackingSource="home"
@@ -377,7 +367,6 @@ function HomePageContent() {
                     <EventGrid
                       events={filteredPastEvents}
                       loading={false}
-                      onEventClick={handleEventClick}
                       showSaveButton={!!user}
                       savedEventIds={savedEventIds}
                       trackingSource="home"
@@ -389,16 +378,7 @@ function HomePageContent() {
           </div>
         </div>
 
-        {/* Event Details Modal */}
-        <EventDetailsModal
-          open={isModalOpen}
-          onOpenChange={(open) => {
-            setIsModalOpen(open);
-            if (!open) setSelectedEvent(null);
-          }}
-          event={selectedEvent}
-          trackingSource="home"
-        />
+
       </div>
     </ErrorBoundary>
   );
