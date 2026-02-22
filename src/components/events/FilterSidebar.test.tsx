@@ -1,3 +1,4 @@
+import React from "react";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
@@ -38,6 +39,7 @@ describe("FilterSidebar", () => {
     
     // Check that it's expanded
     const wrapper = container.firstChild as HTMLElement;
+    // Check inner wrapper
     expect(wrapper).toHaveClass("opacity-100");
     expect(wrapper).toHaveClass("translate-x-0");
     expect(wrapper).not.toHaveClass("w-0");
