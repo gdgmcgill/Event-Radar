@@ -12,15 +12,34 @@ import type { EventTag } from "@/types";
 import { X, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props for the EventFilters component.
+ */
 interface EventFiltersProps {
+  /**
+   * Callback fired when the active filters change.
+   * Receives an object containing selected filter criteria.
+   */
   onFilterChange?: (filters: {
     tags?: EventTag[];
     dateRange?: { start: Date; end: Date };
     clubId?: string;
   }) => void;
+  /**
+   * Initial tags to populate the selected filters state.
+   */
   initialTags?: EventTag[];
 }
 
+/**
+ * A horizontal filter bar component that allows users to toggle active event categories.
+ * 
+ * It manages its own selected tag state and synchronizes with the `initialTags` prop.
+ * When tags are toggled or cleared, it fires the `onFilterChange` callback to notify parent components.
+ * 
+ * @param {EventFiltersProps} props - The component props.
+ * @returns The rendered horizontal event filter UI.
+ */
 export function EventFilters({ onFilterChange, initialTags = [] }: EventFiltersProps) {
   const [selectedTags, setSelectedTags] = useState<EventTag[]>(initialTags);
 

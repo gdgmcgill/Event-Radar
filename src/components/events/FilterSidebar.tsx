@@ -6,18 +6,45 @@ import { cn } from "@/lib/utils";
 import { ChevronRight, ChevronLeft, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Props for the FilterSidebar component.
+ */
 interface FilterSidebarProps {
+  /**
+   * Callback fired when active filters change within the sidebar.
+   */
   onFilterChange?: (filters: {
     tags?: EventTag[];
     dateRange?: { start: Date; end: Date };
     clubId?: string;
   }) => void;
+  /**
+   * Initial selected tags to pass down to the inner EventFilters component.
+   */
   initialTags?: EventTag[];
+  /**
+   * Determines whether the sidebar filter panel is visible.
+   */
   isOpen: boolean;
+  /**
+   * Callback to toggle the visibility state of the sidebar.
+   */
   onToggle: () => void;
+  /**
+   * Optional CSS class name to apply to the root wrapper.
+   */
   className?: string;
 }
 
+/**
+ * A responsive, slide-out sidebar overlay component containing event filtering options.
+ * 
+ * On desktop (`lg` and above), this renders as a floating panel on the left side of the screen context.
+ * It transitions smoothly into and out of view based on the `isOpen` prop.
+ * 
+ * @param {FilterSidebarProps} props - The component props.
+ * @returns The rendered sidebar containing the EventFilters widget.
+ */
 export function FilterSidebar({
   onFilterChange,
   initialTags = [],
