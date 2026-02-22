@@ -11,11 +11,12 @@ import { useState } from "react";
 
 interface SignInButtonProps {
   variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
+  className?: string;
   /** Override where to redirect after login. Defaults to current page. */
   redirectAfterLogin?: string;
 }
 
-export function SignInButton({ variant = "default", redirectAfterLogin }: SignInButtonProps) {
+export function SignInButton({ variant = "default", className, redirectAfterLogin }: SignInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = async () => {
@@ -51,7 +52,7 @@ export function SignInButton({ variant = "default", redirectAfterLogin }: SignIn
   };
 
   return (
-    <Button onClick={handleSignIn} variant={variant} disabled={isLoading}>
+    <Button onClick={handleSignIn} variant={variant} disabled={isLoading} className={className}>
       <LogIn className="mr-2 h-4 w-4" />
       {isLoading ? "Redirecting..." : "Sign In with McGill Email"}
     </Button>

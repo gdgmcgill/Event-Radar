@@ -6,12 +6,20 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { SignInButton } from "@/components/auth/SignInButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventPopularityScore } from "@/types";
@@ -21,6 +29,7 @@ import { RsvpButton } from "@/components/events/RsvpButton";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
 
   const [event, setEvent] = useState<Event | null>(null);
@@ -28,6 +37,7 @@ export default function EventDetailClient() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [savingInProgress, setSavingInProgress] = useState(false);
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [popularity, setPopularity] = useState<EventPopularityScore | null>(null);
 
   useEffect(() => {
@@ -97,7 +107,11 @@ export default function EventDetailClient() {
   }, [id]);
 
   const handleSave = useCallback(async () => {
-    if (!user || !id || savingInProgress) return;
+    if (!user) {
+      setShowSignInPrompt(true);
+      return;
+    }
+    if (!id || savingInProgress) return;
 
     setSavingInProgress(true);
     try {
@@ -122,13 +136,11 @@ export default function EventDetailClient() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Link href="/">
-          <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Events
-          </Button>
-        </Link>
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <Button variant="ghost" className="mb-4 sm:mb-6" onClick={() => router.back()}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Events
+        </Button>
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
           <p className="text-muted-foreground">{error}</p>
           <Button onClick={() => window.location.reload()} variant="outline">
@@ -141,13 +153,11 @@ export default function EventDetailClient() {
 
   if (!event) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Link href="/">
-          <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Events
-          </Button>
-        </Link>
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <Button variant="ghost" className="mb-4 sm:mb-6" onClick={() => router.back()}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Events
+        </Button>
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-2">
           <h2 className="text-2xl font-bold">Event not found</h2>
           <p className="text-muted-foreground">
@@ -159,19 +169,17 @@ export default function EventDetailClient() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Link href="/">
-        <Button variant="ghost" className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Events
-        </Button>
-      </Link>
+    <div className="container mx-auto px-4 py-6 sm:py-8">
+      <Button variant="ghost" className="mb-4 sm:mb-6" onClick={() => router.back()}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Events
+      </Button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Event Image */}
-          <div className="relative h-96 w-full overflow-hidden rounded-lg bg-muted">
+          <div className="relative h-52 sm:h-72 md:h-96 w-full overflow-hidden rounded-lg bg-muted">
             {event.image_url ? (
               <Image
                 src={event.image_url}
@@ -189,14 +197,15 @@ export default function EventDetailClient() {
           {/* Event Details */}
           <Card>
             <CardHeader>
-              <div className="flex items-start justify-between">
-                <CardTitle className="text-3xl">{event.title}</CardTitle>
+              <div className="flex items-start justify-between gap-3">
+                <CardTitle className="text-xl sm:text-2xl md:text-3xl">{event.title}</CardTitle>
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleSave}
-                  disabled={!user || savingInProgress}
-                  title={user ? (saved ? "Unsave event" : "Save event") : "Sign in to save events"}
+                  disabled={savingInProgress}
+                  title={saved ? "Unsave event" : "Save event"}
+                  className="shrink-0"
                 >
                   <Heart
                     className={`h-5 w-5 transition-colors ${saved ? "fill-red-500 text-red-500" : ""}`}
@@ -205,7 +214,7 @@ export default function EventDetailClient() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-lg">{event.description}</p>
+              <p className="text-base sm:text-lg">{event.description}</p>
 
               <div className="space-y-3">
                 <div className="flex items-center text-muted-foreground">
@@ -298,6 +307,20 @@ export default function EventDetailClient() {
           )}
         </div>
       </div>
+
+      <Dialog open={showSignInPrompt} onOpenChange={setShowSignInPrompt}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sign in to save events</DialogTitle>
+            <DialogDescription>
+              Create an account or sign in with your McGill email to save events and get personalised recommendations.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center pt-2">
+            <SignInButton className="w-full sm:w-auto" />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

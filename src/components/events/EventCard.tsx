@@ -15,7 +15,7 @@ import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { type Event, type InteractionSource } from "@/types";
 import { Calendar, Clock, MapPin, Heart, TrendingUp, Flame } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
 import type { EventPopularityScore } from "@/types";
@@ -44,6 +44,11 @@ export function EventCard({
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
   const { trackClick, trackSave, trackUnsave } = useTracking({ source: trackingSource });
+
+  // Sync local state when the parent resolves the saved status after fetching
+  useEffect(() => {
+    setIsSaved(initialIsSaved);
+  }, [initialIsSaved]);
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
