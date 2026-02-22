@@ -278,10 +278,9 @@ export async function GET(request: NextRequest) {
       eventsQuery = eventsQuery.range(from, to);
     }
 
-    eventsQuery = eventsQuery.returns<EventWithPopularity[]>();
-
     // Execute events query
-    const { data: eventsData, error: eventsError, count } = await eventsQuery;
+    const { data: eventsData, error: eventsError, count } = await eventsQuery
+      .returns<EventWithPopularity[]>();
 
     if (eventsError) {
       console.error("Supabase error fetching events:", eventsError);
