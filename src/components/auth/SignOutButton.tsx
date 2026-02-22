@@ -44,9 +44,8 @@ export function SignOutButton({
       console.error("Unexpected sign out error:", err);
       // Fallback: force a full reload to clear all state
       window.location.href = "/";
-    } finally {
-      setIsLoading(false);
     }
+    // Note: No need to reset isLoading since we navigate away
   };
 
   if (compact) {
