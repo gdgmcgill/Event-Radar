@@ -55,6 +55,7 @@ function HomePageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [popularEventIds, setPopularEventIds] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((s) => s.user);
   const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
@@ -297,7 +298,9 @@ function HomePageContent() {
             {/* Popular / Recommended Section */}
             {!isFiltering && (
               (!user || (!isSavedLoading && !hasEnoughSavedEvents) || recommendationFailed) ? (
-                <PopularEventsSection />
+                <PopularEventsSection
+                  onEventsLoaded={(ids) => setPopularEventIds(new Set(ids))}
+                />
               ) : (user && !isSavedLoading && hasEnoughSavedEvents && !recommendationFailed) ? (
                 <RecommendedEventsSection
                   onEmpty={() => setRecommendationFailed(true)}
@@ -323,7 +326,7 @@ function HomePageContent() {
                 </div>
               ) : (
                 <EventGrid
-                  events={filteredEvents}
+                  events={filteredEvents.filter((e) => !popularEventIds.has(e.id))}
                   loading={loading}
                   showSaveButton={!!user}
                   savedEventIds={savedEventIds}
