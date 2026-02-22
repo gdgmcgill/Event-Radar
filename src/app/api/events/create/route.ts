@@ -54,14 +54,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user name for organizer field
+    // Get user profile with roles
     const { data: profile } = await supabase
       .from("users")
-      .select("name, email")
+      .select("name, email, roles")
       .eq("id", user.id)
       .single();
 
     const organizer = profile?.name || profile?.email || user.email || "Unknown";
+    const roles: string[] = profile?.roles ?? [];
+
+    // Determine event status based on user roles
+    let status: "pending" | "approved" = "pending";
+
+    if (roles.includes("admin")) {
+      status = "approved";
+    } else if (roles.includes("club_organizer") && body.club_id) {
+      // Check if user is an organizer for this specific club
+      const { data: membership } = await supabase
+        .from("club_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("club_id", body.club_id)
+        .single();
+
+      if (membership) {
+        status = "approved";
+      }
+    }
 
     const { data, error } = await supabase
       .from("events")
@@ -75,7 +95,8 @@ export async function POST(request: NextRequest) {
         tags: tags,
         image_url: image_url || null,
         category: category || tags[0] || null,
-        status: "pending",
+        club_id: body.club_id || null,
+        status,
         created_by: user.id,
       })
       .select()
@@ -86,8 +107,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const message = status === "approved"
+      ? "Event created and approved"
+      : "Event submitted for review";
+
     return NextResponse.json(
-      { event: data, message: "Event submitted for review" },
+      { event: data, message },
       { status: 201 }
     );
   } catch (error) {
