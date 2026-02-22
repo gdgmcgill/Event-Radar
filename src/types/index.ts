@@ -45,6 +45,12 @@ export interface Club {
   updated_at: string;
 }
 
+// =============================================
+// User Roles
+// =============================================
+
+export type UserRole = 'user' | 'club_organizer' | 'admin';
+
 // Matches public.users table schema
 export interface User {
   id: string;
@@ -52,9 +58,32 @@ export interface User {
   name: string | null;
   avatar_url: string | null;
   interest_tags: string[];
-  is_admin: boolean;
+  roles: UserRole[];
   created_at: string | null;
   updated_at: string | null;
+}
+
+export interface ClubMember {
+  id: string;
+  user_id: string;
+  club_id: string;
+  role: string;
+  created_at: string;
+  club?: Club;
+  user?: User;
+}
+
+export interface OrganizerRequest {
+  id: string;
+  user_id: string;
+  club_id: string;
+  message: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+  club?: Club;
+  user?: User;
 }
 
 export interface SavedEvent {

@@ -24,6 +24,7 @@ export type Database = {
           start_date: string;
           end_date: string | null;
           location: string;
+          club_id: string | null;
           category: string | null;
           tags: string[];
           image_url: string | null;
@@ -41,6 +42,7 @@ export type Database = {
           start_date: string;
           end_date?: string | null;
           location: string;
+          club_id?: string | null;
           category?: string | null;
           tags?: string[];
           image_url?: string | null;
@@ -58,6 +60,7 @@ export type Database = {
           start_date?: string;
           end_date?: string | null;
           location?: string;
+          club_id?: string | null;
           category?: string | null;
           tags?: string[];
           image_url?: string | null;
@@ -148,7 +151,7 @@ export type Database = {
           name: string | null;
           avatar_url: string | null;
           interest_tags: string[];
-          is_admin: boolean;
+          roles: ("user" | "club_organizer" | "admin")[];
           created_at: string;
           updated_at: string;
         };
@@ -158,7 +161,7 @@ export type Database = {
           name?: string | null;
           avatar_url?: string | null;
           interest_tags?: string[];
-          is_admin?: boolean;
+          roles?: ("user" | "club_organizer" | "admin")[];
           created_at?: string;
           updated_at?: string;
         };
@@ -168,11 +171,98 @@ export type Database = {
           name?: string | null;
           avatar_url?: string | null;
           interest_tags?: string[];
-          is_admin?: boolean;
+          roles?: ("user" | "club_organizer" | "admin")[];
           created_at?: string;
           updated_at?: string;
         };
         Relationships: [];
+      };
+      organizer_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          club_id: string;
+          message: string | null;
+          status: string;
+          reviewed_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          club_id: string;
+          message?: string | null;
+          status?: string;
+          reviewed_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          club_id?: string;
+          message?: string | null;
+          status?: string;
+          reviewed_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organizer_requests_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "organizer_requests_club_id_fkey";
+            columns: ["club_id"];
+            isOneToOne: false;
+            referencedRelation: "clubs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      club_members: {
+        Row: {
+          id: string;
+          user_id: string;
+          club_id: string;
+          role: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          club_id: string;
+          role?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          club_id?: string;
+          role?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "club_members_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "club_members_club_id_fkey";
+            columns: ["club_id"];
+            isOneToOne: false;
+            referencedRelation: "clubs";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       saved_events: {
         Row: {
