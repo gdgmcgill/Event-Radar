@@ -282,6 +282,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      rsvps: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          status: "going" | "interested" | "cancelled";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          status: "going" | "interested" | "cancelled";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          status?: "going" | "interested" | "cancelled";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rsvps_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "rsvps_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_engagement_summary: {
         Row: {
           user_id: string;
