@@ -26,6 +26,7 @@ import type { Event, EventPopularityScore } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame } from "lucide-react";
 import { RsvpButton } from "@/components/events/RsvpButton";
+import { RelatedEventCard } from "@/components/events/RelatedEventCard";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +40,7 @@ export default function EventDetailClient() {
   const [savingInProgress, setSavingInProgress] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [popularity, setPopularity] = useState<EventPopularityScore | null>(null);
+  const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -105,6 +107,42 @@ export default function EventDetailClient() {
 
     fetchPopularity();
   }, [id]);
+
+  // Fetch related events once the current event is loaded
+  useEffect(() => {
+    if (!event?.tags?.length) return;
+
+    const fetchRelated = async () => {
+      const tagsParam = event.tags.join(",");
+      const now = new Date().toISOString();
+      try {
+        const res = await fetch(`/api/events?tags=${tagsParam}&limit=6&dateFrom=${now}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const filtered = (data.events as Event[])
+          .filter((e) => e.id !== event.id)
+          .slice(0, 5);
+
+        if (filtered.length > 0) {
+          setRelatedEvents(filtered);
+        } else {
+          // Fallback: upcoming events with no tag filter
+          const fallbackRes = await fetch(`/api/events?limit=6&dateFrom=${now}`);
+          if (!fallbackRes.ok) return;
+          const fallbackData = await fallbackRes.json();
+          setRelatedEvents(
+            (fallbackData.events as Event[])
+              .filter((e) => e.id !== event.id)
+              .slice(0, 5)
+          );
+        }
+      } catch {
+        // Silently fail — related events are non-critical
+      }
+    };
+
+    fetchRelated();
+  }, [event]);
 
   const handleSave = useCallback(async () => {
     if (!user) {
@@ -302,6 +340,20 @@ export default function EventDetailClient() {
                 <div className="pt-2 border-t text-xs text-muted-foreground/70">
                   {popularity.unique_viewers} unique viewers
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Related Events */}
+          {relatedEvents.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Related Events</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {relatedEvents.map((e) => (
+                  <RelatedEventCard key={e.id} event={e} />
+                ))}
               </CardContent>
             </Card>
           )}
