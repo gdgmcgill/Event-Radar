@@ -36,11 +36,13 @@ interface FetchPageResult {
 interface UseEventsResult {
   events: Event[];
   loading: boolean;
+  loadingMore: boolean;
   error: Error | null;
   total: number;
   nextCursor: string | null;
   prevCursor: string | null;
   refetch: () => void;
+  loadMore: () => void;
   goToNext: () => void;
   goToPrev: () => void;
   fetchPage: (options?: FetchPageOptions) => Promise<FetchPageResult>;
@@ -95,6 +97,7 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
 
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [total, setTotal] = useState(0);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -135,6 +138,13 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
     [cursor, direction, filters, limit, sort]
   );
 
+  const applyPageResult = useCallback((result: FetchPageResult, append = false) => {
+    setEvents((prev) => (append ? [...prev, ...result.events] : result.events));
+    setTotal(result.total);
+    setNextCursor(result.nextCursor);
+    setPrevCursor(result.prevCursor);
+  }, []);
+
   const fetchEvents = useCallback(async () => {
     if (!enabled) {
       setLoading(false);
@@ -145,18 +155,15 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
       setLoading(true);
       setError(null);
 
-      const { events: eventList, total, nextCursor, prevCursor } = await fetchPage();
-      setEvents(eventList);
-      setTotal(total);
-      setNextCursor(nextCursor);
-      setPrevCursor(prevCursor);
+      const result = await fetchPage({ cursor });
+      applyPageResult(result);
     } catch (err) {
       console.error("Error fetching events:", err);
       setError(err instanceof Error ? err : new Error("Failed to fetch events"));
     } finally {
       setLoading(false);
     }
-  }, [enabled, fetchPage]);
+  }, [enabled, fetchPage, cursor, applyPageResult]);
 
   // Reset cursor when filters change
   useEffect(() => {
@@ -186,6 +193,25 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
       setCursor(previousCursor ?? null);
     }
   }, [prevCursor]);
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) {
+      return;
+    }
+
+    try {
+      setLoadingMore(true);
+      setError(null);
+
+      const result = await fetchPage({ cursor: nextCursor });
+      applyPageResult(result, true);
+    } catch (err) {
+      console.error("Error loading more events:", err);
+      setError(err instanceof Error ? err : new Error("Failed to fetch events"));
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [nextCursor, loadingMore, fetchPage, applyPageResult]);
 
   const loadAll = useCallback(
     async (options: Omit<FetchPageOptions, "cursor"> = {}) => {
@@ -234,11 +260,13 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
   return {
     events,
     loading,
+    loadingMore,
     error,
     total,
     nextCursor,
     prevCursor,
     refetch: fetchEvents,
+    loadMore,
     goToNext,
     goToPrev,
     fetchPage,

@@ -45,11 +45,7 @@ export default function HomePage() {
 }
 
 function HomePageContent() {
-  const [events, setEvents] = useState<ScoredEvent[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [recommendedEvents, setRecommendedEvents] = useState<ScoredEvent[] | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,8 +59,30 @@ function HomePageContent() {
 
   const NUMBER_OF_EVENTS_PER_BATCH = 20;
 
-  const { fetchPage } = useEvents({
-    enabled: false,
+  const todayStart = useMemo(() => {
+    const dateOnly = new Date().toISOString().split("T")[0];
+    return new Date(dateOnly);
+  }, []);
+
+  const upcomingFilters = useMemo(
+    () => ({
+      dateRange: {
+        start: todayStart,
+      },
+    }),
+    [todayStart]
+  );
+
+  const {
+    events,
+    loading,
+    loadingMore,
+    error,
+    nextCursor,
+    loadMore,
+    refetch,
+  } = useEvents({
+    filters: upcomingFilters,
     limit: NUMBER_OF_EVENTS_PER_BATCH,
     sort: "start_date",
     direction: "asc",
@@ -79,84 +97,40 @@ function HomePageContent() {
     }
   }, [searchParams, router]);
 
-  const fetchUpcomingEventsPage = useCallback(
-    async (cursor: string | null = null): Promise<{ events: ScoredEvent[]; nextCursor: string | null }> => {
-      const dateOnly = new Date().toISOString().split("T")[0];
-      const dateFrom = new Date(dateOnly);
-
-      const { events, nextCursor } = await fetchPage({
-        filters: {
-          dateRange: {
-            start: dateFrom,
-          },
-        },
-        cursor,
-      });
-
-      return {
-        events: events as ScoredEvent[],
-        nextCursor,
-      };
-    },
-    [fetchPage]
-  );
-
-  const loadMore = useCallback(async () => {
-    if (!nextCursor || loadingMore) return;
-    try {
-      setLoadingMore(true);
-      const { events: newEvents, nextCursor: newCursor } =
-        await fetchUpcomingEventsPage(nextCursor);
-      setEvents((prev) => [...prev, ...newEvents]);
-      setNextCursor(newCursor);
-    } catch (err) {
-      console.error("Error loading more events:", err);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [nextCursor, loadingMore, fetchUpcomingEventsPage]);
-
-  const fetchEvents = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Fetch first page of upcoming events
-      const { events: upcomingPage, nextCursor: cursor } =
-        await fetchUpcomingEventsPage();
-      
-      setEvents(upcomingPage);
-      setNextCursor(cursor);
-
-      // Try recommendations if authenticated
-      if (user) {
-        try {
-          const recResponse = await fetch("/api/recommendations");
-          if (recResponse.ok) {
-            const data = await recResponse.json();
-            const recs = Array.isArray(data.recommendations)
-              ? data.recommendations
-              : [];
-            if (recs.length > 0) {
-              setEvents(recs);
-              setNextCursor(null);
-            }
-          }
-        } catch (err) {
-          console.error("Recommendations failed:", err);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching events:", err);
-      setError("Failed to load events. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchUpcomingEventsPage, user]);
-
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    let isActive = true;
+
+    const fetchRecommendations = async () => {
+      if (!user) {
+        setRecommendedEvents(null);
+        return;
+      }
+
+      try {
+        const recResponse = await fetch("/api/recommendations");
+        if (!recResponse.ok) {
+          return;
+        }
+
+        const data = await recResponse.json();
+        const recs = Array.isArray(data.recommendations)
+          ? (data.recommendations as ScoredEvent[])
+          : [];
+
+        if (isActive) {
+          setRecommendedEvents(recs.length > 0 ? recs : null);
+        }
+      } catch (err) {
+        console.error("Recommendations failed:", err);
+      }
+    };
+
+    fetchRecommendations();
+
+    return () => {
+      isActive = false;
+    };
+  }, [user]);
 
   // Global "/" keyboard shortcut to focus search
   useEffect(() => {
@@ -199,9 +173,14 @@ function HomePageContent() {
     [searchQuery, selectedTags]
   );
 
+  const displayedEvents = useMemo(
+    () => (recommendedEvents && recommendedEvents.length > 0 ? recommendedEvents : events),
+    [recommendedEvents, events]
+  );
+
   const filteredEvents = useMemo(
-    () => applyFilters(events),
-    [events, applyFilters]
+    () => applyFilters(displayedEvents),
+    [displayedEvents, applyFilters]
   );
 
   const handleSearchChange = useCallback((query: string) => {
@@ -221,6 +200,8 @@ function HomePageContent() {
   };
 
   const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
+  const canLoadMore = !recommendedEvents?.length && !!nextCursor;
+  const errorMessage = error?.message || null;
 
   return (
     <ErrorBoundary fallbackMessage="We couldn't load events right now.">
@@ -323,7 +304,7 @@ function HomePageContent() {
             </div>
 
             {/* Result count feedback */}
-            {isFiltering && !loading && !error && (
+            {isFiltering && !loading && !errorMessage && (
               <div className="text-sm text-muted-foreground">
                 Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""}
                 {searchQuery.trim() && (
@@ -337,16 +318,16 @@ function HomePageContent() {
 
             {/* Main Content */}
             <div className="min-h-[500px]">
-              {error ? (
+              {errorMessage ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-card rounded-2xl border border-destructive/20 p-8">
                   <div className="rounded-full bg-destructive/10 p-4">
                     <AlertCircle className="h-8 w-8 text-destructive" />
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold text-foreground">Something went wrong</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">{error}</p>
+                    <p className="text-muted-foreground max-w-md mx-auto">{errorMessage}</p>
                   </div>
-                  <Button onClick={fetchEvents} variant="outline" className="gap-2">
+                  <Button onClick={refetch} variant="outline" className="gap-2">
                     <RefreshCcw className="h-4 w-4" />
                     Try Again
                   </Button>
@@ -364,7 +345,7 @@ function HomePageContent() {
             </div>
 
             {/* Load More Button */}
-            {nextCursor && !error && (
+            {canLoadMore && !errorMessage && (
               <div className="flex justify-center mt-8">
                 <Button
                   onClick={loadMore}
