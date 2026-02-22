@@ -28,6 +28,8 @@ export interface Event {
   created_by: string | null;
   approved_by: string | null;
   approved_at: string | null;
+  source?: "manual" | "instagram" | "admin";
+  source_url?: string | null;
   // Relations
   club?: Club;
   saved_by_users?: string[]; // Array of user IDs who saved this event

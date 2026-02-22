@@ -16,7 +16,7 @@ import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventPopularityScore } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink } from "lucide-react";
 import { RsvpButton } from "@/components/events/RsvpButton";
 
 export default function EventDetailClient() {
@@ -226,6 +226,17 @@ export default function EventDetailClient() {
                       {event.club.name}
                     </Link>
                   </div>
+                )}
+                {event.source_url && (
+                  <a
+                    href={event.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    View on Instagram
+                  </a>
                 )}
               </div>
 
