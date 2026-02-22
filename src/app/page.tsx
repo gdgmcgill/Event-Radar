@@ -64,7 +64,8 @@ function HomePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const hasEnoughSavedEvents = savedEventIds.size >= 3;
+  const hasInterestTags = (user?.interest_tags?.length ?? 0) > 0;
+  const canShowRecommendations = hasInterestTags || savedEventIds.size >= 1;
 
   // Read auth error / sign-in required from URL query params
   useEffect(() => {
@@ -319,9 +320,9 @@ function HomePageContent() {
 
             {/* Popular / Recommended Section */}
             {!isFiltering && (
-              (!user || (!isSavedLoading && !hasEnoughSavedEvents) || recommendationFailed) ? (
+              (!user || (!isSavedLoading && !canShowRecommendations) || recommendationFailed) ? (
                 <PopularEventsSection onEventClick={handleEventClick} />
-              ) : (user && !isSavedLoading && hasEnoughSavedEvents && !recommendationFailed) ? (
+              ) : (user && !isSavedLoading && canShowRecommendations && !recommendationFailed) ? (
                 <RecommendedEventsSection
                   onEventClick={handleEventClick}
                   onEmpty={() => setRecommendationFailed(true)}
