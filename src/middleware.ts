@@ -1,7 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { applyApiRateLimit } from "./middlewareRateLimit";
 
 export async function middleware(request: NextRequest) {
+  // Apply public API rate limits before any auth work
+  const rateLimitResponse = applyApiRateLimit(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -81,9 +86,20 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  const path = request.nextUrl.pathname;
+
+  // Route protection: redirect unauthenticated users from protected pages
+  const PROTECTED_ROUTES = ["/my-events", "/create-event", "/notifications", "/profile"];
+  if (!user && PROTECTED_ROUTES.some((route) => path === route || path.startsWith(route + "/"))) {
+    const signInUrl = request.nextUrl.clone();
+    signInUrl.pathname = "/";
+    signInUrl.searchParams.set("signin", "required");
+    signInUrl.searchParams.set("next", path);
+    return NextResponse.redirect(signInUrl);
+  }
+
   // Onboarding guard: redirect to /onboarding if cookie is set
   const needsOnboarding = request.cookies.get("needs_onboarding")?.value === "1";
-  const path = request.nextUrl.pathname;
 
   if (
     needsOnboarding &&

@@ -217,7 +217,7 @@ export type Database = {
           event_id: string;
           interaction_type: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
           session_id: string | null;
-          source: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | null;
+          source: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events' | null;
           metadata: Record<string, unknown>;
           created_at: string;
         };
@@ -227,7 +227,7 @@ export type Database = {
           event_id: string;
           interaction_type: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
           session_id?: string | null;
-          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | null;
+          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events' | null;
           metadata?: Record<string, unknown>;
           created_at?: string;
         };
@@ -237,7 +237,7 @@ export type Database = {
           event_id?: string;
           interaction_type?: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
           session_id?: string | null;
-          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | null;
+          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events' | null;
           metadata?: Record<string, unknown>;
           created_at?: string;
         };
@@ -281,6 +281,48 @@ export type Database = {
           last_calculated_at?: string;
         };
         Relationships: [];
+      };
+      rsvps: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          status: "going" | "interested" | "cancelled";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          status: "going" | "interested" | "cancelled";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          status?: "going" | "interested" | "cancelled";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rsvps_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "rsvps_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_engagement_summary: {
         Row: {

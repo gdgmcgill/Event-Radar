@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, InteractionSource } from "@/types";
-import { MapPin, Calendar, Clock, ExternalLink } from "lucide-react";
+import { MapPin, Calendar, Clock } from "lucide-react";
 import { useTrackEventModal, useTracking } from "@/hooks/useTracking";
 
 type EventDetailsModalProps = {

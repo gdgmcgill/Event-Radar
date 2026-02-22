@@ -1,4 +1,7 @@
 {
+  "compilerOptions": {
+    "strict": false
+  },
   "imports": {
     "@supabase/functions-js": "jsr:@supabase/functions-js@2",
     "@supabase/functions-js/edge-runtime.d.ts": "jsr:@supabase/functions-js@2/edge-runtime.d.ts",

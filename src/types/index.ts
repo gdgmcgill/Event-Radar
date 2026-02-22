@@ -25,6 +25,7 @@ export interface Event {
   created_at: string;
   updated_at: string;
   status: "pending" | "approved" | "rejected";
+  created_by: string | null;
   approved_by: string | null;
   approved_at: string | null;
   // Relations
@@ -80,7 +81,7 @@ export interface EventFilter {
 
 export type InteractionType = 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
 
-export type InteractionSource = 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal';
+export type InteractionSource = 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events';
 
 export interface UserInteraction {
   id: string;
@@ -149,4 +150,33 @@ export interface UserEngagementSummary {
   last_active_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// =============================================
+// RSVP Types
+// =============================================
+
+export type RsvpStatus = 'going' | 'interested' | 'cancelled';
+
+export interface Rsvp {
+  id: string;
+  user_id: string;
+  event_id: string;
+  status: RsvpStatus;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  event?: Event;
+  user?: User;
+}
+
+export interface RsvpCountSummary {
+  going: number;
+  interested: number;
+  total: number;
+}
+
+export interface EventRsvpInfo {
+  counts: RsvpCountSummary;
+  user_rsvp: Rsvp | null;
 }

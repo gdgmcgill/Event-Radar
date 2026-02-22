@@ -10,12 +10,15 @@ import type { Event, EventTag } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 
+import { PopularEventsSection } from "@/components/events/PopularEventsSection";
+import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventSearch } from "@/components/events/EventSearch";
-import { Filter, RefreshCcw, AlertCircle, ChevronDown, X } from "lucide-react";
+import { Filter, RefreshCcw, AlertCircle, ChevronDown, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SignInButton } from "@/components/auth/SignInButton";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   not_mcgill: "Please sign in with a McGill email (@mcgill.ca or @mail.mcgill.ca).",
@@ -48,20 +51,27 @@ function HomePageContent() {
   const [pastExpanded, setPastExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recommendationFailed, setRecommendationFailed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((s) => s.user);
-  const { savedEventIds } = useSavedEvents(!!user);
+  const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Read auth error from URL query params
+  const hasEnoughSavedEvents = savedEventIds.size >= 3;
+
+  // Read auth error / sign-in required from URL query params
   useEffect(() => {
     const errorCode = searchParams.get("error");
+    const signinRequired = searchParams.get("signin");
     if (errorCode && AUTH_ERROR_MESSAGES[errorCode]) {
       setAuthError(AUTH_ERROR_MESSAGES[errorCode]);
+      router.replace("/");
+    } else if (signinRequired === "required") {
+      setAuthError("Please sign in to access that page.");
       router.replace("/");
     }
   }, [searchParams, router]);
@@ -87,23 +97,8 @@ function HomePageContent() {
         return Array.isArray(data.events) ? (data.events as ScoredEvent[]) : [];
       });
 
-      // Only try recommendations if authenticated
-      if (user) {
-        const recResponse = await fetch("/api/recommendations");
-
-        if (recResponse.ok) {
-          const data = await recResponse.json();
-          const recs = Array.isArray(data.recommendations)
-            ? data.recommendations
-            : [];
-          setEvents(recs);
-          const allEvents = await allEventsPromise;
-          splitPast(allEvents);
-          return;
-        }
-      }
-
-      // Unauthenticated or recommendations failed — show all upcoming events
+      // User logic is handled by the sections themselves (Popular vs Recommended)
+      // Always fetch all events (needed for main feed grid)
       const allEvents = await allEventsPromise;
       const upcoming = allEvents.filter((e) => e.event_date >= today);
       setEvents(upcoming);
@@ -114,7 +109,7 @@ function HomePageContent() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, isSavedLoading, hasEnoughSavedEvents]);
 
   useEffect(() => {
     fetchEvents();
@@ -249,7 +244,9 @@ function HomePageContent() {
 
             {/* Header & Filters */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/40">
-              <h2 className="text-3xl font-bold text-foreground tracking-tight">Upcoming Events</h2>
+              <h2 className="text-3xl font-bold text-foreground tracking-tight">
+                Upcoming Events
+              </h2>
 
               <div className="flex items-center gap-3">
                 <div className="hidden md:block">
@@ -295,6 +292,32 @@ function HomePageContent() {
                   <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
                 )}
               </div>
+            )}
+
+            {/* Guest CTA Banner */}
+            {!user && !isFiltering && (
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                <div className="shrink-0 rounded-full bg-primary/10 p-2.5">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    Sign in with your McGill email to save events and get personalized recommendations.
+                  </p>
+                </div>
+                <SignInButton variant="outline" />
+              </div>
+            )}
+
+            {/* Popular / Recommended Section */}
+            {!isFiltering && (
+              (!user || (!isSavedLoading && !hasEnoughSavedEvents) || recommendationFailed) ? (
+                <PopularEventsSection />
+              ) : (user && !isSavedLoading && hasEnoughSavedEvents && !recommendationFailed) ? (
+                <RecommendedEventsSection
+                  onEmpty={() => setRecommendationFailed(true)}
+                />
+              ) : null
             )}
 
             {/* Main Content */}
