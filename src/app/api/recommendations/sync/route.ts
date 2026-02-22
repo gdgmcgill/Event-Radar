@@ -1,3 +1,5 @@
+// TODO(AS-6): Wire up recommendation sync to external AI service or remove this route
+
 /**
  * POST /api/recommendations/sync
  * Sync an event to the recommendation service
