@@ -1,17 +1,39 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Event, EventTag } from "@/types";
 import { EVENT_TAGS } from "@/lib/constants";
+import { tagMapping } from "@/lib/tagMapping";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
+import { useEvents } from "@/hooks/useEvents";
 import { CategorySection, CategorySectionSkeleton } from "@/components/events/CategorySection";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { AlertCircle, RefreshCcw, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const buildEmptyEvents = (): Record<EventTag, Event[]> =>
+  Object.fromEntries(EVENT_TAGS.map((tag) => [tag, [] as Event[]])) as Record<EventTag, Event[]>;
+
+const buildEmptyCursors = (): Record<EventTag, string | null> =>
+  Object.fromEntries(EVENT_TAGS.map((tag) => [tag, null])) as Record<EventTag, string | null>;
+
+const buildEmptyLoading = (): Record<EventTag, boolean> =>
+  Object.fromEntries(EVENT_TAGS.map((tag) => [tag, false])) as Record<EventTag, boolean>;
+
+const getDbTagsForCategory = (tag: EventTag): string[] => {
+  const dbTags = Object.entries(tagMapping)
+    .filter(([, mappedTag]) => mappedTag === tag)
+    .map(([dbTag]) => dbTag);
+
+  const uniqueTags = Array.from(new Set(dbTags));
+  return uniqueTags.length > 0 ? uniqueTags : [tag];
+};
+
 export default function CategoriesPage() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [eventsByTag, setEventsByTag] = useState<Record<EventTag, Event[]>>(buildEmptyEvents);
+  const [nextCursorByTag, setNextCursorByTag] = useState<Record<EventTag, string | null>>(buildEmptyCursors);
+  const [loadingByTag, setLoadingByTag] = useState<Record<EventTag, boolean>>(buildEmptyLoading);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -19,34 +41,77 @@ export default function CategoriesPage() {
   const user = useAuthStore((s) => s.user);
   const { savedEventIds } = useSavedEvents(!!user);
 
-  const fetchEvents = async () => {
+  const { fetchPage } = useEvents({
+    enabled: false,
+    limit: 20,
+    sort: "start_date",
+    direction: "asc",
+  });
+
+  const fetchCategoryPage = useCallback(async (tag: EventTag, cursor?: string | null) => {
+    const dbTags = getDbTagsForCategory(tag);
+    return {
+      ...(await fetchPage({
+        filters: {
+          tags: dbTags,
+        },
+        cursor,
+      })),
+    };
+  }, [fetchPage]);
+
+  const loadInitial = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/events?limit=200");
-      if (!res.ok) throw new Error("Failed to fetch events");
-      const data = await res.json();
-      setEvents(Array.isArray(data.events) ? data.events : []);
+
+      const results = await Promise.all(EVENT_TAGS.map((tag) => fetchCategoryPage(tag)));
+      const nextEvents = buildEmptyEvents();
+      const nextCursors = buildEmptyCursors();
+      const nextLoading = buildEmptyLoading();
+
+      results.forEach((result, index) => {
+        const tag = EVENT_TAGS[index];
+        nextEvents[tag] = result.events;
+        nextCursors[tag] = result.nextCursor;
+      });
+
+      setEventsByTag(nextEvents);
+      setNextCursorByTag(nextCursors);
+      setLoadingByTag(nextLoading);
     } catch (err) {
       console.error("Error fetching events:", err);
       setError("Failed to load events. Please try again later.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchCategoryPage]);
+
+  const handleLoadMore = useCallback(
+    async (tag: EventTag) => {
+      const cursor = nextCursorByTag[tag];
+      if (!cursor || loadingByTag[tag]) return;
+      setLoadingByTag((prev) => ({ ...prev, [tag]: true }));
+
+      try {
+        const { events, nextCursor } = await fetchCategoryPage(tag, cursor);
+        setEventsByTag((prev) => ({
+          ...prev,
+          [tag]: [...prev[tag], ...events],
+        }));
+        setNextCursorByTag((prev) => ({ ...prev, [tag]: nextCursor }));
+      } catch (err) {
+        console.error("Error loading more events:", err);
+      } finally {
+        setLoadingByTag((prev) => ({ ...prev, [tag]: false }));
+      }
+    },
+    [fetchCategoryPage, loadingByTag, nextCursorByTag]
+  );
 
   useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  // Group events by tag - an event can appear in multiple categories
-  const eventsByTag = useMemo(() => {
-    const grouped: Record<string, Event[]> = {};
-    for (const tag of EVENT_TAGS) {
-      grouped[tag] = events.filter((e) => e.tags.includes(tag));
-    }
-    return grouped;
-  }, [events]);
+    loadInitial();
+  }, [loadInitial]);
 
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
@@ -83,7 +148,7 @@ export default function CategoriesPage() {
               <h3 className="text-xl font-bold text-foreground">Something went wrong</h3>
               <p className="text-muted-foreground max-w-md mx-auto">{error}</p>
             </div>
-            <Button onClick={fetchEvents} variant="outline" className="gap-2">
+            <Button onClick={loadInitial} variant="outline" className="gap-2">
               <RefreshCcw className="h-4 w-4" />
               Try Again
             </Button>
@@ -104,6 +169,9 @@ export default function CategoriesPage() {
                 onEventClick={handleEventClick}
                 showSaveButton={!!user}
                 savedEventIds={savedEventIds}
+                hasMore={Boolean(nextCursorByTag[tag])}
+                onLoadMore={() => handleLoadMore(tag)}
+                loadingMore={loadingByTag[tag]}
               />
             ))}
           </div>
