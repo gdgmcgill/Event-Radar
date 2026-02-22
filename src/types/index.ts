@@ -150,3 +150,32 @@ export interface UserEngagementSummary {
   created_at: string;
   updated_at: string;
 }
+
+// =============================================
+// RSVP Types
+// =============================================
+
+export type RsvpStatus = 'going' | 'interested' | 'cancelled';
+
+export interface Rsvp {
+  id: string;
+  user_id: string;
+  event_id: string;
+  status: RsvpStatus;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  event?: Event;
+  user?: User;
+}
+
+export interface RsvpCountSummary {
+  going: number;
+  interested: number;
+  total: number;
+}
+
+export interface EventRsvpInfo {
+  counts: RsvpCountSummary;
+  user_rsvp: Rsvp | null;
+}

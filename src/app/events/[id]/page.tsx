@@ -17,6 +17,7 @@ import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2 } from "lucide-react";
+import { RsvpButton } from "@/components/events/RsvpButton";
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -221,6 +222,11 @@ export default function EventDetailPage() {
                     </Badge>
                   );
                 })}
+              </div>
+
+              {/* RSVP */}
+              <div className="pt-4 border-t">
+                <RsvpButton eventId={event.id} userId={user?.id ?? null} />
               </div>
             </CardContent>
           </Card>
