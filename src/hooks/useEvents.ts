@@ -18,6 +18,21 @@ interface UseEventsOptions {
   direction?: SortDirection;
 }
 
+interface FetchPageOptions {
+  filters?: EventFilter;
+  cursor?: string | null;
+  limit?: number;
+  sort?: SortField;
+  direction?: SortDirection;
+}
+
+interface FetchPageResult {
+  events: Event[];
+  total: number;
+  nextCursor: string | null;
+  prevCursor: string | null;
+}
+
 interface UseEventsResult {
   events: Event[];
   loading: boolean;
@@ -28,6 +43,8 @@ interface UseEventsResult {
   refetch: () => void;
   goToNext: () => void;
   goToPrev: () => void;
+  fetchPage: (options?: FetchPageOptions) => Promise<FetchPageResult>;
+  loadAll: (options?: Omit<FetchPageOptions, "cursor">) => Promise<void>;
 }
 
 /**
@@ -90,6 +107,34 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
   // Track previous filters to reset cursor when they change
   const prevFiltersRef = useRef<string>("");
 
+  const fetchPage = useCallback(
+    async (options: FetchPageOptions = {}): Promise<FetchPageResult> => {
+      const queryString = buildQueryParams(
+        options.filters ?? filters,
+        options.cursor ?? cursor,
+        options.limit ?? limit,
+        options.sort ?? sort,
+        options.direction ?? direction
+      );
+      const response = await fetch(`/api/events?${queryString}`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch events");
+      }
+
+      const data = await response.json();
+      const eventList = Array.isArray(data) ? data : data.events || [];
+
+      return {
+        events: eventList,
+        total: data.total || 0,
+        nextCursor: data.nextCursor ?? null,
+        prevCursor: data.prevCursor ?? null,
+      };
+    },
+    [cursor, direction, filters, limit, sort]
+  );
+
   const fetchEvents = useCallback(async () => {
     if (!enabled) {
       setLoading(false);
@@ -100,28 +145,18 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
       setLoading(true);
       setError(null);
 
-      const queryString = buildQueryParams(filters, cursor, limit, sort, direction);
-      const response = await fetch(`/api/events?${queryString}`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch events");
-      }
-
-      const data = await response.json();
-
-      // Handle response format
-      const eventList = Array.isArray(data) ? data : data.events || [];
+      const { events: eventList, total, nextCursor, prevCursor } = await fetchPage();
       setEvents(eventList);
-      setTotal(data.total || 0);
-      setNextCursor(data.nextCursor ?? null);
-      setPrevCursor(data.prevCursor ?? null);
+      setTotal(total);
+      setNextCursor(nextCursor);
+      setPrevCursor(prevCursor);
     } catch (err) {
       console.error("Error fetching events:", err);
       setError(err instanceof Error ? err : new Error("Failed to fetch events"));
     } finally {
       setLoading(false);
     }
-  }, [filters, enabled, cursor, limit, sort, direction]);
+  }, [enabled, fetchPage]);
 
   // Reset cursor when filters change
   useEffect(() => {
@@ -152,6 +187,50 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
     }
   }, [prevCursor]);
 
+  const loadAll = useCallback(
+    async (options: Omit<FetchPageOptions, "cursor"> = {}) => {
+      try {
+        setLoading(true);
+        setError(null);
+        setCursor(null);
+        cursorStackRef.current = [];
+
+        let currentCursor: string | null = null;
+        let page = 0;
+
+        while (true) {
+          const { events: pageEvents, total, nextCursor } = await fetchPage({
+            ...options,
+            cursor: currentCursor,
+          });
+
+          if (page === 0) {
+            setEvents(pageEvents);
+          } else {
+            setEvents((prev) => [...prev, ...pageEvents]);
+          }
+
+          setTotal(total);
+          setNextCursor(nextCursor);
+          setPrevCursor(null);
+
+          if (!nextCursor) {
+            break;
+          }
+
+          currentCursor = nextCursor;
+          page += 1;
+        }
+      } catch (err) {
+        console.error("Error fetching events:", err);
+        setError(err instanceof Error ? err : new Error("Failed to fetch events"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchPage]
+  );
+
   return {
     events,
     loading,
@@ -162,5 +241,7 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
     refetch: fetchEvents,
     goToNext,
     goToPrev,
+    fetchPage,
+    loadAll,
   };
 }
