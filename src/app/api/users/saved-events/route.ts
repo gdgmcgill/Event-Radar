@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const sort = request.nextUrl.searchParams.get("sort") || "recent";
 
     // Step 1: Get saved event rows for this user
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { data: savedRows, error: savedError } = await (supabase as any)
       .from("saved_events")
       .select("event_id, created_at")
@@ -80,15 +80,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Build a map of event_id -> saved_at timestamp
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const savedAtMap = new Map<string, string>(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       savedRows.map((row: any) => [row.event_id, row.created_at])
     );
     const eventIds = Array.from(savedAtMap.keys());
 
     // Step 2: Fetch full event details (only approved events)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { data: eventsData, error: eventsError } = await (supabase as any)
       .from("events")
       .select("*")
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform events using shared utility and add saved_at
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const events = ((eventsData || []) as any[]).map((event: any) => ({
       ...transformEventFromDB(event),
       saved_at: savedAtMap.get(event.id),
