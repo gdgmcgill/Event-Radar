@@ -100,9 +100,9 @@ async function checkDatabase(): Promise<HealthCheck> {
     const supabase = await createClient();
     
     // Check all tables
-    const tables = ['events', 'users', 'saved_events', 'rsvps'];
+    const tables = ['events', 'users', 'saved_events'] as const;
     const tableChecks: Record<string, boolean> = {};
-    
+
     // for each table, select 1 row and check if it exists
     for (const table of tables) {
       const { error } = await supabase

@@ -24,6 +24,8 @@ interface EventCardProps {
   onClick?: () => void;
   showSaveButton?: boolean;
   isSaved?: boolean;
+  /** Called when the user unsaves an event. If provided, overrides the default toggle behavior for unsaving. */
+  onUnsave?: (eventId: string) => void;
   /** Source context for tracking (e.g., 'home', 'search', 'recommendation') */
   trackingSource?: InteractionSource;
 }
@@ -33,6 +35,7 @@ export function EventCard({
   onClick,
   showSaveButton = false,
   isSaved: initialIsSaved = false,
+  onUnsave,
   trackingSource,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
@@ -41,6 +44,14 @@ export function EventCard({
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // If the event is saved and an onUnsave callback is provided, delegate to it
+    if (isSaved && onUnsave) {
+      trackUnsave(event.id);
+      onUnsave(event.id);
+      return;
+    }
+
     try {
       const response = await fetch(`/api/events/${event.id}/save`, {
         method: "POST",
@@ -83,14 +94,16 @@ export function EventCard({
               src={event.image_url}
               alt={event.title}
               fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground/40 bg-secondary/30">
+            <div className="relative flex h-full items-center justify-center text-muted-foreground/40 bg-secondary/30">
               <Image
                 src="/placeholder-event.png"
                 alt="No Image"
                 fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover opacity-80 transition-transform duration-700 group-hover:scale-105"
               />
             </div>

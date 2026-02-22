@@ -5,10 +5,9 @@
  */
 
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { useAuthStore } from "@/store/useAuthStore";
 import { LogOut } from "lucide-react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface SignOutButtonProps {
@@ -29,33 +28,21 @@ export function SignOutButton({
   variant = "outline",
 }: SignOutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const signOut = useAuthStore((state) => state.signOut);
 
   const handleSignOut = async () => {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
-      
-      // Attempt sign out with timeout to prevent hanging
-      const signOutPromise = supabase.auth.signOut();
-      const result = await Promise.race([
-        signOutPromise,
-        new Promise<{ error: null }>((resolve) =>
-          setTimeout(() => resolve({ error: null }), 3000)
-        ),
-      ]);
+      // Use the auth store's signOut which clears both the Supabase
+      // session and the store state atomically
+      await signOut();
 
-      if ("error" in result && result.error) {
-        console.error("Sign out error:", result.error);
-      }
-
-      // Navigate to home
-      router.push("/");
-      router.refresh();
+      // Hard navigate so the browser picks up the cleared cookies
+      window.location.href = "/";
     } catch (err) {
       console.error("Unexpected sign out error:", err);
-      // Fallback: force a full reload
+      // Fallback: force a full reload to clear all state
       window.location.href = "/";
     } finally {
       setIsLoading(false);

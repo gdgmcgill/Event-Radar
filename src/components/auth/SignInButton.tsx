@@ -9,7 +9,11 @@ import { createClient } from "@/lib/supabase/client";
 import { LogIn } from "lucide-react";
 import { useState } from "react";
 
-export function SignInButton() {
+interface SignInButtonProps {
+  variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
+}
+
+export function SignInButton({ variant = "default" }: SignInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = async () => {
@@ -38,7 +42,7 @@ export function SignInButton() {
   };
 
   return (
-    <Button onClick={handleSignIn} variant="default" disabled={isLoading}>
+    <Button onClick={handleSignIn} variant={variant} disabled={isLoading}>
       <LogIn className="mr-2 h-4 w-4" />
       {isLoading ? "Redirecting..." : "Sign In with McGill Email"}
     </Button>

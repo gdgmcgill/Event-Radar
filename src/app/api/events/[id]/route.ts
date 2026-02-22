@@ -79,10 +79,10 @@ export async function GET(
     const { id } = await params;
     const supabase = await createClient();
 
-    // Fetch event with club relation
+    // Fetch event without club relation since Clubs table does not exist
     const { data, error } = await supabase
       .from("events")
-      .select("*, club:clubs(*)")
+      .select("*")
       .eq("id", id)
       .single();
 
@@ -104,8 +104,8 @@ export async function GET(
       );
     }
 
-    // Transform event to frontend format
-    const event = transformEventFromDB(data);
+    // Transform event to frontend format (cast needed: clubs relation may not exist in DB types)
+    const event = transformEventFromDB(data as unknown as Parameters<typeof transformEventFromDB>[0]);
 
     return NextResponse.json({ event });
   } catch (error) {

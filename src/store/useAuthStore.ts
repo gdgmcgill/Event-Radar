@@ -35,10 +35,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       created_at: string;
       updated_at?: string;
     }) => {
-      console.log("[Auth] Building user from auth data (skipping DB fetch for now)");
+      console.log("[Auth] Building user from auth data");
 
-      // Skip the database query for now - just use auth user data
-      const finalUser: AppUser = {
+      // Set user immediately so the UI renders without waiting for DB
+      const basicUser: AppUser = {
         id: authUser.id,
         email: authUser.email ?? "",
         name:
@@ -46,14 +46,39 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           (authUser.user_metadata?.full_name as string) ??
           null,
         avatar_url: (authUser.user_metadata?.avatar_url as string) ?? null,
-        preferences: null,
+        interest_tags: [],
+        is_admin: false,
         created_at: authUser.created_at,
         updated_at: authUser.updated_at ?? authUser.created_at,
       };
 
-      console.log("[Auth] Setting user:", finalUser.email);
-      set({ user: finalUser, loading: false });
-      console.log("[Auth] State updated, loading should be false now");
+      set({ user: basicUser, loading: false });
+      console.log("[Auth] User set immediately:", basicUser.email);
+
+      // Fetch is_admin and interest_tags from public.users in the background
+      try {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("is_admin, interest_tags")
+          .eq("id", authUser.id)
+          .single();
+
+        if (profile) {
+          set((state) => ({
+            user: state.user
+              ? {
+                  ...state.user,
+                  is_admin: profile.is_admin ?? false,
+                  interest_tags: (profile.interest_tags as string[]) ?? [],
+                }
+              : state.user,
+          }));
+          console.log("[Auth] Updated profile: is_admin=%s, interest_tags=%d",
+            profile.is_admin, (profile.interest_tags as string[] | null)?.length ?? 0);
+        }
+      } catch (err) {
+        console.error("[Auth] Failed to fetch profile:", err);
+      }
     };
 
     // Initial fetch
@@ -84,12 +109,23 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
     };
 
-    // Run initial fetch
-    initialFetch();
+    // Use onAuthStateChange as the single source of truth.
+    // INITIAL_SESSION fires immediately if a session exists, replacing initialFetch.
+    let initialSessionHandled = false;
 
-    // Listen for auth changes
     supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("[Auth] onAuthStateChange:", event, session?.user?.email);
+
+      if (event === "INITIAL_SESSION" || (event === "SIGNED_IN" && !initialSessionHandled)) {
+        initialSessionHandled = true;
+        if (!session?.user) {
+          console.log("[Auth] No initial session, setting loading: false");
+          set({ user: null, loading: false });
+          return;
+        }
+        await fetchAndSetUser(session.user);
+        return;
+      }
 
       if (event === "SIGNED_OUT" || !session?.user) {
         console.log("[Auth] Signed out, clearing user");
@@ -101,13 +137,24 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         await fetchAndSetUser(session.user);
       }
     });
+
+    // Fallback: if no auth event has fired after 3s, run manual fetch
+    setTimeout(async () => {
+      if (!initialSessionHandled) {
+        console.log("[Auth] Auth event timeout, running fallback fetch");
+        initialSessionHandled = true;
+        initialFetch();
+      }
+    }, 3000);
   },
 
   signOut: async () => {
     console.log("[Auth] Signing out...");
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    set({ user: null, loading: false });
+
+    // Sign out via server route so cookies are properly cleared.
+    // The browser client's signOut() hangs with @supabase/ssr,
+    // leaving auth cookies intact and the user still logged in on refresh.
+    await fetch("/auth/signout", { method: "POST", redirect: "manual" });
   },
 }));
 

@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { transformEventFromDB } from "@/lib/tagMapping";
 
 /**
  * @swagger
@@ -92,12 +93,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Query events with their popularity scores
-    // We join events with event_popularity_scores
     const { data: eventsData, error: eventsError } = await supabase
       .from("events")
       .select(`
         *,
-        club:clubs(*),
         popularity:event_popularity_scores(*)
       `)
       .eq("status", "approved")
@@ -107,7 +106,7 @@ export async function GET(request: NextRequest) {
     if (eventsError) {
       console.error("Error fetching events:", eventsError);
       return NextResponse.json(
-        { error: "Failed to fetch events" },
+        { error: "Failed to fetch events", details: eventsError },
         { status: 500 }
       );
     }
@@ -131,7 +130,13 @@ export async function GET(request: NextRequest) {
       .filter((event) => event._score >= minScore)
       .sort((a, b) => b._score - a._score)
       .slice(offset, offset + limit)
-      .map(({ _score, ...event }) => event); // Remove internal _score field
+      .map(({ _score, ...event }) => {
+        const transformed = transformEventFromDB(event as any);
+        return {
+          ...transformed,
+          popularity: event.popularity,
+        };
+      });
 
     // Get total count for pagination
     const totalWithScores = events.filter((event) => {
@@ -150,10 +155,10 @@ export async function GET(request: NextRequest) {
       offset,
       sort: sortBy,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error fetching popular events:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error?.message, stack: error?.stack },
       { status: 500 }
     );
   }

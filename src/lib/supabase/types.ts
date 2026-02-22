@@ -1,7 +1,5 @@
 /**
  * Supabase database types
- * TODO: Generate these types using Supabase CLI:
- * npx supabase gen types typescript --project-id jnlbrvejjjgtjhlajfss > src/lib/supabase/types.ts
  */
 
 export type Json =
@@ -12,7 +10,10 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export interface Database {
+export type Database = {
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5";
+  };
   public: {
     Tables: {
       events: {
@@ -23,14 +24,15 @@ export interface Database {
           start_date: string;
           end_date: string | null;
           location: string;
-          club_id: string | null;
+          category: string | null;
           tags: string[];
           image_url: string | null;
+          organizer: string | null;
+          rsvp_count: number;
+          created_by: string | null;
           created_at: string;
           updated_at: string;
-          status: "pending" | "approved" | "rejected";
-          approved_by: string | null;
-          approved_at: string | null;
+          status: string;
         };
         Insert: {
           id?: string;
@@ -39,14 +41,15 @@ export interface Database {
           start_date: string;
           end_date?: string | null;
           location: string;
-          club_id?: string | null;
+          category?: string | null;
           tags?: string[];
           image_url?: string | null;
+          organizer?: string | null;
+          rsvp_count?: number;
+          created_by?: string | null;
           created_at?: string;
           updated_at?: string;
-          status?: "pending" | "approved" | "rejected";
-          approved_by?: string | null;
-          approved_at?: string | null;
+          status?: string;
         };
         Update: {
           id?: string;
@@ -55,15 +58,58 @@ export interface Database {
           start_date?: string;
           end_date?: string | null;
           location?: string;
-          club_id?: string | null;
+          category?: string | null;
           tags?: string[];
           image_url?: string | null;
+          organizer?: string | null;
+          rsvp_count?: number;
+          created_by?: string | null;
           created_at?: string;
           updated_at?: string;
-          status?: "pending" | "approved" | "rejected";
-          approved_by?: string | null;
-          approved_at?: string | null;
+          status?: string;
         };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: string;
+          title: string;
+          message: string;
+          event_id: string | null;
+          read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: string;
+          title: string;
+          message: string;
+          event_id?: string | null;
+          read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: string;
+          title?: string;
+          message?: string;
+          event_id?: string | null;
+          read?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       clubs: {
         Row: {
@@ -93,32 +139,40 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       users: {
         Row: {
           id: string;
           email: string;
-          full_name: string | null;
+          name: string | null;
+          avatar_url: string | null;
           interest_tags: string[];
+          is_admin: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           email: string;
-          full_name?: string | null;
+          name?: string | null;
+          avatar_url?: string | null;
           interest_tags?: string[];
+          is_admin?: boolean;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           email?: string;
-          full_name?: string | null;
+          name?: string | null;
+          avatar_url?: string | null;
           interest_tags?: string[];
+          is_admin?: boolean;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       saved_events: {
         Row: {
@@ -139,26 +193,22 @@ export interface Database {
           event_id?: string;
           created_at?: string;
         };
-      };
-      user_saved_events: {
-        Row: {
-          id: string;
-          user_id: string;
-          event_id: string;
-          saved_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          event_id: string;
-          saved_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          event_id?: string;
-          saved_at?: string;
-        };
+        Relationships: [
+          {
+            foreignKeyName: "saved_events_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "saved_events_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_interactions: {
         Row: {
@@ -191,6 +241,7 @@ export interface Database {
           metadata?: Record<string, unknown>;
           created_at?: string;
         };
+        Relationships: [];
       };
       event_popularity_scores: {
         Row: {
@@ -229,6 +280,7 @@ export interface Database {
           trending_score?: number;
           last_calculated_at?: string;
         };
+        Relationships: [];
       };
       user_engagement_summary: {
         Row: {
@@ -270,6 +322,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: {
@@ -304,4 +357,4 @@ export interface Database {
       [_ in never]: never;
     };
   };
-}
+};

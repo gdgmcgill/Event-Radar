@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { guestNavItems, authenticatedNavItems } from "./navItems";
+import { guestNavItems, authenticatedNavItems, adminNavItems } from "./navItems";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export function SideNavBar() {
@@ -62,7 +62,7 @@ export function SideNavBar() {
 
           {/* Navigation Items */}
           <nav className="flex-1 px-3 space-y-1 py-4">
-            {navItems.map((item) => {
+            {navItems.filter((item) => item.path !== "/profile").map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.path;
 
@@ -97,9 +97,58 @@ export function SideNavBar() {
                 </Link>
               );
             })}
-          </nav>
 
-          {/* (Profile moved to top) */}
+            {/* Admin Nav Items */}
+            {user?.is_admin && (
+              <>
+                <div className="pt-4 pb-1">
+                  <span
+                    className={cn(
+                      "text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 transition-all duration-300",
+                      isHovered ? "opacity-100" : "opacity-0"
+                    )}
+                  >
+                    Admin
+                  </span>
+                </div>
+                {adminNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.path;
+
+                  return (
+                    <Link
+                      key={item.path}
+                      href={item.path}
+                      className={cn(
+                        "flex items-center px-3 py-3 rounded-xl transition-all duration-200 group",
+                        isActive
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "w-5 h-5 flex-shrink-0 transition-colors",
+                          isActive
+                            ? "text-primary"
+                            : "text-muted-foreground group-hover:text-foreground",
+                          isHovered ? "mr-3" : "mx-auto"
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "whitespace-nowrap overflow-hidden transition-all duration-300",
+                          isHovered ? "opacity-100 w-auto" : "opacity-0 w-0"
+                        )}
+                      >
+                        {item.name}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </>
+            )}
+          </nav>
         </div>
       </div>
 

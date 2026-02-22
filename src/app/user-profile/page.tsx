@@ -28,9 +28,9 @@ export default function UserProfilePage() {
   }
 
   const profile = {
-    name: user.full_name,
+    name: user.user_metadata?.name,
     email: user.email,
-    interests: user.interest_tags,
+    interests: user.user_metadata?.interest_tags,
   };
 
   return (
