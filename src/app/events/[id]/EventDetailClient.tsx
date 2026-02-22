@@ -14,9 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
-import type { Event } from "@/types";
+import type { Event, EventPopularityScore } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame } from "lucide-react";
 import { RsvpButton } from "@/components/events/RsvpButton";
 
 export default function EventDetailClient() {
@@ -28,6 +28,7 @@ export default function EventDetailClient() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [savingInProgress, setSavingInProgress] = useState(false);
+  const [popularity, setPopularity] = useState<EventPopularityScore | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -73,6 +74,27 @@ export default function EventDetailClient() {
 
     checkSaved();
   }, [user, id]);
+
+  // Fetch popularity data for this event
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchPopularity = async () => {
+      try {
+        const res = await fetch(`/api/events/popular?limit=50`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const match = data.events?.find((e: any) => e.id === id);
+        if (match?.popularity) {
+          setPopularity(match.popularity);
+        }
+      } catch {
+        // Silently fail — popularity is non-critical
+      }
+    };
+
+    fetchPopularity();
+  }, [id]);
 
   const handleSave = useCallback(async () => {
     if (!user || !id || savingInProgress) return;
@@ -234,8 +256,46 @@ export default function EventDetailClient() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* TODO: Add related events */}
-          {/* TODO: Add share functionality */}
+          {/* Popularity Stats */}
+          {popularity && (popularity.popularity_score > 0 || popularity.trending_score > 0) && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Event Stats
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {popularity.trending_score >= 5 && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 text-sm font-medium">
+                    <Flame className="h-4 w-4" />
+                    Trending Now
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Eye className="h-4 w-4" />
+                    <span>{popularity.view_count} views</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MousePointerClick className="h-4 w-4" />
+                    <span>{popularity.click_count} clicks</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Bookmark className="h-4 w-4" />
+                    <span>{popularity.save_count} saves</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>{popularity.calendar_add_count} cal adds</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t text-xs text-muted-foreground/70">
+                  {popularity.unique_viewers} unique viewers
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
