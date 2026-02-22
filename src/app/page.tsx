@@ -13,7 +13,6 @@ import { useSavedEvents } from "@/hooks/useSavedEvents";
 import { PopularEventsSection } from "@/components/events/PopularEventsSection";
 import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { EventFilters } from "@/components/events/EventFilters";
-import { FilterSidebar } from "@/components/events/FilterSidebar";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
@@ -59,9 +58,11 @@ function HomePageContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(true);
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const filterContainerRef = useRef<HTMLDivElement>(null);
+  const filterToggleRef = useRef<HTMLButtonElement>(null);
   const user = useAuthStore((s) => s.user);
   const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
   const searchParams = useSearchParams();
@@ -81,6 +82,26 @@ function HomePageContent() {
       router.replace("/");
     }
   }, [searchParams, router]);
+
+  // Add click-outside listener for desktop sidebar
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        isDesktopFilterOpen && 
+        filterContainerRef.current && 
+        !filterContainerRef.current.contains(event.target as Node) &&
+        filterToggleRef.current &&
+        !filterToggleRef.current.contains(event.target as Node)
+      ) {
+        setIsDesktopFilterOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDesktopFilterOpen]);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -262,6 +283,7 @@ function HomePageContent() {
                 {/* Desktop Quick Filters Toggle */}
                 <div className="hidden md:block">
                   <Button
+                    ref={filterToggleRef}
                     variant={isDesktopFilterOpen ? "secondary" : "outline"}
                     className={cn(
                       "gap-2 rounded-xl transition-all shadow-sm",
@@ -321,19 +343,26 @@ function HomePageContent() {
               </div>
             )}
 
-            <div className="flex items-start gap-0">
-              {/* Desktop Filter Sidebar */}
-              <div className="hidden md:block">
-                <FilterSidebar 
-                  isOpen={isDesktopFilterOpen}
-                  onToggle={() => setIsDesktopFilterOpen(!isDesktopFilterOpen)}
-                  onFilterChange={handleFilterChange}
-                  initialTags={selectedTags}
-                />
+              {/* Desktop Expandable Top Filter Panel */}
+              <div 
+                ref={filterContainerRef}
+                className={cn(
+                  "hidden md:block transition-all duration-300 ease-in-out overflow-hidden origin-top",
+                  isDesktopFilterOpen 
+                    ? "opacity-100 scale-y-100 mb-8 max-h-[400px]" 
+                    : "opacity-0 scale-y-95 mb-0 max-h-0"
+                )}
+              >
+                <div className="pt-2"> 
+                  <EventFilters 
+                    onFilterChange={handleFilterChange} 
+                    initialTags={selectedTags} 
+                  />
+                </div>
               </div>
 
               {/* Main Content Area */}
-              <div className="flex-1 min-w-0 flex flex-col gap-8">
+              <div className="flex-1 min-w-0 flex flex-col gap-8 transition-all duration-300">
                 {/* Guest CTA Banner */}
                 {!user && !isFiltering && (
               <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
@@ -418,13 +447,11 @@ function HomePageContent() {
                 )}
               </div>
             )}
-            
-              </div>
-            </div>
           </div>
         </div>
+      </div>
 
-        {/* Event Details Modal */}
+      {/* Event Details Modal */}
         <EventDetailsModal
           open={isModalOpen}
           onOpenChange={(open) => {

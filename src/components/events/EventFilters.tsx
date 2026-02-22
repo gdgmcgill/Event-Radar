@@ -49,15 +49,24 @@ export function EventFilters({ onFilterChange, initialTags = [] }: EventFiltersP
   };
 
   return (
-    <div className="space-y-6 bg-card p-6 rounded-xl border border-border/50 shadow-sm">
-      <div className="flex items-center gap-2 text-primary font-semibold">
-        <Filter className="h-4 w-4" />
-        <span>Filters</span>
-      </div>
-
-      {/* Tag Filters */}
-      <div>
-        <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Categories</h3>
+    <div className="w-full bg-card p-6 rounded-2xl border border-border/50 shadow-sm flex flex-col md:flex-row gap-6 md:items-start justify-between">
+      
+      {/* Search / Category Filters */}
+      <div className="flex-1 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Categories</h3>
+          {selectedTags.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-auto p-0 text-xs text-muted-foreground hover:text-destructive hidden md:flex"
+            >
+              Clear all filters
+            </Button>
+          )}
+        </div>
+        
         <div className="flex flex-wrap gap-2">
           {EVENT_TAGS.map((tag) => {
             const category = EVENT_CATEGORIES[tag];
@@ -69,10 +78,10 @@ export function EventFilters({ onFilterChange, initialTags = [] }: EventFiltersP
                 size="sm"
                 onClick={() => toggleTag(tag)}
                 className={cn(
-                  "rounded-full px-4 transition-all duration-200",
+                  "rounded-full px-4 py-1 h-auto transition-all duration-200 border",
                   isSelected
-                    ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
-                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary/90"
+                    : "bg-secondary/50 text-secondary-foreground border-transparent hover:bg-secondary/80 hover:border-border/50"
                 )}
               >
                 {category.label}
@@ -82,11 +91,11 @@ export function EventFilters({ onFilterChange, initialTags = [] }: EventFiltersP
         </div>
       </div>
 
-      {/* Selected Filters Display */}
+      {/* Selected Filters Display (Mobile only, desktop uses the inline clear button) */}
       {selectedTags.length > 0 && (
-        <div className="pt-4 border-t border-border/50">
+        <div className="pt-4 border-t border-border/50 md:hidden">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-foreground">Active filters:</span>
+            <span className="text-sm font-medium text-foreground">Active:</span>
             <Button
               variant="ghost"
               size="sm"

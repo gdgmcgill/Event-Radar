@@ -28,6 +28,7 @@ describe("FilterSidebar", () => {
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).toHaveClass("w-0");
     expect(wrapper).toHaveClass("opacity-0");
+    expect(wrapper).toHaveClass("-translate-x-4");
   });
 
   it("renders open when isOpen is true", () => {
@@ -38,6 +39,7 @@ describe("FilterSidebar", () => {
     // Check that it's expanded
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).toHaveClass("opacity-100");
+    expect(wrapper).toHaveClass("translate-x-0");
     expect(wrapper).not.toHaveClass("w-0");
   });
 
