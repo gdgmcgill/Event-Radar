@@ -31,7 +31,7 @@ export default function AdminLoginPage() {
       return;
     }
 
-    // Verify is_admin
+    // Verify admin role
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -43,11 +43,12 @@ export default function AdminLoginPage() {
 
     const { data: profile } = await supabase
       .from("users")
-      .select("is_admin")
+      .select("roles")
       .eq("id", user.id)
       .single();
 
-    if (!profile?.is_admin) {
+    const roles: string[] = profile?.roles ?? [];
+    if (!roles.includes("admin")) {
       await supabase.auth.signOut();
       setError("This account does not have admin privileges.");
       setLoading(false);

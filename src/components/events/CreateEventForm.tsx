@@ -362,6 +362,7 @@ export function CreateEventForm() {
         </label>
         {imagePreview ? (
           <div className="relative w-full max-w-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
             <img
               src={imagePreview}
               alt="Preview"

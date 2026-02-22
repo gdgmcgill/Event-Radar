@@ -10,15 +10,72 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
-import { guestNavItems, authenticatedNavItems } from "./navItems";
+import {
+  guestNavItems,
+  baseNavItems,
+  organizerNavItems,
+  adminNavItems,
+  type NavItem,
+} from "./navItems";
 import { cn } from "@/lib/utils";
+import { isAdmin, isOrganizer } from "@/lib/roles";
+
+function MobileNavSection({
+  items,
+  label,
+  pathname,
+  onClose,
+}: {
+  items: NavItem[];
+  label?: string;
+  pathname: string;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      {label && (
+        <div className="col-span-full px-2 pt-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {label}
+          </span>
+        </div>
+      )}
+      {items.map((item) => {
+        const Icon = item.icon;
+        const isActive = pathname === item.path;
+
+        return (
+          <Link
+            key={item.path}
+            href={item.path}
+            onClick={onClose}
+            className={cn(
+              "flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-200",
+              isActive
+                ? "bg-primary/10 text-primary font-semibold"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Icon className="w-6 h-6 mb-2" />
+            <span className="text-sm font-medium">{item.name}</span>
+          </Link>
+        );
+      })}
+    </>
+  );
+}
 
 export function Header() {
   const { user, loading } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const isAuthenticated = !!user;
-  const navItems = isAuthenticated ? authenticatedNavItems : guestNavItems;
+
+  const navItems = isAuthenticated ? baseNavItems : guestNavItems;
+  const showOrganizer = isAuthenticated && user && isOrganizer(user);
+  const showAdmin = isAuthenticated && user && isAdmin(user);
+
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
     <>
@@ -76,27 +133,29 @@ export function Header() {
         {isMobileMenuOpen && (
           <div className="lg:hidden border-t border-border bg-card">
             <nav className="container px-4 py-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.path;
+              <MobileNavSection
+                items={navItems}
+                pathname={pathname}
+                onClose={closeMobileMenu}
+              />
 
-                return (
-                  <Link
-                    key={item.path}
-                    href={item.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-200",
-                      isActive
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="w-6 h-6 mb-2" />
-                    <span className="text-sm font-medium">{item.name}</span>
-                  </Link>
-                );
-              })}
+              {showOrganizer && (
+                <MobileNavSection
+                  items={organizerNavItems}
+                  label="Organizer"
+                  pathname={pathname}
+                  onClose={closeMobileMenu}
+                />
+              )}
+
+              {showAdmin && (
+                <MobileNavSection
+                  items={adminNavItems}
+                  label="Moderation"
+                  pathname={pathname}
+                  onClose={closeMobileMenu}
+                />
+              )}
             </nav>
           </div>
         )}
@@ -106,7 +165,7 @@ export function Header() {
       {isMobileMenuOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40 top-16"
-          onClick={() => setIsMobileMenuOpen(false)}
+          onClick={closeMobileMenu}
         />
       )}
     </>

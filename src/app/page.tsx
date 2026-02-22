@@ -62,7 +62,7 @@ function HomePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const hasEnoughSavedEvents = savedEventIds.size >= 3;
+  const canShowRecommendations = savedEventIds.size >= 3;
 
   // Read auth error / sign-in required from URL query params
   useEffect(() => {
@@ -110,7 +110,7 @@ function HomePageContent() {
     } finally {
       setLoading(false);
     }
-  }, [user, isSavedLoading, hasEnoughSavedEvents]);
+  }, []);
 
   useEffect(() => {
     fetchEvents();
@@ -297,11 +297,11 @@ function HomePageContent() {
 
             {/* Popular / Recommended Section */}
             {!isFiltering && (
-              (!user || (!isSavedLoading && !hasEnoughSavedEvents) || recommendationFailed) ? (
+              (!user || (!isSavedLoading && !canShowRecommendations) || recommendationFailed) ? (
                 <PopularEventsSection
                   onEventsLoaded={(ids) => setPopularEventIds(new Set(ids))}
                 />
-              ) : (user && !isSavedLoading && hasEnoughSavedEvents && !recommendationFailed) ? (
+              ) : (user && !isSavedLoading && canShowRecommendations && !recommendationFailed) ? (
                 <RecommendedEventsSection
                   onEmpty={() => setRecommendationFailed(true)}
                 />

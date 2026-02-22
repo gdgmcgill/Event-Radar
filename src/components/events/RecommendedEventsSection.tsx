@@ -76,6 +76,7 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
 
   useEffect(() => {
     fetchRecommendedEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only fetch
   }, []);
 
   if (loading && events.length === 0) {

@@ -50,7 +50,7 @@ export async function PUT(request: NextRequest) {
       interest_tags,
       updated_at: new Date().toISOString(),
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { data, error } = await (supabase as any)
       .from("users")
       .update(updatePayload)

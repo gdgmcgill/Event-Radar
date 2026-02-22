@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // Upload to Supabase Storage (upsert to overwrite previous avatar)
     const arrayBuffer = await file.arrayBuffer();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { error: uploadError } = await (supabase as any).storage
       .from("avatars")
       .upload(filePath, arrayBuffer, {
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get public URL
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { data: urlData } = (supabase as any).storage
       .from("avatars")
       .getPublicUrl(filePath);
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       avatar_url: avatarUrl,
       updated_at: new Date().toISOString(),
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { error: dbError } = await (supabase as any)
       .from("users")
       .update(updatePayload)

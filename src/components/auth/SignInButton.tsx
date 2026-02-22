@@ -37,6 +37,9 @@ export function SignInButton({ variant = "default", className, redirectAfterLogi
         options: {
           redirectTo: callbackUrl.toString(),
           scopes: "openid profile email",
+          queryParams: {
+            prompt: "select_account",
+          },
         },
       });
 
