@@ -272,8 +272,9 @@ export async function GET(request: NextRequest) {
       const orFilter = `${sortColumn}.${op}.${sortValue},and(${sortColumn}.eq.${sortValue},id.${op}.${cursorPayload.id})`;
       eventsQuery = eventsQuery.or(orFilter).limit(limit + 1);
     } else {
+      // For first page, still fetch limit + 1 to detect if nextCursor exists
       const from = (page - 1) * limit;
-      const to = from + limit - 1;
+      const to = from + limit; // Note: limit, not limit - 1, so we fetch limit + 1 total
       eventsQuery = eventsQuery.range(from, to);
     }
 
@@ -287,8 +288,8 @@ export async function GET(request: NextRequest) {
 
     // Transform events using shared utility
     let rawEvents = (eventsData || []) as EventWithPopularity[];
-    const hasExtra = cursorPayload ? rawEvents.length > limit : false;
-    if (cursorPayload && hasExtra) {
+    const hasExtra = rawEvents.length > limit;
+    if (hasExtra) {
       rawEvents = rawEvents.slice(0, limit);
     }
     if (before) {

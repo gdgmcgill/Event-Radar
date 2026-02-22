@@ -45,8 +45,8 @@ export default function HomePage() {
 
 function HomePageContent() {
   const [events, setEvents] = useState<ScoredEvent[]>([]);
-  const [pastEvents, setPastEvents] = useState<ScoredEvent[]>([]);
-  const [pastExpanded, setPastExpanded] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -69,83 +69,121 @@ function HomePageContent() {
     }
   }, [searchParams, router]);
 
-  const fetchAllEvents = useCallback(async (): Promise<ScoredEvent[]> => {
-    const all: ScoredEvent[] = [];
-    let cursor: string | null = null;
-    let hasMore = true;
+  const fetchUpcomingEventsPage = useCallback(
+    async (cursor: string | null = null): Promise<{ events: ScoredEvent[]; nextCursor: string | null }> => {
+      const today = new Date().toISOString().split("T")[0];
 
-    while (hasMore) {
       const params = new URLSearchParams({
-        limit: "200",
+        limit: "1", // Test with 1 event per page
         sort: "start_date",
         direction: "asc",
+        dateFrom: today,
       });
       if (cursor) {
         params.set("cursor", cursor);
       }
 
       const res = await fetch(`/api/events?${params.toString()}`);
-      if (!res.ok) {
-        throw new Error("Failed to fetch events");
-      }
-      const data = await res.json();
-      const pageEvents = Array.isArray(data.events)
-        ? (data.events as ScoredEvent[])
-        : [];
+      if (!res.ok) throw new Error("Failed to fetch events");
 
-      all.push(...pageEvents);
+      const data = await res.json();
+      return {
+        events: (data.events ?? []) as ScoredEvent[],
+        nextCursor: data.nextCursor ?? null,
+      };
+    },
+    []
+  );
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    try {
+      setLoadingMore(true);
+      const { events: newEvents, nextCursor: newCursor } =
+        await fetchUpcomingEventsPage(nextCursor);
+      setEvents((prev) => [...prev, ...newEvents]);
+      setNextCursor(newCursor);
+    } catch (err) {
+      console.error("Error loading more events:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [nextCursor, loadingMore, fetchUpcomingEventsPage]);
+
+  const fetchPastEvents = useCallback(async (): Promise<ScoredEvent[]> => {
+    const all: ScoredEvent[] = [];
+    let cursor: string | null = null;
+    const today = new Date().toISOString().split("T")[0];
+    const maxEvents = 500;
+
+    while (all.length < maxEvents) {
+      const params = new URLSearchParams({
+        limit: "100",
+        sort: "start_date",
+        direction: "desc",
+        dateTo: today,
+      });
+      if (cursor) {
+        params.set("cursor", cursor);
+      }
+
+      const res = await fetch(`/api/events?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch events");
+
+      const data = await res.json();
+      const pageEvents = (data.events ?? []) as ScoredEvent[];
+      if (pageEvents.length === 0) break;
+
+      all.push(...pageEvents.slice(0, maxEvents - all.length));
       cursor = data.nextCursor ?? null;
-      hasMore = Boolean(cursor && pageEvents.length > 0);
+      if (!cursor) break;
     }
 
     return all;
   }, []);
+
+  // Remove this function - not needed anymore
 
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const today = new Date().toISOString().split("T")[0];
+      // Fetch first page of upcoming events
+      const { events: upcomingPage, nextCursor: cursor } =
+        await fetchUpcomingEventsPage();
+      
+      console.log("Fetched page:", upcomingPage);
+      console.log("Next cursor:", cursor);
+      
+      setEvents(upcomingPage);
+      setNextCursor(cursor);
 
-      const splitPast = (allEvents: ScoredEvent[]) => {
-        const past = allEvents
-          .filter((e) => e.event_date < today)
-          .sort((a, b) => b.event_date.localeCompare(a.event_date));
-        setPastEvents(past);
-      };
-
-      // Always fetch all events (needed for past section + fallback)
-      const allEventsPromise = fetchAllEvents();
-
-      // Only try recommendations if authenticated
+      // Try recommendations if authenticated
       if (user) {
-        const recResponse = await fetch("/api/recommendations");
-
-        if (recResponse.ok) {
-          const data = await recResponse.json();
-          const recs = Array.isArray(data.recommendations)
-            ? data.recommendations
-            : [];
-          setEvents(recs);
-          const allEvents = await allEventsPromise;
-          splitPast(allEvents);
-          return;
+        try {
+          const recResponse = await fetch("/api/recommendations");
+          if (recResponse.ok) {
+            const data = await recResponse.json();
+            const recs = Array.isArray(data.recommendations)
+              ? data.recommendations
+              : [];
+            if (recs.length > 0) {
+              setEvents(recs);
+              setNextCursor(null);
+            }
+          }
+        } catch (err) {
+          console.error("Recommendations failed:", err);
         }
       }
-
-      // Unauthenticated or recommendations failed — show all upcoming events
-      const allEvents = await allEventsPromise;
-      const upcoming = allEvents.filter((e) => e.event_date >= today);
-      setEvents(upcoming);
-      splitPast(allEvents);
     } catch (err) {
       console.error("Error fetching events:", err);
       setError("Failed to load events. Please try again later.");
     } finally {
       setLoading(false);
     }
-  }, [fetchAllEvents, user]);
+  }, [fetchUpcomingEventsPage, user]);
 
   useEffect(() => {
     fetchEvents();
@@ -195,11 +233,6 @@ function HomePageContent() {
   const filteredEvents = useMemo(
     () => applyFilters(events),
     [events, applyFilters]
-  );
-
-  const filteredPastEvents = useMemo(
-    () => applyFilters(pastEvents),
-    [pastEvents, applyFilters]
   );
 
   const handleSearchChange = useCallback((query: string) => {
@@ -323,7 +356,7 @@ function HomePageContent() {
             {/* Result count feedback */}
             {isFiltering && !loading && !error && (
               <div className="text-sm text-muted-foreground">
-                Showing {filteredEvents.length + filteredPastEvents.length} event{filteredEvents.length + filteredPastEvents.length !== 1 ? "s" : ""}
+                Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""}
                 {searchQuery.trim() && (
                   <> for &ldquo;{searchQuery.trim()}&rdquo;</>
                 )}
@@ -361,33 +394,17 @@ function HomePageContent() {
               )}
             </div>
 
-            {/* Past Events (collapsible) */}
-            {!loading && !error && filteredPastEvents.length > 0 && (
-              <div className="border-t border-border/40 pt-6">
-                <button
-                  type="button"
-                  onClick={() => setPastExpanded((prev) => !prev)}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            {/* Load More Button */}
+            {nextCursor && !error && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  variant="outline"
+                  className="gap-2"
                 >
-                  <ChevronDown
-                    className={`h-5 w-5 transition-transform duration-200 ${pastExpanded ? "rotate-180" : ""}`}
-                  />
-                  <span className="text-lg font-semibold">
-                    Past Events ({filteredPastEvents.length})
-                  </span>
-                </button>
-                {pastExpanded && (
-                  <div className="mt-6 opacity-60">
-                    <EventGrid
-                      events={filteredPastEvents}
-                      loading={false}
-                      onEventClick={handleEventClick}
-                      showSaveButton={!!user}
-                      savedEventIds={savedEventIds}
-                      trackingSource="home"
-                    />
-                  </div>
-                )}
+                  {loadingMore ? "Loading..." : "Load More Events"}
+                </Button>
               </div>
             )}
           </div>
