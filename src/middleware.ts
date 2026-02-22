@@ -1,7 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { applyApiRateLimit } from "./middlewareRateLimit";
 
 export async function middleware(request: NextRequest) {
+  // Apply public API rate limits before any auth work
+  const rateLimitResponse = applyApiRateLimit(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
