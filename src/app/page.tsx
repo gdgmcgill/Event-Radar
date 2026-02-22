@@ -64,8 +64,7 @@ function HomePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const hasInterestTags = (user?.interest_tags?.length ?? 0) > 0;
-  const canShowRecommendations = hasInterestTags || savedEventIds.size >= 1;
+  const canShowRecommendations = savedEventIds.size >= 3;
 
   // Read auth error / sign-in required from URL query params
   useEffect(() => {
