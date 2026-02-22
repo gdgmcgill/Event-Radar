@@ -81,7 +81,7 @@ export interface EventFilter {
 
 export type InteractionType = 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
 
-export type InteractionSource = 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal';
+export type InteractionSource = 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events';
 
 export interface UserInteraction {
   id: string;

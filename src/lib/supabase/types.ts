@@ -217,7 +217,7 @@ export type Database = {
           event_id: string;
           interaction_type: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
           session_id: string | null;
-          source: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | null;
+          source: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events' | null;
           metadata: Record<string, unknown>;
           created_at: string;
         };
@@ -227,7 +227,7 @@ export type Database = {
           event_id: string;
           interaction_type: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
           session_id?: string | null;
-          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | null;
+          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events' | null;
           metadata?: Record<string, unknown>;
           created_at?: string;
         };
@@ -237,7 +237,7 @@ export type Database = {
           event_id?: string;
           interaction_type?: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
           session_id?: string | null;
-          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | null;
+          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events' | null;
           metadata?: Record<string, unknown>;
           created_at?: string;
         };
