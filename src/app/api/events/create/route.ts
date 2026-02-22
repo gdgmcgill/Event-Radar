@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
         image_url: image_url || null,
         category: category || tags[0] || null,
         status: "pending",
+        created_by: user.id,
       })
       .select()
       .single();

@@ -29,6 +29,7 @@ export type Database = {
           image_url: string | null;
           organizer: string | null;
           rsvp_count: number;
+          created_by: string | null;
           created_at: string;
           updated_at: string;
           status: string;
@@ -45,6 +46,7 @@ export type Database = {
           image_url?: string | null;
           organizer?: string | null;
           rsvp_count?: number;
+          created_by?: string | null;
           created_at?: string;
           updated_at?: string;
           status?: string;
@@ -61,6 +63,7 @@ export type Database = {
           image_url?: string | null;
           organizer?: string | null;
           rsvp_count?: number;
+          created_by?: string | null;
           created_at?: string;
           updated_at?: string;
           status?: string;

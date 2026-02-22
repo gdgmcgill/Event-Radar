@@ -148,8 +148,27 @@ export async function GET(request: NextRequest) {
     console.error("[Callback] Profile upsert error:", upsertError.message);
   }
 
+  // Check if user needs onboarding (no interest_tags set)
+  let needsOnboarding = false;
+  try {
+    const { data: profile } = await (supabase as any)
+      .from("users")
+      .select("interest_tags")
+      .eq("id", user.id)
+      .single();
+
+    const tags = profile?.interest_tags as string[] | null;
+    needsOnboarding = !tags || tags.length === 0;
+    console.log("[Callback] Onboarding check: interest_tags=%d, needsOnboarding=%s",
+      tags?.length ?? 0, needsOnboarding);
+  } catch (err) {
+    console.error("[Callback] Failed to check onboarding status:", err);
+  }
+
   // Build the final redirect response and attach ALL accumulated cookies
-  const redirectUrl = new URL(next, requestUrl.origin);
+  const redirectUrl = needsOnboarding
+    ? new URL("/onboarding", requestUrl.origin)
+    : new URL(next, requestUrl.origin);
   const response = NextResponse.redirect(redirectUrl);
 
   console.log("[Callback] Building redirect to:", redirectUrl.toString());
@@ -158,6 +177,17 @@ export async function GET(request: NextRequest) {
   for (const [cookieName, { value, options }] of allCookies) {
     console.log("[Callback] Setting cookie:", cookieName, "length:", value.length);
     response.cookies.set(cookieName, value, options);
+  }
+
+  // Set onboarding cookie if user needs onboarding
+  if (needsOnboarding) {
+    response.cookies.set("needs_onboarding", "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 3600, // 1 hour auto-expiry
+    });
+    console.log("[Callback] Set needs_onboarding cookie");
   }
 
   // Log the final Set-Cookie headers for debugging

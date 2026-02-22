@@ -55,22 +55,29 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ user: basicUser, loading: false });
       console.log("[Auth] User set immediately:", basicUser.email);
 
-      // Fetch is_admin from public.users in the background
+      // Fetch is_admin and interest_tags from public.users in the background
       try {
         const { data: profile } = await supabase
           .from("users")
-          .select("is_admin")
+          .select("is_admin, interest_tags")
           .eq("id", authUser.id)
           .single();
 
-        if (profile?.is_admin) {
+        if (profile) {
           set((state) => ({
-            user: state.user ? { ...state.user, is_admin: true } : state.user,
+            user: state.user
+              ? {
+                  ...state.user,
+                  is_admin: profile.is_admin ?? false,
+                  interest_tags: (profile.interest_tags as string[]) ?? [],
+                }
+              : state.user,
           }));
-          console.log("[Auth] Updated is_admin: true");
+          console.log("[Auth] Updated profile: is_admin=%s, interest_tags=%d",
+            profile.is_admin, (profile.interest_tags as string[] | null)?.length ?? 0);
         }
       } catch (err) {
-        console.error("[Auth] Failed to fetch is_admin:", err);
+        console.error("[Auth] Failed to fetch profile:", err);
       }
     };
 
@@ -143,16 +150,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   signOut: async () => {
     console.log("[Auth] Signing out...");
-    // Clear store state immediately so UI updates without waiting for network
-    set({ user: null, loading: false });
 
-    const supabase = createClient();
-    // Use 'local' scope to clear cookies without a network request that can
-    // hang indefinitely.  The server-side session expires via token expiry.
-    const { error } = await supabase.auth.signOut({ scope: "local" });
-    if (error) {
-      console.error("[Auth] Sign out error:", error.message);
-    }
+    // Sign out via server route so cookies are properly cleared.
+    // The browser client's signOut() hangs with @supabase/ssr,
+    // leaving auth cookies intact and the user still logged in on refresh.
+    await fetch("/auth/signout", { method: "POST", redirect: "manual" });
   },
 }));
 
