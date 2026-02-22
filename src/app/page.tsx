@@ -10,6 +10,8 @@ import type { Event, EventTag } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 
+import { PopularEventsSection } from "@/components/events/PopularEventsSection";
+import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
@@ -49,6 +51,7 @@ function HomePageContent() {
   const [pastExpanded, setPastExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recommendationFailed, setRecommendationFailed] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,9 +59,11 @@ function HomePageContent() {
   const [authError, setAuthError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((s) => s.user);
-  const { savedEventIds } = useSavedEvents(!!user);
+  const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const hasEnoughSavedEvents = savedEventIds.size >= 3;
 
   // Read auth error from URL query params
   useEffect(() => {
@@ -90,23 +95,8 @@ function HomePageContent() {
         return Array.isArray(data.events) ? (data.events as ScoredEvent[]) : [];
       });
 
-      // Only try recommendations if authenticated
-      if (user) {
-        const recResponse = await fetch("/api/recommendations");
-
-        if (recResponse.ok) {
-          const data = await recResponse.json();
-          const recs = Array.isArray(data.recommendations)
-            ? data.recommendations
-            : [];
-          setEvents(recs);
-          const allEvents = await allEventsPromise;
-          splitPast(allEvents);
-          return;
-        }
-      }
-
-      // Unauthenticated or recommendations failed — show all upcoming events
+      // User logic is handled by the sections themselves (Popular vs Recommended)
+      // Always fetch all events (needed for main feed grid)
       const allEvents = await allEventsPromise;
       const upcoming = allEvents.filter((e) => e.event_date >= today);
       setEvents(upcoming);
@@ -117,7 +107,7 @@ function HomePageContent() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, isSavedLoading, hasEnoughSavedEvents]);
 
   useEffect(() => {
     fetchEvents();
@@ -257,7 +247,9 @@ function HomePageContent() {
 
             {/* Header & Filters */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/40">
-              <h2 className="text-3xl font-bold text-foreground tracking-tight">Upcoming Events</h2>
+              <h2 className="text-3xl font-bold text-foreground tracking-tight">
+                Upcoming Events
+              </h2>
 
               <div className="flex items-center gap-3">
                 <div className="hidden md:block">
@@ -303,6 +295,18 @@ function HomePageContent() {
                   <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
                 )}
               </div>
+            )}
+
+            {/* Popular / Recommended Section */}
+            {!isFiltering && (
+              (!user || (!isSavedLoading && !hasEnoughSavedEvents) || recommendationFailed) ? (
+                <PopularEventsSection onEventClick={handleEventClick} />
+              ) : (user && !isSavedLoading && hasEnoughSavedEvents && !recommendationFailed) ? (
+                <RecommendedEventsSection
+                  onEventClick={handleEventClick}
+                  onEmpty={() => setRecommendationFailed(true)}
+                />
+              ) : null
             )}
 
             {/* Main Content */}

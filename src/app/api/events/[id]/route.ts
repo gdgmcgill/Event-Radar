@@ -79,10 +79,10 @@ export async function GET(
     const { id } = await params;
     const supabase = await createClient();
 
-    // Fetch event with club relation
+    // Fetch event without club relation since Clubs table does not exist
     const { data, error } = await supabase
       .from("events")
-      .select("*, club:clubs(*)")
+      .select("*")
       .eq("id", id)
       .single();
 
