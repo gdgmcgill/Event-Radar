@@ -1,25 +1,42 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, Children } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface HorizontalEventScrollProps {
   children: React.ReactNode;
+  onNearEnd?: () => void;
+  hasMore?: boolean;
 }
 
-export function HorizontalEventScroll({ children }: HorizontalEventScrollProps) {
+export function HorizontalEventScroll({ 
+  children, 
+  onNearEnd,
+  hasMore = false,
+}: HorizontalEventScrollProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const nearEndTriggeredRef = useRef(false);
 
   const checkScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     setCanScrollLeft(el.scrollLeft > 0);
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  }, []);
+    
+    // Check if we're near the end (within 80% scrolled)
+    const scrollPercentage = (el.scrollLeft + el.clientWidth) / el.scrollWidth;
+    if (scrollPercentage > 0.8 && hasMore && onNearEnd && !nearEndTriggeredRef.current) {
+      nearEndTriggeredRef.current = true;
+      onNearEnd();
+    } else if (scrollPercentage <= 0.8) {
+      // Reset when scrolling back
+      nearEndTriggeredRef.current = false;
+    }
+  }, [hasMore, onNearEnd]);
 
   useEffect(() => {
     checkScroll();
@@ -33,6 +50,11 @@ export function HorizontalEventScroll({ children }: HorizontalEventScrollProps) 
       observer.disconnect();
     };
   }, [checkScroll]);
+
+  // Reset trigger when children change (new items loaded)
+  useEffect(() => {
+    nearEndTriggeredRef.current = false;
+  }, [Children.count(children)]);
 
   const scroll = (direction: "left" | "right") => {
     const el = scrollRef.current;

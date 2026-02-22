@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Event, EventTag } from "@/types";
 import { EVENT_TAGS } from "@/lib/constants";
 import { tagMapping } from "@/lib/tagMapping";
@@ -34,10 +34,18 @@ export default function CategoriesPage() {
   const [eventsByTag, setEventsByTag] = useState<Record<EventTag, Event[]>>(buildEmptyEvents);
   const [nextCursorByTag, setNextCursorByTag] = useState<Record<EventTag, string | null>>(buildEmptyCursors);
   const [loadingByTag, setLoadingByTag] = useState<Record<EventTag, boolean>>(buildEmptyLoading);
+  const [prefetchedByTag, setPrefetchedByTag] = useState<Record<EventTag, { events: Event[]; nextCursor: string | null } | null>>(
+    Object.fromEntries(EVENT_TAGS.map((tag) => [tag, null])) as Record<EventTag, { events: Event[]; nextCursor: string | null } | null>
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Use refs to track prefetching state to avoid stale closures
+  const prefetchingRef = useRef<Record<EventTag, boolean>>(buildEmptyLoading());
+  const prefetchedCursorRef = useRef<Record<EventTag, string | null>>(buildEmptyCursors());
+  
   const user = useAuthStore((s) => s.user);
   const { savedEventIds } = useSavedEvents(!!user);
 
@@ -59,6 +67,34 @@ export default function CategoriesPage() {
       })),
     };
   }, [fetchPage]);
+
+  // Prefetch the next page for a category
+  const prefetchNextPage = useCallback(async (tag: EventTag, cursor: string | null) => {
+    // Don't prefetch if no cursor, already prefetching, or already prefetched this cursor
+    if (!cursor || prefetchingRef.current[tag] || prefetchedCursorRef.current[tag] === cursor) {
+      return;
+    }
+    
+    prefetchingRef.current[tag] = true;
+    prefetchedCursorRef.current[tag] = cursor;
+    
+    try {
+      const result = await fetchCategoryPage(tag, cursor);
+      setPrefetchedByTag((prev) => ({
+        ...prev,
+        [tag]: {
+          events: result.events,
+          nextCursor: result.nextCursor,
+        },
+      }));
+    } catch (err) {
+      console.error(`Error prefetching ${tag} events:`, err);
+      // Reset on error so it can be retried
+      prefetchedCursorRef.current[tag] = null;
+    } finally {
+      prefetchingRef.current[tag] = false;
+    }
+  }, [fetchCategoryPage]);
 
   const loadInitial = useCallback(async () => {
     try {
@@ -84,24 +120,52 @@ export default function CategoriesPage() {
       setEventsByTag(nextEvents);
       setNextCursorByTag(nextCursors);
       setLoadingByTag(buildEmptyLoading());
+      
+      // Prefetch first page for all categories with more data
+      results.forEach((result, index) => {
+        const tag = EVENT_TAGS[index];
+        if (result.nextCursor) {
+          prefetchNextPage(tag, result.nextCursor);
+        }
+      });
     } catch (err) {
       console.error("Error fetching events:", err);
       setError("Failed to load events. Please try again later.");
     } finally {
       setLoading(false);
     }
-  }, [fetchCategoryPage]);
+  }, [fetchCategoryPage, prefetchNextPage]);
 
   const handleLoadMore = useCallback(
     async (tag: EventTag) => {
       const cursor = nextCursorByTag[tag];
+      const prefetched = prefetchedByTag[tag];
+      
+      // If no cursor, nothing to load
       if (!cursor) return;
 
       // Prevent double-loading
-      setLoadingByTag((prev) => {
-        if (prev[tag]) return prev;
-        return { ...prev, [tag]: true };
-      });
+      if (loadingByTag[tag]) return;
+
+      // If we have prefetched data, use it immediately
+      if (prefetched) {
+        setEventsByTag((prev) => ({
+          ...prev,
+          [tag]: [...prev[tag], ...prefetched.events],
+        }));
+        setNextCursorByTag((prev) => ({ ...prev, [tag]: prefetched.nextCursor }));
+        setPrefetchedByTag((prev) => ({ ...prev, [tag]: null }));
+        prefetchedCursorRef.current[tag] = null; // Reset ref
+        
+        // Prefetch the next batch
+        if (prefetched.nextCursor) {
+          prefetchNextPage(tag, prefetched.nextCursor);
+        }
+        return;
+      }
+
+      // Otherwise, fetch normally
+      setLoadingByTag((prev) => ({ ...prev, [tag]: true }));
 
       try {
         const { events, nextCursor } = await fetchCategoryPage(tag, cursor);
@@ -110,13 +174,18 @@ export default function CategoriesPage() {
           [tag]: [...prev[tag], ...events],
         }));
         setNextCursorByTag((prev) => ({ ...prev, [tag]: nextCursor }));
+        
+        // Prefetch the next batch
+        if (nextCursor) {
+          prefetchNextPage(tag, nextCursor);
+        }
       } catch (err) {
         console.error(`Error loading more ${tag} events:`, err);
       } finally {
         setLoadingByTag((prev) => ({ ...prev, [tag]: false }));
       }
     },
-    [fetchCategoryPage, nextCursorByTag]
+    [fetchCategoryPage, nextCursorByTag, prefetchedByTag, loadingByTag, prefetchNextPage]
   );
 
   useEffect(() => {
@@ -181,7 +250,6 @@ export default function CategoriesPage() {
                 savedEventIds={savedEventIds}
                 hasMore={Boolean(nextCursorByTag[tag])}
                 onLoadMore={() => handleLoadMore(tag)}
-                loadingMore={loadingByTag[tag]}
               />
             ))}
           </div>

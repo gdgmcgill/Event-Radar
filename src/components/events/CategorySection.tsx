@@ -5,7 +5,6 @@ import type { Event, EventTag } from "@/types";
 import { EventCard } from "./EventCard";
 import { HorizontalEventScroll } from "./HorizontalEventScroll";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import {
   GraduationCap,
   Users,
@@ -33,7 +32,6 @@ interface CategorySectionProps {
   savedEventIds?: Set<string>;
   hasMore?: boolean;
   onLoadMore?: () => void;
-  loadingMore?: boolean;
 }
 
 export function CategorySection({
@@ -44,7 +42,6 @@ export function CategorySection({
   savedEventIds = new Set(),
   hasMore = false,
   onLoadMore,
-  loadingMore = false,
 }: CategorySectionProps) {
   const category = EVENT_CATEGORIES[tag];
   const Icon = iconMap[category.icon] || Heart;
@@ -70,7 +67,10 @@ export function CategorySection({
           <p className="text-muted-foreground text-sm">No events in this category yet</p>
         </div>
       ) : (
-        <HorizontalEventScroll>
+        <HorizontalEventScroll 
+          onNearEnd={onLoadMore}
+          hasMore={hasMore}
+        >
           {events.map((event) => (
             <div
               key={event.id}
@@ -86,19 +86,6 @@ export function CategorySection({
             </div>
           ))}
         </HorizontalEventScroll>
-      )}
-
-      {hasMore && onLoadMore && (
-        <div className="flex justify-center">
-          <Button
-            variant="outline"
-            onClick={onLoadMore}
-            disabled={loadingMore}
-            className="rounded-full"
-          >
-            {loadingMore ? "Loading..." : "Load more"}
-          </Button>
-        </div>
       )}
     </section>
   );
