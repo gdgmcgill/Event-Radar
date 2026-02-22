@@ -14,7 +14,7 @@ import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
-import { Filter, RefreshCcw, AlertCircle, ChevronDown, X } from "lucide-react";
+import { Filter, RefreshCcw, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -60,6 +60,8 @@ function HomePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const NUMBER_OF_EVENTS_PER_BATCH = 20;
+
   // Read auth error from URL query params
   useEffect(() => {
     const errorCode = searchParams.get("error");
@@ -74,7 +76,7 @@ function HomePageContent() {
       const today = new Date().toISOString().split("T")[0];
 
       const params = new URLSearchParams({
-        limit: "1", // Test with 1 event per page
+        limit: NUMBER_OF_EVENTS_PER_BATCH.toString(),
         sort: "start_date",
         direction: "asc",
         dateFrom: today,
@@ -110,40 +112,6 @@ function HomePageContent() {
     }
   }, [nextCursor, loadingMore, fetchUpcomingEventsPage]);
 
-  const fetchPastEvents = useCallback(async (): Promise<ScoredEvent[]> => {
-    const all: ScoredEvent[] = [];
-    let cursor: string | null = null;
-    const today = new Date().toISOString().split("T")[0];
-    const maxEvents = 500;
-
-    while (all.length < maxEvents) {
-      const params = new URLSearchParams({
-        limit: "100",
-        sort: "start_date",
-        direction: "desc",
-        dateTo: today,
-      });
-      if (cursor) {
-        params.set("cursor", cursor);
-      }
-
-      const res = await fetch(`/api/events?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch events");
-
-      const data = await res.json();
-      const pageEvents = (data.events ?? []) as ScoredEvent[];
-      if (pageEvents.length === 0) break;
-
-      all.push(...pageEvents.slice(0, maxEvents - all.length));
-      cursor = data.nextCursor ?? null;
-      if (!cursor) break;
-    }
-
-    return all;
-  }, []);
-
-  // Remove this function - not needed anymore
-
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
@@ -152,9 +120,6 @@ function HomePageContent() {
       // Fetch first page of upcoming events
       const { events: upcomingPage, nextCursor: cursor } =
         await fetchUpcomingEventsPage();
-      
-      console.log("Fetched page:", upcomingPage);
-      console.log("Next cursor:", cursor);
       
       setEvents(upcomingPage);
       setNextCursor(cursor);
