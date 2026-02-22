@@ -14,9 +14,8 @@ import { PopularEventsSection } from "@/components/events/PopularEventsSection";
 import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
-import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
-import { Filter, RefreshCcw, AlertCircle, ChevronDown, X, Sparkles } from "lucide-react";
+import { Filter, RefreshCcw, AlertCircle, ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SignInButton } from "@/components/auth/SignInButton";
@@ -53,11 +52,10 @@ function HomePageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recommendationFailed, setRecommendationFailed] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [popularEventIds, setPopularEventIds] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((s) => s.user);
   const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
@@ -180,11 +178,6 @@ function HomePageContent() {
     []
   );
 
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setIsModalOpen(true);
-  };
-
   const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
 
   return (
@@ -302,28 +295,14 @@ function HomePageContent() {
               </div>
             )}
 
-            {/* Guest CTA Banner */}
-            {!user && !isFiltering && (
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
-                <div className="shrink-0 rounded-full bg-primary/10 p-2.5">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    Sign in with your McGill email to save events and get personalized recommendations.
-                  </p>
-                </div>
-                <SignInButton variant="outline" />
-              </div>
-            )}
-
             {/* Popular / Recommended Section */}
             {!isFiltering && (
               (!user || (!isSavedLoading && !canShowRecommendations) || recommendationFailed) ? (
-                <PopularEventsSection onEventClick={handleEventClick} />
+                <PopularEventsSection
+                  onEventsLoaded={(ids) => setPopularEventIds(new Set(ids))}
+                />
               ) : (user && !isSavedLoading && canShowRecommendations && !recommendationFailed) ? (
                 <RecommendedEventsSection
-                  onEventClick={handleEventClick}
                   onEmpty={() => setRecommendationFailed(true)}
                 />
               ) : null
@@ -347,9 +326,8 @@ function HomePageContent() {
                 </div>
               ) : (
                 <EventGrid
-                  events={filteredEvents}
+                  events={filteredEvents.filter((e) => !popularEventIds.has(e.id))}
                   loading={loading}
-                  onEventClick={handleEventClick}
                   showSaveButton={!!user}
                   savedEventIds={savedEventIds}
                   trackingSource="home"
@@ -377,7 +355,6 @@ function HomePageContent() {
                     <EventGrid
                       events={filteredPastEvents}
                       loading={false}
-                      onEventClick={handleEventClick}
                       showSaveButton={!!user}
                       savedEventIds={savedEventIds}
                       trackingSource="home"
@@ -389,16 +366,7 @@ function HomePageContent() {
           </div>
         </div>
 
-        {/* Event Details Modal */}
-        <EventDetailsModal
-          open={isModalOpen}
-          onOpenChange={(open) => {
-            setIsModalOpen(open);
-            if (!open) setSelectedEvent(null);
-          }}
-          event={selectedEvent}
-          trackingSource="home"
-        />
+
       </div>
     </ErrorBoundary>
   );

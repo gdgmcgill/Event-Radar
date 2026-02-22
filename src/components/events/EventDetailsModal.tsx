@@ -1,13 +1,14 @@
 // src/components/events/EventDetailsModal.tsx
 "use client";
 
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, InteractionSource } from "@/types";
-import { MapPin, Calendar, Clock, ExternalLink } from "lucide-react";
+import { MapPin, Calendar, Clock, ExternalLink, Share2, Check } from "lucide-react";
 import { useTrackEventModal, useTracking } from "@/hooks/useTracking";
 
 type EventDetailsModalProps = {
@@ -21,7 +22,8 @@ type EventDetailsModalProps = {
 export function EventDetailsModal({ open, onOpenChange, event, trackingSource }: EventDetailsModalProps) {
   // Track modal view when opened
   useTrackEventModal(event?.id || null, open, trackingSource);
-  const { trackCalendarAdd } = useTracking({ source: trackingSource });
+  const { trackCalendarAdd, trackShare } = useTracking({ source: trackingSource });
+  const [copied, setCopied] = useState(false);
 
   if (!event) return null;
 
@@ -53,6 +55,18 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
 
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     return URL.createObjectURL(blob);
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/events/${event.id}`;
+    trackShare(event.id);
+    if (navigator.share) {
+      await navigator.share({ title: event.title, text: event.description, url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleAddToCalendar = () => {
@@ -142,6 +156,15 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
             >
               <Calendar className="mr-2 h-4 w-4" />
               Add to Calendar
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5"
+              onClick={handleShare}
+            >
+              {copied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Share2 className="mr-2 h-4 w-4" />}
+              {copied ? "Copied!" : "Share"}
             </Button>
 
             {event.source_url && (
