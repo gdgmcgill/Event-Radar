@@ -15,7 +15,7 @@ import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { type Event, type InteractionSource } from "@/types";
 import { Calendar, Clock, MapPin, Heart, TrendingUp, Flame } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
 import type { EventPopularityScore } from "@/types";
@@ -31,7 +31,12 @@ interface EventCardProps {
   trackingSource?: InteractionSource;
   /** Popularity data — when provided, badges are shown on the card */
   popularity?: EventPopularityScore | null;
+  /** When set, shows a medal badge (#1/#2/#3) and colored ring instead of trending/popular badges */
+  rank?: 1 | 2 | 3;
+  /** When true, shows view/save engagement stats above the save button */
+  showPopularityStats?: boolean;
 }
+
 
 export function EventCard({
   event,
@@ -41,9 +46,16 @@ export function EventCard({
   onUnsave,
   trackingSource,
   popularity,
+  rank,
+  showPopularityStats = false,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
   const { trackClick, trackSave, trackUnsave } = useTracking({ source: trackingSource });
+
+  // Sync local state when the parent resolves the saved status after fetching
+  useEffect(() => {
+    setIsSaved(initialIsSaved);
+  }, [initialIsSaved]);
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -116,8 +128,8 @@ export function EventCard({
           {/* Gradient Overlay for Text Readability if needed, mostly stylistic here */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 dark:from-white/6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Popularity / Trending Badges */}
-          {popularity && (popularity.trending_score > 0 || popularity.popularity_score > 0) && (
+          {/* Popularity / Trending Badges — only for non-ranked cards */}
+          {!rank && popularity && (popularity.trending_score > 0 || popularity.popularity_score > 0) && (
             <div className="absolute top-3 left-3 flex flex-col gap-1.5">
               {popularity.trending_score >= 5 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500/90 text-white backdrop-blur-sm shadow-sm">
@@ -185,6 +197,15 @@ export function EventCard({
           </div>
         </div>
 
+        {/* Popularity Stats */}
+        {showPopularityStats && popularity && (
+          <div className="px-5 pb-2">
+            <p className="text-xs text-muted-foreground">
+              👁 {popularity.view_count} · 💾 {popularity.save_count}
+            </p>
+          </div>
+        )}
+
         {/* Footer / Tags */}
         <div className="px-5 pb-5 pt-0 flex flex-wrap gap-2">
           {event.tags.slice(0, 3).map((tag) => {
@@ -203,6 +224,7 @@ export function EventCard({
             );
           })}
         </div>
+
       </Card>
     </Link>
   );

@@ -1,27 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { type Event, type EventPopularityScore, EventTag } from "@/types";
+import { type Event, type EventPopularityScore } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 
 interface PopularEventsSectionProps {
   onEventClick?: (event: Event) => void;
+  onEventsLoaded?: (eventIds: string[]) => void;
 }
 
 type EventWithPopularity = Event & { popularity?: EventPopularityScore | null };
 
-export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps) {
+export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEventsSectionProps) {
   const [events, setEvents] = useState<EventWithPopularity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,12 +28,13 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
       setLoading(true);
       setError(null);
 
-      const res = await fetch("/api/events/popular?sort=popularity&limit=6");
+      const res = await fetch("/api/events/popular?sort=popularity&limit=3");
       if (!res.ok) throw new Error("Failed to fetch popular events");
       const data = await res.json();
-      
+
       const evt = Array.isArray(data.events) ? (data.events as EventWithPopularity[]) : [];
       setEvents(evt);
+      onEventsLoaded?.(evt.map((e) => e.id));
     } catch (err) {
       console.error("Error fetching popular events:", err);
       setError("Failed to load popular events.");
@@ -50,24 +45,21 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
 
   useEffect(() => {
     fetchPopularEvents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading && events.length === 0) {
     return (
-      <div className="mb-12">
+      <div className="mb-12 rounded-2xl border border-border/60 bg-muted/40 p-6">
         <div className="mb-6">
           <h2 className="text-3xl font-bold text-foreground tracking-tight">Popular This Week</h2>
           <p className="text-muted-foreground mt-1">See what&apos;s popular between McGill students this week</p>
         </div>
-        <Carousel className="w-full">
-          <CarouselContent className="-ml-4">
-            {[1, 2, 3].map((i) => (
-              <CarouselItem key={i} className="pl-4 basis-[85vw] sm:basis-1/2 lg:basis-1/3">
-                <div className="h-[380px] w-full rounded-2xl bg-secondary/20 animate-pulse border border-border/40" />
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-[380px] w-full rounded-2xl bg-secondary/20 animate-pulse border border-border/40" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -90,40 +82,27 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
   }
 
   return (
-    <div className="mb-12">
+    <div className="mb-12 rounded-2xl border border-border/60 bg-muted/40 p-6">
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-foreground tracking-tight">Popular This Week</h2>
         <p className="text-muted-foreground mt-1">See what&apos;s popular between McGill students this week</p>
       </div>
-      
-      <Carousel
-        opts={{
-          align: "start",
-          loop: false,
-        }}
-        className="w-full"
-      >
-        <CarouselContent className="-ml-4">
-          {events.map((event) => (
-            <CarouselItem key={event.id} className="pl-4 basis-[85vw] sm:basis-1/2 lg:basis-1/3">
-              <EventCard
-                 event={event}
-                 showSaveButton={!!user}
-                 isSaved={savedEventIds.has(event.id)}
-                 trackingSource="home"
-                 onClick={onEventClick ? () => onEventClick(event) : undefined}
-                 popularity={event.popularity}
-               />
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        {events.length > 3 && (
-          <div className="hidden sm:block">
-            <CarouselPrevious />
-            <CarouselNext />
-          </div>
-        )}
-      </Carousel>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {events.map((event, i) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            rank={(i + 1) as 1 | 2 | 3}
+            showPopularityStats
+            showSaveButton={!!user}
+            isSaved={savedEventIds.has(event.id)}
+            trackingSource="home"
+            onClick={onEventClick ? () => onEventClick(event) : undefined}
+            popularity={event.popularity}
+          />
+        ))}
+      </div>
     </div>
   );
 }

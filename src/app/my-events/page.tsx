@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { EventGrid } from "@/components/events/EventGrid";
-import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Button } from "@/components/ui/button";
 import { SignInButton } from "@/components/auth/SignInButton";
@@ -36,8 +35,6 @@ export default function MyEventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>("recent");
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchSavedEvents = useCallback(async () => {
     if (!user) return;
@@ -95,11 +92,6 @@ export default function MyEventsPage() {
       fetchSavedEvents();
       console.error("Error unsaving event:", err);
     }
-  };
-
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setIsModalOpen(true);
   };
 
   // Loading auth state
@@ -226,21 +218,10 @@ export default function MyEventsPage() {
           showSaveButton={true}
           savedEventIds={savedEventIds}
           onUnsave={handleUnsave}
-          onEventClick={handleEventClick}
           trackingSource="my-events"
         />
       )}
 
-      {/* Event Details Modal */}
-      <EventDetailsModal
-        open={isModalOpen}
-        onOpenChange={(open) => {
-          setIsModalOpen(open);
-          if (!open) setSelectedEvent(null);
-        }}
-        event={selectedEvent}
-        trackingSource="my-events"
-      />
     </div>
   );
 }
