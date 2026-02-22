@@ -6,12 +6,20 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { SignInButton } from "@/components/auth/SignInButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event } from "@/types";
@@ -20,6 +28,7 @@ import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2 } from "lucide-react
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
 
   const [event, setEvent] = useState<Event | null>(null);
@@ -27,6 +36,7 @@ export default function EventDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [savingInProgress, setSavingInProgress] = useState(false);
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -74,7 +84,11 @@ export default function EventDetailPage() {
   }, [user, id]);
 
   const handleSave = useCallback(async () => {
-    if (!user || !id || savingInProgress) return;
+    if (!user) {
+      setShowSignInPrompt(true);
+      return;
+    }
+    if (!id || savingInProgress) return;
 
     setSavingInProgress(true);
     try {
@@ -100,12 +114,10 @@ export default function EventDetailPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Link href="/">
-          <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Events
-          </Button>
-        </Link>
+        <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Events
+        </Button>
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
           <p className="text-muted-foreground">{error}</p>
           <Button onClick={() => window.location.reload()} variant="outline">
@@ -119,12 +131,10 @@ export default function EventDetailPage() {
   if (!event) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Link href="/">
-          <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Events
-          </Button>
-        </Link>
+        <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Events
+        </Button>
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-2">
           <h2 className="text-2xl font-bold">Event not found</h2>
           <p className="text-muted-foreground">
@@ -137,12 +147,10 @@ export default function EventDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Link href="/">
-        <Button variant="ghost" className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Events
-        </Button>
-      </Link>
+      <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Events
+      </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
@@ -172,8 +180,8 @@ export default function EventDetailPage() {
                   variant="outline"
                   size="icon"
                   onClick={handleSave}
-                  disabled={!user || savingInProgress}
-                  title={user ? (saved ? "Unsave event" : "Save event") : "Sign in to save events"}
+                  disabled={savingInProgress}
+                  title={saved ? "Unsave event" : "Save event"}
                 >
                   <Heart
                     className={`h-5 w-5 transition-colors ${saved ? "fill-red-500 text-red-500" : ""}`}
@@ -232,6 +240,20 @@ export default function EventDetailPage() {
           {/* TODO: Add share functionality */}
         </div>
       </div>
+
+      <Dialog open={showSignInPrompt} onOpenChange={setShowSignInPrompt}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sign in to save events</DialogTitle>
+            <DialogDescription>
+              Create an account or sign in with your McGill email to save events and get personalised recommendations.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end pt-2">
+            <SignInButton />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
