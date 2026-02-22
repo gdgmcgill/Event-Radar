@@ -5,8 +5,79 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { guestNavItems, authenticatedNavItems, adminNavItems } from "./navItems";
+import {
+  guestNavItems,
+  baseNavItems,
+  organizerNavItems,
+  adminNavItems,
+  type NavItem,
+} from "./navItems";
 import { useAuthStore } from "@/store/useAuthStore";
+import { isAdmin, isOrganizer } from "@/lib/roles";
+
+function NavLink({
+  item,
+  pathname,
+  isHovered,
+}: {
+  item: NavItem;
+  pathname: string;
+  isHovered: boolean;
+}) {
+  const Icon = item.icon;
+  const isActive = pathname === item.path;
+
+  return (
+    <Link
+      href={item.path}
+      className={cn(
+        "flex items-center px-3 py-3 rounded-xl transition-all duration-200 group",
+        isActive
+          ? "bg-primary/10 text-primary font-semibold"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      )}
+    >
+      <Icon
+        className={cn(
+          "w-5 h-5 flex-shrink-0 transition-colors",
+          isActive
+            ? "text-primary"
+            : "text-muted-foreground group-hover:text-foreground",
+          isHovered ? "mr-3" : "mx-auto"
+        )}
+      />
+      <span
+        className={cn(
+          "whitespace-nowrap overflow-hidden transition-all duration-300",
+          isHovered ? "opacity-100 w-auto" : "opacity-0 w-0"
+        )}
+      >
+        {item.name}
+      </span>
+    </Link>
+  );
+}
+
+function SectionDivider({
+  label,
+  isHovered,
+}: {
+  label: string;
+  isHovered: boolean;
+}) {
+  return (
+    <div className="pt-4 pb-1">
+      <span
+        className={cn(
+          "text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 transition-all duration-300",
+          isHovered ? "opacity-100" : "opacity-0"
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export function SideNavBar() {
   const [isHovered, setIsHovered] = useState(false);
@@ -14,7 +85,9 @@ export function SideNavBar() {
   const { user } = useAuthStore();
   const isAuthenticated = !!user;
 
-  const navItems = isAuthenticated ? authenticatedNavItems : guestNavItems;
+  const navItems = isAuthenticated ? baseNavItems : guestNavItems;
+  const showOrganizer = isAuthenticated && user && isOrganizer(user);
+  const showAdmin = isAuthenticated && user && isAdmin(user);
 
   return (
     <>
@@ -62,90 +135,44 @@ export function SideNavBar() {
 
           {/* Navigation Items */}
           <nav className="flex-1 px-3 space-y-1 py-4">
-            {navItems.filter((item) => item.path !== "/profile").map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.path;
-
-              return (
-                <Link
+            {navItems
+              .filter((item) => item.path !== "/profile")
+              .map((item) => (
+                <NavLink
                   key={item.path}
-                  href={item.path}
-                  className={cn(
-                    "flex items-center px-3 py-3 rounded-xl transition-all duration-200 group",
-                    isActive
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "w-5 h-5 flex-shrink-0 transition-colors",
-                      isActive
-                        ? "text-primary"
-                        : "text-muted-foreground group-hover:text-foreground",
-                      isHovered ? "mr-3" : "mx-auto"
-                    )}
-                  />
-                  <span
-                    className={cn(
-                      "whitespace-nowrap overflow-hidden transition-all duration-300",
-                      isHovered ? "opacity-100 w-auto" : "opacity-0 w-0"
-                    )}
-                  >
-                    {item.name}
-                  </span>
-                </Link>
-              );
-            })}
+                  item={item}
+                  pathname={pathname}
+                  isHovered={isHovered}
+                />
+              ))}
 
-            {/* Admin Nav Items */}
-            {user?.roles?.includes("admin") && (
+            {/* Organizer section */}
+            {showOrganizer && (
               <>
-                <div className="pt-4 pb-1">
-                  <span
-                    className={cn(
-                      "text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 transition-all duration-300",
-                      isHovered ? "opacity-100" : "opacity-0"
-                    )}
-                  >
-                    Admin
-                  </span>
-                </div>
-                {adminNavItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.path;
+                <SectionDivider label="Organizer" isHovered={isHovered} />
+                {organizerNavItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    item={item}
+                    pathname={pathname}
+                    isHovered={isHovered}
+                  />
+                ))}
+              </>
+            )}
 
-                  return (
-                    <Link
-                      key={item.path}
-                      href={item.path}
-                      className={cn(
-                        "flex items-center px-3 py-3 rounded-xl transition-all duration-200 group",
-                        isActive
-                          ? "bg-primary/10 text-primary font-semibold"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <Icon
-                        className={cn(
-                          "w-5 h-5 flex-shrink-0 transition-colors",
-                          isActive
-                            ? "text-primary"
-                            : "text-muted-foreground group-hover:text-foreground",
-                          isHovered ? "mr-3" : "mx-auto"
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "whitespace-nowrap overflow-hidden transition-all duration-300",
-                          isHovered ? "opacity-100 w-auto" : "opacity-0 w-0"
-                        )}
-                      >
-                        {item.name}
-                      </span>
-                    </Link>
-                  );
-                })}
+            {/* Admin / Moderation section */}
+            {showAdmin && (
+              <>
+                <SectionDivider label="Moderation" isHovered={isHovered} />
+                {adminNavItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    item={item}
+                    pathname={pathname}
+                    isHovered={isHovered}
+                  />
+                ))}
               </>
             )}
           </nav>
