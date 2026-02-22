@@ -6,6 +6,7 @@ import { EventCard } from "@/components/events/EventCard";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  type CarouselApi,
   Carousel,
   CarouselContent,
   CarouselItem,
@@ -25,6 +26,24 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  useEffect(() => {
+    if (!carouselApi) return;
+    const update = () => {
+      setCanScrollPrev(carouselApi.canScrollPrev());
+      setCanScrollNext(carouselApi.canScrollNext());
+    };
+    update();
+    carouselApi.on("select", update);
+    carouselApi.on("reInit", update);
+    return () => {
+      carouselApi.off("select", update);
+      carouselApi.off("reInit", update);
+    };
+  }, [carouselApi]);
 
   const user = useAuthStore((s) => s.user);
   const { savedEventIds } = useSavedEvents(!!user);
@@ -113,6 +132,7 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
           align: "start",
           loop: false,
         }}
+        setApi={setCarouselApi}
         className="w-full"
       >
         <CarouselContent className="-ml-4">
@@ -128,12 +148,15 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
             </CarouselItem>
           ))}
         </CarouselContent>
-        {/* Only show navigation arrows if there are more than 3 items on desktop */}
-        {events.length > 3 && (
-            <div className="hidden sm:block">
+        {canScrollPrev && (
+          <div className="hidden sm:block">
             <CarouselPrevious />
+          </div>
+        )}
+        {canScrollNext && (
+          <div className="hidden sm:block">
             <CarouselNext />
-            </div>
+          </div>
         )}
       </Carousel>
     </div>
