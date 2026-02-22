@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, ShieldOff, Search } from "lucide-react";
+import { Shield, Search, UserPlus, UserMinus } from "lucide-react";
 import type { UserRole } from "@/types";
 
 interface AdminUser {
@@ -35,14 +35,14 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, []);
 
-  const toggleAdmin = async (userId: string, currentlyAdmin: boolean) => {
+  const toggleOrganizer = async (userId: string, currentlyOrganizer: boolean) => {
     setToggling(userId);
     const targetUser = users.find((u) => u.id === userId);
     if (!targetUser) { setToggling(null); return; }
 
-    const newRoles: UserRole[] = currentlyAdmin
-      ? targetUser.roles.filter((r) => r !== "admin")
-      : [...targetUser.roles.filter((r) => r !== "admin"), "admin"];
+    const newRoles: UserRole[] = currentlyOrganizer
+      ? targetUser.roles.filter((r) => r !== "club_organizer")
+      : [...targetUser.roles.filter((r) => r !== "club_organizer"), "club_organizer"];
 
     const res = await fetch(`/api/admin/users/${userId}`, {
       method: "PATCH",
@@ -125,24 +125,30 @@ export default function AdminUsersPage() {
                   <div className="flex items-center gap-3">
                     {user.roles.includes("admin") && (
                       <Badge className="bg-primary/10 text-primary border-0">
+                        <Shield className="mr-1 h-3 w-3" />
                         Admin
+                      </Badge>
+                    )}
+                    {user.roles.includes("club_organizer") && (
+                      <Badge className="bg-blue-500/10 text-blue-600 border-0">
+                        Organizer
                       </Badge>
                     )}
                     <Button
                       size="sm"
-                      variant={user.roles.includes("admin") ? "destructive" : "outline"}
-                      onClick={() => toggleAdmin(user.id, user.roles.includes("admin"))}
+                      variant={user.roles.includes("club_organizer") ? "destructive" : "outline"}
+                      onClick={() => toggleOrganizer(user.id, user.roles.includes("club_organizer"))}
                       disabled={toggling === user.id}
                     >
-                      {user.roles.includes("admin") ? (
+                      {user.roles.includes("club_organizer") ? (
                         <>
-                          <ShieldOff className="mr-1.5 h-3.5 w-3.5" />
-                          Remove Admin
+                          <UserMinus className="mr-1.5 h-3.5 w-3.5" />
+                          Remove Organizer
                         </>
                       ) : (
                         <>
-                          <Shield className="mr-1.5 h-3.5 w-3.5" />
-                          Make Admin
+                          <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                          Make Organizer
                         </>
                       )}
                     </Button>

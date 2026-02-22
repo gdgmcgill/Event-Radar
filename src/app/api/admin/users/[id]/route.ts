@@ -19,7 +19,10 @@ export async function PATCH(
   };
 
   if ("roles" in body) {
-    updateData.roles = body.roles;
+    // Strip 'admin' — admin role is hardcoded via ADMIN_EMAILS env var only
+    const sanitizedRoles = (body.roles as string[]).filter((r: string) => r !== "admin");
+    if (!sanitizedRoles.includes("user")) sanitizedRoles.unshift("user");
+    updateData.roles = sanitizedRoles;
   }
   if ("name" in body) {
     updateData.name = body.name;

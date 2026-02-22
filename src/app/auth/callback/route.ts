@@ -18,8 +18,18 @@ import type { Database } from "@/lib/supabase/types";
 // Valid McGill email domains
 const VALID_DOMAINS = ["@mcgill.ca", "@mail.mcgill.ca"] as const;
 
+// Hardcoded admin emails — only these accounts can have the admin role
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 function isMcGillEmail(email: string): boolean {
   return VALID_DOMAINS.some((domain) => email.toLowerCase().endsWith(domain));
+}
+
+function isAdminEmail(email: string): boolean {
+  return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
 export async function GET(request: NextRequest) {
@@ -136,16 +146,28 @@ export async function GET(request: NextRequest) {
   }
 
   // Check if user needs onboarding (no interest_tags set)
+  // Also fetch current roles for admin auto-assignment
   let needsOnboarding = false;
   try {
     const { data: profile } = await (supabase as any)
       .from("users")
-      .select("interest_tags")
+      .select("interest_tags, roles")
       .eq("id", user.id)
       .single();
 
     const tags = profile?.interest_tags as string[] | null;
     needsOnboarding = !tags || tags.length === 0;
+
+    // Auto-assign admin role if email is in the hardcoded list
+    const currentRoles = (profile?.roles as string[]) ?? ["user"];
+    if (isAdminEmail(email) && !currentRoles.includes("admin")) {
+      const newRoles = [...currentRoles, "admin"];
+      await (supabase as any)
+        .from("users")
+        .update({ roles: newRoles })
+        .eq("id", user.id);
+      console.log("[Callback] Auto-assigned admin role to:", email);
+    }
   } catch (err) {
     console.error("[Callback] Failed to check onboarding status:", err);
   }
