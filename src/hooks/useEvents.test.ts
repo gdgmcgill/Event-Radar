@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { useEvents } from "./useEvents";
 import type { Event } from "@/types";
@@ -126,7 +126,9 @@ describe("useEvents Hook", () => {
         mockApiResponse(page2Events, 4, null, "cursor-page-1")
       );
 
-      result.current.goToNext();
+      act(() => {
+        result.current.goToNext();
+      });
 
       await waitFor(() => {
         expect(result.current.events).toEqual(page2Events);
@@ -162,7 +164,9 @@ describe("useEvents Hook", () => {
         mockApiResponse(page2Events, 4, null, "cursor-page-1")
       );
 
-      result.current.goToNext();
+      act(() => {
+        result.current.goToNext();
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -177,7 +181,9 @@ describe("useEvents Hook", () => {
         mockApiResponse(page1Events, 4, "cursor-page-2")
       );
 
-      result.current.goToPrev();
+      act(() => {
+        result.current.goToPrev();
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -199,7 +205,9 @@ describe("useEvents Hook", () => {
       });
 
       const callCount = mockFetch.mock.calls.length;
-      result.current.goToNext();
+      act(() => {
+        result.current.goToNext();
+      });
 
       // Should not trigger a new fetch
       expect(mockFetch).toHaveBeenCalledTimes(callCount);
@@ -227,7 +235,9 @@ describe("useEvents Hook", () => {
         mockApiResponse(page2Events, 4, null)
       );
 
-      result.current.loadMore();
+      await act(async () => {
+        await result.current.loadMore();
+      });
 
       // Wait for loadingMore to be set and then complete
       await waitFor(() => {
@@ -266,17 +276,24 @@ describe("useEvents Hook", () => {
       mockFetch.mockImplementationOnce(() => loadMorePromise);
       
       // Start first load more
-      result.current.loadMore();
+      act(() => {
+        result.current.loadMore();
+      });
       
       // Wait a tick for loadingMore to be set
       await new Promise(resolve => setTimeout(resolve, 10));
       
       // Now try to load more again (should be blocked because loadingMore is true)
-      result.current.loadMore();
-      result.current.loadMore();
+      act(() => {
+        result.current.loadMore();
+        result.current.loadMore();
+      });
       
       // Resolve the first load more
-      resolveLoadMore(mockApiResponse(page2Events, 4, null));
+      await act(async () => {
+        resolveLoadMore(mockApiResponse(page2Events, 4, null));
+        await loadMorePromise;
+      });
 
       // Wait for first load more to complete
       await waitFor(() => {
@@ -298,7 +315,9 @@ describe("useEvents Hook", () => {
       });
 
       const callCount = mockFetch.mock.calls.length;
-      result.current.loadMore();
+      act(() => {
+        result.current.loadMore();
+      });
 
       expect(mockFetch).toHaveBeenCalledTimes(callCount);
     });
@@ -322,7 +341,9 @@ describe("useEvents Hook", () => {
 
       const { result } = renderHook(() => useEvents({ enabled: false }));
 
-      await result.current.loadAll();
+      await act(async () => {
+        await result.current.loadAll();
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -338,7 +359,9 @@ describe("useEvents Hook", () => {
 
       const { result } = renderHook(() => useEvents({ enabled: false }));
 
-      await result.current.loadAll();
+      await act(async () => {
+        await result.current.loadAll();
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -354,11 +377,13 @@ describe("useEvents Hook", () => {
 
       const { result } = renderHook(() => useEvents({ enabled: false }));
 
-      await result.current.loadAll({
-        filters: {
-          tags: ["Academic"],
-          searchQuery: "test",
-        },
+      await act(async () => {
+        await result.current.loadAll({
+          filters: {
+            tags: ["Academic"],
+            searchQuery: "test",
+          },
+        });
       });
 
       await waitFor(() => {
@@ -460,7 +485,9 @@ describe("useEvents Hook", () => {
       // Refetch
       mockFetch.mockResolvedValueOnce(mockApiResponse(events2, 2));
 
-      result.current.refetch();
+      await act(async () => {
+        await result.current.refetch();
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -570,7 +597,9 @@ describe("useEvents Hook", () => {
       mockFetch.mockResolvedValueOnce(
         mockApiResponse(page2Events, 3, "cursor-3", "cursor-1")
       );
-      result.current.goToNext();
+      act(() => {
+        result.current.goToNext();
+      });
 
       await waitFor(() => { 
         expect(result.current.loading).toBe(false);
@@ -584,7 +613,9 @@ describe("useEvents Hook", () => {
       mockFetch.mockResolvedValueOnce(
         mockApiResponse(page3Events, 3, null, "cursor-2")
       );
-      result.current.goToNext();
+      act(() => {
+        result.current.goToNext();
+      });
 
       await waitFor(() => {
         expect(result.current.events[0].id).toBe("3");
@@ -594,7 +625,9 @@ describe("useEvents Hook", () => {
       mockFetch.mockResolvedValueOnce(
         mockApiResponse(page2Events, 3, "cursor-3", "cursor-1")
       );
-      result.current.goToPrev();
+      act(() => {
+        result.current.goToPrev();
+      });
 
       await waitFor(() => {
         expect(result.current.events[0].id).toBe("2");
@@ -604,7 +637,9 @@ describe("useEvents Hook", () => {
       mockFetch.mockResolvedValueOnce(
         mockApiResponse(page1Events, 3, "cursor-2")
       );
-      result.current.goToPrev();
+      act(() => {
+        result.current.goToPrev();
+      });
 
       await waitFor(() => {
         expect(result.current.events[0].id).toBe("1");
