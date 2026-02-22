@@ -9,7 +9,6 @@ import { kMeans, type UserPoint, type Vector } from "@/lib/kmeans";
 import { mapTags, transformEventFromDB, tagMapping } from "@/lib/tagMapping";
 import type { Database } from "@/lib/supabase/types";
 import type { NextRequest } from "next/server";
-import { enforceRateLimit } from "@/lib/rateLimit";
 
 type DbUser = Database["public"]["Tables"]["users"]["Row"];
 type DbSavedEvent = Database["public"]["Tables"]["saved_events"]["Row"];
@@ -77,16 +76,6 @@ function mapEventToResponse(event: DbEventRow): Event {
 }
 
 export async function GET(request: NextRequest) {
-  const rateLimited = enforceRateLimit(request, {
-    keyPrefix: "public:recommendations:get",
-    limit: 100,
-    windowMs: 60_000,
-  });
-
-  if (rateLimited) {
-    return rateLimited;
-  }
-
   try {
     // Create a server-side Supabase client (uses auth cookies)
     const supabase = await createClient();
