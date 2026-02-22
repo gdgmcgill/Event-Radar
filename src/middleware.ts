@@ -86,9 +86,20 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  const path = request.nextUrl.pathname;
+
+  // Route protection: redirect unauthenticated users from protected pages
+  const PROTECTED_ROUTES = ["/my-events", "/create-event", "/notifications", "/profile"];
+  if (!user && PROTECTED_ROUTES.some((route) => path === route || path.startsWith(route + "/"))) {
+    const signInUrl = request.nextUrl.clone();
+    signInUrl.pathname = "/";
+    signInUrl.searchParams.set("signin", "required");
+    signInUrl.searchParams.set("next", path);
+    return NextResponse.redirect(signInUrl);
+  }
+
   // Onboarding guard: redirect to /onboarding if cookie is set
   const needsOnboarding = request.cookies.get("needs_onboarding")?.value === "1";
-  const path = request.nextUrl.pathname;
 
   if (
     needsOnboarding &&
