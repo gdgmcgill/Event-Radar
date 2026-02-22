@@ -14,10 +14,11 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { type Event, type InteractionSource } from "@/types";
-import { Calendar, Clock, MapPin, Heart } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, TrendingUp, Flame } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
+import type { EventPopularityScore } from "@/types";
 
 interface EventCardProps {
   event: Event;
@@ -28,6 +29,8 @@ interface EventCardProps {
   onUnsave?: (eventId: string) => void;
   /** Source context for tracking (e.g., 'home', 'search', 'recommendation') */
   trackingSource?: InteractionSource;
+  /** Popularity data — when provided, badges are shown on the card */
+  popularity?: EventPopularityScore | null;
 }
 
 export function EventCard({
@@ -37,6 +40,7 @@ export function EventCard({
   isSaved: initialIsSaved = false,
   onUnsave,
   trackingSource,
+  popularity,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
   const { trackClick, trackSave, trackUnsave } = useTracking({ source: trackingSource });
@@ -116,6 +120,24 @@ export function EventCard({
           
           {/* Gradient Overlay for Text Readability if needed, mostly stylistic here */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 dark:from-white/6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+          {/* Popularity / Trending Badges */}
+          {popularity && (popularity.trending_score > 0 || popularity.popularity_score > 0) && (
+            <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+              {popularity.trending_score >= 5 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500/90 text-white backdrop-blur-sm shadow-sm">
+                  <Flame className="h-3 w-3" />
+                  Trending
+                </span>
+              )}
+              {popularity.popularity_score >= 10 && popularity.trending_score < 5 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/90 text-white backdrop-blur-sm shadow-sm">
+                  <TrendingUp className="h-3 w-3" />
+                  Popular
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Floating Save Button */}
             {showSaveButton && (

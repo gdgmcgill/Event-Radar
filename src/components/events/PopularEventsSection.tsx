@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { type Event, EventTag } from "@/types";
+import { type Event, type EventPopularityScore, EventTag } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,10 @@ interface PopularEventsSectionProps {
   onEventClick?: (event: Event) => void;
 }
 
+type EventWithPopularity = Event & { popularity?: EventPopularityScore | null };
+
 export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps) {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<EventWithPopularity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +38,7 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
       if (!res.ok) throw new Error("Failed to fetch popular events");
       const data = await res.json();
       
-      const evt = Array.isArray(data.events) ? (data.events as Event[]) : [];
+      const evt = Array.isArray(data.events) ? (data.events as EventWithPopularity[]) : [];
       setEvents(evt);
     } catch (err) {
       console.error("Error fetching popular events:", err);
@@ -110,6 +112,7 @@ export function PopularEventsSection({ onEventClick }: PopularEventsSectionProps
                  isSaved={savedEventIds.has(event.id)}
                  trackingSource="home"
                  onClick={onEventClick ? () => onEventClick(event) : undefined}
+                 popularity={event.popularity}
                />
             </CarouselItem>
           ))}
