@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/admin/", "/admin-login"],
+      disallow: ["/api/", "/moderation/", "/admin-login"],
     },
     sitemap: "https://uni-verse.vercel.app/sitemap.xml",
   };
