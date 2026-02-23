@@ -154,6 +154,20 @@ Thursday, March 12
 
     expect(result.extracted_fields?.title).toBe("Trivia Night is BACK!");
   });
+
+  it("includes source_url from post_url in extracted fields", () => {
+    const post = makePost({
+      caption: `Join us for our Annual Gala!
+Date: March 15, 2026
+Time: 7:00 PM
+Location: SSMU Ballroom`,
+      post_url: "https://www.instagram.com/p/ABC123/",
+    });
+    const result = classifyPost(post);
+
+    expect(result.extracted_fields).not.toBeNull();
+    expect(result.extracted_fields?.source_url).toBe("https://www.instagram.com/p/ABC123/");
+  });
 });
 
 // =============================================
