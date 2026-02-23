@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 3 of 4 (Notification System Wiring)
-Plan: 1 of 3 in current phase (03-01 complete)
+Plan: 2 of 3 in current phase (03-02 complete)
 Status: Phase 3 In Progress
-Last activity: 2026-02-23 — Completed 03-01 notification navigation and upsert hardening
+Last activity: 2026-02-23 — Completed 03-02 migration applied and build verification passed
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 10 min
-- Total execution time: 0.5 hours
+- Total plans completed: 4
+- Average duration: 9 min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [█████░░░░░] 50%
 |-------|-------|-------|----------|
 | 01-notification-database-foundation | 2 | 24 min | 12 min |
 | 02-cold-start-fix | 2 | 10 min | 5 min |
-| 03-notification-system-wiring | 1 | 1 min | 1 min |
+| 03-notification-system-wiring | 2 | 11 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (22 min), 01-02 (2 min), 02-01 (8 min), 02-02 (2 min), 03-01 (1 min)
+- Last 5 plans: 01-02 (2 min), 02-01 (8 min), 02-02 (2 min), 03-01 (1 min), 03-02 (10 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -58,6 +58,8 @@ Recent decisions affecting current work:
 - [02-02]: Nudge gated on !isLoading from useSavedEvents to avoid showing inaccurate remaining count during initial fetch
 - [Phase 03-01]: Conditional wrapper: Link for event_id-bearing notifications, button for others
 - [Phase 03-01]: Upsert with onConflict user_id,event_id,type resets read=false and created_at on re-approve/re-reject
+- [03-02]: notifications_dedup_idx UNIQUE partial index applied to production Supabase via MCP; RLS (SELECT/UPDATE own) active — upsert dedup now reliable end-to-end
+- [03-02]: No caching strategy change needed for NotificationBell — polling every 60s is already implemented and correct; no Zustand/SWR refactor required
 
 ### Pending Todos
 
@@ -65,13 +67,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1 - Pending]: Apply `supabase/migrations/20260223000000_notifications_rls_and_dedup.sql` via Supabase MCP tools or Dashboard SQL Editor to add the notifications_dedup_idx UNIQUE index — required before Phase 4 cron work begins (upsert dedup relies on this index).
 - [Phase 4]: pg_cron → pg_net → Next.js API auth has a documented friction point (Supabase issue #4287). Validate before Phase 4 begins; fallback is GitHub Actions or Vercel Cron.
-- [Phase 3]: Decision needed on NotificationBell caching strategy: Zustand global store vs SWR revalidateOnFocus. Pick one approach before implementation to avoid two patterns in the codebase.
-- [Research flag]: Verify whether NotificationBell is already injected at Header.tsx line 122 before Phase 3 begins — may already be done.
 
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 03-01-PLAN.md — Notification navigation and upsert hardening; Phase 3 plan 1 of 3 complete
+Stopped at: Completed 03-02-PLAN.md — Migration applied and build verified; Phase 3 plan 2 of 3 complete
 Resume file: None

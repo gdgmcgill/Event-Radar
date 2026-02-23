@@ -17,8 +17,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Notification UI
 
-- [ ] **NUI-01**: NotificationBell injected into Header.tsx next to auth button for authenticated users
-- [ ] **NUI-02**: Existing notification API routes (GET, PATCH, POST mark-all-read) validated against real notifications table
+- [x] **NUI-01**: NotificationBell injected into Header.tsx next to auth button for authenticated users
+- [x] **NUI-02**: Existing notification API routes (GET, PATCH, POST mark-all-read) validated against real notifications table
 - [x] **NUI-03**: Notification items link to /events/[event_id] when event_id is present
 
 ### Notification Generation
@@ -82,8 +82,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NINF-03 | Phase 1 | Complete |
 | NINF-04 | Phase 1 | Complete |
 | NINF-05 | Phase 1 | Complete |
-| NUI-01 | Phase 3 | Pending |
-| NUI-02 | Phase 3 | Pending |
+| NUI-01 | Phase 3 | Complete |
+| NUI-02 | Phase 3 | Complete |
 | NUI-03 | Phase 3 | Complete |
 | NGEN-01 | Phase 3 | Complete |
 | NGEN-02 | Phase 3 | Complete |
