@@ -21,6 +21,7 @@ import { Filter, RefreshCcw, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/lib/utils";
+import { RECOMMENDATION_THRESHOLD } from "@/lib/constants";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   not_mcgill: "Please sign in with a McGill email (@mcgill.ca or @mail.mcgill.ca).",
@@ -125,7 +126,7 @@ function HomePageContent() {
     direction: "asc",
   });
 
-  const canShowRecommendations = savedEventIds.size >= 3;
+  const canShowRecommendations = savedEventIds.size >= RECOMMENDATION_THRESHOLD;
 
   // Clear query params when auth error is present
   useEffect(() => {
@@ -352,11 +353,11 @@ function HomePageContent() {
 
             {/* Popular / Recommended Section */}
             {!isFiltering && (
-              (!user || (!isSavedLoading && !canShowRecommendations) || recommendationFailed) ? (
+              !user || recommendationFailed ? (
                 <PopularEventsSection
                   onEventsLoaded={(ids) => setPopularEventIds(new Set(ids))}
                 />
-              ) : (user && !isSavedLoading && canShowRecommendations && !recommendationFailed) ? (
+              ) : !isSavedLoading ? (
                 <RecommendedEventsSection
                   onEmpty={() => setRecommendationFailed(true)}
                 />
