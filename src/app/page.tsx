@@ -19,7 +19,7 @@ import { EventSearch } from "@/components/events/EventSearch";
 import { Filter, RefreshCcw, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { SignInButton } from "@/components/auth/SignInButton";
+import { cn } from "@/lib/utils";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   not_mcgill: "Please sign in with a McGill email (@mcgill.ca or @mail.mcgill.ca).",
@@ -50,8 +50,11 @@ function HomePageContent() {
   const [recommendationFailed, setRecommendationFailed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [popularEventIds, setPopularEventIds] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const filterContainerRef = useRef<HTMLDivElement>(null);
+  const filterToggleRef = useRef<HTMLButtonElement>(null);
   const user = useAuthStore((s) => s.user);
   const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
   const searchParams = useSearchParams();
@@ -68,6 +71,27 @@ function HomePageContent() {
     }
     return null;
   }, [searchParams]);
+
+  // Add click-outside listener for desktop sidebar
+  useEffect(() => {
+    if (!isDesktopFilterOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        filterContainerRef.current &&
+        !filterContainerRef.current.contains(event.target as Node) &&
+        filterToggleRef.current &&
+        !filterToggleRef.current.contains(event.target as Node)
+      ) {
+        setIsDesktopFilterOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDesktopFilterOpen]);
 
   const NUMBER_OF_EVENTS_PER_BATCH = 20;
 
@@ -239,15 +263,33 @@ function HomePageContent() {
                 Upcoming Events
               </h2>
 
-              <div className="flex items-center gap-3">
+                {/* Desktop Quick Filters Toggle */}
                 <div className="hidden md:block">
-                  {/* We can place refined quick filters here or keep them in the modal/sidebar */}
+                  <Button
+                    ref={filterToggleRef}
+                    variant={isDesktopFilterOpen ? "secondary" : "outline"}
+                    className={cn(
+                      "gap-2 rounded-xl transition-all shadow-sm",
+                      isDesktopFilterOpen 
+                        ? "bg-secondary text-secondary-foreground" 
+                        : "border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary"
+                    )}
+                    onClick={() => setIsDesktopFilterOpen(!isDesktopFilterOpen)}
+                  >
+                    <Filter className="h-4 w-4" />
+                    Filters
+                    {selectedTags.length > 0 && (
+                      <span className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                        {selectedTags.length}
+                      </span>
+                    )}
+                  </Button>
                 </div>
 
-                {/* Mobile/Desktop Filter Toggle */}
+                {/* Mobile Filter Toggle */}
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="outline" className="gap-2 rounded-xl border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary transition-all shadow-sm">
+                    <Button variant="outline" className="md:hidden gap-2 rounded-xl border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary transition-all shadow-sm">
                       <Filter className="h-4 w-4" />
                       Filters
                       {selectedTags.length > 0 && (
@@ -269,7 +311,6 @@ function HomePageContent() {
                     </div>
                   </SheetContent>
                 </Sheet>
-              </div>
             </div>
 
             {/* Result count feedback */}
@@ -284,6 +325,24 @@ function HomePageContent() {
                 )}
               </div>
             )}
+
+            {/* Desktop Expandable Top Filter Panel */}
+            <div
+              ref={filterContainerRef}
+              className={cn(
+                "hidden md:block transition-all duration-300 ease-in-out overflow-hidden origin-top",
+                isDesktopFilterOpen
+                  ? "opacity-100 scale-y-100 mb-8 max-h-[400px]"
+                  : "opacity-0 scale-y-95 mb-0 max-h-0"
+              )}
+            >
+              <div className="pt-2">
+                <EventFilters
+                  onFilterChange={handleFilterChange}
+                  initialTags={selectedTags}
+                />
+              </div>
+            </div>
 
             {/* Popular / Recommended Section */}
             {!isFiltering && (
@@ -340,8 +399,6 @@ function HomePageContent() {
             )}
           </div>
         </div>
-
-
       </div>
     </ErrorBoundary>
   );

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { EventBadge } from "@/components/events/EventBadge";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import { Pencil, Save, X, Sparkles } from "lucide-react";
@@ -160,18 +160,14 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {selectedTags.map((tag) => {
-                  const category = EVENT_CATEGORIES[tag];
-                  return (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="px-3 py-1 text-sm font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 transition-colors"
-                    >
-                      {category.label}
-                    </Badge>
-                  );
-                })}
+                {selectedTags.map((tag) => (
+                  <EventBadge 
+                    key={tag} 
+                    tag={tag} 
+                    variant="glowing" 
+                    className="px-3 py-1 text-sm" 
+                  />
+                ))}
               </div>
             )}
           </div>
