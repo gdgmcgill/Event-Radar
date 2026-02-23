@@ -43,15 +43,20 @@ export async function PATCH(
 
     if (event?.created_by) {
       const isApproved = status === "approved";
-      await serviceClient.from("notifications").insert({
-        user_id: event.created_by,
-        type: isApproved ? "event_approved" : "event_rejected",
-        title: isApproved ? "Event Approved!" : "Event Not Approved",
-        message: isApproved
-          ? `Your event "${event.title}" has been approved and is now live.`
-          : `Your event "${event.title}" was not approved.`,
-        event_id: id,
-      });
+      await serviceClient.from("notifications").upsert(
+        {
+          user_id: event.created_by,
+          type: isApproved ? "event_approved" : "event_rejected",
+          title: isApproved ? "Event Approved!" : "Event Not Approved",
+          message: isApproved
+            ? `Your event "${event.title}" has been approved and is now live.`
+            : `Your event "${event.title}" was not approved.`,
+          event_id: id,
+          read: false,
+          created_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,event_id,type" }
+      );
     }
   } catch (notifErr) {
     // Notification failure should not break the status update
