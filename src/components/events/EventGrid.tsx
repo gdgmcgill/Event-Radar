@@ -7,7 +7,6 @@
  */
 
 import { EventCard } from "./EventCard";
-import { EventCardSkeleton } from "./EventCardSkeleton";
 import { EventGridSkeleton } from "./EventGridSkeleton";
 import type { Event, InteractionSource } from "@/types";
 

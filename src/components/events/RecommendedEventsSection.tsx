@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { type Event } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
+import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
 import { AlertCircle, RefreshCcw, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -12,8 +13,6 @@ interface RecommendedEventsSectionProps {
   onEventClick?: (event: Event) => void;
   onEmpty?: () => void;
 }
-
-import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
 
 export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedEventsSectionProps) {
   const [events, setEvents] = useState<Event[]>([]);

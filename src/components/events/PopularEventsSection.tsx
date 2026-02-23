@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { type Event, type EventPopularityScore } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
+import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -14,8 +15,6 @@ interface PopularEventsSectionProps {
 }
 
 type EventWithPopularity = Event & { popularity?: EventPopularityScore | null };
-
-import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
 
 export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEventsSectionProps) {
   const [events, setEvents] = useState<EventWithPopularity[]>([]);
