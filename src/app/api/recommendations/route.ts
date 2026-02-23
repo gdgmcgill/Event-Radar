@@ -10,6 +10,7 @@ import { kMeans, type UserPoint, type Vector } from "@/lib/kmeans";
 import { mapTags, transformEventFromDB, tagMapping } from "@/lib/tagMapping";
 import type { Database } from "@/lib/supabase/types";
 import type { NextRequest } from "next/server";
+import { RECOMMENDATION_THRESHOLD } from "@/lib/constants";
 
 type DbUser = Database["public"]["Tables"]["users"]["Row"];
 type DbSavedEvent = Database["public"]["Tables"]["saved_events"]["Row"];
@@ -101,6 +102,50 @@ function mapEventToResponse(event: DbEventRow): Event {
   return transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0]);
 }
 
+// Popularity-ranked fallback for cold-start users (< RECOMMENDATION_THRESHOLD saves).
+// Fetches upcoming approved events joined with popularity scores, excludes already-saved
+// events, applies boost scoring (+2 for save_count > 10, +1 for start within 7 days),
+// sorts descending by score, and returns top 20.
+async function buildPopularityFallback(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  savedIds: Set<string>
+): Promise<Event[]> {
+  const now = new Date();
+  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("*, popularity:event_popularity_scores(*)")
+    .eq("status", "approved")
+    .gt("start_date", now.toISOString())
+    .limit(200);
+
+  if (error) {
+    console.error("Supabase error fetching fallback events:", error);
+    return [];
+  }
+
+  type EventWithPopularity = DbEventRow & {
+    popularity?: Array<{ popularity_score: number; save_count: number }>;
+  };
+
+  const scored = ((data ?? []) as unknown as EventWithPopularity[])
+    .filter((e) => !savedIds.has(e.id))
+    .map((e) => {
+      const pop = e.popularity?.[0];
+      let score = pop?.popularity_score ?? 0;
+      if ((pop?.save_count ?? 0) > 10) score += 2;
+      const start = new Date(e.start_date ?? "");
+      if (start <= sevenDaysFromNow) score += 1;
+      return { event: e, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 20)
+    .map(({ event }) => mapEventToResponse(event));
+
+  return scored;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -111,6 +156,33 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Cold-start detection: fetch only current user's saved events first
+    const { data: userSavedData, error: userSavedError } = await supabase
+      .from("saved_events")
+      .select("event_id")
+      .eq("user_id", user.id);
+
+    if (userSavedError) {
+      console.error("Supabase error fetching user saved events:", userSavedError);
+      return NextResponse.json(
+        { error: "Failed to fetch saved events" },
+        { status: 500 }
+      );
+    }
+
+    const currentUserSavedIds = new Set(
+      (userSavedData ?? []).map((s) => s.event_id)
+    );
+
+    // If below threshold, short-circuit to popularity fallback (skip k-means)
+    if (currentUserSavedIds.size < RECOMMENDATION_THRESHOLD) {
+      const fallbackEvents = await buildPopularityFallback(supabase, currentUserSavedIds);
+      return NextResponse.json({
+        recommendations: fallbackEvents,
+        source: "popular_fallback" as const,
+      });
     }
 
     // Fetch user profile, all users, saved events, all events, and popularity in parallel
@@ -223,7 +295,7 @@ export async function GET(request: NextRequest) {
 
     // If user has no interest_tags and no saved events, we have nothing to work with
     if (isZeroVector && interestTags.length === 0) {
-      return NextResponse.json({ recommendations: [] });
+      return NextResponse.json({ recommendations: [], source: "personalized" as const });
     }
 
     // --- Collaborative signal: k-means cluster ---
@@ -264,7 +336,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (candidates.length === 0) {
-      return NextResponse.json({ recommendations: [] });
+      return NextResponse.json({ recommendations: [], source: "personalized" as const });
     }
 
     // --- Score each candidate event ---
@@ -354,7 +426,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ recommendations });
+    return NextResponse.json({ recommendations, source: "personalized" as const });
   } catch (error) {
     console.error("Error fetching recommendations:", error);
     return NextResponse.json(

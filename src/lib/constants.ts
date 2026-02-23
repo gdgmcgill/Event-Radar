@@ -100,4 +100,9 @@ export const MCGILL_COLORS = {
   DARK_CARD: "#2d2d2d", // Dark theme card background
 } as const;
 
+/**
+ * Minimum number of saved events required before showing personalized recommendations.
+ * Below this threshold, users see the popularity-ranked fallback feed.
+ */
+export const RECOMMENDATION_THRESHOLD = 3;
 
