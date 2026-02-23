@@ -1,2 +1,4 @@
--- statsus column for marking events that are not approved yet by the admins
-ALTER TABLE "public"."events" ADD COLUMN "status" text NOT NULL DEFAULT 'pending';
+-- Legacy migration captured 2025-11-28.
+-- Added "status" column to events table (values: pending/approved/rejected).
+-- This column is already defined in 001_initial_schema.sql, so this file is a no-op on local replay.
+-- Kept as a tracking placeholder to keep local and remote migration history in sync.
