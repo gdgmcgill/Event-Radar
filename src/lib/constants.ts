@@ -21,6 +21,7 @@ export const EVENT_CATEGORIES = {
     selectedBg: "bg-blue-50 dark:bg-blue-950/40",
     checkColor: "bg-blue-600 text-white",
     icon: "GraduationCap",
+    baseColor: "#3b82f6", // tailwind blue-500
     badgeTheme: "bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)] dark:shadow-[0_0_15px_rgba(59,130,246,0.2)]",
   },
   [EventTag.SOCIAL]: {
@@ -30,6 +31,7 @@ export const EVENT_CATEGORIES = {
     selectedBg: "bg-pink-50 dark:bg-pink-950/40",
     checkColor: "bg-pink-600 text-white",
     icon: "Users",
+    baseColor: "#ec4899", // tailwind pink-500
     badgeTheme: "bg-gradient-to-r from-pink-500/10 to-rose-500/10 border-pink-500/20 text-pink-700 dark:text-pink-300 shadow-[0_0_15px_rgba(236,72,153,0.15)] dark:shadow-[0_0_15px_rgba(236,72,153,0.2)]",
   },
   [EventTag.SPORTS]: {
@@ -39,6 +41,7 @@ export const EVENT_CATEGORIES = {
     selectedBg: "bg-green-50 dark:bg-green-950/40",
     checkColor: "bg-green-600 text-white",
     icon: "Trophy",
+    baseColor: "#22c55e", // tailwind green-500
     badgeTheme: "bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20 text-green-700 dark:text-green-300 shadow-[0_0_15px_rgba(34,197,94,0.15)] dark:shadow-[0_0_15px_rgba(34,197,94,0.2)]",
   },
   [EventTag.CAREER]: {
@@ -48,6 +51,7 @@ export const EVENT_CATEGORIES = {
     selectedBg: "bg-purple-50 dark:bg-purple-950/40",
     checkColor: "bg-purple-600 text-white",
     icon: "Briefcase",
+    baseColor: "#a855f7", // tailwind purple-500
     badgeTheme: "bg-gradient-to-r from-purple-500/10 to-fuchsia-500/10 border-purple-500/20 text-purple-700 dark:text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.15)] dark:shadow-[0_0_15px_rgba(168,85,247,0.2)]",
   },
   [EventTag.CULTURAL]: {
@@ -57,6 +61,7 @@ export const EVENT_CATEGORIES = {
     selectedBg: "bg-orange-50 dark:bg-orange-950/40",
     checkColor: "bg-orange-600 text-white",
     icon: "Palette",
+    baseColor: "#f97316", // tailwind orange-500
     badgeTheme: "bg-gradient-to-r from-orange-500/10 to-amber-500/10 border-orange-500/20 text-orange-700 dark:text-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.15)] dark:shadow-[0_0_15px_rgba(249,115,22,0.2)]",
   },
   [EventTag.WELLNESS]: {
@@ -66,6 +71,7 @@ export const EVENT_CATEGORIES = {
     selectedBg: "bg-teal-50 dark:bg-teal-950/40",
     checkColor: "bg-teal-600 text-white",
     icon: "Heart",
+    baseColor: "#14b8a6", // tailwind teal-500
     badgeTheme: "bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border-teal-500/20 text-teal-700 dark:text-teal-300 shadow-[0_0_15px_rgba(20,184,166,0.15)] dark:shadow-[0_0_15px_rgba(20,184,166,0.2)]",
   },
 } as const;

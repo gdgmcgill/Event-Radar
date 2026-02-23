@@ -11,6 +11,7 @@ import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import { X, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EventBadge } from "./EventBadge";
 
 /**
  * Props for the EventFilters component.
@@ -91,20 +92,21 @@ export function EventFilters({ onFilterChange, initialTags = [] }: EventFiltersP
             const category = EVENT_CATEGORIES[tag];
             const isSelected = selectedTags.includes(tag);
             return (
-              <Button
+              <button
                 key={tag}
-                variant="ghost"
-                size="sm"
                 onClick={() => toggleTag(tag)}
                 className={cn(
-                  "rounded-full px-4 py-1 h-auto transition-all duration-200 border",
+                  "rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 border",
                   isSelected
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary/90"
-                    : "bg-secondary/50 text-secondary-foreground border-transparent hover:bg-secondary/80 hover:border-border/50"
+                    ? cn(category.badgeTheme, "scale-105 shadow-md")
+                    : "bg-secondary/40 text-secondary-foreground border-transparent hover:scale-105 hover:bg-secondary/80"
                 )}
+                style={!isSelected ? {
+                  // Subtle hover effect tinted by the category color when unselected
+                } : undefined}
               >
                 {category.label}
-              </Button>
+              </button>
             );
           })}
         </div>
@@ -128,19 +130,15 @@ export function EventFilters({ onFilterChange, initialTags = [] }: EventFiltersP
             {selectedTags.map((tag) => {
               const category = EVENT_CATEGORIES[tag];
               return (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="flex items-center gap-1 pl-2 pr-1 py-1 bg-background"
-                >
-                  {category.label}
+                <div key={tag} className="flex items-center">
+                  <EventBadge tag={tag} className="py-1 px-3 pr-8 relative" />
                   <button
                     onClick={() => toggleTag(tag)}
-                    className="ml-1 hover:bg-muted rounded-full p-0.5 transition-colors"
+                    className="absolute z-10 -ml-7 flex items-center justify-center h-4 w-4 rounded-full bg-background/50 backdrop-blur-sm hover:bg-background/80 transition-colors"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-3 w-3 text-foreground" />
                   </button>
-                </Badge>
+                </div>
               );
             })}
           </div>
