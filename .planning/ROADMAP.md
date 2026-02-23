@@ -45,7 +45,11 @@ Plans:
   3. Events the user has already saved do not appear in the fallback feed
   4. An onboarding nudge tells the user exactly how many more saves are needed to unlock personalized recommendations
   5. A user with 3 or more saved events sees their personalized recommendations (not the fallback feed)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Add cold-start fallback and source field to recommendations API + centralize RECOMMENDATION_THRESHOLD constant
+- [ ] 02-02-PLAN.md — Make RecommendedEventsSection source-aware with nudge UI + fix page.tsx rendering logic
 
 ### Phase 3: Notification System Wiring
 **Goal**: Authenticated users see a live notification bell in the header with an unread count badge, admin approve/reject actions create notifications for club organizers, and the full notification inbox is functional
@@ -79,6 +83,6 @@ Note: Phase 2 is independent of Phase 1 and can be developed in parallel if need
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Notification Database Foundation | 1/2 | Complete    | 2026-02-23 |
-| 2. Cold Start Fix | 0/TBD | Not started | - |
+| 2. Cold Start Fix | 0/2 | Not started | - |
 | 3. Notification System Wiring | 0/TBD | Not started | - |
 | 4. Cron Scheduler Configuration | 0/TBD | Not started | - |
