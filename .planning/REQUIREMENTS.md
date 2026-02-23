@@ -36,10 +36,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **COLD-02**: Fallback query filters start_time > NOW() to exclude past events
 - [x] **COLD-03**: Fallback scoring applies popularity boost (>10 saves → +2) and recency boost (within 7 days → +1)
 - [x] **COLD-04**: API response includes source field ("personalized" or "popular_fallback") so UI can label appropriately
-- [ ] **COLD-05**: RecommendedEventsSection shows "Popular on Campus" label when source is popular_fallback
+- [x] **COLD-05**: RecommendedEventsSection shows "Popular on Campus" label when source is popular_fallback
 - [x] **COLD-06**: Already-saved events excluded from fallback feed
 - [x] **COLD-07**: RECOMMENDATION_THRESHOLD constant centralized in src/lib/constants.ts and used by both page.tsx and API
-- [ ] **COLD-08**: Onboarding nudge displayed in cold-start state ("Save N more events to unlock personalized recommendations")
+- [x] **COLD-08**: Onboarding nudge displayed in cold-start state ("Save N more events to unlock personalized recommendations")
 
 ## v2 Requirements
 
@@ -95,10 +95,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COLD-02 | Phase 2 | Complete |
 | COLD-03 | Phase 2 | Complete |
 | COLD-04 | Phase 2 | Complete |
-| COLD-05 | Phase 2 | Pending |
+| COLD-05 | Phase 2 | Complete |
 | COLD-06 | Phase 2 | Complete |
 | COLD-07 | Phase 2 | Complete |
-| COLD-08 | Phase 2 | Pending |
+| COLD-08 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 22 total

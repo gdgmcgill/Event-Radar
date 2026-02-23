@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 2 of 4 (Cold Start Fix)
-Plan: 1 of 1 in current phase (02-01 complete)
-Status: Phase 2 Plan 1 Complete
-Last activity: 2026-02-23 — Completed 02-01 cold-start fallback and source field in recommendations API
+Plan: 2 of 2 in current phase (02-02 complete)
+Status: Phase 2 Complete
+Last activity: 2026-02-23 — Completed 02-02 source-aware UI and cold-start onboarding nudge
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -28,10 +28,10 @@ Progress: [███░░░░░░░] 30%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-notification-database-foundation | 2 | 24 min | 12 min |
-| 02-cold-start-fix | 1 | 8 min | 8 min |
+| 02-cold-start-fix | 2 | 10 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (22 min), 01-02 (2 min), 02-01 (8 min)
+- Last 5 plans: 01-01 (22 min), 01-02 (2 min), 02-01 (8 min), 02-02 (2 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -53,6 +53,8 @@ Recent decisions affecting current work:
 - [02-01]: RECOMMENDATION_THRESHOLD = 3 centralized in constants.ts; both page.tsx (replace magic number) and RecommendedEventsSection (nudge math) must import it
 - [02-01]: Cold-start early return placed before Promise.all/k-means; uses targeted single-user saved_events fetch for gate check
 - [02-01]: source field added to all 200-response return sites: "popular_fallback" for cold-start path, "personalized" for all personalized paths
+- [02-02]: Authenticated cold-start users now see RecommendedEventsSection (API handles fallback) — page.tsx conditional simplified; canShowRecommendations no longer gates the section
+- [02-02]: Nudge gated on !isLoading from useSavedEvents to avoid showing inaccurate remaining count during initial fetch
 
 ### Pending Todos
 
@@ -68,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 02-01-PLAN.md — Cold-start fallback + source field in recommendations API; RecommendedEventsSection UI update still needed (COLD-05, COLD-08)
+Stopped at: Completed 02-02-PLAN.md — Source-aware UI and cold-start onboarding nudge; Phase 2 complete
 Resume file: None
