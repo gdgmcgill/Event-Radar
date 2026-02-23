@@ -4,7 +4,7 @@
  * Calendar page - Monthly calendar view of events
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Event } from "@/types";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -13,36 +13,32 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
+import { useEvents } from "@/hooks/useEvents";
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const fetchEvents = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/events");
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch events");
-      }
+  const now = new Date();
+  const startOfMonthRef = useRef(new Date(now.getFullYear(), now.getMonth(), 1));
 
-      const data = await response.json();
-      const eventList = Array.isArray(data) ? data : data.events || [];
-      setEvents(eventList);
-    } catch (err) {
-      console.error("Error fetching events:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { events, loading, loadAll } = useEvents({
+    enabled: false,
+    limit: 100,
+    sort: "start_date",
+    direction: "asc",
+  });
 
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    loadAll({
+      filters: {
+        dateRange: {
+          start: startOfMonthRef.current,
+        },
+      },
+    });
+  }, [loadAll]);
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -81,6 +77,7 @@ export default function CalendarPage() {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const showSkeleton = loading && events.length === 0;
+  const showSpinner = loading && !showSkeleton;
 
   // Create calendar grid
   const calendarDays = [];
@@ -133,7 +130,7 @@ export default function CalendarPage() {
               </Button>
               <div className="min-w-[180px] text-center">
                 <span className="text-lg font-semibold text-foreground">{monthName}</span>
-                {loading && !showSkeleton && (
+                {showSpinner && (
                   <span className="ml-2 inline-flex h-4 w-4 animate-spin rounded-full border-2 border-primary/30 border-t-primary align-[-2px]" />
                 )}
               </div>

@@ -190,6 +190,7 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
       }
 
       setSuccess(true);
+      onSuccess?.();
       // Reset form
       setFormData({
         title: "",
