@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { type Event, type EventPopularityScore } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
+import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -57,7 +58,7 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-[380px] w-full rounded-2xl bg-secondary/20 animate-pulse border border-border/40" />
+            <EventCardSkeleton key={i} />
           ))}
         </div>
       </div>
