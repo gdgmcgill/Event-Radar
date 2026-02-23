@@ -7,11 +7,9 @@ type Props = {
 };
 
 function ReactSwagger({ spec }: Props) {
-    return <RedocStandalone 
+    return <RedocStandalone
         spec={spec}
-        options={{
-            
-        }}
+        options={{}}
     />
 }
 

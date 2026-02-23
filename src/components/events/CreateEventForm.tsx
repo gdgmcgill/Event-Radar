@@ -50,7 +50,12 @@ interface FormErrors {
   tags?: string;
 }
 
-export function CreateEventForm() {
+interface CreateEventFormProps {
+  clubId?: string;
+  onSuccess?: () => void;
+}
+
+export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
   const [formData, setFormData] = useState<FormData>({
     title: "",
     description: "",
@@ -174,6 +179,7 @@ export function CreateEventForm() {
           tags: formData.tags,
           image_url: imageUrl,
           category: formData.tags[0],
+          club_id: clubId,
         }),
       });
 
@@ -195,6 +201,7 @@ export function CreateEventForm() {
         imageFile: null,
       });
       removeImage();
+      onSuccess?.();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

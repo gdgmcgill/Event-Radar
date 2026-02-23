@@ -100,6 +100,7 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
             <div className="relative bg-card rounded-2xl shadow-xl border border-border/50 p-2 flex items-center transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20">
               <Search className="ml-4 h-5 w-5 text-muted-foreground flex-shrink-0" />
               <input
+                suppressHydrationWarning
                 ref={setRefs}
                 type="text"
                 placeholder={placeholder}
