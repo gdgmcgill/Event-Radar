@@ -13,6 +13,8 @@ import {
   CONFIDENCE_THRESHOLDS,
 } from "./classifier";
 import crypto from "crypto";
+import { downloadAndUploadImage } from "./image-upload";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // =============================================
 // Types
@@ -108,6 +110,34 @@ export function runPipeline(apifyItems: ApifyInstagramItem[]): PipelineResult {
     errors: [],
     results: classified,
   };
+}
+
+/**
+ * Run the classification pipeline with image re-hosting.
+ * Downloads Instagram CDN images and uploads them to Supabase Storage
+ * so that image URLs are permanent.
+ */
+export async function runPipelineWithImages(
+  apifyItems: ApifyInstagramItem[],
+  supabase: SupabaseClient,
+): Promise<PipelineResult> {
+  const result = runPipeline(apifyItems);
+
+  const uploadPromises = result.results.map(async (r) => {
+    if (!r.extracted_fields?.image_url) return;
+
+    const permanentUrl = await downloadAndUploadImage(
+      r.extracted_fields.image_url,
+      supabase,
+    );
+
+    if (permanentUrl) {
+      r.extracted_fields.image_url = permanentUrl;
+    }
+  });
+
+  await Promise.all(uploadPromises);
+  return result;
 }
 
 /**
