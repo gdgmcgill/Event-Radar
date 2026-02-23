@@ -60,12 +60,18 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
   const handleShare = async () => {
     const url = `${window.location.origin}/events/${event.id}`;
     trackShare(event.id);
-    if (navigator.share) {
-      await navigator.share({ title: event.title, text: event.description, url });
-    } else {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: event.title, text: event.description, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.warn("Share failed:", err);
+      }
     }
   };
 

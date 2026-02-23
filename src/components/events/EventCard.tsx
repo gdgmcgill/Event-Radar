@@ -31,7 +31,7 @@ interface EventCardProps {
   trackingSource?: InteractionSource;
   /** Popularity data — when provided, badges are shown on the card */
   popularity?: EventPopularityScore | null;
-  /** When set, shows a medal badge (#1/#2/#3) and colored ring instead of trending/popular badges */
+  /** When set, suppresses trending/popular badges for ranked cards */
   rank?: 1 | 2 | 3;
   /** When true, shows view/save engagement stats above the save button */
   showPopularityStats?: boolean;

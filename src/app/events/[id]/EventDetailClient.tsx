@@ -151,12 +151,18 @@ export default function EventDetailClient() {
   const handleShare = useCallback(async () => {
     const url = `${window.location.origin}/events/${id}`;
     trackShare(id);
-    if (navigator.share) {
-      await navigator.share({ title: event?.title, text: event?.description, url });
-    } else {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: event?.title, text: event?.description, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.warn("Share failed:", err);
+      }
     }
   }, [id, event, trackShare]);
 
