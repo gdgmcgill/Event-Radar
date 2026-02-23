@@ -2,7 +2,7 @@
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { EventBadge } from "@/components/events/EventBadge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
@@ -85,14 +85,9 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
           <DialogHeader className="space-y-4 text-left">
             <div className="space-y-2">
               <div className="flex flex-wrap gap-2">
-                {event.tags.map((tag) => {
-                  const category = EVENT_CATEGORIES[tag];
-                  return (
-                    <Badge key={tag} variant="secondary" className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                      {category?.label || tag}
-                    </Badge>
-                  );
-                })}
+                {event.tags.map((tag) => (
+                  <EventBadge key={tag} tag={tag} variant="glowing" />
+                ))}
               </div>
               <DialogTitle className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
                 {event.title}

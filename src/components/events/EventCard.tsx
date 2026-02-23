@@ -10,6 +10,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EventBadge } from "@/components/events/EventBadge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
@@ -187,21 +188,9 @@ export function EventCard({
 
         {/* Footer / Tags */}
         <div className="px-5 pb-5 pt-0 flex flex-wrap gap-2">
-          {event.tags.slice(0, 3).map((tag) => {
-            const category = EVENT_CATEGORIES[tag];
-            return (
-              <Badge 
-                key={tag} 
-                variant="secondary" 
-                className={cn(
-                  "px-2.5 py-0.5 text-xs font-medium transition-colors bg-secondary/50 text-secondary-foreground hover:bg-secondary",
-                  // category?.color // Keeping it cleaner with consistent secondary styling
-                )}
-              >
-                {category?.label || tag}
-              </Badge>
-            );
-          })}
+          {event.tags.slice(0, 3).map((tag) => (
+            <EventBadge key={tag} tag={tag} variant="glowing" />
+          ))}
         </div>
       </Card>
     </Link>
