@@ -41,6 +41,9 @@ export interface Club {
   instagram_handle: string | null;
   logo_url: string | null;
   description: string | null;
+  category: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
