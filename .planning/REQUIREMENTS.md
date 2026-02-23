@@ -9,9 +9,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Notification Infrastructure
 
-- [ ] **NINF-01**: Notifications table created in Supabase with columns: id, user_id, event_id, type, title, message, read, created_at
-- [ ] **NINF-02**: RLS enabled on notifications table with policies: SELECT own rows (authenticated), UPDATE own rows (authenticated); INSERT has no policy for authenticated role — service role bypasses RLS by design, blocking any direct browser client INSERT
-- [ ] **NINF-03**: UNIQUE constraint on (user_id, event_id, type) to prevent duplicate notifications
+- [x] **NINF-01**: Notifications table created in Supabase with columns: id, user_id, event_id, type, title, message, read, created_at
+- [x] **NINF-02**: RLS enabled on notifications table with policies: SELECT own rows (authenticated), UPDATE own rows (authenticated); INSERT has no policy for authenticated role — service role bypasses RLS by design, blocking any direct browser client INSERT
+- [x] **NINF-03**: UNIQUE constraint on (user_id, event_id, type) to prevent duplicate notifications
 - [x] **NINF-04**: Notification type strings aligned across codebase — cron route and NotificationItem both use event_reminder_24h, event_reminder_1h, event_approved, event_rejected
 - [x] **NINF-05**: TypeScript types updated in src/types/index.ts to reflect notifications table schema
 
@@ -77,9 +77,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NINF-01 | Phase 1 | Pending |
-| NINF-02 | Phase 1 | Pending |
-| NINF-03 | Phase 1 | Pending |
+| NINF-01 | Phase 1 | Complete |
+| NINF-02 | Phase 1 | Complete |
+| NINF-03 | Phase 1 | Complete |
 | NINF-04 | Phase 1 | Complete |
 | NINF-05 | Phase 1 | Complete |
 | NUI-01 | Phase 3 | Pending |
