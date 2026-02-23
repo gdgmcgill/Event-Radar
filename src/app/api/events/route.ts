@@ -34,11 +34,21 @@ const SORT_FIELDS = new Set<SortField>([
 ]);
 const MAX_LIMIT = 100;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const POSTGREST_FILTER_CHARS = /[(),]/;
+
 const decodeCursor = (cursor: string): CursorPayload | null => {
   try {
     const decoded = Buffer.from(cursor, "base64").toString("utf-8");
     const payload = JSON.parse(decoded) as CursorPayload;
-    if (!payload || typeof payload.id !== "string") {
+    if (!payload || typeof payload.id !== "string" || !UUID_RE.test(payload.id)) {
+      return null;
+    }
+    if (typeof payload.sortValue === "number") {
+      if (!Number.isFinite(payload.sortValue)) return null;
+    } else if (typeof payload.sortValue === "string") {
+      if (POSTGREST_FILTER_CHARS.test(payload.sortValue)) return null;
+    } else {
       return null;
     }
     return payload;
@@ -218,8 +228,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
-    const sortParam = (searchParams.get("sort") || "start_date") as SortField;
-    const directionParam = (searchParams.get("direction") || "asc") as SortDirection;
+    const sortParam = searchParams.get("sort") || "start_date";
+    const directionParam = searchParams.get("direction") || "asc";
     const clubId = searchParams.get("clubId");
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = Math.min(
@@ -234,7 +244,7 @@ export async function GET(request: NextRequest) {
       console.warn("Deprecated pagination: use cursor or before instead of page.");
     }
 
-    if (!SORT_FIELDS.has(sortParam)) {
+    if (!SORT_FIELDS.has(sortParam as SortField)) {
       return NextResponse.json(
         { error: "sort must be one of: start_date, created_at, popularity_score, trending_score" },
         { status: 400 }
@@ -255,8 +265,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const sort = sortParam;
-    const direction = directionParam;
+    const sort = sortParam as SortField;
+    const direction = directionParam as SortDirection;
     const cursorToken = before || cursor;
     const cursorPayload = cursorToken ? decodeCursor(cursorToken) : null;
     if (cursorToken && !cursorPayload) {
@@ -284,9 +294,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      eventsQuery = eventsQuery.or(
-        `title.ilike.%${search}%,description.ilike.%${search}%`
-      );
+      const sanitized = search.replace(/[%_(),]/g, "");
+      if (sanitized) {
+        eventsQuery = eventsQuery.or(
+          `title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`
+        );
+      }
     }
 
     if (dateFrom) {
