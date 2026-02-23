@@ -1,6 +1,7 @@
 "use client";
 
-import { NotificationItem, type Notification } from "./NotificationItem";
+import { NotificationItem } from "./NotificationItem";
+import type { Notification } from "@/types";
 import { Bell } from "lucide-react";
 
 interface NotificationListProps {

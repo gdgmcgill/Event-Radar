@@ -3,17 +3,7 @@
 import { cn } from "@/lib/utils";
 import { Clock, AlertCircle, CheckCircle, XCircle, Bell } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-
-export interface Notification {
-  id: string;
-  user_id: string;
-  type: string;
-  title: string;
-  message: string;
-  event_id: string | null;
-  read: boolean;
-  created_at: string;
-}
+import type { Notification } from "@/types";
 
 const typeConfig: Record<string, { icon: LucideIcon; color: string; bgColor: string }> = {
   event_reminder_24h: {
