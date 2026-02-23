@@ -6,6 +6,27 @@
 
 
 -- =============================================
+-- HELPER: is_admin()
+-- SECURITY DEFINER function that bypasses RLS when checking the
+-- current user's roles. Required to avoid infinite recursion on
+-- policies that live on the public.users table itself.
+-- =============================================
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND 'admin' = ANY(roles)
+  );
+$$;
+
+
+-- =============================================
 -- SECTION 1: notifications
 -- Gap: RLS was never enabled; zero policies existed.
 -- Any authenticated user could read all users' notifications
@@ -62,12 +83,7 @@ CREATE POLICY "Admins can view all profiles"
   ON public.users
   FOR SELECT
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users u2
-      WHERE u2.id = auth.uid() AND 'admin' = ANY(u2.roles)
-    )
-  );
+  USING (public.is_admin());
 
 -- NOTE: The following policies from 002_rls_policies.sql are kept intact:
 --   "Users can view their own profile"   (SELECT own row)
@@ -112,12 +128,7 @@ CREATE POLICY "Admins can view all events"
   ON public.events
   FOR SELECT
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid() AND 'admin' = ANY(roles)
-    )
-  );
+  USING (public.is_admin());
 
 
 -- =============================================
@@ -172,18 +183,8 @@ CREATE POLICY "Admins can update any event"
   ON public.events
   FOR UPDATE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid() AND 'admin' = ANY(roles)
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid() AND 'admin' = ANY(roles)
-    )
-  );
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 
 -- =============================================
@@ -199,12 +200,7 @@ CREATE POLICY "Admins can delete events"
   ON public.events
   FOR DELETE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid() AND 'admin' = ANY(roles)
-    )
-  );
+  USING (public.is_admin());
 
 
 -- =============================================
@@ -225,30 +221,15 @@ CREATE POLICY "Admins can insert clubs"
   ON public.clubs
   FOR INSERT
   TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid() AND 'admin' = ANY(roles)
-    )
-  );
+  WITH CHECK (public.is_admin());
 
 -- Only admins may update club details
 CREATE POLICY "Admins can update clubs"
   ON public.clubs
   FOR UPDATE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid() AND 'admin' = ANY(roles)
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid() AND 'admin' = ANY(roles)
-    )
-  );
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- NOTE: "Clubs are viewable by everyone" from 002 is kept intact.
 
