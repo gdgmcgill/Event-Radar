@@ -10,8 +10,8 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { EventBadge } from "@/components/events/EventBadge";
 import { SignInButton } from "@/components/auth/SignInButton";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -322,19 +322,9 @@ export default function EventDetailClient() {
 
               {/* Tags */}
               <div className="flex flex-wrap gap-2 pt-4">
-                {event.tags.map((tag) => {
-                  const category = EVENT_CATEGORIES[tag];
-                  if (!category) return null;
-                  return (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className={category.color}
-                    >
-                      {category.label}
-                    </Badge>
-                  );
-                })}
+                {event.tags.map((tag) => (
+                  <EventBadge key={tag} tag={tag} variant="glowing" />
+                ))}
               </div>
 
               {/* RSVP */}

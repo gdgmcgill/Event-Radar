@@ -5,14 +5,14 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import type { Event } from "@/types";
+import type { Event, EventTag } from "@/types";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
+import { EVENT_CATEGORIES } from "@/lib/constants";
 import { useEvents } from "@/hooks/useEvents";
 
 export default function CalendarPage() {
@@ -53,11 +53,11 @@ export default function CalendarPage() {
 
   const getEventsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return events.filter(event => event.event_date === dateStr);
+    return events.filter((event: Event) => event.event_date === dateStr);
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate(prev => {
+    setCurrentDate((prev: Date) => {
       const newDate = new Date(prev);
       if (direction === 'prev') {
         newDate.setMonth(prev.getMonth() - 1);
@@ -96,6 +96,30 @@ export default function CalendarPage() {
     trackClick(event.id);
     setSelectedEvent(event);
     setIsModalOpen(true);
+  };
+
+  const getEventGradientStyle = (tags: EventTag[]) => {
+    if (!tags || tags.length === 0) {
+      return { backgroundColor: 'hsl(var(--primary) / 0.1)' }; // Default fallback
+    }
+
+    if (tags.length === 1) {
+      // Single tag: subtle unified gradient based on that one color
+      const baseColor = EVENT_CATEGORIES[tags[0]]?.baseColor || '#ED1B2F';
+      return { 
+        backgroundImage: `linear-gradient(135deg, ${baseColor}20 0%, ${baseColor}40 100%)`,
+        borderLeftColor: baseColor
+      };
+    }
+
+    // Multiple tags: vibrant multi-color gradient sweeping between all their primary colors
+    const colors = tags.map(tag => EVENT_CATEGORIES[tag]?.baseColor || '#ED1B2F');
+    const gradientStops = colors.map((c, i) => `${c}30 ${(i / (colors.length - 1)) * 100}%`).join(', ');
+    
+    return {
+      backgroundImage: `linear-gradient(135deg, ${gradientStops})`,
+      borderLeftColor: colors[0] // Use the first color for the left indicator bar
+    };
   };
 
   return (
@@ -207,21 +231,25 @@ export default function CalendarPage() {
                         {date.getDate()}
                       </span>
                       {dayEvents.length > 0 && (
-                        <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
+                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-secondary text-secondary-foreground text-[10px] font-bold">
                           {dayEvents.length}
-                        </Badge>
+                        </div>
                       )}
                     </div>
 
-                    <div className="flex-1 space-y-1 overflow-y-auto max-h-[80px]">
+                    <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[80px] custom-scrollbar pr-1">
                       {dayEvents.slice(0, 3).map(event => (
                         <button
                           key={event.id}
                           onClick={() => handleEventClick(event)}
-                          className="w-full text-left p-1.5 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors text-xs truncate border-l-2 border-primary"
+                          className="w-full text-left p-1.5 rounded-md hover:brightness-95 dark:hover:brightness-110 transition-all text-xs border-l-[3px] shadow-sm backdrop-blur-sm"
+                          style={getEventGradientStyle(event.tags)}
                         >
-                          <div className="font-medium text-foreground truncate">
-                            {event.event_time} {event.title}
+                          <div className="font-semibold text-foreground/90 leading-tight mb-0.5 line-clamp-1">
+                            {event.title}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium opacity-80">
+                            {event.event_time}
                           </div>
                         </button>
                       ))}
@@ -242,14 +270,28 @@ export default function CalendarPage() {
         </div>
 
         {/* Legend */}
-        <div className="mt-6 flex items-center gap-6 text-sm text-muted-foreground">
+        <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full bg-primary" />
-            <span>Today</span>
+            <span className="font-medium text-foreground">Today</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-l-2 border-primary bg-primary/10" />
-            <span>Event</span>
+          <div className="w-px h-4 bg-border mx-2" />
+          <span className="text-xs font-medium uppercase tracking-wider hidden sm:block">Categories:</span>
+          {Object.entries(EVENT_CATEGORIES).map(([tag, category]) => (
+            <div key={tag} className="flex items-center gap-1.5">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ backgroundColor: category.baseColor }} 
+              />
+              <span className="text-xs">{category.label}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5 ml-2">
+            <div 
+              className="w-4 h-4 rounded-md" 
+              style={{ backgroundImage: 'linear-gradient(135deg, #3b82f640 0%, #ec489940 100%)', borderLeft: '2px solid #3b82f6' }} 
+            />
+            <span className="text-xs italic">Multi-tag Gradient</span>
           </div>
         </div>
         {!loading && events.length === 0 && (
@@ -273,4 +315,3 @@ export default function CalendarPage() {
     </ErrorBoundary>
   );
 }
-
