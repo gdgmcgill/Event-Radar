@@ -29,7 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A duplicate INSERT with the same (user_id, event_id, type) silently does nothing (UNIQUE constraint + ON CONFLICT DO NOTHING)
   4. The codebase and database use the same notification type strings: event_reminder_24h, event_reminder_1h, event_approved, event_rejected
   5. TypeScript interfaces in src/types/index.ts compile without errors and reflect the notifications table schema
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Apply notifications table DDL migration (RLS + UNIQUE indexes) via Supabase MCP
+- [ ] 01-02-PLAN.md — Fix cron type strings (event_reminder_*) and centralize Notification TypeScript interface
 
 ### Phase 2: Cold Start Fix
 **Goal**: New users with fewer than 3 saved events see a popularity-ranked feed of upcoming campus events instead of an empty or broken recommendations section, and understand what action unlocks personalized picks
@@ -74,7 +78,7 @@ Note: Phase 2 is independent of Phase 1 and can be developed in parallel if need
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Notification Database Foundation | 0/TBD | Not started | - |
+| 1. Notification Database Foundation | 0/2 | Not started | - |
 | 2. Cold Start Fix | 0/TBD | Not started | - |
 | 3. Notification System Wiring | 0/TBD | Not started | - |
 | 4. Cron Scheduler Configuration | 0/TBD | Not started | - |
