@@ -19,12 +19,12 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [ ] **NUI-01**: NotificationBell injected into Header.tsx next to auth button for authenticated users
 - [ ] **NUI-02**: Existing notification API routes (GET, PATCH, POST mark-all-read) validated against real notifications table
-- [ ] **NUI-03**: Notification items link to /events/[event_id] when event_id is present
+- [x] **NUI-03**: Notification items link to /events/[event_id] when event_id is present
 
 ### Notification Generation
 
-- [ ] **NGEN-01**: Admin approve action creates event_approved notification for the event submitter
-- [ ] **NGEN-02**: Admin reject action creates event_rejected notification for the event submitter
+- [x] **NGEN-01**: Admin approve action creates event_approved notification for the event submitter
+- [x] **NGEN-02**: Admin reject action creates event_rejected notification for the event submitter
 - [ ] **NGEN-03**: pg_cron job configured in Supabase to call reminder endpoint hourly
 - [ ] **NGEN-04**: CRON_SECRET stored securely in Supabase Vault for pg_cron auth
 - [ ] **NGEN-05**: Cron generates event_reminder_24h notifications for users with saved events starting in ~24 hours
@@ -84,9 +84,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NINF-05 | Phase 1 | Complete |
 | NUI-01 | Phase 3 | Pending |
 | NUI-02 | Phase 3 | Pending |
-| NUI-03 | Phase 3 | Pending |
-| NGEN-01 | Phase 3 | Pending |
-| NGEN-02 | Phase 3 | Pending |
+| NUI-03 | Phase 3 | Complete |
+| NGEN-01 | Phase 3 | Complete |
+| NGEN-02 | Phase 3 | Complete |
 | NGEN-03 | Phase 4 | Pending |
 | NGEN-04 | Phase 4 | Pending |
 | NGEN-05 | Phase 4 | Pending |

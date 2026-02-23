@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** New users see a useful feed from first visit; existing users receive timely notifications about events they care about
-**Current focus:** Phase 2 — Cold Start Fix
+**Current focus:** Phase 3 — Notification System Wiring
 
 ## Current Position
 
-Phase: 2 of 4 (Cold Start Fix)
-Plan: 2 of 2 in current phase (02-02 complete)
-Status: Phase 2 Complete
-Last activity: 2026-02-23 — Completed 02-02 source-aware UI and cold-start onboarding nudge
+Phase: 3 of 4 (Notification System Wiring)
+Plan: 1 of 3 in current phase (03-01 complete)
+Status: Phase 3 In Progress
+Last activity: 2026-02-23 — Completed 03-01 notification navigation and upsert hardening
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -29,9 +29,10 @@ Progress: [████░░░░░░] 40%
 |-------|-------|-------|----------|
 | 01-notification-database-foundation | 2 | 24 min | 12 min |
 | 02-cold-start-fix | 2 | 10 min | 5 min |
+| 03-notification-system-wiring | 1 | 1 min | 1 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (22 min), 01-02 (2 min), 02-01 (8 min), 02-02 (2 min)
+- Last 5 plans: 01-01 (22 min), 01-02 (2 min), 02-01 (8 min), 02-02 (2 min), 03-01 (1 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -55,6 +56,8 @@ Recent decisions affecting current work:
 - [02-01]: source field added to all 200-response return sites: "popular_fallback" for cold-start path, "personalized" for all personalized paths
 - [02-02]: Authenticated cold-start users now see RecommendedEventsSection (API handles fallback) — page.tsx conditional simplified; canShowRecommendations no longer gates the section
 - [02-02]: Nudge gated on !isLoading from useSavedEvents to avoid showing inaccurate remaining count during initial fetch
+- [Phase 03-01]: Conditional wrapper: Link for event_id-bearing notifications, button for others
+- [Phase 03-01]: Upsert with onConflict user_id,event_id,type resets read=false and created_at on re-approve/re-reject
 
 ### Pending Todos
 
@@ -70,5 +73,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 02-02-PLAN.md — Source-aware UI and cold-start onboarding nudge; Phase 2 complete
+Stopped at: Completed 03-01-PLAN.md — Notification navigation and upsert hardening; Phase 3 plan 1 of 3 complete
 Resume file: None
