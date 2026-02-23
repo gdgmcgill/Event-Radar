@@ -13,6 +13,7 @@ import { useEvents } from "@/hooks/useEvents";
 
 import { PopularEventsSection } from "@/components/events/PopularEventsSection";
 import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
+import { HappeningNowSection } from "@/components/events/HappeningNowSection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventSearch } from "@/components/events/EventSearch";
@@ -283,6 +284,11 @@ function HomePageContent() {
                   <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
                 )}
               </div>
+            )}
+
+            {/* Happening Now Section */}
+            {!isFiltering && (
+              <HappeningNowSection />
             )}
 
             {/* Popular / Recommended Section */}

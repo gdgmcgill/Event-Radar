@@ -15,6 +15,8 @@ interface PopularEventsSectionProps {
 
 type EventWithPopularity = Event & { popularity?: EventPopularityScore | null };
 
+import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
+
 export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEventsSectionProps) {
   const [events, setEvents] = useState<EventWithPopularity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-[380px] w-full rounded-2xl bg-secondary/20 animate-pulse border border-border/40" />
+            <EventCardSkeleton key={i} />
           ))}
         </div>
       </div>
