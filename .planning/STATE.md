@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** New users see a useful feed from first visit; existing users receive timely notifications about events they care about
-**Current focus:** Phase 1 — Notification Database Foundation
+**Current focus:** Phase 2 — Cold Start Fix
 
 ## Current Position
 
-Phase: 1 of 4 (Notification Database Foundation)
-Plan: 2 of 2 in current phase
-Status: Phase 1 Complete (pending UNIQUE index application)
-Last activity: 2026-02-23 — Completed 01-01 migration file; 01-02 type fixes already done by prior agent
+Phase: 2 of 4 (Cold Start Fix)
+Plan: 1 of 1 in current phase (02-01 complete)
+Status: Phase 2 Plan 1 Complete
+Last activity: 2026-02-23 — Completed 02-01 cold-start fallback and source field in recommendations API
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 12 min
-- Total execution time: 0.4 hours
+- Total plans completed: 3
+- Average duration: 10 min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-notification-database-foundation | 2 | 24 min | 12 min |
+| 02-cold-start-fix | 1 | 8 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (22 min), 01-02 (2 min)
+- Last 5 plans: 01-01 (22 min), 01-02 (2 min), 02-01 (8 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -49,6 +50,9 @@ Recent decisions affecting current work:
 - [01-02]: Upsert with onConflict: "user_id,event_id,type" and ignoreDuplicates: true is the dedup pattern; requires unique constraint at DB level (plan 03)
 - [01-01]: UNIQUE dedup index (notifications_dedup_idx) not yet applied to remote database — migration file at supabase/migrations/20260223000000_notifications_rls_and_dedup.sql must be applied via Supabase MCP apply_migration or Dashboard SQL Editor
 - [01-01]: Column named `read` (not `is_read`) confirmed correct; RLS enabled and verified in production
+- [02-01]: RECOMMENDATION_THRESHOLD = 3 centralized in constants.ts; both page.tsx (replace magic number) and RecommendedEventsSection (nudge math) must import it
+- [02-01]: Cold-start early return placed before Promise.all/k-means; uses targeted single-user saved_events fetch for gate check
+- [02-01]: source field added to all 200-response return sites: "popular_fallback" for cold-start path, "personalized" for all personalized paths
 
 ### Pending Todos
 
@@ -64,5 +68,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 01-01-PLAN.md (migration file committed) — Phase 1 all plans complete; UNIQUE index needs manual application via Supabase MCP or Dashboard
+Stopped at: Completed 02-01-PLAN.md — Cold-start fallback + source field in recommendations API; RecommendedEventsSection UI update still needed (COLD-05, COLD-08)
 Resume file: None
