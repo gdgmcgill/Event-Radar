@@ -61,7 +61,11 @@ Plans:
   3. A club organizer whose event is approved receives a green notification in their inbox
   4. A club organizer whose event is rejected receives a red notification in their inbox
   5. Clicking a notification that has an associated event navigates the user to /events/[event_id]
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Add event navigation to NotificationItem and harden admin notification upsert
+- [ ] 03-02-PLAN.md — Apply Phase 1 migration and verify notification system end-to-end
 
 ### Phase 4: Cron Scheduler Configuration
 **Goal**: The Supabase pg_cron job runs hourly and automatically generates 24h and 1h reminder notifications for users with upcoming saved events — with no manual triggering required
@@ -84,5 +88,5 @@ Note: Phase 2 is independent of Phase 1 and can be developed in parallel if need
 |-------|----------------|--------|-----------|
 | 1. Notification Database Foundation | 1/2 | Complete    | 2026-02-23 |
 | 2. Cold Start Fix | 2/2 | Complete   | 2026-02-23 |
-| 3. Notification System Wiring | 0/TBD | Not started | - |
+| 3. Notification System Wiring | 0/2 | Not started | - |
 | 4. Cron Scheduler Configuration | 0/TBD | Not started | - |
