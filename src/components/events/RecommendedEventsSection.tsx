@@ -4,27 +4,34 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { type Event } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
 import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
-import { AlertCircle, RefreshCcw, ArrowLeft, ArrowRight } from "lucide-react";
+import { AlertCircle, RefreshCcw, ArrowLeft, ArrowRight, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
+import { RECOMMENDATION_THRESHOLD } from "@/lib/constants";
 
 interface RecommendedEventsSectionProps {
   onEventClick?: (event: Event) => void;
   onEmpty?: () => void;
 }
 
+interface RecommendationsResponse {
+  recommendations: Event[];
+  source?: "personalized" | "popular_fallback";
+}
+
 export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedEventsSectionProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<"personalized" | "popular_fallback">("personalized");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showPrev, setShowPrev] = useState(false);
   const [showNext, setShowNext] = useState(false);
 
   const user = useAuthStore((s) => s.user);
-  const { savedEventIds } = useSavedEvents(!!user);
+  const { savedEventIds, isLoading } = useSavedEvents(!!user);
 
   const updateButtons = useCallback(() => {
     const el = scrollRef.current;
@@ -58,7 +65,8 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
 
       const res = await fetch("/api/recommendations");
       if (!res.ok) throw new Error("Failed to fetch recommendations");
-      const data = await res.json();
+      const data: RecommendationsResponse = await res.json();
+      const fetchedSource = data.source ?? "personalized";
       const fetchedEvents = Array.isArray(data.recommendations) ? data.recommendations : [];
 
       if (fetchedEvents.length === 0) {
@@ -66,6 +74,7 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
         return;
       }
 
+      setSource(fetchedSource);
       setEvents(fetchedEvents);
     } catch (err) {
       console.error("Error fetching recommended events:", err);
@@ -119,10 +128,25 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
     <div className="mb-12 w-full isolate overflow-hidden rounded-2xl border border-border/60 bg-muted/40">
       <div className="px-6 pt-6 mb-6">
         <h2 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-2">
-          Recommended For You
-          <span className="text-sm font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full">New</span>
+          {source === "popular_fallback" ? "Popular on Campus" : "Recommended For You"}
+          {source === "personalized" && (
+            <span className="text-sm font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full">New</span>
+          )}
         </h2>
-        <p className="text-muted-foreground mt-1">Based on your interests and saved events</p>
+        <p className="text-muted-foreground mt-1">
+          {source === "popular_fallback"
+            ? "Trending events from across campus"
+            : "Based on your interests and saved events"}
+        </p>
+        {source === "popular_fallback" && !isLoading && (() => {
+          const remaining = Math.max(0, RECOMMENDATION_THRESHOLD - savedEventIds.size);
+          return remaining > 0 ? (
+            <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5">
+              <BookmarkPlus className="h-4 w-4 text-primary" />
+              Save {remaining} more event{remaining !== 1 ? "s" : ""} to unlock personalized recommendations
+            </p>
+          ) : null;
+        })()}
       </div>
 
       <div className="relative px-4 sm:px-12 pb-6">
