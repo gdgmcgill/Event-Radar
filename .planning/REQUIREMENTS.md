@@ -9,8 +9,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Notification Infrastructure
 
-- [ ] **NINF-01**: Notifications table created in Supabase with columns: id, user_id, event_id, type, title, message, is_read, created_at
-- [ ] **NINF-02**: RLS enabled on notifications table with policies: SELECT own rows, INSERT service-role only, UPDATE own is_read only
+- [ ] **NINF-01**: Notifications table created in Supabase with columns: id, user_id, event_id, type, title, message, read, created_at
+- [ ] **NINF-02**: RLS enabled on notifications table with policies: SELECT own rows (authenticated), UPDATE own rows (authenticated); INSERT has no policy for authenticated role — service role bypasses RLS by design, blocking any direct browser client INSERT
 - [ ] **NINF-03**: UNIQUE constraint on (user_id, event_id, type) to prevent duplicate notifications
 - [ ] **NINF-04**: Notification type strings aligned across codebase — cron route and NotificationItem both use event_reminder_24h, event_reminder_1h, event_approved, event_rejected
 - [ ] **NINF-05**: TypeScript types updated in src/types/index.ts to reflect notifications table schema
