@@ -38,6 +38,9 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own notifications"       ON public.notifications;
 DROP POLICY IF EXISTS "Users can update own notifications"     ON public.notifications;
 DROP POLICY IF EXISTS "Service role can insert notifications"  ON public.notifications;
+-- NOTE: "Users can mark own notifications read" (UPDATE) and the dedup/perf
+-- indexes are handled by 20260223000000_notifications_rls_and_dedup.sql — no
+-- duplicate policy created here.
 
 -- Authenticated users may only read their own notifications
 CREATE POLICY "Users can view own notifications"
@@ -45,14 +48,6 @@ CREATE POLICY "Users can view own notifications"
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
-
--- Authenticated users may mark their own notifications as read
-CREATE POLICY "Users can update own notifications"
-  ON public.notifications
-  FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
 
 -- Service role inserts notifications (admin status handler + cron reminders).
 -- Service role bypasses RLS by default; this policy is explicit for
@@ -74,7 +69,9 @@ CREATE POLICY "Service role can insert notifications"
 -- =============================================
 
 -- Drop the leaking remote_schema policy
-DROP POLICY IF EXISTS "Users can view all profiles" ON public.users;
+DROP POLICY IF EXISTS "Users can view all profiles"        ON public.users;
+-- Drop duplicate UPDATE policies from different migrations
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
 
 -- Admin dashboard reads all user rows — add a scoped policy for that
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.users;
@@ -212,6 +209,8 @@ CREATE POLICY "Admins can delete events"
 
 DROP POLICY IF EXISTS "Clubs can be inserted by authenticated users" ON public.clubs;
 DROP POLICY IF EXISTS "Clubs can be updated by authenticated users"  ON public.clubs;
+DROP POLICY IF EXISTS "Authenticated users can create clubs"         ON public.clubs;
+DROP POLICY IF EXISTS "Admins manage clubs"                          ON public.clubs;
 -- Pre-emptively drop any already-existing versions of our new policies
 DROP POLICY IF EXISTS "Admins can insert clubs"                      ON public.clubs;
 DROP POLICY IF EXISTS "Admins can update clubs"                      ON public.clubs;
