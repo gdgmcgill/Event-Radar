@@ -202,6 +202,7 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
         imageFile: null,
       });
       removeImage();
+      onSuccess?.();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

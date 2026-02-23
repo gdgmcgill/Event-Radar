@@ -30,9 +30,19 @@ interface CategorySectionProps {
   onEventClick: (event: Event) => void;
   showSaveButton?: boolean;
   savedEventIds?: Set<string>;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 }
 
-export function CategorySection({ tag, events, onEventClick, showSaveButton = false, savedEventIds = new Set() }: CategorySectionProps) {
+export function CategorySection({
+  tag,
+  events,
+  onEventClick,
+  showSaveButton = false,
+  savedEventIds = new Set(),
+  hasMore = false,
+  onLoadMore,
+}: CategorySectionProps) {
   const category = EVENT_CATEGORIES[tag];
   const Icon = iconMap[category.icon] || Heart;
 
@@ -57,7 +67,10 @@ export function CategorySection({ tag, events, onEventClick, showSaveButton = fa
           <p className="text-muted-foreground text-sm">No events in this category yet</p>
         </div>
       ) : (
-        <HorizontalEventScroll>
+        <HorizontalEventScroll 
+          onNearEnd={onLoadMore}
+          hasMore={hasMore}
+        >
           {events.map((event) => (
             <div
               key={event.id}

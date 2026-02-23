@@ -9,17 +9,16 @@ import { useSearchParams, useRouter } from "next/navigation";
 import type { Event, EventTag } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
+import { useEvents } from "@/hooks/useEvents";
 
 import { PopularEventsSection } from "@/components/events/PopularEventsSection";
 import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
-import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { EventSearch } from "@/components/events/EventSearch";
-import { Filter, RefreshCcw, AlertCircle, ChevronDown, X, Sparkles } from "lucide-react";
+import { Filter, RefreshCcw, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { SignInButton } from "@/components/auth/SignInButton";
 import { cn } from "@/lib/utils";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -48,18 +47,11 @@ export default function HomePage() {
 }
 
 function HomePageContent() {
-  const [events, setEvents] = useState<ScoredEvent[]>([]);
-  const [pastEvents, setPastEvents] = useState<ScoredEvent[]>([]);
-  const [pastExpanded, setPastExpanded] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [recommendationFailed, setRecommendationFailed] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [popularEventIds, setPopularEventIds] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
   const filterContainerRef = useRef<HTMLDivElement>(null);
   const filterToggleRef = useRef<HTMLButtonElement>(null);
@@ -68,27 +60,25 @@ function HomePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const canShowRecommendations = savedEventIds.size >= 3;
-
-  // Read auth error / sign-in required from URL query params
-  useEffect(() => {
+  // Derive auth error from search params (avoiding setState in effect)
+  const authError = useMemo(() => {
     const errorCode = searchParams.get("error");
     const signinRequired = searchParams.get("signin");
     if (errorCode && AUTH_ERROR_MESSAGES[errorCode]) {
-      setAuthError(AUTH_ERROR_MESSAGES[errorCode]);
-      router.replace("/");
+      return AUTH_ERROR_MESSAGES[errorCode];
     } else if (signinRequired === "required") {
-      setAuthError("Please sign in to access that page.");
-      router.replace("/");
+      return "Please sign in to access that page.";
     }
-  }, [searchParams, router]);
+    return null;
+  }, [searchParams]);
 
   // Add click-outside listener for desktop sidebar
   useEffect(() => {
+    if (!isDesktopFilterOpen) return;
+
     function handleClickOutside(event: MouseEvent) {
       if (
-        isDesktopFilterOpen && 
-        filterContainerRef.current && 
+        filterContainerRef.current &&
         !filterContainerRef.current.contains(event.target as Node) &&
         filterToggleRef.current &&
         !filterToggleRef.current.contains(event.target as Node)
@@ -103,44 +93,45 @@ function HomePageContent() {
     };
   }, [isDesktopFilterOpen]);
 
-  const fetchEvents = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const NUMBER_OF_EVENTS_PER_BATCH = 20;
 
-      const today = new Date().toISOString().split("T")[0];
-
-      const splitPast = (allEvents: ScoredEvent[]) => {
-        const past = allEvents
-          .filter((e) => e.event_date < today)
-          .sort((a, b) => b.event_date.localeCompare(a.event_date));
-        setPastEvents(past);
-      };
-
-      // Always fetch all events (needed for past section + fallback)
-      const allEventsPromise = fetch("/api/events").then(async (res) => {
-        if (!res.ok) throw new Error("Failed to fetch events");
-        const data = await res.json();
-        return Array.isArray(data.events) ? (data.events as ScoredEvent[]) : [];
-      });
-
-      // User logic is handled by the sections themselves (Popular vs Recommended)
-      // Always fetch all events (needed for main feed grid)
-      const allEvents = await allEventsPromise;
-      const upcoming = allEvents.filter((e) => e.event_date >= today);
-      setEvents(upcoming);
-      splitPast(allEvents);
-    } catch (err) {
-      console.error("Error fetching events:", err);
-      setError("Failed to load events. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
+  const todayStart = useMemo(() => {
+    const dateOnly = new Date().toISOString().split("T")[0];
+    return new Date(dateOnly);
   }, []);
 
+  const upcomingFilters = useMemo(
+    () => ({
+      dateRange: {
+        start: todayStart,
+      },
+    }),
+    [todayStart]
+  );
+
+  const {
+    events,
+    loading,
+    loadingMore,
+    error,
+    nextCursor,
+    loadMore,
+    refetch,
+  } = useEvents({
+    filters: upcomingFilters,
+    limit: NUMBER_OF_EVENTS_PER_BATCH,
+    sort: "start_date",
+    direction: "asc",
+  });
+
+  const canShowRecommendations = savedEventIds.size >= 3;
+
+  // Clear query params when auth error is present
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    if (authError) {
+      router.replace("/");
+    }
+  }, [authError, router]);
 
   // Global "/" keyboard shortcut to focus search
   useEffect(() => {
@@ -188,11 +179,6 @@ function HomePageContent() {
     [events, applyFilters]
   );
 
-  const filteredPastEvents = useMemo(
-    () => applyFilters(pastEvents),
-    [pastEvents, applyFilters]
-  );
-
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
   }, []);
@@ -204,12 +190,9 @@ function HomePageContent() {
     []
   );
 
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setIsModalOpen(true);
-  };
-
   const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
+  const canLoadMore = !!nextCursor;
+  const errorMessage = typeof error === 'string' ? error : error?.message || null;
 
   return (
     <ErrorBoundary fallbackMessage="We couldn't load events right now.">
@@ -224,7 +207,7 @@ function HomePageContent() {
               </div>
               <button
                 type="button"
-                onClick={() => setAuthError(null)}
+                onClick={() => router.replace("/")}
                 className="text-destructive/70 hover:text-destructive transition-colors"
                 aria-label="Dismiss"
               >
@@ -331,9 +314,9 @@ function HomePageContent() {
             </div>
 
             {/* Result count feedback */}
-            {isFiltering && !loading && !error && (
+            {isFiltering && !loading && !errorMessage && (
               <div className="text-sm text-muted-foreground">
-                Showing {filteredEvents.length + filteredPastEvents.length} event{filteredEvents.length + filteredPastEvents.length !== 1 ? "s" : ""}
+                Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""}
                 {searchQuery.trim() && (
                   <> for &ldquo;{searchQuery.trim()}&rdquo;</>
                 )}
@@ -343,48 +326,32 @@ function HomePageContent() {
               </div>
             )}
 
-              {/* Desktop Expandable Top Filter Panel */}
-              <div 
-                ref={filterContainerRef}
-                className={cn(
-                  "hidden md:block transition-all duration-300 ease-in-out overflow-hidden origin-top",
-                  isDesktopFilterOpen 
-                    ? "opacity-100 scale-y-100 mb-8 max-h-[400px]" 
-                    : "opacity-0 scale-y-95 mb-0 max-h-0"
-                )}
-              >
-                <div className="pt-2"> 
-                  <EventFilters 
-                    onFilterChange={handleFilterChange} 
-                    initialTags={selectedTags} 
-                  />
-                </div>
+            {/* Desktop Expandable Top Filter Panel */}
+            <div
+              ref={filterContainerRef}
+              className={cn(
+                "hidden md:block transition-all duration-300 ease-in-out overflow-hidden origin-top",
+                isDesktopFilterOpen
+                  ? "opacity-100 scale-y-100 mb-8 max-h-[400px]"
+                  : "opacity-0 scale-y-95 mb-0 max-h-0"
+              )}
+            >
+              <div className="pt-2">
+                <EventFilters
+                  onFilterChange={handleFilterChange}
+                  initialTags={selectedTags}
+                />
               </div>
-
-              {/* Main Content Area */}
-              <div className="flex-1 min-w-0 flex flex-col gap-8 transition-all duration-300">
-                {/* Guest CTA Banner */}
-                {!user && !isFiltering && (
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
-                <div className="shrink-0 rounded-full bg-primary/10 p-2.5">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    Sign in with your McGill email to save events and get personalized recommendations.
-                  </p>
-                </div>
-                <SignInButton variant="outline" />
-              </div>
-            )}
+            </div>
 
             {/* Popular / Recommended Section */}
             {!isFiltering && (
               (!user || (!isSavedLoading && !canShowRecommendations) || recommendationFailed) ? (
-                <PopularEventsSection onEventClick={handleEventClick} />
+                <PopularEventsSection
+                  onEventsLoaded={(ids) => setPopularEventIds(new Set(ids))}
+                />
               ) : (user && !isSavedLoading && canShowRecommendations && !recommendationFailed) ? (
                 <RecommendedEventsSection
-                  onEventClick={handleEventClick}
                   onEmpty={() => setRecommendationFailed(true)}
                 />
               ) : null
@@ -392,25 +359,24 @@ function HomePageContent() {
 
             {/* Main Content */}
             <div className="min-h-[500px]">
-              {error ? (
+              {errorMessage ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-card rounded-2xl border border-destructive/20 p-8">
                   <div className="rounded-full bg-destructive/10 p-4">
                     <AlertCircle className="h-8 w-8 text-destructive" />
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold text-foreground">Something went wrong</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">{error}</p>
+                    <p className="text-muted-foreground max-w-md mx-auto">{errorMessage}</p>
                   </div>
-                  <Button onClick={fetchEvents} variant="outline" className="gap-2">
+                  <Button onClick={refetch} variant="outline" className="gap-2">
                     <RefreshCcw className="h-4 w-4" />
                     Try Again
                   </Button>
                 </div>
               ) : (
                 <EventGrid
-                  events={filteredEvents}
+                  events={filteredEvents.filter((e) => !popularEventIds.has(e.id))}
                   loading={loading}
-                  onEventClick={handleEventClick}
                   showSaveButton={!!user}
                   savedEventIds={savedEventIds}
                   trackingSource="home"
@@ -418,49 +384,21 @@ function HomePageContent() {
               )}
             </div>
 
-            {/* Past Events (collapsible) */}
-            {!loading && !error && filteredPastEvents.length > 0 && (
-              <div className="border-t border-border/40 pt-6">
-                <button
-                  type="button"
-                  onClick={() => setPastExpanded((prev) => !prev)}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            {/* Load More Button */}
+            {canLoadMore && !errorMessage && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  variant="outline"
+                  className="gap-2"
                 >
-                  <ChevronDown
-                    className={`h-5 w-5 transition-transform duration-200 ${pastExpanded ? "rotate-180" : ""}`}
-                  />
-                  <span className="text-lg font-semibold">
-                    Past Events ({filteredPastEvents.length})
-                  </span>
-                </button>
-                {pastExpanded && (
-                  <div className="mt-6 opacity-60">
-                    <EventGrid
-                      events={filteredPastEvents}
-                      loading={false}
-                      onEventClick={handleEventClick}
-                      showSaveButton={!!user}
-                      savedEventIds={savedEventIds}
-                      trackingSource="home"
-                    />
-                  </div>
-                )}
+                  {loadingMore ? "Loading..." : "Load More Events"}
+                </Button>
               </div>
             )}
           </div>
         </div>
-      </div>
-
-      {/* Event Details Modal */}
-        <EventDetailsModal
-          open={isModalOpen}
-          onOpenChange={(open) => {
-            setIsModalOpen(open);
-            if (!open) setSelectedEvent(null);
-          }}
-          event={selectedEvent}
-          trackingSource="home"
-        />
       </div>
     </ErrorBoundary>
   );

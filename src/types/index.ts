@@ -97,10 +97,10 @@ export interface SavedEvent {
 }
 
 export interface EventFilter {
-  tags?: EventTag[];
+  tags?: Array<EventTag | string>;
   dateRange?: {
-    start: Date;
-    end: Date;
+    start?: Date;
+    end?: Date;
   };
   searchQuery?: string;
   clubId?: string;

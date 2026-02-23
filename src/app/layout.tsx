@@ -75,7 +75,7 @@ export default function RootLayout({
             <SideNavBar />
             
             {/* Main Content Area - takes full width on mobile, adjusted for sidebar on desktop */}
-            <div className="flex flex-col flex-1">
+            <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
               {/* Header - contains mobile menu */}
               <Header />
               <main className="flex-1 p-6">{children}</main>

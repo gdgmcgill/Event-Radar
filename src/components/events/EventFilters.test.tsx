@@ -1,11 +1,9 @@
-"use client";
-
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { EventFilters } from "./EventFilters";
-import { EVENT_CATEGORIES, EVENT_TAGS } from "../../lib/constants";
-import type { EventTag } from "../../types";
+import { EventFilters } from "@/components/events/EventFilters";
+import { EVENT_CATEGORIES, EVENT_TAGS } from "@/lib/constants";
+import type { EventTag } from "@/types";
 
 describe("EventFilters Component", () => {
   afterEach(() => {
