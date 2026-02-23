@@ -77,34 +77,34 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NINF-01 | — | Pending |
-| NINF-02 | — | Pending |
-| NINF-03 | — | Pending |
-| NINF-04 | — | Pending |
-| NINF-05 | — | Pending |
-| NUI-01 | — | Pending |
-| NUI-02 | — | Pending |
-| NUI-03 | — | Pending |
-| NGEN-01 | — | Pending |
-| NGEN-02 | — | Pending |
-| NGEN-03 | — | Pending |
-| NGEN-04 | — | Pending |
-| NGEN-05 | — | Pending |
-| NGEN-06 | — | Pending |
-| COLD-01 | — | Pending |
-| COLD-02 | — | Pending |
-| COLD-03 | — | Pending |
-| COLD-04 | — | Pending |
-| COLD-05 | — | Pending |
-| COLD-06 | — | Pending |
-| COLD-07 | — | Pending |
-| COLD-08 | — | Pending |
+| NINF-01 | Phase 1 | Pending |
+| NINF-02 | Phase 1 | Pending |
+| NINF-03 | Phase 1 | Pending |
+| NINF-04 | Phase 1 | Pending |
+| NINF-05 | Phase 1 | Pending |
+| NUI-01 | Phase 3 | Pending |
+| NUI-02 | Phase 3 | Pending |
+| NUI-03 | Phase 3 | Pending |
+| NGEN-01 | Phase 3 | Pending |
+| NGEN-02 | Phase 3 | Pending |
+| NGEN-03 | Phase 4 | Pending |
+| NGEN-04 | Phase 4 | Pending |
+| NGEN-05 | Phase 4 | Pending |
+| NGEN-06 | Phase 4 | Pending |
+| COLD-01 | Phase 2 | Pending |
+| COLD-02 | Phase 2 | Pending |
+| COLD-03 | Phase 2 | Pending |
+| COLD-04 | Phase 2 | Pending |
+| COLD-05 | Phase 2 | Pending |
+| COLD-06 | Phase 2 | Pending |
+| COLD-07 | Phase 2 | Pending |
+| COLD-08 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after initial definition*
+*Last updated: 2026-02-23 after roadmap creation — traceability complete*
