@@ -59,6 +59,14 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
+                  href="/help"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Help & FAQ
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/feedback"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
@@ -67,10 +75,10 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:support@uni-verse.app"
+                  href="mailto:universe.mcgill@gmail.com"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  support@uni-verse.app
+                  universe.mcgill@gmail.com
                 </a>
               </li>
             </ul>

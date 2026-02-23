@@ -14,6 +14,7 @@ import {
   Building2,
   ClipboardList,
   BarChart3,
+  HelpCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -29,6 +30,7 @@ export const guestNavItems: NavItem[] = [
   { name: "Calendar", path: "/calendar", icon: Calendar },
   { name: "Categories", path: "/categories", icon: Tag },
   { name: "About", path: "/about", icon: Info },
+  { name: "Help", path: "/help", icon: HelpCircle },
 ];
 
 /** Visible to every authenticated user (replaces authenticatedNavItems) */
@@ -40,6 +42,7 @@ export const baseNavItems: NavItem[] = [
   { name: "My Events", path: "/my-events", icon: Bookmark },
   { name: "Create Event", path: "/create-event", icon: Plus },
   { name: "Notifications", path: "/notifications", icon: Bell },
+  { name: "Help", path: "/help", icon: HelpCircle },
 ];
 
 /** Extra items for club organizers */
