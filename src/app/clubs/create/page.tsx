@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
+import { Building2, Loader2, ArrowLeft, CheckCircle, Upload, Link2, X } from "lucide-react";
 import Link from "next/link";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 
@@ -18,6 +18,9 @@ export default function CreateClubPage() {
   const [category, setCategory] = useState("");
   const [instagramHandle, setInstagramHandle] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [logoMode, setLogoMode] = useState<"upload" | "url">("upload");
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -67,7 +70,7 @@ export default function CreateClubPage() {
             <Link href="/clubs">
               <Button variant="outline">Browse Clubs</Button>
             </Link>
-            <Button onClick={() => { setSuccess(false); setName(""); setDescription(""); setCategory(""); setInstagramHandle(""); setLogoUrl(""); }}>
+            <Button onClick={() => { setSuccess(false); setName(""); setDescription(""); setCategory(""); setInstagramHandle(""); setLogoUrl(""); setLogoPreview(null); }}>
               Create Another
             </Button>
           </div>
@@ -170,18 +173,85 @@ export default function CreateClubPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="club-logo" className="text-sm font-semibold text-foreground">
-                Logo URL{" "}
+              <label className="text-sm font-semibold text-foreground">
+                Logo{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </label>
-              <input
-                id="club-logo"
-                type="url"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="https://example.com/logo.png"
-                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
+
+              {/* Logo preview */}
+              {logoPreview && (
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-input bg-muted/30">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={logoPreview} alt="Logo preview" className="h-12 w-12 rounded-full object-cover" />
+                  <span className="text-sm text-muted-foreground flex-1 truncate">Logo uploaded</span>
+                  <button type="button" onClick={() => { setLogoPreview(null); setLogoUrl(""); }} className="text-muted-foreground hover:text-foreground">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              {!logoPreview && (
+                <>
+                  {/* Toggle between upload and URL */}
+                  <div className="flex gap-1 p-1 rounded-lg bg-muted w-fit">
+                    <button type="button" onClick={() => setLogoMode("upload")} className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${logoMode === "upload" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+                      <Upload className="h-3 w-3 inline mr-1" />Upload
+                    </button>
+                    <button type="button" onClick={() => setLogoMode("url")} className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${logoMode === "url" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+                      <Link2 className="h-3 w-3 inline mr-1" />URL
+                    </button>
+                  </div>
+
+                  {logoMode === "upload" ? (
+                    <div className="relative">
+                      <input
+                        id="club-logo-file"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        disabled={logoUploading}
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setLogoUploading(true);
+                          try {
+                            const fd = new FormData();
+                            fd.append("file", file);
+                            const res = await fetch("/api/clubs/logo", { method: "POST", body: fd });
+                            if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Upload failed"); }
+                            const data = await res.json();
+                            setLogoUrl(data.url);
+                            setLogoPreview(data.url);
+                          } catch (err) {
+                            setError(err instanceof Error ? err.message : "Logo upload failed");
+                          } finally {
+                            setLogoUploading(false);
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="club-logo-file"
+                        className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-dashed border-input bg-background px-3 py-4 text-sm text-muted-foreground cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                      >
+                        {logoUploading ? (
+                          <><Loader2 className="h-4 w-4 animate-spin" />Uploading...</>
+                        ) : (
+                          <><Upload className="h-4 w-4" />Click to upload logo (max 5MB)</>
+                        )}
+                      </label>
+                    </div>
+                  ) : (
+                    <input
+                      id="club-logo-url"
+                      type="url"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="https://example.com/logo.png"
+                      className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  )}
+                </>
+              )}
             </div>
 
             <Button type="submit" className="w-full" disabled={submitting}>
