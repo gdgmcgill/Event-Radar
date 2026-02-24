@@ -1,6 +1,6 @@
 /**
  * GET /api/clubs
- * List all clubs ordered by name. Public endpoint.
+ * List all approved clubs ordered by name. Public endpoint.
  */
 
 import { NextResponse } from "next/server";
@@ -13,6 +13,7 @@ export async function GET() {
     const { data: clubs, error } = await supabase
       .from("clubs")
       .select("*")
+      .eq("status", "approved")
       .order("name", { ascending: true });
 
     if (error) {
