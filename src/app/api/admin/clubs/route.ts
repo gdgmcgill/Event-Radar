@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("clubs")
-    .select("*, creator:users!clubs_created_by_fkey(id, email, name)", { count: "exact" })
+    .select("*", { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (status !== "all") {

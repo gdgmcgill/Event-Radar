@@ -121,6 +121,9 @@ export type Database = {
           instagram_handle: string | null;
           logo_url: string | null;
           description: string | null;
+          category: string | null;
+          status: string;
+          created_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -130,6 +133,9 @@ export type Database = {
           instagram_handle?: string | null;
           logo_url?: string | null;
           description?: string | null;
+          category?: string | null;
+          status?: string;
+          created_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -139,6 +145,9 @@ export type Database = {
           instagram_handle?: string | null;
           logo_url?: string | null;
           description?: string | null;
+          category?: string | null;
+          status?: string;
+          created_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
