@@ -1,21 +1,30 @@
 // src/components/events/EventDetailsModal.tsx
 "use client";
 
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { EventBadge } from "@/components/events/EventBadge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
-import type { Event } from "@/types";
-import { MapPin, Calendar, Clock, ExternalLink } from "lucide-react";
+import type { Event, InteractionSource } from "@/types";
+import { MapPin, Calendar, Clock, ExternalLink, Share2, Check } from "lucide-react";
+import { useTrackEventModal, useTracking } from "@/hooks/useTracking";
 
 type EventDetailsModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: Event | null;
+  /** Source context for tracking */
+  trackingSource?: InteractionSource;
 };
 
-export function EventDetailsModal({ open, onOpenChange, event }: EventDetailsModalProps) {
+export function EventDetailsModal({ open, onOpenChange, event, trackingSource }: EventDetailsModalProps) {
+  // Track modal view when opened
+  useTrackEventModal(event?.id || null, open, trackingSource);
+  const { trackCalendarAdd, trackShare } = useTracking({ source: trackingSource });
+  const [copied, setCopied] = useState(false);
+
   if (!event) return null;
 
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -48,6 +57,24 @@ export function EventDetailsModal({ open, onOpenChange, event }: EventDetailsMod
     return URL.createObjectURL(blob);
   };
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/events/${event.id}`;
+    trackShare(event.id);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: event.title, text: event.description, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.warn("Share failed:", err);
+      }
+    }
+  };
+
   const handleAddToCalendar = () => {
     const url = generateCalendarUrl();
     const link = document.createElement('a');
@@ -57,6 +84,9 @@ export function EventDetailsModal({ open, onOpenChange, event }: EventDetailsMod
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    // Track calendar add interaction
+    trackCalendarAdd(event.id);
   };
 
   return (
@@ -75,14 +105,9 @@ export function EventDetailsModal({ open, onOpenChange, event }: EventDetailsMod
           <DialogHeader className="space-y-4 text-left">
             <div className="space-y-2">
               <div className="flex flex-wrap gap-2">
-                {event.tags.map((tag) => {
-                  const category = EVENT_CATEGORIES[tag];
-                  return (
-                    <Badge key={tag} variant="secondary" className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                      {category?.label || tag}
-                    </Badge>
-                  );
-                })}
+                {event.tags.map((tag) => (
+                  <EventBadge key={tag} tag={tag} variant="glowing" />
+                ))}
               </div>
               <DialogTitle className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
                 {event.title}
@@ -125,14 +150,37 @@ export function EventDetailsModal({ open, onOpenChange, event }: EventDetailsMod
               </a>
             </Button>
             
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5"
               onClick={handleAddToCalendar}
             >
               <Calendar className="mr-2 h-4 w-4" />
               Add to Calendar
             </Button>
+
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5"
+              onClick={handleShare}
+            >
+              {copied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Share2 className="mr-2 h-4 w-4" />}
+              {copied ? "Copied!" : "Share"}
+            </Button>
+
+            {event.source_url && (
+              <Button asChild variant="outline" className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5">
+                <a
+                  href={event.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View on Instagram
+                </a>
+              </Button>
+            )}
           </div>
 
           {event.club && (

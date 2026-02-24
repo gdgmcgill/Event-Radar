@@ -38,6 +38,9 @@ next-env.d.ts
 # vscode
 .vscode
 
+# claude code (local project config)
+.claude
+
 # python virtual environment
 .venv
 venv/

@@ -9,7 +9,14 @@ import { createClient } from "@/lib/supabase/client";
 import { LogIn } from "lucide-react";
 import { useState } from "react";
 
-export function SignInButton() {
+interface SignInButtonProps {
+  variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
+  className?: string;
+  /** Override where to redirect after login. Defaults to current page. */
+  redirectAfterLogin?: string;
+}
+
+export function SignInButton({ variant = "default", className, redirectAfterLogin }: SignInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = async () => {
@@ -18,11 +25,21 @@ export function SignInButton() {
     try {
       const supabase = createClient();
 
+      // Pass current path as `next` so the callback redirects back here
+      const next = redirectAfterLogin ?? window.location.pathname;
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      if (next && next !== "/") {
+        callbackUrl.searchParams.set("next", next);
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "azure",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl.toString(),
           scopes: "openid profile email",
+          queryParams: {
+            prompt: "select_account",
+          },
         },
       });
 
@@ -38,7 +55,7 @@ export function SignInButton() {
   };
 
   return (
-    <Button onClick={handleSignIn} variant="default" disabled={isLoading}>
+    <Button onClick={handleSignIn} variant={variant} disabled={isLoading} className={className}>
       <LogIn className="mr-2 h-4 w-4" />
       {isLoading ? "Redirecting..." : "Sign In with McGill Email"}
     </Button>

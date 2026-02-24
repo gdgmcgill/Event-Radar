@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * POST /functions/v1/events-webhook
  * Webhook endpoint for receiving events from external resources
@@ -5,10 +6,11 @@
  */
 
 // Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts"
-import { createClient } from "@supabase/supabase-js"
+import "@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "@supabase/supabase-js";
 import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
+
 
 /**
  * Webhook event payload structure
@@ -23,6 +25,7 @@ interface WebhookEvent {
   location: string;
   organizer?: string; // Optional organizer name
   image_url?: string;
+  source_url?: string;
   tags?: string[]; // Additional tags
   capacity?: number;
   price?: number;
@@ -106,6 +109,8 @@ interface DatabaseEvent {
   image_url: string | null;
   organizer: string | null;
   status: "pending" | "approved" | "rejected";
+  source: string;
+  source_url: string | null;
 }
 
 /**
@@ -167,6 +172,8 @@ function mapEventToDatabase(
     image_url: event.image_url || null,
     organizer: event.organizer?.trim() || null,
     status: "pending",
+    source: event.source_url ? "instagram" : "manual",
+    source_url: event.source_url || null,
   };
 
   return { event: dbEvent, errors };

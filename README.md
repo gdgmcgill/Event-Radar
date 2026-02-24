@@ -116,6 +116,7 @@ The application uses Supabase with the following main tables:
 - `src/components/events/EventCard.tsx`: Event card component
 - `src/components/events/EventGrid.tsx`: Grid layout for events
 - `src/components/layout/Header.tsx`: Main navigation header
+- `src/components/ErrorBoundary.tsx`: Reusable UI error boundary
 
 ### API Routes
 - `src/app/api/events/route.ts`: GET events with filters
@@ -143,6 +144,7 @@ Each file contains TODO comments indicating what needs to be implemented.
 - `npm run build`: Build for production
 - `npm run start`: Start production server
 - `npm run lint`: Run ESLint
+- `npm run test`: Run unit tests
 
 ## 🎨 Styling
 
@@ -153,6 +155,20 @@ The project uses Tailwind CSS with shadcn/ui components. Custom colors are defin
 
 The project allows users to toggle between light/dark theme.
 When adding a new UI element, make sure it has [dark theme](https://github.com/gdgmcgill/Event-Radar/wiki/Theming-&-Dark-Mode-%E2%80%94-Guide) 
+
+## 🧯 Error Boundary
+
+Use the reusable `ErrorBoundary` component to prevent a broken UI section from crashing the whole page.
+
+Example:
+
+```tsx
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+<ErrorBoundary fallbackMessage="We couldn't load events right now.">
+  <EventGrid />
+</ErrorBoundary>
+```
 
 ## 🔐 Authentication
 

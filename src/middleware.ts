@@ -1,21 +1,40 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { applyApiRateLimit } from "./middlewareRateLimit";
 
 export async function middleware(request: NextRequest) {
+  // Apply public API rate limits before any auth work
+  const rateLimitResponse = applyApiRateLimit(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // If Supabase env vars are missing, pass through without auth
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.next({ request });
+  }
+
+  try {
+
   let supabaseResponse = NextResponse.next({
     request,
   });
 
+  // Track whether setAll was called (i.e. session was refreshed)
+  let sessionRefreshed = false;
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          sessionRefreshed = true;
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next({
@@ -30,26 +49,77 @@ export async function middleware(request: NextRequest) {
   );
 
   // IMPORTANT: Do not add any logic between createServerClient and
-  // supabase.auth.getUser(). 
+  // supabase.auth.getUser().
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Optional: Redirect unauthenticated users away from protected routes
-  // Uncomment and modify if want to protect certain routes
-  // const protectedRoutes = ["/profile", "/my-events", "/create-event"];
-  // const isProtectedRoute = protectedRoutes.some((route) =>
-  //   request.nextUrl.pathname.startsWith(route)
-  // );
-  //
-  // if (!user && isProtectedRoute) {
-  //   const url = request.nextUrl.clone();
-  //   url.pathname = "/";
-  //   return NextResponse.redirect(url);
-  // }
+  // Clean up stale/orphaned Supabase auth cookies, but ONLY when the
+  // session was actually refreshed (setAll was called).  When the token
+  // is still valid, setAll is never invoked, so the response has no
+  // Set-Cookie headers — running the cleanup in that case would
+  // incorrectly delete every auth cookie chunk.
+  if (user && sessionRefreshed) {
+    const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
+    const cookiePrefix = `sb-${projectRef}-auth-token`;
+
+    const setCookieNames = new Set<string>();
+    supabaseResponse.headers.getSetCookie().forEach((header) => {
+      const name = header.split("=")[0];
+      if (name.startsWith(cookiePrefix)) {
+        setCookieNames.add(name);
+      }
+    });
+
+    request.cookies.getAll().forEach(({ name }) => {
+      if (
+        name.startsWith(cookiePrefix) &&
+        !setCookieNames.has(name) &&
+        name !== cookiePrefix
+      ) {
+        const suffix = name.slice(cookiePrefix.length);
+        if (suffix.match(/^\.\d+$/)) {
+          supabaseResponse.cookies.set(name, "", { maxAge: 0, path: "/" });
+        }
+      }
+    });
+  }
+
+  const path = request.nextUrl.pathname;
+
+  // Route protection: redirect unauthenticated users from protected pages
+  const PROTECTED_ROUTES = ["/my-events", "/create-event", "/notifications", "/profile"];
+  if (!user && PROTECTED_ROUTES.some((route) => path === route || path.startsWith(route + "/"))) {
+    const signInUrl = request.nextUrl.clone();
+    signInUrl.pathname = "/";
+    signInUrl.searchParams.set("signin", "required");
+    signInUrl.searchParams.set("next", path);
+    return NextResponse.redirect(signInUrl);
+  }
+
+  // Onboarding guard: redirect to /onboarding if cookie is set
+  const needsOnboarding = request.cookies.get("needs_onboarding")?.value === "1";
+
+  if (
+    needsOnboarding &&
+    user &&
+    path !== "/onboarding" &&
+    !path.startsWith("/api/") &&
+    !path.startsWith("/auth/")
+  ) {
+    const onboardingUrl = request.nextUrl.clone();
+    onboardingUrl.pathname = "/onboarding";
+    return NextResponse.redirect(onboardingUrl);
+  }
 
   return supabaseResponse;
+
+  } catch (e) {
+    // If middleware fails, pass through rather than 500ing the entire site
+    console.error("[Middleware] Error:", e);
+    return NextResponse.next({ request });
+  }
 }
 
 export const config = {
@@ -61,6 +131,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
