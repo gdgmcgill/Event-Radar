@@ -10,6 +10,7 @@ import {
   Users,
   ClipboardList,
   BarChart3,
+  Building2,
 } from "lucide-react";
 
 const navItems = [
@@ -18,6 +19,7 @@ const navItems = [
   { name: "All Events", path: "/moderation/events", icon: List },
   { name: "Users", path: "/moderation/users", icon: Users },
   { name: "Organizer Requests", path: "/moderation/organizer-requests", icon: ClipboardList },
+  { name: "Clubs", path: "/moderation/clubs", icon: Building2 },
   { name: "Stats", path: "/moderation/stats", icon: BarChart3 },
 ];
 

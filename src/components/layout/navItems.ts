@@ -28,6 +28,7 @@ export const guestNavItems: NavItem[] = [
   { name: "Home", path: "/", icon: Home },
   { name: "Calendar", path: "/calendar", icon: Calendar },
   { name: "Categories", path: "/categories", icon: Tag },
+  { name: "Clubs", path: "/clubs", icon: Building2 },
   { name: "About", path: "/about", icon: Info },
 ];
 
@@ -37,6 +38,7 @@ export const baseNavItems: NavItem[] = [
   { name: "Home", path: "/", icon: Home },
   { name: "Calendar", path: "/calendar", icon: Calendar },
   { name: "Categories", path: "/categories", icon: Tag },
+  { name: "Clubs", path: "/clubs", icon: Building2 },
   { name: "My Events", path: "/my-events", icon: Bookmark },
   { name: "Create Event", path: "/create-event", icon: Plus },
   { name: "Notifications", path: "/notifications", icon: Bell },
@@ -54,5 +56,6 @@ export const adminNavItems: NavItem[] = [
   { name: "All Events", path: "/moderation/events", icon: List },
   { name: "Users", path: "/moderation/users", icon: Users },
   { name: "Organizer Requests", path: "/moderation/organizer-requests", icon: ClipboardList },
+  { name: "Clubs", path: "/moderation/clubs", icon: Building2 },
   { name: "Stats", path: "/moderation/stats", icon: BarChart3 },
 ];
