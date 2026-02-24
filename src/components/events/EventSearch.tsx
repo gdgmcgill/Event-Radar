@@ -167,7 +167,7 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
       return (
         <div 
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 max-h-[300px] overflow-y-auto"
+          className="absolute top-full left-0 right-0 mt-2 bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[300px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
         >
           {suggestions.map((event, index) => (
             <button
@@ -177,14 +177,14 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
                 setShowSuggestions(false);
               }}
               className={cn(
-                "w-full text-left px-4 py-3 border-b flex flex-col gap-1 border-border/50 hover:bg-muted transition-colors",
-                activeIndex === index && "bg-muted"
+                "w-full text-left px-4 py-3 border-b flex flex-col gap-1.5 border-border/40 hover:bg-muted/60 transition-colors group",
+                activeIndex === index && "bg-muted/80"
               )}
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-foreground truncate pl-1">{event.title}</span>
+                <span className="font-medium text-foreground truncate pl-1 group-hover:text-primary transition-colors">{event.title}</span>
                 {event.tags && event.tags.length > 0 && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase tracking-wider shrink-0 ring-1 ring-primary/20 shadow-[0_0_10px_rgba(var(--primary),0.2)]">
                     {event.tags[0]}
                   </span>
                 )}
