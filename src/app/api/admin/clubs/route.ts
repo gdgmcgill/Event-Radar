@@ -1,45 +1,46 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/admin";
+import type { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-export async function GET() {
-  const { supabase, isAdmin } = await verifyAdmin();
-  if (!isAdmin) {
+export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("roles")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.roles?.includes("admin")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Since there's no clubs table, aggregate organizers from events
-  const { data, error } = await supabase
-    .from("events")
-    .select("organizer, status");
+  const searchParams = request.nextUrl.searchParams;
+  const status = searchParams.get("status") || "pending";
+
+  let query = supabase
+    .from("clubs")
+    .select("*, creator:users!clubs_created_by_fkey(id, email, name)", { count: "exact" })
+    .order("created_at", { ascending: false });
+
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
+    console.error("Error fetching admin clubs:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Group by organizer
-  const organizerMap = new Map<
-    string,
-    { total: number; approved: number; pending: number; rejected: number }
-  >();
-
-  for (const event of data ?? []) {
-    const name = event.organizer || "Unknown";
-    const existing = organizerMap.get(name) || {
-      total: 0,
-      approved: 0,
-      pending: 0,
-      rejected: 0,
-    };
-    existing.total++;
-    if (event.status === "approved") existing.approved++;
-    else if (event.status === "pending") existing.pending++;
-    else if (event.status === "rejected") existing.rejected++;
-    organizerMap.set(name, existing);
-  }
-
-  const clubs = Array.from(organizerMap.entries())
-    .map(([name, counts]) => ({ name, ...counts }))
-    .sort((a, b) => b.total - a.total);
-
-  return NextResponse.json({ clubs });
+  return NextResponse.json({ clubs: data ?? [], total: count ?? 0 });
 }
