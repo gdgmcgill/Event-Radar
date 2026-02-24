@@ -35,15 +35,21 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# python
+# vscode
+.vscode
+
+# python virtual environment
+.venv
+venv/
+env/
+ENV/
+
+# python cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-venv/
-env/
-ENV/
 
 # AI recommendation service data
 AI/data/*.faiss

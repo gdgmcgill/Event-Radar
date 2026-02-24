@@ -11,11 +11,11 @@ import { EventCardSkeleton } from "./EventCardSkeleton";
 import type { Event } from "@/types";
 
 interface EventGridProps {
-  events: Event[];
+  events: (Event & { score?: number })[];
   loading?: boolean;
   showSaveButton?: boolean;
   savedEventIds?: Set<string>;
-  onEventClick?: (event: Event) => void;
+  onEventClick?: (event: Event & { score?: number }) => void;
   /** When set, events in this list get recommendation tracking and "Not interested" */
   recommendationOrder?: string[];
   /** Called when user dismisses a recommendation card */

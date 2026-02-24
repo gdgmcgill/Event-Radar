@@ -81,7 +81,7 @@ class RecommendRequest(BaseModel):
             "Negative-rated events are excluded; positive/negative tags shift the user vector."
         )
     )
-    
+
     class Config:
         json_schema_extra = {
             "example": {

@@ -122,7 +122,7 @@ async def recommend(request: RecommendRequest) -> RecommendResponse:
     try:
         service = get_recommender_service()
 
-        # Convert FeedbackItem list → plain dicts for the recommender service
+        # Convert FeedbackItem list to plain dicts for the recommender service
         feedback_dicts = None
         if request.feedback:
             feedback_dicts = [

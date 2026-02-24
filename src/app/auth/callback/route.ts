@@ -1,66 +1,100 @@
 /**
  * OAuth callback handler
- * TODO: Implement OAuth callback processing and user profile creation
+ * Processes the OAuth callback from Supabase/Azure and creates user profile
  */
 
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Valid McGill email domains
+const VALID_DOMAINS = ["@mcgill.ca", "@mail.mcgill.ca"] as const;
+
+function isMcGillEmail(email: string): boolean {
+  return VALID_DOMAINS.some((domain) => email.toLowerCase().endsWith(domain));
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/";
+  const next = requestUrl.searchParams.get("next") ?? "/profile";
+  const errorParam = requestUrl.searchParams.get("error");
+  const errorDescription = requestUrl.searchParams.get("error_description");
 
+  // Handle OAuth provider errors
+  if (errorParam) {
+    console.error("OAuth error:", errorParam, errorDescription);
+    return NextResponse.redirect(
+      new URL(`/?error=${encodeURIComponent(errorParam)}`, requestUrl.origin)
+    );
+  }
+
+  const supabase = await createClient();
+
+  // Exchange the authorization code for a session
   if (code) {
-    const supabase = await createClient();
+    const { error: exchangeError } =
+      await supabase.auth.exchangeCodeForSession(code);
 
-    // TODO: Exchange code for session
-  //   const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (exchangeError) {
+      console.error("Code exchange error:", exchangeError.message);
+      return NextResponse.redirect(
+        new URL(`/?error=auth_failed`, requestUrl.origin)
+      );
+    }
+  }
 
-  //   if (error) {
-  //     return NextResponse.redirect(new URL("/auth/error", requestUrl.origin));
-  //   }
-  //   // TODO: Validate email domain (McGill only)
+  // Get the authenticated user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  //   const {
-  //     data: { user },
-  //   } = await supabase.auth.getUser();
-  //   if (!user) {
-  //     return NextResponse.redirect(`${requestUrl.origin}/auth/error`);
-  //   }
+  if (userError || !user) {
+    console.error("Get user error:", userError?.message);
+    return NextResponse.redirect(
+      new URL(`/?error=not_authenticated`, requestUrl.origin)
+    );
+  }
 
-  //   const email = user.email ?? "";
+  const email = user.email ?? "";
 
-  //   if (!email.endsWith("@mcgill.ca") && !email.endsWith("@mail.mcgill.ca")) {
-  //     await supabase.auth.signOut();
-  //     return NextResponse.redirect("/login?error=not_mcgill");
-  //   }
-  //   // TODO: Create user profile if doesn't exist
-  //   const userMetadata = user.user_metadata ?? {};
-  //   const interestTags = Array.isArray(userMetadata.interest_tags)
-  //     ? userMetadata.interest_tags
-  //     : [];
+  // Enforce McGill domain
+  if (!isMcGillEmail(email)) {
+    await supabase.auth.signOut();
+    return NextResponse.redirect(
+      new URL(`/?error=not_mcgill`, requestUrl.origin)
+    );
+  }
 
-  //   await supabase.from("users").upsert({
-  //     id: user.id,
-  //     email,
-  //     full_name:
-  //       userMetadata.full_name ??
-  //       userMetadata.name ??
-  //       userMetadata.first_name ??
-  //       null,
-  //     interest_tags: interestTags,
-  //     created_at: new Date().toISOString(),
-  //     updated_at: new Date().toISOString(),
-  //   });
-   }
+  // Extract user metadata
+  const metadata = user.user_metadata ?? {};
+  const name =
+    (metadata.name as string) ??
+    (metadata.full_name as string) ??
+    (metadata.preferred_username as string) ??
+    null;
+  const avatarUrl = (metadata.avatar_url as string) ?? null;
 
-  // TODO: Handle error cases
+  // Upsert user profile into public.users table
+  const { error: upsertError } = await supabase.from("users").upsert(
+    {
+      id: user.id,
+      email,
+      name,
+      avatar_url: avatarUrl,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "id",
+      ignoreDuplicates: false,
+    }
+  );
+
+  if (upsertError) {
+    console.error("Profile upsert error:", upsertError.message);
+    // Continue anyway - user is authenticated, profile creation is secondary
+  }
+
   return NextResponse.redirect(new URL(next, requestUrl.origin));
 }
-
-
-
-
-

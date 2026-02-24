@@ -205,6 +205,7 @@ class RecommenderService:
         major: str,
         year_of_study: str,
         clubs_or_interests: List[str],
+<<<<<<< HEAD
         attended_events: Optional[List[str]] = None,
     ) -> np.ndarray:
         """
@@ -278,6 +279,39 @@ class RecommenderService:
         if norm > 0:
             adjusted /= norm
         return adjusted
+=======
+        attended_events: Optional[List[str]] = None
+    ) -> np.ndarray:
+        """
+        Generate a user embedding on-demand.
+        
+        Args:
+            major: User's major/field of study
+            year_of_study: Academic year
+            clubs_or_interests: List of clubs or interest areas
+            attended_events: Optional list of attended event descriptions
+            
+        Returns:
+            User embedding as numpy array
+        """
+        # Build text representations for each field
+        user_texts = UserTower.build_user_texts(
+            major, year_of_study, clubs_or_interests, attended_events
+        )
+        
+        # Get pretrained embeddings for all texts
+        pretrained_embs = self.embedder.encode(user_texts)
+        
+        # Mean pool
+        pooled = UserTower.mean_pool_embeddings(pretrained_embs)
+        pooled_tensor = torch.from_numpy(pooled).float().unsqueeze(0)
+        
+        # Project through user tower
+        with torch.no_grad():
+            user_embedding = self.user_tower(pooled_tensor)
+            
+        return user_embedding.numpy().squeeze()
+>>>>>>> f7063dbebebce92035a8c0ed2622b0ed7e18d09f
     
     def recommend(
         self,
@@ -286,18 +320,27 @@ class RecommenderService:
         clubs_or_interests: List[str],
         attended_events: Optional[List[str]] = None,
         top_k: int = DEFAULT_TOP_K,
+<<<<<<< HEAD
         exclude_event_ids: Optional[List[str]] = None,
         feedback: Optional[List[Dict[str, Any]]] = None
     ) -> List[RecommendationResult]:
         """
         Get ranked event recommendations for a user.
 
+=======
+        exclude_event_ids: Optional[List[str]] = None
+    ) -> List[RecommendationResult]:
+        """
+        Get ranked event recommendations for a user.
+        
+>>>>>>> f7063dbebebce92035a8c0ed2622b0ed7e18d09f
         Args:
             major: User's major
             year_of_study: Academic year
             clubs_or_interests: User's interests
             attended_events: Optional past event descriptions
             top_k: Number of recommendations to return
+<<<<<<< HEAD
             exclude_event_ids: Event IDs to always exclude (e.g. already saved)
             feedback: Optional list of dicts with keys:
                         { "event_id": str, "feedback_type": "positive"|"negative", "tags": [str] }
@@ -343,6 +386,35 @@ class RecommenderService:
             if event_id in all_exclusions:
                 continue
 
+=======
+            exclude_event_ids: Event IDs to exclude from results
+            
+        Returns:
+            List of RecommendationResult objects, sorted by score descending
+        """
+        # Validate top_k
+        top_k = min(max(1, top_k), MAX_TOP_K)
+        
+        # Generate user embedding
+        user_embedding = self.embed_user(
+            major, year_of_study, clubs_or_interests, attended_events
+        )
+        
+        # Account for exclusions in search
+        search_k = top_k
+        if exclude_event_ids:
+            search_k = top_k + len(exclude_event_ids)
+            
+        # Search vector store
+        results = self.vector_store.search(user_embedding, top_k=search_k)
+        
+        # Filter exclusions and format results
+        recommendations = []
+        for event_id, score, metadata in results:
+            if exclude_event_ids and event_id in exclude_event_ids:
+                continue
+                
+>>>>>>> f7063dbebebce92035a8c0ed2622b0ed7e18d09f
             recommendations.append(RecommendationResult(
                 event_id=event_id,
                 score=score,
@@ -352,10 +424,17 @@ class RecommenderService:
                 hosting_club=metadata.hosting_club,
                 category=metadata.category
             ))
+<<<<<<< HEAD
 
             if len(recommendations) >= top_k:
                 break
 
+=======
+            
+            if len(recommendations) >= top_k:
+                break
+                
+>>>>>>> f7063dbebebce92035a8c0ed2622b0ed7e18d09f
         return recommendations
     
     def get_event_count(self) -> int:
