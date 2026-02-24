@@ -14,15 +14,24 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { type Event } from "@/types";
-import { Calendar, Clock, MapPin, Heart } from "lucide-react";
-import { useState } from "react";
+import { Calendar, Clock, MapPin, Heart, X, ThumbsUp, ThumbsDown } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useTracking } from "@/hooks/useTracking";
 
 interface EventCardProps {
   event: Event;
   onClick?: () => void;
   showSaveButton?: boolean;
   isSaved?: boolean;
+  /** When set to "recommendation", shows "Not interested" and sends dismiss feedback */
+  trackingSource?: "recommendation";
+  /** 1-based rank in the recommendation list (for feedback) */
+  recommendationRank?: number;
+  /** Called when user clicks "Not interested"; remove card from list */
+  onDismiss?: (eventId: string) => void;
+  /** Initial thumbs state (from GET /api/recommendations/feedback) */
+  initialThumbsFeedback?: "positive" | "negative" | null;
 }
 
 export function EventCard({
@@ -30,8 +39,54 @@ export function EventCard({
   onClick,
   showSaveButton = false,
   isSaved: initialIsSaved = false,
+  trackingSource,
+  recommendationRank = 1,
+  onDismiss,
+  initialThumbsFeedback = null,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
+  const [thumbsFeedback, setThumbsFeedback] = useState<"positive" | "negative" | null>(initialThumbsFeedback ?? null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const impressionSent = useRef(false);
+  const {
+    trackRecommendationDismiss,
+    trackRecommendationClick,
+    trackRecommendationImpression,
+    trackRecommendationSave,
+    submitThumbsFeedback,
+  } = useTracking();
+
+  // Sync initial thumbs when prop changes (e.g. after fetch)
+  useEffect(() => {
+    setThumbsFeedback(initialThumbsFeedback ?? null);
+  }, [initialThumbsFeedback]);
+
+  // Fire impression once when recommendation card is visible
+  useEffect(() => {
+    if (
+      trackingSource !== "recommendation" ||
+      recommendationRank < 1 ||
+      impressionSent.current
+    )
+      return;
+    const el = cardRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting || impressionSent.current) return;
+        impressionSent.current = true;
+        trackRecommendationImpression(event.id, recommendationRank);
+      },
+      { threshold: 0.2, rootMargin: "0px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [
+    trackingSource,
+    recommendationRank,
+    event.id,
+    trackRecommendationImpression,
+  ]);
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -45,12 +100,22 @@ export function EventCard({
 
       const data = await response.json();
       setIsSaved(data.saved);
+      if (
+        data.saved &&
+        trackingSource === "recommendation" &&
+        recommendationRank >= 1
+      ) {
+        trackRecommendationSave(event.id, recommendationRank);
+      }
     } catch (error) {
       console.error("Error saving event:", error);
     }
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
+    if (trackingSource === "recommendation" && recommendationRank >= 1) {
+      trackRecommendationClick(event.id, recommendationRank);
+    }
     if (onClick) {
       e.preventDefault();
       e.stopPropagation();
@@ -58,9 +123,32 @@ export function EventCard({
     }
   };
 
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (trackingSource === "recommendation" && recommendationRank >= 1) {
+      trackRecommendationDismiss(event.id, recommendationRank);
+    }
+    onDismiss?.(event.id);
+  };
+
+  const handleThumbs = async (e: React.MouseEvent, feedback: "positive" | "negative") => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (trackingSource !== "recommendation") return;
+    const prev = thumbsFeedback;
+    setThumbsFeedback(feedback); // toggle: switch between positive and negative
+    try {
+      await submitThumbsFeedback(event.id, feedback);
+    } catch {
+      setThumbsFeedback(prev); // revert on error
+    }
+  };
+
   return (
-    <Link href={`/events/${event.id}`} onClick={handleCardClick} className="block h-full group">
-      <Card className="h-full overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card rounded-2xl flex flex-col">
+    <div ref={cardRef} className="h-full">
+      <Link href={`/events/${event.id}`} onClick={handleCardClick} className="block h-full group">
+        <Card className="h-full overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card rounded-2xl flex flex-col">
         {/* Image Section */}
         <div className="relative h-52 w-full overflow-hidden bg-secondary/20">
           {event.image_url ? (
@@ -100,6 +188,18 @@ export function EventCard({
               <Heart className={cn("h-4 w-4", isSaved && "fill-current")} />
             </Button>
           )}
+          {/* Not interested (recommendation cards only) */}
+          {trackingSource === "recommendation" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDismiss}
+              className="absolute top-3 left-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-white/20 bg-white/80 text-muted-foreground hover:bg-destructive/90 hover:text-destructive-foreground transition-all duration-300 opacity-80 hover:opacity-100"
+              aria-label="Not interested"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         {/* Content Section */}
@@ -135,25 +235,57 @@ export function EventCard({
           </div>
         </div>
 
-        {/* Footer / Tags */}
-        <div className="px-5 pb-5 pt-0 flex flex-wrap gap-2">
+        {/* Footer / Tags + Thumbs (recommendation only) */}
+        <div className="px-5 pb-5 pt-0 flex flex-wrap items-center gap-2">
           {event.tags.slice(0, 3).map((tag) => {
             const category = EVENT_CATEGORIES[tag];
             return (
-              <Badge 
-                key={tag} 
-                variant="secondary" 
+              <Badge
+                key={tag}
+                variant="secondary"
                 className={cn(
-                  "px-2.5 py-0.5 text-xs font-medium transition-colors bg-secondary/50 text-secondary-foreground hover:bg-secondary",
-                  // category?.color // Keeping it cleaner with consistent secondary styling
+                  "px-2.5 py-0.5 text-xs font-medium transition-colors bg-secondary/50 text-secondary-foreground hover:bg-secondary"
                 )}
               >
                 {category?.label || tag}
               </Badge>
             );
           })}
+          {trackingSource === "recommendation" && (
+            <div className="ml-auto flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => handleThumbs(e, "positive")}
+                className={cn(
+                  "h-8 w-8 rounded-full",
+                  thumbsFeedback === "positive"
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:text-primary"
+                )}
+                aria-label="Thumbs up"
+              >
+                <ThumbsUp className={cn("h-4 w-4", thumbsFeedback === "positive" && "fill-current")} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => handleThumbs(e, "negative")}
+                className={cn(
+                  "h-8 w-8 rounded-full",
+                  thumbsFeedback === "negative"
+                    ? "text-destructive bg-destructive/10"
+                    : "text-muted-foreground hover:text-destructive"
+                )}
+                aria-label="Thumbs down"
+              >
+                <ThumbsDown className={cn("h-4 w-4", thumbsFeedback === "negative" && "fill-current")} />
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
     </Link>
+    </div>
   );
 }

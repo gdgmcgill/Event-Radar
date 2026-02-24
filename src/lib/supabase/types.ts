@@ -140,6 +140,58 @@ export interface Database {
           created_at?: string;
         };
       };
+      recommendation_feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          recommendation_rank: number;
+          action: string;
+          session_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          recommendation_rank: number;
+          action: string;
+          session_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          recommendation_rank?: number;
+          action?: string;
+          session_id?: string | null;
+          created_at?: string;
+        };
+      };
+      recommendation_explicit_feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          feedback_type: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          feedback_type: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          feedback_type?: string;
+          created_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;

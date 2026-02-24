@@ -71,4 +71,31 @@ export interface EventFilter {
   clubId?: string;
 }
 
+/** Recommendation feedback action types */
+export type RecommendationFeedbackAction =
+  | "impression"
+  | "click"
+  | "save"
+  | "dismiss";
+
+/** Payload for logging recommendation feedback */
+export interface RecommendationFeedbackPayload {
+  user_id: string;
+  event_id: string;
+  recommendation_rank: number;
+  action: RecommendationFeedbackAction;
+  session_id?: string;
+}
+
+/** Stored recommendation feedback row (matches recommendation_feedback table) */
+export interface RecommendationFeedback {
+  id: string;
+  user_id: string;
+  event_id: string;
+  recommendation_rank: number;
+  action: RecommendationFeedbackAction;
+  session_id: string | null;
+  created_at: string;
+}
+
 

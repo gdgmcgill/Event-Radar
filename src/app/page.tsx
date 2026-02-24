@@ -11,7 +11,7 @@ import { EventSearch } from "@/components/events/EventSearch";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
-import { Search, Filter, RefreshCcw, AlertCircle } from "lucide-react";
+import { Search, Filter, RefreshCcw, AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -28,6 +28,10 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [recommendationEvents, setRecommendationEvents] = useState<Event[]>([]);
+  const [thumbsFeedbackByEventId, setThumbsFeedbackByEventId] = useState<
+    Record<string, "positive" | "negative">
+  >({});
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -54,6 +58,42 @@ export default function HomePage() {
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/recommendations?top_k=10");
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const recs = data.recommendations as { event_id: string }[] | undefined;
+        if (!recs?.length || cancelled) return;
+        const ids = recs.map((r) => r.event_id).join(",");
+        const eventsRes = await fetch(`/api/events?ids=${encodeURIComponent(ids)}`);
+        if (!eventsRes.ok || cancelled) return;
+        const eventsData = await eventsRes.json();
+        const list = Array.isArray(eventsData) ? eventsData : eventsData.events || [];
+        const order = recs.map((r) => r.event_id);
+        const sorted = [...list].sort(
+          (a, b) => order.indexOf(a.id) - order.indexOf(b.id)
+        );
+        if (!cancelled) setRecommendationEvents(sorted);
+        if (!cancelled && sorted.length > 0) {
+          const ids = sorted.map((e) => e.id).join(",");
+          const fbRes = await fetch(`/api/recommendations/feedback?event_ids=${encodeURIComponent(ids)}`);
+          if (fbRes.ok && !cancelled) {
+            const fbData = (await fbRes.json()) as { feedback: Record<string, "positive" | "negative"> };
+            setThumbsFeedbackByEventId(fbData.feedback ?? {});
+          }
+        }
+      } catch {
+        // Recommendations are best-effort
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
@@ -141,6 +181,29 @@ export default function HomePage() {
               </Sheet>
             </div>
           </div>
+
+          {/* Recommended for you */}
+          {recommendationEvents.length > 0 && (
+            <div className="space-y-4 pb-8">
+              <h2 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+                <Sparkles className="h-7 w-7 text-primary" />
+                Recommended for you
+              </h2>
+              <EventGrid
+                events={recommendationEvents}
+                showSaveButton
+                savedEventIds={new Set()}
+                onEventClick={handleEventClick}
+                recommendationOrder={recommendationEvents.map((e) => e.id)}
+                onDismissRecommendation={(eventId) =>
+                  setRecommendationEvents((prev) =>
+                    prev.filter((e) => e.id !== eventId)
+                  )
+                }
+                thumbsFeedbackByEventId={thumbsFeedbackByEventId}
+              />
+            </div>
+          )}
 
           {/* Main Content */}
           <div className="min-h-[500px]">

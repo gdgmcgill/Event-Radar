@@ -16,6 +16,12 @@ interface EventGridProps {
   showSaveButton?: boolean;
   savedEventIds?: Set<string>;
   onEventClick?: (event: Event) => void;
+  /** When set, events in this list get recommendation tracking and "Not interested" */
+  recommendationOrder?: string[];
+  /** Called when user dismisses a recommendation card */
+  onDismissRecommendation?: (eventId: string) => void;
+  /** Thumbs feedback state per event (from GET /api/recommendations/feedback) */
+  thumbsFeedbackByEventId?: Record<string, "positive" | "negative">;
 }
 
 export function EventGrid({
@@ -24,6 +30,9 @@ export function EventGrid({
   showSaveButton = false,
   savedEventIds = new Set(),
   onEventClick,
+  recommendationOrder,
+  onDismissRecommendation,
+  thumbsFeedbackByEventId,
 }: EventGridProps) {
   if (loading) {
     return (
@@ -46,22 +55,39 @@ export function EventGrid({
     );
   }
 
+  const getRecommendationRank = (eventId: string): number | undefined => {
+    if (!recommendationOrder) return undefined;
+    const i = recommendationOrder.indexOf(eventId);
+    return i >= 0 ? i + 1 : undefined;
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
-      {events.map((event, index) => (
-        <div 
-          key={event.id} 
-          className="animate-in slide-in-from-bottom-4 duration-500"
-          style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}
-        >
-          <EventCard
-            event={event}
-            showSaveButton={showSaveButton}
-            isSaved={savedEventIds.has(event.id)}
-            onClick={onEventClick ? () => onEventClick(event) : undefined}
-          />
-        </div>
-      ))}
+      {events.map((event, index) => {
+        const rank = getRecommendationRank(event.id);
+        const isRecommendation = rank !== undefined;
+        return (
+          <div
+            key={event.id}
+            className="animate-in slide-in-from-bottom-4 duration-500"
+            style={{
+              animationDelay: `${index * 50}ms`,
+              animationFillMode: "both",
+            }}
+          >
+            <EventCard
+              event={event}
+              showSaveButton={showSaveButton}
+              isSaved={savedEventIds.has(event.id)}
+              onClick={onEventClick ? () => onEventClick(event) : undefined}
+              trackingSource={isRecommendation ? "recommendation" : undefined}
+              recommendationRank={rank}
+              onDismiss={onDismissRecommendation}
+              initialThumbsFeedback={thumbsFeedbackByEventId?.[event.id]}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
