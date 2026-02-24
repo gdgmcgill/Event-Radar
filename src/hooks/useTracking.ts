@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback } from "react";
-import type { RecommendationFeedbackAction } from "@/types";
+import { useCallback, useEffect, useRef } from "react";
+import type { RecommendationFeedbackAction, InteractionSource } from "@/types";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";
@@ -25,7 +25,7 @@ async function sendFeedback(payload: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...payload,
-        user_id: "", // Server uses auth user
+        user_id: "",
         session_id: payload.session_id ?? getSessionId(),
       }),
     });
@@ -34,7 +34,32 @@ async function sendFeedback(payload: {
   }
 }
 
-export function useTracking() {
+async function sendInteraction(payload: {
+  event_id: string;
+  interaction_type: string;
+  source?: InteractionSource | null;
+}) {
+  try {
+    await fetch("/api/interactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        session_id: getSessionId(),
+      }),
+    });
+  } catch (e) {
+    console.warn("Interaction tracking failed:", e);
+  }
+}
+
+interface UseTrackingOptions {
+  source?: InteractionSource;
+}
+
+export function useTracking(options?: UseTrackingOptions) {
+  const source = options?.source ?? null;
+
   const trackRecommendationImpression = useCallback(
     (eventId: string, rank: number) => {
       sendFeedback({
@@ -92,11 +117,57 @@ export function useTracking() {
     []
   );
 
+  const trackClick = useCallback(
+    (eventId: string) => {
+      sendInteraction({ event_id: eventId, interaction_type: "click", source });
+    },
+    [source]
+  );
+
+  const trackShare = useCallback(
+    (eventId: string) => {
+      sendInteraction({ event_id: eventId, interaction_type: "share", source });
+    },
+    [source]
+  );
+
+  const trackCalendarAdd = useCallback(
+    (eventId: string) => {
+      sendInteraction({ event_id: eventId, interaction_type: "calendar_add", source });
+    },
+    [source]
+  );
+
   return {
     trackRecommendationImpression,
     trackRecommendationClick,
     trackRecommendationSave,
     trackRecommendationDismiss,
     submitThumbsFeedback,
+    trackClick,
+    trackShare,
+    trackCalendarAdd,
   };
+}
+
+export function useTrackEventModal(
+  eventId: string | null,
+  isOpen: boolean,
+  source?: InteractionSource
+) {
+  const tracked = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen && eventId && tracked.current !== eventId) {
+      tracked.current = eventId;
+      sendInteraction({
+        event_id: eventId,
+        interaction_type: "view",
+        source: source ?? "modal",
+      });
+    }
+    if (!isOpen) {
+      tracked.current = null;
+    }
+  }, [isOpen, eventId, source]);
 }

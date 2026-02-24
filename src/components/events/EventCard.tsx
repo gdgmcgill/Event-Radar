@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
-import { type Event } from "@/types";
+import { type Event, type InteractionSource, type EventPopularityScore } from "@/types";
 import { Calendar, Clock, MapPin, Heart, X, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -24,14 +24,20 @@ interface EventCardProps {
   onClick?: () => void;
   showSaveButton?: boolean;
   isSaved?: boolean;
-  /** When set to "recommendation", shows "Not interested" and sends dismiss feedback */
-  trackingSource?: "recommendation";
+  /** Tracking source context; "recommendation" enables thumbs & dismiss UI */
+  trackingSource?: InteractionSource;
   /** 1-based rank in the recommendation list (for feedback) */
   recommendationRank?: number;
   /** Called when user clicks "Not interested"; remove card from list */
   onDismiss?: (eventId: string) => void;
   /** Initial thumbs state (from GET /api/recommendations/feedback) */
   initialThumbsFeedback?: "positive" | "negative" | null;
+  /** Display rank badge (1, 2, 3) for popular events */
+  rank?: 1 | 2 | 3;
+  /** Show popularity stats overlay */
+  showPopularityStats?: boolean;
+  /** Popularity score data */
+  popularity?: EventPopularityScore | null;
 }
 
 export function EventCard({
@@ -43,6 +49,9 @@ export function EventCard({
   recommendationRank = 1,
   onDismiss,
   initialThumbsFeedback = null,
+  rank: _rank,
+  showPopularityStats: _showPopularityStats,
+  popularity: _popularity,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
   const [thumbsFeedback, setThumbsFeedback] = useState<"positive" | "negative" | null>(initialThumbsFeedback ?? null);

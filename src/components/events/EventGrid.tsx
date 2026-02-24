@@ -8,7 +8,7 @@
 
 import { EventCard } from "./EventCard";
 import { EventCardSkeleton } from "./EventCardSkeleton";
-import type { Event } from "@/types";
+import type { Event, InteractionSource } from "@/types";
 
 interface EventGridProps {
   events: (Event & { score?: number })[];
@@ -22,6 +22,10 @@ interface EventGridProps {
   onDismissRecommendation?: (eventId: string) => void;
   /** Thumbs feedback state per event (from GET /api/recommendations/feedback) */
   thumbsFeedbackByEventId?: Record<string, "positive" | "negative">;
+  /** Called when user unsaves an event */
+  onUnsave?: (eventId: string) => void;
+  /** Tracking source passed to all EventCards */
+  trackingSource?: InteractionSource;
 }
 
 export function EventGrid({
@@ -33,6 +37,8 @@ export function EventGrid({
   recommendationOrder,
   onDismissRecommendation,
   thumbsFeedbackByEventId,
+  onUnsave: _onUnsave,
+  trackingSource,
 }: EventGridProps) {
   if (loading) {
     return (
@@ -80,7 +86,7 @@ export function EventGrid({
               showSaveButton={showSaveButton}
               isSaved={savedEventIds.has(event.id)}
               onClick={onEventClick ? () => onEventClick(event) : undefined}
-              trackingSource={isRecommendation ? "recommendation" : undefined}
+              trackingSource={isRecommendation ? "recommendation" : trackingSource}
               recommendationRank={rank}
               onDismiss={onDismissRecommendation}
               initialThumbsFeedback={thumbsFeedbackByEventId?.[event.id]}

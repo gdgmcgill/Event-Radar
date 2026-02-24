@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (status !== "all") {
-    query = query.eq("status", status);
+    query = query.eq("status", status as "pending" | "approved" | "rejected");
   }
 
   const { data, error, count } = await query;

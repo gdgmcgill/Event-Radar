@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     .range(offset, offset + limit - 1);
 
   if (status && status !== "all") {
-    query = query.eq("status", status);
+    query = query.eq("status", status as "pending" | "approved" | "rejected");
   }
 
   if (search) {

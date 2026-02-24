@@ -77,7 +77,7 @@ export async function GET(
       .order("start_date", { ascending: false });
 
     if (status) {
-      query = query.eq("status", status);
+      query = query.eq("status", status as "pending" | "approved" | "rejected");
     }
 
     const { data: events, error } = await query;
