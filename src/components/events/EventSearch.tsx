@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { cn, formatDate } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { type Event } from "@/types";
+import { EventBadge } from "@/components/events/EventBadge";
 
 interface EventSearchProps {
   onSearchChange: (query: string) => void;
@@ -167,7 +168,7 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
       return (
         <div 
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-2 bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[300px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
+          className="absolute top-full left-0 right-0 mt-2 bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[160px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 custom-scrollbar"
         >
           {suggestions.map((event, index) => (
             <button
@@ -184,9 +185,7 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
               <div className="flex items-center justify-between">
                 <span className="font-medium text-foreground truncate pl-1 group-hover:text-primary transition-colors">{event.title}</span>
                 {event.tags && event.tags.length > 0 && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase tracking-wider shrink-0 ring-1 ring-primary/20 shadow-[0_0_10px_rgba(var(--primary),0.2)]">
-                    {event.tags[0]}
-                  </span>
+                  <EventBadge tag={event.tags[0]} variant="glowing" />
                 )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground pl-1 mt-0.5">
