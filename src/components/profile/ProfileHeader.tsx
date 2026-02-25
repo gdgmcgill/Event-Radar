@@ -95,11 +95,11 @@ export default function ProfileHeader({
   );
 
   const avatarContent = currentAvatarUrl ? (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={currentAvatarUrl}
       alt={name ?? "avatar"}
-      fill
-      className="object-cover"
+      className="w-full h-full object-cover"
     />
   ) : (
     <span className="text-2xl font-semibold text-primary">
@@ -113,11 +113,10 @@ export default function ProfileHeader({
       <div className="relative">
         <div
           onClick={handleAvatarClick}
-          className={`relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-background shadow-xl flex items-center justify-center ${
-            currentAvatarUrl
-              ? ""
-              : "bg-gradient-to-br from-primary/20 to-primary/5"
-          } ${editable ? "cursor-pointer group" : ""}`}
+          className={`relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-background shadow-xl flex items-center justify-center ${currentAvatarUrl
+            ? ""
+            : "bg-gradient-to-br from-primary/20 to-primary/5"
+            } ${editable ? "cursor-pointer group" : ""}`}
         >
           {avatarContent}
 
