@@ -4,6 +4,7 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import InterestsCard from "@/components/profile/InterestsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Mail, Clock } from "lucide-react";
+import EditProfileButton from "@/components/profile/EditProfileButton";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -55,13 +56,22 @@ export default async function ProfilePage() {
 
       <div className="relative max-w-3xl mx-auto py-12 px-4 sm:px-6 space-y-8">
         {/* Page Title */}
-        <div className="space-y-1">
-          <h1 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Account
-          </h1>
-          <p className="text-3xl font-bold text-foreground tracking-tight">
-            Your Profile
-          </p>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Account
+            </h1>
+            <p className="text-3xl font-bold text-foreground tracking-tight">
+              Your Profile
+            </p>
+          </div>
+
+          <EditProfileButton
+            userId={displayData.id}
+            initialName={displayData.name ?? ""}
+            initialAvatarUrl={displayData.avatar_url ?? ""}
+            initialTags={(displayData.interest_tags ?? []) as import("@/types").EventTag[]}
+          />
         </div>
 
         {/* Profile Header - Avatar & Name (no card) */}
@@ -84,7 +94,7 @@ export default async function ProfilePage() {
             initialTags={(displayData.interest_tags ?? []) as import("@/types").EventTag[]}
           />
 
-        {/* Account Info Card and other Info*/}
+          {/* Account Info Card and other Info*/}
         </div>
       </div>
     </div>
