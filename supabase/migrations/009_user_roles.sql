@@ -14,12 +14,21 @@ CREATE TYPE user_role AS ENUM ('user', 'club_organizer', 'admin');
 ALTER TABLE public.users
   ADD COLUMN roles user_role[] NOT NULL DEFAULT '{user}';
 
--- Migrate existing admins
-UPDATE public.users SET roles = '{user, admin}' WHERE is_admin = true;
-UPDATE public.users SET roles = '{user}' WHERE is_admin = false OR is_admin IS NULL;
-
--- Drop the old boolean column
-ALTER TABLE public.users DROP COLUMN is_admin;
+-- Migrate existing admins (conditional: is_admin column only exists on the remote
+-- legacy schema — a fresh local DB replayed from 001_initial_schema.sql never had it)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name   = 'users'
+      AND column_name  = 'is_admin'
+  ) THEN
+    UPDATE public.users SET roles = '{user, admin}' WHERE is_admin = true;
+    UPDATE public.users SET roles = '{user}' WHERE is_admin = false OR is_admin IS NULL;
+    ALTER TABLE public.users DROP COLUMN is_admin;
+  END IF;
+END $$;
 
 -- Index for role-based queries (GIN index for array containment checks)
 CREATE INDEX IF NOT EXISTS idx_users_roles ON public.users USING GIN(roles);
