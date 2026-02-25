@@ -42,19 +42,24 @@ export function EventImageUpload({
             </label>
 
             {imagePreview ? (
-                <div className="relative w-full max-w-sm">
+                <div className="group relative w-full max-w-sm rounded-2xl overflow-hidden shadow-md bg-card border border-border/40 h-52">
                     {/* eslint-disable-next-line @next/next/no-img-element -- handles both local blobs and remote URLs */}
                     <img
                         src={imagePreview}
                         alt="Preview"
-                        className="w-full h-48 object-cover rounded-xl border border-border"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
+
+                    {/* Gradient Overlay matching EventCard */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 dark:from-white/6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                    {/* X button matching styling and positioning of the Heart save button */}
                     <Button
                         type="button"
                         variant="secondary"
                         size="icon"
                         onClick={onImageRemove}
-                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-card/90 backdrop-blur-sm"
+                        className="absolute top-3 right-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 bg-card/90 text-muted-foreground hover:text-destructive hover:bg-card transition-all duration-300 hover:scale-110"
                     >
                         <X className="h-4 w-4" />
                     </Button>
