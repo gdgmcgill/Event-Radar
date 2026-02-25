@@ -1,5 +1,8 @@
-
-
+-- =============================================================================
+-- DEPRECATED: Remote schema dump - may conflict with 001-011 migrations.
+-- See docs/database-cleanup-report.md. Consider archiving after extracting
+-- rsvps table creation if needed for fresh installs.
+-- =============================================================================
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
