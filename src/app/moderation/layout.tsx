@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ModerationNav } from "./ModerationNav";
 
 export default async function ModerationLayout({
   children,
@@ -27,5 +28,10 @@ export default async function ModerationLayout({
     redirect("/");
   }
 
-  return <>{children}</>;
+  return (
+    <div className="space-y-6">
+      <ModerationNav />
+      {children}
+    </div>
+  );
 }

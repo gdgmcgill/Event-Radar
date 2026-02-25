@@ -29,24 +29,17 @@ export async function POST(request: NextRequest) {
         const event = row.events as unknown as { id: string; title: string; start_date: string } | null;
         if (!event) continue;
 
-        // Dedup: check if notification already exists
-        const { count } = await supabase
-          .from("notifications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", row.user_id)
-          .eq("event_id", event.id)
-          .eq("type", "reminder_24h");
-
-        if (count && count > 0) continue;
-
-        await supabase.from("notifications").insert({
-          user_id: row.user_id,
-          type: "reminder_24h",
-          title: "Event Tomorrow",
-          message: `"${event.title}" starts in about 24 hours.`,
-          event_id: event.id,
-        });
-        remindersSent["24h"]++;
+        const { error: err24h } = await supabase.from("notifications").upsert(
+          {
+            user_id: row.user_id,
+            event_id: event.id,
+            type: "event_reminder_24h",
+            title: "Event Tomorrow",
+            message: `"${event.title}" starts in about 24 hours.`,
+          },
+          { onConflict: "user_id,event_id,type", ignoreDuplicates: true }
+        );
+        if (!err24h) remindersSent["24h"]++;
       }
     }
 
@@ -65,24 +58,17 @@ export async function POST(request: NextRequest) {
         const event = row.events as unknown as { id: string; title: string; start_date: string } | null;
         if (!event) continue;
 
-        // Dedup: check if notification already exists
-        const { count } = await supabase
-          .from("notifications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", row.user_id)
-          .eq("event_id", event.id)
-          .eq("type", "reminder_1h");
-
-        if (count && count > 0) continue;
-
-        await supabase.from("notifications").insert({
-          user_id: row.user_id,
-          type: "reminder_1h",
-          title: "Event Starting Soon",
-          message: `"${event.title}" starts in about 1 hour!`,
-          event_id: event.id,
-        });
-        remindersSent["1h"]++;
+        const { error: err1h } = await supabase.from("notifications").upsert(
+          {
+            user_id: row.user_id,
+            event_id: event.id,
+            type: "event_reminder_1h",
+            title: "Event Starting Soon",
+            message: `"${event.title}" starts in about 1 hour!`,
+          },
+          { onConflict: "user_id,event_id,type", ignoreDuplicates: true }
+        );
+        if (!err1h) remindersSent["1h"]++;
       }
     }
 

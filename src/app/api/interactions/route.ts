@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate source if provided
-    const validSources = ['home', 'search', 'recommendation', 'calendar', 'direct', 'modal'];
+    // Validate source if provided (must match user_interactions.source CHECK constraint)
+    const validSources = ['home', 'search', 'recommendation', 'calendar', 'direct', 'modal', 'my-events'];
     if (body.source && !validSources.includes(body.source)) {
       return NextResponse.json(
         { error: `Invalid source. Must be one of: ${validSources.join(', ')}` },

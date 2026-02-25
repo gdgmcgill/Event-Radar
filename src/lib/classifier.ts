@@ -34,6 +34,7 @@ export interface ExtractedEvent {
   location: string;
   organizer: string;
   image_url?: string;
+  source_url?: string;
   tags?: string[];
 }
 
@@ -315,6 +316,7 @@ export function classifyPost(post: InstagramPost): ClassificationResult {
       location: locationMatch || "TBD",
       organizer: cleanAccountName(post.account),
       image_url: post.image_url,
+      source_url: post.post_url,
       tags,
     };
   }

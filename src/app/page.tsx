@@ -21,6 +21,7 @@ import { Filter, RefreshCcw, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/lib/utils";
+import { RECOMMENDATION_THRESHOLD } from "@/lib/constants";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   not_mcgill: "Please sign in with a McGill email (@mcgill.ca or @mail.mcgill.ca).",
@@ -125,7 +126,7 @@ function HomePageContent() {
     direction: "asc",
   });
 
-  const canShowRecommendations = savedEventIds.size >= 3;
+  const canShowRecommendations = savedEventIds.size >= RECOMMENDATION_THRESHOLD;
 
   // Clear query params when auth error is present
   useEffect(() => {
@@ -219,8 +220,8 @@ function HomePageContent() {
         )}
 
         {/* Hero Section */}
-        <section className="relative w-full pt-24 pb-32 md:pt-32 md:pb-40 overflow-hidden bg-secondary/30">
-          <div className="container mx-auto px-4 relative z-10 flex flex-col items-center text-center">
+        <section className="relative w-full pt-16 pb-32 md:pt-20 md:pb-40 bg-secondary/30">
+          <div className="container mx-auto px-4 relative z-30 flex flex-col items-center text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -352,11 +353,11 @@ function HomePageContent() {
 
             {/* Popular / Recommended Section */}
             {!isFiltering && (
-              (!user || (!isSavedLoading && !canShowRecommendations) || recommendationFailed) ? (
+              !user || recommendationFailed ? (
                 <PopularEventsSection
                   onEventsLoaded={(ids) => setPopularEventIds(new Set(ids))}
                 />
-              ) : (user && !isSavedLoading && canShowRecommendations && !recommendationFailed) ? (
+              ) : !isSavedLoading ? (
                 <RecommendedEventsSection
                   onEmpty={() => setRecommendationFailed(true)}
                 />

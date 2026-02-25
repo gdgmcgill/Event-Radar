@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { NotificationList } from "@/components/notifications/NotificationList";
-import type { Notification } from "@/components/notifications/NotificationItem";
+import type { Notification } from "@/types";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

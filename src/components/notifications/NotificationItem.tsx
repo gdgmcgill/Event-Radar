@@ -1,19 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Clock, AlertCircle, CheckCircle, XCircle, Bell } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-
-export interface Notification {
-  id: string;
-  user_id: string;
-  type: string;
-  title: string;
-  message: string;
-  event_id: string | null;
-  read: boolean;
-  created_at: string;
-}
+import type { Notification } from "@/types";
 
 const typeConfig: Record<string, { icon: LucideIcon; color: string; bgColor: string }> = {
   event_reminder_24h: {
@@ -66,12 +57,12 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
   };
   const Icon = config.icon;
 
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        if (!notification.read) onMarkRead(notification.id);
-      }}
+  const handleClick = () => {
+    if (!notification.read) onMarkRead(notification.id);
+  };
+
+  const inner = (
+    <div
       className={cn(
         "w-full flex items-start gap-4 p-4 rounded-xl text-left transition-colors",
         notification.read
@@ -98,6 +89,20 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
           {timeAgo(notification.created_at)}
         </p>
       </div>
+    </div>
+  );
+
+  if (notification.event_id) {
+    return (
+      <Link href={`/events/${notification.event_id}`} onClick={handleClick} className="block w-full">
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={handleClick} className="w-full text-left">
+      {inner}
     </button>
   );
 }

@@ -78,6 +78,9 @@ interface DBClub {
   instagram_handle?: string | null;
   logo_url?: string | null;
   description?: string | null;
+  category?: string | null;
+  status?: string;
+  created_by?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -100,6 +103,9 @@ export function transformEventFromDB(dbEvent: DBEvent): Event {
       instagram_handle: dbEvent.club.instagram_handle || null,
       logo_url: dbEvent.club.logo_url || null,
       description: dbEvent.club.description || null,
+      category: dbEvent.club.category ?? null,
+      status: (dbEvent.club.status ?? "approved") as Club["status"],
+      created_by: dbEvent.club.created_by ?? null,
       created_at: dbEvent.club.created_at,
       updated_at: dbEvent.club.updated_at,
     };
@@ -111,6 +117,9 @@ export function transformEventFromDB(dbEvent: DBEvent): Event {
       instagram_handle: null,
       logo_url: null,
       description: null,
+      category: null,
+      status: "approved",
+      created_by: null,
       created_at: dbEvent.created_at,
       updated_at: dbEvent.updated_at,
     };

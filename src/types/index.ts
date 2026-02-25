@@ -41,6 +41,9 @@ export interface Club {
   instagram_handle: string | null;
   logo_url: string | null;
   description: string | null;
+  category: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -210,4 +213,25 @@ export interface RsvpCountSummary {
 export interface EventRsvpInfo {
   counts: RsvpCountSummary;
   user_rsvp: Rsvp | null;
+}
+
+// =============================================
+// Notification Types
+// =============================================
+
+export type NotificationType =
+  | "event_reminder_24h"
+  | "event_reminder_1h"
+  | "event_approved"
+  | "event_rejected";
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  event_id: string | null;
+  type: NotificationType | string; // string fallback for forward compatibility
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
 }

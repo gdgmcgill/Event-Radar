@@ -91,6 +91,11 @@ export default function EventDetailClient() {
     checkSaved();
   }, [user, id]);
 
+  // Scroll to top when navigating to event detail
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Fetch popularity data for this event
   useEffect(() => {
     if (!id) return;

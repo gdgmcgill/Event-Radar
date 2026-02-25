@@ -118,19 +118,7 @@ export function HappeningNowSection({ onEventClick }: HappeningNowSectionProps) 
   }
 
   if (events.length === 0) {
-    return (
-      <div className="mb-12 w-full isolate overflow-hidden rounded-2xl border border-border/60 bg-muted/40 p-6 sm:p-10 flex flex-col items-center justify-center text-center">
-        <div className="bg-background p-4 rounded-full mb-4 shadow-sm">
-          <Clock className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <h2 className="text-2xl font-bold text-foreground tracking-tight mb-2">
-          Nothing Happening Right Now
-        </h2>
-        <p className="text-muted-foreground max-w-md">
-          There are no events scheduled to start within the next two hours. Check out our upcoming or recommended events below!
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
