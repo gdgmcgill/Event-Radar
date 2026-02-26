@@ -8,6 +8,9 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { resilientFetch } from "@/lib/api/resilient-fetch";
+import { validationError, internalError } from "@/lib/api/errors";
+import { logger } from "@/lib/api/logger";
 
 const RECOMMENDATION_API_URL =
   process.env.RECOMMENDATION_API_URL || "http://localhost:8000";
@@ -22,66 +25,66 @@ interface EventSyncPayload {
   category?: string;
 }
 
-/**
- * Sync event to recommendation service
- */
 export async function POST(request: NextRequest) {
   try {
     const body: EventSyncPayload = await request.json();
 
     if (!body.event_id) {
-      return NextResponse.json(
-        { error: "Missing event_id" },
-        { status: 400 }
-      );
+      return validationError("Missing event_id");
     }
 
     if (body.action === "delete") {
-      // Remove event from recommendation index
-      const response = await fetch(`${RECOMMENDATION_API_URL}/events/remove`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event_id: body.event_id }),
-      });
+      const response = await resilientFetch(
+        `${RECOMMENDATION_API_URL}/events/remove`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event_id: body.event_id }),
+        },
+        { retries: 1 }
+      );
 
       if (!response.ok) {
-        console.error("Failed to remove event from recommendations");
+        logger.warn("Failed to remove event from recommendations", {
+          eventId: body.event_id,
+          status: response.status,
+        });
       }
 
       return NextResponse.json({ success: true, action: "delete" });
     }
 
-    // Create or update event embedding
     if (!body.title || !body.description) {
-      return NextResponse.json(
-        { error: "Missing title or description for create/update" },
-        { status: 400 }
-      );
+      return validationError("Missing title or description for create/update");
     }
 
-    const response = await fetch(`${RECOMMENDATION_API_URL}/embed/event`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        event: {
-          event_id: body.event_id,
-          title: body.title,
-          description: body.description,
-          tags: body.tags || [],
-          hosting_club: body.hosting_club,
-          category: body.category,
-        },
-        store: true,
-      }),
-    });
+    const response = await resilientFetch(
+      `${RECOMMENDATION_API_URL}/embed/event`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: {
+            event_id: body.event_id,
+            title: body.title,
+            description: body.description,
+            tags: body.tags || [],
+            hosting_club: body.hosting_club,
+            category: body.category,
+          },
+          store: true,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Failed to sync event:", errorText);
-      return NextResponse.json(
-        { error: "Failed to sync event", detail: errorText },
-        { status: 500 }
-      );
+      logger.error("Failed to sync event to recommendation service", undefined, {
+        eventId: body.event_id,
+        status: response.status,
+        detail: errorText,
+      });
+      return internalError("Failed to sync event", errorText);
     }
 
     const data = await response.json();
@@ -92,12 +95,7 @@ export async function POST(request: NextRequest) {
       stored: data.stored,
     });
   } catch (error) {
-    console.error("Error syncing event:", error);
-    return NextResponse.json(
-      { error: "Failed to sync event" },
-      { status: 500 }
-    );
+    logger.error("Error syncing event", error);
+    return internalError("Failed to sync event");
   }
 }
-
-
