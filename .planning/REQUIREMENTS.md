@@ -58,10 +58,10 @@
 
 ### Dashboard
 
-- [ ] **DASH-01**: `/my-clubs/[id]` page with server-side role resolution — resolves user's club role in a single DB query, passes as prop to client components
-- [ ] **DASH-02**: Tabbed navigation — Overview, Events, Members, Settings — using shadcn Tabs component
-- [ ] **DASH-03**: URL-param tab state (`?tab=members`) for bookmarkable URLs and correct back-button behavior
-- [ ] **DASH-04**: Overview tab — club info summary (name, description, category, member count, pending invites count for owners)
+- [x] **DASH-01**: `/my-clubs/[id]` page with server-side role resolution — resolves user's club role in a single DB query, passes as prop to client components
+- [x] **DASH-02**: Tabbed navigation — Overview, Events, Members, Settings — using shadcn Tabs component
+- [x] **DASH-03**: URL-param tab state (`?tab=members`) for bookmarkable URLs and correct back-button behavior
+- [x] **DASH-04**: Overview tab — club info summary (name, description, category, member count, pending invites count for owners)
 - [ ] **DASH-05**: Events tab consuming existing `GET /api/clubs/[id]/events` — list view with event title, date, status
 - [ ] **DASH-06**: Club-context event creation link from Events tab — navigates to `/create-event` with `clubId` pre-filled
 
@@ -153,10 +153,10 @@ Updated during roadmap creation. Phases 1-4 are v1.0, phases 5+ are v1.1.
 | DBROLE-05 | Phase 5 | Complete |
 | DBROLE-06 | Phase 5 | Complete |
 | DBROLE-07 | Phase 5 | Complete |
-| DASH-01 | Phase 6 | Pending |
-| DASH-02 | Phase 6 | Pending |
-| DASH-03 | Phase 6 | Pending |
-| DASH-04 | Phase 6 | Pending |
+| DASH-01 | Phase 6 | Complete |
+| DASH-02 | Phase 6 | Complete |
+| DASH-03 | Phase 6 | Complete |
+| DASH-04 | Phase 6 | Complete |
 | DASH-05 | Phase 6 | Pending |
 | DASH-06 | Phase 6 | Pending |
 | MEM-01 | Phase 7 | Pending |

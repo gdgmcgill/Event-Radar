@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Club Organizer UX Overhaul
 status: unknown
-last_updated: "2026-02-26T03:25:18.072Z"
+last_updated: "2026-02-26T03:56:00Z"
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 8
+  completed_phases: 5
+  total_plans: 14
+  completed_plans: 9
 ---
 
 # Project State
@@ -18,17 +18,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Club organizers must have a seamless, unified experience from club creation through event management
-**Current focus:** Phase 5 — Database Foundation (all plans complete, awaiting verification)
+**Current focus:** Phase 6 — Dashboard Shell + Read-Only Tabs (Plan 01 complete)
 
 ## Current Position
 
-Phase: 5 of 8 (Database Foundation)
-Plan: 2 of 2 complete
-Status: Verifying
-Last activity: 2026-02-25 — Completed 05-02: migration applied to Supabase, all DBROLE requirements verified
+Phase: 6 of 8 (Dashboard Shell + Read-Only Tabs)
+Plan: 1 of 3 complete
+Status: In Progress
+Last activity: 2026-02-26 — Completed 06-01: shadcn Tabs installed, club dashboard shell + Overview tab created
 
-Progress: [##########..........] 50%
-(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phase 5 plans complete)
+Progress: [###########.........] 55%
+(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-6 in progress)
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: [##########..........] 50%
 | 2. Cold Start Fix | 2 | — | — |
 | 3. Notification Wiring | 2 | — | — |
 | 5. Database Foundation | 2 | ~13min | ~6.5min |
+| 6. Dashboard Shell | 1/3 | 4min | 4min |
 
 *Updated after each plan completion*
 
@@ -63,6 +64,10 @@ Progress: [##########..........] 50%
 - [v1.1 05-01]: Backfill runs before CHECK constraint to normalize existing organizer rows for creators
 - [v1.1 05-01]: Self-removal guard uses (select auth.uid()) wrapper for PostgreSQL initPlan caching
 - [v1.1 05-01]: No invitee-access SELECT policy on club_invitations — deferred to Phase 7
+- [v1.1 06-01]: Member count and pending invites fetched server-side in page.tsx to avoid client-side waterfall
+- [v1.1 06-01]: Pending invites passed as null for organizers — prevents RLS exposure, keeps Overview clean
+- [v1.1 06-01]: router.replace (not push) for tab changes — avoids polluting browser history stack
+- [v1.1 06-01]: club_invitations added to supabase/types.ts (Phase 5 table was missing from local types)
 
 ### Pending Todos
 
@@ -75,6 +80,6 @@ Progress: [##########..........] 50%
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Completed 05-02-PLAN.md — migration applied to Supabase, all DBROLE requirements verified. Awaiting phase verification.
+Last session: 2026-02-26
+Stopped at: Completed 06-01-PLAN.md — shadcn Tabs installed, /my-clubs/[id] server page + client dashboard shell + ClubOverviewTab created.
 Resume file: None

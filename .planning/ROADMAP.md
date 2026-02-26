@@ -75,7 +75,7 @@ Plans:
 - Integer phases (5, 6, 7, 8): Planned milestone work
 - Decimal phases (e.g., 6.1): Urgent insertions if needed (marked with INSERTED)
 
-- [ ] **Phase 5: Database Foundation** - Role constraints, security functions, RLS policies, invitations table, and auto-grant owner on approval
+- [x] **Phase 5: Database Foundation** - Role constraints, security functions, RLS policies, invitations table, and auto-grant owner on approval
 - [ ] **Phase 6: Dashboard Shell + Read-Only Tabs** - /my-clubs/[id] page with server-side role resolution, tabbed navigation, Overview and Events tabs
 - [ ] **Phase 7: Members Tab + Invite Flow** - Member list API, member management UI, invitation system with copy-link UX, acceptance flow
 - [ ] **Phase 8: Settings Tab + Surface Fixes** - Club settings editing, context-aware public club page, club selector on create-event, auto-approval
@@ -111,7 +111,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Install shadcn Tabs, create server page with role resolution, build client dashboard shell with URL-param tabs, and implement Overview tab
+- [x] 06-01-PLAN.md — Install shadcn Tabs, create server page with role resolution, build client dashboard shell with URL-param tabs, and implement Overview tab
 - [ ] 06-02-PLAN.md — Create Events tab consuming existing API, wire into dashboard, and update create-event page for clubId pre-fill
 
 ### Phase 7: Members Tab + Invite Flow
