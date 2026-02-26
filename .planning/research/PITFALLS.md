@@ -1,8 +1,8 @@
-# Domain Pitfalls
+# Pitfalls Research
 
-**Domain:** Cold Start Recommendation Fix + In-App Notification System
-**Project:** Uni-Verse (McGill campus event discovery platform)
-**Researched:** 2026-02-23
+**Domain:** Role-based club management + member invitations + organizer dashboard on existing Next.js/Supabase platform
+**Researched:** 2026-02-25
+**Confidence:** HIGH (based on direct codebase inspection of migrations 009 and 011, confirmed against Supabase RLS behavior)
 
 ---
 
@@ -12,269 +12,313 @@ Mistakes that cause rewrites, data loss, or broken features at launch.
 
 ---
 
-### Pitfall 1: Cron-Generated Duplicate Notifications
+### Pitfall 1: RLS Policy Gap — Owner Cannot Read Cross-Row Club Members
 
-**What goes wrong:** The Supabase Edge Function cron job fires on schedule and inserts a 24h or 1h reminder — but if the cron fires twice (overlap, restart, or pg_net retry), two identical notifications land in the table for the same user + event + type combination. Users see duplicate bell entries and lose trust in the system immediately.
+**What goes wrong:**
+The existing `"Users see own memberships"` policy on `club_members` only allows a user to read the single row where `user_id = auth.uid()`. When an owner opens the Members tab of the dashboard, the query fetches all members of a club — rows belonging to other users. Every row except the owner's own row is denied. The result is an empty member list with no error, not a permission denied message. This is extremely hard to debug because the route returns 200 with an empty array.
 
-**Why it happens:** pg_cron with pg_net HTTP invocations can retry on transient failures. Supabase Edge Functions have at-least-once delivery semantics, not exactly-once. Without a database-level guard, every retry becomes a new row.
+**Why it happens:**
+The original policies in `009_user_roles.sql` were designed for a two-actor model: a user seeing their own row, and admins seeing everything. The owner role adds a third actor that needs cross-row SELECT on a specific club's membership. Developers add the `role = 'owner'` column but do not revisit the RLS policies because "club_members already has RLS."
 
-**Consequences:** Duplicate rows in the notifications table. Users see the same reminder twice (or more). If the mark-as-read logic operates by ID, one duplicate will stay "unread" permanently, breaking the unread count badge.
+**How to avoid:**
+Add a `SECURITY DEFINER` helper function `is_club_owner(club_id UUID)` following the exact pattern of the existing `is_admin()` function in `011_rls_audit.sql`. Then add two new policies:
+- SELECT: `"Owners can view all club members"` — `EXISTS (SELECT 1 FROM is_club_owner(club_members.club_id))`
+- DELETE: `"Owners can remove club members"` — same EXISTS check, with a guard preventing self-removal
 
-**Prevention:**
-- Add a composite `UNIQUE` constraint on `(user_id, event_id, type)` in the notifications table at creation time — this is the simplest, most reliable guard. Postgres will reject the second insert with a constraint violation.
-- In the Edge Function, use `INSERT ... ON CONFLICT (user_id, event_id, type) DO NOTHING` so duplicates are silently discarded without crashing the function.
-- For the 24h and 1h reminders, include the notification type in the key: `event_reminder_24h` and `event_reminder_1h` are distinct types so both reminders can coexist for the same event.
+Both policies must be in the same migration that adds the owner role distinction to the `role` column.
 
-**Detection (warning signs):**
-- Users reporting "I got the same reminder twice."
-- Unread badge count not going to zero after reading all notifications.
-- Notifications table row count growing faster than (users × events × 2).
+**Warning signs:**
+- Members tab shows zero rows despite rows existing in the DB when queried as service_role.
+- No error thrown — Supabase client returns `{ data: [], error: null }`.
+- `SELECT * FROM club_members` in the Supabase SQL editor (as authenticated user) returns only the user's own row.
 
-**Phase:** Notifications DB schema phase — the UNIQUE constraint must be added when the table is created, not retrofitted later when data exists.
-
----
-
-### Pitfall 2: RLS Not Enabled on the Notifications Table
-
-**What goes wrong:** The `notifications` table is created but RLS is not enabled (Supabase default). Any authenticated user can query or modify any other user's notifications via the Supabase client. Bell count and read status are exposed across users.
-
-**Why it happens:** Supabase tables have RLS disabled by default. The codebase already uses service-role keys in some API routes (e.g., `calculate-popularity`), which bypass RLS entirely — so forgetting to enable RLS on a new table is easy to miss if manual testing uses a service role client.
-
-**Consequences:** Privacy breach — user A can read, mark-read, or delete user B's notifications. This is a launch-blocking security issue.
-
-**Prevention:**
-- Enable RLS immediately when creating the notifications table (before any data).
-- Add four policies minimum: SELECT (user sees only their rows), INSERT (only service role or Edge Function inserts), UPDATE (user can only update `is_read` on their own rows), DELETE (no user deletion; admin/service role only).
-- Never use `auth.uid()` policy checks in the SQL Editor — test via the Supabase client with a real user JWT to verify policies actually fire.
-- The CONCERNS.md already flags missing database indexes on `user_id` — ensure `notifications.user_id` is indexed, as the RLS policy `WHERE user_id = auth.uid()` triggers a sequential scan without it.
-
-**Detection (warning signs):**
-- Supabase dashboard shows notifications table with RLS disabled (visible in Table Editor).
-- A logged-in user can run `SELECT * FROM notifications` in the client and see rows belonging to other users.
-- The unread count returns values even when a different test account should have no notifications.
-
-**Phase:** Notifications DB schema phase — before any API routes are built.
+**Phase to address:** Phase 1 — database migration (owner role + RLS policies). Must be done before any dashboard UI.
 
 ---
 
-### Pitfall 3: Showing Expired / Past Events in the Cold Start Fallback Feed
+### Pitfall 2: Infinite Recursion in RLS Policies for club_members Self-Reference
 
-**What goes wrong:** The popularity-based fallback feed for users below the 3-save threshold queries `event_popularity` scored events without filtering for `start_time > NOW()`. New users see a feed full of events that already happened. They cannot attend them, feel the app is broken, and abandon during the exact moment the platform needs to make a first impression.
+**What goes wrong:**
+Adding an RLS policy on `club_members` that contains a subquery `FROM club_members` (to check if the current user is an owner) causes PostgreSQL to recursively evaluate the policy while already processing a query on the same table. PostgreSQL raises `ERROR: infinite recursion detected in policy for relation "club_members"`. All queries on `club_members` fail until the policy is dropped.
 
-**Why it happens:** The existing popularity scoring system (`>10 saves → +2`, `within 7 days → +1`) operates on historical save counts. A campus event from two weeks ago may still have a high popularity score. The recommendations API (365 lines, flagged in CONCERNS.md as uncached) will surface whatever scores highest without temporal filtering unless explicitly guarded.
+**Why it happens:**
+The natural way to write "only owners of this club can see all members" is:
+```sql
+EXISTS (SELECT 1 FROM club_members WHERE user_id = auth.uid() AND club_id = club_members.club_id AND role = 'owner')
+```
+This self-referential subquery triggers the policy again recursively during evaluation.
 
-**Consequences:** New users see irrelevant past events. The cold start "fix" makes first impressions worse, not better. This is the most visible UX failure possible for the milestone.
+**How to avoid:**
+Create a `SECURITY DEFINER` function that bypasses RLS when checking ownership — identical to how `is_admin()` works in `011_rls_audit.sql`:
+```sql
+CREATE OR REPLACE FUNCTION public.is_club_owner(target_club_id UUID)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.club_members
+    WHERE club_id = target_club_id
+      AND user_id = auth.uid()
+      AND role = 'owner'
+  );
+$$;
+```
+Use `public.is_club_owner(club_members.club_id)` in policies, never a raw subquery `FROM club_members`.
 
-**Prevention:**
-- Add an explicit `AND start_time > NOW()` (or `AND end_time > NOW()`) filter on every query path that serves the popularity fallback feed.
-- Consider a secondary sort: primary by `popularity_score DESC`, secondary by `start_time ASC` so the soonest upcoming event surfaces first among ties.
-- The recency boost (`within 7 days → +1`) in the scoring formula should use event `start_time`, not `created_at`, so it boosts upcoming events rather than recently created ones regardless of timing.
+**Warning signs:**
+- Any RLS policy on `club_members` with `FROM club_members` in the USING or WITH CHECK clause without a SECURITY DEFINER wrapper.
+- `ERROR: infinite recursion detected` in Supabase logs after deploying a migration.
+- All member list API calls return 500 after a migration deploy.
 
-**Detection (warning signs):**
-- Manual test: create a new account, expect to see the fallback feed, check if any displayed events have `start_time` in the past.
-- The `/api/events/popular` route (flagged in CONCERNS.md with `any` types) should be audited to confirm it already filters by time — do not assume it does.
-
-**Phase:** Cold start API fallback implementation — apply the time filter in the same PR that adds the fallback path to `/api/recommendations`.
-
----
-
-### Pitfall 4: Threshold Visibility — No User-Facing Feedback on Why Recommendations Are Missing
-
-**What goes wrong:** A user with 1 or 2 saved events does not see personalized recommendations. They see a popularity feed but have no idea why. They assume the recommendation system is broken or simply never existed. They don't know that saving one more event would unlock personalization. The threshold gate is invisible.
-
-**Why it happens:** Binary thresholds without UI feedback are a classic cold start UX mistake. The gate logic lives in the API or page.tsx, but nothing surfaces the threshold to the user.
-
-**Consequences:** Users never reach the 3-save threshold. The personalization feature is permanently gated for a large cohort of users who don't understand the model. Engagement and retention drop at exactly the wrong moment (new user onboarding).
-
-**Prevention:**
-- Display a progress indicator or contextual banner in the recommendations section: "Save 2 more events to unlock personalized picks" when the user has 1 saved event.
-- When the user has 0 saves, show: "Start saving events to get personalized recommendations."
-- This UI element should update reactively — the existing `savedEventIds.size` state in `page.tsx` already tracks this count, so the progress display is a minor addition.
-- Do not gatekeep silently. Show the fallback feed AND explain the progression.
-
-**Detection (warning signs):**
-- Code review: if the threshold check in `page.tsx` or `/api/recommendations` has no corresponding UI indicator, this pitfall is present.
-- User testing: ask a new user why they don't see personalized recommendations — if they can't answer, the feedback is missing.
-
-**Phase:** Cold start UI implementation — ship the progress indicator in the same phase as the threshold logic, not as a follow-up.
+**Phase to address:** Phase 1 — design the `is_club_owner()` function before writing any `club_members` policies. This is the foundation for everything else.
 
 ---
 
-## Moderate Pitfalls
+### Pitfall 3: clubs Table UPDATE Locked to Admins — Settings Tab Silently Fails
+
+**What goes wrong:**
+Migration `011_rls_audit.sql` deliberately locked `clubs` UPDATE to admins only (`"Admins can update clubs"`). The v1.1 milestone requires owners to edit club name, description, category, Instagram, and logo from the Settings tab. Without a new RLS policy, every save silently returns `0 rows updated` — PostgREST does not throw an error when RLS blocks an UPDATE, it just reports no rows matched. The UI may show an optimistic success toast while the database has not changed.
+
+**Why it happens:**
+The security audit was correct at the time. The organizer settings feature is additive. Developers building the settings form test it with a service role client (which bypasses RLS) during development, so everything works locally. It fails silently in production where the authenticated client is used.
+
+**How to avoid:**
+Add a migration with a scoped UPDATE policy for owners before the settings tab ships:
+```sql
+CREATE POLICY "Owners can update own club"
+  ON public.clubs
+  FOR UPDATE
+  TO authenticated
+  USING (public.is_club_owner(clubs.id))
+  WITH CHECK (public.is_club_owner(clubs.id));
+```
+The API route must also explicitly exclude `status` from the updatable columns — owners cannot self-approve a pending club by including `status: 'approved'` in the PATCH body.
+
+**Warning signs:**
+- Settings form saves without error but data does not change on page reload.
+- Supabase logs show `UPDATE clubs SET ... 0 rows` for authenticated (non-admin) requests.
+- No migration adding an owner UPDATE policy for `clubs` exists before the settings UI PR is merged.
+
+**Phase to address:** Phase 3 — club settings tab. The migration must be in the same PR as the settings form.
 
 ---
 
-### Pitfall 5: Notification Bell Triggers Unread Count Fetch on Every Page Navigation
+### Pitfall 4: Invite Flow Exposes Role Escalation via Direct PostgREST Call
 
-**What goes wrong:** The NotificationBell component lives in the Header. If it fetches the unread count on every mount (every client-side navigation), it issues a `GET /api/notifications?unread_count=true` call on every page change. With 50 concurrent users navigating normally, this becomes 50+ requests per minute against a route that queries Supabase on every call — adding to the existing "recommendation engine processes all events per user" load flagged in CONCERNS.md.
+**What goes wrong:**
+The invite feature requires a new INSERT path on `club_members`. If the INSERT policy is written as `WITH CHECK (true)` or `WITH CHECK (auth.uid() IS NOT NULL)`, any authenticated user can POST directly to the Supabase PostgREST endpoint (bypassing the Next.js API route entirely) and insert themselves as an `owner` of any club. The application layer checks role, but the database layer does not — and PostgREST is always reachable with a valid JWT.
 
-**Why it happens:** The Header is a client component that re-mounts on route changes. Without memoization or a shared state layer, every mount triggers a fresh fetch.
+**Why it happens:**
+Developers write the API route with role guards and assume that is sufficient. They forget that Supabase exposes every table via REST, and any user with a valid JWT can call it directly. The service role client pattern used in admin routes gives a false sense that "the DB is protected by the API."
 
-**Prevention:**
-- Use a global state store (Zustand — already present in the codebase at `src/store/useAuthStore.ts`) to cache the unread count client-side and only re-fetch on: page focus, explicit bell open, or after a mark-as-read action.
-- Alternatively, co-locate the unread count fetch with the existing auth initialization so the count is loaded once per session and updated on explicit interactions.
-- If choosing Supabase Realtime for live updates: each browser tab opens a WebSocket connection. For a beta with a small user base this is fine, but document the per-connection cost and set a conscious threshold for when to revisit.
+**How to avoid:**
+The INSERT policy on `club_members` for invites must enforce two constraints at the database layer:
+1. The inserting user is an owner of the target club: `public.is_club_owner(NEW.club_id)` must be true.
+2. The inserted role cannot be `'owner'`: `WITH CHECK (role = 'organizer')` — hardcoded, never from the client payload.
 
-**Detection (warning signs):**
-- Open browser DevTools Network tab and navigate between pages — if `GET /api/notifications` fires on every navigation, the fetch is not cached.
-- Supabase dashboard shows notifications API query count disproportionately high relative to user count.
+Additionally, add a CHECK constraint on the `role` column itself: `CHECK (role IN ('owner', 'organizer'))`. This is a schema-level guard that no policy can bypass.
 
-**Phase:** NotificationBell component implementation.
+**Warning signs:**
+- Any INSERT policy on `club_members` that does not call `is_club_owner()` in WITH CHECK.
+- `role` column has no CHECK constraint — `role = 'superadmin'` would succeed silently.
+- The invite API route uses the service role client (which means RLS is bypassed and the DB-layer guard does not exist).
 
----
-
-### Pitfall 6: Admin Approve/Reject Notifications Created in Application Code Instead of Database Trigger — Race Condition on Concurrent Approvals
-
-**What goes wrong:** If notification creation on admin approve/reject is implemented in the Next.js API route handler (application code path), a rapid double-click or concurrent admin action can trigger two route invocations, creating two "Your event was approved" notifications for the same event submission. The UNIQUE constraint from Pitfall 1 saves you here only if `type` is sufficiently specific.
-
-**Why it happens:** HTTP is stateless — two near-simultaneous POST requests to `/api/admin/events/[id]/approve` both read the event as "pending" and both attempt to create a notification. Without a database-level guard, both succeed.
-
-**Prevention:**
-- The PROJECT.md notes this decision is pending: "Notification creation on admin action (in approval flow or DB trigger)." Prefer a Postgres trigger on the `events` table that fires on `status` column transition from `pending` → `approved` or `pending` → `rejected`. Triggers are atomic and execute exactly once per row update, eliminating the race.
-- If using application code instead, add a unique constraint on `(user_id, event_id, type)` — the notification types `event_approved` and `event_rejected` are specific enough that a second attempt will hit the constraint and be discarded.
-- Ensure the admin action updates `events.status` atomically (single `UPDATE`) and the notification is a side effect of that update, not a separate step.
-
-**Detection (warning signs):**
-- A club organizer receives two "approved" emails for the same event submission.
-- Notifications table contains rows with identical `user_id`, `event_id`, `type` and nearly identical `created_at` timestamps.
-
-**Phase:** Admin notification integration phase.
+**Phase to address:** Phase 1 (CHECK constraint on role column) + Phase 2 (invite API route RLS policy).
 
 ---
 
-### Pitfall 7: Supabase Edge Function Cron Timing Drift for Event Reminders
+### Pitfall 5: Service Role Client Used in Organizer Routes — No DB-Layer Backstop
 
-**What goes wrong:** The 24h reminder cron job scans for events starting between `NOW() + 23h` and `NOW() + 25h` (or similar window). If the window is too narrow (e.g., exactly 24h to 24h+1min), a cron that runs at a slightly different wall-clock time due to pg_cron scheduling jitter misses events. If the window is too wide, users get reminders for events they didn't expect to be reminded about.
+**What goes wrong:**
+The existing `POST /api/admin/clubs/[id]` approval route uses the service role client and bypasses RLS. This is correct for admin-only operations. The pitfall is applying this pattern to organizer-facing routes (dashboard settings PATCH, member removal DELETE, invite INSERT) "because it's simpler than writing RLS policies." If any of these routes has a bug, injection, or authorization bypass, the service role key gives full unrestricted access to the entire database.
 
-**Why it happens:** pg_cron does not guarantee sub-minute accuracy. The Supabase documentation recommends jobs run no longer than 10 minutes and no more than 8 concurrently, but does not guarantee exact invocation timing. The Edge Function itself has a cold start median of 400ms, adding additional timing variance.
+**Why it happens:**
+The service role client is already imported and working in the codebase. Writing RLS policies requires more upfront work. The pattern is established for admin routes and tempting to reuse for organizer routes that also need elevated access.
 
-**Prevention:**
-- Use a generous time window in the reminder query: for "24h before event," query `start_time BETWEEN NOW() + INTERVAL '23 hours 30 minutes' AND NOW() + INTERVAL '24 hours 30 minutes'`. This 1-hour window tolerates cron timing drift without double-firing (protected by the UNIQUE constraint from Pitfall 1).
-- The UNIQUE constraint `(user_id, event_id, type)` is the backstop — even if the time window overlaps between two cron runs, the second insert is silently dropped via `ON CONFLICT DO NOTHING`.
-- Log the cron invocation time inside the Edge Function so timing drift can be observed and adjusted.
+**How to avoid:**
+Use the service role client only in routes protected by a server-side `is_admin()` check. All organizer-facing routes must use the regular authenticated Supabase client (`createClient()` with the anon key) and rely on RLS for authorization. Add an explicit comment on every service role client import: `// SERVICE ROLE: admin routes only — never use in organizer-facing routes`.
 
-**Detection (warning signs):**
-- Users report not receiving reminders for events they saved.
-- Edge Function logs show invocation timestamps drifting more than 2-3 minutes from the scheduled time.
-- The notifications table shows zero rows with `type = 'event_reminder_24h'` despite saved events with upcoming start times.
+**Warning signs:**
+- `SUPABASE_SERVICE_ROLE_KEY` referenced in a route that does not first verify the requesting user is an admin.
+- Organizer dashboard API routes that skip row-level checks because "the middleware already confirmed they have the club_organizer role" — middleware checks the role type, not club membership.
 
-**Phase:** Edge Function cron implementation.
-
----
-
-### Pitfall 8: Hydration Mismatch in NotificationBell Due to Unread Count Server/Client Divergence
-
-**What goes wrong:** If the NotificationBell is rendered in a server component (or the Header renders server-side with a pre-fetched unread count), and the client-side state differs at hydration time (because auth state hasn't initialized yet), React throws a hydration mismatch error that crashes the entire page or silently renders the wrong count.
-
-**Why it happens:** The existing codebase already has a fragile auth state synchronization issue (CONCERNS.md: "3-second fallback timeout arbitrary"). Adding a notification count that depends on auth state to a shared layout component creates another hydration-sensitive dependency.
-
-**Prevention:**
-- Render the NotificationBell as a client component with `"use client"`. Initialize unread count to `0` and fetch asynchronously after the component mounts. This is the pattern used in Next.js App Router to avoid hydration mismatches for auth-dependent UI.
-- Do not pass the unread count from a server component as a prop to a client component across the server/client boundary without using `Suspense` boundaries — this is a known Next.js App Router footgun.
-- The existing auth initialization pattern in `useAuthStore.ts` can be extended to also initialize notification count, keeping both in the same store update.
-
-**Detection (warning signs):**
-- Browser console shows "Hydration failed because the initial UI does not match server-rendered HTML."
-- The notification badge flickers from a number to 0 on page load.
-- The bell renders server-side with a count but the client renders it differently.
-
-**Phase:** NotificationBell component implementation.
+**Phase to address:** Phase 2 — all organizer API routes. Enforce in PR review checklist for this milestone.
 
 ---
 
-### Pitfall 9: Popularity Score Stale Data — High-Scored Past Events Poisoning the Fallback Feed
+### Pitfall 6: Auto-Approval Scope Too Broad — Any club_organizer Can Trigger It
 
-**What goes wrong:** The `event_popularity` table stores cumulative popularity scores. An event from the beginning of the semester with 50 saves has a high score and will perpetually top the fallback feed, even after it ends — unless Pitfall 3's time filter is applied. But even with a future-only filter, events nearing their end date may still rank above genuinely popular upcoming events because their save counts accumulated over weeks.
+**What goes wrong:**
+The v1.1 milestone adds club-context event creation from the dashboard with auto-approval for organizers. If the auto-approval logic checks only `'club_organizer' = ANY(users.roles)` without verifying club membership, a user with the `club_organizer` role can create an event with any `club_id` (including clubs they do not belong to) and have it auto-approved — bypassing the moderation queue entirely.
 
-**Why it happens:** Popularity scoring is additive and unbounded. The recency boost (`within 7 days → +1`) helps but does not overcome 50 accumulated saves. The CONCERNS.md flags "N+1 query pattern in popularity calculation" and "Recommendation engine processes all events per user" — the scoring system is already a known performance and accuracy concern.
+**Why it happens:**
+The `users.roles` array check is already established in middleware and API routes. It is the natural first-pass authorization check. The secondary check — is this user a member of the specific club they are posting on behalf of? — is easy to omit.
 
-**Prevention:**
-- When serving the cold start fallback, normalize scores against time-to-event: deprioritize events starting more than 30 days out (unlikely the user can attend), and avoid showing events starting within the next hour (insufficient planning time for a new user).
-- A simple window: `start_time BETWEEN NOW() + INTERVAL '2 hours' AND NOW() + INTERVAL '14 days'` combined with popularity sort gives a feed that is both popular and immediately actionable.
-- Do not change the underlying scoring formula for this milestone (PROJECT.md explicitly states "recommendation algorithm changes beyond cold start fix" are out of scope), but apply the time window filter at query time.
+**How to avoid:**
+Auto-approval must require both conditions:
+1. `'club_organizer' = ANY(users.roles)` — user has the organizer role.
+2. `EXISTS (SELECT 1 FROM club_members WHERE club_id = NEW.club_id AND user_id = auth.uid())` — user is a member of the specific club.
 
-**Detection (warning signs):**
-- The fallback feed is dominated by the same 3-5 events regardless of the current date.
-- Events from before the current week appear in the "popular" fallback feed.
-- New user test accounts see the same stale events as they did two weeks prior.
+Implement this check in the API route, not just in the RLS policy (which governs row access, not business logic like approval status).
 
-**Phase:** Cold start API fallback implementation.
+**Warning signs:**
+- Auto-approval logic references only `users.roles` without a `club_members` join.
+- An organizer can create an event with a `club_id` for a club they are not listed in and have it auto-approved.
+- Test: create event via API with a valid organizer JWT but a `club_id` the user has no membership row for — it should be pending, not auto-approved.
 
----
-
-## Minor Pitfalls
-
----
-
-### Pitfall 10: NotificationItem Timestamp Display Shows Wrong Time Zone
-
-**What goes wrong:** Notification `created_at` timestamps are stored in UTC (Supabase default). The NotificationItem component renders them without timezone conversion. A Montreal user sees "Reminder at 5:00 PM" for an event that starts at 1:00 PM EST because the UTC timestamp was rendered directly.
-
-**Prevention:**
-- Use `toLocaleString('en-CA', { timeZone: 'America/Toronto' })` for all timestamp display in notification components, consistent with how the existing `formatDate()` and `formatTime()` utilities in `src/lib/utils.ts` handle event times. Check if those utilities already apply timezone conversion — if so, reuse them.
-
-**Phase:** NotificationItem component implementation.
+**Phase to address:** Phase 2 — event creation from dashboard.
 
 ---
 
-### Pitfall 11: Mark-All-Read Endpoint Missing Pagination Guard
+### Pitfall 7: Dead Link `/my-clubs/[id]` Goes Live Before Dashboard Is Complete
 
-**What goes wrong:** `POST /api/notifications?action=mark-all-read` issues a bulk UPDATE against the user's notifications table. If a user somehow accumulates thousands of notifications (e.g., a system bug generates duplicates despite Pitfall 1 prevention), the bulk UPDATE can be slow and block the DB connection. No LIMIT means the query runs to completion regardless of row count.
+**What goes wrong:**
+The `/my-clubs` listing page already links to `/my-clubs/[id]` — confirmed as a dead link in PROJECT.md. If the dashboard page file is merged to fix the dead link before all tabs are functional, organizers reach a partially broken experience from a link they can already click. The Members tab might show an empty state due to missing RLS policies (Pitfall 1). The Settings tab might silently fail on save (Pitfall 3). All four tabs are visible at once on a tabbed UI — there is no hiding an incomplete tab.
 
-**Prevention:**
-- Add a reasonable per-user notification cap in the cron function (e.g., max 2 active reminders per event per user — enforced by the UNIQUE constraint from Pitfall 1). This bounds the maximum rows a mark-all-read touches.
-- In the API route, add `LIMIT 500` on the bulk UPDATE or paginate it, matching the capped maximum.
+**Why it happens:**
+Dashboard pages are built incrementally, tab by tab. Developers merge the page stub to resolve the dead link, intending to "add the other tabs later." The dead link feels like a bug to fix; a live broken page feels like a feature to build.
 
-**Phase:** Notifications API route implementation.
+**How to avoid:**
+Treat the `/my-clubs/[id]` page as a single atomic deliverable. All four tabs (Overview, Events, Members, Settings) must be functional before merging the page file. Define tab completeness criteria before starting implementation: each tab must render correct data, handle empty states explicitly, and not silently fail on mutations.
 
----
+**Warning signs:**
+- PR merges `app/my-clubs/[id]/page.tsx` without all tab components implemented and tested.
+- Members tab renders with no loading/error state — just silently returns an empty array.
+- Settings save button has no error handling.
 
-### Pitfall 12: `canShowRecommendations` Logic Lives in Multiple Places After Refactor
-
-**What goes wrong:** Currently `canShowRecommendations = hasInterestTags || savedEventIds.size >= 1` exists in `src/app/page.tsx`. When the threshold is changed to `savedEventIds.size >= 3`, if the same check is copy-pasted into the `/api/recommendations` fallback logic, the two values can drift (e.g., page shows personalized UI at 3 saves but API still returns fallback at 1 save, or vice versa).
-
-**Prevention:**
-- Define the threshold (`RECOMMENDATION_THRESHOLD = 3`) as a named constant in `src/lib/constants.ts` alongside the existing `EVENT_TAGS` and `EVENT_CATEGORIES` constants. Import this constant everywhere the threshold is checked — page.tsx and the recommendations API route.
-- This is consistent with the codebase's existing pattern of centralizing magic values in constants.ts.
-
-**Detection (warning signs):**
-- The personalization UI indicator (from Pitfall 4) shows "1 more event to unlock" but the API is already returning personalized results (or vice versa).
-
-**Phase:** Cold start implementation — centralize the constant before writing any threshold-check code.
+**Phase to address:** Phase 2 — dashboard foundation. Set the completeness bar before the first line of code is written.
 
 ---
 
-## Phase-Specific Warnings
+## Technical Debt Patterns
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Notifications DB table creation | RLS disabled by default (Pitfall 2) | Enable RLS + all 4 policies before merging schema |
-| Notifications DB table creation | No duplicate guard (Pitfall 1) | Add UNIQUE(user_id, event_id, type) at creation |
-| Cold start fallback API | Past events in feed (Pitfall 3) | Add `start_time > NOW()` filter in same PR |
-| Cold start UI | Silent threshold gate (Pitfall 4) | Ship progress indicator with threshold logic |
-| NotificationBell component | Unread count on every navigation (Pitfall 5) | Cache in Zustand; fetch once per session |
-| NotificationBell component | Hydration mismatch (Pitfall 8) | Mark as `"use client"`, initialize count to 0 |
-| Edge Function cron | Duplicate delivery on retry (Pitfall 1 + 7) | Use ON CONFLICT DO NOTHING + wide time window |
-| Admin approve/reject flow | Race condition on double-click (Pitfall 6) | Prefer DB trigger over application code |
-| Cold start fallback API | Stale popular events (Pitfall 9) | Apply time window filter at query time |
-| NotificationItem component | UTC timestamp display (Pitfall 10) | Reuse existing formatTime() utility |
-| Recommendations constant | Threshold drift between UI and API (Pitfall 12) | Define RECOMMENDATION_THRESHOLD in constants.ts |
+Shortcuts that seem reasonable but create long-term problems.
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Service role client in organizer API routes | Skip writing RLS policies | Any route compromise = full DB access; no audit trail for organizer actions | Never |
+| No CHECK constraint on `club_members.role` | Faster migration | Arbitrary role strings silently accepted; `role = 'superadmin'` works | Never — add CHECK on role column in Phase 1 |
+| Inline `FROM club_members` subquery in `club_members` RLS policy | Avoids writing a helper function | Infinite recursion crash in production | Never — use SECURITY DEFINER function |
+| Allow owner to PATCH `clubs.status` from settings form | Simpler API — one endpoint updates all fields | Owners self-approve pending clubs; bypasses admin moderation | Never — exclude status from owner-updatable columns |
+| Merge dashboard page stub before all tabs are functional | Fixes dead link immediately | Users reach a live but broken experience | Never — ship all tabs together or keep the dead link |
+| Accept `role` field from client payload in invite endpoint | Flexible invite system | Any user can escalate to owner via direct API call | Never — hardcode `role = 'organizer'` server-side |
+
+---
+
+## Integration Gotchas
+
+Common mistakes when connecting to the existing system.
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Supabase RLS + PostgREST | Writing guards only in Next.js API routes, assuming PostgREST is internal | PostgREST is reachable with any valid user JWT — all table policies must be safe as the last line of defense |
+| Supabase permissive policies (OR logic) | Adding a new permissive policy assuming it narrows existing access | Permissive policies expand access with OR. To narrow access, drop the broad policy and replace with a scoped one |
+| club_members self-referential RLS | `FROM club_members` subquery in a `club_members` policy | Use `is_club_owner()` SECURITY DEFINER function — never a raw subquery on the same table |
+| Service role client | Reusing admin route pattern for organizer routes | Service role bypasses RLS entirely; use authenticated client for all organizer-facing routes |
+| Next.js middleware route protection | Middleware checks `club_organizer` role but not club membership | Middleware handles role type; API routes must also verify the user is a member of the specific club being accessed |
+| clubs table RLS after audit | Assuming clubs has "enough" RLS from the security audit | `011_rls_audit.sql` locked UPDATE to admins only; owner settings require a new migration to add a scoped UPDATE policy |
+
+---
+
+## Performance Traps
+
+Patterns that work at small scale but fail as usage grows.
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| No composite index on `club_members(club_id, role)` | `is_club_owner()` function does a full scan on every RLS policy evaluation (called once per returned row) | Add `CREATE INDEX idx_club_members_club_role ON club_members(club_id, role)` in Phase 1 migration | At ~200+ club_members rows — policies are evaluated per-row on every query |
+| Dashboard fetches members, events, and club details in three sequential awaits | Tab switches feel slow; visible waterfall in DevTools network panel | Use `Promise.all()` for parallel fetches or a single Supabase RPC | From day one — visible on any >50ms network |
+| Fetching full event objects for the dashboard events list tab | Over-fetches unused columns (description, tags, image_url) for a list view | SELECT only `id, title, date, status` for list; fetch full event only on edit | Noticeable at ~30+ events per club |
+
+---
+
+## Security Mistakes
+
+Domain-specific security issues beyond general web security.
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Accepting `role` from client in invite payload | Role escalation — any user inserts themselves as owner | Hardcode `role = 'organizer'` in invite API route; never read it from request body |
+| No expiry on invite tokens | Stale invite links usable indefinitely; club membership granted after member leaves | Add `expires_at TIMESTAMPTZ` column to invite table; reject inserts if `expires_at < NOW()` |
+| Invite accepted without verifying invitee email matches authenticated user | Anyone with the link can accept on behalf of any email | Validate `auth.user().email === invite.invitee_email` before inserting `club_members` row |
+| Owner can update `clubs.status` via settings PATCH | Owner self-approves a pending club, bypassing admin moderation | Explicitly exclude `status` from the list of columns the owner PATCH endpoint accepts |
+| Event auto-approval checks role only, not club membership | Organizer creates event under any club_id and bypasses moderation | Require both: `club_organizer` role in `users.roles` AND membership row in `club_members` for the specific `club_id` |
+| `users.roles` readable by all authenticated users | Attacker enumerates admin and organizer accounts | Confirmed fixed in `011_rls_audit.sql` — verify no new migration re-introduces a permissive users SELECT policy |
+
+---
+
+## UX Pitfalls
+
+Common user experience mistakes in this domain.
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Public club page shows "Request Organizer Access" to existing organizers | Organizer clicks it, goes through the request flow, gets a confusing error | Context-aware CTA: check `club_members` on page load — show "Manage Club" for owners, "Club Dashboard" for organizers, "Request Access" for everyone else |
+| No feedback after inviting a member when the email is not in the users table | Owner thinks invite succeeded; invitee never gets access | Show explicit error: "No account found for this email. They must sign in with their McGill account first." |
+| Settings save with no field-change detection | Unnecessary API calls on every tab visit; misleading affordance | Disable save button until a field value diverges from the originally loaded club data |
+| Member removal with no confirmation dialog | Owner accidentally removes a co-organizer with one mis-click | Require confirm dialog for member removal; no undo exists |
+| Dashboard accessible by role type but not scoped to club — any organizer sees any club dashboard | Organizer A can view organizer B's club member list | Dashboard page must verify membership in the specific club, not just presence of `club_organizer` in roles |
+
+---
+
+## "Looks Done But Isn't" Checklist
+
+Things that appear complete but are missing critical pieces.
+
+- [ ] **Owner role migration:** `club_members.role` column has `CHECK (role IN ('owner', 'organizer'))` constraint — verify in migration SQL, not just application code
+- [ ] **is_club_owner() function:** SECURITY DEFINER function exists and is used in all club_members policies — verify no raw `FROM club_members` subquery exists in any RLS policy
+- [ ] **Owner cross-row SELECT:** Owner can see all club members, not just their own row — test via authenticated Supabase client with owner JWT (not service role)
+- [ ] **clubs UPDATE policy:** Owner can save club settings via authenticated client — test fails without the new migration; test succeeds only after it lands
+- [ ] **Auto-grant on approval:** Club creator gets `role = 'owner'` in `club_members` AND `club_organizer` in `users.roles` on admin approval — verify both, not just one
+- [ ] **Invite role lock:** Sending `role: 'owner'` in invite request body is ignored — verify by POSTing directly to the API with owner payload
+- [ ] **Auto-approval scope:** Organizer creating event with a `club_id` they have no membership row for gets pending status, not auto-approved
+- [ ] **Dashboard route protection:** `/my-clubs/[id]` returns an error (not empty data) when accessed by a user who is not a member of that club — test at both middleware and API layer
+- [ ] **Public club page CTAs:** All three membership states tested — owner, organizer, and unaffiliated user each see the correct CTA
+
+---
+
+## Recovery Strategies
+
+When pitfalls occur despite prevention, how to recover.
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Infinite recursion in club_members policy deployed to production | HIGH | Drop offending policy immediately via Supabase SQL editor using service role; all club_members queries fail until fixed; deploy corrected migration with SECURITY DEFINER function |
+| Role escalation — unauthorized owner row inserted | HIGH | Revoke the club_members row and downgrade users.roles; audit Supabase logs for other inserts from the same session; add missing CHECK constraint and RLS WITH CHECK in emergency migration |
+| Service role used in organizer route — scope of exposure discovered | HIGH | Audit all requests via that route in Supabase logs; rotate service role key immediately; redeploy route using authenticated client + RLS |
+| Owner accidentally self-removed — club has no owner | MEDIUM | Admin reassigns owner via admin dashboard or direct SQL; club management is locked until fixed; add application guard preventing self-removal |
+| clubs UPDATE policy missing — settings saves silently failing | LOW | Add missing RLS policy migration; no data loss occurred; users see stale data until deployment |
+| Dead link page merged incomplete — users reach broken tabs | LOW | Revert to 404 or add "coming soon" redirect for incomplete tabs; document tab completeness criteria before next PR |
+
+---
+
+## Pitfall-to-Phase Mapping
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Owner cross-row SELECT blocked by existing RLS | Phase 1: DB migration (owner role + policies) | Query club_members as owner JWT via supabase-js — confirm all club members returned |
+| Infinite recursion in club_members policies | Phase 1: DB migration (is_club_owner function) | Deploy migration to staging, run authenticated query — confirm no recursion error |
+| Role escalation via invite payload | Phase 2: Invite API route + RLS INSERT policy | POST directly to PostgREST with `role: 'owner'` — confirm rejected |
+| Service role in organizer routes | Phase 2: All organizer API routes | Grep for SERVICE_ROLE_KEY in non-admin route files during PR review |
+| Auto-approval too broad | Phase 2: Event creation from dashboard | Create event with valid organizer JWT + foreign club_id — confirm pending status |
+| Dead link goes live before dashboard complete | Phase 2: Dashboard foundation | All four tabs render correct data before merging the page file |
+| clubs UPDATE blocked for owners after audit | Phase 3: Club settings tab | Save settings as owner JWT via supabase-js — confirm row updated in DB |
+| Public club page shows wrong CTAs | Phase 4: Context-aware public page | Test all three membership states against the public club page |
 
 ---
 
 ## Sources
 
-- [Supabase Row Level Security Docs](https://supabase.com/docs/guides/database/postgres/row-level-security) — HIGH confidence (official docs)
-- [Fixing RLS Misconfigurations in Supabase](https://prosperasoft.com/blog/database/supabase/supabase-rls-issues/) — MEDIUM confidence (community, verified against official docs)
-- [Supabase Scheduling Edge Functions](https://supabase.com/docs/guides/functions/schedule-functions) — HIGH confidence (official docs)
-- [Processing Large Jobs with Edge Functions, Cron, and Queues](https://supabase.com/blog/processing-large-jobs-with-edge-functions) — HIGH confidence (official Supabase blog)
-- [Supabase Persistent Storage and 97% Faster Cold Starts](https://supabase.com/blog/persistent-storage-for-faster-edge-functions) — HIGH confidence (official Supabase blog, cold start latency figures: 400ms median)
-- [Building Idempotent Cron Jobs](https://traveling-coderman.net/code/node-architecture/idempotent-cron-job/) — MEDIUM confidence (community article with verifiable pattern)
-- [Idempotent Requests in Notification Infrastructure](https://www.fyno.io/blog/idempotent-requests-in-notification-infrastructure-cm4s7axck002x9jffvml6fx1y) — MEDIUM confidence (vendor blog, pattern is well-established)
-- [Top 5 In-App Notification Pitfalls](https://sceyt.com/blog/in-app-notification-mistakes-and-how-to-avoid-them) — MEDIUM confidence (community article)
-- [Building a Real-time Notification System with Supabase and Next.js](https://makerkit.dev/blog/tutorials/real-time-notifications-supabase-nextjs) — MEDIUM confidence (MakerKit, practical implementation)
-- [Next.js Hydration Error Docs](https://nextjs.org/docs/messages/react-hydration-error) — HIGH confidence (official Next.js docs)
-- [Cracking the Cold Start Problem: A Practitioner's Guide](https://medium.com/data-scientists-handbook/cracking-the-cold-start-problem-in-recommender-systems-a-practitioners-guide-069bfda2b800) — MEDIUM confidence (community, patterns are standard)
-- [Popularity Bias in Recommender Systems](https://link.springer.com/article/10.1007/s11257-024-09406-0) — HIGH confidence (peer-reviewed, Springer)
-- [Why Most Mobile Push Notification Architecture Fails](https://www.netguru.com/blog/why-mobile-push-notification-architecture-fails) — MEDIUM confidence (agency blog, patterns are well-established)
-- Project-specific context: `.planning/PROJECT.md` and `.planning/codebase/CONCERNS.md` — HIGH confidence (first-party codebase analysis)
+- Direct inspection of `/supabase/migrations/009_user_roles.sql` — confirmed `club_members.role TEXT` has no CHECK constraint; confirmed existing RLS policies cover only own-row SELECT and admin ALL; HIGH confidence (first-party codebase)
+- Direct inspection of `/supabase/migrations/011_rls_audit.sql` — confirmed `clubs` UPDATE locked to admins only; confirmed `is_admin()` SECURITY DEFINER pattern available to reuse for `is_club_owner()`; HIGH confidence (first-party codebase)
+- `.planning/PROJECT.md` — confirmed dead link on `/my-clubs/[id]`, confirmed auto-grant uses service role, confirmed role column needs owner/organizer distinction; HIGH confidence (first-party)
+- Supabase RLS documentation on permissive policy OR logic — HIGH confidence (official Supabase docs)
+- PostgreSQL documentation on SECURITY DEFINER functions to break recursive RLS evaluation — HIGH confidence (official PostgreSQL docs, well-established pattern)
+- Supabase PostgREST direct endpoint exposure — HIGH confidence (Supabase architecture is documented; any table is reachable via REST with a valid JWT)
+
+---
+*Pitfalls research for: Role-based club management + member invitations + organizer dashboard (v1.1 milestone)*
+*Researched: 2026-02-25*
