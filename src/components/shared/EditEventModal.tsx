@@ -26,8 +26,12 @@ import {
   Palette,
   Heart,
   Sparkles,
+  X,
+  Upload,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { uploadEventImage } from "@/lib/upload-utils";
+import { EventImageUpload } from "@/components/events/EventImageUpload";
 
 const iconMap: Record<string, LucideIcon> = {
   GraduationCap,
@@ -57,6 +61,8 @@ export function EditEventModal({
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
   const [tags, setTags] = useState<EventTag[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestedTags, setSuggestedTags] = useState<EventTag[]>([]);
@@ -86,6 +92,8 @@ export function EditEventModal({
     setTime(ev.event_time);
     setLocation(ev.location);
     setTags([...ev.tags]);
+    setImageFile(null);
+    setImagePreview(ev.image_url || null);
     setError(null);
   };
 
@@ -102,6 +110,17 @@ export function EditEventModal({
     );
   };
 
+  const handleImageChange = (file: File) => {
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setError(null);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!event) return;
@@ -110,6 +129,18 @@ export function EditEventModal({
     setError(null);
 
     try {
+      let finalImageUrl = imagePreview;
+
+      // Upload new image if provided
+      if (imageFile) {
+        const uploadedUrl = await uploadEventImage(imageFile);
+        if (uploadedUrl) {
+          finalImageUrl = uploadedUrl;
+        } else {
+          console.warn("Image upload failed, submitting without new image");
+        }
+      }
+
       const startDate = new Date(`${date}T${time}`).toISOString();
 
       const res = await fetch(`/api/events/${event.id}`, {
@@ -122,12 +153,14 @@ export function EditEventModal({
           end_date: startDate,
           location,
           tags,
+          image_url: finalImageUrl,
           category: tags[0],
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Failed to update event");
       }
 
@@ -282,6 +315,13 @@ export function EditEventModal({
               })}
             </div>
           </div>
+
+          <EventImageUpload
+            imagePreview={imagePreview}
+            onImageChange={handleImageChange}
+            onImageRemove={removeImage}
+            setError={setError}
+          />
 
           <DialogFooter>
             <Button
