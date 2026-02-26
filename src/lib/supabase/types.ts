@@ -469,38 +469,32 @@ export type Database = {
         Row: {
           id: string;
           club_id: string;
-          invited_by: string;
+          inviter_id: string;
           invitee_email: string;
-          role: string;
-          status: string;
           token: string;
-          expires_at: string | null;
+          status: string;
+          expires_at: string;
           created_at: string;
-          updated_at: string;
         };
         Insert: {
           id?: string;
           club_id: string;
-          invited_by: string;
+          inviter_id: string;
           invitee_email: string;
-          role?: string;
-          status?: string;
           token?: string;
-          expires_at?: string | null;
+          status?: string;
+          expires_at?: string;
           created_at?: string;
-          updated_at?: string;
         };
         Update: {
           id?: string;
           club_id?: string;
-          invited_by?: string;
+          inviter_id?: string;
           invitee_email?: string;
-          role?: string;
-          status?: string;
           token?: string;
-          expires_at?: string | null;
+          status?: string;
+          expires_at?: string;
           created_at?: string;
-          updated_at?: string;
         };
         Relationships: [
           {
@@ -511,8 +505,8 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "club_invitations_invited_by_fkey";
-            columns: ["invited_by"];
+            foreignKeyName: "club_invitations_inviter_id_fkey";
+            columns: ["inviter_id"];
             isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["id"];
