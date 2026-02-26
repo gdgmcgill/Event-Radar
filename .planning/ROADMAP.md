@@ -108,7 +108,11 @@ Plans:
   3. The Overview tab displays the club's name, description, category, and member count
   4. The Events tab lists the club's events with title, date, and approval status (consuming the existing GET /api/clubs/[id]/events endpoint)
   5. The Events tab contains a "Create Event" link that navigates to /create-event with the club pre-selected
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Install shadcn Tabs, create server page with role resolution, build client dashboard shell with URL-param tabs, and implement Overview tab
+- [ ] 06-02-PLAN.md — Create Events tab consuming existing API, wire into dashboard, and update create-event page for clubId pre-fill
 
 ### Phase 7: Members Tab + Invite Flow
 **Goal**: Club owners can view all members, remove organizers, invite new organizers by email with a copy-link mechanism, and see pending invitations — completing the member management loop
