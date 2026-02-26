@@ -144,7 +144,7 @@ Phases execute in numeric order: 5 → 6 → 7 → 8
 | 2. Cold Start Fix | v1.0 | 2/2 | Complete | 2026-02-23 |
 | 3. Notification System Wiring | v1.0 | 2/2 | Complete | 2026-02-23 |
 | 4. Cron Scheduler Configuration | v1.0 | 0/TBD | Deferred | - |
-| 5. Database Foundation | v1.1 | 0/2 | Planned | - |
+| 5. Database Foundation | 1/2 | In Progress|  | - |
 | 6. Dashboard Shell + Read-Only Tabs | v1.1 | 0/TBD | Not started | - |
 | 7. Members Tab + Invite Flow | v1.1 | 0/TBD | Not started | - |
 | 8. Settings Tab + Surface Fixes | v1.1 | 0/TBD | Not started | - |
