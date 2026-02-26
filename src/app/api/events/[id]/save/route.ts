@@ -6,6 +6,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
+import { unauthorizedError, notFoundError, internalError } from "@/lib/api/errors";
+import { logger } from "@/lib/api/logger";
 
 interface RouteContext {
   params: Promise<{
@@ -24,7 +26,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedError();
     }
 
     const { error: deleteError } = await supabase
@@ -34,14 +36,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
       .eq("event_id", eventId);
 
     if (deleteError) {
-      console.error("Error deleting saved event:", deleteError);
-      return NextResponse.json({ error: "Failed to unsave event" }, { status: 500 });
+      logger.error("Failed to unsave event", deleteError, { eventId, userId: user.id });
+      return internalError("Failed to unsave event");
     }
 
     return NextResponse.json({ saved: false });
   } catch (error) {
-    console.error("Unexpected error unsaving event:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    logger.error("Unexpected error unsaving event", error);
+    return internalError();
   }
 }
 
@@ -56,10 +58,9 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedError();
     }
 
-    // Check if event exists
     const { data: eventExists, error: eventError } = await supabase
       .from("events")
       .select("id")
@@ -67,15 +68,14 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
       .maybeSingle();
 
     if (eventError) {
-      console.error("Error looking up event:", eventError);
-      return NextResponse.json({ error: "Failed to verify event" }, { status: 500 });
+      logger.error("Failed to verify event", eventError, { eventId });
+      return internalError("Failed to verify event");
     }
 
     if (!eventExists) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+      return notFoundError("Event");
     }
 
-    // Check if already saved
     const { data: existing, error: existingError } = await supabase
       .from("saved_events")
       .select("id")
@@ -84,11 +84,10 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
       .maybeSingle();
 
     if (existingError) {
-      console.error("Error checking saved event:", existingError);
-      return NextResponse.json({ error: "Failed to check saved event" }, { status: 500 });
+      logger.error("Failed to check saved event", existingError, { eventId, userId: user.id });
+      return internalError("Failed to check saved event");
     }
 
-    // Toggle: if already saved, unsave it
     if (existing) {
       const { error: deleteError } = await supabase
         .from("saved_events")
@@ -97,26 +96,25 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
         .eq("event_id", eventId);
 
       if (deleteError) {
-        console.error("Error unsaving event:", deleteError);
-        return NextResponse.json({ error: "Failed to unsave event" }, { status: 500 });
+        logger.error("Failed to unsave event", deleteError, { eventId, userId: user.id });
+        return internalError("Failed to unsave event");
       }
 
       return NextResponse.json({ saved: false });
     }
- 
-    // Save it
+
     const { error: insertError } = await supabase
       .from("saved_events")
       .insert({ user_id: user.id, event_id: eventId });
 
     if (insertError) {
-      console.error("Save event error:", insertError);
-      return NextResponse.json({ error: "Failed to save event" }, { status: 500 });
+      logger.error("Failed to save event", insertError, { eventId, userId: user.id });
+      return internalError("Failed to save event");
     }
 
     return NextResponse.json({ saved: true });
   } catch (error) {
-    console.error("Unexpected error saving event:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    logger.error("Unexpected error saving event", error);
+    return internalError();
   }
 }
