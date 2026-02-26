@@ -77,7 +77,7 @@ Plans:
 
 - [x] **Phase 5: Database Foundation** - Role constraints, security functions, RLS policies, invitations table, and auto-grant owner on approval
 - [x] **Phase 6: Dashboard Shell + Read-Only Tabs** - /my-clubs/[id] page with server-side role resolution, tabbed navigation, Overview and Events tabs (completed 2026-02-26)
-- [ ] **Phase 7: Members Tab + Invite Flow** - Member list API, member management UI, invitation system with copy-link UX, acceptance flow
+- [x] **Phase 7: Members Tab + Invite Flow** - Member list API, member management UI, invitation system with copy-link UX, acceptance flow (completed 2026-02-26)
 - [ ] **Phase 8: Settings Tab + Surface Fixes** - Club settings editing, context-aware public club page, club selector on create-event, auto-approval
 
 ## Phase Details
@@ -155,5 +155,5 @@ Phases execute in numeric order: 5 → 6 → 7 → 8
 | 4. Cron Scheduler Configuration | v1.0 | 0/TBD | Deferred | - |
 | 5. Database Foundation | v1.1 | 2/2 | Complete | 2026-02-25 |
 | 6. Dashboard Shell + Read-Only Tabs | 3/3 | Complete   | 2026-02-26 | - |
-| 7. Members Tab + Invite Flow | 2/3 | In Progress|  | - |
+| 7. Members Tab + Invite Flow | 3/3 | Complete   | 2026-02-26 | - |
 | 8. Settings Tab + Surface Fixes | v1.1 | 0/TBD | Not started | - |

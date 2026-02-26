@@ -76,6 +76,8 @@ Progress: [###############.....] 70%
 - [v1.1 07-01]: POST /invites returns token only — URL construction is client-side, avoids hardcoding domain in API
 - [v1.1 07-01]: Invitee SELECT policy uses email sub-select from users table (consistent with Phase 5 RLS patterns)
 - [v1.1 07-01]: Owner revoke UPDATE policy added to invitee migration (MEM-08) — all club_invitations UPDATE policies co-located
+- [v1.1 07-02]: userId prop threads from server page (user.id from auth.getUser) through ClubDashboard to ClubMembersTab — avoids client-side auth call in component
+- [v1.1 07-02]: Invite revocation uses status update ('revoked') not hard delete — preserves invitation history
 - [v1.1 07-03]: RLS handles email match implicitly on invite lookup — query returns null for mismatched email, no explicit app-layer email comparison needed
 - [v1.1 07-03]: Success page shown (not immediate redirect) on invite acceptance — user sees "You're in!" confirmation
 - [v1.1 07-03]: Existing member silently redirects to club dashboard — idempotent, not an error condition
