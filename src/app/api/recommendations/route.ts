@@ -11,6 +11,8 @@ import { mapTags, transformEventFromDB, tagMapping } from "@/lib/tagMapping";
 import type { Database } from "@/lib/supabase/types";
 import type { NextRequest } from "next/server";
 import { RECOMMENDATION_THRESHOLD } from "@/lib/constants";
+import { unauthorizedError, internalError } from "@/lib/api/errors";
+import { logger } from "@/lib/api/logger";
 
 type DbUser = Database["public"]["Tables"]["users"]["Row"];
 type DbSavedEvent = Database["public"]["Tables"]["saved_events"]["Row"];
@@ -121,7 +123,7 @@ async function buildPopularityFallback(
     .limit(200);
 
   if (error) {
-    console.error("Supabase error fetching fallback events:", error);
+    logger.error("Supabase error fetching fallback events", error);
     return [];
   }
 
@@ -155,7 +157,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedError();
     }
 
     // Cold-start detection: fetch only current user's saved events first
@@ -165,11 +167,8 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id);
 
     if (userSavedError) {
-      console.error("Supabase error fetching user saved events:", userSavedError);
-      return NextResponse.json(
-        { error: "Failed to fetch saved events" },
-        { status: 500 }
-      );
+      logger.error("Failed to fetch saved events", userSavedError);
+      return internalError("Failed to fetch saved events");
     }
 
     const currentUserSavedIds = new Set(
@@ -205,35 +204,23 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (userProfileResult.error) {
-      console.error("Supabase error fetching user profile:", userProfileResult.error);
-      return NextResponse.json(
-        { error: "Failed to fetch user profile" },
-        { status: 500 }
-      );
+      logger.error("Failed to fetch user profile", userProfileResult.error);
+      return internalError("Failed to fetch user profile");
     }
 
     if (usersResult.error) {
-      console.error("Supabase error fetching users:", usersResult.error);
-      return NextResponse.json(
-        { error: "Failed to fetch users" },
-        { status: 500 }
-      );
+      logger.error("Failed to fetch users", usersResult.error);
+      return internalError("Failed to fetch users");
     }
 
     if (savedEventsResult.error) {
-      console.error("Supabase error fetching saved events:", savedEventsResult.error);
-      return NextResponse.json(
-        { error: "Failed to fetch saved events" },
-        { status: 500 }
-      );
+      logger.error("Failed to fetch saved events", savedEventsResult.error);
+      return internalError("Failed to fetch saved events");
     }
 
     if (allEventsResult.error) {
-      console.error("Supabase error fetching events:", allEventsResult.error);
-      return NextResponse.json(
-        { error: "Failed to fetch events" },
-        { status: 500 }
-      );
+      logger.error("Failed to fetch events", allEventsResult.error);
+      return internalError("Failed to fetch events");
     }
 
     const userProfile = userProfileResult.data as unknown as DbUser | null;
@@ -409,11 +396,8 @@ export async function GET(request: NextRequest) {
           .limit(20);
 
         if (fallbackError) {
-          console.error("Supabase error fetching fallback events:", fallbackError);
-          return NextResponse.json(
-            { error: "Failed to fetch recommendations" },
-            { status: 500 }
-          );
+          logger.error("Failed to fetch fallback recommendations", fallbackError);
+          return internalError("Failed to fetch recommendations");
         }
 
         const fallbackEvents = fallbackEventsResult as unknown as DbEventRow[] | null;
@@ -428,10 +412,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ recommendations, source: "personalized" as const });
   } catch (error) {
-    console.error("Error fetching recommendations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch recommendations" },
-      { status: 500 }
-    );
+    logger.error("Error fetching recommendations", error);
+    return internalError("Failed to fetch recommendations");
   }
 }
