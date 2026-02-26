@@ -91,7 +91,7 @@ export async function PATCH(
       {
         user_id: club.created_by,
         club_id: id,
-        role: "organizer",
+        role: "owner",              // DBROLE-06: creator becomes owner, not organizer
       },
       { onConflict: "user_id,club_id" }
     );
@@ -101,7 +101,7 @@ export async function PATCH(
         user_id: club.created_by,
         type: "club_approved",
         title: "Club Approved!",
-        message: `Your club "${club.name}" has been approved. You are now an organizer and can create events.`,
+        message: `Your club "${club.name}" has been approved. You are now the owner and can create events.`,
       });
     } catch (notifErr) {
       console.error("[Admin] Failed to send club notification:", notifErr);
