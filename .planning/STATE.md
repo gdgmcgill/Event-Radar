@@ -36,5 +36,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Milestone v1.1 initialization — researching domain before requirements
-Resume file: None
+Stopped at: Research complete (4 researchers + synthesis). Next: Define requirements (Step 9 of new-milestone workflow)
+Resume file: .planning/.continue-here.md
