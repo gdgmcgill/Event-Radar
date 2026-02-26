@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Club Organizer UX Overhaul
 status: unknown
-last_updated: "2026-02-26T03:56:00Z"
+last_updated: "2026-02-26T04:03:00Z"
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 14
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Club organizers must have a seamless, unified experience from club creation through event management
-**Current focus:** Phase 6 — Dashboard Shell + Read-Only Tabs (Plan 01 complete)
+**Current focus:** Phase 6 — Dashboard Shell + Read-Only Tabs (Plan 02 complete)
 
 ## Current Position
 
 Phase: 6 of 8 (Dashboard Shell + Read-Only Tabs)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In Progress
-Last activity: 2026-02-26 — Completed 06-01: shadcn Tabs installed, club dashboard shell + Overview tab created
+Last activity: 2026-02-26 — Completed 06-02: ClubEventsTab created with fetch/loading/error/empty/list states; create-event page updated for clubId pre-fill
 
 Progress: [###########.........] 55%
 (v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-6 in progress)
@@ -45,7 +45,7 @@ Progress: [###########.........] 55%
 | 2. Cold Start Fix | 2 | — | — |
 | 3. Notification Wiring | 2 | — | — |
 | 5. Database Foundation | 2 | ~13min | ~6.5min |
-| 6. Dashboard Shell | 1/3 | 4min | 4min |
+| 6. Dashboard Shell | 2/3 | 5min | 2.5min |
 
 *Updated after each plan completion*
 
@@ -68,6 +68,9 @@ Progress: [###########.........] 55%
 - [v1.1 06-01]: Pending invites passed as null for organizers — prevents RLS exposure, keeps Overview clean
 - [v1.1 06-01]: router.replace (not push) for tab changes — avoids polluting browser history stack
 - [v1.1 06-01]: club_invitations added to supabase/types.ts (Phase 5 table was missing from local types)
+- [v1.1 06-02]: useCallback wrapping fetchEvents so retry button and useEffect share same fetcher without re-creation
+- [v1.1 06-02]: Suspense wraps CreateEventPageContent (useSearchParams caller) — required by Next.js App Router
+- [v1.1 06-02]: Badge className override for status colors (green/amber) rather than new variants on shared component
 
 ### Pending Todos
 
@@ -81,5 +84,5 @@ Progress: [###########.........] 55%
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 06-01-PLAN.md — shadcn Tabs installed, /my-clubs/[id] server page + client dashboard shell + ClubOverviewTab created.
+Stopped at: Completed 06-02-PLAN.md — ClubEventsTab created and wired, create-event page updated for clubId pre-fill.
 Resume file: None

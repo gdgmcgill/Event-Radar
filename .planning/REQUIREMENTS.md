@@ -62,8 +62,8 @@
 - [x] **DASH-02**: Tabbed navigation — Overview, Events, Members, Settings — using shadcn Tabs component
 - [x] **DASH-03**: URL-param tab state (`?tab=members`) for bookmarkable URLs and correct back-button behavior
 - [x] **DASH-04**: Overview tab — club info summary (name, description, category, member count, pending invites count for owners)
-- [ ] **DASH-05**: Events tab consuming existing `GET /api/clubs/[id]/events` — list view with event title, date, status
-- [ ] **DASH-06**: Club-context event creation link from Events tab — navigates to `/create-event` with `clubId` pre-filled
+- [x] **DASH-05**: Events tab consuming existing `GET /api/clubs/[id]/events` — list view with event title, date, status
+- [x] **DASH-06**: Club-context event creation link from Events tab — navigates to `/create-event` with `clubId` pre-filled
 
 ### Members & Invitations
 
@@ -157,8 +157,8 @@ Updated during roadmap creation. Phases 1-4 are v1.0, phases 5+ are v1.1.
 | DASH-02 | Phase 6 | Complete |
 | DASH-03 | Phase 6 | Complete |
 | DASH-04 | Phase 6 | Complete |
-| DASH-05 | Phase 6 | Pending |
-| DASH-06 | Phase 6 | Pending |
+| DASH-05 | Phase 6 | Complete |
+| DASH-06 | Phase 6 | Complete |
 | MEM-01 | Phase 7 | Pending |
 | MEM-02 | Phase 7 | Pending |
 | MEM-03 | Phase 7 | Pending |

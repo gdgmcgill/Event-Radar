@@ -76,7 +76,7 @@ Plans:
 - Decimal phases (e.g., 6.1): Urgent insertions if needed (marked with INSERTED)
 
 - [x] **Phase 5: Database Foundation** - Role constraints, security functions, RLS policies, invitations table, and auto-grant owner on approval
-- [ ] **Phase 6: Dashboard Shell + Read-Only Tabs** - /my-clubs/[id] page with server-side role resolution, tabbed navigation, Overview and Events tabs
+- [x] **Phase 6: Dashboard Shell + Read-Only Tabs** - /my-clubs/[id] page with server-side role resolution, tabbed navigation, Overview and Events tabs (completed 2026-02-26)
 - [ ] **Phase 7: Members Tab + Invite Flow** - Member list API, member management UI, invitation system with copy-link UX, acceptance flow
 - [ ] **Phase 8: Settings Tab + Surface Fixes** - Club settings editing, context-aware public club page, club selector on create-event, auto-approval
 
@@ -149,6 +149,6 @@ Phases execute in numeric order: 5 → 6 → 7 → 8
 | 3. Notification System Wiring | v1.0 | 2/2 | Complete | 2026-02-23 |
 | 4. Cron Scheduler Configuration | v1.0 | 0/TBD | Deferred | - |
 | 5. Database Foundation | v1.1 | 2/2 | Complete | 2026-02-25 |
-| 6. Dashboard Shell + Read-Only Tabs | v1.1 | 0/TBD | Not started | - |
+| 6. Dashboard Shell + Read-Only Tabs | 2/2 | Complete   | 2026-02-26 | - |
 | 7. Members Tab + Invite Flow | v1.1 | 0/TBD | Not started | - |
 | 8. Settings Tab + Surface Fixes | v1.1 | 0/TBD | Not started | - |
