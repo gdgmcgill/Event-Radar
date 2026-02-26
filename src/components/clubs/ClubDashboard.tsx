@@ -9,6 +9,7 @@ import type { Club } from "@/types";
 import { ClubOverviewTab } from "@/components/clubs/ClubOverviewTab";
 import { ClubEventsTab } from "@/components/clubs/ClubEventsTab";
 import { ClubMembersTab } from "@/components/clubs/ClubMembersTab";
+import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 
 interface ClubDashboardProps {
   club: Club;
@@ -49,6 +50,8 @@ function ClubDashboardInner({
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <AppBreadcrumb items={[{ label: "My Clubs", href: "/my-clubs" }, { label: club.name }]} />
+
       {/* Page Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
