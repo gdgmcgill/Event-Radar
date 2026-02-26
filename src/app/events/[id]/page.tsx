@@ -4,6 +4,7 @@
  */
 
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import EventDetailClient from "./EventDetailClient";
 
@@ -50,5 +51,9 @@ export async function generateMetadata({
 }
 
 export default function EventDetailPage() {
-  return <EventDetailClient />;
+  return (
+    <Suspense>
+      <EventDetailClient />
+    </Suspense>
+  );
 }

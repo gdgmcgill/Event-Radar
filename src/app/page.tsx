@@ -54,6 +54,7 @@ function HomePageContent() {
   const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [popularEventIds, setPopularEventIds] = useState<Set<string>>(new Set());
+  const [searchKey, setSearchKey] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const filterContainerRef = useRef<HTMLDivElement>(null);
   const filterToggleRef = useRef<HTMLButtonElement>(null);
@@ -192,6 +193,12 @@ function HomePageContent() {
     []
   );
 
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery("");
+    setSelectedTags([]);
+    setSearchKey((k) => k + 1);
+  }, []);
+
   const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
   const canLoadMore = !!nextCursor;
   const errorMessage = typeof error === 'string' ? error : error?.message || null;
@@ -241,6 +248,7 @@ function HomePageContent() {
             {/* Centralized Search */}
             <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 flex justify-center">
               <EventSearch
+                key={searchKey}
                 ref={searchInputRef}
                 onSearchChange={handleSearchChange}
                 variant="hero"
@@ -387,6 +395,8 @@ function HomePageContent() {
                   showSaveButton={!!user}
                   savedEventIds={savedEventIds}
                   trackingSource="home"
+                  hasFilters={isFiltering}
+                  onClearFilters={handleClearFilters}
                 />
               )}
             </div>

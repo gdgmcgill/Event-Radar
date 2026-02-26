@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   UserPlus,
 } from "lucide-react";
+import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import Link from "next/link";
 import type { Club, Event } from "@/types";
 import { EventTag } from "@/types";
@@ -79,14 +80,7 @@ export default function ClubDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Back link */}
-      <Link
-        href="/clubs"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        All Clubs
-      </Link>
+      <AppBreadcrumb items={[{ label: "Clubs", href: "/clubs" }, { label: club.name }]} />
 
       {/* Club Header */}
       <div className="flex items-start gap-4 mb-8">
