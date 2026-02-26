@@ -465,6 +465,60 @@ export type Database = {
         };
         Relationships: [];
       };
+      club_invitations: {
+        Row: {
+          id: string;
+          club_id: string;
+          invited_by: string;
+          invitee_email: string;
+          role: string;
+          status: string;
+          token: string;
+          expires_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          club_id: string;
+          invited_by: string;
+          invitee_email: string;
+          role?: string;
+          status?: string;
+          token?: string;
+          expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          club_id?: string;
+          invited_by?: string;
+          invitee_email?: string;
+          role?: string;
+          status?: string;
+          token?: string;
+          expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "club_invitations_club_id_fkey";
+            columns: ["club_id"];
+            isOneToOne: false;
+            referencedRelation: "clubs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "club_invitations_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
