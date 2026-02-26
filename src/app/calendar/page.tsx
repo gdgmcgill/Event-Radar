@@ -9,7 +9,8 @@ import type { Event, EventTag } from "@/types";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CalendarOff } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
 import { EVENT_CATEGORIES } from "@/lib/constants";
@@ -295,8 +296,13 @@ export default function CalendarPage() {
           </div>
         </div>
         {!loading && events.length === 0 && (
-          <div className="mt-6 text-sm text-muted-foreground text-center">
-            No events found for this month.
+          <div className="mt-6">
+            <EmptyState
+              icon={CalendarOff}
+              title="No events this month"
+              description="Check back soon or browse all upcoming events."
+              action={{ label: "Browse Events", href: "/" }}
+            />
           </div>
         )}
       </div>
