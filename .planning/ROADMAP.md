@@ -124,7 +124,12 @@ Plans:
   3. An owner can enter a McGill email address and generate an invitation link that can be copied to clipboard
   4. A user who opens an invitation link while logged in with the matching email is added to the club as an organizer
   5. Pending invitations appear in a separate section of the Members tab showing the invitee email and invitation date
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Fix types.ts schema mismatch, write invitee RLS migration, create GET/DELETE members API and POST invites API
+- [ ] 07-02-PLAN.md — Build ClubMembersTab with member list, removal dialog, invite form with copy-link, pending invites, and revocation; wire into dashboard
+- [ ] 07-03-PLAN.md — Create /invites/[token] server component page for invitation acceptance flow
 
 ### Phase 8: Settings Tab + Surface Fixes
 **Goal**: Club owners can edit their club's details from the dashboard, and organizers experience a polished end-to-end flow from club creation through event publishing with no dead ends or confusing CTAs
@@ -150,5 +155,5 @@ Phases execute in numeric order: 5 → 6 → 7 → 8
 | 4. Cron Scheduler Configuration | v1.0 | 0/TBD | Deferred | - |
 | 5. Database Foundation | v1.1 | 2/2 | Complete | 2026-02-25 |
 | 6. Dashboard Shell + Read-Only Tabs | 3/3 | Complete   | 2026-02-26 | - |
-| 7. Members Tab + Invite Flow | v1.1 | 0/TBD | Not started | - |
+| 7. Members Tab + Invite Flow | v1.1 | 0/3 | Planning complete | - |
 | 8. Settings Tab + Surface Fixes | v1.1 | 0/TBD | Not started | - |
