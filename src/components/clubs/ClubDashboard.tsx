@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building2 } from "lucide-react";
 import type { Club } from "@/types";
 import { ClubOverviewTab } from "@/components/clubs/ClubOverviewTab";
+import { ClubEventsTab } from "@/components/clubs/ClubEventsTab";
 
 interface ClubDashboardProps {
   club: Club;
@@ -78,9 +79,7 @@ function ClubDashboardInner({
         </TabsContent>
 
         <TabsContent value="events">
-          <div className="py-8 text-center text-muted-foreground">
-            Events tab content will appear here.
-          </div>
+          <ClubEventsTab clubId={club.id} />
         </TabsContent>
 
         <TabsContent value="members">
