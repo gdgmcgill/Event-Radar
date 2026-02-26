@@ -34,6 +34,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getCircuitState } from "@/lib/api/resilient-fetch";
 
 // Store server start time
 const serverStartTime = Date.now();
@@ -59,6 +60,7 @@ interface HealthResponse {
     azure_oauth: HealthCheck;
     environment: HealthCheck;
     memory: HealthCheck;
+    recommendation_service: HealthCheck;
   };
 }
 /**
@@ -324,6 +326,49 @@ function checkMemory(): HealthCheck {
   }
 }
 
+async function checkRecommendationService(): Promise<HealthCheck> {
+  const startTime = Date.now();
+  const url = process.env.RECOMMENDATION_API_URL || "http://localhost:8000";
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+
+    const response = await fetch(`${url}/health`, {
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
+
+    const responseTime = Date.now() - startTime;
+    const circuitState = getCircuitState(url);
+
+    if (response.ok) {
+      return {
+        status: circuitState === "closed" ? "healthy" : "degraded",
+        message: "Recommendation service is reachable",
+        responseTime,
+        details: { circuitState },
+      };
+    }
+
+    return {
+      status: "degraded",
+      message: `Recommendation service returned ${response.status}`,
+      responseTime,
+      details: { circuitState },
+    };
+  } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    const circuitState = getCircuitState(url);
+
+    return {
+      status: "degraded",
+      message: `Recommendation service unreachable: ${error.message}`,
+      responseTime,
+      details: { circuitState },
+    };
+  }
+}
+
 /**
  * Main health check endpoint
  */
@@ -333,12 +378,13 @@ export async function GET() {
     const uptime = Math.floor((Date.now() - serverStartTime) / 1000); // in seconds
 
     // Run all health checks in parallel
-    const [database, supabase_auth, azure_oauth, environment, memory] = await Promise.all([
+    const [database, supabase_auth, azure_oauth, environment, memory, recommendation_service] = await Promise.all([
       checkDatabase(),
       checkSupabaseAuth(),
-      checkAzureOAuth(), // Now properly tests Azure OAuth configuration
+      checkAzureOAuth(),
       Promise.resolve(checkEnvironment()),
       Promise.resolve(checkMemory()),
+      checkRecommendationService(),
     ]);
 
     // Server check (if we got here, server is up)
@@ -348,7 +394,7 @@ export async function GET() {
     };
 
     // Determine overall health status
-    const checks = { server, database, supabase_auth, azure_oauth, environment, memory };
+    const checks = { server, database, supabase_auth, azure_oauth, environment, memory, recommendation_service };
     let overallStatus: "healthy" | "degraded" | "unhealthy" = "healthy";
 
     // If any check is unhealthy, overall is unhealthy
