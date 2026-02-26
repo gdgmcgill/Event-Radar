@@ -95,8 +95,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Write migration SQL (role constraint, is_club_owner(), RLS policies, invitations table) and patch admin route
-- [ ] 05-02-PLAN.md — Apply migration to Supabase and verify all DBROLE requirements end-to-end
+- [x] 05-01-PLAN.md — Write migration SQL (role constraint, is_club_owner(), RLS policies, invitations table) and patch admin route
+- [x] 05-02-PLAN.md — Apply migration to Supabase and verify all DBROLE requirements end-to-end
 
 ### Phase 6: Dashboard Shell + Read-Only Tabs
 **Goal**: Club organizers can navigate to /my-clubs/[id] and see a tabbed dashboard with Overview and Events information for their club — resolving the current dead link with a functional, read-only experience
@@ -144,7 +144,7 @@ Phases execute in numeric order: 5 → 6 → 7 → 8
 | 2. Cold Start Fix | v1.0 | 2/2 | Complete | 2026-02-23 |
 | 3. Notification System Wiring | v1.0 | 2/2 | Complete | 2026-02-23 |
 | 4. Cron Scheduler Configuration | v1.0 | 0/TBD | Deferred | - |
-| 5. Database Foundation | 1/2 | In Progress|  | - |
+| 5. Database Foundation | v1.1 | 2/2 | Complete | 2026-02-25 |
 | 6. Dashboard Shell + Read-Only Tabs | v1.1 | 0/TBD | Not started | - |
 | 7. Members Tab + Invite Flow | v1.1 | 0/TBD | Not started | - |
 | 8. Settings Tab + Surface Fixes | v1.1 | 0/TBD | Not started | - |
