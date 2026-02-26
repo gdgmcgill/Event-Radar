@@ -8,6 +8,7 @@ import { Building2 } from "lucide-react";
 import type { Club } from "@/types";
 import { ClubOverviewTab } from "@/components/clubs/ClubOverviewTab";
 import { ClubEventsTab } from "@/components/clubs/ClubEventsTab";
+import { ClubMembersTab } from "@/components/clubs/ClubMembersTab";
 
 interface ClubDashboardProps {
   club: Club;
@@ -15,6 +16,7 @@ interface ClubDashboardProps {
   memberCount: number;
   pendingInvitesCount: number | null;
   initialTab: string;
+  userId: string;
 }
 
 const VALID_TABS = ["overview", "events", "members", "settings"] as const;
@@ -30,6 +32,7 @@ function ClubDashboardInner({
   memberCount,
   pendingInvitesCount,
   initialTab,
+  userId,
 }: ClubDashboardProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -83,9 +86,7 @@ function ClubDashboardInner({
         </TabsContent>
 
         <TabsContent value="members">
-          <div className="py-8 text-center text-muted-foreground">
-            Members management coming soon.
-          </div>
+          <ClubMembersTab clubId={club.id} role={role} userId={userId} />
         </TabsContent>
 
         <TabsContent value="settings">

@@ -1,6 +1,6 @@
 /**
- * POST /api/clubs/:id/invites
- * Create an invitation for a McGill email address to join the club
+ * POST /api/clubs/:id/invites — Create an invitation for a McGill email
+ * DELETE /api/clubs/:id/invites — Revoke a pending invitation (owner only)
  * Requires: owner role for this club
  */
 
@@ -143,6 +143,76 @@ export async function POST(
     console.error("Error in POST club invite:", error);
     return NextResponse.json(
       { error: "Failed to create invitation" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  try {
+    const { id: clubId } = await params;
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "You must be signed in" },
+        { status: 401 }
+      );
+    }
+
+    // Verify caller is owner
+    const { data: membership } = await supabase
+      .from("club_members")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("club_id", clubId)
+      .single();
+
+    if (!membership || membership.role !== "owner") {
+      return NextResponse.json(
+        { error: "Only the club owner can revoke invitations" },
+        { status: 403 }
+      );
+    }
+
+    const { inviteId } = await request.json();
+
+    if (!inviteId) {
+      return NextResponse.json(
+        { error: "Invite ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Update status to 'revoked' — preserves invitation history
+    const { error: updateError } = await supabase
+      .from("club_invitations")
+      .update({ status: "revoked" })
+      .eq("id", inviteId)
+      .eq("club_id", clubId)
+      .eq("status", "pending");
+
+    if (updateError) {
+      console.error("Error revoking invitation:", updateError);
+      return NextResponse.json(
+        { error: "Failed to revoke invitation" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ message: "Invitation revoked" });
+  } catch (error) {
+    console.error("Error in DELETE club invite:", error);
+    return NextResponse.json(
+      { error: "Failed to revoke invitation" },
       { status: 500 }
     );
   }

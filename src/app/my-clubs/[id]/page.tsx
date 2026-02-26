@@ -68,6 +68,7 @@ export default async function ClubDashboardPage({
       memberCount={memberCount ?? 0}
       pendingInvitesCount={pendingInvitesCount}
       initialTab={initialTab}
+      userId={user.id}
     />
   );
 }
