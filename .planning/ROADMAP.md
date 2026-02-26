@@ -149,6 +149,6 @@ Phases execute in numeric order: 5 → 6 → 7 → 8
 | 3. Notification System Wiring | v1.0 | 2/2 | Complete | 2026-02-23 |
 | 4. Cron Scheduler Configuration | v1.0 | 0/TBD | Deferred | - |
 | 5. Database Foundation | v1.1 | 2/2 | Complete | 2026-02-25 |
-| 6. Dashboard Shell + Read-Only Tabs | 2/2 | Complete   | 2026-02-26 | - |
+| 6. Dashboard Shell + Read-Only Tabs | 3/3 | Complete   | 2026-02-26 | - |
 | 7. Members Tab + Invite Flow | v1.1 | 0/TBD | Not started | - |
 | 8. Settings Tab + Surface Fixes | v1.1 | 0/TBD | Not started | - |
