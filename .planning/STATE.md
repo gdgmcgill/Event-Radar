@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Club Organizer UX Overhaul
 status: unknown
-last_updated: "2026-02-26T05:01:00Z"
+last_updated: "2026-02-26T05:04:00Z"
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 7 of 8 (Members Tab + Invite Flow) — In Progress
-Plan: 1 of 3 complete
-Status: In Progress
-Last activity: 2026-02-26 — Completed 07-01: Backend API routes for members (GET/DELETE) and invites (POST); corrected club_invitations types; invitee RLS policies
+Phase: 7 of 8 (Members Tab + Invite Flow) — Complete
+Plan: 3 of 3 complete
+Status: Phase Complete
+Last activity: 2026-02-26 — Completed 07-03: /invites/[token] server component acceptance page; full invite lifecycle now functional
 
-Progress: [##############......] 65%
-(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 in progress)
+Progress: [###############.....] 70%
+(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 complete, Phase 8 pending)
 
 ## Performance Metrics
 
@@ -46,7 +46,7 @@ Progress: [##############......] 65%
 | 3. Notification Wiring | 2 | — | — |
 | 5. Database Foundation | 2 | ~13min | ~6.5min |
 | 6. Dashboard Shell | 3/3 | ~6min | ~2min |
-| 7. Members Tab | 1/3 | ~8min | — |
+| 7. Members Tab | 3/3 | ~13min | ~4min |
 
 *Updated after each plan completion*
 
@@ -76,6 +76,9 @@ Progress: [##############......] 65%
 - [v1.1 07-01]: POST /invites returns token only — URL construction is client-side, avoids hardcoding domain in API
 - [v1.1 07-01]: Invitee SELECT policy uses email sub-select from users table (consistent with Phase 5 RLS patterns)
 - [v1.1 07-01]: Owner revoke UPDATE policy added to invitee migration (MEM-08) — all club_invitations UPDATE policies co-located
+- [v1.1 07-03]: RLS handles email match implicitly on invite lookup — query returns null for mismatched email, no explicit app-layer email comparison needed
+- [v1.1 07-03]: Success page shown (not immediate redirect) on invite acceptance — user sees "You're in!" confirmation
+- [v1.1 07-03]: Existing member silently redirects to club dashboard — idempotent, not an error condition
 
 ### Pending Todos
 
@@ -89,5 +92,5 @@ Progress: [##############......] 65%
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 07-01-PLAN.md — Backend API for members tab (GET/DELETE members, POST invite) and invitee RLS policies delivered.
+Stopped at: Completed 07-03-PLAN.md — /invites/[token] server component page; Phase 7 (Members Tab + Invite Flow) complete.
 Resume file: None

@@ -155,5 +155,5 @@ Phases execute in numeric order: 5 → 6 → 7 → 8
 | 4. Cron Scheduler Configuration | v1.0 | 0/TBD | Deferred | - |
 | 5. Database Foundation | v1.1 | 2/2 | Complete | 2026-02-25 |
 | 6. Dashboard Shell + Read-Only Tabs | 3/3 | Complete   | 2026-02-26 | - |
-| 7. Members Tab + Invite Flow | 1/3 | In Progress|  | - |
+| 7. Members Tab + Invite Flow | 2/3 | In Progress|  | - |
 | 8. Settings Tab + Surface Fixes | v1.1 | 0/TBD | Not started | - |

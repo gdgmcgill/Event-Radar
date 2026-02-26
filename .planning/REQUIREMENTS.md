@@ -72,7 +72,7 @@
 - [x] **MEM-03**: Member removal by owner — confirmation dialog, self-removal guard (owner cannot remove themselves), `DELETE /api/clubs/[id]/members` endpoint
 - [ ] **MEM-04**: Direct organizer invitation by email — owner enters McGill email, generates invite with copy-link UX (no email delivery in v1.1)
 - [x] **MEM-05**: `POST /api/clubs/[id]/invites` endpoint — owner-only, hardcodes `role='organizer'` server-side (never from client payload), validates invitee email exists in users table
-- [ ] **MEM-06**: Invitation acceptance flow — `/invites/[token]` page, validates token not expired, validates authenticated user email matches invitee_email, inserts into `club_members` as organizer
+- [x] **MEM-06**: Invitation acceptance flow — `/invites/[token]` page, validates token not expired, validates authenticated user email matches invitee_email, inserts into `club_members` as organizer
 - [ ] **MEM-07**: Pending invitations visible in Members tab — separate section showing pending invites with email and date
 - [ ] **MEM-08**: Invitation revocation by owner — delete/revoke pending invitation from Members tab *(P2)*
 
@@ -164,7 +164,7 @@ Updated during roadmap creation. Phases 1-4 are v1.0, phases 5+ are v1.1.
 | MEM-03 | Phase 7 | Complete |
 | MEM-04 | Phase 7 | Pending |
 | MEM-05 | Phase 7 | Complete |
-| MEM-06 | Phase 7 | Pending |
+| MEM-06 | Phase 7 | Complete |
 | MEM-07 | Phase 7 | Pending |
 | MEM-08 | Phase 7 | Pending |
 | SURF-01 | Phase 8 | Pending |
