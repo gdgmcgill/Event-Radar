@@ -547,7 +547,7 @@ function cleanAccountName(account: string): string {
  * Classify which tags apply to the event based on caption content.
  * Returns array of tag strings matching the 6 canonical EventTag values.
  */
-function classifyTags(caption: string): string[] {
+export function classifyTags(caption: string): string[] {
   const captionLower = caption.toLowerCase();
   const matchedTags: string[] = [];
 
