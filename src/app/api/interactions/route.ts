@@ -10,6 +10,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { TrackInteractionPayload } from "@/types";
+import { validationError, notFoundError, internalError } from "@/lib/api/errors";
+import { logger } from "@/lib/api/logger";
 
 /**
  * @swagger
@@ -56,28 +58,19 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!body.event_id || !body.interaction_type) {
-      return NextResponse.json(
-        { error: "event_id and interaction_type are required" },
-        { status: 400 }
-      );
+      return validationError("event_id and interaction_type are required");
     }
 
     // Validate interaction_type
     const validTypes = ['view', 'click', 'save', 'unsave', 'share', 'calendar_add'];
     if (!validTypes.includes(body.interaction_type)) {
-      return NextResponse.json(
-        { error: `Invalid interaction_type. Must be one of: ${validTypes.join(', ')}` },
-        { status: 400 }
-      );
+      return validationError(`Invalid interaction_type. Must be one of: ${validTypes.join(", ")}`);
     }
 
     // Validate source if provided (must match user_interactions.source CHECK constraint)
     const validSources = ['home', 'search', 'recommendation', 'calendar', 'direct', 'modal', 'my-events'];
     if (body.source && !validSources.includes(body.source)) {
-      return NextResponse.json(
-        { error: `Invalid source. Must be one of: ${validSources.join(', ')}` },
-        { status: 400 }
-      );
+      return validationError(`Invalid source. Must be one of: ${validSources.join(", ")}`);
     }
 
     const supabase = await createClient();
@@ -95,18 +88,12 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (eventError) {
-      console.error("Error verifying event:", eventError);
-      return NextResponse.json(
-        { error: "Failed to verify event" },
-        { status: 500 }
-      );
+      logger.error("Failed to verify event", eventError, { eventId: body.event_id });
+      return internalError("Failed to verify event");
     }
 
     if (!eventExists) {
-      return NextResponse.json(
-        { error: "Event not found" },
-        { status: 404 }
-      );
+      return notFoundError("Event");
     }
 
     // Insert the interaction
@@ -127,11 +114,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error("Error recording interaction:", insertError);
-      return NextResponse.json(
-        { error: "Failed to record interaction" },
-        { status: 500 }
-      );
+      logger.error("Failed to record interaction", insertError, { eventId: body.event_id });
+      return internalError("Failed to record interaction");
     }
 
     const result = interaction as { id: string; created_at: string } | null;
@@ -145,10 +129,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Unexpected error recording interaction:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logger.error("Unexpected error recording interaction", error);
+    return internalError();
   }
 }
