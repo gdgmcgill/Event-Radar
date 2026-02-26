@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { classifyTags } from "@/lib/classifier";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import {
   Briefcase,
   Palette,
   Heart,
+  Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { uploadEventImage } from "@/lib/upload-utils";
@@ -71,6 +73,24 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [suggestedTags, setSuggestedTags] = useState<EventTag[]>([]);
+
+  useEffect(() => {
+    const textToClassify = `${formData.title} ${formData.description}`.trim();
+    if (textToClassify.length < 10) {
+      setSuggestedTags([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const suggestions = classifyTags(textToClassify) as EventTag[];
+      // Filter out tags that are already selected
+      const newSuggestions = suggestions.filter((tag) => !formData.tags.includes(tag));
+      setSuggestedTags(newSuggestions);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.title, formData.description, formData.tags]);
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -307,6 +327,33 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
           Categories <span className="text-destructive">*</span>
         </label>
         <p className="text-xs text-muted-foreground">Select all that apply</p>
+
+        {suggestedTags.length > 0 && (
+          <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-xl space-y-2">
+            <p className="text-xs font-medium text-primary flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" /> Suggested based on your details
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestedTags.map((tag) => {
+                const cat = EVENT_CATEGORIES[tag];
+                const Icon = iconMap[cat.icon] || Heart;
+                return (
+                  <button
+                    key={`suggested-${tag}`}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs font-medium"
+                  >
+                    <Icon className="h-3 w-3" />
+                    {cat.label}
+                    <span className="text-[10px] opacity-70 ml-1">+ Add</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-3">
           {EVENT_TAGS.map((tag) => {
             const cat = EVENT_CATEGORIES[tag];

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { classifyTags } from "@/lib/classifier";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ import {
   Briefcase,
   Palette,
   Heart,
+  Sparkles,
   X,
   Upload,
 } from "lucide-react";
@@ -63,6 +65,24 @@ export function EditEventModal({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestedTags, setSuggestedTags] = useState<EventTag[]>([]);
+
+  useEffect(() => {
+    const textToClassify = `${title} ${description}`.trim();
+    if (textToClassify.length < 10) {
+      setSuggestedTags([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const suggestions = classifyTags(textToClassify) as EventTag[];
+      // Filter out tags that are already selected
+      const newSuggestions = suggestions.filter((tag) => !tags.includes(tag));
+      setSuggestedTags(newSuggestions);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [title, description, tags]);
 
   // Sync form state when event changes
   const resetForm = (ev: Event) => {
@@ -243,6 +263,33 @@ export function EditEventModal({
 
           <div className="space-y-3">
             <label className="text-sm font-semibold text-foreground">Categories</label>
+
+            {suggestedTags.length > 0 && (
+              <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-xl space-y-2">
+                <p className="text-xs font-medium text-primary flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Suggested based on your details
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestedTags.map((tag) => {
+                    const cat = EVENT_CATEGORIES[tag];
+                    const Icon = iconMap[cat.icon] || Heart;
+                    return (
+                      <button
+                        key={`suggested-${tag}`}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs font-medium"
+                      >
+                        <Icon className="h-3 w-3" />
+                        {cat.label}
+                        <span className="text-[10px] opacity-70 ml-1">+ Add</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2">
               {EVENT_TAGS.map((tag) => {
                 const cat = EVENT_CATEGORIES[tag];
