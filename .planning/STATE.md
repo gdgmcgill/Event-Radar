@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Club Organizer UX Overhaul
 status: unknown
-last_updated: "2026-02-26T04:18:00Z"
+last_updated: "2026-02-26T05:01:00Z"
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 6 of 8 (Dashboard Shell + Read-Only Tabs) — COMPLETE
-Plan: 3 of 3 complete
+Phase: 7 of 8 (Members Tab + Invite Flow) — In Progress
+Plan: 1 of 3 complete
 Status: In Progress
-Last activity: 2026-02-26 — Completed 06-03: Applied transformEventFromDB to GET /api/clubs/[id]/events; fixes ClubEventsTab date/time display (event_date + event_time now populated)
+Last activity: 2026-02-26 — Completed 07-01: Backend API routes for members (GET/DELETE) and invites (POST); corrected club_invitations types; invitee RLS policies
 
-Progress: [############........] 60%
-(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-6 complete)
+Progress: [##############......] 65%
+(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 in progress)
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [############........] 60%
 | 3. Notification Wiring | 2 | — | — |
 | 5. Database Foundation | 2 | ~13min | ~6.5min |
 | 6. Dashboard Shell | 3/3 | ~6min | ~2min |
+| 7. Members Tab | 1/3 | ~8min | — |
 
 *Updated after each plan completion*
 
@@ -72,6 +73,9 @@ Progress: [############........] 60%
 - [v1.1 06-02]: Suspense wraps CreateEventPageContent (useSearchParams caller) — required by Next.js App Router
 - [v1.1 06-02]: Badge className override for status colors (green/amber) rather than new variants on shared component
 - [v1.1 06-03]: transformEventFromDB cast pattern (event as Parameters<typeof transformEventFromDB>[0]) bridges Supabase row type to DBEvent — all event API routes must use this pattern
+- [v1.1 07-01]: POST /invites returns token only — URL construction is client-side, avoids hardcoding domain in API
+- [v1.1 07-01]: Invitee SELECT policy uses email sub-select from users table (consistent with Phase 5 RLS patterns)
+- [v1.1 07-01]: Owner revoke UPDATE policy added to invitee migration (MEM-08) — all club_invitations UPDATE policies co-located
 
 ### Pending Todos
 
@@ -85,5 +89,5 @@ Progress: [############........] 60%
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 06-03-PLAN.md — Phase 6 complete. Applied transformEventFromDB to clubs events API; ClubEventsTab date/time rendering fixed.
+Stopped at: Completed 07-01-PLAN.md — Backend API for members tab (GET/DELETE members, POST invite) and invitee RLS policies delivered.
 Resume file: None
