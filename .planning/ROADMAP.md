@@ -79,7 +79,7 @@ Plans:
 - [x] **Phase 6: Dashboard Shell + Read-Only Tabs** - /my-clubs/[id] page with server-side role resolution, tabbed navigation, Overview and Events tabs (completed 2026-02-26)
 - [x] **Phase 7: Members Tab + Invite Flow** - Member list API, member management UI, invitation system with copy-link UX, acceptance flow (completed 2026-02-26)
 - [ ] **Phase 8: Settings Tab + Surface Fixes** - Club settings editing, context-aware public club page, club selector on create-event, auto-approval
-- [ ] **Phase 9: Follow System** - club_followers table, follow/unfollow API + UI, follower counts on club profile and organizer dashboard
+- [x] **Phase 9: Follow System** - club_followers table, follow/unfollow API + UI, follower counts on club profile and organizer dashboard (completed 2026-02-27)
 
 ## Phase Details
 
@@ -174,4 +174,4 @@ Phases execute in numeric order: 5 → 6 → 7 → 8 → 9
 | 6. Dashboard Shell + Read-Only Tabs | 3/3 | Complete   | 2026-02-26 | - |
 | 7. Members Tab + Invite Flow | 3/3 | Complete   | 2026-02-26 | - |
 | 8. Settings Tab + Surface Fixes | v1.1 | 0/TBD | Not started | - |
-| 9. Follow System | 1/2 | In Progress|  | - |
+| 9. Follow System | 2/2 | Complete   | 2026-02-27 | - |

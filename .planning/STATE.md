@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Club Organizer UX Overhaul
-status: unknown
-last_updated: "2026-02-27T05:33:00Z"
+status: complete
+last_updated: "2026-02-27T05:38:00Z"
 progress:
-  total_phases: 8
-  completed_phases: 6
-  total_plans: 16
-  completed_plans: 15
+  total_phases: 9
+  completed_phases: 9
+  total_plans: 17
+  completed_plans: 17
 ---
 
 # Project State
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 9 of 9 (Follow System) — In Progress
-Plan: 1 of 2 complete
-Status: Plan 01 Complete
-Last activity: 2026-02-27 — Completed 09-01: club_followers migration, TypeScript types, follow/unfollow API routes, follower count in club API
+Phase: 9 of 9 (Follow System) — Complete
+Plan: 2 of 2 complete
+Status: Phase 09 Complete — All Plans Done
+Last activity: 2026-02-27 — Completed 09-02: FollowButton UI, club profile follower count, organizer dashboard follower stat, profile Following section
 
-Progress: [################....] 75%
-(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 complete, Phase 8 pending; Phase 9 Plan 1 complete)
+Progress: [####################] 100%
+(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 complete; Phase 8 pending; Phase 9 complete — follow system fully shipped)
 
 ## Performance Metrics
 
@@ -85,6 +85,10 @@ Progress: [################....] 75%
 - [v1.1 09-01]: Upsert with ignoreDuplicates makes follow idempotent — no prior check query needed
 - [v1.1 09-01]: GET /api/clubs/[id]/follow returns { is_following: false, is_member: false } for unauthenticated (not 401)
 - [v1.1 09-01]: Promise.all refactor in club API reduces sequential round-trips (3 parallel queries)
+- [v1.1 09-02]: FollowButton performs optimistic state update then reverts silently on API error
+- [v1.1 09-02]: Hover state on Following button shows Unfollow text and UserMinus icon (Instagram-style toggle affordance)
+- [v1.1 09-02]: Unauthenticated users see Follow button; clicking redirects to /auth/signin via router.push
+- [v1.1 09-02]: Profile page Following section queries club_followers directly with Supabase server client (not via API route)
 
 ### Pending Todos
 
@@ -98,5 +102,5 @@ Progress: [################....] 75%
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 09-01-PLAN.md — club_followers backend (migration, types, follow API routes, follower count); Phase 9 Plan 01 complete.
+Stopped at: Completed 09-02-PLAN.md — follow system UI (FollowButton, club profile count, dashboard stat, profile Following section); Phase 9 complete. All plans done.
 Resume file: None

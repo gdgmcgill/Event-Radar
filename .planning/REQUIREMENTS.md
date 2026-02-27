@@ -99,9 +99,9 @@
 - [x] **FOLLOW-03**: `DELETE /api/clubs/[id]/follow` endpoint — authenticated users can unfollow a club
 - [x] **FOLLOW-04**: `GET /api/clubs/[id]/follow` endpoint — returns whether the current user follows this club
 - [x] **FOLLOW-05**: `GET /api/user/following` endpoint — returns list of clubs the current user follows
-- [ ] **FOLLOW-06**: Follow/Unfollow button on club profile page (`/clubs/[id]`) — visible to authenticated users who are not members of the club
-- [ ] **FOLLOW-07**: Follower count displayed on public club profile page
-- [ ] **FOLLOW-08**: Follower count and follow data visible in organizer analytics dashboard (Overview tab)
+- [x] **FOLLOW-06**: Follow/Unfollow button on club profile page (`/clubs/[id]`) — visible to authenticated users who are not members of the club
+- [x] **FOLLOW-07**: Follower count displayed on public club profile page
+- [x] **FOLLOW-08**: Follower count and follow data visible in organizer analytics dashboard (Overview tab)
 
 ## Deferred Requirements
 
@@ -195,9 +195,9 @@ Updated during roadmap creation. Phases 1-4 are v1.0, phases 5+ are v1.1.
 | FOLLOW-03 | Phase 9 | Complete |
 | FOLLOW-04 | Phase 9 | Complete |
 | FOLLOW-05 | Phase 9 | Complete |
-| FOLLOW-06 | Phase 9 | Pending |
-| FOLLOW-07 | Phase 9 | Pending |
-| FOLLOW-08 | Phase 9 | Pending |
+| FOLLOW-06 | Phase 9 | Complete |
+| FOLLOW-07 | Phase 9 | Complete |
+| FOLLOW-08 | Phase 9 | Complete |
 
 **Coverage:**
 - v1.0 requirements: 22 total (18 complete, 4 deferred)
