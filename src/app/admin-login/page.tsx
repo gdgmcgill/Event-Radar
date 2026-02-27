@@ -31,7 +31,7 @@ export default function AdminLoginPage() {
       return;
     }
 
-    // Verify admin role
+    // Verify admin role 
     const {
       data: { user },
     } = await supabase.auth.getUser();
