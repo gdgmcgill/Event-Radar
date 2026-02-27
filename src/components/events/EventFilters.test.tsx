@@ -1,5 +1,4 @@
-import { render, screen, cleanup, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EVENT_CATEGORIES, EVENT_TAGS } from "@/lib/constants";
@@ -38,13 +37,13 @@ describe("EventFilters Component", () => {
     const categoryLabel = EVENT_CATEGORIES[targetTag].label;
 
     const button = screen.getByRole("button", { name: categoryLabel });
-    await act(async () => {
-      button.click();
-    });
+    fireEvent.click(button);
 
-    expect(handleFilterChange).toHaveBeenCalledTimes(1);
-    expect(handleFilterChange).toHaveBeenCalledWith({
-      tags: [targetTag],
+    await waitFor(() => {
+      expect(handleFilterChange).toHaveBeenCalledTimes(1);
+      expect(handleFilterChange).toHaveBeenCalledWith({
+        tags: [targetTag],
+      });
     });
   });
 
@@ -57,12 +56,12 @@ describe("EventFilters Component", () => {
     render(<EventFilters initialTags={[initialTag]} onFilterChange={handleFilterChange} />);
 
     const button = screen.getByRole("button", { name: categoryLabel });
-    await act(async () => {
-      button.click();
-    });
+    fireEvent.click(button);
 
-    expect(handleFilterChange).toHaveBeenCalledWith({
-      tags: undefined, // Empty array falls back to undefined
+    await waitFor(() => {
+      expect(handleFilterChange).toHaveBeenCalledWith({
+        tags: undefined, // Empty array falls back to undefined
+      });
     });
   });
 
@@ -72,12 +71,12 @@ describe("EventFilters Component", () => {
     render(<EventFilters initialTags={[EVENT_TAGS[0], EVENT_TAGS[1]]} onFilterChange={handleFilterChange} />);
 
     const clearButton = screen.getByRole("button", { name: /clear all filters/i });
-    await act(async () => {
-      clearButton.click();
-    });
+    fireEvent.click(clearButton);
 
-    expect(handleFilterChange).toHaveBeenCalledWith({
-      tags: undefined,
+    await waitFor(() => {
+      expect(handleFilterChange).toHaveBeenCalledWith({
+        tags: undefined,
+      });
     });
   });
 });

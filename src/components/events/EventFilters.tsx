@@ -41,13 +41,29 @@ interface EventFiltersProps {
  * @param {EventFiltersProps} props - The component props.
  * @returns The rendered horizontal event filter UI.
  */
-export function EventFilters({ onFilterChange, initialTags = [] }: EventFiltersProps) {
-  const [selectedTags, setSelectedTags] = useState<EventTag[]>(initialTags);
+function areTagsEqual(left: EventTag[], right: EventTag[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((tag, index) => tag === right[index]);
+}
+
+export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps) {
+  const [selectedTags, setSelectedTags] = useState<EventTag[]>(() => initialTags ?? []);
 
   // Sync with initial tags if they change
   useEffect(() => {
+    if (!initialTags) {
+      return;
+    }
+
+    if (areTagsEqual(initialTags, selectedTags)) {
+      return;
+    }
+
     setSelectedTags(initialTags);
-  }, [initialTags]);
+  }, [initialTags, selectedTags]);
 
   const toggleTag = (tag: EventTag) => {
     const newTags = selectedTags.includes(tag)
