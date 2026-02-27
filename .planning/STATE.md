@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Club Organizer UX Overhaul
 status: unknown
-last_updated: "2026-02-26T05:16:45.764Z"
+last_updated: "2026-02-27T05:33:00Z"
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 6
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 16
+  completed_plans: 15
 ---
 
 # Project State
@@ -18,17 +18,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Club organizers must have a seamless, unified experience from club creation through event management
-**Current focus:** Phase 7 — Invitations Tab + Management
+**Current focus:** Phase 9 — Follow System
 
 ## Current Position
 
-Phase: 7 of 8 (Members Tab + Invite Flow) — Complete
-Plan: 3 of 3 complete
-Status: Phase Complete
-Last activity: 2026-02-26 — Completed 07-03: /invites/[token] server component acceptance page; full invite lifecycle now functional
+Phase: 9 of 9 (Follow System) — In Progress
+Plan: 1 of 2 complete
+Status: Plan 01 Complete
+Last activity: 2026-02-27 — Completed 09-01: club_followers migration, TypeScript types, follow/unfollow API routes, follower count in club API
 
-Progress: [###############.....] 70%
-(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 complete, Phase 8 pending)
+Progress: [################....] 75%
+(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 complete, Phase 8 pending; Phase 9 Plan 1 complete)
 
 ## Performance Metrics
 
@@ -81,6 +81,10 @@ Progress: [###############.....] 70%
 - [v1.1 07-03]: RLS handles email match implicitly on invite lookup — query returns null for mismatched email, no explicit app-layer email comparison needed
 - [v1.1 07-03]: Success page shown (not immediate redirect) on invite acceptance — user sees "You're in!" confirmation
 - [v1.1 07-03]: Existing member silently redirects to club dashboard — idempotent, not an error condition
+- [v1.1 09-01]: Public SELECT RLS policy on club_followers enables anonymous follower count without app-layer auth checks
+- [v1.1 09-01]: Upsert with ignoreDuplicates makes follow idempotent — no prior check query needed
+- [v1.1 09-01]: GET /api/clubs/[id]/follow returns { is_following: false, is_member: false } for unauthenticated (not 401)
+- [v1.1 09-01]: Promise.all refactor in club API reduces sequential round-trips (3 parallel queries)
 
 ### Pending Todos
 
@@ -93,6 +97,6 @@ Progress: [###############.....] 70%
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Completed 07-03-PLAN.md — /invites/[token] server component page; Phase 7 (Members Tab + Invite Flow) complete.
+Last session: 2026-02-27
+Stopped at: Completed 09-01-PLAN.md — club_followers backend (migration, types, follow API routes, follower count); Phase 9 Plan 01 complete.
 Resume file: None

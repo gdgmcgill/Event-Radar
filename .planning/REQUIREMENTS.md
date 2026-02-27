@@ -94,11 +94,11 @@
 
 ### Follow System
 
-- [ ] **FOLLOW-01**: `club_followers` table with `user_id`, `club_id`, `created_at` — UNIQUE constraint on `(user_id, club_id)`, indexes on `club_id` and `user_id`, RLS policies for authenticated follow/unfollow and organizer read access
-- [ ] **FOLLOW-02**: `POST /api/clubs/[id]/follow` endpoint — authenticated users can follow an approved club, idempotent (no error on duplicate)
-- [ ] **FOLLOW-03**: `DELETE /api/clubs/[id]/follow` endpoint — authenticated users can unfollow a club
-- [ ] **FOLLOW-04**: `GET /api/clubs/[id]/follow` endpoint — returns whether the current user follows this club
-- [ ] **FOLLOW-05**: `GET /api/user/following` endpoint — returns list of clubs the current user follows
+- [x] **FOLLOW-01**: `club_followers` table with `user_id`, `club_id`, `created_at` — UNIQUE constraint on `(user_id, club_id)`, indexes on `club_id` and `user_id`, RLS policies for authenticated follow/unfollow and organizer read access
+- [x] **FOLLOW-02**: `POST /api/clubs/[id]/follow` endpoint — authenticated users can follow an approved club, idempotent (no error on duplicate)
+- [x] **FOLLOW-03**: `DELETE /api/clubs/[id]/follow` endpoint — authenticated users can unfollow a club
+- [x] **FOLLOW-04**: `GET /api/clubs/[id]/follow` endpoint — returns whether the current user follows this club
+- [x] **FOLLOW-05**: `GET /api/user/following` endpoint — returns list of clubs the current user follows
 - [ ] **FOLLOW-06**: Follow/Unfollow button on club profile page (`/clubs/[id]`) — visible to authenticated users who are not members of the club
 - [ ] **FOLLOW-07**: Follower count displayed on public club profile page
 - [ ] **FOLLOW-08**: Follower count and follow data visible in organizer analytics dashboard (Overview tab)
@@ -190,11 +190,11 @@ Updated during roadmap creation. Phases 1-4 are v1.0, phases 5+ are v1.1.
 | SURF-06 | Phase 8 | Pending |
 | SURF-07 | Phase 8 | Pending |
 
-| FOLLOW-01 | Phase 9 | Pending |
-| FOLLOW-02 | Phase 9 | Pending |
-| FOLLOW-03 | Phase 9 | Pending |
-| FOLLOW-04 | Phase 9 | Pending |
-| FOLLOW-05 | Phase 9 | Pending |
+| FOLLOW-01 | Phase 9 | Complete |
+| FOLLOW-02 | Phase 9 | Complete |
+| FOLLOW-03 | Phase 9 | Complete |
+| FOLLOW-04 | Phase 9 | Complete |
+| FOLLOW-05 | Phase 9 | Complete |
 | FOLLOW-06 | Phase 9 | Pending |
 | FOLLOW-07 | Phase 9 | Pending |
 | FOLLOW-08 | Phase 9 | Pending |
