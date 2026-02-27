@@ -1,191 +1,212 @@
-# Feature Landscape
+# Feature Research
 
-**Domain:** In-app notification system + cold start recommendation fallback feed
+**Domain:** Club organizer dashboard — member management, roles, invitations, club settings
 **Project:** Uni-Verse — campus event discovery platform (McGill University)
-**Researched:** 2026-02-23
-**Milestone scope:** Adding cold start fix and notification system to existing platform
+**Milestone:** v1.1 Club Organizer UX Overhaul
+**Researched:** 2026-02-25
+**Confidence:** HIGH (patterns verified against Slack, GitHub Orgs, Discord; Uni-Verse constraints well-defined from PROJECT.md)
 
 ---
 
-## Codebase Audit Summary
+## Codebase Context (What Already Exists)
 
-Before categorizing features, a codebase audit established what already exists and what is genuinely missing:
+Before categorizing new features, audit what the codebase already provides:
 
-**Already built (do not rebuild):**
-- NotificationBell component with 60s polling and unread count badge — exists at `src/components/notifications/NotificationBell.tsx`
-- NotificationItem component with 4 type configs (event_reminder_24h, event_reminder_1h, event_approved, event_rejected) — exists
-- NotificationList component with empty state — exists
-- GET /api/notifications (returns notifications + unread_count, limit 50) — exists
-- PATCH /api/notifications/[id] (mark single as read) — exists
-- POST /api/notifications?action=mark-all-read — exists
-- /notifications page with optimistic mark-read/mark-all-read — exists
-- Cron route POST /api/cron/send-reminders (24h + 1h reminder generation with deduplication) — exists
-- canShowRecommendations gate at `savedEventIds.size >= 3` — exists in page.tsx line 128
-- Recommendations API with full hybrid scoring (content + collaborative + popularity) — exists
-- Interest-tag fallback in recommendations API — exists (interest_tags overlap query)
-- Popular events section (PopularEventsSection.tsx, /api/events/popular) — exists
+**Already built — do not rebuild:**
+- Club creation flow with admin approval (`/clubs/create`, `/api/admin/clubs/[id]`)
+- Organizer request flow (non-creator path to become an organizer)
+- Club browsing and public detail pages (`/clubs`, `/clubs/[id]`)
+- Admin club moderation page
+- `/my-clubs` listing page (links to `/my-clubs/[id]` — dead link)
+- `GET /api/clubs/[id]/events` returns all events for a club (organizer-only)
+- `PATCH /api/events/[id]` supports editing by club organizers (membership check exists)
+- `CreateEventForm` accepts optional `clubId` prop (never passed from UI)
+- `POST /api/admin/clubs/[id]` auto-grants `club_organizer` role + `club_members` insert on approval — but uses generic `role = 'organizer'` with no owner distinction
+- `club_members` table with `role TEXT` column (no CHECK constraint — accepts any string)
 
-**Genuinely missing (active milestone scope):**
-- Notifications database table — not yet created in Supabase
-- NotificationBell not yet injected into Header.tsx
-- Cron not wired to Vercel or Supabase scheduler
-- Cold start fallback: when user has <3 saved events AND zero interest tags, API returns empty array with no fallback to popularity — no graceful degradation to the popular/trending feed
-- Recommendations API type mismatch: cron inserts `reminder_24h`/`reminder_1h` but NotificationItem typeConfig expects `event_reminder_24h`/`event_reminder_1h` — type string mismatch
-- No notification seeding on admin approve/reject actions
-- No `/api/recommendations` fallback path that explicitly returns a popularity-ranked feed for cold-start users
+**Genuinely missing — active milestone scope:**
+- `/my-clubs/[id]` dashboard page (dead link exists, page doesn't)
+- `owner` vs `organizer` distinction in `club_members.role` (no DB constraint)
+- Auto-grant of `owner` (not just `organizer`) to club creator on admin approval
+- Organizer invitation system (club_invitations table, invite flow, acceptance)
+- Club settings editing UI for owners
+- Club-context event creation wired from dashboard
+- Context-aware CTAs on public club page (3 states: visitor / organizer / owner)
+- Club selector on `/create-event` for organizers belonging to multiple clubs
+- Updated post-creation messaging on `/clubs/create` success screen
 
 ---
 
-## Table Stakes
+## Table Stakes (Users Expect These)
 
-Features users expect from this domain. Absence makes the experience feel broken or incomplete.
-
-### Notification System — Table Stakes
+Features organizers assume exist. Missing these makes the dashboard feel broken or unfinished.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Unread count badge on bell icon | Every notification system from Gmail to GitHub shows this. Absence means users don't know they have notifications. | Low | Already implemented in NotificationBell.tsx. Needs Header.tsx injection. |
-| Bell navigates to notification list/inbox | Users expect tapping the bell to open their notifications. Navigation to /notifications is the simpler, correct pattern for this app scale. | Low | Already implemented via Link in NotificationBell.tsx. |
-| Notifications persist in a list (inbox) | Ephemeral-only notifications (toast-only) are not sufficient — users must be able to review past notifications. | Low | /notifications page already built. Depends on DB table existing. |
-| Mark single notification as read | Standard interaction — clicking a notification marks it read. Unread items should be visually distinct (bold, indicator dot). | Low | Already implemented with optimistic update in notifications page. |
-| Mark all as read | When a user has many unread notifications, one-click clearance is expected. | Low | Already implemented. |
-| Read/unread visual distinction | Unread items must be visually distinct from read ones. Bold text + indicator dot is the established pattern. | Low | Already implemented in NotificationItem.tsx (bg-card + shadow vs bg-card/50 + opacity-70). |
-| Relative timestamps ("2h ago", "just now") | Absolute timestamps feel heavy in notification inboxes. Relative time is universally expected. | Low | Already implemented in timeAgo() in NotificationItem.tsx. |
-| Empty state when no notifications exist | "You have no notifications yet" with icon prevents confusion for new users. | Low | Already implemented in NotificationList.tsx. |
-| Auth-gated notification page | Unauthenticated users must not see or access notifications. | Low | Already implemented in /notifications page. |
-| Event reminder notifications (24h and 1h) | Core value: users save events to get reminded. Without reminders the save feature loses its primary utility. | Medium | Cron route exists. Needs: DB table, scheduler wiring, type string alignment. |
-| Deduplication of reminder notifications | Without deduplication, cron running every hour sends duplicate 24h reminders. | Low | Already implemented in cron route (count check before insert). |
-| Notification creation on admin approve/reject | Club organizers submitting events must hear the outcome. This is the core feedback loop of the submission workflow. | Low | Not yet implemented. Needs integration into admin approve/reject actions. |
-
-### Cold Start Recommendation Feed — Table Stakes
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Non-empty feed for brand-new users | New users who see an empty "Recommended for You" section on first visit interpret it as a broken product. This is the primary issue to fix. | Low-Med | Fix: return popularity-ranked fallback from /api/recommendations when user has <3 saved events. PopularEventsSection already exists and covers the visual side; the API needs the fallback path. |
-| Threshold before personalization kicks in | Showing K-means recommendations to a user with 0 saved events produces noise, not signal. A gate (currently 3 saves) prevents bad personalization. | Low | Already implemented (savedEventIds.size >= 3 on page.tsx line 128). Correct. |
-| Graceful API fallback, not silent empty | The API returning `{ recommendations: [] }` for cold-start users with no tags causes the RecommendedEventsSection to call `onEmpty()` and disappear. The section vanishes silently. Users see no explanation. | Low-Med | Fix: /api/recommendations should detect the cold-start state and return a popularity-ranked feed with a `source: "popular_fallback"` flag so the UI can label it appropriately. |
-| Contextual label for fallback section | When showing the popularity fallback instead of personalized recommendations, the section title should reflect that ("Popular on Campus" not "Recommended For You"). Showing "Recommended For You" for a popularity feed is misleading. | Low | Fix: RecommendedEventsSection reads `source` from API response and conditionally renders a different heading/description. |
-| Popularity scoring that favors recent + popular events | A fallback that shows old events with high all-time saves is misleading. Recency must factor into the fallback score. | Low | Already defined: >10 saves → +2, within 7 days → +1. Existing event_popularity_scores table. |
-| Saved events excluded from fallback | Showing a saved event in the fallback "Popular" section wastes a slot and confuses the user. | Low | Already excluded in the main recommendations path. Must be carried to the fallback path. |
+| Tabbed dashboard at `/my-clubs/[id]` | Every org management tool (Slack, GitHub, Discord, Luma) uses a single hub with tabs. Organizers expect one place to manage everything. Dead link already exists — this is the primary gap. | MEDIUM | Four tabs: Overview, Events, Members, Settings. Needs new page at `src/app/my-clubs/[id]/page.tsx`. |
+| Member list with roles visible | Organizers need to see who is in their club and at what role. Without this, inviting and removing is blind. | LOW | `club_members` table exists. Join with `users` to show name/email. Display `owner` vs `organizer` role per row. |
+| Owner vs organizer role distinction | Every mature platform (Slack, GitHub Orgs, Discord) separates who *owns* the entity from who *operates* it. Owners manage club identity and members; organizers create events. Without this distinction the system is a flat room with no accountability structure. | MEDIUM | `club_members.role TEXT` exists but has no constraint. Migration: add CHECK constraint (`'owner'`, `'organizer'`). One club should have exactly one owner at this stage. |
+| Auto-grant owner status on club approval | Club creator having to separately request access to their own club is a broken flow. Admin approval is the trust event; organizer/owner status must follow automatically. | LOW | One-line change: in `POST /api/admin/clubs/[id]`, change the `club_members` insert from `role = 'organizer'` to `role = 'owner'`. Migration must land first to accept the string. |
+| Event list in club context (Events tab) | Organizers need to see all events tied to their club without hunting through the global feed. | LOW | `GET /api/clubs/[id]/events` already exists and is ready to consume. Wire into Events tab. |
+| Club-context event creation from dashboard | Creating an event from a club dashboard should pre-fill the club. Requiring organizers to manually select from a dropdown every time is unnecessary friction. | LOW | `CreateEventForm` already accepts `clubId` prop — pass it from the dashboard. Events created by club organizers for their own club should be auto-approved. |
+| Club settings editing (name, description, category, links, logo) | Organizers expect to control their club's public presence without filing an admin ticket for a typo fix. Every platform separates settings-editing from initial creation approval. | MEDIUM | Owner-only. Edits to name/description/logo go live immediately (no re-approval needed). Admin approved the club's existence; day-to-day settings are the owner's domain. |
+| Context-aware public club page CTAs | Showing "Request Organizer Access" to someone who is already an organizer is a broken experience. The CTA must reflect the viewer's actual relationship to the club. | MEDIUM | Three states: (1) visitor — show "Request Organizer Access"; (2) organizer — show "Manage Club" link to dashboard; (3) owner — show "Manage Club" link. Requires RLS-safe read of `club_members` for current user. |
+| Updated post-creation messaging on `/clubs/create` | After submitting a club, the success screen should explain what happens next: pending review, then auto-granted owner status. Currently this is a dead end with no guidance. | LOW | Copy/UI change only. No backend work. High trust impact for minimal effort. |
 
 ---
 
-## Differentiators
+## Differentiators (Competitive Advantage)
 
-Features that go beyond expectations and create positive moments. Not required for beta, but add value when time permits.
-
-### Notification System — Differentiators
+Features beyond the baseline that make the organizer experience genuinely good for a university context.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Supabase Realtime instead of polling | Near-instant notification delivery vs. up-to-60s lag from polling. Meaningful for 1h reminder UX — a reminder that arrives 60s late can miss the window. | Medium | Supabase Realtime PostgreSQL changes subscription can replace the 60s poll. Recommended for post-beta. PROJECT.md marks this as "to be decided during implementation." |
-| Toast/snackbar for new notifications received while browsing | When Realtime is added, a transient toast can surface new notifications without requiring the user to check the bell. | Medium | Depends on Realtime being in place first. Defer until Realtime is chosen. |
-| Notification type filtering on inbox page | "Show only reminders" or "Show only approvals" reduces cognitive load for power users (club organizers who receive many approve/reject notifications). | Medium | Not in current scope. Future enhancement. |
-| Clickable notification links to event detail page | Notifications mentioning an event could link directly to /events/[id]. Reduces friction from "you have a reminder" → viewing the event. | Low-Med | Notification schema already includes event_id. Implementation: wrap NotificationItem in conditional Link to /events/[event_id]. Low complexity addition. |
-| Pagination on /notifications page | The current implementation fetches 50 notifications max and shows all. For active users over time, the list grows. | Low | Add cursor-based pagination matching the pattern used by useEvents hook. Not blocking for beta. |
-
-### Cold Start Recommendation Feed — Differentiators
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Onboarding prompt to save events to unlock personalization | Instead of silently showing the popular feed, a subtle inline nudge ("Save 3 events to unlock personalized recommendations") tells users why personalization isn't showing yet and creates a clear action path. | Low | This is a UI-only addition to RecommendedEventsSection or the section below it. High value-to-effort ratio. |
-| Progress indicator toward personalization ("2 of 3 saves") | Gamification: showing progress toward the 3-save threshold motivates users to engage more. Seen in Spotify's taste setup flow. | Low-Med | Requires reading savedEventIds.size in the cold-start state and rendering a progress element. Worth exploring if onboarding prompt alone is insufficient. |
-| Interest-tag-aware fallback (not pure popularity) | For a new user who completed onboarding tag selection, showing purely popular events ignores known signal. A hybrid "popularity among events matching your interest tags" is more relevant. | Medium | Partially exists: the recommendations API already has an interest-tag fallback query. The cold-start fix can leverage this. |
+| Direct organizer invitations by email (no admin approval) | Owner invites a co-organizer by McGill email — no admin ticket, no waiting. This is the GitHub Org invitation model: the trusted owner's invitation is itself the trust event. Removes a bottleneck that would otherwise kill adoption of multi-organizer clubs. | MEDIUM | Owner sends invite → creates `club_invitations` record (pending) → invited user accepts from notification or link → inserted into `club_members` as organizer. Standard 7-day expiry. Requires new `club_invitations` table. |
+| Invitation status tracking (pending / accepted / expired / revoked) | Owner can see pending invitations, revoke them, and re-send. Prevents the "did they get it?" confusion that kills async collaboration. | LOW | `club_invitations` table with `status` enum. Render pending invites in Members tab under "Pending Invitations" section. Revoke = delete the record. |
+| Member removal by owner | Owners need to remove organizers who are inactive or no longer affiliated. Standard for any org management tool. | LOW | Delete from `club_members` where `user_id = target AND club_id = club`. Guard: owner cannot remove themselves (would leave club ownerless). |
+| Club selector on `/create-event` for multi-club organizers | Organizers managing multiple clubs need to pick which club an event belongs to. Currently `clubId` is never passed from the event creation UI — the form accepts it but nothing connects it. | LOW | Dropdown on `/create-event` page populated from the current user's `club_members` memberships. Show only if user has organizer role in at least one club. |
 
 ---
 
-## Anti-Features
+## Anti-Features (Commonly Requested, Often Problematic)
 
-Features to explicitly NOT build for this milestone. Each has a reason and an alternative.
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| Email notifications | Out of scope per PROJECT.md. External channels require SPF/DKIM setup, unsubscribe compliance (CAN-SPAM/CASL), deliverability monitoring, and bounce handling. Beta is not the moment for this. | In-app only. Revisit after beta if retention data shows demand. |
-| Push notifications (browser/mobile) | Requires service worker registration, push API keys, permission prompts. Adds infrastructure complexity disproportionate to beta stage. Browser permission prompts also reduce trust if introduced too early. | In-app only. Defer to a dedicated notifications milestone. |
-| Notification preferences/settings UI | Per PROJECT.md: "all notifications on by default for beta." Building settings before understanding which notification types users want to mute adds speculative complexity. | Ship all types on. Add preferences after beta usage patterns are clear. |
-| Real-time chat or messaging | Unrelated to this milestone. Would require a separate channel architecture (WebSockets, presence). | Nothing. Not in the product vision. |
-| Recommendation algorithm changes beyond cold start fix | The existing K-means + content-based + popularity hybrid already works. Changing algorithm weights or adding new signals risks breaking what works for existing users. | Leave the algorithm alone. Only fix the entry-point gate and fallback path. |
-| Notification deletion | Adds DB mutation complexity. For beta, retention of all notifications for history is more useful than deletion. | Read-only history. If notification count becomes a problem, add auto-expiry at DB level (e.g., delete after 90 days) rather than user-triggered delete. |
-| Per-notification-type delivery schedule (quiet hours, frequency caps) | Over-engineering for a beta platform. With only 4 notification types and low volume (reminder-based only), frequency is naturally limited. | Default-on for all types. Post-beta preference work. |
-| Recommendation explanation ("Why am I seeing this?") | Valuable UX pattern (used by Netflix, Spotify) but adds significant UI and API complexity. The fallback section label change ("Popular on Campus") is a simpler form of transparency that suffices for beta. | Use section title/subtitle to communicate feed type. No per-card explanation needed. |
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Club deletion by organizers | "I created it, I should be able to delete it" | Cascading data loss: events, saved_events, interactions, notifications all reference the club. Irreversible. Admin must verify intent and handle cleanup. | Admin-only. Owner can request deletion via admin. Future: soft-delete/archive status. |
+| Event deletion by organizers | Organizers want to clean up mistakes | Deletes interaction history and breaks saved-event lists for students who saved the event. Data integrity outweighs convenience. | Organizers edit events (set status to cancelled, correct details). Only admins delete. |
+| Multi-level role hierarchy (moderator, event manager, treasurer) | Large clubs want granular control | Complexity far exceeds campus club needs. Permissions become unmaintainable. Role confusion increases for users. Three roles is already a lot for a university club. | Two roles (owner, organizer) cover all real use cases at this scale. Re-evaluate if a specific club explicitly needs more. |
+| Open membership / self-serve organizer join | "Reduce friction — let anyone request to join as organizer directly" | Club identity and event credibility depend on organizer trust. Open join enables spam, fake clubs, and event abuse. | Invitation-only. Owner invites; no self-service organizer escalation. The existing admin-mediated request flow remains for non-creator paths. |
+| Owner transfer UI | "What if the creator graduates?" | Edge case with low frequency. Requires ownership validation, confirmation step, notification on both sides. Complex for a rare need. | Admin handles ownership transfer manually for now. Flag for v2 after graduation cycle data shows how often it's needed. |
+| Real-time member presence / activity feed | Feels modern | Supabase Realtime adds complexity; university club activity is low-frequency. No meaningful UX improvement at this scale. | Show static joined date and role on member list. |
+| Club analytics dashboard (event views, member growth charts) | Organizers want data | Right feature, wrong milestone. Building analytics before the dashboard itself is stable wastes effort if schema changes. | Defer to v1.2+. Interaction data is already being captured in `user_interactions` and `event_popularity_scores` — analysis can come later without any new data collection. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-notifications DB table
-  → GET /api/notifications (can't query what doesn't exist)
-    → NotificationBell (fetches from API)
-      → Header.tsx injection (renders the bell)
-    → /notifications page (fetches from API)
-      → mark-as-read (requires notifications rows)
-      → mark-all-read (requires notifications rows)
+[DB migration: club_members.role CHECK constraint]  (must be first)
+    └──enables──> [Auto-grant owner on approval] (can insert 'owner' without violating constraint)
+    └──enables──> [Owner vs organizer role distinction everywhere]
+                      └──enables──> [Tabbed dashboard /my-clubs/[id]]
+                                        ├──requires──> [Member list with roles]
+                                        │                  └──enables──> [Member removal by owner]
+                                        │                  └──enables──> [Invitation status tracking]
+                                        ├──requires──> [Direct organizer invitations]
+                                        │                  └──requires──> [club_invitations table migration]
+                                        ├──requires──> [Event list in club context]
+                                        │                  └──enables──> [Club-context event creation]
+                                        └──requires──> [Club settings editing (owner-only)]
 
-cron route (POST /api/cron/send-reminders)
-  → notifications DB table (inserts into it)
-  → Vercel/Supabase scheduler trigger (wires the cron to run hourly)
+[Owner vs organizer role distinction]
+    └──enables──> [Context-aware public club page] (three CTA states require knowing role)
 
-admin approve/reject actions
-  → notifications DB table (inserts approval/rejection notifications)
-  → notification type string consistency (must match typeConfig keys: event_reminder_24h, event_reminder_1h, event_approved, event_rejected)
+[Direct organizer invitations]
+    └──requires──> [club_invitations table]
+    └──requires──> [Owner vs organizer role distinction] (must write role='organizer' on acceptance)
 
-cold start fallback feed
-  → /api/recommendations fallback path (returns popularity-ranked events when savedEventIds.size < 3)
-    → event_popularity_scores table (already exists)
-    → saved_events (to exclude already-saved events from fallback)
-  → RecommendedEventsSection UI (reads `source` flag, renders appropriate label)
-  → canShowRecommendations gate on page.tsx (already exists, controls whether section renders at all)
-
-NOTE: canShowRecommendations currently hides the section entirely when < 3 saves.
-The cold start fix changes this: the section should always render but show different content
-(fallback feed) instead of hiding. This means canShowRecommendations may need to be
-renamed or restructured to canShowPersonalized, with the section always visible.
+[Club selector on /create-event]
+    └──requires──> [club_members readable by current user via RLS]
+    └──enhances──> [Club-context event creation] (both solve the clubId gap)
 ```
 
-**Critical type mismatch to resolve:**
-The cron route (`/api/cron/send-reminders/route.ts`) inserts notifications with types `reminder_24h` and `reminder_1h`. The NotificationItem typeConfig keyed on `event_reminder_24h` and `event_reminder_1h`. These strings do not match, meaning reminder notifications will render with the generic Bell fallback icon, not the Clock/AlertCircle icons. One set of strings must be aligned before shipping.
+### Dependency Notes
+
+- **DB migration must land first:** The `club_members.role` CHECK constraint migration is the prerequisite for everything. Without it, inserting `'owner'` either fails (if constraint already blocks it) or is silently ambiguous (if no constraint). Run migration, then update all role-writing code.
+- **Dashboard requires auto-grant:** Without auto-grant, the club creator navigates to `/my-clubs/[id]` and is treated as a non-member — a completely broken state since `/my-clubs` already links there.
+- **Invitations require role distinction:** The invitation acceptance flow must write `role = 'organizer'` to `club_members`; this only works correctly once the two-role model is in place.
+- **Context-aware public page requires role distinction:** The three CTA states depend on reading `club_members.role` for the current user against a specific club. Without the `owner` / `organizer` distinction, all existing members look the same.
 
 ---
 
-## MVP Recommendation
+## MVP Definition
 
-For this milestone, prioritize in this order:
+This milestone (v1.1) has a well-defined scope from PROJECT.md. Mapping to launch vs defer:
 
-**Must ship (blocking beta):**
-1. Create notifications DB table in Supabase (everything else is blocked on this)
-2. Align notification type strings across cron route and NotificationItem typeConfig
-3. Inject NotificationBell into Header.tsx
-4. Wire cron scheduler (Vercel cron or Supabase pg_cron)
-5. Add admin approve/reject → notification creation
-6. Fix /api/recommendations to return popularity-ranked fallback when user is cold-start
-7. Update RecommendedEventsSection to show appropriate label based on API `source` flag
+### Launch With (v1.1 — this milestone)
 
-**Should ship (high value, low complexity):**
-8. Clickable notification items linking to /events/[event_id] (event_id already in schema)
-9. Onboarding nudge in the cold-start section ("Save 3 events to unlock personalized recommendations")
+- [ ] DB migration: `club_members.role` CHECK constraint (`'owner'`, `'organizer'`) — foundational, everything depends on it
+- [ ] Auto-grant `'owner'` role to club creator on admin approval (change one insert in admin API)
+- [ ] `/my-clubs/[id]` tabbed dashboard (Overview, Events, Members, Settings tabs)
+- [ ] Member list tab with roles visible, pending invitations visible
+- [ ] Member removal (owner removes organizer, cannot remove self)
+- [ ] Direct organizer invitation by email (owner-only, creates `club_invitations` record)
+- [ ] Invitation acceptance flow (invited user sees invite, accepts, becomes organizer)
+- [ ] Club settings editing — owner-only: name, description, category, Instagram, logo
+- [ ] Club-context event creation from dashboard (pre-fills `clubId`, auto-approve for own club)
+- [ ] Event management tab (view and link to edit club events via existing `PATCH /api/events/[id]`)
+- [ ] Context-aware public club page (three CTA states: visitor / organizer / owner)
+- [ ] Club selector on `/create-event` for organizers with multiple clubs
+- [ ] Updated post-creation messaging on `/clubs/create` success screen
 
-**Defer post-beta:**
-- Supabase Realtime replacing polling
-- Notification type filtering on inbox
-- Pagination on /notifications
-- Progress indicator toward personalization threshold
-- Email/push notifications
-- Notification preferences
+### Add After Validation (v1.2)
+
+- [ ] Invitation expiry enforcement and re-send — add once invitations are in production and edge cases surface
+- [ ] Club analytics (event views, member growth over time) — defer until dashboard is stable; `user_interactions` and `event_popularity_scores` already collect the data
+
+### Future Consideration (v2+)
+
+- [ ] Owner transfer flow — rare (graduation turnover); admin can handle manually until frequency justifies the feature
+- [ ] Club archiving / soft-delete — useful but requires cascading status changes across events, notifications, saved events
+- [ ] Granular sub-organizer roles — only if specific clubs demonstrate the need
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| DB migration: role CHECK constraint | HIGH | LOW | P1 |
+| Auto-grant owner on approval | HIGH | LOW | P1 |
+| `/my-clubs/[id]` tabbed dashboard scaffold | HIGH | MEDIUM | P1 |
+| Member list with roles visible | HIGH | LOW | P1 |
+| Context-aware public club page | HIGH | MEDIUM | P1 |
+| Club-context event creation | HIGH | LOW | P1 |
+| Direct organizer invitations | HIGH | MEDIUM | P1 |
+| Club settings editing | MEDIUM | MEDIUM | P1 |
+| Event list / edit in dashboard (Events tab) | MEDIUM | LOW | P1 |
+| Club selector on `/create-event` | MEDIUM | LOW | P1 |
+| Updated post-creation messaging | LOW | LOW | P1 (copy-only) |
+| Member removal by owner | MEDIUM | LOW | P2 |
+| Invitation status tracking (revoke / resend) | LOW | LOW | P2 |
+| Club analytics | MEDIUM | HIGH | P3 |
+| Owner transfer UI | LOW | HIGH | P3 |
+
+**Priority key:**
+- P1: Must have for this milestone
+- P2: Should have, add when possible within milestone
+- P3: Future milestone
+
+---
+
+## Competitor Feature Analysis
+
+Platforms analyzed for pattern reference: Slack workspaces, GitHub Organizations, Discord servers, Luma (event org management), Wild Apricot (club membership software).
+
+| Feature | Slack / GitHub Orgs | Discord | Our Approach |
+|---------|---------------------|---------|--------------|
+| Role tiers | Owner > Admin > Member | Owner > Admin > Moderator > Member | Owner > Organizer (two roles; campus clubs do not need more hierarchy) |
+| Invite mechanism | Email invite (trusted link) | Invite link (public or time-limited) | Email invite by owner only — no public join links for organizers. McGill email required. |
+| Invite approval required? | No — the invitation is the trust event | No | No — owner's invitation is trusted. Admin not involved in co-organizer onboarding. |
+| Settings editing | Owner / Admin can edit workspace settings | Owner / Admin | Owner-only for club metadata. Edits are live (no re-approval). |
+| Member removal | Owner or Admin removes members | Owner / Admin / Moderator | Owner removes organizers. Owner cannot remove themselves. |
+| Event creation in org context | Luma: org pre-selected when creating from org dashboard | N/A | Pre-fill `clubId` from dashboard; auto-approve events created by club organizers for their own club |
+| Public page context-awareness | GitHub shows "Member" badge when you belong to the org. Luma shows "Manage" link for org admins. | Discord shows "Joined" state | Three CTA states: visitor (request access), organizer ("Manage Club"), owner ("Manage Club") |
+| Analytics | GitHub Insights, Slack analytics (paid) | Server Insights (premium) | Deferred to v1.2. Interaction data already captured. |
 
 ---
 
 ## Sources
 
-- Codebase audit: `src/components/notifications/`, `src/app/api/notifications/`, `src/app/api/cron/send-reminders/route.ts`, `src/app/api/recommendations/route.ts`, `src/components/events/RecommendedEventsSection.tsx`, `src/components/events/PopularEventsSection.tsx`, `src/app/page.tsx`
-- Project context: `.planning/PROJECT.md`
-- [Cold Start Problem — Practitioner's Guide (Medium/Data Scientists Handbook)](https://medium.com/data-scientists-handbook/cracking-the-cold-start-problem-in-recommender-systems-a-practitioners-guide-069bfda2b800) — MEDIUM confidence (WebSearch, not officially verified)
-- [Cold Start Problem 2025 Overview (Shadecoder)](https://www.shadecoder.com/topics/cold-start-problem-a-comprehensive-guide-for-2025) — LOW confidence (single source)
-- [Warm Recommendations for the AI Cold-Start Problem (Airbyte)](https://airbyte.com/blog/recommendations-for-the-ai-cold-start-problem) — MEDIUM confidence (credible vendor, not primary research)
-- [Design Guidelines for Better Notifications UX (Smashing Magazine, 2025)](https://www.smashingmagazine.com/2025/07/design-guidelines-better-notifications-ux/) — MEDIUM confidence (authoritative UX publication)
-- [In-App Notifications — if and how you should use them (UserGuiding)](https://userguiding.com/blog/in-app-notifications) — MEDIUM confidence
-- [Notification System Design: Architecture & Best Practices (MagicBell)](https://www.magicbell.com/blog/notification-system-design) — MEDIUM confidence (vendor source, practical)
-- [Using Realtime with Next.js (Supabase Official Docs)](https://supabase.com/docs/guides/realtime/realtime-with-nextjs) — HIGH confidence (official documentation)
-- [Building a Real-time Notification System with Supabase and Next.js (MakerKit)](https://makerkit.dev/blog/tutorials/real-time-notifications-supabase-nextjs) — MEDIUM confidence (credible community source)
-- [Notification Center — How to Build (Courier)](https://www.courier.com/blog/how-to-build-a-notification-center-for-web-and-mobile-apps) — MEDIUM confidence (vendor documentation)
-- [Long Polling vs WebSockets at scale (Ably)](https://ably.com/blog/websockets-vs-long-polling) — HIGH confidence (official Ably docs, real-time infrastructure vendor)
+- [Types of roles in Slack](https://slack.com/help/articles/360018112273-Types-of-roles-in-Slack) — role hierarchy and invite permission patterns (HIGH confidence)
+- [Role Management at Slack Engineering](https://slack.engineering/role-management-at-slack/) — permission/role design principles (HIGH confidence)
+- [14 Best Club Management Software Tools — Wild Apricot](https://www.wildapricot.com/blog/club-management-software) — member management table stakes survey (MEDIUM confidence)
+- [9 Top Membership Management Software for 2025 — Gradnet](https://gradnet.io/blog/top-membership-management-software/) — invite and role patterns in club tools (MEDIUM confidence)
+- [15 Best Club Management Software Tools for 2026 — Join It](https://joinit.com/blog/best-club-management-software) — feature landscape and admin delegation patterns (MEDIUM confidence)
+- PROJECT.md — Uni-Verse v1.1 target features, constraints, existing API context (HIGH confidence)
+- CLAUDE.md — tech stack, database schema, existing patterns (HIGH confidence)
+
+---
+
+*Feature research for: Club organizer dashboard, member management, invite system (Uni-Verse v1.1)*
+*Researched: 2026-02-25*

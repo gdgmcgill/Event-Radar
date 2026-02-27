@@ -17,7 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { Event } from "@/types";
-import Link from "next/link";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type SortOption = "recent" | "date" | "title";
 
@@ -196,19 +196,12 @@ export default function MyEventsPage() {
 
       {/* Empty state */}
       {!loading && !error && events.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
-          <Heart className="h-16 w-16 text-muted-foreground/30 mb-6" />
-          <p className="text-xl font-semibold mb-2 text-foreground">
-            No saved events yet
-          </p>
-          <p className="text-base text-muted-foreground max-w-md mb-6">
-            Start exploring events and tap the heart icon to save them here for
-            later.
-          </p>
-          <Link href="/">
-            <Button>Discover Events</Button>
-          </Link>
-        </div>
+        <EmptyState
+          icon={Heart}
+          title="No saved events yet"
+          description="Start exploring events and tap the heart icon to save them here for later."
+          action={{ label: "Discover Events", href: "/" }}
+        />
       )}
 
       {/* Events grid */}

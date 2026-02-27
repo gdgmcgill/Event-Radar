@@ -9,6 +9,8 @@
 import { EventCard } from "./EventCard";
 import { EventGridSkeleton } from "./EventGridSkeleton";
 import type { Event, InteractionSource } from "@/types";
+import { CalendarOff, SearchX } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface EventGridProps {
   events: (Event & { score?: number })[];
@@ -20,6 +22,10 @@ interface EventGridProps {
   onUnsave?: (eventId: string) => void;
   /** Source context for tracking (e.g., 'home', 'search', 'recommendation') */
   trackingSource?: InteractionSource;
+  /** True when any search/filter is active — shows filter-specific empty state */
+  hasFilters?: boolean;
+  /** Called when user clicks "Clear Filters" in the empty state */
+  onClearFilters?: () => void;
 }
 
 export function EventGrid({
@@ -30,19 +36,27 @@ export function EventGrid({
   onEventClick,
   onUnsave,
   trackingSource,
+  hasFilters = false,
+  onClearFilters,
 }: EventGridProps) {
   if (loading) {
     return <EventGridSkeleton count={6} />;
   }
 
   if (events.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
-        <p className="text-xl font-semibold mb-2 text-foreground">No events found</p>
-        <p className="text-base text-muted-foreground max-w-md">
-          Try adjusting your filters or check back later for more upcoming experiences.
-        </p>
-      </div>
+    return hasFilters ? (
+      <EmptyState
+        icon={SearchX}
+        title="No results for these filters"
+        description="Try clearing your filters or adjusting your search."
+        action={onClearFilters ? { label: "Clear Filters", onClick: onClearFilters } : undefined}
+      />
+    ) : (
+      <EmptyState
+        icon={CalendarOff}
+        title="No upcoming events"
+        description="Check back soon for new events from McGill clubs."
+      />
     );
   }
 

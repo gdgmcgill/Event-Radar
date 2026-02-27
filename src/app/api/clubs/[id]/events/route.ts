@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
+import { transformEventFromDB } from "@/lib/tagMapping";
 
 interface RouteParams {
   params: Promise<{
@@ -87,7 +88,11 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ events: events ?? [] });
+    const transformedEvents = (events ?? []).map(event =>
+      transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
+    );
+
+    return NextResponse.json({ events: transformedEvents });
   } catch (error) {
     console.error("Error in club events:", error);
     return NextResponse.json(

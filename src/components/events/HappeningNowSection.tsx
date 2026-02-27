@@ -75,7 +75,6 @@ export function HappeningNowSection({ onEventClick }: HappeningNowSectionProps) 
     }, 60000);
 
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only fetch + interval
   }, []);
 
   if (loading && events.length === 0) {

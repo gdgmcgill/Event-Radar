@@ -1,394 +1,252 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-02-23
+**Analysis Date:** 2026-02-25
 
 ## Directory Layout
 
 ```
-Event-Radar/
-├── src/
-│   ├── app/                           # Next.js App Router (pages & API routes)
-│   │   ├── api/                       # Server-side API endpoints
-│   │   │   ├── events/
-│   │   │   │   ├── route.ts           # GET /api/events (paginated events list)
-│   │   │   │   ├── popular/
-│   │   │   │   │   └── route.ts       # GET /api/events/popular
-│   │   │   │   └── [id]/
-│   │   │   │       └── save/
-│   │   │   │           └── route.ts   # POST /api/events/{id}/save
-│   │   │   ├── clubs/                 # Club endpoints
-│   │   │   ├── admin/                 # Admin panel endpoints
-│   │   │   │   ├── events/            # Admin event management
-│   │   │   │   ├── clubs/             # Admin club management
-│   │   │   │   ├── users/             # Admin user management
-│   │   │   │   ├── organizer-requests/# Organizer approval requests
-│   │   │   │   ├── stats/             # Admin analytics
-│   │   │   │   └── calculate-popularity/ # Recalculate popularity scores
-│   │   │   ├── interactions/          # POST /api/interactions (track user actions)
-│   │   │   ├── recommendations/       # GET /api/recommendations
-│   │   │   ├── user/
-│   │   │   │   └── engagement/        # User engagement stats
-│   │   │   ├── auth/                  # Auth endpoints
-│   │   │   │   ├── callback/          # GET /auth/callback (OAuth handler)
-│   │   │   │   └── signout/           # POST /auth/signout
-│   │   │   ├── health/                # GET /api/health (uptime check)
-│   │   │   ├── users/                 # User data endpoints
-│   │   │   │   └── saved-events/      # GET /api/users/saved-events
-│   │   │   └── my-clubs/              # User's owned clubs
-│   │   │
-│   │   ├── (pages)/                   # User-facing pages
-│   │   │   ├── page.tsx               # / (Home - event discovery)
-│   │   │   ├── events/
-│   │   │   │   └── [id]/
-│   │   │   │       └── page.tsx       # /events/{id} (event detail)
-│   │   │   ├── my-events/
-│   │   │   │   └── page.tsx           # /my-events (saved events)
-│   │   │   ├── calendar/
-│   │   │   │   └── page.tsx           # /calendar (calendar view)
-│   │   │   ├── my-clubs/              # Organizer club management
-│   │   │   │   └── page.tsx
-│   │   │   ├── create-event/
-│   │   │   │   └── page.tsx           # Event creation form
-│   │   │   ├── admin/                 # Admin dashboard
-│   │   │   │   ├── page.tsx           # /admin (overview)
-│   │   │   │   ├── events/            # /admin/events
-│   │   │   │   ├── clubs/             # /admin/clubs
-│   │   │   │   ├── users/             # /admin/users
-│   │   │   │   ├── pending/           # /admin/pending (event approval)
-│   │   │   │   └── layout.tsx         # Admin layout wrapper
-│   │   │   ├── profile/               # /profile (user profile)
-│   │   │   ├── user-profile/          # /user-profile
-│   │   │   ├── onboarding/            # /onboarding (interest tags setup)
-│   │   │   ├── about/                 # /about
-│   │   │   └── docs/                  # /docs
-│   │   │
-│   │   ├── layout.tsx                 # Root layout (wraps all pages)
-│   │   ├── globals.css                # Global styles
-│   │   ├── robots.ts                  # SEO: robots.txt
-│   │   └── sitemap.ts                 # SEO: sitemap.xml
-│   │
-│   ├── components/                    # React components (organized by feature)
-│   │   ├── ui/                        # shadcn/ui primitives
-│   │   │   ├── button.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── badge.tsx
-│   │   │   ├── dialog.tsx
-│   │   │   ├── sheet.tsx              # Mobile sidebar
-│   │   │   └── ... (other ui primitives)
-│   │   │
-│   │   ├── layout/                    # Global layout components
-│   │   │   ├── Header.tsx             # Top navigation bar
-│   │   │   ├── SideNavBar.tsx         # Desktop left sidebar
-│   │   │   ├── Footer.tsx
-│   │   │   ├── ThemeToggle.tsx        # Dark mode toggle
-│   │   │   └── navItems.ts            # Navigation items config
-│   │   │
-│   │   ├── events/                    # Event-related components
-│   │   │   ├── EventCard.tsx          # Single event card
-│   │   │   ├── EventCardSkeleton.tsx  # Loading skeleton
-│   │   │   ├── EventGrid.tsx          # Grid of event cards
-│   │   │   ├── EventGridSkeleton.tsx  # Grid loading skeleton
-│   │   │   ├── EventFilters.tsx       # Filter panel (desktop)
-│   │   │   ├── FilterSidebar.tsx      # Collapsible sidebar filters
-│   │   │   ├── EventSearch.tsx        # Search input component
-│   │   │   ├── EventDetailsModal.tsx  # Detailed event view modal
-│   │   │   ├── EventBadge.tsx         # Category/popularity badge
-│   │   │   ├── PopularEventsSection.tsx # Trending events section
-│   │   │   ├── RecommendedEventsSection.tsx # Personalized recommendations
-│   │   │   ├── HappeningNowSection.tsx # Current events
-│   │   │   ├── HorizontalEventScroll.tsx # Horizontal scrolling list
-│   │   │   ├── CategorySection.tsx
-│   │   │   ├── RsvpButton.tsx         # RSVP interaction
-│   │   │   ├── CreateEventForm.tsx    # Event creation form
-│   │   │   ├── CreateEventModal.tsx
-│   │   │   ├── RelatedEventCard.tsx
-│   │   │   ├── EventFilters.test.tsx  # Component tests
-│   │   │   └── FilterSidebar.test.tsx
-│   │   │
-│   │   ├── auth/                      # Authentication components
-│   │   │   ├── SignInButton.tsx       # OAuth sign-in button
-│   │   │   └── SignOutButton.tsx
-│   │   │
-│   │   ├── clubs/                     # Club-related components
-│   │   │   ├── ClubCard.tsx
-│   │   │   └── ... (club management UI)
-│   │   │
-│   │   ├── profile/                   # User profile components
-│   │   │   └── ... (profile editing UI)
-│   │   │
-│   │   ├── admin/                     # Admin panel components
-│   │   │   └── ... (admin dashboard UI)
-│   │   │
-│   │   ├── notifications/             # Notification components
-│   │   │   └── NotificationBell.tsx   # Notification indicator
-│   │   │
-│   │   ├── providers/                 # Context providers
-│   │   │   └── AuthProvider.tsx       # Initializes Zustand auth store
-│   │   │
-│   │   ├── shared/                    # Shared utility components
-│   │   │   ├── ErrorBoundary.tsx      # React error boundary
-│   │   │   └── ... (other utilities)
-│   │   │
-│   │   └── redoc/                     # API documentation components
-│   │       └── ... (Redoc wrapper)
-│   │
-│   ├── hooks/                         # Custom React hooks
-│   │   ├── useEvents.ts               # Event fetching with pagination
-│   │   ├── useEvents.test.ts          # Hook tests
-│   │   ├── useSavedEvents.ts          # Fetch user's saved event IDs
-│   │   ├── useUser.ts                 # User profile hook
-│   │   ├── useTracking.ts             # Track user interactions
-│   │   └── index.ts                   # Hook exports
-│   │
-│   ├── lib/                           # Utility functions & config
-│   │   ├── supabase/                  # Supabase clients & types
-│   │   │   ├── client.ts              # Browser Supabase client
-│   │   │   ├── server.ts              # Server Supabase client
-│   │   │   ├── service.ts             # Database query helpers
-│   │   │   └── types.ts               # Auto-generated DB types
-│   │   │
-│   │   ├── utils.ts                   # General utilities (cn, formatDate, etc)
-│   │   ├── constants.ts               # Event categories, API endpoints, colors
-│   │   ├── roles.ts                   # isAdmin(), isOrganizer() helpers
-│   │   ├── tagMapping.ts              # Event tag transformations
-│   │   ├── admin.ts                   # Admin utility functions
-│   │   ├── classifier.ts              # ML: Event tag classification
-│   │   ├── classifier.test.ts
-│   │   ├── classifier-pipeline.ts     # ML: Classification pipeline
-│   │   ├── kmeans.ts                  # ML: K-means clustering for recommendations
-│   │   ├── kmeans.test.ts
-│   │   ├── swagger.ts                 # API documentation generation
-│   │   └── middlewareRateLimit.ts     # Request rate limiting
-│   │
-│   ├── store/                         # Global state management
-│   │   └── useAuthStore.ts            # Zustand auth store (singleton)
-│   │
-│   ├── types/                         # TypeScript definitions
-│   │   └── index.ts                   # All app type definitions (Event, User, etc)
-│   │
-│   └── middleware.ts                  # Next.js middleware (runs on every request)
+src/
+├── app/                           # Next.js App Router (pages, layouts, API routes)
+│   ├── (public pages)/            # Public routes (about, help, privacy, terms, feedback, etc.)
+│   ├── api/                       # REST API endpoints
+│   │   ├── admin/                 # Admin operations (events, clubs, users, stats)
+│   │   ├── events/                # Event CRUD and operations (save, RSVP, popular, happening-now)
+│   │   ├── clubs/                 # Club management
+│   │   ├── interactions/          # User interaction tracking (views, clicks, saves)
+│   │   ├── recommendations/       # Event recommendations engine
+│   │   ├── profile/               # User profile operations
+│   │   ├── notifications/         # Notification delivery
+│   │   ├── auth/                  # OAuth callback, sign out
+│   │   └── cron/                  # Scheduled tasks (send reminders)
+│   ├── admin-login/               # Admin login page
+│   ├── calendar/                  # Calendar view page
+│   ├── categories/                # Category browsing page
+│   ├── clubs/                     # Club discovery and management pages
+│   ├── create-event/              # Event creation form page
+│   ├── events/[id]/               # Event detail page (dynamic route)
+│   ├── my-clubs/                  # User's clubs dashboard
+│   ├── my-events/                 # Saved events page
+│   ├── notifications/             # Notifications page
+│   ├── onboarding/                # Onboarding flow page
+│   ├── moderation/                # Admin moderation pages
+│   ├── profile/                   # User profile page
+│   ├── user-profile/              # User profile editing page
+│   ├── layout.tsx                 # Root layout with AuthProvider, Header, SideNavBar
+│   ├── page.tsx                   # Home page (main feed)
+│   ├── robots.ts                  # SEO robots.txt
+│   └── sitemap.ts                 # SEO sitemap
 │
-├── public/                            # Static assets
-│   └── ... (images, fonts, etc)
+├── components/                    # Reusable React components
+│   ├── ui/                        # shadcn/ui primitives (button, input, dialog, etc.)
+│   ├── layout/                    # Header, SideNavBar, Footer, ThemeToggle
+│   ├── events/                    # Event-specific components (Card, Grid, Filters, Modal, etc.)
+│   ├── auth/                      # Auth components (SignInButton, SignOutButton)
+│   ├── clubs/                     # Club components (OrganizerRequestDialog)
+│   ├── profile/                   # Profile components (EditProfileModal, AvatarCropModal, etc.)
+│   ├── notifications/             # Notification UI (NotificationBell, NotificationList)
+│   ├── providers/                 # Context providers (AuthProvider)
+│   ├── redoc/                     # API documentation UI
+│   ├── shared/                    # Shared modals (EditEventModal)
+│   └── ErrorBoundary.tsx          # Error boundary wrapper
 │
-├── .planning/                         # GSD planning documents
-│   └── codebase/                      # Architecture & design docs (generated)
-│       ├── ARCHITECTURE.md
-│       ├── STRUCTURE.md
-│       ├── CONVENTIONS.md
-│       ├── TESTING.md
-│       ├── STACK.md
-│       ├── INTEGRATIONS.md
-│       └── CONCERNS.md
+├── hooks/                         # Custom React hooks
+│   ├── useEvents.ts               # Fetch events with cursor pagination
+│   ├── useSavedEvents.ts          # Manage saved event IDs
+│   ├── useUser.ts                 # Fetch user profile
+│   ├── useTracking.ts             # Track user interactions
+│   └── *.test.ts                  # Hook tests
 │
-└── Configuration files
-    ├── next.config.ts                 # Next.js configuration
-    ├── tsconfig.json                  # TypeScript configuration
-    ├── package.json                   # Dependencies
-    ├── package-lock.json              # Lock file
-    ├── tailwind.config.ts             # Tailwind CSS config
-    ├── postcss.config.mjs             # PostCSS config
-    ├── eslint.config.mjs              # ESLint rules
-    └── .env.local                     # Environment variables (not committed)
+├── lib/                           # Utility functions and helpers
+│   ├── supabase/
+│   │   ├── client.ts              # Browser Supabase client factory
+│   │   ├── server.ts              # Server Supabase client factory
+│   │   ├── service.ts             # Service role client (admin operations)
+│   │   └── types.ts               # Generated Supabase database types
+│   ├── utils.ts                   # General utilities (cn, formatDate, formatTime, isMcGillEmail)
+│   ├── constants.ts               # Constants (EVENT_TAGS, EVENT_CATEGORIES, COLORS, API endpoints)
+│   ├── roles.ts                   # Role checking functions (isAdmin, isOrganizer)
+│   ├── classifier.ts              # Instagram event classifier (NLP)
+│   ├── classifier-pipeline.ts     # Classification pipeline with webhook integration
+│   ├── kmeans.ts                  # K-means clustering for recommendations
+│   ├── tagMapping.ts              # Event tag normalization
+│   ├── image-upload.ts            # Image download/upload to Supabase storage
+│   ├── admin.ts                   # Admin verification utilities
+│   ├── swagger.ts                 # OpenAPI/Swagger documentation generator
+│   └── *.test.ts                  # Utility tests
+│
+├── store/                         # Zustand state management
+│   └── useAuthStore.ts            # Global auth state (user, loading, initialize)
+│
+├── types/                         # TypeScript type definitions
+│   └── index.ts                   # Event, Club, User, SavedEvent, RSVP, Notification types
+│
+├── middleware.ts                  # Next.js middleware (auth, rate limiting, route protection)
+├── middlewareRateLimit.ts         # Rate limiting logic
+│
+└── __tests__/                     # Integration tests
+    └── api/
+        └── events/
+            └── rsvp.test.ts       # RSVP endpoint tests
 ```
 
 ## Directory Purposes
 
 **src/app/:**
-Purpose: Next.js App Router - contains all routes and API endpoints. Exports page components and API handlers via file-based routing.
-Contains: Page components (TSX), API route handlers, nested layouts, authentication routes.
-Key files:
-- `page.tsx` at root: Home page (event discovery)
-- `api/` prefix: API endpoints (query handlers)
-- Routes named by folder structure: `/my-events` = `src/app/my-events/page.tsx`
+- Purpose: Next.js App Router pages, layouts, and API routes
+- Contains: Page components (.tsx), layout components, dynamic segments [id], API route handlers
+- Organized: By feature/domain (events, clubs, admin, etc.)
+
+**src/app/api/:**
+- Purpose: REST API endpoints
+- Contains: Route handlers returning JSON responses
+- Pattern: File-based routing (folder/route.ts); folders with [id] for dynamic segments
 
 **src/components/:**
-Purpose: Reusable React components organized by feature area. No page logic, only presentation and basic interactions.
-Contains: Component files (TSX), component tests, UI primitives, layout shells.
-Key files:
-- `ui/`: shadcn/ui components (Button, Card, Dialog, etc)
-- `events/`: EventCard, EventGrid, EventFilters, EventDetailsModal
-- `layout/`: Global UI structure (Header, SideNavBar, Footer)
-- `providers/`: Context providers (AuthProvider initializes Zustand)
+- Purpose: Reusable React UI components
+- Contains: Functional components using hooks, Tailwind CSS, shadcn/ui
+- Organized: By feature/domain; `ui/` for primitive components
 
 **src/hooks/:**
-Purpose: Custom React hooks for data fetching, state management, and side effects. Encapsulate API interactions.
-Contains: Hook implementations with TypeScript interfaces for options and return types.
-Key hooks:
-- `useEvents()`: Cursor-based pagination, filtering, sorting
-- `useSavedEvents()`: Fetch and cache user's saved event IDs
-- `useTracking()`: Send interaction events to analytics API
-
-**src/lib/supabase/:**
-Purpose: Supabase integration layer. Separates client vs server clients, provides type safety.
-Contains:
-- `client.ts`: Browser-safe Supabase client (uses env.NEXT_PUBLIC_*)
-- `server.ts`: Server-only Supabase client (async, handles cookies)
-- `types.ts`: Auto-generated TypeScript types from DB schema
-- `service.ts`: Query builder functions (optional, not always used)
+- Purpose: Custom React hooks encapsulating logic
+- Contains: Data fetching, state management, side effects
+- Pattern: Returns hooks that can be called from components; includes test files
 
 **src/lib/:**
-Purpose: Shared utility functions and configuration. Single responsibility per file.
-Contains:
-- `utils.ts`: General utilities (cn for class merging, formatDate, formatTime)
-- `constants.ts`: Event categories, colors, API endpoints
-- `roles.ts`: Role checking functions
-- `classifier.ts`: ML model for auto-tagging events
+- Purpose: Utility functions, integrations, constants
+- Contains: Formatting, validation, database clients, classification logic
+- Organized: By concern (supabase/, constants, classifiers)
 
 **src/store/:**
-Purpose: Global application state using Zustand. Currently only auth state.
-Contains: Auth store with user, loading, initialized flags, initialize() and signOut() methods.
-Pattern: Created with `create()` factory, used via `useAuthStore()` hook
+- Purpose: Global client-side state management
+- Contains: Zustand stores (currently just auth)
+- Pattern: `useAuthStore` provides user, loading, initialize, signOut
 
 **src/types/:**
-Purpose: Central TypeScript definitions. All interfaces in one file for easy discovery.
-Contains: Domain models (Event, User, Club, etc), enums, API response types.
-Key types:
-- `Event`: Core event with status, tags, relations
-- `User`: Authenticated user with roles and preferences
-- `UserInteraction`: Analytics event for tracking
-- `EventFilter`: Query filter parameters
+- Purpose: TypeScript interfaces matching database schema
+- Contains: Event, Club, User, SavedEvent, RSVP, Notification, UserInteraction
+- Single file: `index.ts` (currently 237 lines)
 
-**src/middleware.ts:**
-Purpose: Next.js middleware. Runs on every request before route handlers.
-Responsibilities:
-- Refresh Supabase session tokens
-- Protect routes (redirect unauthenticated users)
-- Enforce onboarding flow
-- Apply rate limiting
+**src/__tests__/:**
+- Purpose: Integration/unit tests
+- Contains: Test files mirroring src/ structure
+- Current coverage: Limited (rsvp.test.ts, some hook tests)
 
 ## Key File Locations
 
 **Entry Points:**
-
-- `src/app/layout.tsx`: Root HTML structure, AuthProvider initialization, theme script
-- `src/app/page.tsx`: Home page with event discovery, search, filters, pagination
-- `src/app/auth/callback/route.ts`: OAuth callback handler (validates McGill email, upserts profile)
-- `src/middleware.ts`: Request-level auth and routing logic
+- `src/app/page.tsx`: Home feed page (main entry point for users)
+- `src/app/auth/callback/route.ts`: OAuth redirect handler
+- `src/middleware.ts`: Request-level auth, rate limiting, route protection
+- `src/app/layout.tsx`: Root layout with AuthProvider, Header, Footer
 
 **Configuration:**
-
-- `src/lib/constants.ts`: EVENT_CATEGORIES (colors, icons), API_ENDPOINTS, MCGILL_COLORS
-- `src/components/layout/navItems.ts`: Navigation menu structure (guest, user, organizer, admin)
-- `src/lib/supabase/types.ts`: Supabase DB type definitions (auto-generated)
+- `.env.local`: Supabase credentials (DO NOT COMMIT)
+- `next.config.js`: Next.js build configuration
+- `tsconfig.json`: TypeScript strict mode enabled
+- `tailwind.config.ts`: Tailwind CSS theming
 
 **Core Logic:**
+- `src/lib/supabase/client.ts`: Browser Supabase client for client components
+- `src/lib/supabase/server.ts`: Server Supabase client for API routes
+- `src/store/useAuthStore.ts`: Global auth state management
+- `src/hooks/useEvents.ts`: Main event fetching hook with cursor pagination
 
-- `src/store/useAuthStore.ts`: Global auth state (Zustand)
-- `src/hooks/useEvents.ts`: Event pagination and filtering logic
-- `src/lib/supabase/client.ts`: Browser Supabase client factory
-- `src/lib/supabase/server.ts`: Server Supabase client factory
+**Data Models:**
+- `src/types/index.ts`: All TypeScript interfaces for domain entities
+
+**API Routes (by resource):**
+- `src/app/api/events/route.ts`: GET events with filtering/pagination
+- `src/app/api/events/[id]/save/route.ts`: POST/DELETE to save/unsave
+- `src/app/api/events/[id]/rsvp/route.ts`: GET/POST/DELETE RSVP
+- `src/app/api/events/popular/route.ts`: GET trending events
+- `src/app/api/recommendations/route.ts`: GET personalized recommendations
+- `src/app/api/admin/events/route.ts`: Admin event listing
+- `src/app/api/admin/events/[id]/status/route.ts`: Admin event approval
 
 **Testing:**
-
-- `src/hooks/useEvents.test.ts`: Unit tests for event fetching hook
-- `src/components/events/EventFilters.test.tsx`: Component tests
-- `src/lib/classifier.test.ts`: ML classifier tests
-- `src/lib/kmeans.test.ts`: K-means clustering tests
+- `src/hooks/useEvents.test.ts`: Hook unit tests
+- `src/__tests__/api/events/rsvp.test.ts`: Integration test for RSVP endpoint
 
 ## Naming Conventions
 
 **Files:**
-
-- **Page components:** `page.tsx` (Next.js convention)
-- **API routes:** `route.ts` (Next.js convention)
-- **Components:** PascalCase, e.g., `EventCard.tsx`, `EventFilters.tsx`
-- **Hooks:** camelCase with `use` prefix, e.g., `useEvents.ts`, `useSavedEvents.ts`
-- **Utilities:** camelCase, e.g., `utils.ts`, `constants.ts`
-- **Tests:** Same name as file + `.test.ts` or `.spec.ts`, e.g., `useEvents.test.ts`
+- Components: PascalCase (e.g., `EventCard.tsx`, `Header.tsx`)
+- Utilities: camelCase (e.g., `utils.ts`, `tagMapping.ts`)
+- API routes: lowercase with dashes in folders (e.g., `route.ts` inside `src/app/api/admin/events/[id]/`)
+- Tests: Same name as file with `.test.ts` suffix (e.g., `useEvents.test.ts`)
 
 **Directories:**
+- Feature/domain folders: lowercase (e.g., `events`, `clubs`, `admin`)
+- Dynamic segments: [brackets] (e.g., `[id]` for dynamic routes)
+- Utility groups: lowercase (e.g., `supabase`, `ui`, `layout`)
 
-- **Pages:** kebab-case matching URL paths, e.g., `/my-events` = `my-events/`
-- **API routes:** kebab-case matching URL paths, e.g., `/api/events` = `api/events/`
-- **Components by feature:** kebab-case, e.g., `events/`, `layout/`, `auth/`, `admin/`
-- **Dynamic segments:** [bracket-notation], e.g., `[id]/` for `events/{id}`
+**Components:**
+- Page components: Named by feature (e.g., `HomePage`, `EventDetailPage`)
+- Modal/Dialog components: End with "Modal" or "Dialog" (e.g., `EventDetailsModal`, `EditProfileModal`)
+- Button/Action components: Verb-based (e.g., `SignInButton`, `SaveButton`, `RsvpButton`)
+- Section components: Named by content (e.g., `PopularEventsSection`, `HappeningNowSection`)
 
-**Functions & Variables:**
-
-- **Functions:** camelCase, e.g., `formatDate()`, `isMcGillEmail()`, `isAdmin()`
-- **Constants:** UPPER_SNAKE_CASE, e.g., `MAX_LIMIT`, `PROTECTED_ROUTES`, `VALID_DOMAINS`
-- **Type names:** PascalCase, e.g., `Event`, `User`, `EventFilter`
-- **Enums:** PascalCase, e.g., `EventTag`, `RsvpStatus`, `InteractionType`
+**Hooks:**
+- Prefix "use" (e.g., `useEvents`, `useSavedEvents`, `useUser`)
+- Naming describes what they manage (e.g., `useAuthStore`, `useTracking`)
 
 ## Where to Add New Code
 
-**New Feature (Full Page):**
+**New Feature (Event Search Enhancement):**
+- Primary code: `src/app/events/` or new route like `src/app/search/`
+- Component: `src/components/events/SearchFilters.tsx`
+- Hook: `src/hooks/useSearch.ts`
+- API endpoint: `src/app/api/search/route.ts`
+- Tests: `src/hooks/useSearch.test.ts`, `src/__tests__/api/search/route.test.ts`
+- Types: Add to `src/types/index.ts`
 
-1. **Page component:** `src/app/{feature}/page.tsx`
-   - Import layout components (Header, Footer via root layout)
-   - Use hooks for data fetching: `useEvents()`, `useUser()`, etc
-   - Import components from `src/components/{feature}/`
+**New Component (Reusable UI):**
+- Implementation: `src/components/{feature}/{ComponentName}.tsx`
+- If generic: `src/components/ui/{componentName}.tsx`
+- Tests: Alongside component if complex (`ComponentName.test.tsx`)
 
-2. **Feature components:** `src/components/{feature}/{ComponentName}.tsx`
-   - Use shadcn/ui buttons, cards, dialogs
-   - Mark as "use client" if interactive
-   - Accept data via props, emit via callbacks
-
-3. **Feature tests:** `src/components/{feature}/{ComponentName}.test.tsx`
-   - Follow existing test patterns in `EventFilters.test.tsx`
-
-4. **API endpoint:** `src/app/api/{feature}/route.ts` (if needed)
-   - Use server Supabase client
-   - Check auth with `supabase.auth.getUser()`
-   - Return `NextResponse` with appropriate status
-
-**New Component/Module:**
-
-- **Reusable component:** `src/components/{category}/{ComponentName}.tsx`
-  - Use "use client" only if interactive
-  - Accept all data via props
-  - Emit via callbacks (onSelect, onChange, etc)
-
-- **UI primitive from shadcn:** `src/components/ui/{ComponentName}.tsx`
-  - Copy from shadcn/ui component library
-  - No modifications to primitives
-
-- **Custom hook:** `src/hooks/use{Feature}.ts`
-  - Follow pattern: `useState` + `useEffect` for side effects
-  - Return object with data, loading, error, and functions
-  - Use Supabase client from `src/lib/supabase/client.ts` or `server.ts`
+**New Page/Route:**
+- Create folder in `src/app/` matching route path
+- Add `page.tsx` for page or `route.ts` for API endpoint
+- Use existing layout if inheriting from parent
 
 **Utilities:**
+- General helper: Add to `src/lib/utils.ts`
+- Domain-specific: Create new file in `src/lib/` (e.g., `src/lib/recommendations.ts`)
+- Feature-specific classification: `src/lib/classifier.ts`
 
-- **Shared functions:** `src/lib/utils.ts` (small functions)
-- **Constants:** `src/lib/constants.ts` (if event-related) or create new file
-- **Feature-specific utils:** `src/lib/{feature}.ts`, e.g., `src/lib/roles.ts`
+**Global State:**
+- Store in `src/store/` with Zustand (e.g., `src/store/useNotificationStore.ts`)
 
-**Types:**
-
-- **Always:** Add to `src/types/index.ts`
-- **Export enum:** `export enum {Name} { ... }`
-- **Export interface:** `export interface {Name} { ... }`
-- **Never create separate type files** (keep in `index.ts` for discoverability)
+**API Endpoints:**
+- CRUD for resource: `src/app/api/{resource}/route.ts` (list/create), `src/app/api/{resource}/[id]/route.ts` (read/update/delete)
+- Sub-resource actions: `src/app/api/{resource}/[id]/{action}/route.ts` (e.g., `/api/events/[id]/save/route.ts`)
+- Paginated lists: Use cursor pagination (see `useEvents` hook pattern)
 
 ## Special Directories
 
-**Public Files:**
-- Location: `/public`
-- Purpose: Static assets (images, fonts, SVGs)
-- Generated: No
+**src/__tests__/:**
+- Purpose: Integration and unit tests
+- Generated: No (manually written)
 - Committed: Yes
-- Served at root: `/image.png` = `public/image.png`
+- Pattern: Mirrors src/ structure for organization
 
-**node_modules:**
+**node_modules/:**
 - Purpose: Installed dependencies
-- Generated: Yes (via `npm install`)
+- Generated: Yes (via npm install)
 - Committed: No (in .gitignore)
-- Size: ~500MB (should not commit)
 
-**.next:**
-- Purpose: Next.js build output (compiled pages, server functions)
-- Generated: Yes (via `npm run build` or dev server)
-- Committed: No (in .gitignore)
-- Size: ~300MB (should not commit)
+**src/lib/supabase/types.ts:**
+- Purpose: Auto-generated Supabase database types
+- Generated: Yes (via `npx supabase gen types`)
+- Committed: Yes (should be regenerated when schema changes)
+- Note: Do not manually edit; regenerate from Supabase CLI
 
-**.env.local:**
-- Purpose: Environment variables (Supabase credentials, admin emails)
-- Generated: No (created manually)
-- Committed: No (in .gitignore) — contains secrets!
-- Required: Yes, for dev and production
+**public/:**
+- Purpose: Static assets
+- Generated: No (manually added)
+- Committed: Yes
 
 ---
 
-*Structure analysis: 2026-02-23*
+*Structure analysis: 2026-02-25*

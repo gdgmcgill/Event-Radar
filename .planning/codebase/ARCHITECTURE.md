@@ -1,320 +1,210 @@
 # Architecture
 
-**Analysis Date:** 2026-02-23
+**Analysis Date:** 2026-02-25
 
 ## Pattern Overview
 
-**Overall:** Next.js App Router with client/server separation and state management via Zustand
+**Overall:** Next.js 16 full-stack application using App Router pattern with layered architecture consisting of client components, API route handlers, and server-side logic all in single codebase.
 
 **Key Characteristics:**
-- Server-side rendering with selective client interactivity
-- Cursor-based pagination for event feeds
-- Supabase as primary backend with real-time capabilities
-- Client-side state management using Zustand (auth) and React hooks (data)
-- Component-driven UI with shadcn/ui and Tailwind CSS
+- Hybrid client/server components (using "use client" directive for client-side interactivity)
+- REST API endpoints with Next.js API routes in `src/app/api/`
+- Supabase for database, auth, and real-time features
+- Zustand for client-side state management
+- Cursor-based pagination for efficient data fetching
 - Role-based access control (user, club_organizer, admin)
+- Type-safe database layer using generated Supabase types
 
 ## Layers
 
-**Presentation Layer (Components):**
-- Purpose: Render UI and handle user interactions
-- Location: `src/components/`
-- Contains: React components organized by feature (events, layout, auth, clubs, etc.)
-- Depends on: Hooks, utils, types, UI components
-- Used by: Next.js page routes
+**Presentation Layer (Components & Pages):**
+- Purpose: Render UI, collect user input, display data from server/API
+- Location: `src/app/` (pages via App Router), `src/components/`
+- Contains: Page components, layout components, UI primitives, event filters, forms
+- Depends on: Custom hooks, stores (Zustand), utility functions, types
+- Used by: Browser/user interaction
 
-**State Management Layer:**
-- Purpose: Manage application state and authentication
-- Location: `src/store/useAuthStore.ts`
-- Contains: Zustand store for authenticated user state, roles, and interest tags
-- Depends on: Supabase client, types
-- Used by: AuthProvider, Header, SideNavBar, and auth-gated features
+**Data Fetching & State Layer:**
+- Purpose: Manage client-side data fetching, pagination, caching; server-side session management
+- Location: `src/hooks/` (custom hooks), `src/store/` (Zustand stores), `src/lib/supabase/`
+- Contains: `useEvents` (cursor pagination), `useSavedEvents`, `useUser`, `useAuthStore`
+- Depends on: Supabase clients, API routes, types
+- Used by: Presentation layer components
 
-**Hooks Layer (Data & Logic):**
-- Purpose: Encapsulate data fetching, business logic, and side effects
-- Location: `src/hooks/`
-- Key hooks:
-  - `useEvents()`: Cursor-based event pagination with filtering
-  - `useSavedEvents()`: Fetch user's saved event IDs
-  - `useUser()`: User profile data
-  - `useTracking()`: Event interaction tracking (views, clicks, saves, shares)
-- Depends on: API routes, Supabase clients, types
-- Used by: Components and pages
-
-**API Layer:**
-- Purpose: Server-side logic, database queries, and external integrations
+**API Layer (Route Handlers):**
+- Purpose: Expose REST endpoints for CRUD operations, data aggregation, business logic
 - Location: `src/app/api/`
-- Contains: Next.js API routes organized by resource (events, clubs, admin, auth)
-- Patterns:
-  - Event queries with cursor pagination: `GET /api/events`
-  - Admin endpoints for event/club/user management: `GET|POST|PUT /api/admin/*`
-  - User interactions tracking: `POST /api/interactions`
-  - Recommendations: `GET /api/recommendations`
-- Depends on: Supabase server client, database types, business logic utilities
-- Used by: Client-side hooks and browser fetch requests
+- Contains: Route handler files organized by resource (events, clubs, admin, interactions, recommendations, etc.)
+- Depends on: Supabase server client, auth verification, type transformations
+- Used by: Client components (via fetch/hooks), external systems (webhooks)
 
-**Data Access Layer:**
-- Purpose: Encapsulate Supabase database access and queries
-- Location: `src/lib/supabase/`
-- Contains:
-  - `client.ts`: Browser Supabase client for client components
-  - `server.ts`: Server Supabase client for API routes
-  - `types.ts`: Auto-generated TypeScript types from Supabase schema
-  - `service.ts`: Database query helpers
-- Depends on: Supabase SDK, environment variables
-- Used by: API routes and client hooks
+**Server Integration Layer:**
+- Purpose: Database access, authentication, session management, service operations
+- Location: `src/lib/supabase/`, `src/middleware.ts`
+- Contains: Supabase client factories (client/server), middleware for auth/rate limiting
+- Depends on: Supabase SDK, Next.js server features
+- Used by: API routes, page components, middleware
 
-**Utilities & Constants:**
-- Purpose: Shared functions and configuration
-- Location: `src/lib/` and `src/types/`
-- Key files:
-  - `utils.ts`: Date formatting, class merging (cn), McGill email validation
-  - `constants.ts`: Event categories, API endpoints, McGill colors
-  - `roles.ts`: Role checking functions (isAdmin, isOrganizer)
-  - `types/index.ts`: TypeScript interfaces for all domain models
+**Utilities & Helpers Layer:**
+- Purpose: Reusable functions for formatting, validation, classification, image handling
+- Location: `src/lib/`
+- Contains: Utils (`cn`, formatting functions), constants, roles, tag mapping, ML classifier
+- Depends on: Date libraries (date-fns), types
+- Used by: All layers
+
+**Type System:**
+- Purpose: Define data structures matching Supabase schema + domain types
+- Location: `src/types/index.ts`
+- Contains: Event, Club, User, SavedEvent, RSVP, Notification, UserInteraction interfaces
+- Depends on: None (defines contracts)
+- Used by: All layers
 
 ## Data Flow
 
-**Event Discovery Flow (Home Page):**
+**Event Browsing Flow:**
 
-1. User loads `/` → `src/app/page.tsx` (client component)
-2. Component initializes with `useEvents()` hook
-3. Hook calls `/api/events?limit=20&sort=start_date&direction=asc`
-4. API route validates query params and executes Supabase query
-5. Response includes: `{ events: Event[], total: number, nextCursor: string }`
-6. Hook updates state and provides refetch/loadMore functions
-7. Component renders `<EventGrid>` with paginated results
-8. User clicks "Load More" → hook fetches next cursor page
-9. Results append to existing list (append mode in hook)
+1. User loads home page (`src/app/page.tsx`)
+2. HomePageContent initializes `useEvents` hook with filters
+3. Hook builds query params using `buildQueryParams` and calls `GET /api/events`
+4. API route (`src/app/api/events/route.ts`) queries Supabase with cursor pagination
+5. Database returns event batch + next cursor
+6. Hook updates state; component renders EventGrid
+7. User scrolls/filters; hook calls `loadMore()` with next cursor
+8. New batch fetched and appended to events array
 
-**Save Event Flow (Interactive):**
+**Save Event Flow:**
 
-1. User clicks heart button on `<EventCard>`
+1. User clicks save button on EventCard (`src/components/events/EventCard.tsx`)
 2. Component calls `POST /api/events/{id}/save`
-3. Middleware validates authentication (protected route)
-4. API creates/deletes record in `saved_events` table
-5. Returns `{ saved: boolean }` with interaction tracking
-6. Component updates local `isSaved` state
-7. `useTracking()` logs interaction to `user_interactions` table
+3. API route verifies auth, checks if event exists
+4. If already saved, deletes from `saved_events` table; else inserts
+5. Returns `{ saved: true/false }`
+6. Hook `useSavedEvents` updates local saved IDs set
+7. UI reflects toggle (button fills/empties)
 
-**Authentication Flow:**
+**Recommendation Flow:**
 
-1. User visits site → `src/app/layout.tsx` wraps with `<AuthProvider>`
-2. Provider calls `useAuthStore.initialize()`
-3. Store fetches user from Supabase: `supabase.auth.getUser()`
-4. If auth session exists, fetches user profile from `public.users` table
-5. Stores in Zustand: `{ user, loading, initialized }`
-6. Middleware checks protected routes, redirects to `/` with `?signin=required`
-7. User clicks Sign In → redirects to OAuth provider (Azure/Google)
-8. Provider calls OAuth callback → `/auth/callback?code=...`
-9. Callback validates McGill email, upserts profile, checks onboarding status
-10. Redirects to `/onboarding` if needed, else to home
-11. Onboarding captures `interest_tags` for recommendations
+1. User has 3+ saved events (meets `RECOMMENDATION_THRESHOLD`)
+2. Home page renders `RecommendedEventsSection` instead of `PopularEventsSection`
+3. Section fetches recommendations from `GET /api/recommendations`
+4. API queries similarity clusters and returns scored events
+5. Events displayed with personalized ranking
 
-**Recommendations Flow (Post-Onboarding):**
+**Admin Moderation Flow:**
 
-1. Home page renders `<RecommendedEventsSection>` (requires 3+ saved events)
-2. Component calls `/api/recommendations`
-3. API uses user's `interest_tags` to fetch matching events
-4. Implements K-means clustering to diversify results
-5. Returns scored events ordered by personalization score
-6. Component displays in horizontal scroll
-
-**Popular/Trending Events:**
-
-1. Home page shows `<PopularEventsSection>` for unauthenticated users
-2. Component calls `/api/events/popular?limit=10`
-3. API queries events sorted by `popularity_score` or `trending_score`
-4. Popularity scores calculated by `/api/admin/calculate-popularity`
-5. Admin job aggregates `user_interactions` data hourly
-6. Scores based on: view_count, click_count, save_count, share_count, unique_viewers
+1. Admin navigates to `/moderation/events`
+2. ModerationNav enforces role check via `isAdmin(user)` from `src/lib/roles.ts`
+3. Page fetches pending events from `GET /api/admin/events`
+4. Admin approves/rejects event via `PATCH /api/admin/events/{id}/status`
+5. Status updates propagate to event lists and notifications
 
 **State Management:**
-
-- **Auth State:** Zustand store (singleton, persists in browser memory for session)
-- **Event Data:** React hook state (fetched from API, accumulated via pagination)
-- **Saved Events:** Hook state (Set<string> of saved event IDs for quick lookup)
-- **Filter State:** Component-level state (search query, selected tags)
-- **Theme State:** localStorage (light/dark mode preference)
+- Global auth state: `useAuthStore` (Zustand) - holds user info, loading state
+- Session management: Middleware at `src/middleware.ts` refreshes Supabase session on each request
+- Local component state: React hooks (useState, useCallback, useMemo) for UI state
+- Derived/cached queries: Custom hooks manage request state and caching
 
 ## Key Abstractions
 
-**Event (Domain Model):**
-- Purpose: Core entity representing a campus event
-- Examples: `src/types/index.ts` (Event interface)
-- Pattern: Immutable data passed from API → components
-- Structure: `{ id, title, description, event_date, event_time, location, tags, club_id, status, ... }`
+**Supabase Client Factories:**
+- Purpose: Separate browser (client-side) and server (API/middleware) Supabase client creation
+- Examples: `src/lib/supabase/client.ts`, `src/lib/supabase/server.ts`
+- Pattern: Factory functions returning configured Supabase client with auth state management
 
-**EventFilter (Query Filter):**
-- Purpose: Encapsulate filtering parameters for event queries
-- Examples: `src/types/index.ts` (EventFilter interface)
-- Pattern: Built by components, passed to `useEvents()`, serialized to query params
-- Structure: `{ tags?, dateRange?, searchQuery?, clubId? }`
+**Event Cursor Pagination System:**
+- Purpose: Efficiently paginate large event lists without offset (which is O(n) on large datasets)
+- Examples: `useEvents` hook, `buildQueryParams`, `decodeCursor`/`encodeCursor` in route.ts
+- Pattern: Base64-encoded cursors containing sort field value + ID; client requests next/prev page
 
-**User (Domain Model):**
-- Purpose: Represents authenticated user with roles and preferences
-- Examples: `src/types/index.ts` (User interface)
-- Pattern: Stored in Zustand, fetched from Supabase `public.users` table
-- Structure: `{ id, email, name, avatar_url, interest_tags, roles, ... }`
+**Hook-Based Data Fetching:**
+- Purpose: Encapsulate API calls and state management in reusable custom hooks
+- Examples: `useEvents`, `useSavedEvents`, `useUser`, `useTracking`
+- Pattern: Hook returns `{ data, loading, error, refetch, loadMore }` interface
 
-**UserInteraction (Analytics Event):**
-- Purpose: Track user actions for analytics and recommendations
-- Examples: `src/types/index.ts` (UserInteraction interface)
-- Pattern: Sent to `/api/interactions` via `useTracking()` hook
-- Types: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add'
+**Role-Based Access Control (RBAC):**
+- Purpose: Gate features and routes by user role (user, club_organizer, admin)
+- Examples: `isAdmin()`, `isOrganizer()` in `src/lib/roles.ts`; route protection in middleware
+- Pattern: User has `roles: UserRole[]` array; check membership before exposing UI/endpoints
 
-**EventPopularityScore (Derived Data):**
-- Purpose: Denormalized popularity metrics for efficient sorting
-- Examples: `src/types/index.ts` (EventPopularityScore interface)
-- Pattern: Calculated async via admin endpoint, stored in `event_popularity` table
-- Structure: view_count, click_count, save_count, share_count, unique_viewers, popularity_score, trending_score
+**Component Composition with Error Boundaries:**
+- Purpose: Gracefully handle rendering errors in subtrees
+- Examples: `ErrorBoundary` component wrapping sections in pages
+- Pattern: Class-based boundary catches errors, renders fallback UI, allows reset
 
-**Cursor (Pagination):**
-- Purpose: Encode page position in opaque base64 token
-- Pattern: Used in `useEvents()` for stateless cursor-based pagination
-- Validation: UUID format check, finite number check, no PostgREST injection chars
+**Event Tag Classification Pipeline:**
+- Purpose: Normalize and classify events across multiple data sources (manual, Instagram, admin)
+- Examples: `src/lib/classifier.ts`, `src/lib/tagMapping.ts`, `transformEventFromDB`
+- Pattern: Transform DB tags → EventTag enum; classify Instagram posts → database events
 
 ## Entry Points
 
-**Web Application Root:**
-- Location: `src/app/layout.tsx`
-- Triggers: Browser navigation to any route
-- Responsibilities:
-  - Set up AuthProvider (initializes Zustand store)
-  - Render root HTML structure (dark mode detection via script)
-  - Load global fonts (Inter from Google Fonts)
-  - Set up SEO metadata
-
-**Home Page:**
+**Web Application:**
 - Location: `src/app/page.tsx`
-- Triggers: User navigates to `/` or follows default route
-- Responsibilities:
-  - Display hero section with search
-  - Manage filter state (search query, selected tags)
-  - Fetch events via `useEvents()` hook with pagination
-  - Show "Happening Now", "Recommended", or "Popular" sections
-  - Render EventGrid with load-more capability
-  - Handle auth error messages from query params
+- Triggers: Browser navigation to `/`
+- Responsibilities: Render home feed, manage filter/search state, display event sections
 
-**Event Details:**
-- Location: `src/app/events/[id]/page.tsx`
-- Triggers: User clicks event card or navigates to `/events/{id}`
-- Responsibilities: Show full event details with RSVP/save options
-
-**My Events (Saved):**
-- Location: `src/app/my-events/page.tsx`
-- Triggers: Authenticated user navigates to `/my-events`
-- Responsibilities: Display user's saved events with remove option
-
-**Admin Dashboard:**
-- Location: `src/app/admin/page.tsx` and child routes
-- Triggers: Admin user navigates to `/admin`
-- Responsibilities: Manage events, clubs, users, view analytics
-
-**OAuth Callback:**
+**Authentication Callback:**
 - Location: `src/app/auth/callback/route.ts`
-- Triggers: OAuth provider redirects with `code` parameter
-- Responsibilities:
-  - Exchange code for Supabase session
-  - Validate McGill email domain
-  - Upsert user profile to `public.users`
-  - Check onboarding status and set cookie
-  - Redirect to `/onboarding` or original destination
+- Triggers: OAuth redirect from Supabase Auth
+- Responsibilities: Exchange auth code for session, set cookies, redirect to app
+
+**API Events List:**
+- Location: `src/app/api/events/route.ts`
+- Triggers: GET request with optional filters, cursor, sort parameters
+- Responsibilities: Query events with pagination, apply filters, return JSON response
 
 **Middleware:**
 - Location: `src/middleware.ts`
-- Triggers: Every request to application
-- Responsibilities:
-  - Refresh Supabase session if expired
-  - Enforce route protection (redirect unauthenticated users from protected routes)
-  - Enforce onboarding flow (redirect incomplete profiles)
-  - Apply rate limiting to public API endpoints
+- Triggers: Every request (configured via matcher)
+- Responsibilities: Refresh auth session, verify McGill email, protect routes, rate limit
+
+**Event Detail Page:**
+- Location: `src/app/events/[id]/page.tsx`
+- Triggers: Browser navigation to `/events/{id}`
+- Responsibilities: Fetch single event, render details, show RSVP/save buttons
 
 ## Error Handling
 
-**Strategy:** Graceful degradation with user feedback
+**Strategy:** Explicit try-catch blocks in API routes with status codes; fallback error states in components
 
 **Patterns:**
 
-**API Error Handling (Server):**
-- Try-catch blocks wrap Supabase calls
-- Return NextResponse with appropriate status code (400, 401, 403, 500)
-- Log error details server-side for debugging
-- Return minimal error info to client (no stack traces)
-- Example: `GET /api/events` returns `{ error: "Failed to fetch events" }` on DB error
+- API routes wrap all logic in try-catch, return `NextResponse.json({ error: message }, { status: code })`
+  - 401 Unauthorized: Missing/invalid auth
+  - 404 Not Found: Resource doesn't exist
+  - 500 Internal Server Error: Database/unexpected failures
+  - Example: `src/app/api/events/[id]/save/route.ts` lines 17-44
 
-**Hook Error Handling (Client):**
-- `useEvents()` catches fetch errors, stores in state
-- `useSavedEvents()` silently fails (no user feedback for non-critical)
-- Components check error state and render error UI (AlertCircle icon with retry button)
-- Example: EventGrid shows error message with "Try Again" button
+- Client components use ErrorBoundary wrapper for React rendering errors
+  - Example: `src/app/page.tsx` wraps content in `<ErrorBoundary>`
+  - Displays user-friendly fallback message with retry button
 
-**Component Error Handling (Client):**
-- `<ErrorBoundary>` catches React render errors in subtrees
-- Fallback UI displayed instead of blank screen
-- Logs error boundary catches for monitoring
-- Example: HomePage wrapped with ErrorBoundary showing fallback message
+- Hooks return error object in state: `const { error, loading } = useEvents()`
+  - Component conditionally renders error UI or data
+  - Example: `src/app/page.tsx` lines 369-391 checks `if (errorMessage)`
 
-**Auth Error Handling:**
-- Callback route validates McGill email; rejects non-McGill users
-- Returns `?error=not_mcgill` query param to home page
-- AuthProvider shows banner alert with error message
-- User can retry sign-in
-
-**Network Resilience:**
-- Cursor-based pagination allows resuming from last position
-- No exponential backoff implemented (would need retry library)
-- Failed loads show retry button in UI
+- Async operations log errors to console for debugging
+  - Example: `console.error("[Auth] Failed to fetch profile:", err)` in `useAuthStore`
 
 ## Cross-Cutting Concerns
 
-**Logging:**
-- Browser console logs: `[Auth]`, `[Middleware]`, `[Callback]` prefixes
-- Server logs: Includes error context and user info for debugging
-- Structured logging not implemented (could use Pino or Winston)
-- useTracking hook sends interaction events to API (for analytics, not logging)
+**Logging:** Console.log throughout codebase with `[Context]` prefix (e.g., `[Auth]`, `[Middleware]`). No centralized logger configured.
 
 **Validation:**
-
-**Email Validation:**
-- McGill domain check: `isMcGillEmail()` checks @mcgill.ca or @mail.mcgill.ca
-- Used in auth callback to enforce McGill-only access
-
-**Query Param Validation:**
-- useEvents builds safe query params via URLSearchParams API
-- API route validates sort field against whitelist: [start_date, created_at, popularity_score, trending_score]
-- Cursor decoding validates UUID format and checks for injection characters
-
-**Type Validation:**
-- TypeScript strict mode enabled (all any types forbidden)
-- Supabase auto-generated types in `src/lib/supabase/types.ts`
-- Interface definitions prevent data shape mismatches
+- Input validation in API routes (cursor format, sort fields, limits)
+  - Example: `decodeCursor` validates UUID format, sort values in `src/app/api/events/route.ts` lines 40-58
+- Supabase RLS (Row Level Security) provides database-level access control
 
 **Authentication:**
+- Supabase Auth (OAuth via McGill login)
+- Session stored in HTTP-only cookies managed by middleware
+- `useAuthStore` syncs auth state to client on load
+- Protected routes redirect unauthenticated users to `/` with `signin=required` param
 
-**Session Management:**
-- Supabase handles OAuth session tokens (stored in cookies)
-- Middleware refreshes expired tokens automatically
-- AuthProvider initializes session on app load
-- Zustand persists user data in memory for session duration
+**Rate Limiting:** Custom middleware in `src/middlewareRateLimit.ts` applied at request level before auth
 
-**Authorization:**
-
-**Route Protection:**
-- Middleware redirects unauthenticated users from protected routes
-- Protected routes: `/my-events`, `/create-event`, `/notifications`, `/profile`
-
-**Role-Based Access:**
-- Functions `isAdmin()` and `isOrganizer()` check user.roles array
-- Header and SideNavBar conditionally show organizer/admin nav items
-- Admin routes protected at middleware level (checked in API routes via user.id lookup)
-
-**Data Access Control:**
-- API routes check auth (via supabase.auth.getUser())
-- Saved events endpoint returns only current user's saves
-- User profile endpoint returns only current user's data
-- Admin endpoints check for "admin" role
+**Interactions Tracking:** `POST /api/interactions` records user actions (view, click, save, share) for popularity/recommendation algorithms
 
 ---
 
-*Architecture analysis: 2026-02-23*
+*Architecture analysis: 2026-02-25*

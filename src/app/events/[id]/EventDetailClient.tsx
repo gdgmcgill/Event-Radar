@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -24,15 +24,24 @@ import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventPopularityScore } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Calendar, Clock, MapPin, Heart, ArrowLeft, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink, Share2, Check } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink, Share2, Check } from "lucide-react";
+import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { RelatedEventCard } from "@/components/events/RelatedEventCard";
 import { useTracking } from "@/hooks/useTracking";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from");
   const user = useAuthStore((s) => s.user);
+
+  function getBreadcrumbItems(title: string) {
+    if (from === "my-events") {
+      return [{ label: "My Events", href: "/my-events" }, { label: title }];
+    }
+    return [{ label: "Home", href: "/" }, { label: title }];
+  }
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -202,10 +211,7 @@ export default function EventDetailClient() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-6 sm:py-8">
-        <Button variant="ghost" className="mb-4 sm:mb-6" onClick={() => router.back()}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Events
-        </Button>
+        <AppBreadcrumb items={getBreadcrumbItems("Error")} />
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
           <p className="text-muted-foreground">{error}</p>
           <Button onClick={() => window.location.reload()} variant="outline">
@@ -219,10 +225,7 @@ export default function EventDetailClient() {
   if (!event) {
     return (
       <div className="container mx-auto px-4 py-6 sm:py-8">
-        <Button variant="ghost" className="mb-4 sm:mb-6" onClick={() => router.back()}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Events
-        </Button>
+        <AppBreadcrumb items={getBreadcrumbItems("Not Found")} />
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-2">
           <h2 className="text-2xl font-bold">Event not found</h2>
           <p className="text-muted-foreground">
@@ -235,10 +238,7 @@ export default function EventDetailClient() {
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
-      <Button variant="ghost" className="mb-4 sm:mb-6" onClick={() => router.back()}>
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Events
-      </Button>
+      <AppBreadcrumb items={getBreadcrumbItems(event.title)} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         {/* Main Content */}

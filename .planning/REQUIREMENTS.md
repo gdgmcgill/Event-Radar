@@ -1,11 +1,10 @@
-# Requirements: Uni-Verse Beta Launch — Cold Start Fix & Notifications
+# Requirements: Uni-Verse
 
-**Defined:** 2026-02-23
-**Core Value:** New users see a useful feed from first visit; existing users receive timely notifications about events they care about
+**Core Value:** Club organizers must have a seamless, unified experience from club creation through event management — no broken flows, no dead ends, no unnecessary admin bottlenecks.
 
-## v1 Requirements
+## v1.0 Requirements (Cold Start Fix & Notifications)
 
-Requirements for this milestone. Each maps to roadmap phases.
+*Defined: 2026-02-23 — Phases 1-3 complete, Phase 4 deferred*
 
 ### Notification Infrastructure
 
@@ -41,22 +40,68 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **COLD-07**: RECOMMENDATION_THRESHOLD constant centralized in src/lib/constants.ts and used by both page.tsx and API
 - [x] **COLD-08**: Onboarding nudge displayed in cold-start state ("Save N more events to unlock personalized recommendations")
 
-## v2 Requirements
+---
 
-Deferred to future release. Tracked but not in current roadmap.
+## v1.1 Requirements (Club Organizer UX Overhaul)
 
-### Notifications
+*Defined: 2026-02-25 — All pending*
 
-- **NOTF-01**: Supabase Realtime subscription replaces SWR polling for instant notification delivery
-- **NOTF-02**: Notification type filtering on /notifications page (show only reminders, only approvals)
-- **NOTF-03**: Cursor-based pagination on /notifications page
-- **NOTF-04**: User can configure notification preferences (mute specific types)
-- **NOTF-05**: Toast/snackbar for new notifications received while browsing
+### Database & Roles
 
-### Cold Start
+- [x] **DBROLE-01**: `CHECK (role IN ('owner', 'organizer'))` constraint on `club_members.role` column
+- [x] **DBROLE-02**: `is_club_owner(club_id UUID)` SECURITY DEFINER function — prevents RLS infinite recursion, follows existing `is_admin()` pattern from `011_rls_audit.sql`
+- [x] **DBROLE-03**: Owner cross-row SELECT policy on `club_members` — owners can view all members of their club (not just own row)
+- [x] **DBROLE-04**: Owner DELETE policy on `club_members` — owners can remove organizers, with self-removal guard at DB level
+- [x] **DBROLE-05**: Composite index on `club_members(club_id, role)` for `is_club_owner()` query performance
+- [x] **DBROLE-06**: Auto-grant `'owner'` role (not generic `'organizer'`) to club creator on admin approval — change existing insert in `POST /api/admin/clubs/[id]`
+- [x] **DBROLE-07**: `club_invitations` table with columns: id, club_id, inviter_id, invitee_email, token, status (pending/accepted/expired/revoked), expires_at, created_at — with RLS policies using `is_club_owner()`
 
-- **COLD2-01**: Progress indicator toward personalization threshold ("2 of 3 saves")
-- **COLD2-02**: Interest-tag-aware fallback (hybrid popularity + matching tags for onboarded users)
+### Dashboard
+
+- [x] **DASH-01**: `/my-clubs/[id]` page with server-side role resolution — resolves user's club role in a single DB query, passes as prop to client components
+- [x] **DASH-02**: Tabbed navigation — Overview, Events, Members, Settings — using shadcn Tabs component
+- [x] **DASH-03**: URL-param tab state (`?tab=members`) for bookmarkable URLs and correct back-button behavior
+- [x] **DASH-04**: Overview tab — club info summary (name, description, category, member count, pending invites count for owners)
+- [x] **DASH-05**: Events tab consuming existing `GET /api/clubs/[id]/events` — list view with event title, date, status
+- [x] **DASH-06**: Club-context event creation link from Events tab — navigates to `/create-event` with `clubId` pre-filled
+
+### Members & Invitations
+
+- [x] **MEM-01**: `GET /api/clubs/[id]/members` endpoint — returns members with user info and roles, accessible by club members only
+- [x] **MEM-02**: Member list UI with role badges (owner/organizer) and joined date
+- [x] **MEM-03**: Member removal by owner — confirmation dialog, self-removal guard (owner cannot remove themselves), `DELETE /api/clubs/[id]/members` endpoint
+- [x] **MEM-04**: Direct organizer invitation by email — owner enters McGill email, generates invite with copy-link UX (no email delivery in v1.1)
+- [x] **MEM-05**: `POST /api/clubs/[id]/invites` endpoint — owner-only, hardcodes `role='organizer'` server-side (never from client payload), validates invitee email exists in users table
+- [x] **MEM-06**: Invitation acceptance flow — `/invites/[token]` page, validates token not expired, validates authenticated user email matches invitee_email, inserts into `club_members` as organizer
+- [x] **MEM-07**: Pending invitations visible in Members tab — separate section showing pending invites with email and date
+- [x] **MEM-08**: Invitation revocation by owner — delete/revoke pending invitation from Members tab *(P2)*
+
+### Settings & Surface Fixes
+
+- [ ] **SURF-01**: Owner UPDATE RLS policy on `clubs` table — scoped to own club via `is_club_owner()`, does NOT allow updating `status` column
+- [ ] **SURF-02**: `PATCH /api/clubs/[id]` handler — owner-only, explicitly excludes `status` from updatable columns, uses authenticated client (not service role)
+- [ ] **SURF-03**: Club settings form — react-hook-form + Zod validation for name, description, category, Instagram link, logo — owner-only, save button disabled until field changes detected
+- [ ] **SURF-04**: Context-aware public club page (`/clubs/[id]`) — 3 CTA states: visitor sees "Request Organizer Access", organizer sees "Manage Club" link, owner sees "Manage Club" link
+- [ ] **SURF-05**: Club selector dropdown on `/create-event` page — populated from user's `club_members` memberships, shown only if user is organizer of at least one club
+- [ ] **SURF-06**: Auto-approval for events created by organizers for their own club — requires BOTH `club_organizer` role AND membership row in `club_members` for the specific `club_id`
+- [ ] **SURF-07**: Updated post-creation messaging on `/clubs/create` success screen — explains pending review and auto-granted owner status upon approval
+
+---
+
+## Deferred Requirements
+
+### v1.2
+
+- **DEFER-01**: Email-delivered invitations via Resend (ship copy-link first in v1.1, upgrade to email in v1.2)
+- **DEFER-02**: Invitation expiry enforcement and re-send UI
+- **DEFER-03**: Club analytics dashboard (event views, member growth) — interaction data already captured in `user_interactions` and `event_popularity_scores`
+- **NGEN-03 through NGEN-06**: pg_cron scheduler configuration (carried from v1.0 Phase 4)
+
+### v2+
+
+- **DEFER-04**: Owner transfer flow — admin handles manually until graduation cycle data justifies the feature
+- **DEFER-05**: Club archiving / soft-delete — requires cascading status changes across events, notifications, saved_events
+- **DEFER-06**: Granular sub-organizer roles — only if specific clubs demonstrate the need
 
 ## Out of Scope
 
@@ -64,16 +109,18 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Email notifications | External channels require SPF/DKIM, unsubscribe compliance, deliverability monitoring — beta is in-app only |
-| Push notifications (browser/mobile) | Service worker registration, push API keys, permission prompts — defer to dedicated milestone |
-| Notification deletion by user | Read-only history for beta; add auto-expiry at DB level if count becomes a problem |
-| Real-time chat/messaging | Unrelated to this milestone; separate channel architecture needed |
-| Recommendation algorithm changes | Existing K-means + content-based hybrid works; only fix the entry gate and fallback path |
-| Per-notification delivery schedule / quiet hours | Over-engineering for beta with 4 types and low volume |
+| Club deletion by organizers | Cascading data loss; admin-only destructive action |
+| Event deletion by organizers | Breaks saved-event lists and interaction history; organizers edit, admins delete |
+| Multi-level role hierarchy (moderator, treasurer, etc.) | Two roles (owner/organizer) cover all real campus club use cases |
+| Open membership / self-serve organizer join | Club credibility depends on organizer trust; invitation-only |
+| Real-time member presence / activity feed | Low-frequency university club activity; unnecessary complexity |
+| Email notifications | SPF/DKIM, unsubscribe compliance, deliverability monitoring — beta is in-app only |
+| Push notifications (browser/mobile) | Service worker, push API keys, permission prompts — defer to dedicated milestone |
+| Logo upload via Supabase Storage | Evaluate during Phase 8 planning — ship text fields first, add logo as follow-up if low-risk |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Updated during roadmap creation. Phases 1-4 are v1.0, phases 5+ are v1.1.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -87,10 +134,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NUI-03 | Phase 3 | Complete |
 | NGEN-01 | Phase 3 | Complete |
 | NGEN-02 | Phase 3 | Complete |
-| NGEN-03 | Phase 4 | Pending |
-| NGEN-04 | Phase 4 | Pending |
-| NGEN-05 | Phase 4 | Pending |
-| NGEN-06 | Phase 4 | Pending |
+| NGEN-03 | Phase 4 | Deferred |
+| NGEN-04 | Phase 4 | Deferred |
+| NGEN-05 | Phase 4 | Deferred |
+| NGEN-06 | Phase 4 | Deferred |
 | COLD-01 | Phase 2 | Complete |
 | COLD-02 | Phase 2 | Complete |
 | COLD-03 | Phase 2 | Complete |
@@ -99,12 +146,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COLD-06 | Phase 2 | Complete |
 | COLD-07 | Phase 2 | Complete |
 | COLD-08 | Phase 2 | Complete |
+| DBROLE-01 | Phase 5 | Complete |
+| DBROLE-02 | Phase 5 | Complete |
+| DBROLE-03 | Phase 5 | Complete |
+| DBROLE-04 | Phase 5 | Complete |
+| DBROLE-05 | Phase 5 | Complete |
+| DBROLE-06 | Phase 5 | Complete |
+| DBROLE-07 | Phase 5 | Complete |
+| DASH-01 | Phase 6 | Complete |
+| DASH-02 | Phase 6 | Complete |
+| DASH-03 | Phase 6 | Complete |
+| DASH-04 | Phase 6 | Complete |
+| DASH-05 | Phase 6 | Complete |
+| DASH-06 | Phase 6 | Complete |
+| MEM-01 | Phase 7 | Complete |
+| MEM-02 | Phase 7 | Complete |
+| MEM-03 | Phase 7 | Complete |
+| MEM-04 | Phase 7 | Complete |
+| MEM-05 | Phase 7 | Complete |
+| MEM-06 | Phase 7 | Complete |
+| MEM-07 | Phase 7 | Complete |
+| MEM-08 | Phase 7 | Complete |
+| SURF-01 | Phase 8 | Pending |
+| SURF-02 | Phase 8 | Pending |
+| SURF-03 | Phase 8 | Pending |
+| SURF-04 | Phase 8 | Pending |
+| SURF-05 | Phase 8 | Pending |
+| SURF-06 | Phase 8 | Pending |
+| SURF-07 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 22 total
-- Mapped to phases: 22
-- Unmapped: 0 ✓
+- v1.0 requirements: 22 total (18 complete, 4 deferred)
+- v1.1 requirements: 28 total (27 P1, 1 P2)
+- Unmapped to phases: 0
 
 ---
-*Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after roadmap creation — traceability complete*
+*Requirements defined: 2026-02-23 (v1.0), 2026-02-25 (v1.1)*
+*Last updated: 2026-02-25 — v1.1 requirements mapped to Phases 5-8*

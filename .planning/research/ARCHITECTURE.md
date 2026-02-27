@@ -1,489 +1,510 @@
-# Architecture Patterns: Cold Start Fix & Notification System
+# Architecture Research
 
-**Domain:** Recommendation cold start fallback + in-app notification system
-**Researched:** 2026-02-23
-**Overall confidence:** HIGH — based primarily on direct codebase inspection plus verified community patterns
+**Domain:** Club organizer dashboard — tabbed UI, member management, invite flows, club settings editing
+**Researched:** 2026-02-25
+**Confidence:** HIGH — based on direct codebase inspection of existing routes, components, and schema
 
 ---
 
-## Recommended Architecture
+## Standard Architecture
 
-This milestone adds two largely independent subsystems to the existing Next.js App Router + Supabase app. They share the database layer but are otherwise decoupled and can be built in parallel after the database table is created.
+### System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ Browser (Client Components)                                         │
-│                                                                     │
-│  Header.tsx                                                         │
-│   └── NotificationBell.tsx ──── polls /api/notifications (60s)     │
-│                                                                     │
-│  /notifications page.tsx                                           │
-│   ├── NotificationList.tsx                                          │
-│   └── NotificationItem.tsx ── PATCH /api/notifications/[id]        │
-│                                                                     │
-│  Home page.tsx                                                      │
-│   ├── canShowRecommendations = savedEventIds.size >= 3             │
-│   ├── [gate passes] RecommendedEventsSection → /api/recommendations │
-│   └── [gate fails]  PopularEventsSection → /api/events/popular     │
-└───────────────────────┬────────────────────────┬────────────────────┘
-                        │ fetch                  │ fetch
-┌───────────────────────▼────────────────────────▼────────────────────┐
-│ Next.js API Layer (Route Handlers — server-side)                    │
-│                                                                     │
-│  GET  /api/notifications        → Supabase: SELECT notifications    │
-│  PATCH /api/notifications/[id]  → Supabase: UPDATE read=true        │
-│  POST  /api/notifications?action=mark-all-read → bulk UPDATE        │
-│                                                                     │
-│  GET  /api/recommendations      → K-means engine OR popularity FB  │
-│  GET  /api/events/popular       → event_popularity_scores JOIN      │
-│                                                                     │
-│  POST /api/cron/send-reminders  → bulk INSERT notifications         │
-│  PATCH /api/admin/events/[id]/status → INSERT approval notification │
-└───────────────────────┬─────────────────────────────────────────────┘
-                        │ Supabase SDK
-┌───────────────────────▼─────────────────────────────────────────────┐
-│ Supabase (PostgreSQL + Auth)                                        │
-│                                                                     │
-│  notifications table (user_id, type, title, message, event_id,     │
-│                        read, created_at)                            │
-│  saved_events table  (user_id, event_id) — drives threshold check  │
-│  event_popularity_scores table — drives fallback feed               │
-└─────────────────────────────────────────────────────────────────────┘
-                        ▲
-                        │ HTTP POST (CRON_SECRET bearer token)
-┌───────────────────────┴─────────────────────────────────────────────┐
-│ Supabase pg_cron (scheduled) OR external cron caller                │
-│  Schedule: every hour → POST /api/cron/send-reminders               │
-│  Auth: Authorization: Bearer $CRON_SECRET header                    │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    Page Layer (App Router)                       │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌────────────────┐  ┌──────────────────┐  ┌─────────────────┐  │
+│  │ /my-clubs/[id] │  │  /clubs/[id]     │  │ /create-event   │  │
+│  │  (NEW)         │  │ (MODIFY CTAs)    │  │ (MODIFY)        │  │
+│  └───────┬────────┘  └────────┬─────────┘  └────────┬────────┘  │
+│          │                   │                      │           │
+├──────────┴───────────────────┴──────────────────────┴───────────┤
+│                    Client Component Layer                        │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────┐  ┌───────────────┐  ┌───────────────────┐ │
+│  │ ClubDashboard    │  │ MemberList    │  │ InviteOrganizer   │ │
+│  │ Tabs (NEW)       │  │ (NEW)         │  │ Modal (NEW)       │ │
+│  └──────────────────┘  └───────────────┘  └───────────────────┘ │
+│  ┌──────────────────┐  ┌───────────────┐  ┌───────────────────┐ │
+│  │ ClubSettings     │  │ ClubOverview  │  │ CreateEventForm   │ │
+│  │ Form (NEW)       │  │ Tab (NEW)     │  │ (MODIFY — clubId) │ │
+│  └──────────────────┘  └───────────────┘  └───────────────────┘ │
+├─────────────────────────────────────────────────────────────────┤
+│                       API Route Layer                            │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────────────┐  ┌──────────────────────────────┐  │
+│  │ /api/clubs/[id]/members  │  │ /api/clubs/[id]/invites      │  │
+│  │ GET, DELETE (NEW)        │  │ POST, GET (NEW)              │  │
+│  └──────────────────────────┘  └──────────────────────────────┘  │
+│  ┌──────────────────────────┐  ┌──────────────────────────────┐  │
+│  │ /api/clubs/[id] PATCH    │  │ /api/clubs/[id]/events GET   │  │
+│  │ (ADD to existing route)  │  │ (EXISTS — use as-is)         │  │
+│  └──────────────────────────┘  └──────────────────────────────┘  │
+│  ┌──────────────────────────┐                                     │
+│  │ /api/invites/[token] GET │                                     │
+│  │ (NEW — accept invite)    │                                     │
+│  └──────────────────────────┘                                     │
+├─────────────────────────────────────────────────────────────────┤
+│                       Supabase Layer                             │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌────────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ club_members   │  │ clubs        │  │ organizer_invites    │  │
+│  │ role: owner |  │  │ editable by  │  │ (NEW TABLE)          │  │
+│  │ organizer      │  │ owners only  │  │ token, email,        │  │
+│  │ (ADD constraint│  │              │  │ club_id, expires_at, │  │
+│  │  via migration)│  │              │  │ status               │  │
+│  └────────────────┘  └──────────────┘  └──────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Component Responsibilities
 
-## Actual State of Implementation (Codebase Audit)
-
-**Confidence:** HIGH — direct code inspection.
-
-### Already Exists (Do Not Rebuild)
-
-| Component | File | Status |
-|-----------|------|--------|
-| `NotificationBell` | `src/components/notifications/NotificationBell.tsx` | Complete — polls 60s, badge, link to /notifications |
-| `NotificationItem` | `src/components/notifications/NotificationItem.tsx` | Complete — 4 types with color/icon config |
-| `NotificationList` | `src/components/notifications/NotificationList.tsx` | Complete — empty state, maps NotificationItem |
-| `/notifications` page | `src/app/notifications/page.tsx` | Complete — auth guard, skeleton, mark-all-read |
-| `GET /api/notifications` | `src/app/api/notifications/route.ts` | Complete — returns notifications + unread_count |
-| `POST /api/notifications?action=mark-all-read` | same file | Complete |
-| `PATCH /api/notifications/[id]` | `src/app/api/notifications/[id]/route.ts` | Exists as file (content not read — verify it marks read) |
-| Cron reminder endpoint | `src/app/api/cron/send-reminders/route.ts` | Complete — 24h/1h windows, dedup check, CRON_SECRET auth |
-| Admin approval notification | `src/app/api/admin/events/[id]/status/route.ts` | Complete — inserts event_approved/event_rejected |
-| Cold start gate (page.tsx) | `src/app/page.tsx` line 128 | Complete — `savedEventIds.size >= 3` |
-| `RecommendedEventsSection` | `src/components/events/RecommendedEventsSection.tsx` | Complete — calls /api/recommendations, calls onEmpty on failure |
-| `PopularEventsSection` | `src/components/events/PopularEventsSection.tsx` | Complete — calls /api/events/popular |
-| `GET /api/events/popular` | `src/app/api/events/popular/route.ts` | Complete — sorts by popularity_score or trending_score |
-| NotificationBell injected in Header | `src/components/layout/Header.tsx` line 122 | Complete |
-
-### Gaps to Investigate Before Building
-
-Based on the codebase audit, the primary remaining work is likely:
-
-| Area | Gap | Location to Check |
-|------|-----|-------------------|
-| `notifications` DB table | May not exist in Supabase yet — code references it but table creation via MCP not confirmed | Supabase dashboard / types.ts |
-| Cron scheduling | `POST /api/cron/send-reminders` exists but needs a caller (pg_cron job or external scheduler) | No pg_cron config found in codebase |
-| Notification type naming mismatch | Cron inserts `reminder_24h` / `reminder_1h` but PROJECT.md specifies `event_reminder_24h` / `event_reminder_1h` | `src/app/api/cron/send-reminders/route.ts` lines 44, 74 vs NotificationItem.tsx lines 19-27 |
-| `GET /api/events/popular` popularity boost | PROJECT.md specifies scoring: >10 saves → +2, recency within 7 days → +1. Current endpoint queries pre-computed scores | `src/app/api/events/popular/route.ts` — verify scoring matches spec |
-| Recommendation API threshold enforcement | API itself does not enforce the 3-save threshold — the gate is client-side only in page.tsx | `src/app/api/recommendations/route.ts` — API returns results for any authenticated user |
+| Component | Responsibility | New vs Modified |
+|-----------|----------------|-----------------|
+| `/my-clubs/[id]/page.tsx` | Dashboard shell — resolves user role in club server-side, renders tab container | NEW |
+| `ClubDashboardTabs` | URL-param-driven tab switcher for Overview / Events / Members / Settings | NEW |
+| `ClubOverviewTab` | Club info summary, upcoming event count, quick-action buttons | NEW |
+| `ClubEventsTab` | Club event list with edit links; consumes existing `GET /api/clubs/[id]/events` | NEW |
+| `ClubMembersTab` | Member list; remove-member for owners; trigger invite modal | NEW |
+| `ClubSettingsTab` | Editable form for name, description, category, Instagram, logo; owner-only | NEW |
+| `InviteOrganizerModal` | Email input form; calls `POST /api/clubs/[id]/invites`; returns copy-link URL | NEW |
+| `CreateEventForm` | `clubId` prop already exists but is never passed — wire it up from club dashboard | MODIFY |
+| `/clubs/[id]/page.tsx` | Add context-aware CTA: hide "Request Organizer Access" for existing members | MODIFY |
+| `/create-event/page.tsx` | Add club selector dropdown for organizers with multiple clubs | MODIFY |
+| `SideNavBar` / `Header` | Role-based nav items already in place; no change required | NO CHANGE |
 
 ---
 
-## Component Boundaries
+## Recommended Project Structure
 
-### Notification System
+```
+src/
+├── app/
+│   ├── my-clubs/
+│   │   ├── page.tsx                         # Existing listing — no change
+│   │   └── [id]/
+│   │       └── page.tsx                     # NEW — dashboard shell + role resolution
+│   ├── clubs/
+│   │   └── [id]/
+│   │       └── page.tsx                     # MODIFY — context-aware CTAs
+│   ├── create-event/
+│   │   └── page.tsx                         # MODIFY — club selector for organizers
+│   ├── invites/
+│   │   └── [token]/
+│   │       └── page.tsx                     # NEW — accept invite redirect page
+│   └── api/
+│       ├── clubs/
+│       │   ├── route.ts                     # Existing POST — no change
+│       │   └── [id]/
+│       │       ├── route.ts                 # MODIFY — add PATCH for settings
+│       │       ├── events/
+│       │       │   └── route.ts             # EXISTS — no change needed
+│       │       ├── members/
+│       │       │   └── route.ts             # NEW — GET list, DELETE member
+│       │       └── invites/
+│       │           └── route.ts             # NEW — POST create, GET pending
+│       └── invites/
+│           └── [token]/
+│               └── route.ts                 # NEW — GET accept invite token
+├── components/
+│   └── clubs/                               # NEW directory
+│       ├── ClubDashboardTabs.tsx
+│       ├── ClubOverviewTab.tsx
+│       ├── ClubEventsTab.tsx
+│       ├── ClubMembersTab.tsx
+│       ├── ClubSettingsTab.tsx
+│       └── InviteOrganizerModal.tsx
+└── supabase/
+    └── migrations/
+        └── YYYYMMDD_club_organizer_v11.sql  # NEW — role constraint + invites table
+```
 
-| Component | Responsibility | Inputs | Outputs / Side Effects |
-|-----------|---------------|--------|----------------------|
-| `NotificationBell` (client) | Display unread count badge; link to /notifications page | Polls `GET /api/notifications` every 60s | Renders badge with count |
-| `/notifications page.tsx` (client) | Full notification history, mark-read interactions | `GET /api/notifications` on mount | User-initiated `PATCH /[id]` and `POST ?action=mark-all-read` |
-| `NotificationList` (client) | Render ordered list of notifications | `Notification[]` prop, `onMarkRead` callback | Delegates to `NotificationItem` |
-| `NotificationItem` (client) | Render single notification with type-specific icon/color | `Notification` object, `onMarkRead` callback | Click → calls `onMarkRead(id)` |
-| `GET /api/notifications` (server) | Fetch user's notifications + unread count | Supabase auth session | `{ notifications[], unread_count }` |
-| `PATCH /api/notifications/[id]` (server) | Mark single notification read | Path param `id`, auth session | `{ success: true }` |
-| `POST /api/notifications?mark-all-read` (server) | Bulk mark-read | Auth session | `{ success: true }` |
-| `POST /api/cron/send-reminders` (server) | Generate 24h and 1h reminders for saved events | `CRON_SECRET` bearer auth | Inserts rows into `notifications` table |
-| `PATCH /api/admin/events/[id]/status` (server) | Approve/reject event, then notify creator | Admin role, event id, status | Updates `events.status`, inserts notification |
-| `notifications` table (Supabase) | Persist notification records | Server-side inserts (cron, admin action) | SELECT via API, RLS: user_id = auth.uid() |
+### Structure Rationale
 
-### Cold Start / Recommendation System
+- **`components/clubs/`:** Mirrors existing `components/events/` directory. All club dashboard components grouped together. Keeps dashboard concerns isolated from shared UI primitives in `components/ui/`.
+- **`app/api/clubs/[id]/members/` and `invites/`:** Follows established sub-route pattern — `/api/clubs/[id]/events/` already exists. Avoids query-param-based routing on the base `[id]/route.ts` handler.
+- **`app/api/invites/[token]/`:** Separate from clubs API because the token route is accessed by the invitee (not the club owner) and does not fit the owner-scoped `/api/clubs/[id]/...` namespace.
+- **Single migration file:** All schema changes (role check constraint, organizer_invites table, auto-grant role update) are atomic and reviewable together.
 
-| Component | Responsibility | Inputs | Outputs |
-|-----------|---------------|--------|---------|
-| `page.tsx` gate logic | Decide which feed section to show | `savedEventIds.size` (from `useSavedEvents` hook) | Renders `RecommendedEventsSection` or `PopularEventsSection` |
-| `RecommendedEventsSection` (client) | Fetch personalized events; emit `onEmpty` if API returns 0 results | Mount effect | Calls `GET /api/recommendations` |
-| `PopularEventsSection` (client) | Fetch popularity-sorted events | Mount effect | Calls `GET /api/events/popular?sort=popularity&limit=3` |
-| `GET /api/recommendations` (server) | K-means hybrid engine; tag-based fallback if no scored candidates | Auth session, `interest_tags`, `saved_events` | `{ recommendations: Event[] }` |
-| `GET /api/events/popular` (server) | Return events sorted by pre-computed popularity/trending score | Query params: sort, limit, offset, min_score | `{ events: Event[], total, sort }` |
-| `event_popularity_scores` table | Denormalized popularity data for efficient sorting | Written by `/api/admin/calculate-popularity` | Read by `/api/events/popular` |
-| `saved_events` table | Count used for cold start threshold check | Written by save/unsave actions | Read by `useSavedEvents()` hook |
+---
+
+## Architectural Patterns
+
+### Pattern 1: URL-Param Driven Tabs (No useState)
+
+**What:** Active tab stored in URL search param (`?tab=members`), not React state. The page shell reads `searchParams.tab` and passes it to the tab component. Switching tabs is a shallow router push.
+
+**When to use:** Dashboard tabs where bookmarkability and back-button behavior matter. Always prefer this over `useState` for primary navigation structures.
+
+**Trade-offs:** Slightly more boilerplate than useState. Gains shareable URLs, correct browser back behavior, and server-readable initial state.
+
+**Example:**
+```typescript
+// app/my-clubs/[id]/page.tsx
+export default async function ClubDashboardPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { tab?: string };
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  const { data: membership } = await supabase
+    .from("club_members")
+    .select("role")
+    .eq("club_id", params.id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!membership) redirect("/my-clubs"); // not a member of this club
+
+  const activeTab = searchParams.tab ?? "overview";
+  return <ClubDashboardTabs clubId={params.id} userRole={membership.role} activeTab={activeTab} />;
+}
+```
+
+### Pattern 2: Role Resolution in Page Shell — One Query, Passed as Prop
+
+**What:** The dashboard page resolves the user's role (owner / organizer / null) server-side via a single membership query. `userRole` is passed as a prop to every tab. Tabs read the prop to conditionally render controls — they do NOT make independent membership checks.
+
+**When to use:** Any route with role-differentiated views. Centralizes authorization in one place per request cycle.
+
+**Trade-offs:** One additional DB query on page load, but eliminates N redundant client-side permission queries across tabs.
+
+**Example:**
+```typescript
+// ClubMembersTab.tsx — reads prop, does not query membership
+export function ClubMembersTab({ clubId, userRole }: { clubId: string; userRole: "owner" | "organizer" }) {
+  return (
+    <div>
+      <MemberList clubId={clubId} />
+      {userRole === "owner" && (
+        <Button onClick={() => setShowInviteModal(true)}>Invite Organizer</Button>
+      )}
+    </div>
+  );
+}
+```
+
+### Pattern 3: Session Client for Reads, Service Client for Privileged Writes
+
+**What:** Member list and club event fetches use the session Supabase client (RLS enforced). Invite creation, member removal, and club settings updates use the service client after an explicit ownership check in the API route handler.
+
+**When to use:** Same split already established in this codebase: `createClient()` from `@/lib/supabase/server` for user-scoped reads, `createServiceClient()` for cross-user writes or admin operations.
+
+**Trade-offs:** Service client bypasses RLS entirely — explicit ownership verification in route code is mandatory. This is the correct tradeoff because the API route is the enforcement point.
+
+**Example:**
+```typescript
+// POST /api/clubs/[id]/invites/route.ts
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const supabase = await createClient();                          // session client
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Ownership check via RLS-enforced session client
+  const { data: membership } = await supabase
+    .from("club_members")
+    .select("role")
+    .eq("club_id", params.id)
+    .eq("user_id", user.id)
+    .single();
+  if (membership?.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  // Privileged write via service client
+  const serviceClient = createServiceClient();
+  const token = crypto.randomUUID();
+  const { error } = await serviceClient.from("organizer_invites").insert({
+    club_id: params.id,
+    email: body.email,
+    token,
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    status: "pending",
+  });
+  if (error) return NextResponse.json({ error: "Failed to create invite" }, { status: 500 });
+
+  return NextResponse.json({ inviteUrl: `/invites/${token}` });
+}
+```
+
+### Pattern 4: Token-Based Invite — No Email Infrastructure Required for MVP
+
+**What:** Owner submits an invitee's email. API creates an `organizer_invites` row with a UUID token and returns the invite URL. Owner copies and shares the link manually. Invitee visits `/invites/[token]`, which validates the token and auto-adds them as `organizer` in `club_members`.
+
+**When to use:** Any invite flow where email infrastructure (Resend, SendGrid) is not yet configured. Token link approach works immediately and can be upgraded to email-delivered links in a later milestone.
+
+**Trade-offs:** Owner must copy-paste the invite link for v1.1. Acceptable for the current milestone scope.
 
 ---
 
 ## Data Flow
 
-### Notification Creation Flow (Two Sources)
-
-**Source 1: Admin Approve/Reject**
+### Dashboard Load Flow
 
 ```
-Admin clicks approve/reject in admin dashboard
-  → PATCH /api/admin/events/[id]/status
-  → verifyAdmin() checks role
-  → UPDATE events.status
-  → createServiceClient().from("notifications").insert({
-      user_id: event.created_by,
-      type: "event_approved" | "event_rejected",
-      title: ..., message: ..., event_id: id
-    })
-  → Returns { success: true }
+User visits /my-clubs/[id]
+    ↓
+Server component: query club_members for user+club (session client, RLS)
+    ↓
+If no membership → redirect /my-clubs
+If membership found → resolve role ("owner" | "organizer")
+    ↓
+Render ClubDashboardTabs with { clubId, userRole, activeTab }
+    ↓
+Active tab component mounts → fetches its own data via client-side fetch
 ```
 
-**Source 2: Scheduled Reminders**
+### Club Settings Edit Flow
 
 ```
-pg_cron (hourly) or external scheduler
-  → POST /api/cron/send-reminders
-  → Validates Authorization: Bearer $CRON_SECRET
-  → Queries saved_events JOIN events WHERE start_date in [now+23h, now+25h]
-  → For each saved event: check dedup (notifications WHERE type=reminder_24h AND event_id=X)
-  → Insert { user_id, type: "reminder_24h", title, message, event_id }
-  → Repeat for 1h window [now+55min, now+65min]
-  → Returns { success, reminders_sent: { "24h": N, "1h": N } }
+Owner edits name/description in ClubSettingsTab
+    ↓
+PATCH /api/clubs/[id]
+    ↓ session client: verify caller is owner (RLS membership check)
+    ↓ service client: UPDATE clubs SET name=..., description=... WHERE id=...
+    ↓
+Return updated club row
+    ↓
+ClubSettingsTab updates local state, shows success toast (shadcn/ui)
 ```
 
-### Notification Read Flow
+### Organizer Invitation Flow
 
 ```
-User opens /notifications
-  → NotificationsPage mounts → fetchNotifications()
-  → GET /api/notifications
-  → supabase.from("notifications").select("*").eq("user_id", uid).order("created_at", desc).limit(50)
-  → supabase.from("notifications").select("*", count).eq("user_id", uid).eq("read", false)
-  → Returns { notifications[], unread_count }
-  → User clicks unread notification → optimistic update → PATCH /api/notifications/[id]
-  → supabase.from("notifications").update({ read: true }).eq("id", id)
+Owner enters email in InviteOrganizerModal
+    ↓
+POST /api/clubs/[id]/invites
+    ↓ verify caller is owner (session client, RLS)
+    ↓ insert into organizer_invites (service client)
+    ↓
+API returns { inviteUrl: "/invites/[token]" }
+    ↓
+Modal shows link for owner to copy and share
+    ↓
+Invitee opens link → GET /api/invites/[token]
+    ↓ validate: token exists, not expired, status=pending, email matches user
+    ↓ insert into club_members (role: "organizer") via service client
+    ↓ update organizer_invites.status = "accepted"
+    ↓
+Redirect to /my-clubs/[clubId]?tab=overview
 ```
 
-### NotificationBell Poll Flow
+### Member Removal Flow
 
 ```
-NotificationBell mounts in Header (authenticated users only)
-  → fetchCount() immediately on mount
-  → GET /api/notifications → extract unread_count
-  → setInterval(fetchCount, 60000) — poll every 60 seconds
-  → Updates badge in Header
+Owner clicks Remove in ClubMembersTab
+    ↓
+DELETE /api/clubs/[id]/members/[userId]
+    ↓ verify caller is owner (session client, RLS)
+    ↓ verify target is not caller (cannot remove yourself)
+    ↓ verify target is not another owner (cannot demote owners)
+    ↓ delete from club_members (service client)
+    ↓
+ClubMembersTab: optimistic remove row, re-fetch on error
 ```
 
-### Cold Start Gate Flow
+### Auto-Grant Owner on Club Approval (Existing Route, One-Line Fix)
 
 ```
-User loads / (home page)
-  → useSavedEvents(!!user) → GET /api/users/saved-events
-  → savedEventIds: Set<string>
-
-  if savedEventIds.size < 3:
-    → render <PopularEventsSection>
-    → GET /api/events/popular?sort=popularity&limit=3
-    → Joins event_popularity_scores, sorts by popularity_score DESC
-    → Shows "Popular This Week" with rank badges
-
-  if savedEventIds.size >= 3:
-    → render <RecommendedEventsSection>
-    → GET /api/recommendations
-    → K-means clustering + content scoring + popularity weighting
-    → if recommendations.length === 0: calls onEmpty() → falls back to <PopularEventsSection>
-    → Shows "Recommended For You" horizontal scroll
+Admin approves club → POST /api/admin/clubs/[id] (existing route)
+    ↓ CURRENT: club_members.insert({ role: "organizer" })
+    ↓ CHANGE TO: club_members.insert({ role: "owner" })
+    ↓
+Creator is now "owner" — full dashboard access from day one
 ```
 
-### Popularity Score Flow (Existing, Referenced by Cold Start Fallback)
+### State Management
 
-```
-Admin triggers /api/admin/calculate-popularity (manual or scheduled)
-  → Aggregates user_interactions (views, clicks, saves, shares)
-  → Calculates popularity_score and trending_score per event
-  → Upserts into event_popularity_scores table
-  → Used by /api/events/popular in the cold start fallback feed
-```
+No global state store required. Each tab component manages its own fetch-on-mount data lifecycle. The page shell provides `clubId` and `userRole` as props (server-resolved). Tab-level mutations trigger local state re-fetches, matching the existing pattern in `my-clubs/page.tsx`.
 
 ---
 
-## Patterns to Follow
+## New vs Modified — Explicit Inventory
 
-### Pattern 1: Server Client for Writes, Standard Client for User-Scoped Reads
+### New Files
 
-**What:** Use `createServiceClient()` (bypasses RLS) for notification creation from admin actions and cron jobs. Use `createClient()` (respects RLS) for user-fetching their own notifications.
+| File | Type | Purpose |
+|------|------|---------|
+| `src/app/my-clubs/[id]/page.tsx` | Page (Server Component) | Dashboard shell, role resolution |
+| `src/components/clubs/ClubDashboardTabs.tsx` | Component | URL-param tab switcher |
+| `src/components/clubs/ClubOverviewTab.tsx` | Component | Overview tab content |
+| `src/components/clubs/ClubEventsTab.tsx` | Component | Events tab — wraps existing events API |
+| `src/components/clubs/ClubMembersTab.tsx` | Component | Members tab, remove member |
+| `src/components/clubs/ClubSettingsTab.tsx` | Component | Settings form, owner-only |
+| `src/components/clubs/InviteOrganizerModal.tsx` | Component | Invite modal, returns copy-link |
+| `src/app/api/clubs/[id]/members/route.ts` | API Route | GET member list, DELETE member |
+| `src/app/api/clubs/[id]/invites/route.ts` | API Route | POST create invite, GET pending invites |
+| `src/app/api/invites/[token]/route.ts` | API Route | GET accept invite token |
+| `src/app/invites/[token]/page.tsx` | Page | Accept invite — validates token, redirects |
+| `supabase/migrations/YYYYMMDD_club_organizer_v11.sql` | Migration | role check constraint, organizer_invites table |
 
-**When:** Any server-side write that is not user-initiated (admin action, scheduled job).
+### Modified Files
 
-**Example:**
-```typescript
-// Admin status route — service client bypasses RLS for cross-user write
-const serviceClient = createServiceClient();
-await serviceClient.from("notifications").insert({
-  user_id: event.created_by, // different user than admin
-  type: "event_approved",
-  ...
-});
+| File | Change |
+|------|--------|
+| `src/app/api/clubs/[id]/route.ts` | Add PATCH handler for club settings (name, description, category, instagram, logo_url) |
+| `src/app/api/admin/clubs/[id]/route.ts` | Change auto-grant role from `"organizer"` to `"owner"` on club approval |
+| `src/app/clubs/[id]/page.tsx` | Add context-aware CTA: hide "Request Organizer Access" for existing organizers/owners |
+| `src/app/create-event/page.tsx` | Add club selector dropdown for organizers with multiple clubs |
+| `src/components/events/CreateEventForm.tsx` | Wire existing `clubId` prop: pre-fill club_id, auto-approve if organizer |
 
-// User reads their own notifications — standard server client, RLS enforced
-const supabase = await createClient();
-const { data } = await supabase
-  .from("notifications")
-  .select("*")
-  .eq("user_id", user.id); // RLS policy also enforces this
-```
+### Unchanged Files
 
-### Pattern 2: Optimistic Updates with Revert on Failure
-
-**What:** For mark-read interactions, update client state immediately then confirm server-side. Revert by re-fetching if server errors.
-
-**When:** Low-stakes user interactions where latency would degrade UX.
-
-**Example:**
-```typescript
-// In notifications/page.tsx
-const handleMarkRead = async (id: string) => {
-  // Optimistic update first
-  setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  setUnreadCount(prev => Math.max(0, prev - 1));
-
-  try {
-    await fetch(`/api/notifications/${id}`, { method: "PATCH" });
-  } catch {
-    fetchNotifications(); // revert by re-fetching
-  }
-};
-```
-
-### Pattern 3: Client-Side Gate, API-Side Graceful Degradation
-
-**What:** The 3-save threshold is enforced client-side in `page.tsx`. The recommendations API does not enforce the gate — it returns tag-based fallback results for users with no save history. The `onEmpty` callback on `RecommendedEventsSection` handles the case where the API returns 0 results.
-
-**When:** Two-layered resilience: the gate prevents unnecessary API calls, and the API's own fallback catches edge cases.
-
-**Example:**
-```typescript
-// page.tsx — client gate
-const canShowRecommendations = savedEventIds.size >= 3;
-
-// RecommendedEventsSection — API fallback
-if (fetchedEvents.length === 0) {
-  onEmpty?.(); // triggers PopularEventsSection to show instead
-  return;
-}
-```
-
-### Pattern 4: CRON_SECRET Bearer Auth for Internal Cron Endpoints
-
-**What:** Protect the cron endpoint from public access using a shared secret in `Authorization: Bearer $CRON_SECRET` header.
-
-**When:** Any Next.js API route intended to be called only by a scheduler, not users.
-
-**Example:**
-```typescript
-export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  // ... proceed with cron work
-}
-```
-
-### Pattern 5: Deduplication Check Before Notification Insert
-
-**What:** Before inserting a reminder notification, query whether an identical notification already exists. Prevents duplicate reminders if the cron runs more than once in the same window.
-
-**When:** Any scheduled job that might run near its window boundary or be retried.
-
-**Example:**
-```typescript
-const { count } = await supabase
-  .from("notifications")
-  .select("id", { count: "exact", head: true })
-  .eq("user_id", row.user_id)
-  .eq("event_id", event.id)
-  .eq("type", "reminder_24h");
-
-if (count && count > 0) continue; // skip — already sent
-```
+| File | Reason |
+|------|--------|
+| `src/app/api/clubs/[id]/events/route.ts` | Returns club events for organizers already — no change needed |
+| `src/app/my-clubs/page.tsx` | Listing page links to `[id]` already; no change needed |
+| `src/components/layout/SideNavBar.tsx` | Role-based nav items already wired |
+| `src/lib/supabase/client.ts` + `server.ts` | Client/server split unchanged |
 
 ---
 
-## Anti-Patterns to Avoid
+## Build Order (Dependency-First)
 
-### Anti-Pattern 1: Real-Time WebSocket Subscription for Notification Bell
+```
+Phase 1 — Database Foundation (everything depends on this)
+  1. SQL migration:
+     - Add CHECK constraint on club_members.role: ('owner', 'organizer')
+     - Create organizer_invites table (id, club_id, email, token, status, expires_at)
+     - Add RLS: only club owners can read/write their club's invites
+  2. Modify /api/admin/clubs/[id]: role "organizer" → "owner" in auto-grant insert
 
-**What:** Using Supabase Realtime `channel().on("postgres_changes")` to push new notifications instantly to the bell.
+Phase 2 — Dashboard Shell (other tabs depend on this existing)
+  3. /my-clubs/[id]/page.tsx — role resolution + redirect guard
+  4. ClubDashboardTabs.tsx — URL-param tab switcher
 
-**Why bad:** WebSocket connections per user add infrastructure load. For a beta with low concurrent users, polling every 60 seconds provides acceptable freshness with zero additional infrastructure. The existing implementation already uses polling — do not replace it.
+Phase 3 — Overview + Events Tabs (lowest risk — read-only, existing APIs)
+  5. ClubOverviewTab.tsx — static club info display
+  6. ClubEventsTab.tsx — wraps existing GET /api/clubs/[id]/events (no new API)
 
-**Instead:** Keep the 60-second polling interval. If real-time delivery becomes a product requirement post-beta, add Supabase Realtime as an enhancement then.
+Phase 4 — Members API + Tab
+  7. GET + DELETE /api/clubs/[id]/members/route.ts
+  8. ClubMembersTab.tsx + InviteOrganizerModal.tsx
 
-### Anti-Pattern 2: Enforcing the 3-Save Gate in the API Route
+Phase 5 — Invite Flow
+  9. POST /api/clubs/[id]/invites/route.ts
+ 10. GET /api/invites/[token]/route.ts
+ 11. /invites/[token]/page.tsx
 
-**What:** Adding `savedEventIds.size >= 3` check to `GET /api/recommendations` and returning 403 or empty when threshold not met.
+Phase 6 — Settings
+ 12. PATCH /api/clubs/[id]/route.ts
+ 13. ClubSettingsTab.tsx
 
-**Why bad:** The client-side gate already prevents the request from being made. Adding it to the API creates a confusing double-gate and could break `RecommendedEventsSection` in edge cases where the client-side count is stale.
+Phase 7 — Surface Fixes (isolated, can be done any time after Phase 1)
+ 14. /clubs/[id] public page — context-aware CTA
+ 15. /create-event — club selector for organizers
+ 16. Wire CreateEventForm clubId prop
+```
 
-**Instead:** Let the API's existing tag-based fallback handle users below threshold. The client-side gate does the real gating work. The API gracefully returns content (tag-matched events) regardless.
-
-### Anti-Pattern 3: Notification Creation in a Postgres Trigger Instead of Application Code
-
-**What:** Using a Supabase database trigger on `events.status` to automatically insert notifications.
-
-**Why bad:** Harder to debug, not visible in application code, harder to test, and the existing admin status route already creates notifications in application code. Database triggers are appropriate for simple data integrity but add complexity here.
-
-**Instead:** Notification creation stays in `src/app/api/admin/events/[id]/status/route.ts` where it already lives and is isolated with a try/catch that does not break the primary status update on notification failure.
-
-### Anti-Pattern 4: Pagination for Notifications API
-
-**What:** Adding cursor-based pagination to `GET /api/notifications` to match the events API pattern.
-
-**Why bad:** The existing implementation fetches the 50 most recent notifications with `.limit(50)` — appropriate for the notification history page. Cursor pagination adds complexity for no user benefit at beta scale.
-
-**Instead:** Keep `.limit(50).order("created_at", { ascending: false })`. If the notification volume grows, revisit.
-
-### Anti-Pattern 5: Type Naming Inconsistency Between Cron and Component
-
-**What:** The cron route inserts `type: "reminder_24h"` and `type: "reminder_1h"`, but `NotificationItem.tsx` and PROJECT.md specify `event_reminder_24h` and `event_reminder_1h`.
-
-**Why bad:** Notifications inserted by cron will not match the `typeConfig` in NotificationItem — they will fall back to the generic Bell icon and `text-muted-foreground` color, losing the blue/orange distinction.
-
-**Instead:** Align type names across all sources. Either update the cron to insert `event_reminder_24h` / `event_reminder_1h`, or update NotificationItem's typeConfig to match `reminder_24h` / `reminder_1h`. Pick one and apply consistently.
+**Rationale:** Database migration is the hard dependency for all role-based logic. Dashboard shell must exist before tabs can be rendered. Events tab uses an existing API (lowest-risk, early confidence win). Members API before invite UI (invite is inside the members tab). Settings last (no upstream dependencies). Surface fixes are isolated and can slip to the end without blocking the core dashboard.
 
 ---
 
-## Component Boundary Summary
+## Scaling Considerations
 
-```
-Notification System:
-  DB (notifications table)
-    ← inserts from:
-        /api/admin/events/[id]/status (admin action, service client)
-        /api/cron/send-reminders (scheduled, service client)
-    → reads from:
-        /api/notifications (user-scoped, standard client, RLS)
-        /api/notifications/[id] (PATCH — mark read)
-  Components:
-    Header.tsx
-      └── NotificationBell.tsx (polls /api/notifications)
-    /notifications page
-      ├── NotificationList.tsx
-      └── NotificationItem.tsx
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| Current (campus app, ~1K users) | Direct Supabase queries per request — appropriate, no caching layer needed |
+| 10K users | Add column pruning to member list queries; paginate ClubEventsTab if clubs have >50 events |
+| 100K+ users | Move invite token validation to Supabase Edge Function; cache club membership checks |
 
-Cold Start System:
-  DB (saved_events, event_popularity_scores)
-    → read from:
-        useSavedEvents() hook → gate logic in page.tsx
-        /api/recommendations → K-means engine
-        /api/events/popular → fallback feed
-  Components:
-    page.tsx (gate logic)
-      ├── RecommendedEventsSection.tsx → /api/recommendations
-      └── PopularEventsSection.tsx → /api/events/popular
-```
+### Scaling Priorities
+
+1. **First bottleneck:** Member list and events list both fetched on tab mount. Add `stale-while-revalidate` headers on GET endpoints or adopt React Query with a short TTL.
+2. **Second bottleneck:** Logo upload (if added to settings). Use Supabase Storage presigned upload URLs server-side — do not stream large files through Next.js API routes.
 
 ---
 
-## Suggested Build Order
+## Anti-Patterns
 
-Dependencies flow from database to API to components. Both systems share the database step.
+### Anti-Pattern 1: Permission Checks Inside Tab Components
 
-```
-Step 1: Database (PREREQUISITE for both systems)
-  - Create notifications table in Supabase via MCP tooling
-  - Schema: id (uuid), user_id (uuid FK auth.users), type (text),
-            title (text), message (text), event_id (uuid FK events nullable),
-            read (bool default false), created_at (timestamptz default now())
-  - Enable RLS: SELECT/UPDATE policy: auth.uid() = user_id
-  - Index: user_id (for fetch), (user_id, read) composite (for unread_count)
-  - Resolve type name inconsistency: decide event_reminder_24h vs reminder_24h
-  - Add notification to src/lib/supabase/types.ts (regenerate or add manually)
+**What people do:** Each tab component independently queries `club_members` to check if the current user is an owner before rendering admin controls.
 
-Step 2: Fix Notification Type Names (PREREQUISITE for cron and components to match)
-  - Align src/app/api/cron/send-reminders/route.ts type strings
-    with src/components/notifications/NotificationItem.tsx typeConfig keys
-  - Update src/types/index.ts if Notification interface defined there
+**Why it's wrong:** N redundant DB queries per page load. Permission logic scattered across multiple files. Easy to miss one check and create a privilege escalation path.
 
-Step 3: Cold Start Gate Verification (independent of notifications)
-  - Verify page.tsx gate: savedEventIds.size >= 3 (ALREADY DONE)
-  - Verify PopularEventsSection shows when gate fails (ALREADY DONE)
-  - Verify /api/events/popular scoring matches PROJECT.md spec
-    (>10 saves → +2 boost, recency within 7 days → +1 boost)
-  - If popularity_scores don't apply the boosts at query time, the scoring
-    is in calculate-popularity — verify it matches spec or update it
+**Do this instead:** Resolve role once in the page shell server-side. Pass `userRole` as a prop to all tabs. Tabs only read the prop.
 
-Step 4: Validate API Routes (verify existing code works end-to-end)
-  - Test GET /api/notifications with authenticated user
-  - Test PATCH /api/notifications/[id]
-  - Test POST /api/notifications?action=mark-all-read
-  - Test POST /api/cron/send-reminders with CRON_SECRET
+### Anti-Pattern 2: Using Service Client for All Club API Operations
 
-Step 5: Schedule Cron
-  - Configure pg_cron in Supabase to POST to /api/cron/send-reminders hourly
-  - Store CRON_SECRET in Supabase Vault
-  - Pattern: net.http_post(url, headers, body) from pg_cron via pg_net extension
-  - Alternative: External cron caller (GitHub Actions, Vercel Cron) if pg_cron auth is complex
-    (Note: pg_cron → Edge Function auth gap documented in Supabase GitHub issue #4287)
+**What people do:** Since some club API routes already use the service client for admin ops, developers reuse it for all operations including reads.
 
-Step 6: End-to-End Verification
-  - Create test event starting in ~24h, save it, trigger cron manually
-  - Verify notification appears in NotificationBell badge
-  - Verify notification displays with correct icon/color in /notifications page
-  - Verify mark-read works (badge decrements)
-  - Verify new user (0 saves) sees PopularEventsSection
-  - Verify user with 3+ saves sees RecommendedEventsSection
-```
+**Why it's wrong:** Bypasses RLS entirely. A bug in ownership validation exposes all clubs' data to any authenticated user.
+
+**Do this instead:** Session client for reads (RLS enforces membership). Service client only for privileged writes — and only after explicit ownership verification in route code.
+
+### Anti-Pattern 3: useState for Tab Navigation
+
+**What people do:** `const [activeTab, setActiveTab] = useState("overview")` — tab state held in React.
+
+**Why it's wrong:** Refreshing the page resets to the default tab. Tabs are not bookmarkable. Back button does not restore the tab the user was on.
+
+**Do this instead:** Store active tab in URL search param (`?tab=members`). Use `router.push` or `<Link>` with shallow routing for tab switches.
+
+### Anti-Pattern 4: Blocking the Invite Feature on Email Infrastructure
+
+**What people do:** Defer the invite feature entirely until a transactional email provider (Resend, SendGrid) is configured and tested.
+
+**Why it's wrong:** Blocks a core v1.1 feature on an infrastructure dependency that can be added progressively.
+
+**Do this instead:** Implement token-based invite with a copy-link UX first. Return the invite URL from the API. Owner copies and shares it. Email delivery is a progressive enhancement for v1.2.
+
+### Anti-Pattern 5: Allowing Owners to Remove Themselves
+
+**What people do:** DELETE `/api/clubs/[id]/members/[userId]` removes any member including the requesting owner.
+
+**Why it's wrong:** Creates clubs with no owner — settings become inaccessible, members cannot be managed, and the club is in an unrecoverable state without admin intervention.
+
+**Do this instead:** API route must check `targetUserId !== requestingUserId` and also verify the target's role is not `"owner"` (or alternatively: only allow one owner removal path via admin). Return 400 with a clear error message.
 
 ---
 
-## Scalability Considerations
+## Integration Points
 
-| Concern | At 100 users (beta) | At 10K users | At 1M users |
-|---------|---------------------|--------------|-------------|
-| Notification polling (60s interval) | No issue — trivial load | Consider increasing interval to 120s or adding Realtime | Replace polling with Supabase Realtime or a dedicated notification service |
-| Cron reminder query (saved_events JOIN events) | Runs in milliseconds | Add index on saved_events.user_id and events.start_date | Partition by date, pre-compute reminder queues |
-| GET /api/notifications limit(50) | Fine for any user | Fine — per-user query with RLS index | Add cursor pagination if users accumulate >50 notifications |
-| K-means recommendations (processes ALL events) | Acceptable (few events) | Becomes slow (documented in CONCERNS.md) | Pre-compute and cache cluster results with TTL |
-| Notification dedup check (per row in cron) | Fine — N small queries | Batch dedup with IN clause | Pre-compute which users/events already have reminders |
+### Existing APIs Already Ready to Use
+
+| API | Current State | Integration |
+|-----|--------------|-------------|
+| `GET /api/clubs/[id]/events` | Exists, returns club events for organizers | ClubEventsTab fetches this directly — no changes |
+| `PATCH /api/events/[id]` | Exists, checks club membership | ClubEventsTab edit links point to existing edit form |
+| `GET /api/my-clubs` | Exists, returns clubs with stats | /my-clubs page listing — no change |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| Dashboard page shell → Tab components | Props: `clubId`, `userRole`, `club` | Server-resolved role flows down as props; tabs own their own data fetches |
+| ClubMembersTab → InviteOrganizerModal | Callback prop `onInviteCreated` | Modal signals parent to refresh pending invite list |
+| ClubDashboardTabs → URL | `router.push("?tab=members")` | Shallow push; page shell re-renders with new searchParams.tab |
+| CreateEventForm ↔ Club dashboard | `clubId` prop (already defined, not wired) | Wire from ClubEventsTab "Create Event" button — no interface change to the form component |
+| Admin approval route → club_members | Direct DB insert with `role: "owner"` | One-line change to existing `/api/admin/clubs/[id]` route |
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| Supabase Auth | Session client in API routes — unchanged | No new auth surface |
+| Supabase Storage | Logo upload via presigned URL | Defer to v1.2 if logo upload is risky; ship settings without logo field first |
+| Email (Resend) | Not required for v1.1 — token URL returned from API | Progressive enhancement for v1.2 |
 
 ---
 
 ## Sources
 
 - Direct codebase inspection — HIGH confidence (primary source)
-  - `src/app/api/notifications/route.ts`
-  - `src/app/api/notifications/[id]/route.ts`
-  - `src/app/api/cron/send-reminders/route.ts`
-  - `src/app/api/admin/events/[id]/status/route.ts`
-  - `src/app/api/events/popular/route.ts`
-  - `src/app/api/recommendations/route.ts`
-  - `src/app/page.tsx`
-  - `src/components/notifications/NotificationBell.tsx`
-  - `src/components/notifications/NotificationItem.tsx`
-  - `src/components/notifications/NotificationList.tsx`
-  - `src/app/notifications/page.tsx`
-  - `src/components/events/RecommendedEventsSection.tsx`
-  - `src/components/events/PopularEventsSection.tsx`
-  - `.planning/codebase/ARCHITECTURE.md`
-  - `.planning/PROJECT.md`
-- [Building a Real-time Notification System with Supabase and Next.js](https://makerkit.dev/blog/tutorials/real-time-notifications-supabase-nextjs) — MEDIUM confidence (confirms patterns used)
-- [Scheduling Edge Functions | Supabase Docs](https://supabase.com/docs/guides/functions/schedule-functions) — HIGH confidence (official)
-- [Supabase Cron | Supabase Docs](https://supabase.com/docs/guides/cron) — HIGH confidence (official)
-- [pg_cron → Edge Function auth gap](https://github.com/supabase/cli/issues/4287) — HIGH confidence (known documented gap)
-- [Row Level Security | Supabase Docs](https://supabase.com/docs/guides/database/postgres/row-level-security) — HIGH confidence (official)
-- [Cold Start Problem fallback patterns](https://web.tapereal.com/blog/6-strategies-to-solve-cold-start-problem-in-recommender-systems/) — MEDIUM confidence (confirms popularity-as-fallback is standard)
+  - `src/app/api/clubs/` (existing routes)
+  - `src/app/my-clubs/page.tsx` (existing listing, dead `[id]` link confirmed)
+  - `src/components/events/CreateEventForm.tsx` (clubId prop confirmed present, not wired)
+  - `src/app/api/admin/clubs/` (auto-grant insert confirmed)
+  - `.planning/PROJECT.md` v1.1 milestone context
+- Next.js App Router `searchParams` pattern for tab state — HIGH confidence (official Next.js docs)
+- Supabase RLS + service role client split — HIGH confidence (established pattern in this codebase)
 
 ---
 
-*Architecture research: 2026-02-23*
+*Architecture research for: Club organizer dashboard — Uni-Verse v1.1*
+*Researched: 2026-02-25*
