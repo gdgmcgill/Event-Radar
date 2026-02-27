@@ -88,6 +88,21 @@
 
 ---
 
+## v1.2 Requirements (Club Organizer Experience & Follow-Based Discovery)
+
+*Defined: 2026-02-27 — PRD: docs/plans/2026-02-26-club-organizer-experience-prd.md*
+
+### Follow System
+
+- [ ] **FOLLOW-01**: `club_followers` table with `user_id`, `club_id`, `created_at` — UNIQUE constraint on `(user_id, club_id)`, indexes on `club_id` and `user_id`, RLS policies for authenticated follow/unfollow and organizer read access
+- [ ] **FOLLOW-02**: `POST /api/clubs/[id]/follow` endpoint — authenticated users can follow an approved club, idempotent (no error on duplicate)
+- [ ] **FOLLOW-03**: `DELETE /api/clubs/[id]/follow` endpoint — authenticated users can unfollow a club
+- [ ] **FOLLOW-04**: `GET /api/clubs/[id]/follow` endpoint — returns whether the current user follows this club
+- [ ] **FOLLOW-05**: `GET /api/user/following` endpoint — returns list of clubs the current user follows
+- [ ] **FOLLOW-06**: Follow/Unfollow button on club profile page (`/clubs/[id]`) — visible to authenticated users who are not members of the club
+- [ ] **FOLLOW-07**: Follower count displayed on public club profile page
+- [ ] **FOLLOW-08**: Follower count and follow data visible in organizer analytics dashboard (Overview tab)
+
 ## Deferred Requirements
 
 ### v1.2
@@ -175,11 +190,21 @@ Updated during roadmap creation. Phases 1-4 are v1.0, phases 5+ are v1.1.
 | SURF-06 | Phase 8 | Pending |
 | SURF-07 | Phase 8 | Pending |
 
+| FOLLOW-01 | Phase 9 | Pending |
+| FOLLOW-02 | Phase 9 | Pending |
+| FOLLOW-03 | Phase 9 | Pending |
+| FOLLOW-04 | Phase 9 | Pending |
+| FOLLOW-05 | Phase 9 | Pending |
+| FOLLOW-06 | Phase 9 | Pending |
+| FOLLOW-07 | Phase 9 | Pending |
+| FOLLOW-08 | Phase 9 | Pending |
+
 **Coverage:**
 - v1.0 requirements: 22 total (18 complete, 4 deferred)
 - v1.1 requirements: 28 total (27 P1, 1 P2)
+- v1.2 requirements: 8 total (8 pending)
 - Unmapped to phases: 0
 
 ---
-*Requirements defined: 2026-02-23 (v1.0), 2026-02-25 (v1.1)*
-*Last updated: 2026-02-25 — v1.1 requirements mapped to Phases 5-8*
+*Requirements defined: 2026-02-23 (v1.0), 2026-02-25 (v1.1), 2026-02-27 (v1.2)*
+*Last updated: 2026-02-27 — v1.2 Follow System requirements added, mapped to Phase 9*

@@ -3,7 +3,7 @@
 ## Milestones
 
 - [x] **v1.0 Cold Start Fix & Notifications** - Phases 1-4 (Phases 1-3 shipped 2026-02-23, Phase 4 deferred)
-- [ ] **v1.1 Club Organizer UX Overhaul** - Phases 5-8 (in progress)
+- [ ] **v1.1 Club Organizer UX Overhaul** - Phases 5-9 (in progress)
 
 ## Phases
 
@@ -79,6 +79,7 @@ Plans:
 - [x] **Phase 6: Dashboard Shell + Read-Only Tabs** - /my-clubs/[id] page with server-side role resolution, tabbed navigation, Overview and Events tabs (completed 2026-02-26)
 - [x] **Phase 7: Members Tab + Invite Flow** - Member list API, member management UI, invitation system with copy-link UX, acceptance flow (completed 2026-02-26)
 - [ ] **Phase 8: Settings Tab + Surface Fixes** - Club settings editing, context-aware public club page, club selector on create-event, auto-approval
+- [ ] **Phase 9: Follow System** - club_followers table, follow/unfollow API + UI, follower counts on club profile and organizer dashboard
 
 ## Phase Details
 
@@ -142,10 +143,22 @@ Plans:
   4. An event created by an organizer for their own club is auto-approved (status set to 'approved' without admin intervention) — verified by the event appearing immediately without pending status
   5. The /clubs/create success screen explains that the club is pending admin review and that the creator will be granted owner status upon approval
 
+### Phase 9: Follow System
+**Goal**: Students can follow clubs and see follower counts, club organizers see follower data — laying the data foundation for the blended feed and analytics dashboard
+**Depends on**: Phase 5 (club_members RLS patterns), Phase 8 (club profile surface fixes)
+**Requirements**: FOLLOW-01, FOLLOW-02, FOLLOW-03, FOLLOW-04, FOLLOW-05, FOLLOW-06, FOLLOW-07, FOLLOW-08
+**Success Criteria** (what must be TRUE):
+  1. A `club_followers` table exists in Supabase with RLS policies — authenticated users can follow/unfollow, organizers can read follower data for their clubs
+  2. A student can tap a Follow button on a club's profile page and the club appears in their following list
+  3. A student can unfollow a club and it disappears from their following list
+  4. The club profile page shows a public follower count
+  5. Club organizers see follower count in their dashboard Overview tab
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 5 → 6 → 7 → 8
+Phases execute in numeric order: 5 → 6 → 7 → 8 → 9
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -157,3 +170,4 @@ Phases execute in numeric order: 5 → 6 → 7 → 8
 | 6. Dashboard Shell + Read-Only Tabs | 3/3 | Complete   | 2026-02-26 | - |
 | 7. Members Tab + Invite Flow | 3/3 | Complete   | 2026-02-26 | - |
 | 8. Settings Tab + Surface Fixes | v1.1 | 0/TBD | Not started | - |
+| 9. Follow System | v1.1 | 0/TBD | Not started | - |
