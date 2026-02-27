@@ -153,7 +153,11 @@ Plans:
   3. A student can unfollow a club and it disappears from their following list
   4. The club profile page shows a public follower count
   5. Club organizers see follower count in their dashboard Overview tab
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Create club_followers migration, TypeScript types, and follow/unfollow API routes
+- [ ] 09-02-PLAN.md — Add FollowButton to club profile, follower count to dashboard, Following section to profile
 
 ## Progress
 
