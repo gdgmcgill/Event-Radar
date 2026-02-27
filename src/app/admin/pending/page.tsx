@@ -5,7 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Calendar, MapPin } from "lucide-react";
+import { CheckCircle, XCircle, Calendar, MapPin, Pencil } from "lucide-react";
+import {
+  AdminEventEditModal,
+  type EditablePendingEvent,
+} from "@/components/events/AdminEventEditModal";
 
 interface PendingEvent {
   id: string;
@@ -16,6 +20,7 @@ interface PendingEvent {
   location: string | null;
   organizer: string | null;
   tags: string[] | null;
+  image_url: string | null;
   status: string;
   created_at: string | null;
 }
@@ -24,12 +29,13 @@ export default function PendingEventsPage() {
   const [events, setEvents] = useState<PendingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EditablePendingEvent | null>(null);
 
   const fetchPending = useCallback(async () => {
     const supabase = createClient();
     const { data } = await supabase
       .from("events")
-      .select("id, title, description, start_date, end_date, location, organizer, tags, status, created_at")
+      .select("id, title, description, start_date, end_date, location, organizer, tags, image_url, status, created_at")
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
@@ -40,6 +46,16 @@ export default function PendingEventsPage() {
   useEffect(() => {
     fetchPending();
   }, [fetchPending]);
+
+  const handleEditSaved = (updated: EditablePendingEvent) => {
+    setEvents((prev) =>
+      prev.map((e) => (e.id === updated.id ? { ...e, ...updated } : e))
+    );
+  };
+
+  const handleEditSavedAndApproved = (eventId: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+  };
 
   const handleAction = async (eventId: string, status: "approved" | "rejected") => {
     setActionLoading(eventId);
@@ -118,7 +134,16 @@ export default function PendingEventsPage() {
                     ))}
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingEvent(event)}
+                    disabled={actionLoading === event.id}
+                  >
+                    <Pencil className="mr-2 h-3.5 w-3.5" />
+                    Edit
+                  </Button>
                   <Button
                     size="sm"
                     onClick={() => handleAction(event.id, "approved")}
@@ -142,6 +167,13 @@ export default function PendingEventsPage() {
           ))}
         </div>
       )}
+
+      <AdminEventEditModal
+        event={editingEvent}
+        onClose={() => setEditingEvent(null)}
+        onSaved={handleEditSaved}
+        onSavedAndApproved={handleEditSavedAndApproved}
+      />
     </div>
   );
 }
