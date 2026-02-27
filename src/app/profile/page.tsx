@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import InterestsCard from "@/components/profile/InterestsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Mail, Clock } from "lucide-react";
+import { Calendar, Mail, Clock, Heart, Building2 } from "lucide-react";
 import EditProfileButton from "@/components/profile/EditProfileButton";
 
 export default async function ProfilePage() {
@@ -24,6 +24,23 @@ export default async function ProfilePage() {
     .select("*")
     .eq("id", user.id)
     .single();
+
+  // Fetch clubs the user follows
+  const { data: following } = await supabase
+    .from("club_followers")
+    .select(`
+      id,
+      created_at,
+      clubs (
+        id,
+        name,
+        logo_url,
+        description,
+        category
+      )
+    `)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
   // Fallback to auth user data if profile doesn't exist
   const displayData = profile ?? {
@@ -93,6 +110,53 @@ export default async function ProfilePage() {
             userId={displayData.id}
             initialTags={(displayData.interest_tags ?? []) as import("@/types").EventTag[]}
           />
+
+          {/* Following Clubs Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Heart className="h-5 w-5" />
+                Following
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(!following || following.length === 0) ? (
+                <p className="text-sm text-muted-foreground">
+                  You&apos;re not following any clubs yet. Visit the{" "}
+                  <a href="/clubs" className="text-primary hover:underline">clubs page</a>{" "}
+                  to discover clubs to follow.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {following.map((f) => {
+                    const club = f.clubs as unknown as { id: string; name: string; logo_url: string | null; description: string | null; category: string | null };
+                    return (
+                      <a
+                        key={f.id}
+                        href={`/clubs/${club.id}`}
+                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                      >
+                        {club.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={club.logo_url} alt={club.name} className="h-10 w-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Building2 className="h-5 w-5 text-primary" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-foreground truncate">{club.name}</p>
+                          {club.category && (
+                            <p className="text-xs text-muted-foreground">{club.category}</p>
+                          )}
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Account Info Card and other Info*/}
         </div>

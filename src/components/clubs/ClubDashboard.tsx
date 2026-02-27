@@ -18,6 +18,7 @@ interface ClubDashboardProps {
   pendingInvitesCount: number | null;
   initialTab: string;
   userId: string;
+  followerCount: number;
 }
 
 const VALID_TABS = ["overview", "events", "members", "settings"] as const;
@@ -34,6 +35,7 @@ function ClubDashboardInner({
   pendingInvitesCount,
   initialTab,
   userId,
+  followerCount,
 }: ClubDashboardProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -81,6 +83,7 @@ function ClubDashboardInner({
             memberCount={memberCount}
             pendingInvitesCount={pendingInvitesCount}
             role={role}
+            followerCount={followerCount}
           />
         </TabsContent>
 
