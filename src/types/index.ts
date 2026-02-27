@@ -76,6 +76,14 @@ export interface ClubMember {
   user?: User;
 }
 
+export interface ClubFollower {
+  id: string;
+  user_id: string;
+  club_id: string;
+  created_at: string;
+  club?: Club; // Populated when joining via GET /api/user/following
+}
+
 export interface OrganizerRequest {
   id: string;
   user_id: string;
