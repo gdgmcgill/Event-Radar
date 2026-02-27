@@ -4,7 +4,7 @@
  * Filter bar component for events
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
@@ -51,6 +51,7 @@ function areTagsEqual(left: EventTag[], right: EventTag[]) {
 
 export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps) {
   const [selectedTags, setSelectedTags] = useState<EventTag[]>(() => initialTags ?? []);
+  const lastSyncedTags = useRef(initialTags);
 
   // Sync with initial tags if they change
   useEffect(() => {
@@ -58,12 +59,14 @@ export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps)
       return;
     }
 
-    if (areTagsEqual(initialTags, selectedTags)) {
+    if (lastSyncedTags.current && areTagsEqual(initialTags, lastSyncedTags.current)) {
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedTags(initialTags);
-  }, [initialTags, selectedTags]);
+    lastSyncedTags.current = initialTags;
+  }, [initialTags]);
 
   const toggleTag = (tag: EventTag) => {
     const newTags = selectedTags.includes(tag)
