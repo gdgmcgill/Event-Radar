@@ -9,6 +9,7 @@ import {
   Clock,
   XCircle,
   Instagram,
+  Heart,
 } from "lucide-react";
 import type { Club } from "@/types";
 
@@ -17,6 +18,7 @@ interface ClubOverviewTabProps {
   memberCount: number;
   pendingInvitesCount: number | null;
   role: "owner" | "organizer";
+  followerCount: number;
 }
 
 export function ClubOverviewTab({
@@ -24,6 +26,7 @@ export function ClubOverviewTab({
   memberCount,
   pendingInvitesCount,
   role,
+  followerCount,
 }: ClubOverviewTabProps) {
   const statusConfig = {
     approved: {
@@ -95,6 +98,17 @@ export function ClubOverviewTab({
             </span>
           </div>
           <p className="text-2xl font-bold text-foreground">{memberCount}</p>
+        </div>
+
+        {/* Followers stat */}
+        <div className="p-4 rounded-lg border bg-card">
+          <div className="flex items-center gap-3 mb-2">
+            <Heart className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium text-muted-foreground">
+              Followers
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-foreground">{followerCount}</p>
         </div>
 
         {/* Pending Invitations stat (owner only) */}

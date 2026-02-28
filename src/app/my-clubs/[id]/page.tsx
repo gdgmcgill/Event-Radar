@@ -29,6 +29,7 @@ export default async function ClubDashboardPage({
     { data: club },
     { data: membership },
     { count: memberCount },
+    { count: followerCount },
   ] = await Promise.all([
     supabase.from("clubs").select("*").eq("id", id).single(),
     supabase
@@ -39,6 +40,10 @@ export default async function ClubDashboardPage({
       .single(),
     supabase
       .from("club_members")
+      .select("*", { count: "exact", head: true })
+      .eq("club_id", id),
+    supabase
+      .from("club_followers")
       .select("*", { count: "exact", head: true })
       .eq("club_id", id),
   ]);
@@ -69,6 +74,7 @@ export default async function ClubDashboardPage({
       pendingInvitesCount={pendingInvitesCount}
       initialTab={initialTab}
       userId={user.id}
+      followerCount={followerCount ?? 0}
     />
   );
 }
