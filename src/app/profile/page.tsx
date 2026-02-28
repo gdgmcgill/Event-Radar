@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import InterestsCard from "@/components/profile/InterestsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -123,7 +124,7 @@ export default async function ProfilePage() {
               {(!following || following.length === 0) ? (
                 <p className="text-sm text-muted-foreground">
                   You&apos;re not following any clubs yet. Visit the{" "}
-                  <a href="/clubs" className="text-primary hover:underline">clubs page</a>{" "}
+                  <Link href="/clubs" className="text-primary hover:underline">clubs page</Link>{" "}
                   to discover clubs to follow.
                 </p>
               ) : (
@@ -131,7 +132,7 @@ export default async function ProfilePage() {
                   {following.map((f) => {
                     const club = f.clubs as unknown as { id: string; name: string; logo_url: string | null; description: string | null; category: string | null };
                     return (
-                      <a
+                      <Link
                         key={f.id}
                         href={`/clubs/${club.id}`}
                         className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
@@ -150,7 +151,7 @@ export default async function ProfilePage() {
                             <p className="text-xs text-muted-foreground">{club.category}</p>
                           )}
                         </div>
-                      </a>
+                      </Link>
                     );
                   })}
                 </div>
