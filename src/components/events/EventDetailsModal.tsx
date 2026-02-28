@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, InteractionSource } from "@/types";
-import { MapPin, Calendar, Clock, ExternalLink, Share2, Check } from "lucide-react";
+import { MapPin, Calendar, Clock, ExternalLink, Share2, Check, Loader2 } from "lucide-react";
 import { useTrackEventModal, useTracking } from "@/hooks/useTracking";
 
 type EventDetailsModalProps = {
@@ -24,6 +24,7 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
   useTrackEventModal(event?.id || null, open, trackingSource);
   const { trackCalendarAdd, trackShare } = useTracking({ source: trackingSource });
   const [copied, setCopied] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
 
   if (!event) return null;
 
@@ -61,6 +62,30 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
     document.body.removeChild(link);
 
     trackCalendarAdd(event.id);
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      setIsExportingCsv(true);
+      const response = await fetch(`/api/events/export?format=csv&eventId=${encodeURIComponent(event.id)}`);
+      if (!response.ok) throw new Error("Export failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${event.title.replace(/\s+/g, "-")}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    } catch (err) {
+      if (err instanceof Error) {
+        console.warn("CSV export failed:", err);
+      }
+    } finally {
+      setIsExportingCsv(false);
+    }
   };
 
   return (
@@ -131,6 +156,16 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
             >
               <Calendar className="mr-2 h-4 w-4" />
               Add to Calendar
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleExportCsv}
+              disabled={isExportingCsv}
+            >
+              {isExportingCsv ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
+              {isExportingCsv ? "Exporting..." : "Export as CSV"}
             </Button>
 
             <Button

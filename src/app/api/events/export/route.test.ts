@@ -93,7 +93,7 @@ describe("GET /api/events/export", () => {
         expect(res.headers.get("Content-Disposition")).toBe('attachment; filename="events.csv"');
 
         const text = await res.text();
-        expect(text).toContain("id,title,description,start_date,end_date,location,club_id,category,tags,image_url,status,approved_by,approved_at,created_by,created_at,updated_at,source,source_url,organizer,rsvp_count,club_record_id,club_name,club_instagram_handle,club_logo_url,club_description,club_category,club_status,club_created_by,club_created_at,club_updated_at");
+        expect(text).toContain("event_id,title,description,start_date,end_date,location,category,tags,image_url,source_url,organizer,rsvp_count,club_name,club_instagram_handle,club_description");
         expect(text).toContain('"Test Event"');
         expect(text).toContain('"tech, coding"');
         expect(text).toContain('"Tech Club"');

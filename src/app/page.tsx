@@ -17,7 +17,6 @@ import { HappeningNowSection } from "@/components/events/HappeningNowSection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventSearch } from "@/components/events/EventSearch";
-import { ExportEventsButton } from "@/components/events/ExportEventsButton";
 import { Filter, RefreshCcw, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -275,12 +274,6 @@ function HomePageContent() {
               </h2>
 
               <div className="flex items-center gap-2">
-                <ExportEventsButton
-                  searchQuery={searchQuery}
-                  selectedTags={selectedTags}
-                  dateFrom={upcomingFilters.dateRange?.start.toISOString()}
-                />
-
                 {/* Desktop Quick Filters Toggle */}
                 <div className="hidden md:block">
                   <Button
