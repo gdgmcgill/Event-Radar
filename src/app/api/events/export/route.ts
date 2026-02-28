@@ -1,8 +1,140 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import type { Database } from "@/lib/supabase/types";
 
+type EventRow = Database["public"]["Tables"]["events"]["Row"] & {
+    approved_by?: string | null;
+    approved_at?: string | null;
+    source?: string | null;
+    source_url?: string | null;
+    club?: ClubRow | null;
+};
+
+type ClubRow = Database["public"]["Tables"]["clubs"]["Row"];
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const CSV_HEADERS = [
+    "id",
+    "title",
+    "description",
+    "start_date",
+    "end_date",
+    "location",
+    "club_id",
+    "category",
+    "tags",
+    "image_url",
+    "status",
+    "approved_by",
+    "approved_at",
+    "created_by",
+    "created_at",
+    "updated_at",
+    "source",
+    "source_url",
+    "organizer",
+    "rsvp_count",
+    "club_record_id",
+    "club_name",
+    "club_instagram_handle",
+    "club_logo_url",
+    "club_description",
+    "club_category",
+    "club_status",
+    "club_created_by",
+    "club_created_at",
+    "club_updated_at",
+];
+
+const escapeCsvValue = (value: string) => `"${value.replace(/"/g, '""')}"`;
+
+const toCsvValue = (value: unknown) => {
+    if (value === null || value === undefined) return '""';
+    if (Array.isArray(value)) return escapeCsvValue(value.join(", "));
+    return escapeCsvValue(String(value));
+};
+
+const formatDateForICal = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+};
+
+const escapeICalText = (value: string) =>
+    value
+        .replace(/\\/g, "\\\\")
+        .replace(/\r\n|\n|\r/g, "\\n")
+        .replace(/;/g, "\\;")
+        .replace(/,/g, "\\,");
+
+/**
+ * @swagger
+ * /api/events/export:
+ *   get:
+ *    summary: /api/events/export
+ *    description: Export approved events as CSV or iCal
+ *    tags:
+ *      - Events
+ *    parameters:
+ *      - name: format
+ *        description: Export format
+ *        in: query
+ *        required: true
+ *        schema:
+ *          type: string
+ *          enum: [csv, ical]
+ *      - name: tags
+ *        description: Comma-separated list of tags
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: search
+ *        description: Search query
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: dateFrom
+ *        description: Start date for filtering
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: dateTo
+ *        description: End date for filtering
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: clubId
+ *        description: Filter by club id
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *      - name: eventId
+ *        description: Export a single event by id
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *    responses:
+ *      200:
+ *        description: Export file
+ *        content:
+ *          text/csv:
+ *            schema:
+ *              type: string
+ *          text/calendar:
+ *            schema:
+ *              type: string
+ *      400:
+ *        description: Validation error
+ *      500:
+ *        description: Internal server error
+ */
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -13,17 +145,22 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "format parameter must be 'csv' or 'ical'" }, { status: 400 });
         }
 
-        const tags = searchParams.get('tags');
-        const search = searchParams.get('search');
-        const dateFrom = searchParams.get('dateFrom');
-        const dateTo = searchParams.get('dateTo');
+        const tags = searchParams.get("tags");
+        const search = searchParams.get("search");
+        const dateFrom = searchParams.get("dateFrom");
+        const dateTo = searchParams.get("dateTo");
         const clubId = searchParams.get("clubId");
+        const eventId = searchParams.get("eventId");
+
+        if (eventId && !UUID_RE.test(eventId)) {
+            return NextResponse.json({ error: "eventId must be a valid UUID" }, { status: 400 });
+        }
 
         let eventsQuery = supabase
             .from("events")
-            .select("*")
+            .select("*, club:clubs(*)")
             .eq("status", "approved")
-            .order("start_date", { ascending: true }); // Generally useful to order by start date for exports
+            .order("start_date", { ascending: true });
 
         // Apply filters
         if (tags) {
@@ -52,6 +189,10 @@ export async function GET(request: NextRequest) {
             eventsQuery = eventsQuery.eq("club_id", clubId);
         }
 
+        if (eventId) {
+            eventsQuery = eventsQuery.eq("id", eventId);
+        }
+
         // Execute query
         const { data: eventsData, error: eventsError } = await eventsQuery;
 
@@ -60,29 +201,46 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: eventsError.message }, { status: 500 });
         }
 
-        const dbEvents = eventsData ?? [];
+        const dbEvents = (eventsData ?? []) as unknown as EventRow[];
 
-        if (format === 'csv') {
-            // Generate CSV
-            const headers = ['Title', 'Description', 'Start Date', 'End Date', 'Location', 'Category', 'Tags'];
+        if (format === "csv") {
+            const rows = dbEvents.map((event) => {
+                const club = event.club ?? null;
+                return [
+                    toCsvValue(event.id),
+                    toCsvValue(event.title),
+                    toCsvValue(event.description),
+                    toCsvValue(event.start_date),
+                    toCsvValue(event.end_date ?? ""),
+                    toCsvValue(event.location),
+                    toCsvValue(event.club_id ?? ""),
+                    toCsvValue(event.category ?? ""),
+                    toCsvValue(event.tags ?? []),
+                    toCsvValue(event.image_url ?? ""),
+                    toCsvValue(event.status ?? ""),
+                    toCsvValue(event.approved_by ?? ""),
+                    toCsvValue(event.approved_at ?? ""),
+                    toCsvValue(event.created_by ?? ""),
+                    toCsvValue(event.created_at ?? ""),
+                    toCsvValue(event.updated_at ?? ""),
+                    toCsvValue(event.source ?? ""),
+                    toCsvValue(event.source_url ?? ""),
+                    toCsvValue(event.organizer ?? ""),
+                    toCsvValue(event.rsvp_count ?? ""),
+                    toCsvValue(club?.id ?? ""),
+                    toCsvValue(club?.name ?? ""),
+                    toCsvValue(club?.instagram_handle ?? ""),
+                    toCsvValue(club?.logo_url ?? ""),
+                    toCsvValue(club?.description ?? ""),
+                    toCsvValue(club?.category ?? ""),
+                    toCsvValue(club?.status ?? ""),
+                    toCsvValue(club?.created_by ?? ""),
+                    toCsvValue(club?.created_at ?? ""),
+                    toCsvValue(club?.updated_at ?? ""),
+                ].join(",");
+            });
 
-            const escapeCsv = (str: string | null | undefined) => {
-                if (!str) return '""';
-                const escaped = String(str).replace(/"/g, '""');
-                return `"${escaped}"`;
-            };
-
-            const rows = dbEvents.map((event: any) => [
-                escapeCsv(event.title),
-                escapeCsv(event.description),
-                escapeCsv(new Date(event.start_date).toISOString()),
-                escapeCsv(event.end_date ? new Date(event.end_date).toISOString() : ''),
-                escapeCsv(event.location),
-                escapeCsv(event.category || ''),
-                escapeCsv((event.tags || []).join(', '))
-            ].join(','));
-
-            const csvContent = [headers.join(','), ...rows].join('\n');
+            const csvContent = [CSV_HEADERS.join(","), ...rows].join("\n");
 
             return new NextResponse(csvContent, {
                 status: 200,
@@ -91,38 +249,37 @@ export async function GET(request: NextRequest) {
                     'Content-Disposition': 'attachment; filename="events.csv"',
                 },
             });
-        } else if (format === 'ical') {
-            // Generate iCal
-            const formatDateForICal = (dateStr: string) => {
-                const date = new Date(dateStr);
-                return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            };
+        } else if (format === "ical") {
+            const lineBreak = "\r\n";
+            const dtstamp = formatDateForICal(new Date().toISOString());
 
-            const icalEvents = dbEvents.map((event: any) => {
-                const dtstart = formatDateForICal(event.start_date);
-                const dtend = event.end_date ? formatDateForICal(event.end_date) : dtstart; // Fallback to start if no end
-                const dtstamp = formatDateForICal(new Date().toISOString());
+            const icalEvents = dbEvents
+                .map((event) => {
+                    const dtstart = formatDateForICal(event.start_date);
+                    const dtend = event.end_date ? formatDateForICal(event.end_date) : dtstart;
 
-                const descriptionEscaped = (event.description || '').replace(/\n/g, '\\n').replace(/,/g, '\\,');
-                const locationEscaped = (event.location || '').replace(/,/g, '\\,');
+                    return [
+                        "BEGIN:VEVENT",
+                        `UID:${event.id}@event-radar.local`,
+                        `DTSTAMP:${dtstamp}`,
+                        `DTSTART:${dtstart}`,
+                        `DTEND:${dtend}`,
+                        `SUMMARY:${escapeICalText(event.title ?? "")}`,
+                        `DESCRIPTION:${escapeICalText(event.description ?? "")}`,
+                        `LOCATION:${escapeICalText(event.location ?? "")}`,
+                        "END:VEVENT",
+                    ].join(lineBreak);
+                })
+                .join(lineBreak);
 
-                return `BEGIN:VEVENT
-UID:${event.id}@event-radar.local
-DTSTAMP:${dtstamp}
-DTSTART:${dtstart}
-DTEND:${dtend}
-SUMMARY:${event.title}
-DESCRIPTION:${descriptionEscaped}
-LOCATION:${locationEscaped}
-END:VEVENT`;
-            }).join('\n');
-
-            const icalContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Event Radar//EN
-CALSCALE:GREGORIAN
-${icalEvents}
-END:VCALENDAR`;
+            const icalContent = [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "PRODID:-//Event Radar//EN",
+                "CALSCALE:GREGORIAN",
+                icalEvents,
+                "END:VCALENDAR",
+            ].join(lineBreak);
 
             return new NextResponse(icalContent, {
                 status: 200,

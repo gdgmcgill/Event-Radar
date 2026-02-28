@@ -1,7 +1,43 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 // Must be hoisted so the mock is registered before the module import
-const { mockFrom } = vi.hoisted(() => {
+const { mockFrom, mockQuery, mockEvents } = vi.hoisted(() => {
+    const mockEvents = [
+        {
+            id: "1f4f1a1a-1111-4f4f-9a9a-111111111111",
+            title: "Test Event",
+            description: "Line1\nLine2, semicolon; backslash \\",
+            start_date: "2024-05-01T12:00:00Z",
+            end_date: "2024-05-01T14:00:00Z",
+            location: "Test Location",
+            status: "approved",
+            category: "Academic",
+            tags: ["tech", "coding"],
+            image_url: "https://example.com/image.png",
+            created_by: "user-1",
+            created_at: "2024-04-01T10:00:00Z",
+            updated_at: "2024-04-02T10:00:00Z",
+            approved_by: "admin-1",
+            approved_at: "2024-04-03T10:00:00Z",
+            source: "manual",
+            source_url: "https://example.com/source",
+            organizer: "Tech Club",
+            rsvp_count: 42,
+            club: {
+                id: "club-1",
+                name: "Tech Club",
+                instagram_handle: "@techclub",
+                logo_url: "https://example.com/logo.png",
+                description: "Club description",
+                category: "Tech",
+                status: "approved",
+                created_by: "user-2",
+                created_at: "2023-01-01T10:00:00Z",
+                updated_at: "2023-02-01T10:00:00Z",
+            },
+        },
+    ];
+
     const mockQuery = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -14,22 +50,8 @@ const { mockFrom } = vi.hoisted(() => {
             resolve({ data: mockEvents, error: null }),
     };
 
-    const mockEvents = [
-        {
-            id: "1",
-            title: "Test Event",
-            description: "A test event description",
-            start_date: "2024-05-01T12:00:00Z",
-            end_date: "2024-05-01T14:00:00Z",
-            location: "Test Location",
-            status: "approved",
-            category: "Academic",
-            tags: ["tech", "coding"],
-        },
-    ];
-
     const mockFrom = vi.fn().mockReturnValue(mockQuery);
-    return { mockFrom };
+    return { mockFrom, mockQuery, mockEvents };
 });
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -44,6 +66,13 @@ import { NextRequest } from "next/server";
 describe("GET /api/events/export", () => {
     beforeEach(() => {
         mockFrom.mockClear();
+        mockQuery.select.mockClear();
+        mockQuery.eq.mockClear();
+        mockQuery.order.mockClear();
+        mockQuery.overlaps.mockClear();
+        mockQuery.or.mockClear();
+        mockQuery.gte.mockClear();
+        mockQuery.lte.mockClear();
     });
 
     it("should return 400 if format is invalid", async () => {
@@ -64,9 +93,10 @@ describe("GET /api/events/export", () => {
         expect(res.headers.get("Content-Disposition")).toBe('attachment; filename="events.csv"');
 
         const text = await res.text();
-        expect(text).toContain("Title,Description,Start Date,End Date,Location,Category,Tags");
+        expect(text).toContain("id,title,description,start_date,end_date,location,club_id,category,tags,image_url,status,approved_by,approved_at,created_by,created_at,updated_at,source,source_url,organizer,rsvp_count,club_record_id,club_name,club_instagram_handle,club_logo_url,club_description,club_category,club_status,club_created_by,club_created_at,club_updated_at");
         expect(text).toContain('"Test Event"');
         expect(text).toContain('"tech, coding"');
+        expect(text).toContain('"Tech Club"');
     });
 
     it("should return iCal data with correct structure", async () => {
@@ -81,6 +111,25 @@ describe("GET /api/events/export", () => {
         expect(text).toContain("BEGIN:VCALENDAR");
         expect(text).toContain("SUMMARY:Test Event");
         expect(text).toContain("DTSTART:20240501T120000Z");
+        expect(text).toContain("DESCRIPTION:Line1\\nLine2\\, semicolon\\; backslash \\\\");
         expect(text).toContain("END:VCALENDAR");
+    });
+
+    it("should return 400 if eventId is invalid", async () => {
+        const req = new NextRequest("http://localhost:3000/api/events/export?format=csv&eventId=not-a-uuid");
+        const res = await GET(req);
+        if (!res) throw new Error("Response is undefined");
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.error).toBe("eventId must be a valid UUID");
+    });
+
+    it("should filter by eventId", async () => {
+        const eventId = mockEvents[0].id;
+        const req = new NextRequest(`http://localhost:3000/api/events/export?format=csv&eventId=${eventId}`);
+        const res = await GET(req);
+        if (!res) throw new Error("Response is undefined");
+        expect(res.status).toBe(200);
+        expect(mockQuery.eq).toHaveBeenCalledWith("id", eventId);
     });
 });

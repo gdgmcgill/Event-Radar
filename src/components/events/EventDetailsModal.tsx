@@ -31,31 +31,8 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
     event.location,
   )}`;
 
-  // Generate calendar URL (ICS format)
-  const generateCalendarUrl = () => {
-    const eventDateTime = new Date(`${event.event_date}T${event.event_time}`);
-    const endDateTime = new Date(eventDateTime.getTime() + 2 * 60 * 60 * 1000); // +2 hours default
-    
-    const formatICSDate = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    };
-
-    const icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'BEGIN:VEVENT',
-      `DTSTART:${formatICSDate(eventDateTime)}`,
-      `DTEND:${formatICSDate(endDateTime)}`,
-      `SUMMARY:${event.title}`,
-      `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}`,
-      `LOCATION:${event.location}`,
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].join('\n');
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    return URL.createObjectURL(blob);
-  };
+  const buildExportUrl = () =>
+    `/api/events/export?format=ical&eventId=${encodeURIComponent(event.id)}`;
 
   const handleShare = async () => {
     const url = `${window.location.origin}/events/${event.id}`;
@@ -76,16 +53,13 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
   };
 
   const handleAddToCalendar = () => {
-    const url = generateCalendarUrl();
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${event.title.replace(/\s+/g, '-')}.ics`;
+    const link = document.createElement("a");
+    link.href = buildExportUrl();
+    link.download = `${event.title.replace(/\s+/g, "-")}.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
 
-    // Track calendar add interaction
     trackCalendarAdd(event.id);
   };
 
