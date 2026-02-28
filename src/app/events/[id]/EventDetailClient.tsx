@@ -24,11 +24,10 @@ import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventPopularityScore } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink, Share2, Check, FileSpreadsheet } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink, FileSpreadsheet } from "lucide-react";
 import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { RelatedEventCard } from "@/components/events/RelatedEventCard";
-import { useTracking } from "@/hooks/useTracking";
 import { exportEventCsv, exportEventIcal } from "@/lib/exportUtils";
 
 export default function EventDetailClient() {
@@ -52,10 +51,8 @@ export default function EventDetailClient() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [popularity, setPopularity] = useState<EventPopularityScore | null>(null);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
-  const [copied, setCopied] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
-
-  const { trackShare } = useTracking({ source: "direct" });
+  const [isExportingIcal, setIsExportingIcal] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -164,24 +161,6 @@ export default function EventDetailClient() {
     fetchRelated();
   }, [event]);
 
-  const handleShare = useCallback(async () => {
-    const url = `${window.location.origin}/events/${id}`;
-    trackShare(id);
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: event?.title, text: event?.description, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name !== "AbortError") {
-        console.warn("Share failed:", err);
-      }
-    }
-  }, [id, event, trackShare]);
-
   const handleSave = useCallback(async () => {
     if (!user) {
       setShowSignInPrompt(true);
@@ -211,6 +190,18 @@ export default function EventDetailClient() {
       // Error already logged in exportUtils
     } finally {
       setIsExportingCsv(false);
+    }
+  }, [event]);
+
+  const handleAddToCalendar = useCallback(async () => {
+    if (!event) return;
+    try {
+      setIsExportingIcal(true);
+      await exportEventIcal(event.id, event.title);
+    } catch {
+      // Error already logged in exportUtils
+    } finally {
+      setIsExportingIcal(false);
     }
   }, [event]);
 
@@ -282,11 +273,12 @@ export default function EventDetailClient() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={handleShare}
-                    title="Share event"
+                    onClick={handleAddToCalendar}
+                    disabled={isExportingIcal}
+                    title="Add to calendar"
                     className="shrink-0"
                   >
-                    {copied ? <Check className="h-5 w-5 text-green-500" /> : <Share2 className="h-5 w-5" />}
+                    {isExportingIcal ? <Loader2 className="h-5 w-5 animate-spin" /> : <Calendar className="h-5 w-5" />}
                   </Button>
                   <Button
                     variant="outline"
@@ -363,11 +355,12 @@ export default function EventDetailClient() {
 
                   <Button
                     variant="outline"
-                    className="w-full sm:flex-1 border-primary/20 text-primary hover:bg-primary/5"
-                    onClick={handleShare}
+                    className="w-full sm:flex-1 border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleAddToCalendar}
+                    disabled={isExportingIcal}
                   >
-                    {copied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Share2 className="mr-2 h-4 w-4" />}
-                    {copied ? "Copied!" : "Share"}
+                    {isExportingIcal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
+                    {isExportingIcal ? "Adding..." : "Add to Calendar"}
                   </Button>
                 </div>
               </div>
