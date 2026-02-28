@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { EventBadge } from "@/components/events/EventBadge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
-import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, InteractionSource } from "@/types";
 import { MapPin, Calendar, Clock, ExternalLink, Share2, Check, Loader2 } from "lucide-react";
 import { useTrackEventModal, useTracking } from "@/hooks/useTracking";
@@ -26,15 +25,13 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
   const { trackCalendarAdd, trackShare } = useTracking({ source: trackingSource });
   const [copied, setCopied] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isExportingIcal, setIsExportingIcal] = useState(false);
 
   if (!event) return null;
 
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     event.location,
   )}`;
-
-  const buildExportUrl = () =>
-    `/api/events/export?format=ical&eventId=${encodeURIComponent(event.id)}`;
 
   const handleShare = async () => {
     const url = `${window.location.origin}/events/${event.id}`;
@@ -54,15 +51,16 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
     }
   };
 
-  const handleAddToCalendar = () => {
-    const link = document.createElement("a");
-    link.href = buildExportUrl();
-    link.download = `${event.title.replace(/\s+/g, "-")}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    trackCalendarAdd(event.id);
+  const handleAddToCalendar = async () => {
+    try {
+      setIsExportingIcal(true);
+      await exportEventIcal(event.id, event.title);
+      trackCalendarAdd(event.id);
+    } catch (err) {
+      // Error already logged in exportUtils
+    } finally {
+      setIsExportingIcal(false);
+    }
   };
 
   const handleExportCsv = async () => {
@@ -139,11 +137,12 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
             
             <Button
               variant="outline"
-              className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5"
+              className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleAddToCalendar}
+              disabled={isExportingIcal}
             >
-              <Calendar className="mr-2 h-4 w-4" />
-              Add to Calendar
+              {isExportingIcal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
+              {isExportingIcal ? "Adding..." : "Add to Calendar"}
             </Button>
 
             <Button
