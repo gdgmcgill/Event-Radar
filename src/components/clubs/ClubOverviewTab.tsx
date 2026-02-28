@@ -46,7 +46,7 @@ export function ClubOverviewTab({
     },
   };
 
-  const status = statusConfig[club.status];
+  const status = statusConfig[club.status ?? "pending"];
 
   return (
     <div className="space-y-6">
