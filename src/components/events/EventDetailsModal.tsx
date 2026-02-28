@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { EventBadge } from "@/components/events/EventBadge";
+import { EventImage } from "@/components/events/EventImage";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
@@ -92,13 +93,14 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto p-0 gap-0 bg-card border-border shadow-2xl rounded-2xl">
-        {/* Header / Image Placeholder if available */}
-        <div className="relative h-40 w-full bg-secondary/30 flex items-center justify-center border-b border-border/50">
-           {/* If we had an image, it would go here. For now, a pattern or placeholder. */}
-           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/10" />
-           <div className="z-10 text-primary/20">
-             {/* Optional: Icon or Logo */}
-           </div>
+        {/* Event Image Header */}
+        <div className="relative h-40 w-full overflow-hidden border-b border-border/50">
+          <EventImage
+            imageUrl={event.image_url}
+            clubLogoUrl={event.club?.logo_url}
+            alt={event.title}
+            sizes="(max-width: 768px) 100vw, 800px"
+          />
         </div>
 
         <div className="p-6 space-y-6">

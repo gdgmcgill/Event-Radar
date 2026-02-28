@@ -1,0 +1,42 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient with McGill colors -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#561c24;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#ED1B2F;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#c7c7a3;stop-opacity:0.6" />
+    </linearGradient>
+    <linearGradient id="overlayGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:0.5" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+  <rect width="1200" height="630" fill="url(#overlayGradient)"/>
+  
+  <!-- Pattern overlay for texture -->
+  <g opacity="0.1">
+    <circle cx="200" cy="150" r="100" fill="#ffffff"/>
+    <circle cx="1000" cy="480" r="120" fill="#ffffff"/>
+    <circle cx="600" cy="315" r="80" fill="#ffffff"/>
+  </g>
+  
+  <!-- Uni-Verse Logo Text -->
+  <text x="600" y="280" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#ffffff" text-anchor="middle">
+    Uni-Verse
+  </text>
+  
+  <!-- Tagline -->
+  <text x="600" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="400" fill="#e8d8c4" text-anchor="middle" opacity="0.9">
+    McGill Campus Events
+  </text>
+  
+  <!-- Icon -->
+  <g transform="translate(570, 380)">
+    <circle cx="30" cy="30" r="30" fill="#ffffff" opacity="0.2"/>
+    <path d="M30 20L30 40M20 30L40 30" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+    <circle cx="30" cy="30" r="20" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.6"/>
+  </g>
+</svg>

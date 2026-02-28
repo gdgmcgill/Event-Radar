@@ -277,8 +277,8 @@ export async function GET(request: NextRequest) {
     const isPopularitySort =
       sort === "popularity_score" || sort === "trending_score";
     const selectClause = isPopularitySort
-      ? "*, popularity:event_popularity_scores(popularity_score, trending_score)"
-      : "*";
+      ? "*, club:clubs(id, name, logo_url), popularity:event_popularity_scores(popularity_score, trending_score)"
+      : "*, club:clubs(id, name, logo_url)";
     const isAsc = direction === "asc";
     const queryAscending = before ? !isAsc : isAsc;
 

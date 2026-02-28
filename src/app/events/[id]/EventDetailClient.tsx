@@ -7,10 +7,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { EventBadge } from "@/components/events/EventBadge";
+import { EventImage } from "@/components/events/EventImage";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -245,18 +245,13 @@ export default function EventDetailClient() {
         <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Event Image */}
           <div className="relative h-52 sm:h-72 md:h-96 w-full overflow-hidden rounded-lg bg-muted">
-            {event.image_url ? (
-              <Image
-                src={event.image_url}
-                alt={event.title}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                No Image Available
-              </div>
-            )}
+            <EventImage
+              imageUrl={event.image_url}
+              clubLogoUrl={event.club?.logo_url}
+              alt={event.title}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
+              priority
+            />
           </div>
 
           {/* Event Details */}

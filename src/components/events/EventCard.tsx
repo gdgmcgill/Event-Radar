@@ -2,7 +2,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EventBadge } from "@/components/events/EventBadge";
+import { EventImage } from "@/components/events/EventImage";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
@@ -106,25 +106,13 @@ export function EventCard({
       <Card className="h-full overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card rounded-2xl flex flex-col">
         {/* Image Section */}
         <div className="relative h-52 w-full overflow-hidden bg-secondary/20">
-          {event.image_url ? (
-            <Image
-              src={event.image_url}
-              alt={event.title}
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-          ) : (
-            <div className="relative flex h-full items-center justify-center text-muted-foreground/40 bg-secondary/30">
-              <Image
-                src="/placeholder-event.png"
-                alt="No Image"
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="object-cover opacity-80 transition-transform duration-700 group-hover:scale-105"
-              />
-            </div>
-          )}
+          <EventImage
+            imageUrl={event.image_url}
+            clubLogoUrl={event.club?.logo_url}
+            alt={event.title}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="transition-transform duration-700 group-hover:scale-105"
+          />
           
           {/* Gradient Overlay for Text Readability if needed, mostly stylistic here */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 dark:from-white/6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

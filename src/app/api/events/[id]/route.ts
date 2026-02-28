@@ -79,10 +79,10 @@ export async function GET(
     const { id } = await params;
     const supabase = await createClient();
 
-    // Fetch event without club relation since Clubs table does not exist
+    // Fetch event with club relation for image fallback
     const { data, error } = await supabase
       .from("events")
-      .select("*")
+      .select("*, club:clubs(id, name, logo_url)")
       .eq("id", id)
       .single();
 
