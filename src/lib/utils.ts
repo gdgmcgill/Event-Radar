@@ -61,7 +61,7 @@ export function formatDateTime(dateString: string, timeString: string): string {
  * @returns True if the email is a McGill email
  */
 export function isMcGillEmail(email: string): boolean {
-  return email.endsWith("@mail.mcgill.ca") || email.endsWith("@mcgill.ca");
+  return /^[^@]+@(mail\.)?mcgill\.ca$/i.test(email);
 }
 
 

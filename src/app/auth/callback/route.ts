@@ -11,12 +11,10 @@
  */
 
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
-
-// Valid McGill email domains
-const VALID_DOMAINS = ["@mcgill.ca", "@mail.mcgill.ca"] as const;
 
 // Hardcoded admin emails — only these accounts can have the admin role
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
@@ -25,7 +23,7 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .filter(Boolean);
 
 function isMcGillEmail(email: string): boolean {
-  return VALID_DOMAINS.some((domain) => email.toLowerCase().endsWith(domain));
+  return /^[^@]+@(mail\.)?mcgill\.ca$/i.test(email);
 }
 
 function isAdminEmail(email: string): boolean {
@@ -110,6 +108,21 @@ export async function GET(request: NextRequest) {
   if (!isMcGillEmail(email)) {
     console.error("[Callback] Not a McGill email:", email);
     await supabase.auth.signOut();
+
+    // Delete the orphaned auth.users row — exchangeCodeForSession() already
+    // created it before we could check the email. Service role is required
+    // because the anon client cannot call auth admin methods.
+    try {
+      const adminClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      await adminClient.auth.admin.deleteUser(user.id);
+      console.log("[Callback] Deleted non-McGill auth user:", email);
+    } catch (err) {
+      console.error("[Callback] Failed to delete non-McGill auth user:", err);
+    }
+
     return NextResponse.redirect(
       new URL(`/?error=not_mcgill`, requestUrl.origin)
     );

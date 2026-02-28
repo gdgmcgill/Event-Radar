@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { classifyTags } from "@/lib/classifier";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,9 +19,11 @@ import {
   Briefcase,
   Palette,
   Heart,
+  Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { uploadEventImage } from "@/lib/upload-utils";
+import { EventImageUpload } from "./EventImageUpload";
 
 const iconMap: Record<string, LucideIcon> = {
   GraduationCap,
@@ -70,6 +73,24 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [suggestedTags, setSuggestedTags] = useState<EventTag[]>([]);
+
+  useEffect(() => {
+    const textToClassify = `${formData.title} ${formData.description}`.trim();
+    if (textToClassify.length < 10) {
+      setSuggestedTags([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const suggestions = classifyTags(textToClassify) as EventTag[];
+      // Filter out tags that are already selected
+      const newSuggestions = suggestions.filter((tag) => !formData.tags.includes(tag));
+      setSuggestedTags(newSuggestions);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.title, formData.description, formData.tags]);
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -103,16 +124,7 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
     if (errors.tags) setErrors((prev) => ({ ...prev, tags: undefined }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      setSubmitError("Image must be less than 5MB");
-      return;
-    }
-
+  const handleImageChange = (file: File) => {
     setFormData((prev) => ({ ...prev, imageFile: file }));
     setImagePreview(URL.createObjectURL(file));
   };
@@ -123,27 +135,6 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
       URL.revokeObjectURL(imagePreview);
       setImagePreview(null);
     }
-  };
-
-  const uploadImage = async (file: File): Promise<string | null> => {
-    const supabase = createClient();
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-
-    const { error } = await supabase.storage
-      .from("event-images")
-      .upload(fileName, file);
-
-    if (error) {
-      console.error("Image upload error:", error);
-      return null;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from("event-images")
-      .getPublicUrl(fileName);
-
-    return urlData.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,7 +148,7 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
       // Upload image if provided
       let imageUrl: string | null = null;
       if (formData.imageFile) {
-        imageUrl = await uploadImage(formData.imageFile);
+        imageUrl = await uploadEventImage(formData.imageFile);
         if (!imageUrl) {
           // Image upload failed but continue without image
           console.warn("Image upload failed, submitting without image");
@@ -336,6 +327,33 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
           Categories <span className="text-destructive">*</span>
         </label>
         <p className="text-xs text-muted-foreground">Select all that apply</p>
+
+        {suggestedTags.length > 0 && (
+          <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-xl space-y-2">
+            <p className="text-xs font-medium text-primary flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" /> Suggested based on your details
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestedTags.map((tag) => {
+                const cat = EVENT_CATEGORIES[tag];
+                const Icon = iconMap[cat.icon] || Heart;
+                return (
+                  <button
+                    key={`suggested-${tag}`}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs font-medium"
+                  >
+                    <Icon className="h-3 w-3" />
+                    {cat.label}
+                    <span className="text-[10px] opacity-70 ml-1">+ Add</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-3">
           {EVENT_TAGS.map((tag) => {
             const cat = EVENT_CATEGORIES[tag];
@@ -363,43 +381,12 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
         {errors.tags && <p className="text-xs text-destructive">{errors.tags}</p>}
       </div>
 
-      {/* Image Upload */}
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-foreground">
-          Event Image <span className="text-muted-foreground font-normal">(optional)</span>
-        </label>
-        {imagePreview ? (
-          <div className="relative w-full max-w-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="w-full h-48 object-cover rounded-xl border border-border"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              size="icon"
-              onClick={removeImage}
-              className="absolute top-2 right-2 h-8 w-8 rounded-full bg-card/90 backdrop-blur-sm"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <label className="flex flex-col items-center justify-center h-40 max-w-sm rounded-xl border-2 border-dashed border-border/60 bg-card/30 cursor-pointer hover:border-border hover:bg-muted/30 transition-colors">
-            <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-            <span className="text-sm text-muted-foreground">Click to upload</span>
-            <span className="text-xs text-muted-foreground/60 mt-1">Max 5MB</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-          </label>
-        )}
-      </div>
+      <EventImageUpload
+        imagePreview={imagePreview}
+        onImageChange={handleImageChange}
+        onImageRemove={removeImage}
+        setError={setSubmitError}
+      />
 
       {/* Submit */}
       <Button

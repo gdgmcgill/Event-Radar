@@ -1,194 +1,286 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-02-23
+**Analysis Date:** 2026-02-25
 
 ## Naming Patterns
 
 **Files:**
-- Components: PascalCase (e.g., `EventCard.tsx`, `ErrorBoundary.tsx`)
-- Pages/routes: kebab-case (e.g., `my-events/page.tsx`, `create-event/page.tsx`)
-- Utilities/hooks: camelCase (e.g., `useEvents.ts`, `constants.ts`, `utils.ts`)
-- Test files: Component name + `.test.ts(x)` suffix (e.g., `EventFilters.test.tsx`)
+- React components: PascalCase with `.tsx` extension (e.g., `EventCard.tsx`, `EventFilters.tsx`)
+- TypeScript utilities/logic: camelCase with `.ts` extension (e.g., `useEvents.ts`, `utils.ts`)
+- API routes: lowercase with `/` structure matching Next.js routing (e.g., `/api/events/route.ts`)
+- Test files: match source file name with `.test.ts` or `.test.tsx` suffix (e.g., `useEvents.test.ts`, `EventCard.test.tsx`)
+- Constants files: `constants.ts`, `tagMapping.ts`, `roles.ts` (lowercase with descriptive name)
 
 **Functions:**
-- camelCase for all functions (e.g., `formatDate()`, `buildQueryParams()`, `createMockEvent()`)
-- Async functions use same convention as synchronous
-- Factory/helper functions follow common pattern: `createMock*` (e.g., `createMockEvent`, `createMockRequest`)
+- camelCase for all function names
+- Hooks start with `use` prefix (e.g., `useEvents`, `useTracking`, `useUser`)
+- Private/internal functions use `_` prefix or are defined locally in scope
+- API route handlers: `GET`, `POST`, `PATCH`, `DELETE` (uppercase - Next.js convention)
 
 **Variables:**
-- camelCase for all variables: local vars, component props, state variables (e.g., `eventId`, `selectedTags`, `loadingMore`)
-- Constants: UPPER_SNAKE_CASE for module-level constants (e.g., `MAX_LIMIT`, `SORT_FIELDS`, `UUID_RE`, `VALID_STATUSES`)
-- Array identifiers use plural form (e.g., `events`, `tags`, `cursorStackRef`)
-- Boolean flags use `is*` or `should*` prefix (e.g., `isSaved`, `shouldThrow`, `showSaveButton`)
+- camelCase for all variable names
+- State variables: `const [isLoading, setIsLoading] = useState(false)` pattern
+- Ref variables: camelCase with `Ref` suffix (e.g., `sessionIdRef`, `viewTimersRef`)
+- Constants/enums: UPPER_SNAKE_CASE (e.g., `MAX_LIMIT = 100`, `UUID_RE`)
 
 **Types:**
-- Interface names: PascalCase, prefixed with `I` is NOT used (e.g., `EventFiltersProps`, `UseEventsOptions`, `RouteContext`)
-- Type aliases: PascalCase (e.g., `SortField`, `SortDirection`, `RsvpStatus`)
-- Enum members: UPPER_SNAKE_CASE (e.g., `EventTag.ACADEMIC`, `EventTag.SOCIAL`)
+- Interface names: PascalCase starting with capital letter (e.g., `Event`, `EventFilter`, `UseEventsResult`)
+- Enum names: PascalCase (e.g., `EventTag`, `NotificationType`)
+- Type aliases: PascalCase when they represent object types (e.g., `SortField`, `InteractionType`)
+- Database row types: `{TableName}Row` (e.g., `EventRow`)
 
 ## Code Style
 
 **Formatting:**
-- Prettier configuration enforced via `.prettierrc`:
-  - `semi: true` - Always include semicolons
-  - `singleQuote: false` - Use double quotes
-  - `printWidth: 80` - Line length limit
-  - `tabWidth: 2` - Two-space indentation
+- Prettier configured with:
+  - `semi: true` - Semicolons required
+  - `singleQuote: false` - Double quotes
+  - `printWidth: 80` - Line width limit
+  - `tabWidth: 2` - 2-space indentation
+  - `trailingComma: "es5"` - Trailing commas in objects/arrays
   - `useTabs: false` - Spaces, not tabs
-  - `trailingComma: "es5"` - Trailing commas where valid in ES5
 
 **Linting:**
-- ESLint via `eslint.config.mjs`
-- Extends `eslint-config-next/core-web-vitals`
-- Ignores `.claude/` directory
-- Run with `npm run lint`
+- ESLint with `eslint-config-next/core-web-vitals` extends
+- TypeScript strict mode enabled (`"strict": true` in `tsconfig.json`)
+- No JavaScript allowed in TypeScript files unless explicitly allowed
 
-**TypeScript:**
-- Strict mode enabled (`"strict": true` in `tsconfig.json`)
-- No implicit `any` allowed
-- All types must be explicitly declared
-- Use `type` imports for types: `import type { Event } from "@/types"`
-- Use `import` for values
+**File Structure Pattern:**
+```typescript
+"use client";  // If needed for client components
+/**
+ * JSDoc comment describing the module/component
+ */
+
+// Imports (organized by type)
+import { external, libraries } from "package-name";
+import { internal, modules } from "@/path";
+
+// Type/Interface definitions
+interface ComponentProps {}
+type CustomType = "value1" | "value2";
+
+// Component/Function export
+export function ComponentName() {
+  // Implementation
+}
+```
 
 ## Import Organization
 
 **Order:**
-1. React and framework imports (e.g., `import { useState } from "react"`)
-2. Next.js imports (e.g., `import Link from "next/link"`)
-3. Third-party libraries (e.g., `import clsx from "clsx"`)
-4. UI component imports (e.g., `import { Button } from "@/components/ui/button"`)
-5. Feature/domain imports (e.g., `import { useEvents } from "@/hooks/useEvents"`)
-6. Type imports (e.g., `import type { Event } from "@/types"`)
-7. Same-directory relative imports last (e.g., `import { EventBadge } from "./EventBadge"`)
+1. External third-party packages (react, next, date-fns, etc.)
+2. Radix UI and UI component libraries (@radix-ui/*, shadcn/ui)
+3. Internal components and modules using `@/` alias
+4. Type imports using `import type`
+
+**Example from codebase:**
+```typescript
+import Link from "next/link";
+import Image from "next/image";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { formatDate, formatTime } from "@/lib/utils";
+import { type Event, type InteractionSource } from "@/types";
+```
 
 **Path Aliases:**
-- All imports use `@/` path alias mapping to `src/`
-- Never use relative paths like `../../../`
-- Example: `import { cn } from "@/lib/utils"` instead of `import { cn } from "../../../lib/utils"`
+- `@/` maps to `src/` (defined in `tsconfig.json`)
+- Always use `@/` for internal imports, never relative paths like `../../../`
 
 ## Error Handling
 
 **Patterns:**
-- API routes (server-side): Catch errors and return `NextResponse.json({ error: string }, { status: number })`
-- Always log errors to console with `console.error()` for debugging
-- Use specific HTTP status codes:
-  - `400` for validation/input errors (malformed JSON, missing fields, invalid values)
-  - `401` for authentication failures (not authenticated)
-  - `403` for authorization failures (authenticated but forbidden)
-  - `404` for resource not found
-  - `500` for unexpected errors
-- Example from `src/app/api/events/[id]/rsvp/route.ts`:
-  ```typescript
-  if (eventError) {
-    console.error("Error looking up event:", eventError);
-    return NextResponse.json({ error: "Failed to verify event" }, { status: 500 });
-  }
-  if (!eventExists) {
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
-  }
-  ```
+- Try-catch blocks in async functions with proper error logging
+- Error messages logged with `console.error()` for debugging
+- Non-critical errors (like tracking) logged with `console.warn()` and fail silently
+- API routes return `NextResponse` with appropriate status codes and error objects
 
-- Client-side hooks: Store errors in state, catch with `try/catch`, log with `console.error()`
-- Example from `src/hooks/useEvents.ts`:
-  ```typescript
-  catch (err) {
-    console.error("Error fetching events:", err);
-    setError(err instanceof Error ? err : new Error("Failed to fetch events"));
+**Examples:**
+```typescript
+// In hooks/useTracking.ts - non-critical error, silent fail
+try {
+  const response = await fetch(API_ENDPOINTS.INTERACTIONS, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    console.warn("Failed to track interaction:", await response.text());
   }
-  ```
+} catch (error) {
+  // Silently fail - tracking should not break the app
+  console.warn("Error tracking interaction:", error);
+}
+```
 
-- Type guards for validation (e.g., `isValidStatus()` in `src/app/api/events/[id]/rsvp/route.ts`):
-  ```typescript
-  function isValidStatus(status: unknown): status is RsvpStatus {
-    return typeof status === "string" && VALID_STATUSES.includes(status as RsvpStatus);
-  }
-  ```
+```typescript
+// In hooks/useEvents.ts - critical error, user-facing
+try {
+  setLoading(true);
+  setError(null);
+  const result = await fetchPage({ cursor });
+  applyPageResult(result);
+} catch (err) {
+  console.error("Error fetching events:", err);
+  setError(err instanceof Error ? err : new Error("Failed to fetch events"));
+} finally {
+  setLoading(false);
+}
+```
+
+**API Route Error Pattern:**
+```typescript
+// In src/app/api/events/[id]/route.ts
+try {
+  const { id } = await params;
+  const supabase = await createClient();
+  // ... logic
+  return NextResponse.json({ event }, { status: 200 });
+} catch (error) {
+  console.error("Error fetching event:", error);
+  return NextResponse.json(
+    { error: "Internal server error" },
+    { status: 500 }
+  );
+}
+```
 
 ## Logging
 
-**Framework:** `console` (native, no external logger)
+**Framework:** Native `console` (no dedicated logging library)
 
 **Patterns:**
-- `console.error()` for error logging (used in all API routes and hooks)
-- Log before returning error responses for debuggability
-- Prefix logs with context when helpful (e.g., `"[Admin]"` in `src/app/api/admin/organizer-requests/[id]/route.ts`)
-- Only log errors, not info/debug statements (keep logs clean)
+- `console.error()` - For critical errors that need investigation
+- `console.warn()` - For non-critical failures, warnings, and edge cases
+- `console.log()` - Rarely used; prefer structured error/warning logging
+- No logging in production-critical paths unless needed for monitoring
+
+**Locations:** Logs appear in:
+- Browser console (client components)
+- Server logs (API routes, server components)
 
 ## Comments
 
 **When to Comment:**
-- JSDoc comments on exported functions and types (required for public APIs)
-- Explain WHY, not WHAT the code does
-- Section dividers for logical groupings (e.g., `// ─── GET /api/events/:id/rsvp ───────────────────────────`)
+- Complex business logic requiring explanation (e.g., cursor pagination implementation)
+- Non-obvious type manipulations or data transformations
+- External API requirements or constraints
+- Workarounds for known issues
 
 **JSDoc/TSDoc:**
-- All exported functions have JSDoc headers with `@param` and `@returns`
-- Example from `src/lib/utils.ts`:
-  ```typescript
-  /**
-   * Format an ISO date string to a readable format
-   * @param dateString - ISO date string (e.g., "2024-01-15")
-   * @returns Formatted date string (e.g., "January 15, 2024")
-   */
-  export function formatDate(dateString: string): string {
-    ...
-  }
-  ```
+- Used extensively for functions, hooks, and exported types
+- Includes `@param` for function parameters
+- Includes `@returns` for return values
+- Format: Multi-line block comments with `/**` opening
 
-- Components document props in JSDoc:
-  ```typescript
-  /**
-   * Props for the EventFilters component.
-   */
-  interface EventFiltersProps {
-    /**
-     * Callback fired when the active filters change.
-     */
-    onFilterChange?: (...) => void;
-  }
-  ```
+**Examples from codebase:**
+
+```typescript
+/**
+ * Custom hook for fetching and managing events with cursor-based pagination
+ */
+export function useEvents(options: UseEventsOptions = {}): UseEventsResult
+
+/**
+ * Format an ISO date string to a readable format
+ * @param dateString - ISO date string (e.g., "2024-01-15")
+ * @returns Formatted date string (e.g., "January 15, 2024")
+ */
+export function formatDate(dateString: string): string
+
+/**
+ * Track view with debouncing
+ * Only tracks after user has been viewing for viewDebounceMs
+ * Also deduplicates views within the same session
+ */
+const trackView = useCallback((eventId: string, trackOptions?: TrackOptions) => {
+```
 
 ## Function Design
 
-**Size:** Keep functions focused and under 50 lines where possible; complex logic split into helper functions
+**Size:** Functions kept reasonably small; split complex logic into helpers
+- Most utility functions: 10-50 lines
+- Hooks with state management: 100-300 lines (acceptable for complex state)
+- API handlers: 50-200 lines
 
 **Parameters:**
-- Prefer object parameters for functions with multiple arguments
-- Example: `fetchPage(options?: FetchPageOptions)` instead of `fetchPage(cursor, limit, sort, direction)`
-- Use type-safe options interfaces
+- Named parameters preferred over positional when 2+ arguments
+- Use interface/type for function option objects (e.g., `UseEventsOptions`)
+- Optional parameters documented with `?` and defaults provided
+
+```typescript
+// Good: Options object with documented properties
+interface UseEventsOptions {
+  filters?: EventFilter;
+  enabled?: boolean;
+  limit?: number;
+  sort?: SortField;
+  direction?: SortDirection;
+}
+
+export function useEvents(options: UseEventsOptions = {}): UseEventsResult
+```
 
 **Return Values:**
-- Functions return relevant data types, not generic objects
-- Use `null` for optional/missing values, not `undefined`
-- Callbacks use function types defined in interfaces (e.g., `onFilterChange?: (filters: {...}) => void`)
+- Explicitly typed return values using TypeScript return type annotations
+- Objects returned from hooks include all state and methods needed
+- Async functions return `Promise<T>`
 
 ## Module Design
 
 **Exports:**
-- Named exports preferred: `export function useEvents() {}`
-- Default exports only for pages
-- Export types separately: `export type UseEventsOptions = { ... }`
-- All hooks exported as named exports from `src/hooks/`
-- All types exported from centralized `src/types/index.ts`
+- Named exports preferred (`export function`, `export interface`)
+- Default exports rarely used
+- Re-exports from `index.ts` create barrel files for organized imports
 
 **Barrel Files:**
-- Use for organizing types: `src/types/index.ts` exports all type interfaces
-- Do NOT use barrel files for components (import directly from component files)
+- Used in `src/types/index.ts` to export all type definitions
+- Allows `import { Event, User, Club } from "@/types"`
+- Not used heavily elsewhere; modules export directly
 
-## Client vs Server Components
+**Example from `src/types/index.ts`:**
+```typescript
+export enum EventTag { ... }
+export interface Event { ... }
+export interface Club { ... }
+export interface User { ... }
+export type UserRole = 'user' | 'club_organizer' | 'admin';
+```
 
-**"use client" Directive:**
-- Required on all interactive components (hooks, event handlers, state)
-- Examples: `src/components/events/EventFilters.tsx`, `src/hooks/useEvents.ts`
+## React-Specific Patterns
+
+**Client Components:**
+- Use `"use client"` directive at top of file
+- State management: `useState` for local state, `useCallback` for memoized handlers
+- Refs: `useRef` for stable references (not re-created on render)
+- Side effects: `useEffect` with proper dependency arrays
 
 **Server Components:**
-- Pages in `src/app/` are server components by default
-- API routes are server-only
+- Default in Next.js 16; no directive needed
+- API routes marked with `async` function handlers
+- Use `async/await` for Supabase queries
 
-**Supabase Client Usage:**
-- Client-side: `import { createClient } from "@/lib/supabase/client"`
-- Server-side (API routes): `import { createClient } from "@/lib/supabase/server"`
+**Props Pattern:**
+```typescript
+interface EventCardProps {
+  event: Event;
+  onClick?: () => void;
+  showSaveButton?: boolean;
+  /** Description of optional prop */
+  trackingSource?: InteractionSource;
+}
+
+export function EventCard({
+  event,
+  onClick,
+  showSaveButton = false,
+  trackingSource,
+}: EventCardProps) {
+  // Implementation
+}
+```
 
 ---
 
-*Convention analysis: 2026-02-23*
+*Convention analysis: 2026-02-25*

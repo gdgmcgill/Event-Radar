@@ -71,6 +71,37 @@ export interface User {
   updated_at: string | null;
 }
 
+export interface ClubMember {
+  id: string;
+  user_id: string;
+  club_id: string;
+  role: string;
+  created_at: string;
+  club?: Club;
+  user?: User;
+}
+
+export interface ClubFollower {
+  id: string;
+  user_id: string;
+  club_id: string;
+  created_at: string;
+  club?: Club;
+}
+
+export interface OrganizerRequest {
+  id: string;
+  user_id: string;
+  club_id: string;
+  message: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+  club?: Club;
+  user?: User;
+}
+
 export interface SavedEvent {
   id: string;
   user_id: string;

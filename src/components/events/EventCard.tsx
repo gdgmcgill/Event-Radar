@@ -156,8 +156,8 @@ export function EventCard({
 
   return (
     <div ref={cardRef} className="h-full">
-      <Link href={`/events/${event.id}`} onClick={handleCardClick} className="block h-full group">
-        <Card className="h-full overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card rounded-2xl flex flex-col">
+    <Link href={`/events/${event.id}${trackingSource ? `?from=${trackingSource}` : ""}`} onClick={handleCardClick} className="block h-full group">
+      <Card className="h-full overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card rounded-2xl flex flex-col">
         {/* Image Section */}
         <div className="relative h-52 w-full overflow-hidden bg-secondary/20">
           {event.image_url ? (

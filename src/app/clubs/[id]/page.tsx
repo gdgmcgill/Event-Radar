@@ -12,12 +12,14 @@ import {
   ArrowLeft,
   UserPlus,
 } from "lucide-react";
+import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import Link from "next/link";
 import type { Club, Event } from "@/types";
 import { EventTag } from "@/types";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { EventCard } from "@/components/events/EventCard";
 import { OrganizerRequestDialog } from "@/components/clubs/OrganizerRequestDialog";
+import { FollowButton } from "@/components/clubs/FollowButton";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function ClubDetailPage() {
@@ -27,6 +29,9 @@ export default function ClubDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
   const { user } = useAuthStore();
 
   const fetchClub = useCallback(async () => {
@@ -39,6 +44,7 @@ export default function ClubDetailPage() {
       const data = await res.json();
       setClub(data.club);
       setEvents(data.events ?? []);
+      setFollowerCount(data.follower_count ?? 0);
     } catch {
       setError("Failed to load club");
     } finally {
@@ -46,9 +52,34 @@ export default function ClubDetailPage() {
     }
   }, [id]);
 
+  const fetchFollowStatus = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/clubs/${id}/follow`);
+      if (res.ok) {
+        const data = await res.json();
+        setIsFollowing(data.is_following);
+        setIsMember(data.is_member);
+      }
+    } catch {
+      // Silently fail — follow status is non-critical
+    }
+  }, [id, user]);
+
   useEffect(() => {
     fetchClub();
   }, [fetchClub]);
+
+  useEffect(() => {
+    if (user) {
+      fetchFollowStatus();
+    }
+  }, [fetchFollowStatus, user]);
+
+  const handleFollowChange = useCallback((nowFollowing: boolean) => {
+    setFollowerCount((prev) => prev + (nowFollowing ? 1 : -1));
+    setIsFollowing(nowFollowing);
+  }, []);
 
   if (loading) {
     return (
@@ -79,14 +110,7 @@ export default function ClubDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Back link */}
-      <Link
-        href="/clubs"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        All Clubs
-      </Link>
+      <AppBreadcrumb items={[{ label: "Clubs", href: "/clubs" }, { label: club.name }]} />
 
       {/* Club Header */}
       <div className="flex items-start gap-4 mb-8">
@@ -123,6 +147,9 @@ export default function ClubDetailPage() {
                 @{club.instagram_handle.replace("@", "")}
               </a>
             )}
+            <span className="text-sm text-muted-foreground">
+              {followerCount} {followerCount === 1 ? "follower" : "followers"}
+            </span>
           </div>
           {club.description && (
             <p className="text-muted-foreground">{club.description}</p>
@@ -130,24 +157,30 @@ export default function ClubDetailPage() {
         </div>
       </div>
 
-      {/* Request Organizer Access button */}
-      {user && (
-        <div className="mb-8">
-          <Button
-            variant="outline"
-            onClick={() => setRequestDialogOpen(true)}
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Request Organizer Access
-          </Button>
-          <OrganizerRequestDialog
-            open={requestDialogOpen}
-            onOpenChange={setRequestDialogOpen}
+      {/* Follow / Request Organizer Access buttons */}
+      <div className="mb-8 flex items-center gap-3">
+        {!isMember && (
+          <FollowButton
             clubId={club.id}
-            clubName={club.name}
+            initialIsFollowing={isFollowing}
+            onFollowChange={handleFollowChange}
           />
-        </div>
-      )}
+        )}
+        {user && !isMember && (
+          <>
+            <Button variant="outline" onClick={() => setRequestDialogOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Request Organizer Access
+            </Button>
+            <OrganizerRequestDialog
+              open={requestDialogOpen}
+              onOpenChange={setRequestDialogOpen}
+              clubId={club.id}
+              clubName={club.name}
+            />
+          </>
+        )}
+      </div>
 
       {/* Upcoming Events */}
       <div>

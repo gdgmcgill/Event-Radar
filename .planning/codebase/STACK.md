@@ -1,130 +1,137 @@
 # Technology Stack
 
-**Analysis Date:** 2026-02-23
+**Analysis Date:** 2026-02-25
 
 ## Languages
 
 **Primary:**
-- TypeScript 5.4.0 - All source code (strict mode enabled via `tsconfig.json`)
+- TypeScript 5.4.0 - Entire codebase with strict mode enabled
+- JavaScript (Node.js) - Build tooling and scripts
 
 **Secondary:**
-- JavaScript - Configuration files (`postcss.config.js`, `next.config.js`, `eslint.config.mjs`)
+- SQL - Supabase PostgreSQL database and migrations
+- TypeScript (Deno) - Supabase Edge Functions
 
 ## Runtime
 
 **Environment:**
-- Node.js (no specific version pinned - no `.nvmrc` file)
+- Node.js (version not specified, no .nvmrc file)
+- Supabase Edge Runtime (Deno 2) for serverless functions
 
 **Package Manager:**
-- npm (version managed in `package-lock.json`)
-- Lockfile: present
+- npm (version not specified)
+- Lockfile: `package-lock.json` present
 
 ## Frameworks
 
 **Core:**
-- Next.js 16.0.3 - Full-stack framework with App Router, API routes, middleware
+- Next.js 16.0.3 (App Router) - Full-stack framework with built-in API routes
 - React 18.3.0 - UI library
+- Supabase 2.49.0 (@supabase/ssr 0.7.0) - Backend-as-a-service for auth and database
 
-**UI Components & Styling:**
+**UI & Styling:**
 - Tailwind CSS 3.4.1 - Utility-first CSS framework
-- shadcn/ui (via @radix-ui components) - Accessible component library
-  - @radix-ui/react-dialog ^1.1.15
-  - @radix-ui/react-dropdown-menu ^2.1.16
-  - @radix-ui/react-slider ^1.3.6
-  - @radix-ui/react-switch ^1.2.6
-  - @radix-ui/react-slot ^1.0.2
+- shadcn/ui - Component library built on Radix UI primitives
 - Lucide React 0.344.0 - Icon library
-- Tailwind Merge 2.2.1 - Utility for merging Tailwind classes
-- Tailwind CSS Animate 1.0.7 - Animation utilities
-- Class Variance Authority 0.7.1 - Component variant system
+- Radix UI - Accessible component primitives:
+  - @radix-ui/react-dialog (1.1.15)
+  - @radix-ui/react-dropdown-menu (2.1.16)
+  - @radix-ui/react-slider (1.3.6)
+  - @radix-ui/react-switch (1.2.6)
+  - @radix-ui/react-slot (1.0.2)
 
 **Testing:**
-- Vitest 4.0.18 - Unit/component test runner
-- @testing-library/react 16.3.2 - React component testing utilities
-- @testing-library/jest-dom 6.9.1 - Custom matchers
+- Vitest 4.0.18 - Test runner with jsdom environment
+- @testing-library/react 16.3.2 - React component testing
 - @testing-library/user-event 14.6.1 - User interaction simulation
+- @testing-library/jest-dom 6.9.1 - Custom DOM matchers
 - jsdom 28.1.0 - DOM implementation for testing
 
 **Build/Dev:**
-- TypeScript 5.4.0 - Type checking and compilation
-- Autoprefixer 10.4.17 - CSS vendor prefixing
-- PostCSS 8.4.35 - CSS processing
-- ESLint 9.39.1 - Code linting (extends `eslint-config-next`)
+- ESLint 9.39.1 with Next.js config - Code linting
 - Prettier 3.2.5 - Code formatting
-- Cross-env 10.1.0 - Cross-platform environment variables
-- @vitejs/plugin-react 5.1.4 - React support for Vitest
+- Autoprefixer 10.4.17 - PostCSS vendor prefixes
+- PostCSS 8.4.35 - CSS transformation
+- Embla Carousel React 8.3.0 - Carousel/slider component
+- react-easy-crop 5.5.6 - Image cropping utility
+- class-variance-authority 0.7.1 - Component variant system
+- clsx 2.1.0 - Conditional className utility
+- tailwind-merge 2.2.1 - Merge Tailwind classes
+- tailwindcss-animate 1.0.7 - Animation utilities
+- SWR 2.3.7 - Data fetching and caching library
+- Zustand 5.0.9 - Lightweight state management
+- date-fns 3.3.1 - Date utility library
+- yaml 2.8.2 - YAML parsing
+
+**API Documentation:**
+- Swagger UI React 5.30.2 - Interactive API docs
+- Redoc 2.5.1 - OpenAPI documentation rendering
+- next-swagger-doc 0.4.1 - Swagger/OpenAPI generation for Next.js
+- @swagger-api/apidom-ns-openapi-3-1 1.0.0-rc.3 - OpenAPI 3.1 support
+
+**Development Tools:**
+- cross-env 10.1.0 - Cross-platform environment variables
+- @vitejs/plugin-react 5.1.4 - Vite React plugin (used by Vitest)
 
 ## Key Dependencies
 
 **Critical:**
-- @supabase/ssr 0.7.0 - Server-side Supabase integration for cookie handling in Next.js
-- @supabase/supabase-js 2.49.0 - Supabase JavaScript client for database and auth
-- swr 2.3.7 - Data fetching library for React hooks
-- zustand 5.0.9 - Lightweight state management library
+- @supabase/supabase-js 2.49.0 - Supabase JavaScript client for browser
+- @supabase/ssr 0.7.0 - Supabase server-side rendering utilities for cookie management
+- @supabase/functions-js - Supabase Edge Functions types and utilities
 
-**Date & Time:**
-- date-fns 3.3.1 - Date manipulation and formatting utilities
-
-**Image & Media:**
-- react-easy-crop 5.5.6 - Image cropping component
-- embla-carousel-react 8.3.0 - Headless carousel component
-
-**API Documentation:**
-- next-swagger-doc 0.4.1 - Swagger/OpenAPI doc generation from route comments
-- @swagger-api/apidom-ns-openapi-3-1 1.0.0-rc.3 - OpenAPI 3.1 support
-- swagger-ui-react 5.30.2 - Interactive API documentation UI
-- redoc 2.5.1 - Alternative API documentation viewer
-- yaml 2.8.2 - YAML parsing (for Swagger spec generation)
-
-**Utilities:**
-- clsx 2.1.0 - Utility for constructing class strings
-- @types/node 20.11.0 - Node.js type definitions
-- @types/react 18.2.0 - React type definitions
-- @types/react-dom 18.2.0 - React DOM type definitions
-- @types/swagger-ui-react 5.18.0 - Swagger UI type definitions
+**Infrastructure:**
+- date-fns 3.3.1 - Date formatting and manipulation
+- swr 2.3.7 - HTTP client with caching for API calls
+- zustand 5.0.9 - Global state management (lightweight Redux alternative)
+- clsx/tailwind-merge - ClassName utilities for dynamic styling
 
 ## Configuration
 
 **Environment:**
-- `.env.local` (Git-ignored, contains Supabase credentials and cron secret)
-- `.env.local.example` provided as template
-- Required env vars:
-  - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Public anonymous key for browser access
-  - `SUPABASE_SERVICE_ROLE_KEY` - Secret key for server-side operations
-  - `CRON_SECRET` - Authentication token for scheduled jobs (set in Vercel)
-  - `ADMIN_EMAILS` (optional) - Comma-separated admin email list for auto-role assignment
+- Variables configured via `.env.local` (not committed)
+- No `.env.example` file in repo
+- Environment variable substitution in Supabase config.toml for secrets
 
 **Build:**
-- `next.config.js` - Next.js configuration with:
-  - Remote image patterns for Supabase and Unsplash
-  - Security headers (X-Frame-Options, CSP, HSTS, etc.)
-- `tsconfig.json` - TypeScript configuration with:
-  - Path alias: `@/*` → `src/*`
-  - Strict mode enabled
-  - Target: ES2020
-- `tailwind.config.ts` - Tailwind CSS configuration with custom theme colors
-- `postcss.config.js` - PostCSS config for Tailwind and Autoprefixer
-- `vitest.config.ts` - Vitest configuration:
-  - Environment: jsdom (DOM testing)
-  - Setup file: `vitest.setup.ts`
-  - Globals enabled
-  - Excludes: `supabase/**`, `src/lib/kmeans.test.ts`
-
-**Code Quality:**
-- `.eslintrc` extensions via `eslint.config.mjs` - ESLint configuration extending Next.js core web vitals
-- `.prettierrc` (inferred to exist but auto-configured)
+- `tsconfig.json` - TypeScript configuration with strict mode
+- `next.config.js` - Next.js configuration with image optimization
+- `vitest.config.ts` - Vitest test runner configuration
+- `.prettierrc` - Code formatting with semicolons, 80-char line width, 2 spaces
+- `eslint.config.mjs` - ESLint using Next.js core-web-vitals config
+- `supabase/config.toml` - Supabase local development and production settings
 
 ## Platform Requirements
 
 **Development:**
-- Node.js (LTS recommended, no version pinned)
-- npm for package management
+- Node.js (version unspecified)
+- npm (version unspecified)
+- Supabase CLI for local development
+- TypeScript strict mode compliance required
 
 **Production:**
-- Vercel (recommended deployment platform per `CRON_SECRET` environment variable)
-- Supabase project (database and authentication backend)
+- Deployment target: Vercel (implied by Next.js 16 and Supabase integration)
+- Supabase cloud project
+- Environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+
+## Build Commands
+
+```bash
+npm run dev       # Next.js dev server with large HTTP header support
+npm run build     # Production build
+npm run start     # Production server with large HTTP header support
+npm run lint      # ESLint check
+npm test          # Vitest watch mode
+npm run test:run  # Vitest single run
+```
+
+## Special Configuration Notes
+
+- **Node options:** Both dev and start commands use `NODE_OPTIONS=--max-http-header-size=32768` to support large Azure OAuth tokens (chunked into multiple cookies by Supabase)
+- **Image optimization:** Next.js images allowed from Supabase URLs (`*.supabase.co`, `*.supabase.in`) and Unsplash
+- **Security headers:** Comprehensive set via Next.js config (Frame options, Content-Type, XSS protection, HSTS)
+- **Path aliases:** `@/*` maps to `src/*` for cleaner imports
 
 ---
 
-*Stack analysis: 2026-02-23*
+*Stack analysis: 2026-02-25*

@@ -1,39 +1,52 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: Club Organizer UX Overhaul
+status: unknown
+last_updated: "2026-02-27T05:45:49.064Z"
+progress:
+  total_phases: 8
+  completed_phases: 7
+  total_plans: 16
+  completed_plans: 16
+---
+
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-23)
+See: .planning/PROJECT.md (updated 2026-02-25)
 
-**Core value:** New users see a useful feed from first visit; existing users receive timely notifications about events they care about
-**Current focus:** Phase 3 — Notification System Wiring
+**Core value:** Club organizers must have a seamless, unified experience from club creation through event management
+**Current focus:** Phase 9 — Follow System
 
 ## Current Position
 
-Phase: 3 of 4 (Notification System Wiring)
-Plan: 2 of 3 in current phase (03-02 complete)
-Status: Phase 3 In Progress
-Last activity: 2026-02-23 — Completed 03-02 migration applied and build verification passed
+Phase: 9 of 9 (Follow System) — Complete
+Plan: 2 of 2 complete
+Status: Phase 09 Complete — All Plans Done
+Last activity: 2026-02-27 — Completed 09-02: FollowButton UI, club profile follower count, organizer dashboard follower stat, profile Following section
 
-Progress: [██████░░░░] 60%
+Progress: [####################] 100%
+(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 complete; Phase 8 pending; Phase 9 complete — follow system fully shipped)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 9 min
-- Total execution time: 0.6 hours
+- Total plans completed: 6 (v1.0)
+- Average duration: —
+- Total execution time: —
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-notification-database-foundation | 2 | 24 min | 12 min |
-| 02-cold-start-fix | 2 | 10 min | 5 min |
-| 03-notification-system-wiring | 2 | 11 min | 6 min |
-
-**Recent Trend:**
-- Last 5 plans: 01-02 (2 min), 02-01 (8 min), 02-02 (2 min), 03-01 (1 min), 03-02 (10 min)
-- Trend: Stable
+| 1. Notification DB | 2 | — | — |
+| 2. Cold Start Fix | 2 | — | — |
+| 3. Notification Wiring | 2 | — | — |
+| 5. Database Foundation | 2 | ~13min | ~6.5min |
+| 6. Dashboard Shell | 3/3 | ~6min | ~2min |
+| 7. Members Tab | 3/3 | ~13min | ~4min |
 
 *Updated after each plan completion*
 
@@ -41,36 +54,53 @@ Progress: [██████░░░░] 60%
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Roadmap]: Phase 2 (Cold Start Fix) is independent of Phase 1 and can be executed in parallel
-- [Roadmap]: Phase 4 (Cron) depends on both Phase 1 (table exists) and Phase 3 (cron route validated)
-- [01-02]: Canonical notification type strings use event_ prefix: event_reminder_24h, event_reminder_1h, event_approved, event_rejected
-- [01-02]: Notification interface centralized in src/types/index.ts — single source of truth for all consumers
-- [01-02]: Upsert with onConflict: "user_id,event_id,type" and ignoreDuplicates: true is the dedup pattern; requires unique constraint at DB level (plan 03)
-- [01-01]: UNIQUE dedup index (notifications_dedup_idx) not yet applied to remote database — migration file at supabase/migrations/20260223000000_notifications_rls_and_dedup.sql must be applied via Supabase MCP apply_migration or Dashboard SQL Editor
-- [01-01]: Column named `read` (not `is_read`) confirmed correct; RLS enabled and verified in production
-- [02-01]: RECOMMENDATION_THRESHOLD = 3 centralized in constants.ts; both page.tsx (replace magic number) and RecommendedEventsSection (nudge math) must import it
-- [02-01]: Cold-start early return placed before Promise.all/k-means; uses targeted single-user saved_events fetch for gate check
-- [02-01]: source field added to all 200-response return sites: "popular_fallback" for cold-start path, "personalized" for all personalized paths
-- [02-02]: Authenticated cold-start users now see RecommendedEventsSection (API handles fallback) — page.tsx conditional simplified; canShowRecommendations no longer gates the section
-- [02-02]: Nudge gated on !isLoading from useSavedEvents to avoid showing inaccurate remaining count during initial fetch
-- [Phase 03-01]: Conditional wrapper: Link for event_id-bearing notifications, button for others
-- [Phase 03-01]: Upsert with onConflict user_id,event_id,type resets read=false and created_at on re-approve/re-reject
-- [03-02]: notifications_dedup_idx UNIQUE partial index applied to production Supabase via MCP; RLS (SELECT/UPDATE own) active — upsert dedup now reliable end-to-end
-- [03-02]: No caching strategy change needed for NotificationBell — polling every 60s is already implemented and correct; no Zustand/SWR refactor required
+- [v1.0]: 3+ saved events threshold for recommendations
+- [v1.0]: Supabase Edge Function for reminder cron
+- [v1.0]: Notification polling every 60s for bell updates
+- [v1.1]: Auto-grant owner (not organizer) on club approval
+- [v1.1]: Owner/organizer role distinction in club_members table
+- [v1.1]: Direct invitations from owners — no admin approval needed
+- [v1.1]: Copy-link invite UX for v1.1; email delivery deferred to v1.2
+- [v1.1]: is_club_owner() SECURITY DEFINER pattern — prevents RLS infinite recursion
+- [v1.1 05-01]: Backfill runs before CHECK constraint to normalize existing organizer rows for creators
+- [v1.1 05-01]: Self-removal guard uses (select auth.uid()) wrapper for PostgreSQL initPlan caching
+- [v1.1 05-01]: No invitee-access SELECT policy on club_invitations — deferred to Phase 7
+- [v1.1 06-01]: Member count and pending invites fetched server-side in page.tsx to avoid client-side waterfall
+- [v1.1 06-01]: Pending invites passed as null for organizers — prevents RLS exposure, keeps Overview clean
+- [v1.1 06-01]: router.replace (not push) for tab changes — avoids polluting browser history stack
+- [v1.1 06-01]: club_invitations added to supabase/types.ts (Phase 5 table was missing from local types)
+- [v1.1 06-02]: useCallback wrapping fetchEvents so retry button and useEffect share same fetcher without re-creation
+- [v1.1 06-02]: Suspense wraps CreateEventPageContent (useSearchParams caller) — required by Next.js App Router
+- [v1.1 06-02]: Badge className override for status colors (green/amber) rather than new variants on shared component
+- [v1.1 06-03]: transformEventFromDB cast pattern (event as Parameters<typeof transformEventFromDB>[0]) bridges Supabase row type to DBEvent — all event API routes must use this pattern
+- [v1.1 07-01]: POST /invites returns token only — URL construction is client-side, avoids hardcoding domain in API
+- [v1.1 07-01]: Invitee SELECT policy uses email sub-select from users table (consistent with Phase 5 RLS patterns)
+- [v1.1 07-01]: Owner revoke UPDATE policy added to invitee migration (MEM-08) — all club_invitations UPDATE policies co-located
+- [v1.1 07-02]: userId prop threads from server page (user.id from auth.getUser) through ClubDashboard to ClubMembersTab — avoids client-side auth call in component
+- [v1.1 07-02]: Invite revocation uses status update ('revoked') not hard delete — preserves invitation history
+- [v1.1 07-03]: RLS handles email match implicitly on invite lookup — query returns null for mismatched email, no explicit app-layer email comparison needed
+- [v1.1 07-03]: Success page shown (not immediate redirect) on invite acceptance — user sees "You're in!" confirmation
+- [v1.1 07-03]: Existing member silently redirects to club dashboard — idempotent, not an error condition
+- [v1.1 09-01]: Public SELECT RLS policy on club_followers enables anonymous follower count without app-layer auth checks
+- [v1.1 09-01]: Upsert with ignoreDuplicates makes follow idempotent — no prior check query needed
+- [v1.1 09-01]: GET /api/clubs/[id]/follow returns { is_following: false, is_member: false } for unauthenticated (not 401)
+- [v1.1 09-01]: Promise.all refactor in club API reduces sequential round-trips (3 parallel queries)
+- [v1.1 09-02]: FollowButton performs optimistic state update then reverts silently on API error
+- [v1.1 09-02]: Hover state on Following button shows Unfollow text and UserMinus icon (Instagram-style toggle affordance)
+- [v1.1 09-02]: Unauthenticated users see Follow button; clicking redirects to /auth/signin via router.push
+- [v1.1 09-02]: Profile page Following section queries club_followers directly with Supabase server client (not via API route)
 
 ### Pending Todos
 
-None yet.
+- Phase 4 from v1.0 (Cron Scheduler Configuration) deferred to v1.2
 
 ### Blockers/Concerns
 
-- [Phase 4]: pg_cron → pg_net → Next.js API auth has a documented friction point (Supabase issue #4287). Validate before Phase 4 begins; fallback is GitHub Actions or Vercel Cron.
+- Phase 5: is_club_owner() deployed with SECURITY DEFINER — verified callable in production, returns false without auth context (expected behavior)
+- Phase 8: clubs UPDATE is locked by 011_rls_audit.sql — owner UPDATE policy required before settings tab works
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Completed 03-02-PLAN.md — Migration applied and build verified; Phase 3 plan 2 of 3 complete
+Last session: 2026-02-27
+Stopped at: Completed 09-02-PLAN.md — follow system UI (FollowButton, club profile count, dashboard stat, profile Following section); Phase 9 complete. All plans done.
 Resume file: None

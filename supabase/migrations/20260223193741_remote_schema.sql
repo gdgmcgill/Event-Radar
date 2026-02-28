@@ -1,0 +1,5 @@
+-- Remote schema migration captured 2026-02-23
+-- This migration was applied directly on the remote database before local
+-- migration history was established. It is recorded here as a placeholder
+-- to keep local and remote migration tracking in sync.
+-- The schema changes it represents are already covered by migrations 001-010.

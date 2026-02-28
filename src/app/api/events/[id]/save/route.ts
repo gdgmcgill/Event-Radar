@@ -103,7 +103,7 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
 
       return NextResponse.json({ saved: false });
     }
-
+ 
     // Save it
     const { error: insertError } = await supabase
       .from("saved_events")
