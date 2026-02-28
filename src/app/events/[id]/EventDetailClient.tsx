@@ -29,6 +29,7 @@ import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { RelatedEventCard } from "@/components/events/RelatedEventCard";
 import { useTracking } from "@/hooks/useTracking";
+import { exportEventCsv, exportEventIcal } from "@/lib/exportUtils";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -205,22 +206,9 @@ export default function EventDetailClient() {
     if (!event) return;
     try {
       setIsExportingCsv(true);
-      const response = await fetch(`/api/events/export?format=csv&eventId=${encodeURIComponent(event.id)}`);
-      if (!response.ok) throw new Error("Export failed");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${event.title.replace(/\s+/g, "-")}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
+      await exportEventCsv(event.id, event.title);
     } catch (err) {
-      if (err instanceof Error) {
-        console.warn("CSV export failed:", err);
-      }
+      // Error already logged in exportUtils
     } finally {
       setIsExportingCsv(false);
     }
