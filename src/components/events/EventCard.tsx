@@ -32,6 +32,8 @@ interface EventCardProps {
   onDismiss?: (eventId: string) => void;
   /** Initial thumbs state (from GET /api/recommendations/feedback) */
   initialThumbsFeedback?: "positive" | "negative" | null;
+  /** Called after a successful save/unsave toggle */
+  onSaveToggle?: (eventId: string, saved: boolean) => void;
   /** Display rank badge (1, 2, 3) for popular events */
   rank?: 1 | 2 | 3;
   /** Show popularity stats overlay */
@@ -48,6 +50,7 @@ export function EventCard({
   trackingSource,
   recommendationRank = 1,
   onDismiss,
+  onSaveToggle,
   initialThumbsFeedback = null,
   rank: _rank,
   showPopularityStats: _showPopularityStats,
@@ -109,6 +112,7 @@ export function EventCard({
 
       const data = await response.json();
       setIsSaved(data.saved);
+      onSaveToggle?.(event.id, data.saved);
       if (
         data.saved &&
         trackingSource === "recommendation" &&

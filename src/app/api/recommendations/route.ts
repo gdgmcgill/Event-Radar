@@ -81,7 +81,9 @@ export async function POST(request: NextRequest) {
     }
 
     const data: RecommendResponse = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   } catch (error) {
     console.error("Error fetching recommendations:", error);
     return NextResponse.json(
@@ -118,49 +120,67 @@ export async function GET(request: NextRequest) {
     type UserProfileRow = { interest_tags: string[] | null; full_name: string | null };
     const userProfile = userProfileData as UserProfileRow | null;
 
-    // Fetch user's saved events to exclude
-    const { data: savedEvents } = await supabase
-      .from("saved_events")
-      .select("event_id")
-      .eq("user_id", user.id);
+    // Fetch saved events and explicit feedback in parallel
+    const [savedEventsResult, rawFeedbackResult] = await Promise.all([
+      supabase
+        .from("saved_events")
+        .select("event_id")
+        .eq("user_id", user.id),
+      supabase
+        .from("recommendation_explicit_feedback")
+        .select("event_id, feedback_type")
+        .eq("user_id", user.id),
+    ]);
 
-    const savedList = (savedEvents ?? []) as { event_id: string }[];
+    const savedList = (savedEventsResult.data ?? []) as { event_id: string }[];
     const excludeEventIds = savedList.map((se) => se.event_id);
 
-    // Fetch user's explicit thumbs feedback to bias the recommendation vector
-    const { data: rawFeedback } = await supabase
-      .from("recommendation_explicit_feedback")
-      .select("event_id, feedback_type")
-      .eq("user_id", user.id);
-
-    const feedbackRows = (rawFeedback ?? []) as {
+    const feedbackRows = (rawFeedbackResult.data ?? []) as {
       event_id: string;
       feedback_type: string;
     }[];
 
-    // Look up tags for all rated events so the AI service can shift the user vector
+    // Collect all event IDs that need tag lookups (saved + explicitly rated)
+    const allSignalEventIds = [
+      ...excludeEventIds,
+      ...feedbackRows.map((r) => r.event_id),
+    ];
+    const uniqueSignalIds = [...new Set(allSignalEventIds)];
+
     let feedbackPayload: FeedbackItem[] = [];
-    if (feedbackRows.length > 0) {
-      const ratedEventIds = feedbackRows.map((r) => r.event_id);
-      const { data: ratedEvents } = await supabase
+    if (uniqueSignalIds.length > 0) {
+      const { data: signalEvents } = await supabase
         .from("events")
         .select("id, tags")
-        .in("id", ratedEventIds);
+        .in("id", uniqueSignalIds);
 
-      type RatedEvent = { id: string; tags: string[] | null };
-      const ratedList = (ratedEvents ?? []) as RatedEvent[];
+      type SignalEvent = { id: string; tags: string[] | null };
+      const signalList = (signalEvents ?? []) as SignalEvent[];
       const tagsById: Record<string, string[]> = {};
-      for (const ev of ratedList) {
+      for (const ev of signalList) {
         tagsById[ev.id] = ev.tags ?? [];
       }
 
-      feedbackPayload = feedbackRows
+      // Explicit thumbs feedback (strongest signal)
+      const explicitFeedback = feedbackRows
         .filter((r) => r.feedback_type === "positive" || r.feedback_type === "negative")
         .map((r) => ({
           event_id: r.event_id,
           feedback_type: r.feedback_type as "positive" | "negative",
           tags: tagsById[r.event_id] ?? [],
         }));
+
+      // Saved events as implicit positive signals (user chose to save them)
+      const explicitIds = new Set(feedbackRows.map((r) => r.event_id));
+      const implicitPositive = excludeEventIds
+        .filter((id) => !explicitIds.has(id))
+        .map((id) => ({
+          event_id: id,
+          feedback_type: "positive" as const,
+          tags: tagsById[id] ?? [],
+        }));
+
+      feedbackPayload = [...explicitFeedback, ...implicitPositive];
     }
 
     // Build user payload from profile
@@ -198,11 +218,15 @@ export async function GET(request: NextRequest) {
         recommendations: [],
         total_events: 0,
         fallback: true,
+      }, {
+        headers: { "Cache-Control": "private, no-store" },
       });
     }
 
     const data: RecommendResponse = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   } catch (error) {
     console.error("Error fetching recommendations:", error);
     return NextResponse.json(
