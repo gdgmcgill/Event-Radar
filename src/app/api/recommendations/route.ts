@@ -42,9 +42,51 @@ interface RecommendationItem {
   category: string | null;
 }
 
+interface RecommendationItemWithExplanation extends RecommendationItem {
+  explanation?: string;
+}
+
 interface RecommendResponse {
   recommendations: RecommendationItem[];
   total_events: number;
+}
+
+function formatTagLabel(tag: string): string {
+  return tag.charAt(0).toUpperCase() + tag.slice(1);
+}
+
+function generateExplanation(
+  rec: RecommendationItem,
+  userInterests: string[],
+  positiveFeedbackTags: Set<string>,
+  source: "personalized" | "popular_fallback"
+): string {
+  if (source === "popular_fallback") {
+    return "Trending on campus this week";
+  }
+
+  // Check overlap between event tags and user's explicit interest tags
+  const interestOverlap = rec.tags.filter((t) =>
+    userInterests.some((ui) => ui.toLowerCase() === t.toLowerCase())
+  );
+  if (interestOverlap.length > 0) {
+    const labels = interestOverlap.slice(0, 2).map(formatTagLabel);
+    return `Because you're interested in ${labels.join(" and ")}`;
+  }
+
+  // Check overlap with tags from positively-rated or saved events
+  const feedbackOverlap = rec.tags.filter((t) => positiveFeedbackTags.has(t.toLowerCase()));
+  if (feedbackOverlap.length > 0) {
+    const labels = feedbackOverlap.slice(0, 2).map(formatTagLabel);
+    return `Similar to events you've liked in ${labels.join(" and ")}`;
+  }
+
+  // High-score fallback
+  if (rec.score >= 0.8) {
+    return "Highly recommended based on your profile";
+  }
+
+  return "Recommended for you";
 }
 
 /**
@@ -217,6 +259,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         recommendations: [],
         total_events: 0,
+        source: "popular_fallback",
         fallback: true,
       }, {
         headers: { "Cache-Control": "private, no-store" },
@@ -224,9 +267,40 @@ export async function GET(request: NextRequest) {
     }
 
     const data: RecommendResponse = await response.json();
-    return NextResponse.json(data, {
-      headers: { "Cache-Control": "private, no-store" },
-    });
+
+    // Determine source: if no personal signals exist, this is a popular fallback
+    const hasPersonalSignals =
+      feedbackPayload.length > 0 ||
+      (userProfile?.interest_tags ?? []).length > 0;
+    const source: "personalized" | "popular_fallback" = hasPersonalSignals
+      ? "personalized"
+      : "popular_fallback";
+
+    // Build set of tags the user has shown positive affinity toward
+    const positiveFeedbackTags = new Set<string>();
+    for (const fb of feedbackPayload) {
+      if (fb.feedback_type === "positive") {
+        for (const tag of fb.tags) {
+          positiveFeedbackTags.add(tag.toLowerCase());
+        }
+      }
+    }
+
+    const userInterests = userProfile?.interest_tags ?? [];
+    const recommendationsWithExplanations: RecommendationItemWithExplanation[] =
+      data.recommendations.map((rec) => ({
+        ...rec,
+        explanation: generateExplanation(rec, userInterests, positiveFeedbackTags, source),
+      }));
+
+    return NextResponse.json(
+      {
+        ...data,
+        source,
+        recommendations: recommendationsWithExplanations,
+      },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
   } catch (error) {
     console.error("Error fetching recommendations:", error);
     return NextResponse.json(

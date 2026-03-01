@@ -16,8 +16,12 @@ interface RecommendedEventsSectionProps {
   onEmpty?: () => void;
 }
 
+interface RecommendationWithExplanation extends Event {
+  explanation?: string;
+}
+
 interface RecommendationsResponse {
-  recommendations: Event[];
+  recommendations: RecommendationWithExplanation[];
   source?: "personalized" | "popular_fallback";
 }
 
@@ -28,6 +32,9 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
   const [source, setSource] = useState<"personalized" | "popular_fallback">("personalized");
   const [thumbsFeedbackByEventId, setThumbsFeedbackByEventId] = useState<
     Record<string, "positive" | "negative">
+  >({});
+  const [explanationByEventId, setExplanationByEventId] = useState<
+    Record<string, string>
   >({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -80,6 +87,14 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
 
       setSource(fetchedSource);
       setEvents(fetchedEvents);
+
+      const explanations: Record<string, string> = {};
+      for (const ev of fetchedEvents) {
+        if (ev.explanation) {
+          explanations[ev.id] = ev.explanation;
+        }
+      }
+      setExplanationByEventId(explanations);
 
       // Hydrate existing thumbs feedback for these events
       const ids = fetchedEvents.map((e) => e.id).join(",");
@@ -204,6 +219,7 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
                 recommendationRank={index + 1}
                 onDismiss={handleDismiss}
                 onSaveToggle={handleSaveToggle}
+                explanation={explanationByEventId[event.id] ?? null}
                 initialThumbsFeedback={thumbsFeedbackByEventId[event.id] ?? null}
                 onClick={onEventClick ? () => onEventClick(event) : undefined}
               />

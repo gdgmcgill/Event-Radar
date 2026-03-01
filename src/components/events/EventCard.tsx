@@ -34,6 +34,8 @@ interface EventCardProps {
   initialThumbsFeedback?: "positive" | "negative" | null;
   /** Called after a successful save/unsave toggle */
   onSaveToggle?: (eventId: string, saved: boolean) => void;
+  /** Why this event was recommended (shown below the card) */
+  explanation?: string | null;
   /** Display rank badge (1, 2, 3) for popular events */
   rank?: 1 | 2 | 3;
   /** Show popularity stats overlay */
@@ -51,6 +53,7 @@ export function EventCard({
   recommendationRank = 1,
   onDismiss,
   onSaveToggle,
+  explanation,
   initialThumbsFeedback = null,
   rank: _rank,
   showPopularityStats: _showPopularityStats,
@@ -298,6 +301,11 @@ export function EventCard({
           )}
         </div>
       </Card>
+      {explanation && (
+        <p className="mt-1.5 px-1 text-xs text-muted-foreground/70 italic truncate">
+          {explanation}
+        </p>
+      )}
     </Link>
     </div>
   );
