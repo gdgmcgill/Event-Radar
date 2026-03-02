@@ -41,6 +41,7 @@ const { mockFrom, mockQuery, mockEvents } = vi.hoisted(() => {
     const mockQuery = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         overlaps: vi.fn().mockReturnThis(),
         or: vi.fn().mockReturnThis(),
@@ -68,6 +69,7 @@ describe("GET /api/events/export", () => {
         mockFrom.mockClear();
         mockQuery.select.mockClear();
         mockQuery.eq.mockClear();
+        mockQuery.in.mockClear();
         mockQuery.order.mockClear();
         mockQuery.overlaps.mockClear();
         mockQuery.or.mockClear();
@@ -131,5 +133,36 @@ describe("GET /api/events/export", () => {
         if (!res) throw new Error("Response is undefined");
         expect(res.status).toBe(200);
         expect(mockQuery.eq).toHaveBeenCalledWith("id", eventId);
+    });
+
+    it("should filter by eventIds", async () => {
+        const eventIds = [
+            "1f4f1a1a-1111-4f4f-9a9a-111111111111",
+            "2f4f1a1a-2222-4f4f-9a9a-222222222222",
+        ];
+        const req = new NextRequest(`http://localhost:3000/api/events/export?format=csv&eventIds=${eventIds.join(",")}`);
+        const res = await GET(req);
+        if (!res) throw new Error("Response is undefined");
+        expect(res.status).toBe(200);
+        expect(mockQuery.in).toHaveBeenCalledWith("id", eventIds);
+    });
+
+    it("should return 400 if eventIds contains invalid UUID", async () => {
+        const req = new NextRequest("http://localhost:3000/api/events/export?format=csv&eventIds=not-a-uuid");
+        const res = await GET(req);
+        if (!res) throw new Error("Response is undefined");
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.error).toBe("eventIds must be a comma-separated list of valid UUIDs");
+    });
+
+    it("should return 400 if eventId and eventIds are both provided", async () => {
+        const eventId = mockEvents[0].id;
+        const req = new NextRequest(`http://localhost:3000/api/events/export?format=csv&eventId=${eventId}&eventIds=${eventId}`);
+        const res = await GET(req);
+        if (!res) throw new Error("Response is undefined");
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.error).toBe("Provide either eventId or eventIds, not both");
     });
 });

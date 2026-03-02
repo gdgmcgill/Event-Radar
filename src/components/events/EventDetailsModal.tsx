@@ -9,7 +9,7 @@ import { formatDate, formatTime } from "@/lib/utils";
 import type { Event, InteractionSource } from "@/types";
 import { MapPin, Calendar, Clock, ExternalLink, Share2, Check, Loader2 } from "lucide-react";
 import { useTrackEventModal, useTracking } from "@/hooks/useTracking";
-import { exportEventCsv, exportEventIcal } from "@/lib/exportUtils";
+import { exportEventIcal } from "@/lib/exportUtils";
 
 type EventDetailsModalProps = {
   open: boolean;
@@ -24,7 +24,6 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
   useTrackEventModal(event?.id || null, open, trackingSource);
   const { trackCalendarAdd, trackShare } = useTracking({ source: trackingSource });
   const [copied, setCopied] = useState(false);
-  const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isExportingIcal, setIsExportingIcal] = useState(false);
 
   if (!event) return null;
@@ -60,17 +59,6 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
       // Error already logged in exportUtils
     } finally {
       setIsExportingIcal(false);
-    }
-  };
-
-  const handleExportCsv = async () => {
-    try {
-      setIsExportingCsv(true);
-      await exportEventCsv(event.id, event.title);
-    } catch (err) {
-      // Error already logged in exportUtils
-    } finally {
-      setIsExportingCsv(false);
     }
   };
 
@@ -143,16 +131,6 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
             >
               {isExportingIcal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
               {isExportingIcal ? "Adding..." : "Add to Calendar"}
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleExportCsv}
-              disabled={isExportingCsv}
-            >
-              {isExportingCsv ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
-              {isExportingCsv ? "Exporting..." : "Export as CSV"}
             </Button>
 
             <Button

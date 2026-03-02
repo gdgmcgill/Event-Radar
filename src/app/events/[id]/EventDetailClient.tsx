@@ -24,11 +24,11 @@ import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventPopularityScore } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink, FileSpreadsheet } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink } from "lucide-react";
 import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { RelatedEventCard } from "@/components/events/RelatedEventCard";
-import { exportEventCsv, exportEventIcal } from "@/lib/exportUtils";
+import { exportEventIcal } from "@/lib/exportUtils";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -51,7 +51,6 @@ export default function EventDetailClient() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [popularity, setPopularity] = useState<EventPopularityScore | null>(null);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
-  const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isExportingIcal, setIsExportingIcal] = useState(false);
 
   useEffect(() => {
@@ -180,18 +179,6 @@ export default function EventDetailClient() {
       setSavingInProgress(false);
     }
   }, [user, id, savingInProgress]);
-
-  const handleExportCsv = useCallback(async () => {
-    if (!event) return;
-    try {
-      setIsExportingCsv(true);
-      await exportEventCsv(event.id, event.title);
-    } catch (err) {
-      // Error already logged in exportUtils
-    } finally {
-      setIsExportingCsv(false);
-    }
-  }, [event]);
 
   const handleAddToCalendar = useCallback(async () => {
     if (!event) return;
@@ -338,31 +325,19 @@ export default function EventDetailClient() {
                 ))}
               </div>
 
-              {/* RSVP and Export Buttons */}
+              {/* RSVP and Calendar Actions */}
               <div className="pt-4 border-t space-y-3">
                 <RsvpButton eventId={event.id} userId={user?.id ?? null} />
-                
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button
-                    variant="outline"
-                    className="w-full sm:flex-1 border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleExportCsv}
-                    disabled={isExportingCsv}
-                  >
-                    {isExportingCsv ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                    {isExportingCsv ? "Exporting..." : "Export as CSV"}
-                  </Button>
 
-                  <Button
-                    variant="outline"
-                    className="w-full sm:flex-1 border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleAddToCalendar}
-                    disabled={isExportingIcal}
-                  >
-                    {isExportingIcal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
-                    {isExportingIcal ? "Adding..." : "Add to Calendar"}
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  className="w-full border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleAddToCalendar}
+                  disabled={isExportingIcal}
+                >
+                  {isExportingIcal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
+                  {isExportingIcal ? "Adding..." : "Add to Calendar"}
+                </Button>
               </div>
             </CardContent>
           </Card>

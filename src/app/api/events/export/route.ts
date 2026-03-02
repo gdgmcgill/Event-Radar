@@ -105,6 +105,12 @@ const escapeICalText = (value: string) =>
  *        required: false
  *        schema:
  *          type: string
+ *      - name: eventIds
+ *        description: Export multiple events by comma-separated ids
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
  *    responses:
  *      200:
  *        description: Export file
@@ -136,9 +142,21 @@ export async function GET(request: NextRequest) {
         const dateTo = searchParams.get("dateTo");
         const clubId = searchParams.get("clubId");
         const eventId = searchParams.get("eventId");
+        const eventIdsParam = searchParams.get("eventIds");
+        const eventIds = eventIdsParam
+            ? eventIdsParam.split(",").map((id) => id.trim()).filter(Boolean)
+            : [];
 
         if (eventId && !UUID_RE.test(eventId)) {
             return NextResponse.json({ error: "eventId must be a valid UUID" }, { status: 400 });
+        }
+
+        if (eventIds.some((id) => !UUID_RE.test(id))) {
+            return NextResponse.json({ error: "eventIds must be a comma-separated list of valid UUIDs" }, { status: 400 });
+        }
+
+        if (eventId && eventIds.length > 0) {
+            return NextResponse.json({ error: "Provide either eventId or eventIds, not both" }, { status: 400 });
         }
 
         let eventsQuery = supabase
@@ -176,6 +194,10 @@ export async function GET(request: NextRequest) {
 
         if (eventId) {
             eventsQuery = eventsQuery.eq("id", eventId);
+        }
+
+        if (eventIds.length > 0) {
+            eventsQuery = eventsQuery.in("id", eventIds);
         }
 
         // Execute query

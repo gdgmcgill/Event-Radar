@@ -27,12 +27,17 @@ export async function downloadExportFile(
   }
 }
 
-export async function exportEventCsv(
-  eventId: string,
-  eventTitle: string,
+export async function exportEventsCsv(
+  eventIds: string[],
+  filename = "my-events.csv",
 ): Promise<void> {
-  const url = `/api/events/export?format=csv&eventId=${encodeURIComponent(eventId)}`;
-  const filename = `${eventTitle.replace(/\s+/g, "-")}.csv`;
+  const uniqueEventIds = Array.from(new Set(eventIds)).filter(Boolean);
+  if (uniqueEventIds.length === 0) {
+    throw new Error("No event IDs provided for CSV export");
+  }
+
+  const eventIdsParam = uniqueEventIds.join(",");
+  const url = `/api/events/export?format=csv&eventIds=${encodeURIComponent(eventIdsParam)}`;
   await downloadExportFile(url, filename);
 }
 
