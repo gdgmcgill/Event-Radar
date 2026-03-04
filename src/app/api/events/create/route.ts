@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { validateEventDates } from "@/lib/dateValidation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Description is required" }, { status: 400 });
     }
     if (!start_date) {
-      return NextResponse.json({ error: "Start date is required" }, { status: 400 });
+      return NextResponse.json({ error: "Start date is required", field: "start_date" }, { status: 400 });
     }
     if (!location || !location.trim()) {
       return NextResponse.json({ error: "Location is required" }, { status: 400 });
@@ -42,16 +43,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate start_date is in the future
-    const startDate = new Date(start_date);
-    if (isNaN(startDate.getTime())) {
-      return NextResponse.json({ error: "Invalid start date" }, { status: 400 });
-    }
-    if (startDate < new Date()) {
-      return NextResponse.json(
-        { error: "Event date must be in the future" },
-        { status: 400 }
-      );
+    // Validate date fields (strict ISO 8601 + future constraint)
+    const dateError = validateEventDates(start_date, end_date);
+    if (dateError) {
+      return NextResponse.json({ error: dateError.message, field: dateError.field }, { status: 400 });
     }
 
     // Get user profile with roles
