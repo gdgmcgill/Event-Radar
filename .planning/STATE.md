@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 Phase: 9 of 9 (Follow System) — Complete
 Plan: 2 of 2 complete
 Status: Phase 09 Complete — All Plans Done
-Last activity: 2026-02-27 — Completed 09-02: FollowButton UI, club profile follower count, organizer dashboard follower stat, profile Following section
+Last activity: 2026-03-04 - Completed quick task 1: Fix EventCard rank not defined error and recommendations 500 error
 
 Progress: [####################] 100%
 (v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 complete; Phase 8 pending; Phase 9 complete — follow system fully shipped)
@@ -101,6 +101,12 @@ Progress: [####################] 100%
 
 - Phase 5: is_club_owner() deployed with SECURITY DEFINER — verified callable in production, returns false without auth context (expected behavior)
 - Phase 8: clubs UPDATE is locked by 011_rls_audit.sql — owner UPDATE policy required before settings tab works
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Fix EventCard rank not defined error and recommendations 500 error | 2026-03-04 | c618dd3 | [1-fix-eventcard-rank-not-defined-error-and](./quick/1-fix-eventcard-rank-not-defined-error-and/) |
 
 ## Session Continuity
 
