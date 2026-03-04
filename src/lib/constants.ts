@@ -79,6 +79,7 @@ export const EVENT_CATEGORIES = {
 export const API_ENDPOINTS = {
   EVENTS: "/api/events",
   EVENT_DETAIL: (id: string) => `/api/events/${id}`,
+  EVENT_EXPORT: "/api/events/export",
   SAVE_EVENT: (id: string) => `/api/events/${id}/save`,
   RECOMMENDATIONS: "/api/recommendations",
   ADMIN_EVENTS: "/api/admin/events",

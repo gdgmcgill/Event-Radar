@@ -273,6 +273,7 @@ function HomePageContent() {
                 Upcoming Events
               </h2>
 
+              <div className="flex items-center gap-2">
                 {/* Desktop Quick Filters Toggle */}
                 <div className="hidden md:block">
                   <Button
@@ -280,8 +281,8 @@ function HomePageContent() {
                     variant={isDesktopFilterOpen ? "secondary" : "outline"}
                     className={cn(
                       "gap-2 rounded-xl transition-all shadow-sm",
-                      isDesktopFilterOpen 
-                        ? "bg-secondary text-secondary-foreground" 
+                      isDesktopFilterOpen
+                        ? "bg-secondary text-secondary-foreground"
                         : "border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary"
                     )}
                     onClick={() => setIsDesktopFilterOpen(!isDesktopFilterOpen)}
@@ -321,6 +322,7 @@ function HomePageContent() {
                     </div>
                   </SheetContent>
                 </Sheet>
+              </div>
             </div>
 
             {/* Result count feedback */}

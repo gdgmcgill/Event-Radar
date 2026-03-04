@@ -51,6 +51,8 @@ const mockApiResponse = (
 describe("useEvents Hook", () => {
   beforeEach(() => {
     mockFetch.mockClear();
+    // Default mock response to prevent undefined errors on unexpected secondary fetches
+    mockFetch.mockResolvedValue(mockApiResponse([], 0));
   });
 
   afterEach(() => {
@@ -251,7 +253,7 @@ describe("useEvents Hook", () => {
     it("should not load more when already loading", async () => {
       const page1Events = [createMockEvent("1"), createMockEvent("2")];
       const page2Events = [createMockEvent("3"), createMockEvent("4")];
-      
+
       mockFetch.mockResolvedValueOnce(
         mockApiResponse(page1Events, 4, "cursor-next")
       );
@@ -264,7 +266,7 @@ describe("useEvents Hook", () => {
 
       expect(result.current.nextCursor).toBe("cursor-next");
       expect(result.current.loadingMore).toBe(false);
-      
+
       const callCountBefore = mockFetch.mock.calls.length;
 
       // Mock a slow response
@@ -272,23 +274,23 @@ describe("useEvents Hook", () => {
       const loadMorePromise = new Promise((resolve) => {
         resolveLoadMore = resolve;
       });
-      
+
       mockFetch.mockImplementationOnce(() => loadMorePromise);
-      
+
       // Start first load more
       act(() => {
         result.current.loadMore();
       });
-      
+
       // Wait a tick for loadingMore to be set
       await new Promise(resolve => setTimeout(resolve, 10));
-      
+
       // Now try to load more again (should be blocked because loadingMore is true)
       act(() => {
         result.current.loadMore();
         result.current.loadMore();
       });
-      
+
       // Resolve the first load more
       await act(async () => {
         resolveLoadMore(mockApiResponse(page2Events, 4, null));
@@ -601,10 +603,10 @@ describe("useEvents Hook", () => {
         result.current.goToNext();
       });
 
-      await waitFor(() => { 
+      await waitFor(() => {
         expect(result.current.loading).toBe(false);
       }, { timeout: 2000 });
-      
+
       await waitFor(() => {
         expect(result.current.events[0].id).toBe("2");
       }, { timeout: 2000 });

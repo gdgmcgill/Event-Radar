@@ -6,10 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { EventBadge } from "@/components/events/EventBadge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
-import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, InteractionSource } from "@/types";
-import { MapPin, Calendar, Clock, ExternalLink, Share2, Check } from "lucide-react";
+import { MapPin, Calendar, Clock, ExternalLink, Share2, Check, Loader2 } from "lucide-react";
 import { useTrackEventModal, useTracking } from "@/hooks/useTracking";
+import { exportEventIcal } from "@/lib/exportUtils";
 
 type EventDetailsModalProps = {
   open: boolean;
@@ -24,38 +24,13 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
   useTrackEventModal(event?.id || null, open, trackingSource);
   const { trackCalendarAdd, trackShare } = useTracking({ source: trackingSource });
   const [copied, setCopied] = useState(false);
+  const [isExportingIcal, setIsExportingIcal] = useState(false);
 
   if (!event) return null;
 
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     event.location,
   )}`;
-
-  // Generate calendar URL (ICS format)
-  const generateCalendarUrl = () => {
-    const eventDateTime = new Date(`${event.event_date}T${event.event_time}`);
-    const endDateTime = new Date(eventDateTime.getTime() + 2 * 60 * 60 * 1000); // +2 hours default
-    
-    const formatICSDate = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    };
-
-    const icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'BEGIN:VEVENT',
-      `DTSTART:${formatICSDate(eventDateTime)}`,
-      `DTEND:${formatICSDate(endDateTime)}`,
-      `SUMMARY:${event.title}`,
-      `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}`,
-      `LOCATION:${event.location}`,
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].join('\n');
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    return URL.createObjectURL(blob);
-  };
 
   const handleShare = async () => {
     const url = `${window.location.origin}/events/${event.id}`;
@@ -75,18 +50,16 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
     }
   };
 
-  const handleAddToCalendar = () => {
-    const url = generateCalendarUrl();
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${event.title.replace(/\s+/g, '-')}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    // Track calendar add interaction
-    trackCalendarAdd(event.id);
+  const handleAddToCalendar = async () => {
+    try {
+      setIsExportingIcal(true);
+      await exportEventIcal(event.id, event.title);
+      trackCalendarAdd(event.id);
+    } catch (err) {
+      // Error already logged in exportUtils
+    } finally {
+      setIsExportingIcal(false);
+    }
   };
 
   return (
@@ -152,11 +125,12 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
             
             <Button
               variant="outline"
-              className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5"
+              className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleAddToCalendar}
+              disabled={isExportingIcal}
             >
-              <Calendar className="mr-2 h-4 w-4" />
-              Add to Calendar
+              {isExportingIcal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
+              {isExportingIcal ? "Adding..." : "Add to Calendar"}
             </Button>
 
             <Button

@@ -14,10 +14,11 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { type Event, type InteractionSource, type EventPopularityScore } from "@/types";
-import { Calendar, Clock, MapPin, Heart, X, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, X, ThumbsUp, ThumbsDown, TrendingUp, Flame, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
+import { exportEventIcal } from "@/lib/exportUtils";
 
 interface EventCardProps {
   event: Event;
@@ -61,6 +62,7 @@ export function EventCard({
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
   const [thumbsFeedback, setThumbsFeedback] = useState<"positive" | "negative" | null>(initialThumbsFeedback ?? null);
+  const [isExportingCal, setIsExportingCal] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const impressionSent = useRef(false);
   const {
@@ -153,11 +155,24 @@ export function EventCard({
     e.stopPropagation();
     if (trackingSource !== "recommendation") return;
     const prev = thumbsFeedback;
-    setThumbsFeedback(feedback); // toggle: switch between positive and negative
+    setThumbsFeedback(feedback);
     try {
       await submitThumbsFeedback(event.id, feedback);
     } catch {
-      setThumbsFeedback(prev); // revert on error
+      setThumbsFeedback(prev);
+    }
+  };
+
+  const handleExportCalendar = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setIsExportingCal(true);
+      await exportEventIcal(event.id, event.title);
+    } catch {
+      // Error already logged in exportUtils
+    } finally {
+      setIsExportingCal(false);
     }
   };
 
@@ -188,29 +203,64 @@ export function EventCard({
           {/* Gradient Overlay for Text Readability if needed, mostly stylistic here */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 dark:from-white/6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Floating Save Button */}
-            {showSaveButton && (
+          {/* Popularity / Trending Badges — only for non-ranked cards */}
+          {!rank && popularity && (popularity.trending_score > 0 || popularity.popularity_score > 0) && (
+            <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+              {popularity.trending_score >= 5 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500/90 text-white backdrop-blur-sm shadow-sm">
+                  <Flame className="h-3 w-3" />
+                  Trending
+                </span>
+              )}
+              {popularity.popularity_score >= 10 && popularity.trending_score < 5 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/90 text-white backdrop-blur-sm shadow-sm">
+                  <TrendingUp className="h-3 w-3" />
+                  Popular
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Floating Action Buttons */}
+          <div className="absolute top-3 right-3 flex flex-col gap-2">
+
             <Button
               variant="secondary"
               size="icon"
-              onClick={handleSave}
+              onClick={handleExportCalendar}
+              disabled={isExportingCal}
               className={cn(
-                "absolute top-3 right-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
-                isSaved 
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                  : "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
+                "h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
+                "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
               )}
+              title="Export to Calendar"
             >
-              <Heart className={cn("h-4 w-4", isSaved && "fill-current")} />
+              {isExportingCal ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
             </Button>
-          )}
+            {showSaveButton && (
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleSave}
+                className={cn(
+                  "h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
+                  isSaved
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
+                )}
+                title={isSaved ? "Unsave event" : "Save event"}
+              >
+                <Heart className={cn("h-4 w-4", isSaved && "fill-current")} />
+              </Button>
+            )}
+          </div>
           {/* Not interested (recommendation cards only) */}
           {trackingSource === "recommendation" && (
             <Button
               variant="ghost"
               size="icon"
               onClick={handleDismiss}
-              className="absolute top-3 left-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-white/20 bg-white/80 text-muted-foreground hover:bg-destructive/90 hover:text-destructive-foreground transition-all duration-300 opacity-80 hover:opacity-100"
+              className="absolute bottom-3 left-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-white/20 bg-white/80 text-muted-foreground hover:bg-destructive/90 hover:text-destructive-foreground transition-all duration-300 opacity-80 hover:opacity-100"
               aria-label="Not interested"
             >
               <X className="h-4 w-4" />

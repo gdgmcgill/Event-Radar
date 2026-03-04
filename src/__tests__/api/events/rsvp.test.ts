@@ -78,6 +78,7 @@ function createRouteContext(eventId = "test-event-id") {
 let GET: any, POST: any, DELETE: any;
 
 beforeEach(async () => {
+  vi.resetModules();
   vi.clearAllMocks();
   mockUser = null;
   mockAuthError = null;
