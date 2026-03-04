@@ -121,7 +121,19 @@ async def recommend(request: RecommendRequest) -> RecommendResponse:
     """
     try:
         service = get_recommender_service()
-        
+
+        # Convert FeedbackItem list to plain dicts for the recommender service
+        feedback_dicts = None
+        if request.feedback:
+            feedback_dicts = [
+                {
+                    "event_id": item.event_id,
+                    "feedback_type": item.feedback_type,
+                    "tags": item.tags,
+                }
+                for item in request.feedback
+            ]
+
         # Get recommendations
         results = service.recommend(
             major=request.user.major,
@@ -129,7 +141,8 @@ async def recommend(request: RecommendRequest) -> RecommendResponse:
             clubs_or_interests=request.user.clubs_or_interests,
             attended_events=request.user.attended_events,
             top_k=request.top_k,
-            exclude_event_ids=request.exclude_event_ids
+            exclude_event_ids=request.exclude_event_ids,
+            feedback=feedback_dicts
         )
         
         # Format response

@@ -1,5 +1,7 @@
 /**
  * Supabase database types
+ * TODO: Generate these types using Supabase CLI:
+ * npx supabase gen types typescript --project-id jnlbrvejjjgtjhlajfss > src/lib/supabase/types.ts
  */
 
 export type Json =
@@ -10,10 +12,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type Database = {
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5";
-  };
+export interface Database {
   public: {
     Tables: {
       events: {
@@ -22,54 +21,189 @@ export type Database = {
           title: string;
           description: string;
           start_date: string;
-          end_date: string | null;
+          end_date: string;
+          event_date: string;
+          event_time: string;
           location: string;
+          organizer: string | null;
           club_id: string | null;
-          category: string | null;
           tags: string[];
           image_url: string | null;
-          organizer: string | null;
-          rsvp_count: number;
+          category: string | null;
+          source_url: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
-          status: string;
+          status: "pending" | "approved" | "rejected";
+          approved_by: string | null;
+          approved_at: string | null;
         };
         Insert: {
           id?: string;
           title: string;
           description: string;
-          start_date: string;
-          end_date?: string | null;
+          start_date?: string;
+          end_date?: string;
+          event_date?: string;
+          event_time?: string;
           location: string;
+          organizer?: string | null;
           club_id?: string | null;
-          category?: string | null;
           tags?: string[];
           image_url?: string | null;
-          organizer?: string | null;
-          rsvp_count?: number;
+          category?: string | null;
+          source_url?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
-          status?: string;
+          status?: "pending" | "approved" | "rejected";
+          approved_by?: string | null;
+          approved_at?: string | null;
         };
         Update: {
           id?: string;
           title?: string;
           description?: string;
           start_date?: string;
-          end_date?: string | null;
+          end_date?: string;
+          event_date?: string;
+          event_time?: string;
           location?: string;
+          organizer?: string | null;
           club_id?: string | null;
-          category?: string | null;
           tags?: string[];
           image_url?: string | null;
-          organizer?: string | null;
-          rsvp_count?: number;
+          category?: string | null;
+          source_url?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
-          status?: string;
+          status?: "pending" | "approved" | "rejected";
+          approved_by?: string | null;
+          approved_at?: string | null;
+        };
+        Relationships: [];
+      };
+      clubs: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          category: string | null;
+          instagram_handle: string | null;
+          logo_url: string | null;
+          status: "pending" | "approved" | "rejected";
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          category?: string | null;
+          instagram_handle?: string | null;
+          logo_url?: string | null;
+          status?: "pending" | "approved" | "rejected";
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          category?: string | null;
+          instagram_handle?: string | null;
+          logo_url?: string | null;
+          status?: "pending" | "approved" | "rejected";
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      users: {
+        Row: {
+          id: string;
+          email: string;
+          name: string | null;
+          full_name: string | null;
+          avatar_url: string | null;
+          roles: ("user" | "admin" | "club_organizer")[];
+          interest_tags: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          name?: string | null;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          roles?: ("user" | "admin" | "club_organizer")[];
+          interest_tags?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          name?: string | null;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          roles?: ("user" | "admin" | "club_organizer")[];
+          interest_tags?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      saved_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      rsvps: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          status: "going" | "interested" | "cancelled";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          status: "going" | "interested" | "cancelled";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          status?: "going" | "interested" | "cancelled";
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -104,86 +238,6 @@ export type Database = {
           read?: boolean;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "notifications_event_id_fkey";
-            columns: ["event_id"];
-            isOneToOne: false;
-            referencedRelation: "events";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      clubs: {
-        Row: {
-          id: string;
-          name: string;
-          instagram_handle: string | null;
-          logo_url: string | null;
-          description: string | null;
-          category: string | null;
-          status: string;
-          created_by: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          instagram_handle?: string | null;
-          logo_url?: string | null;
-          description?: string | null;
-          category?: string | null;
-          status?: string;
-          created_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          instagram_handle?: string | null;
-          logo_url?: string | null;
-          description?: string | null;
-          category?: string | null;
-          status?: string;
-          created_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      users: {
-        Row: {
-          id: string;
-          email: string;
-          name: string | null;
-          avatar_url: string | null;
-          interest_tags: string[];
-          roles: ("user" | "club_organizer" | "admin")[];
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          email: string;
-          name?: string | null;
-          avatar_url?: string | null;
-          interest_tags?: string[];
-          roles?: ("user" | "club_organizer" | "admin")[];
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          email?: string;
-          name?: string | null;
-          avatar_url?: string | null;
-          interest_tags?: string[];
-          roles?: ("user" | "club_organizer" | "admin")[];
-          created_at?: string;
-          updated_at?: string;
-        };
         Relationships: [];
       };
       organizer_requests: {
@@ -192,7 +246,7 @@ export type Database = {
           user_id: string;
           club_id: string;
           message: string | null;
-          status: string;
+          status: "pending" | "approved" | "rejected";
           reviewed_by: string | null;
           created_at: string;
           updated_at: string;
@@ -202,7 +256,7 @@ export type Database = {
           user_id: string;
           club_id: string;
           message?: string | null;
-          status?: string;
+          status?: "pending" | "approved" | "rejected";
           reviewed_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -212,27 +266,12 @@ export type Database = {
           user_id?: string;
           club_id?: string;
           message?: string | null;
-          status?: string;
+          status?: "pending" | "approved" | "rejected";
           reviewed_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "organizer_requests_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "organizer_requests_club_id_fkey";
-            columns: ["club_id"];
-            isOneToOne: false;
-            referencedRelation: "clubs";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       club_members: {
         Row: {
@@ -240,104 +279,50 @@ export type Database = {
           user_id: string;
           club_id: string;
           role: string;
-          created_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
           club_id: string;
-          role?: string;
-          created_at?: string;
+          role: string;
         };
         Update: {
           id?: string;
           user_id?: string;
           club_id?: string;
           role?: string;
-          created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "club_members_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "club_members_club_id_fkey";
-            columns: ["club_id"];
-            isOneToOne: false;
-            referencedRelation: "clubs";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      saved_events: {
-        Row: {
-          id: string;
-          user_id: string;
-          event_id: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          event_id: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          event_id?: string;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "saved_events_event_id_fkey";
-            columns: ["event_id"];
-            isOneToOne: false;
-            referencedRelation: "events";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "saved_events_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       user_interactions: {
         Row: {
           id: string;
           user_id: string | null;
           event_id: string;
-          interaction_type: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
+          interaction_type: string;
+          source: string | null;
           session_id: string | null;
-          source: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events' | null;
-          metadata: Record<string, unknown>;
+          metadata: Json;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id?: string | null;
           event_id: string;
-          interaction_type: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
+          interaction_type: string;
+          source?: string | null;
           session_id?: string | null;
-          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events' | null;
-          metadata?: Record<string, unknown>;
+          metadata?: Json;
           created_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string | null;
           event_id?: string;
-          interaction_type?: 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
+          interaction_type?: string;
+          source?: string | null;
           session_id?: string | null;
-          source?: 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events' | null;
-          metadata?: Record<string, unknown>;
+          metadata?: Json;
           created_at?: string;
         };
         Relationships: [];
@@ -345,83 +330,38 @@ export type Database = {
       event_popularity_scores: {
         Row: {
           event_id: string;
+          popularity_score: number;
+          trending_score: number;
           view_count: number;
           click_count: number;
           save_count: number;
-          share_count: number;
           calendar_add_count: number;
           unique_viewers: number;
-          popularity_score: number;
-          trending_score: number;
           last_calculated_at: string;
         };
         Insert: {
           event_id: string;
+          popularity_score?: number;
+          trending_score?: number;
           view_count?: number;
           click_count?: number;
           save_count?: number;
-          share_count?: number;
           calendar_add_count?: number;
           unique_viewers?: number;
-          popularity_score?: number;
-          trending_score?: number;
           last_calculated_at?: string;
         };
         Update: {
           event_id?: string;
+          popularity_score?: number;
+          trending_score?: number;
           view_count?: number;
           click_count?: number;
           save_count?: number;
-          share_count?: number;
           calendar_add_count?: number;
           unique_viewers?: number;
-          popularity_score?: number;
-          trending_score?: number;
           last_calculated_at?: string;
         };
         Relationships: [];
-      };
-      rsvps: {
-        Row: {
-          id: string;
-          user_id: string;
-          event_id: string;
-          status: "going" | "interested" | "cancelled";
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          event_id: string;
-          status: "going" | "interested" | "cancelled";
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          event_id?: string;
-          status?: "going" | "interested" | "cancelled";
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "rsvps_event_id_fkey";
-            columns: ["event_id"];
-            isOneToOne: false;
-            referencedRelation: "events";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "rsvps_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
       };
       user_engagement_summary: {
         Row: {
@@ -431,11 +371,11 @@ export type Database = {
           total_saves: number;
           total_shares: number;
           total_calendar_adds: number;
-          favorite_tags: { tag: string; count: number }[];
-          favorite_clubs: { club_id: string; count: number }[];
+          favorite_tags: string[];
+          favorite_clubs: string[];
           last_active_at: string | null;
-          created_at: string;
-          updated_at: string;
+          created_at: string | null;
+          updated_at: string | null;
         };
         Insert: {
           user_id: string;
@@ -444,11 +384,11 @@ export type Database = {
           total_saves?: number;
           total_shares?: number;
           total_calendar_adds?: number;
-          favorite_tags?: { tag: string; count: number }[];
-          favorite_clubs?: { club_id: string; count: number }[];
+          favorite_tags?: string[];
+          favorite_clubs?: string[];
           last_active_at?: string | null;
-          created_at?: string;
-          updated_at?: string;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
         Update: {
           user_id?: string;
@@ -457,11 +397,65 @@ export type Database = {
           total_saves?: number;
           total_shares?: number;
           total_calendar_adds?: number;
-          favorite_tags?: { tag: string; count: number }[];
-          favorite_clubs?: { club_id: string; count: number }[];
+          favorite_tags?: string[];
+          favorite_clubs?: string[];
           last_active_at?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      recommendation_feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          recommendation_rank: number;
+          action: string;
+          session_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          recommendation_rank: number;
+          action: string;
+          session_id?: string | null;
           created_at?: string;
-          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          recommendation_rank?: number;
+          action?: string;
+          session_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      recommendation_explicit_feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          feedback_type: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          feedback_type: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          feedback_type?: string;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -547,32 +541,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      update_event_popularity: {
-        Args: { p_event_id: string };
-        Returns: void;
-      };
-      update_user_engagement: {
-        Args: { p_user_id: string };
-        Returns: void;
-      };
-      calculate_popularity_score: {
-        Args: {
-          p_view_count: number;
-          p_click_count: number;
-          p_save_count: number;
-          p_share_count: number;
-          p_calendar_add_count: number;
-          p_unique_viewers: number;
-        };
-        Returns: number;
-      };
-      calculate_trending_score: {
-        Args: { p_event_id: string };
-        Returns: number;
-      };
+      [_ in never]: never;
     };
     Enums: {
       [_ in never]: never;
     };
   };
-};
+}

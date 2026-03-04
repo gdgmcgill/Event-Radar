@@ -3,12 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--max-http-header-size=32768 next dev",
+    "dev": "next dev",
     "build": "next build",
-    "start": "cross-env NODE_OPTIONS=--max-http-header-size=32768 next start",
+    "start": "next start",
     "lint": "eslint .",
-    "test": "vitest",
-    "test:run": "vitest run"
+    "check:feedback": "node scripts/check-feedback-loop.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -23,40 +22,32 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
-    "embla-carousel-react": "^8.3.0",
+    "embla-carousel-react": "^8.6.0",
     "lucide-react": "^0.344.0",
     "next": "^16.0.3",
     "next-swagger-doc": "^0.4.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-easy-crop": "^5.5.6",
-    "redoc": "^2.5.1",
+    "redoc": "^2.5.2",
     "swagger-ui-react": "^5.30.2",
     "swr": "^2.3.7",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
-    "yaml": "^2.8.2",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.10",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/swagger-ui-react": "^5.18.0",
-    "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.4.17",
-    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.3",
-    "jsdom": "^28.1.0",
     "postcss": "^8.4.35",
     "prettier": "^3.2.5",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.4.0",
-    "vitest": "^4.0.18"
+    "typescript": "^5.4.0"
   }
 }

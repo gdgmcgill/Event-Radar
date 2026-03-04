@@ -132,7 +132,7 @@ export default async function ProfilePage() {
                   {following.map((f) => {
                     const club = f.clubs as unknown as { id: string; name: string; logo_url: string | null; description: string | null; category: string | null };
                     return (
-                      <a
+                      <Link
                         key={f.id}
                         href={`/clubs/${club.id}`}
                         className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
@@ -151,7 +151,7 @@ export default async function ProfilePage() {
                             <p className="text-xs text-muted-foreground">{club.category}</p>
                           )}
                         </div>
-                      </a>
+                      </Link>
                     );
                   })}
                 </div>

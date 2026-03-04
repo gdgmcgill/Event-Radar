@@ -61,7 +61,7 @@ export default function CategoriesPage() {
     return {
       ...(await fetchPage({
         filters: {
-          tags: dbTags,
+          tags: dbTags as EventTag[],
         },
         cursor,
       })),
