@@ -15,10 +15,11 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { type Event, type InteractionSource } from "@/types";
-import { Calendar, Clock, MapPin, Heart, TrendingUp, Flame } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, TrendingUp, Flame, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
+import { exportEventIcal } from "@/lib/exportUtils";
 import type { EventPopularityScore } from "@/types";
 
 interface EventCardProps {
@@ -51,6 +52,7 @@ export function EventCard({
   showPopularityStats = false,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
+  const [isExportingCal, setIsExportingCal] = useState(false);
   const { trackClick, trackSave, trackUnsave } = useTracking({ source: trackingSource });
 
   // Sync local state when the parent resolves the saved status after fetching
@@ -101,6 +103,20 @@ export function EventCard({
     }
   };
 
+  const handleExportCalendar = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      setIsExportingCal(true);
+      await exportEventIcal(event.id, event.title);
+    } catch (err) {
+      // Error already logged in exportUtils
+    } finally {
+      setIsExportingCal(false);
+    }
+  };
+
   return (
     <Link href={`/events/${event.id}${trackingSource ? `?from=${trackingSource}` : ""}`} onClick={handleCardClick} className="block h-full group">
       <Card className="h-full overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card rounded-2xl flex flex-col">
@@ -147,22 +163,38 @@ export function EventCard({
             </div>
           )}
 
-          {/* Floating Save Button */}
-            {showSaveButton && (
+          {/* Floating Action Buttons */}
+          <div className="absolute top-3 right-3 flex flex-col gap-2">
             <Button
               variant="secondary"
               size="icon"
-              onClick={handleSave}
+              onClick={handleExportCalendar}
+              disabled={isExportingCal}
               className={cn(
-                "absolute top-3 right-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
-                isSaved 
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                  : "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
+                "h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
+                "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
               )}
+              title="Export to Calendar"
             >
-              <Heart className={cn("h-4 w-4", isSaved && "fill-current")} />
+              {isExportingCal ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
             </Button>
-          )}
+            {showSaveButton && (
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleSave}
+                className={cn(
+                  "h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
+                  isSaved 
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                    : "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
+                )}
+                title={isSaved ? "Unsave event" : "Save event"}
+              >
+                <Heart className={cn("h-4 w-4", isSaved && "fill-current")} />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Content Section */}

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import InterestsCard from "@/components/profile/InterestsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -123,7 +124,7 @@ export default async function ProfilePage() {
               {(!following || following.length === 0) ? (
                 <p className="text-sm text-muted-foreground">
                   You&apos;re not following any clubs yet. Visit the{" "}
-                  <a href="/clubs" className="text-primary hover:underline">clubs page</a>{" "}
+                  <Link href="/clubs" className="text-primary hover:underline">clubs page</Link>{" "}
                   to discover clubs to follow.
                 </p>
               ) : (

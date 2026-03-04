@@ -7,6 +7,7 @@ A campus event discovery platform for McGill University. Discover and explore ca
 - **Event Discovery**: Browse events by category, date, and location
 - **Personalized Recommendations**: Get event suggestions based on your interests
 - **Save Events**: Save events for later viewing
+- **Event Export**: Download events as CSV or iCal
 - **Guest Access**: Browse events without signing in
 - **McGill Authentication**: Sign in with McGill email for full features
 - **Admin Dashboard**: Manage events and approve submissions
@@ -120,6 +121,7 @@ The application uses Supabase with the following main tables:
 
 ### API Routes
 - `src/app/api/events/route.ts`: GET events with filters
+- `src/app/api/events/export/route.ts`: Export events as CSV or iCal
 - `src/app/api/events/[id]/route.ts`: GET single event
 - `src/app/api/events/[id]/save/route.ts`: POST save/unsave event
 - `src/app/api/recommendations/route.ts`: GET personalized recommendations

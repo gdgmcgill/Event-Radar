@@ -32,6 +32,34 @@ GET /api/events?tags=music,community&sort=start_date&direction=asc&limit=20 HTTP
 
 ### Example Success Response (200)
 
+## GET /api/events/export
+
+Export approved events as CSV or iCal.
+
+- **Authentication:** Not required
+- **Query Parameters:**
+  - `format` (string, required) - `csv` or `ical`
+  - `tags` (string, optional) - Comma-separated list of tags
+  - `search` (string, optional) - Search query
+  - `dateFrom` (string, optional) - ISO start date
+  - `dateTo` (string, optional) - ISO end date
+  - `clubId` (string, optional) - Filter by club id
+  - `eventId` (string, optional) - Export a single event by id
+- **Responses:**
+  - `200 OK` - CSV or iCal file download
+  - `400 Bad Request` - `{ "error": "format parameter must be 'csv' or 'ical'" }`
+  - `500 Internal Server Error` - `{ "error": "Failed to generate export" }`
+
+### Example Requests
+
+```http
+GET /api/events/export?format=csv&tags=career,academic HTTP/1.1
+```
+
+```http
+GET /api/events/export?format=ical&eventId=44a6be58-533b-4b15-bd15-631919439803 HTTP/1.1
+```
+
 ```json
 {
   "events": [

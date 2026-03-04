@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorBoundary } from "./ErrorBoundary";
 
@@ -63,12 +62,13 @@ describe("ErrorBoundary", () => {
   });
 
   it("renders custom fallback and can reset", async () => {
-    const user = userEvent.setup();
     render(<ResettableWrapper />);
 
     expect(screen.getByText("Custom fallback: Flaky error")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Reset" }));
-    expect(screen.getByText("Recovered content")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await waitFor(() => {
+      expect(screen.getByText("Recovered content")).toBeInTheDocument();
+    });
   });
 });
