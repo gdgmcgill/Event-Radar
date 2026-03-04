@@ -105,13 +105,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the full body (including optional feedback) to the AI service
-    const response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (fetchError) {
+      console.warn("Recommendation service unreachable:", fetchError);
+      return NextResponse.json(
+        { error: "Recommendation service unavailable", fallback: true },
+        { status: 503 }
+      );
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -238,18 +247,31 @@ export async function GET(request: NextRequest) {
     const topK = parseInt(searchParams.get("top_k") || "10", 10);
 
     // Call the recommendation service, including feedback for vector adjustment
-    const response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user: userPayload,
-        top_k: topK,
-        exclude_event_ids: excludeEventIds,
-        feedback: feedbackPayload.length > 0 ? feedbackPayload : undefined,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user: userPayload,
+          top_k: topK,
+          exclude_event_ids: excludeEventIds,
+          feedback: feedbackPayload.length > 0 ? feedbackPayload : undefined,
+        }),
+      });
+    } catch (fetchError) {
+      console.warn("Recommendation service unreachable, returning fallback:", fetchError);
+      return NextResponse.json({
+        recommendations: [],
+        total_events: 0,
+        source: "popular_fallback",
+        fallback: true,
+      }, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
