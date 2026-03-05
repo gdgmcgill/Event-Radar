@@ -45,9 +45,9 @@ Requirements for the club organizer rework milestone. Each maps to roadmap phase
 
 ### Reviews
 
-- [ ] **REVW-01**: After an event ends, users who RSVP'd "going" are prompted to rate the event (1-5 stars) with optional text feedback
-- [ ] **REVW-02**: Organizer can view aggregate review data for past events: average rating, rating distribution, and anonymized comments
-- [ ] **REVW-03**: A user can only submit one review per event, and reviews cannot be submitted before the event date
+- [x] **REVW-01**: After an event ends, users who RSVP'd "going" are prompted to rate the event (1-5 stars) with optional text feedback
+- [x] **REVW-02**: Organizer can view aggregate review data for past events: average rating, rating distribution, and anonymized comments
+- [x] **REVW-03**: A user can only submit one review per event, and reviews cannot be submitted before the event date
 
 ## v2 Requirements
 
@@ -114,9 +114,9 @@ Deferred to future milestones. Tracked but not in current roadmap.
 | ANLY-01 | Phase 3 | Complete (03-01) |
 | ANLY-02 | Phase 3 | Complete (03-01) |
 | ANLY-03 | Phase 3 | Complete (03-01) |
-| REVW-01 | Phase 3 | Pending |
-| REVW-02 | Phase 3 | Pending |
-| REVW-03 | Phase 3 | Pending |
+| REVW-01 | Phase 3 | Complete (03-02) |
+| REVW-02 | Phase 3 | Complete (03-02) |
+| REVW-03 | Phase 3 | Complete (03-02) |
 
 **Coverage:**
 - v1 requirements: 24 total

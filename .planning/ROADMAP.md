@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Club Infrastructure and Team Management** - Public club pages, organizer management dashboard, team invites, and student follow/unfollow
 - [x] **Phase 2: Event Management** - Event creation with club selector, event listing/editing, auto-approval, duplication, RSVP counts, and follower notifications
-- [ ] **Phase 3: Analytics and Reviews** - Event-level and club-level analytics dashboards with charts, plus post-event review submission and organizer-facing review aggregation
+- [x] **Phase 3: Analytics and Reviews** - Event-level and club-level analytics dashboards with charts, plus post-event review submission and organizer-facing review aggregation
 
 ## Phase Details
 
@@ -63,7 +63,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — Analytics types, API endpoints (event + club level), ClubAnalyticsTab with Recharts charts, dashboard wiring
-- [ ] 03-02-PLAN.md — Reviews table migration, review API (submit + aggregate), StarRating component, ReviewPrompt on event detail page
+- [x] 03-02-PLAN.md — Reviews table migration, review API (submit + aggregate), StarRating component, ReviewPrompt on event detail page
 
 ## Progress
 
@@ -74,4 +74,4 @@ Phases execute in numeric order: 1 -> 2 -> 3
 |-------|----------------|--------|-----------|
 | 1. Club Infrastructure and Team Management | 3/3 | Complete | 2026-03-05 |
 | 2. Event Management | 2/2 | Complete | 2026-03-05 |
-| 3. Analytics and Reviews | 1/2 | In Progress | - |
+| 3. Analytics and Reviews | 2/2 | Complete | 2026-03-05 |
