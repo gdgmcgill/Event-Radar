@@ -15,16 +15,13 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
+import { isMcGillEmail } from "@/lib/utils";
 
 // Hardcoded admin emails — only these accounts can have the admin role
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
-
-function isMcGillEmail(email: string): boolean {
-  return /^[^@]+@(mail\.)?mcgill\.ca$/i.test(email);
-}
 
 function isAdminEmail(email: string): boolean {
   return ADMIN_EMAILS.includes(email.toLowerCase());
