@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rerankWithMMR, type RecommendationItem as DiversityRecommendationItem } from "@/lib/diversity";
+import { pickVariant } from "@/lib/experiments";
 
 // Recommendation service URL (configurable via environment variable)
 const RECOMMENDATION_API_URL =
@@ -235,6 +236,53 @@ export async function GET(request: NextRequest) {
       feedbackPayload = [...explicitFeedback, ...implicitPositive];
     }
 
+    // Check for active recommendation experiments
+    let experimentVariantId: string | null = null;
+    let experimentLambda: number | null = null;
+
+    const { data: activeExperiments } = await supabase
+      .from("experiments")
+      .select("id, name, status")
+      .eq("status", "running");
+
+    if (activeExperiments && activeExperiments.length > 0) {
+      const experiment = activeExperiments[0] as { id: string; name: string };
+
+      const { data: variantRows } = await supabase
+        .from("experiment_variants")
+        .select("*")
+        .eq("experiment_id", experiment.id);
+
+      type VRow = { id: string; experiment_id: string; name: string; config: Record<string, unknown>; weight: number };
+      const variants = (variantRows ?? []) as VRow[];
+
+      if (variants.length >= 2) {
+        const { data: existingAssignment } = await supabase
+          .from("experiment_assignments")
+          .select("variant_id")
+          .eq("experiment_id", experiment.id)
+          .eq("user_id", user.id)
+          .single();
+
+        let assignedVariant: VRow;
+        if (existingAssignment) {
+          assignedVariant = variants.find((v) => v.id === existingAssignment.variant_id) ?? variants[0];
+        } else {
+          assignedVariant = pickVariant(user.id, experiment.id, variants) as VRow;
+          await supabase.from("experiment_assignments").insert({
+            experiment_id: experiment.id,
+            variant_id: assignedVariant.id,
+            user_id: user.id,
+          });
+        }
+
+        experimentVariantId = assignedVariant.id;
+        if (typeof assignedVariant.config?.lambda === "number") {
+          experimentLambda = assignedVariant.config.lambda as number;
+        }
+      }
+    }
+
     // Build user payload from profile
     const userPayload: UserPayload = {
       major: "General Studies", // Default if not in profile
@@ -292,9 +340,10 @@ export async function GET(request: NextRequest) {
     const data: RecommendResponse = await response.json();
 
     // Apply MMR diversity re-ranking
+    // Use experiment lambda if assigned, otherwise use query param or default
     const diversityParam = searchParams.get("diversity");
-    const diversityLambda = diversityParam ? parseFloat(diversityParam) : 0.7;
-    const lambda = Math.max(0, Math.min(1, isNaN(diversityLambda) ? 0.7 : diversityLambda));
+    const baseLambda = diversityParam ? parseFloat(diversityParam) : 0.7;
+    const lambda = experimentLambda ?? (isNaN(baseLambda) ? 0.7 : Math.max(0, Math.min(1, baseLambda)));
 
     const { items: diversifiedRecs, metadata: diversityMetadata } = rerankWithMMR(
       data.recommendations as unknown as DiversityRecommendationItem[],
@@ -332,6 +381,7 @@ export async function GET(request: NextRequest) {
         source,
         recommendations: recommendationsWithExplanations,
         diversity_metadata: diversityMetadata,
+        experiment_variant_id: experimentVariantId,
       },
       { headers: { "Cache-Control": "private, no-store" } }
     );
