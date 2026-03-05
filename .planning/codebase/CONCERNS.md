@@ -1,255 +1,171 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-02-25
+**Analysis Date:** 2026-03-05
 
 ## Tech Debt
 
-### Unfinished Recommendation Sync Route
-- **Issue:** Route stub with no external service integration
-- **Files:** `src/app/api/recommendations/sync/route.ts:1`
-- **Impact:** POST endpoint to sync events to recommendation service is not wired up. Currently accepts payloads but notes that integration is incomplete (TODO AS-6). If this route is called by a pipeline, events may not actually sync to the recommendation index.
-- **Fix approach:** Either implement full integration to external recommendation API service (Python backend on port 8000 expected), or remove the route entirely and handle syncing differently (e.g., triggers on event create/update in Supabase).
+**Hand-written Supabase types instead of auto-generated:**
+- Issue: Database types in `src/lib/supabase/types.ts` are manually maintained. The file itself contains a TODO to generate them via CLI. Many API routes cast `supabase as any` to bypass type mismatches, indicating the types have drifted from the actual schema.
+- Files: `src/lib/supabase/types.ts`, `src/app/auth/callback/route.ts` (lines 149, 165, 178), `src/app/api/feedback/route.ts` (line 30), `src/app/api/profile/avatar/route.ts` (lines 61, 78, 91), `src/app/api/clubs/logo/route.ts` (lines 54, 69), `src/app/api/users/[id]/route.ts` (line 106), `src/app/api/users/saved-events/route.ts` (lines 64, 92, 108), `src/app/api/profile/interests/route.ts` (line 54)
+- Impact: `as any` casts silence type errors, meaning schema changes break at runtime not compile time. At least 18 occurrences of `(supabase as any)` in production code (not tests).
+- Fix approach: Run `npx supabase gen types typescript --project-id <id> > src/lib/supabase/types.ts` and remove all `as any` casts. Add this to CI as a pre-build step.
 
-### EventGrid Component Not Fully Implemented
-- **Issue:** Component has incomplete features
-- **Files:** `src/components/events/EventGrid.tsx:6`
-- **Impact:** Grid component lacks proper responsive behavior, loading state skeleton refinements, and empty state animations. Currently uses basic Tailwind grid that may not adapt well to all screen sizes.
-- **Fix approach:** Implement media query-aware grid columns, enhance loading state UX, and improve empty state messaging.
+**Pervasive `error: any` in catch blocks:**
+- Issue: The health route and other files use `catch (error: any)` instead of narrowing error types.
+- Files: `src/app/api/health/route.ts` (lines 139, 177, 243, 319, 375), `src/app/api/events/popular/route.ts` (line 158)
+- Impact: Bypasses TypeScript strict mode guarantees. Accessing `error.message` on a non-Error value will return undefined silently.
+- Fix approach: Use `catch (error: unknown)` and narrow with `error instanceof Error ? error.message : String(error)`.
 
-## Performance Bottlenecks
+**Unsanitized search input in ilike queries:**
+- Issue: `src/app/api/events/route.ts` line 197 interpolates user `search` input directly into an `ilike` filter string without escaping Supabase/PostgREST special characters (`%`, `_`). The export route sanitizes this (line 175) but the main events route does not.
+- Files: `src/app/api/events/route.ts` (line 197), `src/app/api/admin/events/route.ts` (line 28)
+- Impact: Users can craft search queries with `%` or `_` wildcards to perform broader-than-intended searches. Not a SQL injection risk (Supabase parameterizes), but a logic bug.
+- Fix approach: Strip or escape `%` and `_` characters from search input before interpolation, matching the pattern in `src/app/api/events/export/route.ts` line 175.
 
-### Recommendations Endpoint Loads Entire Datasets
-- **Problem:** `/api/recommendations` fetches ALL users, ALL events, and ALL saved events into memory for k-means clustering
-- **Files:** `src/app/api/recommendations/route.ts:188-205`
-- **Cause:** Uses `.select("*")` on `events` table (line 203) and loads all users regardless of whether they have meaningful data. At scale (1000+ users, 10000+ events), this becomes prohibitively slow and memory-intensive.
-- **Improvement path:**
-  - Add `.limit()` to query only active users (those with recent activity)
-  - Query only future/upcoming events: `.gt("start_date", now.toISOString())`
-  - Consider pagination for clustering if user base grows beyond ~500 users
-  - Move k-means to a separate background job rather than request-time computation
+**Hardcoded fallback values in recommendation payload:**
+- Issue: The recommendations GET handler always sends `major: "General Studies"` and `year_of_study: "Student"` because user profile data for these fields is never fetched or stored.
+- Files: `src/app/api/recommendations/route.ts` (lines 238-243)
+- Impact: The recommendation AI service receives no real user demographic data, reducing personalization quality.
+- Fix approach: Add `major` and `year_of_study` fields to the user profile schema and onboarding flow, then read them here.
 
-### K-Means Clustering on Request Path
-- **Problem:** k-means algorithm runs synchronously during recommendation request
-- **Files:** `src/app/api/recommendations/route.ts:307-326`
-- **Cause:** Clustering 500+ users is computationally expensive (50 iterations max per user). With 6-dimensional vectors, this adds latency directly to user-facing API.
-- **Improvement path:** Pre-compute clusters on a schedule (daily/hourly). Store cluster assignments in DB. Fetch pre-computed clusters at request time rather than computing on demand.
+**179 console.log/error/warn calls across 62 files with no structured logging:**
+- Issue: All logging is done via bare `console.error()` and `console.warn()`. No log levels, no structured output, no correlation IDs.
+- Files: Across all `src/app/api/` routes and many component files
+- Impact: In production, logs lack context for debugging. Cannot filter by severity or trace requests across middleware and route handlers.
+- Fix approach: Introduce a lightweight logger utility (e.g., pino or a custom wrapper) that outputs structured JSON with request IDs.
 
-### SELECT * on Large Events Table
-- **Problem:** Line 203 and 406 use `.select("*")` without field specification
-- **Files:** `src/app/api/recommendations/route.ts:203, 406`
-- **Cause:** Fetches all event columns (including description, image_url, etc.) but only uses tags, id, start_date. Each unused column increases network payload.
-- **Improvement path:** Specify only needed columns: `.select("id, tags, start_date, status")` at minimum. Same pattern in fallback query line 406.
+## Known Bugs
 
-### Full User Enrichment in Recommendations
-- **Problem:** Code enriches every user vector with saved event tags, even users not in current cluster
-- **Files:** `src/app/api/recommendations/route.ts:282-289`
-- **Cause:** Loops through ALL saved_events and enriches ALL user vectors before filtering to current user's cluster. This is wasteful—only cluster-mates matter.
-- **Improvement path:** After cluster assignment, only enrich vectors for users in the current cluster.
-
-## Scaling Limits
-
-### In-Memory Data Structures for Clustering
-- **Current capacity:** Works efficiently for ~500-1000 users with ~10000 events
-- **Limit:** At 5000+ users or 50000+ events, memory usage for `Map<string, Vector>` and `Map<string, Set<string>>` becomes problematic
-- **Scaling path:**
-  - Move clustering to a separate Node.js worker process or serverless function with higher memory limits
-  - Cache user vectors in Redis instead of computing them request-time
-  - Pre-compute and store cluster assignments in `user_clusters` table
-
-### Concurrent Requests to Recommendation Endpoint
-- **Current capacity:** Supabase free tier handles ~5-10 concurrent requests
-- **Limit:** Each request triggers 5 parallel Supabase queries fetching full datasets. At 20+ concurrent requests, Supabase rate limits or connection pool exhaustion occurs
-- **Scaling path:**
-  - Implement caching layer (SWR on frontend with 5-minute TTL)
-  - Cache recommendation results in Redis keyed by `user_id` with 10-minute TTL
-  - Add rate limiting to `/api/recommendations` endpoint
-
-## TypeScript Safety Issues
-
-### Excessive `as unknown as` Type Casts
-- **Issue:** Frequent unsafe type assertions bypass type checking
-- **Files:**
-  - `src/app/api/recommendations/route.ts:132, 239-243` (lines 132, 239, 240, 241, 242, 243)
-  - `src/app/api/clubs/logo/route.ts:54, 69`
-  - `src/app/api/feedback/route.ts:31`
-  - `src/app/auth/callback/route.ts:149, 165, 178`
-- **Impact:** Loses type safety. If Supabase schema changes, these casts will silently accept wrong types and cause runtime errors downstream
-- **Fix approach:**
-  - Define proper type guards for database row types
-  - Use `type Database` from supabase/types correctly instead of asserting `as any`
-  - Create utility function `assertEventRow()` instead of inline casts
-
-### Any Types in Error Handling
-- **Issue:** Catch blocks use `error: any` instead of proper error typing
-- **Files:** `src/app/api/health/route.ts:139, 177, 243, 319, 375`
-- **Impact:** Cannot safely access error properties. `error.message` may not exist, causing secondary errors
-- **Fix approach:** Use `error: unknown` and add proper type guards: `if (error instanceof Error) { error.message }`
-
-### Missing Type Guard for Supabase Response
-- **Issue:** `supabase.storage.getPublicUrl()` returns untyped object with possible undefined fields
-- **Files:** `src/app/api/clubs/logo/route.ts:69`
-- **Impact:** Code assumes `urlData` has the expected structure without validation. If Supabase changes response format, storage URLs break silently
-- **Fix approach:** Add explicit type checking before using `urlData.publicUrl`
-
-## Fragile Areas
-
-### Recommendation Engine Collapse Without Data
-- **Files:** `src/app/api/recommendations/route.ts:294-299, 338`
-- **Why fragile:**
-  - If `currentUserVector` is zero (no interest tags + no saved events) and no `interestTags`, engine returns empty array
-  - If all candidates are filtered out (e.g., no upcoming events), returns empty array
-  - No graceful degradation—ends with `[]` instead of fallback to popular events
-- **Safe modification:** Always have fallback path. Check test coverage for zero-vector and no-candidates scenarios
-- **Test coverage:** Untested edge cases around line 297-299 and 338-339
-
-### Classifier Heuristics Drift Over Time
-- **Files:** `src/lib/classifier.ts:200-332` (signals, confidence thresholds)
-- **Why fragile:**
-  - Confidence thresholds (0.7, 0.4) are hardcoded and tuned for current Instagram post distribution
-  - If Instagram format changes (e.g., less structured captions, more emojis) or McGill clubs post differently next semester, thresholds may misclassify 30%+ of posts
-  - Date/time regex patterns are brittle to variations (handles "Jan 15" but not "January15" without space)
-- **Safe modification:** Log confidence scores to database for every post. Monitor misclassification rate. Adjust thresholds monthly based on actual data
-- **Test coverage:** Good coverage in `src/lib/classifier.test.ts` but tests use fixed, well-formatted captions. Real data likely messier.
-
-### EventGrid Score Display Without Normalization
-- **Files:** `src/components/events/EventGrid.tsx:14`
-- **Why fragile:**
-  - Component accepts `score?: number` on events but doesn't normalize/validate it
-  - Scores from recommendations (0.0-1.0) displayed raw could show as "0.345" if displayed as-is
-  - If recommendation algorithm changes score scale (e.g., becomes 0-100), display breaks
-- **Safe modification:**
-  - Add explicit prop for score display format: `scoreFormat?: 'percentage' | 'hidden'`
-  - Validate score is in valid range before rendering
-  - Always display as percentage (score * 100) if shown
-- **Test coverage:** Component not tested
-
-### Auth Callback Logic Complexity
-- **Files:** `src/app/auth/callback/route.ts:40-185`
-- **Why fragile:**
-  - McGill email validation (`isMcGillEmail()`) depends on `@mcgill.ca` or `@mail.mcgill.ca` domains
-  - If McGill changes email domains or adds institutional SSO with different domain, auth breaks
-  - Orphaned user cleanup (delete non-McGill users) happens inline with profile creation—if deletion fails, profile still created and user stuck
-  - Auto-admin assignment hardcoded to `ADMIN_EMAILS` env var without validation of email format
-- **Safe modification:**
-  - Store McGill domain list in database, not hardcoded
-  - Separate user cleanup into async job with retry logic
-  - Add logging for every auth state transition
-- **Test coverage:** Untested callback flow
-
-## Validation Gaps
-
-### Insufficient Input Validation on API Endpoints
-- **Issue:** Minimal validation on request bodies
-- **Files:**
-  - `src/app/api/recommendations/sync/route.ts:32-37` (only checks `event_id` presence)
-  - `src/app/api/events/[id]/rsvp/route.ts:24-26` (status validation is weak)
-  - `src/app/api/feedback/route.ts` (assumes request.json() succeeds, no field validation)
-- **Impact:** Malformed requests bypass checks and could insert bad data into database
-- **Fix approach:**
-  - Use Zod or similar validation library for all request payloads
-  - Validate UUIDs, email formats, date ranges before DB operations
-  - Return clear 400 errors with validation details
-
-### Cursor Validation in Pagination
-- **Issue:** Cursor is base64-decoded but schema validation is loose
-- **Files:** `src/app/api/events/route.ts:40-58`
-- **Impact:** Malicious cursor like `eyJzcm9ydFZhbHVlIjp9` (empty sortValue) passes validation but could cause query errors
-- **Fix approach:** Stricter bounds checking on numeric sortValues, regex validation on string sortValues
+**`getSession()` used for auth checks instead of `getUser()`:**
+- Symptoms: Two API routes use `supabase.auth.getSession()` for authentication. Supabase documentation warns that `getSession()` reads from local storage/cookies without server-side verification, making it spoofable.
+- Files: `src/app/api/recommendations/analytics/route.ts` (line 19), `src/app/api/health/route.ts` (line 160)
+- Trigger: A user could craft session cookies to pass the `getSession()` check without a valid token.
+- Workaround: The analytics route has RLS as a secondary guard. The health route uses it only to check if auth service is operational (not for access control), so the risk is lower there.
 
 ## Security Considerations
 
-### Console Logging in Production
-- **Risk:** Sensitive data may be logged to stdout in production
-- **Files:** Many API routes use `console.error()` and `console.log()` (28+ instances found)
-- **Current mitigation:** Next.js logs to stderr which isn't typically exposed, but errors could leak into client-side logs if caught and re-logged
-- **Recommendations:**
-  - Use structured logging (e.g., `pino`, `winston`) with log levels
-  - Never log full error objects or database query results
-  - Scrub sensitive fields before logging (email, token fragments)
+**Admin analytics endpoint lacks authorization:**
+- Risk: `GET /api/recommendations/analytics` requires only any authenticated session. The TODO on line 25 notes admin restriction should be added but is not implemented.
+- Files: `src/app/api/recommendations/analytics/route.ts` (lines 14-28)
+- Current mitigation: RLS limits returned data to the requesting user's own feedback rows.
+- Recommendations: Implement the `isAdmin()` check as noted in the TODO. Use the same `verifyAdmin()` pattern from `src/lib/admin.ts` used by other admin routes.
 
-### Admin Email Hardcoding
-- **Risk:** Admin email list in `process.env.ADMIN_EMAILS` could be leaked if .env is exposed
-- **Files:** `src/app/auth/callback/route.ts:20`
-- **Current mitigation:** Stored in .env.local (not committed)
-- **Recommendations:**
-  - Consider storing admin roles in database with audit trail
-  - Limit admin assignment to explicit migrations or admin panel, not auto-assign on signup
+**Admin calculate-popularity endpoint falls open without ADMIN_API_KEY:**
+- Risk: If `ADMIN_API_KEY` env var is not set, the endpoint accepts any request (line 61: `if (expectedKey && ...)`). This is intended for dev but dangerous if the env var is accidentally omitted in production.
+- Files: `src/app/api/admin/calculate-popularity/route.ts` (lines 57-66)
+- Current mitigation: The endpoint only recalculates scores, not destructive. But it uses a service role client with full DB access.
+- Recommendations: Fail closed: if `ADMIN_API_KEY` is not set, return 503 instead of allowing unauthenticated access.
 
-### Service Role Key in Client-Visible Code
-- **Risk:** `SUPABASE_SERVICE_ROLE_KEY` used in auth callback (server-side only) but could be exposed
-- **Files:** `src/app/auth/callback/route.ts:117-118`
-- **Current mitigation:** Only used in server routes, `process.env` access is server-only
-- **Recommendations:** Double-check that build doesn't accidentally include SUPABASE_SERVICE_ROLE_KEY in browser bundles (use Next.js strict env validation)
+**Non-null assertions on environment variables:**
+- Risk: Multiple Supabase client files use `process.env.NEXT_PUBLIC_SUPABASE_URL!` with TypeScript non-null assertion. If the env var is missing, this creates a client with `undefined` as the URL, causing cryptic runtime errors.
+- Files: `src/lib/supabase/client.ts` (line 11), `src/lib/supabase/server.ts` (line 14), `src/lib/supabase/service.ts` (line 11), `src/app/auth/callback/route.ts` (lines 59, 117)
+- Current mitigation: The middleware checks for these vars and passes through if missing (line 14 of `src/middleware.ts`). The health endpoint also validates them.
+- Recommendations: Add runtime validation at the Supabase client creation points, or use a validated config module that throws at startup.
 
-## Missing Critical Features
+**Rate limiting is in-memory only:**
+- Risk: The rate limiter in `src/middlewareRateLimit.ts` uses an in-memory `Map` on `globalThis`. In a multi-instance deployment (Vercel serverless), each instance has its own store, so limits are not shared.
+- Files: `src/middlewareRateLimit.ts` (lines 1-18)
+- Current mitigation: Comment on line 6 acknowledges this and suggests Vercel KV / Upstash Redis.
+- Recommendations: For production with multiple instances, replace with a distributed rate limiter. For a single-instance Vercel deployment, current approach is adequate.
 
-### Event Recurrence Not Supported
-- **Problem:** No database structure for recurring events (weekly club meetings, monthly mixers)
-- **Blocks:** Users can't easily find "every Tuesday event" without manual re-posting each week
-- **Impact:** Event creation friction increases, incomplete event data
+**Admin endpoints excluded from rate limiting:**
+- Risk: All `/api/admin/*` paths bypass the rate limiter entirely (line 76 of `src/middlewareRateLimit.ts`). If admin auth is bypassed, there is no secondary defense.
+- Files: `src/middlewareRateLimit.ts` (line 76)
+- Current mitigation: Admin routes use `verifyAdmin()` from `src/lib/admin.ts`.
+- Recommendations: Apply rate limiting to admin routes as well, with a more generous limit.
 
-### Event Reminders Not Implemented
-- **Problem:** Platform has no reminder/notification system for saved events
-- **Blocks:** Users can't be notified before an event they saved, reducing attendance
-- **Impact:** Reduced user engagement, saved events become stale bookmarks
+## Performance Bottlenecks
 
-### Recommendation Feedback Loop Missing
-- **Problem:** No way to capture "not interested" feedback to improve recommendations
-- **Blocks:** Recommendation engine has no signal for false positives, only implicit signal from saves
-- **Impact:** Recommendations may degrade if user interests change
+**RSVP counts fetched by loading all rows and filtering in JS:**
+- Problem: The RSVP GET endpoint fetches all non-cancelled RSVP rows for an event, then counts "going" and "interested" in JavaScript using `.filter().length`.
+- Files: `src/app/api/events/[id]/rsvp/route.ts` (lines 91-103)
+- Cause: Using `select("id, status")` without aggregation. For popular events with many RSVPs, this loads unnecessary data.
+- Improvement path: Use Supabase `.select('*', { count: 'exact', head: true })` with filters for each status, or create a database view/function that returns counts directly.
+
+**Events GET route fetches `select('*')` without club join, then fabricates club objects:**
+- Problem: The events list endpoint fetches all columns, then constructs synthetic `club` objects from the `organizer` string field (lines 253-261). This is a workaround for a missing join.
+- Files: `src/app/api/events/route.ts` (lines 177-264)
+- Cause: Comment on line 83 of `src/app/api/events/[id]/route.ts` says "Clubs table does not exist" but `clubs` table is referenced in types and other routes. The data model appears inconsistent.
+- Improvement path: Use a proper join (`select('*, club:clubs(*)')`) and remove the synthetic club fabrication.
+
+**Popularity calculation processes events sequentially in batches of 10:**
+- Problem: The admin endpoint calls `update_event_popularity` RPC individually for each event, batched by 10 with `Promise.all`. For large event counts this is slow.
+- Files: `src/app/api/admin/calculate-popularity/route.ts` (lines 104-139)
+- Cause: Individual RPC calls per event rather than a single bulk database function.
+- Improvement path: Create a single Postgres function `recalculate_all_popularity()` that processes all events in one transaction.
+
+## Fragile Areas
+
+**Tag mapping between DB and frontend:**
+- Files: `src/app/api/events/route.ts` (lines 30-41), `src/lib/tagMapping.ts`
+- Why fragile: Two separate tag mapping implementations exist. The events route has a hardcoded `tagMapping` Record that maps strings to `EventTag` enum values with a silent fallback to `EventTag.SOCIAL` for unknown tags. The `tagMapping.ts` module is used by other routes. Adding a new tag requires updating multiple files.
+- Safe modification: Centralize all tag mapping in `src/lib/tagMapping.ts` and import it in `src/app/api/events/route.ts`.
+- Test coverage: `src/__tests__/api/events/get-events.test.ts` tests the events route but does not verify tag mapping for unknown tags.
+
+**Event data model dual-schema (start_date/end_date vs event_date/event_time):**
+- Files: `src/app/api/events/route.ts` (lines 11-27, 224-226), `src/lib/supabase/types.ts`
+- Why fragile: The `EventRow` type in the events route has both `start_date`/`end_date` and `event_date`/`event_time` as optional fields, with fallback logic (`event.start_date ?? event.event_date`). This suggests a schema migration that was not fully completed.
+- Safe modification: Verify which columns the production DB actually uses, then remove the deprecated schema branch and update types.
+- Test coverage: Tests mock the data, so they cannot catch column-name mismatches with the real DB.
+
+**Auth callback with multiple `(supabase as any)` casts:**
+- Files: `src/app/auth/callback/route.ts` (lines 149, 165, 178)
+- Why fragile: The OAuth callback handles user creation, admin role assignment, and onboarding detection. Every DB call uses `as any`, so type changes silently break this critical flow. No test coverage exists for this route.
+- Safe modification: Update types first, then remove casts. Add integration tests.
+- Test coverage: No tests found for `src/app/auth/callback/route.ts`.
+
+## Scaling Limits
+
+**In-memory rate limiting:**
+- Current capacity: Works for a single Node.js process.
+- Limit: Breaks with multiple serverless function instances (each has its own store).
+- Scaling path: Move to Redis/Upstash-based rate limiting as noted in `src/middlewareRateLimit.ts` comments.
+
+**Recommendation service dependency:**
+- Current capacity: Single external service at `RECOMMENDATION_API_URL` (defaults to `localhost:8000`).
+- Limit: If the recommendation service is down, GET returns empty results with `source: "popular_fallback"` but POST returns 503.
+- Scaling path: The fallback behavior is already partially implemented. Consider caching recent recommendation results.
 
 ## Dependencies at Risk
 
-### No Outdated Dependencies Found
-- Stack uses modern, actively maintained libraries (Next.js 16, React 18, Supabase JS 2.49)
-- However, consider:
-  - `@swagger-api/apidom-ns-openapi-3-1`: Pre-release version (`1.0.0-rc.3`). May not be stable for production Swagger docs
-  - `next-swagger-doc`: Low-maintenance project. Alternatives: `tsoa`, `tRPC` for better type safety
+**None critical detected.** The project uses well-maintained packages (Next.js, Supabase SDK, Tailwind, shadcn/ui). No deprecated or unmaintained dependencies identified.
+
+## Missing Critical Features
+
+**No admin authorization on analytics endpoint:**
+- Problem: `GET /api/recommendations/analytics` is accessible to any authenticated user (TODO comment acknowledges this).
+- Blocks: Cannot safely expose recommendation analytics in production without leaking data across users (mitigated by RLS but not application-level).
+
+**No CSRF protection on state-changing API routes:**
+- Problem: POST/PATCH/DELETE routes rely solely on Supabase session cookies for auth. No CSRF token validation.
+- Blocks: Standard browser-based CSRF attacks could trigger state changes if a user is logged in.
 
 ## Test Coverage Gaps
 
-### API Recommendation Endpoint Lacks Tests
-- **What's not tested:** `/api/recommendations` endpoint (main complexity)
-- **Files:** `src/app/api/recommendations/route.ts` (437 lines, 0 tests)
-- **Risk:** k-means clustering logic, cold-start detection, fallback paths untested. Changes could break silently.
-- **Priority:** High—core business logic
+**Auth callback route (critical path, zero tests):**
+- What's not tested: OAuth code exchange, McGill email validation, user upsert, admin role assignment, onboarding redirect logic.
+- Files: `src/app/auth/callback/route.ts`
+- Risk: Breaking changes to Supabase auth SDK or user metadata format go undetected.
+- Priority: High
 
-### EventGrid Component Not Tested
-- **What's not tested:** EventGrid rendering, animation, empty state, loading state
-- **Files:** `src/components/events/EventGrid.tsx`
-- **Risk:** UI breaks without warning
-- **Priority:** Medium—can be caught by E2E tests, but unit coverage would be faster feedback
+**Admin routes (limited coverage):**
+- What's not tested: `src/app/api/admin/events/route.ts`, `src/app/api/admin/calculate-popularity/route.ts`, `src/app/api/admin/clubs/[id]/route.ts`, `src/app/api/admin/organizer-requests/[id]/route.ts`
+- Files: All routes under `src/app/api/admin/`
+- Risk: Admin operations (event approval, club management, popularity calculation) have no automated verification.
+- Priority: Medium
 
-### Auth Callback Not Tested
-- **What's not tested:** McGill email validation, non-McGill user deletion, admin assignment, profile creation
-- **Files:** `src/app/auth/callback/route.ts`
-- **Risk:** Auth flow regressions on code changes
-- **Priority:** High—authentication is critical path
+**Recommendation routes (no tests):**
+- What's not tested: `src/app/api/recommendations/route.ts` GET/POST handlers, fallback behavior, explanation generation.
+- Files: `src/app/api/recommendations/route.ts`, `src/app/api/recommendations/analytics/route.ts`, `src/app/api/recommendations/feedback/route.ts`, `src/app/api/recommendations/sync/route.ts`
+- Risk: Recommendation logic changes (user payload construction, feedback aggregation) could silently break personalization.
+- Priority: Medium
 
-### Classifier Pipeline Integration Untested
-- **What's not tested:** Full pipeline from Apify output → classification → webhook
-- **Files:** `src/lib/classifier-pipeline.ts`
-- **Risk:** Events stuck in pipeline or sent to wrong status if webhook fails
-- **Priority:** High—event ingestion is core feature
-
-### Error Handling in useEvents Hook Not Tested
-- **What's not tested:** Error scenarios, retry logic, pagination edge cases
-- **Files:** `src/hooks/useEvents.ts` (275 lines, 0 tests)
-- **Risk:** Silent failures when API returns errors, infinite loading states
-- **Priority:** Medium—affects all event listing pages
-
-## Known Issues
-
-### EventGrid TODO Not Tracked
-- **Issue:** Responsive grid, loading states incomplete per TODO comment
-- **Status:** Acknowledged but not in issue tracker. May be forgotten.
-- **Recommendation:** Create GitHub issue or move to backlog
-
-### Recommendation Sync TODO Not Tracked
-- **Issue:** TODO AS-6 references external system integration. Unclear if this is linked to actual task board or just inline comment.
-- **Status:** Unresolved. Route may be called by pipeline but does nothing.
-- **Recommendation:** Either complete integration or remove route. Verify nothing calls it first.
+**Client components (no component tests):**
+- What's not tested: `src/app/page.tsx` (home page), `src/components/events/EventCard.tsx`, `src/components/events/CreateEventForm.tsx`
+- Files: All components under `src/components/events/` except `EventFilters.test.tsx` and `FilterSidebar.test.tsx`
+- Risk: UI regressions in event display, filtering, and form submission go undetected.
+- Priority: Low (existing filter tests cover key component logic)
 
 ---
 
-*Concerns audit: 2026-02-25*
+*Concerns audit: 2026-03-05*

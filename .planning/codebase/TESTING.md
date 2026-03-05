@@ -1,421 +1,396 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-02-25
+**Analysis Date:** 2026-03-05
 
 ## Test Framework
 
 **Runner:**
-- Vitest 4.0.18 - Modern test runner with Vue/React support
-- Config: `vitest.config.ts` in project root
-- Setup file: `vitest.setup.ts` (imports `@testing-library/jest-dom/vitest`)
+- Vitest (bundled with project, no separate version pinned in package.json)
+- Config: `vitest.config.ts`
+- Environment: jsdom
+- Globals: enabled (`describe`, `it`, `expect`, `vi` available without import, though files import them explicitly)
+- Setup file: `vitest.setup.ts` (loads `@testing-library/jest-dom/vitest`)
 
 **Assertion Library:**
-- Vitest built-in matchers (expect API)
-- `@testing-library/jest-dom` for DOM matchers (e.g., `toBeInTheDocument()`)
+- Vitest built-in `expect` (compatible with Jest API)
+- `@testing-library/jest-dom/vitest` for DOM assertions (`toBeInTheDocument()`, `toHaveClass()`)
 
 **Run Commands:**
 ```bash
-npm run test        # Run tests in watch mode
-npm run test:run    # Run tests once and exit
+npx vitest              # Run all tests (watch mode by default)
+npx vitest run          # Run all tests once
+npx vitest run --coverage  # Coverage (if configured)
 ```
 
-**Environment:**
-- `jsdom` - JavaScript implementation of web standards for DOM testing
-- Test globals enabled (`globals: true` in config)
-- React 18 with `@vitejs/plugin-react` for JSX support
+Note: No `test` script is defined in `package.json`. Run vitest directly via npx.
 
 ## Test File Organization
 
 **Location:**
-- Co-located with source files using `.test.ts` or `.test.tsx` suffix
-- Some utility tests also live alongside implementation (e.g., `kmeans.test.ts` beside `kmeans.ts`)
-- Larger test suites can be in `src/__tests__/` directory
+- Mixed pattern: both co-located and centralized tests exist
+- Co-located: test file next to source file (e.g., `src/lib/dateValidation.test.ts` next to `src/lib/dateValidation.ts`)
+- Centralized: `src/__tests__/api/events/` for some API route tests
+- API route co-located: `src/app/api/events/route.test.ts`, `src/app/api/events/export/route.test.ts`
+- Component co-located: `src/components/ErrorBoundary.test.tsx`, `src/components/events/EventFilters.test.tsx`
 
 **Naming:**
-- Match source filename exactly with `.test.*` addition
-- Examples:
-  - `useEvents.ts` → `useEvents.test.ts`
-  - `EventFilters.tsx` → `EventFilters.test.tsx`
-  - `classifier.ts` → `classifier.test.ts`
+- `{filename}.test.ts` for TypeScript modules
+- `{filename}.test.tsx` for React components
+- No `.spec.` convention used
 
-**File Structure Example:**
+**Exclusions:**
+- `vitest.config.ts` excludes: `supabase/**`, `src/lib/kmeans.test.ts`
+- `tsconfig.json` excludes: `**/*.test.ts`, `**/*.test.tsx` from type-checking compilation
+
+**Structure:**
 ```
 src/
-├── hooks/
-│   ├── useEvents.ts
-│   └── useEvents.test.ts
+├── __tests__/
+│   └── api/events/
+│       ├── date-validation.test.ts
+│       ├── get-events.test.ts
+│       └── rsvp.test.ts
+├── app/api/events/
+│   ├── route.test.ts              # co-located with route.ts
+│   └── export/route.test.ts       # co-located with route.ts
 ├── components/
-│   ├── events/
-│   │   ├── EventCard.tsx
-│   │   └── EventFilters.test.tsx
+│   ├── ErrorBoundary.test.tsx     # co-located
+│   └── events/
+│       ├── EventFilters.test.tsx  # co-located
+│       └── FilterSidebar.test.tsx # co-located
+├── hooks/
+│   └── useEvents.test.ts         # co-located
 └── lib/
-    ├── classifier.ts
-    └── classifier.test.ts
+    ├── classifier.test.ts        # co-located
+    ├── classifier-pipeline.test.ts
+    ├── dateValidation.test.ts
+    ├── exportUtils.test.ts
+    └── image-upload.test.ts
 ```
 
 ## Test Structure
 
 **Suite Organization:**
 ```typescript
-describe("ComponentName or FunctionName", () => {
-  beforeEach(() => {
-    // Setup before each test
-  });
+// Pattern: file-level doc comment, imports, section-divided structure
+/**
+ * Unit tests for GET /api/events
+ * Covers: [list of scenarios]
+ * Supabase and tagMapping are mocked -- no live DB required.
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-  afterEach(() => {
-    // Cleanup after each test
-    cleanup();
-    vi.clearAllMocks();
-  });
+// ─── Types ───────────────────────────────────────────────
+interface MockEvent { /* ... */ }
 
-  describe("Feature or Method Name", () => {
-    it("should describe the behavior", () => {
-      // Arrange
-      const input = "value";
+// ─── Fixtures ────────────────────────────────────────────
+function makeEvent(overrides: Partial<MockEvent> = {}): MockEvent { /* ... */ }
 
-      // Act
-      const result = functionUnderTest(input);
+// ─── Mocks ───────────────────────────────────────────────
+vi.mock("@/lib/supabase/server", () => ({ /* ... */ }));
 
-      // Assert
-      expect(result).toBe("expected");
-    });
-  });
-});
-```
+// ─── Helpers ─────────────────────────────────────────────
+function makeRequest(params: Record<string, string> = {}): NextRequest { /* ... */ }
 
-**Patterns from codebase:**
-
-```typescript
-// From src/hooks/useEvents.test.ts - Hook testing
-describe("useEvents Hook", () => {
-  beforeEach(() => {
-    mockFetch.mockClear();
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe("Initial Fetch", () => {
-    it("should fetch events on mount", async () => {
-      const events = [createMockEvent("1"), createMockEvent("2")];
-      mockFetch.mockResolvedValueOnce(mockApiResponse(events, 2));
-
-      const { result } = renderHook(() => useEvents());
-
-      expect(result.current.loading).toBe(true);
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(result.current.events).toEqual(events);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-    });
-  });
-});
-```
-
-```typescript
-// From src/components/ErrorBoundary.test.tsx - Component testing
-describe("ErrorBoundary", () => {
-  beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("renders the default fallback when a child throws", () => {
-    render(
-      <ErrorBoundary fallbackMessage="Calendar failed">
-        <Thrower />
-      </ErrorBoundary>
-    );
-
-    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    expect(screen.getByText("Calendar failed")).toBeInTheDocument();
-  });
-});
-```
-
-## Mocking
-
-**Framework:** Vitest's `vi` object (vi.mock, vi.fn, vi.spyOn)
-
-**Global Mocks:**
-```typescript
-// Mock fetch globally (from useEvents.test.ts)
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
-// Mock Supabase client (from events/route.test.ts)
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(),
-}));
-
-vi.mock("@/lib/tagMapping", () => ({
-  transformEventFromDB: (event: unknown) => event,
-}));
-```
-
-**Function Mocks:**
-```typescript
-// Mock implementation with resolved value
-mockFetch.mockResolvedValueOnce({
-  ok: true,
-  json: async () => ({ events: [...], total: 10 }),
+// ─── Module reset ────────────────────────────────────────
+let GET: (req: NextRequest) => Promise<Response>;
+beforeEach(async () => {
+  vi.resetModules();
+  vi.clearAllMocks();
+  // Re-import route handler after mock reset
+  const routeModule = await import("@/app/api/events/route");
+  GET = routeModule.GET;
 });
 
-// Mock implementation with rejection
-mockFetch.mockRejectedValueOnce(new Error("Network error"));
-
-// Mock with custom implementation
-mockFetch.mockImplementationOnce(() => loadMorePromise);
-
-// Spy on console methods
-vi.spyOn(console, "error").mockImplementation(() => {});
+// ─── Test Groups ─────────────────────────────────────────
+describe("GET /api/events -- success", () => { /* ... */ });
+describe("GET /api/events -- error handling", () => { /* ... */ });
 ```
 
 **Patterns:**
-- Mocks cleared in `beforeEach` or `afterEach` to isolate tests
-- `vi.clearAllMocks()` in `afterEach()` to reset all mocks
-- `vi.restoreAllMocks()` when spying on built-ins (console, etc.)
+- Use section dividers with `// ─── Section Name ───` lines
+- Group related tests in nested `describe()` blocks named after the endpoint and scenario category
+- `beforeEach` for mock reset and module re-import (API route tests)
+- `afterEach` with `cleanup()` and `vi.clearAllMocks()` for component tests
+- Test names use descriptive sentences: `"returns 200 with events array and pagination metadata"`
 
-**What to Mock:**
-- External API calls (fetch requests)
-- Supabase clients and queries
-- Utility functions that make side effects
-- Console methods (to suppress logs during tests)
-- Browser APIs like sessionStorage
+## Mocking
 
-**What NOT to Mock:**
-- Pure utility functions (date formatting, validators)
-- React hooks from React library
-- Internal component logic (let components render naturally)
-- Type definitions and constants
+**Framework:** Vitest built-in `vi` (compatible with Jest mocking API)
 
-## Fixtures and Factories
-
-**Test Data Creation:**
+**Supabase Server Client Mock (most common pattern):**
 ```typescript
-// Factory function (from useEvents.test.ts)
-const createMockEvent = (id: string, date: string = "2026-02-25"): Event => ({
-  id,
-  title: `Event ${id}`,
-  description: `Description for event ${id}`,
-  event_date: date,
-  event_time: "18:00",
-  start_date: new Date(date).toISOString(),
-  end_date: new Date(date).toISOString(),
-  location: "Test Location",
-  club_id: "club-1",
-  tags: ["Academic"],
-  image_url: null,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  status: "approved",
-  club: {
-    id: "club-1",
-    name: "Test Club",
-    instagram_handle: "@testclub",
-    logo_url: null,
-    description: "Test club description",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-});
+// Pattern from src/__tests__/api/events/get-events.test.ts
+const mockSupabase = {
+  from: vi.fn(),
+};
 
-// API response factory
-const mockApiResponse = (
-  events: Event[],
-  total: number,
-  nextCursor: string | null = null,
-  prevCursor: string | null = null
-) => ({
-  ok: true,
-  json: async () => ({
-    events,
-    total,
-    nextCursor,
-    prevCursor,
-  }),
-});
-```
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn(() => Promise.resolve(mockSupabase)),
+}));
 
-**Location:**
-- Factory functions defined at top of test file
-- Reusable across multiple tests in same file
-- Allows easy customization with `overrides` parameter
-
-```typescript
-// Example with overrides (from classifier.test.ts)
-function makePost(overrides: Partial<InstagramPost> = {}): InstagramPost {
-  return {
-    id: "test-post-1",
-    caption: "",
-    timestamp: "2026-02-20T12:00:00Z",
-    image_url: "https://example.com/image.jpg",
-    account: "mcgill_sus",
-    ...overrides,
-  };
+// Chainable query builder
+function createChainableBuilder() {
+  const builder: Record<string, unknown> = {};
+  const chainMethods = ["select", "eq", "order", "overlaps", "or", "gte", "lte"];
+  for (const method of chainMethods) {
+    builder[method] = vi.fn().mockReturnValue(builder);
+  }
+  // Terminal method resolves the query
+  builder.range = vi.fn().mockImplementation(() => Promise.resolve(mockQueryResult));
+  return builder;
 }
 ```
 
-## Coverage
+**Supabase Auth Mock:**
+```typescript
+// Pattern from src/__tests__/api/events/rsvp.test.ts
+let mockUser: { id: string } | null = null;
+let mockAuthError: { message: string } | null = null;
 
-**Requirements:** Not enforced (no coverage threshold specified in config)
-
-**View Coverage:** Run tests with coverage flag (if configured)
-```bash
-npm run test:run -- --coverage
+const mockSupabase = {
+  auth: {
+    getUser: vi.fn(() =>
+      Promise.resolve({
+        data: { user: mockUser },
+        error: mockAuthError,
+      })
+    ),
+  },
+  from: vi.fn((table: string) => { /* table-specific mock */ }),
+};
 ```
 
-**Exclusions (from vitest.config.ts):**
-- Supabase functions directory excluded
-- `kmeans.test.ts` explicitly excluded (likely GPU/heavy computation test)
+**Global Fetch Mock:**
+```typescript
+// Pattern from src/hooks/useEvents.test.ts
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+// Or using stubGlobal:
+vi.stubGlobal("fetch", mockFetch);
+```
+
+**Component Child Mock:**
+```typescript
+// Pattern from src/components/events/FilterSidebar.test.tsx
+vi.mock("@/components/events/EventFilters", () => ({
+  EventFilters: ({ onFilterChange, initialTags }: any) => (
+    <div data-testid="mock-event-filters">
+      <button onClick={() => onFilterChange?.({ tags: ["academic"] })}>
+        Trigger Filter
+      </button>
+    </div>
+  ),
+}));
+```
+
+**Hoisted Mocks (for module-level import):**
+```typescript
+// Pattern from src/app/api/events/export/route.test.ts
+const { mockFrom, mockQuery, mockEvents } = vi.hoisted(() => {
+  // Define mocks that must exist before module import
+  return { mockFrom, mockQuery, mockEvents };
+});
+
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn().mockResolvedValue({ from: mockFrom }),
+}));
+```
+
+**What to Mock:**
+- Supabase client (both server and browser): always mock, never hit real DB
+- `@/lib/tagMapping`: mock to pass-through when not testing tag transformation
+- Global `fetch`: mock in hook/utility tests
+- Child components: mock when testing parent behavior in isolation
+- `window.URL.createObjectURL` / `revokeObjectURL`: mock in download/export tests
+- `console.error`: spy and suppress in ErrorBoundary tests
+
+**What NOT to Mock:**
+- Pure utility functions under test (e.g., `isValidISODate`, `classifyPost`, `extractDate`)
+- React Testing Library utilities
+- NextRequest/NextResponse constructors (use real instances)
+
+## Fixtures and Factories
+
+**Test Data:**
+```typescript
+// Factory function pattern (most common)
+// From src/__tests__/api/events/get-events.test.ts
+function makeEvent(overrides: Partial<MockEvent> = {}): MockEvent {
+  return {
+    id: "evt-1",
+    title: "Hackathon 2099",
+    description: "A coding competition",
+    start_date: "2099-06-15T10:00:00Z",
+    // ... all fields with defaults
+    ...overrides,
+  };
+}
+
+// From src/hooks/useEvents.test.ts
+const createMockEvent = (id: string, date: string = "2026-02-25"): Event => ({
+  id,
+  title: `Event ${id}`,
+  // ... derived from parameters
+});
+
+// API response wrapper
+const mockApiResponse = (events: Event[], total: number, nextCursor: string | null = null) => ({
+  ok: true,
+  json: async () => ({ events, total, nextCursor }),
+});
+```
+
+**Constants for Test Data:**
+```typescript
+// Pattern from src/__tests__/api/events/date-validation.test.ts
+const FUTURE_DATE = "2099-12-31";
+const FUTURE_DATETIME = "2099-12-31T09:00:00Z";
+const PAST_DATE = "2000-01-01";
+```
+
+**Location:**
+- Fixtures defined inline at the top of each test file
+- No shared fixtures directory -- each test is self-contained
+- Factory functions use `make` or `create` prefix
+
+## Coverage
+
+**Requirements:** None enforced. No coverage thresholds configured in `vitest.config.ts`.
+
+**View Coverage:**
+```bash
+npx vitest run --coverage
+```
 
 ## Test Types
 
 **Unit Tests:**
-- Scope: Individual functions, hooks, utilities
-- Approach: Test function inputs and outputs
-- Examples: `utils.ts` (formatDate, formatTime, isMcGillEmail), pure functions
+- Pure functions: `src/lib/dateValidation.test.ts`, `src/lib/classifier.test.ts`
+- Tested in isolation with direct function imports
+- No mocking needed for pure logic
 
-**Integration Tests:**
-- Scope: Multiple components working together, API routes with mocked DB
-- Approach: Test data flow through system
-- Examples:
-  - `useEvents.test.ts` - Hook with mocked fetch, pagination, filtering
-  - `events/route.test.ts` - GET endpoint with mocked Supabase client
-  - Component integration tests (ErrorBoundary with child components)
+**API Route Tests:**
+- `src/__tests__/api/events/get-events.test.ts`, `src/__tests__/api/events/rsvp.test.ts`
+- `src/app/api/events/route.test.ts`, `src/app/api/events/export/route.test.ts`
+- Mock Supabase client, import and call route handler functions directly
+- Test HTTP status codes, response body shape, and Supabase query builder calls
+- Use `vi.resetModules()` + dynamic `import()` in `beforeEach` to get fresh handler per test
 
-**E2E Tests:**
-- Framework: Not used in current setup
-- Approach: Would test complete user flows end-to-end
+**Component Tests:**
+- `src/components/ErrorBoundary.test.tsx`, `src/components/events/EventFilters.test.tsx`
+- Use `@testing-library/react` (`render`, `screen`, `fireEvent`, `waitFor`)
+- Test rendering, user interactions, and callback invocations
+- Mock child components to isolate parent behavior
+
+**Hook Tests:**
+- `src/hooks/useEvents.test.ts`
+- Use `renderHook` and `act` from `@testing-library/react`
+- Mock global `fetch` to control API responses
+- Test state transitions, pagination, error handling
+
+**Pipeline/Integration Tests:**
+- `src/lib/classifier-pipeline.test.ts`
+- Test multi-step data transformations end-to-end
+- Mock external services (fetch, Supabase storage) but exercise internal pipeline logic
 
 ## Common Patterns
 
-**Async Testing (from useEvents.test.ts):**
+**Async Testing:**
 ```typescript
-// For hooks that fetch data
-const { result } = renderHook(() => useEvents());
+// API route test pattern
+it("returns 200 with events", async () => {
+  const res = await GET(makeRequest());
+  expect(res.status).toBe(200);
 
-expect(result.current.loading).toBe(true);
-
-await waitFor(() => {
-  expect(result.current.loading).toBe(false);
+  const body = await res.json();
+  expect(body.events).toHaveLength(1);
 });
 
-expect(result.current.events).toEqual(events);
-```
-
-```typescript
-// For async actions within components
-const user = userEvent.setup();
-await user.click(screen.getByRole("button", { name: "Reset" }));
-expect(screen.getByText("Recovered content")).toBeInTheDocument();
-```
-
-```typescript
-// For promise-based API calls
-await act(async () => {
-  await result.current.loadAll();
-});
-
-await waitFor(() => {
-  expect(result.current.loading).toBe(false);
-});
-```
-
-**Error Testing (from useEvents.test.ts):**
-```typescript
-// Test error state
-it("should handle fetch errors", async () => {
-  mockFetch.mockRejectedValueOnce(new Error("Network error"));
-
+// Hook test with waitFor
+it("should fetch events on mount", async () => {
+  mockFetch.mockResolvedValueOnce(mockApiResponse(events, 2));
   const { result } = renderHook(() => useEvents());
 
+  expect(result.current.loading).toBe(true);
   await waitFor(() => {
     expect(result.current.loading).toBe(false);
   });
+  expect(result.current.events).toEqual(events);
+});
+```
 
+**Error Testing:**
+```typescript
+// API route error pattern
+it("returns 500 when Supabase returns an error", async () => {
+  mockQueryResult = {
+    data: null,
+    error: { message: "Database connection failed" },
+    count: null,
+  };
+  const res = await GET(makeRequest());
+  expect(res.status).toBe(500);
+  const body = await res.json();
+  expect(body).toHaveProperty("error");
+});
+
+// Hook error pattern
+it("should handle fetch errors", async () => {
+  mockFetch.mockRejectedValueOnce(new Error("Network error"));
+  const { result } = renderHook(() => useEvents());
+  await waitFor(() => {
+    expect(result.current.loading).toBe(false);
+  });
   expect(result.current.error).toBeInstanceOf(Error);
   expect(result.current.error?.message).toBe("Network error");
-  expect(result.current.events).toEqual([]);
 });
 ```
 
-**Component Render Testing (from EventFilters.test.tsx):**
+**Dynamic Module Import Pattern (API route tests):**
 ```typescript
-// Test rendering with props
-it("initializes with provided initialTags", () => {
-  const initialTags = [EVENT_TAGS[0], EVENT_TAGS[1]];
-  render(<EventFilters initialTags={initialTags} />);
+// Reset and re-import route handlers in beforeEach to get clean mock state
+let GET: (req: NextRequest) => Promise<Response>;
 
-  expect(
-    screen.getByRole("button", { name: /clear all filters/i })
-  ).toBeInTheDocument();
+beforeEach(async () => {
+  vi.resetModules();
+  vi.clearAllMocks();
+  mockQueryResult = { data: [makeEvent()], error: null, count: 1 };
+  mockSupabase.from.mockImplementation(() => createChainableBuilder());
+
+  const routeModule = await import("@/app/api/events/route");
+  GET = routeModule.GET as typeof GET;
 });
 ```
 
-**User Interaction Testing (from EventFilters.test.tsx):**
+**Component Interaction Testing:**
 ```typescript
-// Test click handlers and state changes
+// From src/components/events/EventFilters.test.tsx
 it("calls onFilterChange when a category is toggled on", async () => {
-  const user = userEvent.setup();
   const handleFilterChange = vi.fn();
-
   render(<EventFilters onFilterChange={handleFilterChange} />);
 
-  const targetTag = EVENT_TAGS[0];
-  const categoryLabel = EVENT_CATEGORIES[targetTag].label;
-
   const button = screen.getByRole("button", { name: categoryLabel });
-  await user.click(button);
+  fireEvent.click(button);
 
-  expect(handleFilterChange).toHaveBeenCalledWith({
-    tags: [targetTag],
+  await waitFor(() => {
+    expect(handleFilterChange).toHaveBeenCalledTimes(1);
+    expect(handleFilterChange).toHaveBeenCalledWith({ tags: [targetTag] });
   });
 });
 ```
 
-**API Route Testing (from events/route.test.ts):**
-```typescript
-// Test Next.js API route handlers
-const request = new NextRequest("http://localhost/api/events?limit=2");
-const response = await GET(request);
-const body = await response.json();
+## Test File Count
 
-expect(response.status).toBe(200);
-expect(body.events).toHaveLength(2);
-expect(body.prevCursor).toBeNull();
-expect(body.nextCursor).toBeTruthy();
-```
-
-## Testing Best Practices
-
-**Isolation:**
-- Clear all mocks between tests
-- Use `cleanup()` from testing-library to clean up DOM
-- Reset refs and state for each test
-
-**Naming:**
-- Test description starts with "should" for clarity
-- Use `describe()` to group related tests
-- Nested describe blocks for logical organization
-
-**Async Handling:**
-- Use `waitFor()` for assertions that depend on async state updates
-- Use `act()` wrapper when directly updating hook state in tests
-- Proper timeouts for long-running operations
-
-**Assertions:**
-- One primary assertion per test (though multiple related assertions OK)
-- Use specific matchers (`toEqual` not `toBe` for objects)
-- Check important properties, not implementation details
+| Category | Count | Files |
+|----------|-------|-------|
+| API route tests | 5 | `src/__tests__/api/events/*.test.ts` (3), `src/app/api/events/route.test.ts`, `src/app/api/events/export/route.test.ts` |
+| Component tests | 3 | `ErrorBoundary.test.tsx`, `EventFilters.test.tsx`, `FilterSidebar.test.tsx` |
+| Hook tests | 1 | `useEvents.test.ts` |
+| Lib/utility tests | 5 | `classifier.test.ts`, `classifier-pipeline.test.ts`, `dateValidation.test.ts`, `exportUtils.test.ts`, `image-upload.test.ts` |
+| **Total** | **14** | (excluding `kmeans.test.ts` which is excluded from vitest config) |
 
 ---
 
-*Testing analysis: 2026-02-25*
+*Testing analysis: 2026-03-05*
