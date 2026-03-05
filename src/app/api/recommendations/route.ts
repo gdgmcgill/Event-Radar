@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rerankWithMMR, type RecommendationItem as DiversityRecommendationItem } from "@/lib/diversity";
 
 // Recommendation service URL (configurable via environment variable)
 const RECOMMENDATION_API_URL =
@@ -290,6 +291,16 @@ export async function GET(request: NextRequest) {
 
     const data: RecommendResponse = await response.json();
 
+    // Apply MMR diversity re-ranking
+    const diversityParam = searchParams.get("diversity");
+    const diversityLambda = diversityParam ? parseFloat(diversityParam) : 0.7;
+    const lambda = Math.max(0, Math.min(1, isNaN(diversityLambda) ? 0.7 : diversityLambda));
+
+    const { items: diversifiedRecs, metadata: diversityMetadata } = rerankWithMMR(
+      data.recommendations as unknown as DiversityRecommendationItem[],
+      lambda
+    );
+
     // Determine source: if no personal signals exist, this is a popular fallback
     const hasPersonalSignals =
       feedbackPayload.length > 0 ||
@@ -310,9 +321,9 @@ export async function GET(request: NextRequest) {
 
     const userInterests = userProfile?.interest_tags ?? [];
     const recommendationsWithExplanations: RecommendationItemWithExplanation[] =
-      data.recommendations.map((rec) => ({
+      diversifiedRecs.map((rec) => ({
         ...rec,
-        explanation: generateExplanation(rec, userInterests, positiveFeedbackTags, source),
+        explanation: generateExplanation(rec as unknown as RecommendationItem, userInterests, positiveFeedbackTags, source),
       }));
 
     return NextResponse.json(
@@ -320,6 +331,7 @@ export async function GET(request: NextRequest) {
         ...data,
         source,
         recommendations: recommendationsWithExplanations,
+        diversity_metadata: diversityMetadata,
       },
       { headers: { "Cache-Control": "private, no-store" } }
     );
