@@ -82,3 +82,11 @@ export const EVENT_CATEGORIES = {
  */
 export const RECOMMENDATION_THRESHOLD = 3;
 
+export const API_ENDPOINTS = {
+  ADMIN_CALCULATE_POPULARITY: "/api/admin/calculate-popularity",
+  // A/B Testing endpoints
+  ADMIN_EXPERIMENTS: "/api/admin/experiments",
+  ADMIN_EXPERIMENT_DETAIL: (id: string) => `/api/admin/experiments/${id}`,
+  ADMIN_EXPERIMENT_RESULTS: (id: string) => `/api/admin/experiments/${id}/results`,
+};
+
