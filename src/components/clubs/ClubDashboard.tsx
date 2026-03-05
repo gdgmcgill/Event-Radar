@@ -10,6 +10,7 @@ import { ClubOverviewTab } from "@/components/clubs/ClubOverviewTab";
 import { ClubSettingsTab } from "@/components/clubs/ClubSettingsTab";
 import { ClubMembersTab } from "@/components/clubs/ClubMembersTab";
 import { ClubEventsTab } from "@/components/clubs/ClubEventsTab";
+import { ClubAnalyticsTab } from "@/components/clubs/ClubAnalyticsTab";
 import type { Club } from "@/types";
 
 interface ClubDashboardProps {
@@ -78,6 +79,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           {isOwner && (
             <TabsTrigger value="settings">Settings</TabsTrigger>
           )}
@@ -97,6 +99,10 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
 
         <TabsContent value="events">
           <ClubEventsTab clubId={clubId} clubName={club.name} />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <ClubAnalyticsTab clubId={clubId} />
         </TabsContent>
 
         {isOwner && (

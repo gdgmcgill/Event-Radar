@@ -29,6 +29,7 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-easy-crop": "^5.5.6",
+    "recharts": "^3.7.0",
     "redoc": "^2.5.2",
     "swagger-ui-react": "^5.30.2",
     "swr": "^2.3.7",
