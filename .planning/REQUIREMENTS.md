@@ -16,13 +16,13 @@ Requirements for the club organizer rework milestone. Each maps to roadmap phase
 
 ### Event Management
 
-- [ ] **EVNT-01**: Organizer can create an event for their club with title, description, date/time, location, tags, and image, with the club pre-selected via a club selector dropdown
-- [ ] **EVNT-02**: Organizer can view a list of their club's events showing title, date, status (pending/approved/rejected), and RSVP count
+- [x] **EVNT-01**: Organizer can create an event for their club with title, description, date/time, location, tags, and image, with the club pre-selected via a club selector dropdown
+- [x] **EVNT-02**: Organizer can view a list of their club's events showing title, date, status (pending/approved/rejected), and RSVP count
 - [ ] **EVNT-03**: Organizer can edit an existing event's details (title, description, date, location, tags, image) from the club management page
-- [ ] **EVNT-04**: An event created by a club owner or organizer for their own club is auto-approved (status set to 'approved' without admin intervention)
-- [ ] **EVNT-05**: Organizer can see RSVP counts (going/interested) for each of their events
+- [x] **EVNT-04**: An event created by a club owner or organizer for their own club is auto-approved (status set to 'approved' without admin intervention)
+- [x] **EVNT-05**: Organizer can see RSVP counts (going/interested) for each of their events
 - [ ] **EVNT-06**: Organizer can duplicate an existing event to pre-fill the creation form with its details (title, description, location, tags) for quick recurring event creation
-- [ ] **EVNT-07**: When a club publishes a new event, all club followers receive an in-app notification
+- [x] **EVNT-07**: When a club publishes a new event, all club followers receive an in-app notification
 
 ### Team Management
 
@@ -97,13 +97,13 @@ Deferred to future milestones. Tracked but not in current roadmap.
 | CLUB-02 | Phase 1 | Complete (01-01) |
 | CLUB-03 | Phase 1 | Complete (01-01) |
 | CLUB-04 | Phase 1 | Complete (01-03) |
-| EVNT-01 | Phase 2 | Pending |
-| EVNT-02 | Phase 2 | Pending |
+| EVNT-01 | Phase 2 | Complete |
+| EVNT-02 | Phase 2 | Complete |
 | EVNT-03 | Phase 2 | Pending |
-| EVNT-04 | Phase 2 | Pending |
-| EVNT-05 | Phase 2 | Pending |
+| EVNT-04 | Phase 2 | Complete |
+| EVNT-05 | Phase 2 | Complete |
 | EVNT-06 | Phase 2 | Pending |
-| EVNT-07 | Phase 2 | Pending |
+| EVNT-07 | Phase 2 | Complete |
 | TEAM-01 | Phase 1 | Complete (01-01) |
 | TEAM-02 | Phase 1 | Complete (01-01) |
 | TEAM-03 | Phase 1 | Complete (01-01) |

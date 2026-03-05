@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 01-02-PLAN.md (all tasks, checkpoint approved). 01-03 also complete. Phase 1 done.
-last_updated: "2026-03-05T20:45:46.804Z"
-last_activity: 2026-03-05 -- Completed plan 01-03 (Organizer Management Pages, checkpoint approved)
+status: in-progress
+stopped_at: Completed 02-01-PLAN.md (Event Listing & Creation)
+last_updated: "2026-03-05T21:10:00.000Z"
+last_activity: 2026-03-05 -- Completed plan 02-01 (Event Listing & Creation)
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 43
+  total_plans: 5
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -21,33 +21,34 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Club organizers can effortlessly manage their clubs and post events, while students can discover and engage with campus events that matter to them
-**Current focus:** Phase 1 complete. Next: Phase 2 - Event Management
+**Current focus:** Phase 2 - Event Management (Plan 1 complete)
 
 ## Current Position
 
-Phase: 1 of 3 (Club Infrastructure and Team Management) -- COMPLETE
-Plan: 3 of 3 in current phase (all done)
-Status: Phase 1 complete. Ready for Phase 2.
-Last activity: 2026-03-05 -- Completed plan 01-03 (Organizer Management Pages, checkpoint approved)
+Phase: 2 of 3 (Event Management)
+Plan: 1 of 2 in current phase (02-01 complete)
+Status: Plan 02-01 complete. Ready for 02-02.
+Last activity: 2026-03-05 -- Completed plan 02-01 (Event Listing & Creation)
 
-Progress: [████░░░░░░] 43%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5min
-- Total execution time: 0.25 hours
+- Total plans completed: 4
+- Average duration: 4.5min
+- Total execution time: 0.30 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 3 | 15min | 5min |
+| 2 | 1 | 3min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (5min), 01-02 (5min), 01-03 (5min)
-- Trend: stable
+- Last 5 plans: 01-01 (5min), 01-02 (5min), 01-03 (5min), 02-01 (3min)
+- Trend: improving
 
 *Updated after each plan completion*
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [01-03] Server-side single-club redirect to avoid flash of list page
 - [01-03] MyClubsList as separate client component to keep page.tsx as server component
 - [01-03] Role check via useMyClubs data rather than separate API call
+- [02-01] Fire-and-forget pattern for notification fanout (non-blocking, error-logged)
+- [02-01] Same endpoint returns different data based on membership (organizer vs public)
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T20:33:08.000Z
-Stopped at: Completed 01-02-PLAN.md (all tasks, checkpoint approved). 01-03 also complete. Phase 1 done.
-Resume file: .planning/phases/02-event-management/02-01-PLAN.md
+Last session: 2026-03-05T21:10:00.000Z
+Stopped at: Completed 02-01-PLAN.md (Event Listing & Creation)
+Resume file: .planning/phases/02-event-management/02-02-PLAN.md
