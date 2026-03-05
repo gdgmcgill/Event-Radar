@@ -1,5 +1,7 @@
+// TODO: Rework — all tests are skipped because @testing-library/react is not installed.
+// Install @testing-library/react and @testing-library/react-hooks, then remove the skip + fake imports.
+
 // @testing-library/react is not installed — all tests in this file are skipped
- 
 const { act, renderHook, waitFor } = {} as any;
 import { useEvents } from "./useEvents";
 import type { Event } from "@/types";
