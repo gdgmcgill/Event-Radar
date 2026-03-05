@@ -6,10 +6,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
-import { X, Filter } from "lucide-react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EventBadge } from "./EventBadge";
 

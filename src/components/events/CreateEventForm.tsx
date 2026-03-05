@@ -4,15 +4,12 @@ import { useState, useEffect } from "react";
 import { classifyTags } from "@/lib/classifier";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle,
   Loader2,
-  Upload,
-  X,
   GraduationCap,
   Users,
   Trophy,
@@ -181,7 +178,6 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
       }
 
       setSuccess(true);
-      onSuccess?.();
       // Reset form
       setFormData({
         title: "",
