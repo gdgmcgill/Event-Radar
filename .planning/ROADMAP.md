@@ -32,8 +32,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01: Club API Foundation (teardown, migration, API routes, SWR hooks)
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [x] 01-02: Public Club Pages & Invite Acceptance
+- [x] 01-03: Organizer Management Pages (My Clubs list, dashboard, settings, members, quick-switch)
 
 ### Phase 2: Event Management
 **Goal**: Organizers can create, edit, list, and duplicate events for their clubs, with auto-approval for their own clubs, RSVP visibility, and follower notifications on publish
@@ -72,6 +72,6 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Club Infrastructure and Team Management | 1/3 | In progress | - |
+| 1. Club Infrastructure and Team Management | 3/3 | In progress (checkpoint pending) | - |
 | 2. Event Management | 0/2 | Not started | - |
 | 3. Analytics and Reviews | 0/2 | Not started | - |

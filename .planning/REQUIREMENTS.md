@@ -10,9 +10,9 @@ Requirements for the club organizer rework milestone. Each maps to roadmap phase
 ### Club Management
 
 - [x] **CLUB-01**: User can view a public club page showing the club's logo, name, description, category, Instagram link, follower count, and upcoming/past events *(API ready: 01-01)*
-- [x] **CLUB-02**: Club owner can edit their club's name, description, logo, category, and Instagram link from a dedicated management page, and see changes persist after reload *(API ready: 01-01)*
-- [x] **CLUB-03**: Organizer can view a "My Clubs" list page showing all clubs they own or organize, with club name, logo, role, and member count *(API ready: 01-01)*
-- [ ] **CLUB-04**: Organizer can switch between clubs via a quick-switch dropdown in the club management view without navigating back to the list
+- [x] **CLUB-02**: Club owner can edit their club's name, description, logo, category, and Instagram link from a dedicated management page, and see changes persist after reload *(API: 01-01, UI: 01-03)*
+- [x] **CLUB-03**: Organizer can view a "My Clubs" list page showing all clubs they own or organize, with club name, logo, role, and member count *(API: 01-01, UI: 01-03)*
+- [x] **CLUB-04**: Organizer can switch between clubs via a quick-switch dropdown in the club management view without navigating back to the list *(UI: 01-03)*
 
 ### Event Management
 
@@ -26,9 +26,9 @@ Requirements for the club organizer rework milestone. Each maps to roadmap phase
 
 ### Team Management
 
-- [x] **TEAM-01**: Club owner can view all club members with their role (owner/organizer) and joined date *(API ready: 01-01)*
-- [x] **TEAM-02**: Club owner can invite a McGill email address to join the club as an organizer, generating a shareable invitation link *(API ready: 01-01)*
-- [x] **TEAM-03**: Club owner can remove an organizer from the club (but cannot remove themselves) *(API ready: 01-01)*
+- [x] **TEAM-01**: Club owner can view all club members with their role (owner/organizer) and joined date *(API: 01-01, UI: 01-03)*
+- [x] **TEAM-02**: Club owner can invite a McGill email address to join the club as an organizer, generating a shareable invitation link *(API: 01-01, UI: 01-03)*
+- [x] **TEAM-03**: Club owner can remove an organizer from the club (but cannot remove themselves) *(API: 01-01, UI: 01-03)*
 - [x] **TEAM-04**: A user who opens an invitation link while logged in with the matching email is added to the club as an organizer *(API ready: 01-01)*
 
 ### Student Engagement
@@ -96,7 +96,7 @@ Deferred to future milestones. Tracked but not in current roadmap.
 | CLUB-01 | Phase 1 | Complete (01-01) |
 | CLUB-02 | Phase 1 | Complete (01-01) |
 | CLUB-03 | Phase 1 | Complete (01-01) |
-| CLUB-04 | Phase 1 | Pending |
+| CLUB-04 | Phase 1 | Complete (01-03) |
 | EVNT-01 | Phase 2 | Pending |
 | EVNT-02 | Phase 2 | Pending |
 | EVNT-03 | Phase 2 | Pending |
