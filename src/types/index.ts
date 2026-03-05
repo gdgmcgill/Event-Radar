@@ -81,17 +81,22 @@ export interface ClubMember {
   user?: User;
 }
 
-export interface OrganizerRequest {
+export interface ClubInvitation {
+  id: string;
+  club_id: string;
+  inviter_id: string;
+  invitee_email: string;
+  token: string;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+}
+
+export interface ClubFollower {
   id: string;
   user_id: string;
   club_id: string;
-  message: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  reviewed_by: string | null;
   created_at: string;
-  updated_at: string;
-  club?: Club;
-  user?: User;
 }
 
 export interface SavedEvent {

@@ -89,7 +89,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Route protection: redirect unauthenticated users from protected pages
-  const PROTECTED_ROUTES = ["/my-events", "/create-event", "/notifications", "/profile"];
+  const PROTECTED_ROUTES = ["/my-events", "/create-event", "/notifications", "/profile", "/my-clubs", "/invites"];
   if (!user && PROTECTED_ROUTES.some((route) => path === route || path.startsWith(route + "/"))) {
     const signInUrl = request.nextUrl.clone();
     signInUrl.pathname = "/";
