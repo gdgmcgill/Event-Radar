@@ -59,7 +59,8 @@ AI/data/*.faiss
 AI/data/*.json
 AI/models/*.pt
 
-# internal dashboard (gitignored tool)
+# internal dashboard
 /internal
-docs/plans/2026-02-26-internal-dashboard-design.md
-docs/plans/2026-02-26-internal-dashboard-plan.md
+
+# planning artifacts
+.planning/
