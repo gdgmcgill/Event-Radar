@@ -3,12 +3,21 @@
 import { useState } from "react";
 import { useClubEventsManagement } from "@/hooks/useClubs";
 import { CreateEventModal } from "@/components/events/CreateEventModal";
+import { CreateEventForm } from "@/components/events/CreateEventForm";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
-import { Plus, Calendar, Users, Star, CalendarX } from "lucide-react";
+import { Plus, Calendar, Users, Star, CalendarX, Pencil, Copy } from "lucide-react";
+import type { EventTag } from "@/types";
 
 interface ClubEventsTabProps {
   clubId: string;
@@ -18,7 +27,12 @@ interface ClubEventsTabProps {
 interface EventWithRsvp {
   id: string;
   title: string;
+  description: string;
   start_date: string;
+  location: string;
+  tags: EventTag[];
+  image_url?: string | null;
+  category?: string | null;
   status: "pending" | "approved" | "rejected";
   rsvp_counts?: {
     going: number;
@@ -47,6 +61,8 @@ const statusConfig = {
 export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
   const { events, isLoading, mutate } = useClubEventsManagement(clubId);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventWithRsvp | null>(null);
+  const [duplicatingEvent, setDuplicatingEvent] = useState<EventWithRsvp | null>(null);
 
   if (isLoading) {
     return (
@@ -129,6 +145,26 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
                     )}
                   </div>
                 </div>
+                <div className="flex items-center gap-1 ml-2 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 cursor-pointer"
+                    aria-label="Edit event"
+                    onClick={() => setEditingEvent(event)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 cursor-pointer"
+                    aria-label="Duplicate event"
+                    onClick={() => setDuplicatingEvent(event)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
               </Card>
             );
           })}
@@ -142,6 +178,78 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
         clubId={clubId}
         onSuccess={() => mutate()}
       />
+
+      {/* Edit Event Modal */}
+      <Dialog
+        open={!!editingEvent}
+        onOpenChange={(open) => {
+          if (!open) setEditingEvent(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Event</DialogTitle>
+            <DialogDescription>
+              Update the details of your event.
+            </DialogDescription>
+          </DialogHeader>
+          {editingEvent && (
+            <CreateEventForm
+              clubId={clubId}
+              eventId={editingEvent.id}
+              mode="edit"
+              initialData={{
+                title: editingEvent.title,
+                description: editingEvent.description,
+                start_date: editingEvent.start_date,
+                location: editingEvent.location,
+                tags: editingEvent.tags,
+                image_url: editingEvent.image_url,
+                category: editingEvent.category,
+              }}
+              onSuccess={() => {
+                setEditingEvent(null);
+                mutate();
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate Event Modal */}
+      <Dialog
+        open={!!duplicatingEvent}
+        onOpenChange={(open) => {
+          if (!open) setDuplicatingEvent(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Duplicate Event</DialogTitle>
+            <DialogDescription>
+              Create a new event based on an existing one. Pick a new date and time.
+            </DialogDescription>
+          </DialogHeader>
+          {duplicatingEvent && (
+            <CreateEventForm
+              clubId={clubId}
+              mode="duplicate"
+              initialData={{
+                title: duplicatingEvent.title,
+                description: duplicatingEvent.description,
+                location: duplicatingEvent.location,
+                tags: duplicatingEvent.tags,
+                image_url: duplicatingEvent.image_url,
+                category: duplicatingEvent.category,
+              }}
+              onSuccess={() => {
+                setDuplicatingEvent(null);
+                mutate();
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
