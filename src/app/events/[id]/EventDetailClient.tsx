@@ -28,6 +28,10 @@ import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookma
 import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { RelatedEventCard } from "@/components/events/RelatedEventCard";
+import { ReviewPrompt } from "@/components/events/ReviewPrompt";
+import { EventReviewsSection } from "@/components/events/EventReviewsSection";
+import { StarRating } from "@/components/events/StarRating";
+import { useEventReviews } from "@/hooks/useAnalytics";
 import { exportEventIcal } from "@/lib/exportUtils";
 
 export default function EventDetailClient() {
@@ -52,6 +56,7 @@ export default function EventDetailClient() {
   const [popularity, setPopularity] = useState<EventPopularityScore | null>(null);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
   const [isExportingIcal, setIsExportingIcal] = useState(false);
+  const { data: reviewData, mutate: mutateReviews } = useEventReviews(id ?? "");
 
   useEffect(() => {
     if (!id) return;
@@ -401,6 +406,35 @@ export default function EventDetailClient() {
           )}
         </div>
       </div>
+
+      {/* Reviews Section */}
+      {event && (
+        <div className="mt-8 space-y-4">
+          {/* Show ReviewPrompt if user can review */}
+          {user && reviewData?.can_review && !reviewData.user_review && (
+            <ReviewPrompt
+              eventId={event.id}
+              onReviewSubmitted={() => mutateReviews()}
+            />
+          )}
+
+          {/* Show user's existing review */}
+          {user && reviewData?.user_review && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Your rating:</span>
+              <StarRating value={reviewData.user_review.rating} readonly size="sm" />
+            </div>
+          )}
+
+          {/* Show aggregate reviews */}
+          {reviewData && reviewData.aggregate.total_reviews > 0 && (
+            <EventReviewsSection
+              eventId={event.id}
+              isOrganizer={false}
+            />
+          )}
+        </div>
+      )}
 
       <Dialog open={showSignInPrompt} onOpenChange={setShowSignInPrompt}>
         <DialogContent className="sm:max-w-sm">
