@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     (v: { name: string; config?: Record<string, unknown>; weight?: number }) => ({
       experiment_id: experiment.id,
       name: v.name,
-      config: v.config ?? null,
+      config: v.config ?? {},
       weight: v.weight ?? 1,
     })
   );

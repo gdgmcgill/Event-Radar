@@ -68,8 +68,9 @@ export default function ExperimentsPage() {
   }, []);
 
   useEffect(() => {
-    fetchExperiments();
-  }, [fetchExperiments]);
+    void fetchExperiments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCreate = async () => {
     setCreating(true);
