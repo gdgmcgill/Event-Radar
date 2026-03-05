@@ -218,3 +218,24 @@ export interface ExperimentResults {
   } | null;
 }
 
+// ── Analytics Types ────────────────────────────────────────────────────────
+
+export interface EventAnalytics {
+  event_id: string;
+  title: string;
+  event_date: string;
+  views: number;
+  clicks: number;
+  saves: number;
+  unique_viewers: number;
+  rsvp_going: number;
+  rsvp_interested: number;
+}
+
+export interface ClubAnalytics {
+  follower_growth: { date: string; count: number }[];
+  total_attendees: number;
+  popular_tags: { tag: string; count: number }[];
+  events: EventAnalytics[];
+}
+

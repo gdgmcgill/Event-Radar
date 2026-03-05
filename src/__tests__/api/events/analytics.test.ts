@@ -20,8 +20,8 @@ function createMockQueryBuilder(resolvedValue: { data: unknown; error: unknown }
   // Terminal methods resolve the value
   builder.maybeSingle = jest.fn().mockResolvedValue(resolvedValue);
   builder.single = jest.fn().mockResolvedValue(resolvedValue);
-  // When used as a non-terminal (select chained on), return the resolved data/error as array result
-  builder.then = undefined; // not thenable by default
+  // Make builder thenable so `await supabase.from(...).select(...).eq(...)` resolves
+  builder.then = jest.fn((resolve: (v: unknown) => void) => resolve(resolvedValue));
   return builder;
 }
 

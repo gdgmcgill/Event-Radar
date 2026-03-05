@@ -19,6 +19,8 @@ function createMockQueryBuilder(resolvedValue: { data: unknown; error: unknown }
   builder.from = jest.fn().mockReturnValue(builder);
   builder.maybeSingle = jest.fn().mockResolvedValue(resolvedValue);
   builder.single = jest.fn().mockResolvedValue(resolvedValue);
+  // Make builder thenable so `await supabase.from(...).select(...).eq(...)` resolves
+  builder.then = jest.fn((resolve: (v: unknown) => void) => resolve(resolvedValue));
   return builder;
 }
 
