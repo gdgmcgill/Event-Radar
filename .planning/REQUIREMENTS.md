@@ -93,36 +93,36 @@ Deferred to future milestones. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLUB-01 | TBD | Pending |
-| CLUB-02 | TBD | Pending |
-| CLUB-03 | TBD | Pending |
-| CLUB-04 | TBD | Pending |
-| EVNT-01 | TBD | Pending |
-| EVNT-02 | TBD | Pending |
-| EVNT-03 | TBD | Pending |
-| EVNT-04 | TBD | Pending |
-| EVNT-05 | TBD | Pending |
-| EVNT-06 | TBD | Pending |
-| EVNT-07 | TBD | Pending |
-| TEAM-01 | TBD | Pending |
-| TEAM-02 | TBD | Pending |
-| TEAM-03 | TBD | Pending |
-| TEAM-04 | TBD | Pending |
-| FLLW-01 | TBD | Pending |
-| FLLW-02 | TBD | Pending |
-| FLLW-03 | TBD | Pending |
-| ANLY-01 | TBD | Pending |
-| ANLY-02 | TBD | Pending |
-| ANLY-03 | TBD | Pending |
-| REVW-01 | TBD | Pending |
-| REVW-02 | TBD | Pending |
-| REVW-03 | TBD | Pending |
+| CLUB-01 | Phase 1 | Pending |
+| CLUB-02 | Phase 1 | Pending |
+| CLUB-03 | Phase 1 | Pending |
+| CLUB-04 | Phase 1 | Pending |
+| EVNT-01 | Phase 2 | Pending |
+| EVNT-02 | Phase 2 | Pending |
+| EVNT-03 | Phase 2 | Pending |
+| EVNT-04 | Phase 2 | Pending |
+| EVNT-05 | Phase 2 | Pending |
+| EVNT-06 | Phase 2 | Pending |
+| EVNT-07 | Phase 2 | Pending |
+| TEAM-01 | Phase 1 | Pending |
+| TEAM-02 | Phase 1 | Pending |
+| TEAM-03 | Phase 1 | Pending |
+| TEAM-04 | Phase 1 | Pending |
+| FLLW-01 | Phase 1 | Pending |
+| FLLW-02 | Phase 1 | Pending |
+| FLLW-03 | Phase 1 | Pending |
+| ANLY-01 | Phase 3 | Pending |
+| ANLY-02 | Phase 3 | Pending |
+| ANLY-03 | Phase 3 | Pending |
+| REVW-01 | Phase 3 | Pending |
+| REVW-02 | Phase 3 | Pending |
+| REVW-03 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation*
