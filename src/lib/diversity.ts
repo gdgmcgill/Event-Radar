@@ -29,15 +29,15 @@ export interface DiversityMetadata {
 export function jaccardSimilarity(tagsA: string[], tagsB: string[]): number {
   if (tagsA.length === 0 && tagsB.length === 0) return 0;
 
-  const setA = new Set(tagsA);
-  const setB = new Set(tagsB);
+  const setA = new Set(tagsA.map((t) => t.toLowerCase()));
+  const setB = new Set(tagsB.map((t) => t.toLowerCase()));
 
   let intersectionSize = 0;
   for (const tag of setA) {
     if (setB.has(tag)) intersectionSize++;
   }
 
-  const unionSize = new Set([...tagsA, ...tagsB]).size;
+  const unionSize = new Set([...setA, ...setB]).size;
   return intersectionSize / unionSize;
 }
 
@@ -107,7 +107,8 @@ export function rerankWithMMR(
   const tagDistribution: Record<string, number> = {};
   for (const item of selected) {
     for (const tag of item.tags) {
-      tagDistribution[tag] = (tagDistribution[tag] || 0) + 1;
+      const key = tag.toLowerCase();
+      tagDistribution[key] = (tagDistribution[key] || 0) + 1;
     }
   }
 
