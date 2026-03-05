@@ -1,13 +1,13 @@
 # Middleware, Hooks & Auth Store
 
-**middleware.ts** — Applies rate limiting (via `middlewareRateLimit.ts`), refreshes Supabase sessions, cleans stale auth cookies, redirects unauthenticated users from protected routes, and enforces the onboarding flow. `middlewareRateLimit.ts` is actively imported and live.
+**middleware.ts** — Rate limiting, Supabase session refresh, auth cookie cleanup, protected-route redirects, onboarding enforcement. `middlewareRateLimit.ts` is actively imported.
 
-**useEvents.ts** — Cursor-paginated event fetching with filter-aware reset, load-more, and load-all support. Removed 3 `console.error` debug calls.
+**useEvents.ts** — Cursor-paginated event fetching with filter-aware reset and load-more. Removed 3 debug `console.error` calls.
 
-**useUser.ts** — Deleted. Was a standalone auth hook that fully duplicated `useAuthStore` and was never imported anywhere.
+**useUser.ts** — Deleted. Duplicated `useAuthStore` and had zero imports.
 
-**useSavedEvents.ts** — Fetches saved event IDs for heart-state initialisation. No changes needed.
+**useSavedEvents.ts** — Fetches saved event IDs for UI state. No changes.
 
-**useTracking.ts** — Fires recommendation feedback and interaction events. Used by EventCard, EventDetailsModal, and the calendar page. No changes needed.
+**useTracking.ts** — Fires interaction and recommendation feedback events. No changes.
 
-**useAuthStore.ts** — Zustand store managing auth state with optimistic user-set + background profile hydration and a 3 s fallback fetch. Removed all 12 `console.log`/`console.error` debug calls; both actions (`initialize`, `signOut`) are externally used and kept.
+**useAuthStore.ts** — Zustand auth store with optimistic user-set and profile hydration. Removed 12 debug console calls.
