@@ -15,13 +15,19 @@ function createMockQueryBuilder(resolvedValue: { data: unknown; error: unknown }
     builder[method] = jest.fn().mockReturnValue(builder);
   }
   builder.from = jest.fn().mockReturnValue(builder);
-  // Terminal methods resolve the value
+  // Make builder thenable so `await builder` resolves to the value
+  // (Supabase PostgREST builders are thenable)
+  builder.then = (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
+    Promise.resolve(resolvedValue).then(resolve, reject);
+  // Terminal methods also resolve the value
   builder.maybeSingle = jest.fn().mockResolvedValue(resolvedValue);
   builder.single = jest.fn().mockResolvedValue(resolvedValue);
   // select after insert/update should still chain
   const selectAfterMutation = {
     single: jest.fn().mockResolvedValue(resolvedValue),
     maybeSingle: jest.fn().mockResolvedValue(resolvedValue),
+    then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
+      Promise.resolve(resolvedValue).then(resolve, reject),
   };
   builder.select = jest.fn().mockReturnValue({ ...builder, ...selectAfterMutation });
   return builder;

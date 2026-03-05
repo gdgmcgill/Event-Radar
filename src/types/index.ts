@@ -239,3 +239,21 @@ export interface ClubAnalytics {
   events: EventAnalytics[];
 }
 
+// ── Review Types ─────────────────────────────────────────────────────────
+
+export interface Review {
+  id: string;
+  user_id: string;
+  event_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+export interface ReviewAggregate {
+  average_rating: number;
+  total_reviews: number;
+  distribution: { rating: number; count: number }[];
+  comments: { rating: number; comment: string; created_at: string }[];
+}
+

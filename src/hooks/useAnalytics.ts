@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { EventAnalytics, ClubAnalytics } from "@/types";
+import type { EventAnalytics, ClubAnalytics, ReviewAggregate, Review } from "@/types";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -27,6 +27,22 @@ export function useEventAnalytics(eventId: string) {
 export function useClubAnalytics(clubId: string) {
   return useSWR<ClubAnalytics>(
     clubId ? `/api/clubs/${clubId}/analytics` : null,
+    fetcher
+  );
+}
+
+interface EventReviewsResponse {
+  aggregate: ReviewAggregate;
+  user_review: Review | null;
+  can_review: boolean;
+}
+
+/**
+ * Fetch review aggregate, user review status, and eligibility for an event.
+ */
+export function useEventReviews(eventId: string) {
+  return useSWR<EventReviewsResponse>(
+    eventId ? `/api/events/${eventId}/reviews` : null,
     fetcher
   );
 }
