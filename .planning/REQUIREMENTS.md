@@ -9,9 +9,9 @@ Requirements for the club organizer rework milestone. Each maps to roadmap phase
 
 ### Club Management
 
-- [ ] **CLUB-01**: User can view a public club page showing the club's logo, name, description, category, Instagram link, follower count, and upcoming/past events
-- [ ] **CLUB-02**: Club owner can edit their club's name, description, logo, category, and Instagram link from a dedicated management page, and see changes persist after reload
-- [ ] **CLUB-03**: Organizer can view a "My Clubs" list page showing all clubs they own or organize, with club name, logo, role, and member count
+- [x] **CLUB-01**: User can view a public club page showing the club's logo, name, description, category, Instagram link, follower count, and upcoming/past events *(API ready: 01-01)*
+- [x] **CLUB-02**: Club owner can edit their club's name, description, logo, category, and Instagram link from a dedicated management page, and see changes persist after reload *(API ready: 01-01)*
+- [x] **CLUB-03**: Organizer can view a "My Clubs" list page showing all clubs they own or organize, with club name, logo, role, and member count *(API ready: 01-01)*
 - [ ] **CLUB-04**: Organizer can switch between clubs via a quick-switch dropdown in the club management view without navigating back to the list
 
 ### Event Management
@@ -26,16 +26,16 @@ Requirements for the club organizer rework milestone. Each maps to roadmap phase
 
 ### Team Management
 
-- [ ] **TEAM-01**: Club owner can view all club members with their role (owner/organizer) and joined date
-- [ ] **TEAM-02**: Club owner can invite a McGill email address to join the club as an organizer, generating a shareable invitation link
-- [ ] **TEAM-03**: Club owner can remove an organizer from the club (but cannot remove themselves)
-- [ ] **TEAM-04**: A user who opens an invitation link while logged in with the matching email is added to the club as an organizer
+- [x] **TEAM-01**: Club owner can view all club members with their role (owner/organizer) and joined date *(API ready: 01-01)*
+- [x] **TEAM-02**: Club owner can invite a McGill email address to join the club as an organizer, generating a shareable invitation link *(API ready: 01-01)*
+- [x] **TEAM-03**: Club owner can remove an organizer from the club (but cannot remove themselves) *(API ready: 01-01)*
+- [x] **TEAM-04**: A user who opens an invitation link while logged in with the matching email is added to the club as an organizer *(API ready: 01-01)*
 
 ### Student Engagement
 
-- [ ] **FLLW-01**: Student can follow a club from the public club page, and the club appears in their following list
-- [ ] **FLLW-02**: Student can unfollow a club, and it disappears from their following list
-- [ ] **FLLW-03**: Public club page displays a follower count visible to all visitors
+- [x] **FLLW-01**: Student can follow a club from the public club page, and the club appears in their following list *(API ready: 01-01)*
+- [x] **FLLW-02**: Student can unfollow a club, and it disappears from their following list *(API ready: 01-01)*
+- [x] **FLLW-03**: Public club page displays a follower count visible to all visitors *(API ready: 01-01)*
 
 ### Analytics
 
@@ -93,9 +93,9 @@ Deferred to future milestones. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLUB-01 | Phase 1 | Pending |
-| CLUB-02 | Phase 1 | Pending |
-| CLUB-03 | Phase 1 | Pending |
+| CLUB-01 | Phase 1 | Complete (01-01) |
+| CLUB-02 | Phase 1 | Complete (01-01) |
+| CLUB-03 | Phase 1 | Complete (01-01) |
 | CLUB-04 | Phase 1 | Pending |
 | EVNT-01 | Phase 2 | Pending |
 | EVNT-02 | Phase 2 | Pending |
@@ -104,13 +104,13 @@ Deferred to future milestones. Tracked but not in current roadmap.
 | EVNT-05 | Phase 2 | Pending |
 | EVNT-06 | Phase 2 | Pending |
 | EVNT-07 | Phase 2 | Pending |
-| TEAM-01 | Phase 1 | Pending |
-| TEAM-02 | Phase 1 | Pending |
-| TEAM-03 | Phase 1 | Pending |
-| TEAM-04 | Phase 1 | Pending |
-| FLLW-01 | Phase 1 | Pending |
-| FLLW-02 | Phase 1 | Pending |
-| FLLW-03 | Phase 1 | Pending |
+| TEAM-01 | Phase 1 | Complete (01-01) |
+| TEAM-02 | Phase 1 | Complete (01-01) |
+| TEAM-03 | Phase 1 | Complete (01-01) |
+| TEAM-04 | Phase 1 | Complete (01-01) |
+| FLLW-01 | Phase 1 | Complete (01-01) |
+| FLLW-02 | Phase 1 | Complete (01-01) |
+| FLLW-03 | Phase 1 | Complete (01-01) |
 | ANLY-01 | Phase 3 | Pending |
 | ANLY-02 | Phase 3 | Pending |
 | ANLY-03 | Phase 3 | Pending |

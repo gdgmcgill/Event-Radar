@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 
 Plans:
-- [ ] 01-01: TBD
+- [x] 01-01: Club API Foundation (teardown, migration, API routes, SWR hooks)
 - [ ] 01-02: TBD
 - [ ] 01-03: TBD
 
@@ -72,6 +72,6 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Club Infrastructure and Team Management | 0/3 | Not started | - |
+| 1. Club Infrastructure and Team Management | 1/3 | In progress | - |
 | 2. Event Management | 0/2 | Not started | - |
 | 3. Analytics and Reviews | 0/2 | Not started | - |
