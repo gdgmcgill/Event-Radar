@@ -7,7 +7,7 @@
  *
  * Supabase and auth are mocked so no live DB is required.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -25,23 +25,23 @@ let mockAuthError: { message: string } | null = null;
 function createMockChain(resolvedValue: { data: unknown; error: unknown }) {
   const chain: Record<string, unknown> = {};
   const methods = ["select", "insert", "update", "eq", "single", "maybeSingle"];
-  for (const m of methods) chain[m] = vi.fn().mockReturnValue(chain);
-  chain.single = vi.fn().mockResolvedValue(resolvedValue);
-  chain.maybeSingle = vi.fn().mockResolvedValue(resolvedValue);
-  chain.select = vi.fn().mockReturnValue({
+  for (const m of methods) chain[m] = jest.fn().mockReturnValue(chain);
+  chain.single = jest.fn().mockResolvedValue(resolvedValue);
+  chain.maybeSingle = jest.fn().mockResolvedValue(resolvedValue);
+  chain.select = jest.fn().mockReturnValue({
     ...chain,
-    single: vi.fn().mockResolvedValue(resolvedValue),
+    single: jest.fn().mockResolvedValue(resolvedValue),
   });
   return chain;
 }
 
 const mockSupabase = {
   auth: {
-    getUser: vi.fn(() =>
+    getUser: jest.fn(() =>
       Promise.resolve({ data: { user: mockUser }, error: mockAuthError })
     ),
   },
-  from: vi.fn(() =>
+  from: jest.fn(() =>
     createMockChain({
       data: { id: "evt-1", club_id: null, roles: ["club_organizer"] },
       error: null,
@@ -49,12 +49,12 @@ const mockSupabase = {
   ),
 };
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(() => Promise.resolve(mockSupabase)),
+jest.mock("@/lib/supabase/server", () => ({
+  createClient: jest.fn(() => Promise.resolve(mockSupabase)),
 }));
 
-vi.mock("@/lib/tagMapping", () => ({
-  transformEventFromDB: vi.fn((e: unknown) => e),
+jest.mock("@/lib/tagMapping", () => ({
+  transformEventFromDB: jest.fn((e: unknown) => e),
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -95,8 +95,8 @@ let POST: (req: Request) => Promise<Response>;
 let PATCH: (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response>;
 
 beforeEach(async () => {
-  vi.resetModules();
-  vi.clearAllMocks();
+  jest.resetModules();
+  jest.clearAllMocks();
   mockUser = { id: "user-1", email: "daniel@mail.mcgill.ca" };
   mockAuthError = null;
 

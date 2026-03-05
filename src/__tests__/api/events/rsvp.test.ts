@@ -4,7 +4,6 @@
  * These tests mock the Supabase client to unit-test the API route handlers
  * without requiring a live database connection.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -13,19 +12,19 @@ function createMockQueryBuilder(resolvedValue: { data: unknown; error: unknown }
   const builder: Record<string, unknown> = {};
   const methods = ["select", "insert", "update", "delete", "eq", "neq", "maybeSingle", "single"];
   for (const method of methods) {
-    builder[method] = vi.fn().mockReturnValue(builder);
+    builder[method] = jest.fn().mockReturnValue(builder);
   }
   // from() returns the builder
-  builder.from = vi.fn().mockReturnValue(builder);
+  builder.from = jest.fn().mockReturnValue(builder);
   // Terminal methods resolve the value
-  builder.maybeSingle = vi.fn().mockResolvedValue(resolvedValue);
-  builder.single = vi.fn().mockResolvedValue(resolvedValue);
+  builder.maybeSingle = jest.fn().mockResolvedValue(resolvedValue);
+  builder.single = jest.fn().mockResolvedValue(resolvedValue);
   // select after insert/update should still chain
   const selectAfterMutation = {
-    single: vi.fn().mockResolvedValue(resolvedValue),
-    maybeSingle: vi.fn().mockResolvedValue(resolvedValue),
+    single: jest.fn().mockResolvedValue(resolvedValue),
+    maybeSingle: jest.fn().mockResolvedValue(resolvedValue),
   };
-  builder.select = vi.fn().mockReturnValue({ ...builder, ...selectAfterMutation });
+  builder.select = jest.fn().mockReturnValue({ ...builder, ...selectAfterMutation });
   return builder;
 }
 
@@ -35,14 +34,14 @@ let mockQueryResults: Map<string, { data: unknown; error: unknown }>;
 
 const mockSupabase = {
   auth: {
-    getUser: vi.fn(() =>
+    getUser: jest.fn(() =>
       Promise.resolve({
         data: { user: mockUser },
         error: mockAuthError,
       })
     ),
   },
-  from: vi.fn((table: string) => {
+  from: jest.fn((table: string) => {
     const defaultResult = { data: null, error: null };
     const result = mockQueryResults.get(table) ?? defaultResult;
     const builder = createMockQueryBuilder(result);
@@ -50,8 +49,8 @@ const mockSupabase = {
   }),
 };
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(() => Promise.resolve(mockSupabase)),
+jest.mock("@/lib/supabase/server", () => ({
+  createClient: jest.fn(() => Promise.resolve(mockSupabase)),
 }));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -78,8 +77,8 @@ function createRouteContext(eventId = "test-event-id") {
 let GET: any, POST: any, DELETE: any;
 
 beforeEach(async () => {
-  vi.resetModules();
-  vi.clearAllMocks();
+  jest.resetModules();
+  jest.clearAllMocks();
   mockUser = null;
   mockAuthError = null;
   mockQueryResults = new Map();

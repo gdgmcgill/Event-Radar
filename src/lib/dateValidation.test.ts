@@ -7,7 +7,6 @@
  *   - isEndAfterStart – ordering validation
  *   - validateEventDates – full combined validator
  */
-import { describe, it, expect } from "vitest";
 import {
   isValidISODate,
   isDateInFuture,

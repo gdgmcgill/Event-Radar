@@ -1,16 +1,29 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { exportEventsCsv } from "./exportUtils";
 
-const mockFetch = vi.fn();
+const mockFetch = jest.fn();
 const mockBlob = new Blob(["event_id,title\n1,Test"]);
-const createObjectURLSpy = vi.fn(() => "blob:mock-url");
-const revokeObjectURLSpy = vi.fn();
+const createObjectURLSpy = jest.fn(() => "blob:mock-url");
+const revokeObjectURLSpy = jest.fn();
 
-vi.stubGlobal("fetch", mockFetch);
+global.fetch = mockFetch as unknown as typeof fetch;
+
+// Polyfill browser globals for node test environment
+if (typeof window === "undefined") {
+   
+  (global as any).window = { URL: { createObjectURL: createObjectURLSpy, revokeObjectURL: revokeObjectURLSpy } };
+}
+if (typeof document === "undefined") {
+  const mockLink = { href: "", download: "", click: jest.fn() };
+   
+  (global as any).document = {
+    createElement: jest.fn(() => mockLink),
+    body: { appendChild: jest.fn(), removeChild: jest.fn() },
+  };
+}
 
 describe("exportEventsCsv", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
 
     Object.defineProperty(window.URL, "createObjectURL", {
       value: createObjectURLSpy,
