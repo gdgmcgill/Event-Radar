@@ -9,6 +9,7 @@ import { ClubQuickSwitch } from "@/components/clubs/ClubQuickSwitch";
 import { ClubOverviewTab } from "@/components/clubs/ClubOverviewTab";
 import { ClubSettingsTab } from "@/components/clubs/ClubSettingsTab";
 import { ClubMembersTab } from "@/components/clubs/ClubMembersTab";
+import { ClubEventsTab } from "@/components/clubs/ClubEventsTab";
 import type { Club } from "@/types";
 
 interface ClubDashboardProps {
@@ -76,6 +77,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="events">Events</TabsTrigger>
           {isOwner && (
             <TabsTrigger value="settings">Settings</TabsTrigger>
           )}
@@ -91,6 +93,10 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
             memberCount={memberCount}
             onEditClick={isOwner ? () => setActiveTab("settings") : undefined}
           />
+        </TabsContent>
+
+        <TabsContent value="events">
+          <ClubEventsTab clubId={clubId} clubName={club.name} />
         </TabsContent>
 
         {isOwner && (

@@ -68,6 +68,7 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [suggestedTags, setSuggestedTags] = useState<EventTag[]>([]);
@@ -177,6 +178,7 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
         throw new Error(data.error || "Failed to create event");
       }
 
+      setSuccessMessage(data.message || "Event submitted!");
       setSuccess(true);
       // Reset form
       setFormData({
@@ -198,17 +200,22 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
   };
 
   if (success) {
+    const isApproved = successMessage.toLowerCase().includes("approved");
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-card rounded-2xl border border-green-200 dark:border-green-900/50 p-8">
         <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-4">
           <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
         </div>
-        <h3 className="text-2xl font-bold text-foreground">Event Submitted!</h3>
+        <h3 className="text-2xl font-bold text-foreground">
+          {isApproved ? "Event Published!" : "Event Submitted!"}
+        </h3>
         <p className="text-muted-foreground max-w-md">
-          Your event has been submitted for review. An admin will approve it shortly and it will appear on the platform.
+          {isApproved
+            ? "Your event has been approved and is now live on the platform."
+            : "Your event has been submitted for review. An admin will approve it shortly."}
         </p>
-        <Button onClick={() => setSuccess(false)} className="mt-4">
-          Submit Another Event
+        <Button onClick={() => setSuccess(false)} className="mt-4 cursor-pointer">
+          Create Another Event
         </Button>
       </div>
     );
@@ -396,7 +403,7 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
             Submitting...
           </>
         ) : (
-          "Submit Event for Review"
+          "Create Event"
         )}
       </Button>
     </form>
