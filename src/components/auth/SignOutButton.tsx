@@ -40,9 +40,7 @@ export function SignOutButton({
 
       // Hard navigate so the browser picks up the cleared cookies
       window.location.href = "/";
-    } catch (err) {
-      console.error("Unexpected sign out error:", err);
-      // Fallback: force a full reload to clear all state
+    } catch {
       window.location.href = "/";
     } finally {
       setIsLoading(false);

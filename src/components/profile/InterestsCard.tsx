@@ -14,7 +14,7 @@ type InterestsCardProps = {
   initialTags: EventTag[];
 };
 
-function normalizeInterests(interest_tags: any): EventTag[] {
+function normalizeInterests(interest_tags: unknown): EventTag[] {
   if (!interest_tags) return [];
   if (Array.isArray(interest_tags)) {
     return interest_tags.filter(
