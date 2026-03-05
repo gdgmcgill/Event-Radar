@@ -65,6 +65,9 @@ Recent decisions affecting current work:
 - [01-01] Separate user query for member details (Supabase types lack FK join)
 - [01-01] Live COUNT for follower/member counts (avoids trigger complexity)
 - [01-01] Idempotent migration with IF NOT EXISTS / DO $$ blocks
+- [01-02] Used status field instead of accepted_at for invite acceptance (matches actual DB schema)
+- [01-02] Direct Supabase server queries in page component for SSR (no API round-trip)
+- [01-02] Manual club info attachment to events (Supabase types lack events-clubs FK)
 - [01-03] Server-side single-club redirect to avoid flash of list page
 - [01-03] MyClubsList as separate client component to keep page.tsx as server component
 - [01-03] Role check via useMyClubs data rather than separate API call
@@ -82,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T20:32:00.000Z
-Stopped at: Completed 01-03-PLAN.md (checkpoint approved). Phase 1 complete.
+Last session: 2026-03-05T20:33:08.000Z
+Stopped at: Completed 01-02-PLAN.md (all tasks, checkpoint approved). 01-03 also complete. Phase 1 done.
 Resume file: .planning/phases/02-event-management/02-01-PLAN.md
