@@ -59,11 +59,11 @@ Plans:
   2. An organizer can view club-level trends (follower growth over time, total attendees, most popular tags) on the club management page
   3. After an event ends, a user who RSVP'd "going" is prompted to rate the event (1-5 stars) with optional text feedback, limited to one review per event and only after the event date
   4. An organizer can view aggregate review data for past events: average rating, rating distribution, and anonymized comments
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Analytics types, API endpoints (event + club level), ClubAnalyticsTab with Recharts charts, dashboard wiring
+- [ ] 03-02-PLAN.md — Reviews table migration, review API (submit + aggregate), StarRating component, ReviewPrompt on event detail page
 
 ## Progress
 
