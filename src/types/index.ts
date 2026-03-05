@@ -81,14 +81,6 @@ export interface ClubMember {
   user?: User;
 }
 
-export interface ClubFollower {
-  id: string;
-  user_id: string;
-  club_id: string;
-  created_at: string;
-  club?: Club;
-}
-
 export interface OrganizerRequest {
   id: string;
   user_id: string;
@@ -164,22 +156,3 @@ export type RecommendationFeedbackAction =
   | "save"
   | "dismiss";
 
-/** Payload for logging recommendation feedback */
-export interface RecommendationFeedbackPayload {
-  user_id: string;
-  event_id: string;
-  recommendation_rank: number;
-  action: RecommendationFeedbackAction;
-  session_id?: string;
-}
-
-/** Stored recommendation feedback row (matches recommendation_feedback table) */
-export interface RecommendationFeedback {
-  id: string;
-  user_id: string;
-  event_id: string;
-  recommendation_rank: number;
-  action: RecommendationFeedbackAction;
-  session_id: string | null;
-  created_at: string;
-}
