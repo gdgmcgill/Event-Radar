@@ -158,7 +158,6 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
       const result = await fetchPage({ cursor });
       applyPageResult(result);
     } catch (err) {
-      console.error("Error fetching events:", err);
       setError(err instanceof Error ? err : new Error("Failed to fetch events"));
     } finally {
       setLoading(false);
@@ -206,7 +205,6 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
       const result = await fetchPage({ cursor: nextCursor });
       applyPageResult(result, true);
     } catch (err) {
-      console.error("Error loading more events:", err);
       setError(err instanceof Error ? err : new Error("Failed to fetch events"));
     } finally {
       setLoadingMore(false);
@@ -248,7 +246,6 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
           page += 1;
         }
       } catch (err) {
-        console.error("Error fetching events:", err);
         setError(err instanceof Error ? err : new Error("Failed to fetch events"));
       } finally {
         setLoading(false);
