@@ -62,7 +62,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Analytics types, API endpoints (event + club level), ClubAnalyticsTab with Recharts charts, dashboard wiring
+- [x] 03-01-PLAN.md — Analytics types, API endpoints (event + club level), ClubAnalyticsTab with Recharts charts, dashboard wiring
 - [ ] 03-02-PLAN.md — Reviews table migration, review API (submit + aggregate), StarRating component, ReviewPrompt on event detail page
 
 ## Progress
@@ -74,4 +74,4 @@ Phases execute in numeric order: 1 -> 2 -> 3
 |-------|----------------|--------|-----------|
 | 1. Club Infrastructure and Team Management | 3/3 | Complete | 2026-03-05 |
 | 2. Event Management | 2/2 | Complete | 2026-03-05 |
-| 3. Analytics and Reviews | 0/2 | Not started | - |
+| 3. Analytics and Reviews | 1/2 | In Progress | - |

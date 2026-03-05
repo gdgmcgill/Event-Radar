@@ -39,9 +39,9 @@ Requirements for the club organizer rework milestone. Each maps to roadmap phase
 
 ### Analytics
 
-- [ ] **ANLY-01**: Organizer can view event-level analytics for each event: total views, clicks, saves, and RSVP breakdown (going/interested)
-- [ ] **ANLY-02**: Organizer can view club-level trends: follower growth over time, total attendees across all events, and most popular event tags
-- [ ] **ANLY-03**: Analytics data is presented with charts (line/bar) on the club management page
+- [x] **ANLY-01**: Organizer can view event-level analytics for each event: total views, clicks, saves, and RSVP breakdown (going/interested)
+- [x] **ANLY-02**: Organizer can view club-level trends: follower growth over time, total attendees across all events, and most popular event tags
+- [x] **ANLY-03**: Analytics data is presented with charts (line/bar) on the club management page
 
 ### Reviews
 
@@ -111,9 +111,9 @@ Deferred to future milestones. Tracked but not in current roadmap.
 | FLLW-01 | Phase 1 | Complete (01-01) |
 | FLLW-02 | Phase 1 | Complete (01-01) |
 | FLLW-03 | Phase 1 | Complete (01-01) |
-| ANLY-01 | Phase 3 | Pending |
-| ANLY-02 | Phase 3 | Pending |
-| ANLY-03 | Phase 3 | Pending |
+| ANLY-01 | Phase 3 | Complete (03-01) |
+| ANLY-02 | Phase 3 | Complete (03-01) |
+| ANLY-03 | Phase 3 | Complete (03-01) |
 | REVW-01 | Phase 3 | Pending |
 | REVW-02 | Phase 3 | Pending |
 | REVW-03 | Phase 3 | Pending |
