@@ -7,6 +7,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rerankWithMMR, type RecommendationItem as DiversityRecommendationItem } from "@/lib/diversity";
+import { pickVariant } from "@/lib/experiments";
 
 // Recommendation service URL (configurable via environment variable)
 const RECOMMENDATION_API_URL =
@@ -105,19 +107,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the full body (including optional feedback) to the AI service
-    const response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (fetchError) {
+      console.warn("Recommendation service unreachable:", fetchError);
+      return NextResponse.json(
+        { error: "Recommendation service unavailable", fallback: true },
+        { status: 503 }
+      );
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Recommendation service error:", errorText);
       return NextResponse.json(
-        { error: "Recommendation service error", detail: errorText },
+        { error: "Recommendation service error" },
         { status: response.status }
       );
     }
@@ -225,6 +236,53 @@ export async function GET(request: NextRequest) {
       feedbackPayload = [...explicitFeedback, ...implicitPositive];
     }
 
+    // Check for active recommendation experiments
+    let experimentVariantId: string | null = null;
+    let experimentLambda: number | null = null;
+
+    const { data: activeExperiments } = await supabase
+      .from("experiments")
+      .select("id, name, status")
+      .eq("status", "running");
+
+    if (activeExperiments && activeExperiments.length > 0) {
+      const experiment = activeExperiments[0] as { id: string; name: string };
+
+      const { data: variantRows } = await supabase
+        .from("experiment_variants")
+        .select("*")
+        .eq("experiment_id", experiment.id);
+
+      type VRow = { id: string; experiment_id: string; name: string; config: Record<string, unknown>; weight: number };
+      const variants = (variantRows ?? []) as VRow[];
+
+      if (variants.length >= 2) {
+        const { data: existingAssignment } = await supabase
+          .from("experiment_assignments")
+          .select("variant_id")
+          .eq("experiment_id", experiment.id)
+          .eq("user_id", user.id)
+          .single();
+
+        let assignedVariant: VRow;
+        if (existingAssignment) {
+          assignedVariant = variants.find((v) => v.id === existingAssignment.variant_id) ?? variants[0];
+        } else {
+          assignedVariant = pickVariant(user.id, experiment.id, variants) as VRow;
+          await supabase.from("experiment_assignments").insert({
+            experiment_id: experiment.id,
+            variant_id: assignedVariant.id,
+            user_id: user.id,
+          });
+        }
+
+        experimentVariantId = assignedVariant.id;
+        if (typeof assignedVariant.config?.lambda === "number") {
+          experimentLambda = assignedVariant.config.lambda as number;
+        }
+      }
+    }
+
     // Build user payload from profile
     const userPayload: UserPayload = {
       major: "General Studies", // Default if not in profile
@@ -238,18 +296,31 @@ export async function GET(request: NextRequest) {
     const topK = parseInt(searchParams.get("top_k") || "10", 10);
 
     // Call the recommendation service, including feedback for vector adjustment
-    const response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user: userPayload,
-        top_k: topK,
-        exclude_event_ids: excludeEventIds,
-        feedback: feedbackPayload.length > 0 ? feedbackPayload : undefined,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user: userPayload,
+          top_k: topK,
+          exclude_event_ids: excludeEventIds,
+          feedback: feedbackPayload.length > 0 ? feedbackPayload : undefined,
+        }),
+      });
+    } catch (fetchError) {
+      console.warn("Recommendation service unreachable, returning fallback:", fetchError);
+      return NextResponse.json({
+        recommendations: [],
+        total_events: 0,
+        source: "popular_fallback",
+        fallback: true,
+      }, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -267,6 +338,17 @@ export async function GET(request: NextRequest) {
     }
 
     const data: RecommendResponse = await response.json();
+
+    // Apply MMR diversity re-ranking
+    // Use experiment lambda if assigned, otherwise use query param or default
+    const diversityParam = searchParams.get("diversity");
+    const baseLambda = diversityParam ? parseFloat(diversityParam) : 0.7;
+    const lambda = experimentLambda ?? (isNaN(baseLambda) ? 0.7 : Math.max(0, Math.min(1, baseLambda)));
+
+    const { items: diversifiedRecs, metadata: diversityMetadata } = rerankWithMMR(
+      data.recommendations as unknown as DiversityRecommendationItem[],
+      lambda
+    );
 
     // Determine source: if no personal signals exist, this is a popular fallback
     const hasPersonalSignals =
@@ -288,9 +370,9 @@ export async function GET(request: NextRequest) {
 
     const userInterests = userProfile?.interest_tags ?? [];
     const recommendationsWithExplanations: RecommendationItemWithExplanation[] =
-      data.recommendations.map((rec) => ({
+      diversifiedRecs.map((rec) => ({
         ...rec,
-        explanation: generateExplanation(rec, userInterests, positiveFeedbackTags, source),
+        explanation: generateExplanation(rec as unknown as RecommendationItem, userInterests, positiveFeedbackTags, source),
       }));
 
     return NextResponse.json(
@@ -298,6 +380,8 @@ export async function GET(request: NextRequest) {
         ...data,
         source,
         recommendations: recommendationsWithExplanations,
+        diversity_metadata: diversityMetadata,
+        experiment_variant_id: experimentVariantId,
       },
       { headers: { "Cache-Control": "private, no-store" } }
     );

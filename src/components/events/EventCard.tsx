@@ -56,9 +56,9 @@ export function EventCard({
   onSaveToggle,
   explanation,
   initialThumbsFeedback = null,
-  rank: _rank,
-  showPopularityStats: _showPopularityStats,
-  popularity: _popularity,
+  rank,
+  showPopularityStats,
+  popularity,
 }: EventCardProps) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
   const [thumbsFeedback, setThumbsFeedback] = useState<"positive" | "negative" | null>(initialThumbsFeedback ?? null);

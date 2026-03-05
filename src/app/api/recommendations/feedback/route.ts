@@ -38,6 +38,7 @@ interface AnalyticsBody {
   recommendation_rank: number;
   action: RecommendationFeedbackAction;
   session_id?: string;
+  experiment_variant_id?: string;
 }
 
 /** GET: fetch current user's thumbs feedback for given event_ids */
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
       if (upsertError) {
         console.error("Recommendation explicit feedback upsert error:", upsertError);
         return NextResponse.json(
-          { error: "Failed to store feedback", detail: upsertError.message },
+          { error: "Failed to store feedback" },
           { status: 500 }
         );
       }
@@ -168,12 +169,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const row: RecommendationFeedbackInsert = {
+    const row = {
       user_id: userId,
       event_id,
       recommendation_rank,
       action: action as string,
       session_id: session_id ?? null,
+      experiment_variant_id: (body as AnalyticsBody).experiment_variant_id ?? null,
     };
 
     const { error } = await supabase
@@ -183,7 +185,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error("Recommendation feedback insert error:", error);
       return NextResponse.json(
-        { error: "Failed to store feedback", detail: error.message },
+        { error: "Failed to store feedback" },
         { status: 500 }
       );
     }

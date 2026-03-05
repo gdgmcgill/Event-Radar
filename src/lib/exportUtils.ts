@@ -20,9 +20,6 @@ export async function downloadExportFile(
     window.URL.revokeObjectURL(objectUrl);
     document.body.removeChild(link);
   } catch (err) {
-    if (err instanceof Error) {
-      console.warn(`Failed to export file: ${err.message}`);
-    }
     throw err;
   }
 }

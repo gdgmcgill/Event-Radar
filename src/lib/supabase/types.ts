@@ -413,6 +413,7 @@ export interface Database {
           recommendation_rank: number;
           action: string;
           session_id: string | null;
+          experiment_variant_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -422,6 +423,7 @@ export interface Database {
           recommendation_rank: number;
           action: string;
           session_id?: string | null;
+          experiment_variant_id: string | null;
           created_at?: string;
         };
         Update: {
@@ -431,6 +433,7 @@ export interface Database {
           recommendation_rank?: number;
           action?: string;
           session_id?: string | null;
+          experiment_variant_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -535,6 +538,93 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      experiments: {
+        Row: {
+          id: string;
+          name: string;
+          description: string;
+          status: "draft" | "running" | "paused" | "completed";
+          target_metric: "ctr" | "save_rate" | "dismiss_rate";
+          start_date: string | null;
+          end_date: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string;
+          status?: "draft" | "running" | "paused" | "completed";
+          target_metric?: "ctr" | "save_rate" | "dismiss_rate";
+          start_date?: string | null;
+          end_date?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string;
+          status?: "draft" | "running" | "paused" | "completed";
+          target_metric?: "ctr" | "save_rate" | "dismiss_rate";
+          start_date?: string | null;
+          end_date?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      experiment_variants: {
+        Row: {
+          id: string;
+          experiment_id: string;
+          name: string;
+          config: Record<string, unknown>;
+          weight: number;
+        };
+        Insert: {
+          id?: string;
+          experiment_id: string;
+          name: string;
+          config?: Record<string, unknown>;
+          weight?: number;
+        };
+        Update: {
+          id?: string;
+          experiment_id?: string;
+          name?: string;
+          config?: Record<string, unknown>;
+          weight?: number;
+        };
+        Relationships: [];
+      };
+      experiment_assignments: {
+        Row: {
+          id: string;
+          experiment_id: string;
+          variant_id: string;
+          user_id: string;
+          assigned_at: string;
+        };
+        Insert: {
+          id?: string;
+          experiment_id: string;
+          variant_id: string;
+          user_id: string;
+          assigned_at?: string;
+        };
+        Update: {
+          id?: string;
+          experiment_id?: string;
+          variant_id?: string;
+          user_id?: string;
+          assigned_at?: string;
+        };
+        Relationships: [];
       };
     };
     Views: {

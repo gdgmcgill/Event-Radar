@@ -3,8 +3,6 @@
 import { EventFilters } from "@/components/events/EventFilters";
 import type { EventTag } from "@/types";
 import { cn } from "@/lib/utils";
-import { ChevronRight, ChevronLeft, Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 /**
  * Props for the FilterSidebar component.

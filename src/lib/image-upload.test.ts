@@ -1,22 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { downloadAndUploadImage } from "./image-upload";
 
 // Mock fetch globally
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
+const mockFetch = jest.fn();
+global.fetch = mockFetch as unknown as typeof fetch;
 
 // Mock Supabase client
-const mockUpload = vi.fn();
-const mockGetPublicUrl = vi.fn();
-const mockFrom = vi.fn(() => ({
+const mockUpload = jest.fn();
+const mockGetPublicUrl = jest.fn();
+const mockFrom = jest.fn(() => ({
   upload: mockUpload,
   getPublicUrl: mockGetPublicUrl,
 }));
+ 
 const mockSupabase = { storage: { from: mockFrom } } as any;
 
 describe("downloadAndUploadImage", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it("downloads image and uploads to Supabase Storage, returns public URL", async () => {

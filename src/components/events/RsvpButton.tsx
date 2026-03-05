@@ -55,22 +55,28 @@ export function RsvpButton({ eventId, userId }: RsvpButtonProps) {
     }
 
     setIsSubmitting(true);
+    const prevUserRsvp = userRsvp;
+    const prevCounts = counts;
     try {
       // If clicking the same status, cancel the RSVP
       if (userRsvp?.status === status) {
-        const res = await fetch(`/api/events/${eventId}/rsvp`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId }),
-        });
-        if (!res.ok) throw new Error("Failed to cancel RSVP");
-
         setUserRsvp(null);
         setCounts((prev) => ({
           ...prev,
           [status]: Math.max(0, prev[status] - 1),
           total: Math.max(0, prev.total - 1),
         }));
+
+        const res = await fetch(`/api/events/${eventId}/rsvp`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId }),
+        });
+        if (!res.ok) {
+          setUserRsvp(prevUserRsvp);
+          setCounts(prevCounts);
+          throw new Error("Failed to cancel RSVP");
+        }
         return;
       }
 

@@ -1,3 +1,5 @@
+const K_MEANS_MAX_ITERATIONS = 50;
+
 // Numeric vector used by the clustering algorithm
 export type Vector = number[];
 
@@ -59,8 +61,7 @@ export function kMeans(
         return [];
     }
 
-    // Hard cap on iterations to avoid infinite loops
-    const maxIterations = 50;
+    const maxIterations = K_MEANS_MAX_ITERATIONS;
     // Can't have more clusters than points
     const safeK = Math.min(k, points.length);
     // Dimension (number of features) of each vector

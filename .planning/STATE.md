@@ -1,52 +1,53 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: Club Organizer UX Overhaul
-status: unknown
-last_updated: "2026-02-27T05:45:49.064Z"
+milestone_name: milestone
+status: planning
+stopped_at: Phase 1 context gathered
+last_updated: "2026-03-05T09:06:15.996Z"
+last_activity: 2026-03-05 -- Roadmap created
 progress:
-  total_phases: 8
-  completed_phases: 7
-  total_plans: 16
-  completed_plans: 16
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-25)
+See: .planning/PROJECT.md (updated 2026-03-05)
 
-**Core value:** Club organizers must have a seamless, unified experience from club creation through event management
-**Current focus:** Phase 9 — Follow System
+**Core value:** Club organizers can effortlessly manage their clubs and post events, while students can discover and engage with campus events that matter to them
+**Current focus:** Phase 1 - Club Infrastructure and Team Management
 
 ## Current Position
 
-Phase: 9 of 9 (Follow System) — Complete
-Plan: 2 of 2 complete
-Status: Phase 09 Complete — All Plans Done
-Last activity: 2026-02-27 — Completed 09-02: FollowButton UI, club profile follower count, organizer dashboard follower stat, profile Following section
+Phase: 1 of 3 (Club Infrastructure and Team Management)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-03-05 -- Roadmap created
 
-Progress: [####################] 100%
-(v1.0 Phases 1-3 complete, Phase 4 deferred; v1.1 Phases 5-7 complete; Phase 8 pending; Phase 9 complete — follow system fully shipped)
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (v1.0)
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 0
+- Average duration: -
+- Total execution time: 0 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Notification DB | 2 | — | — |
-| 2. Cold Start Fix | 2 | — | — |
-| 3. Notification Wiring | 2 | — | — |
-| 5. Database Foundation | 2 | ~13min | ~6.5min |
-| 6. Dashboard Shell | 3/3 | ~6min | ~2min |
-| 7. Members Tab | 3/3 | ~13min | ~4min |
+| - | - | - | - |
+
+**Recent Trend:**
+- Last 5 plans: -
+- Trend: -
 
 *Updated after each plan completion*
 
@@ -54,53 +55,26 @@ Progress: [####################] 100%
 
 ### Decisions
 
-- [v1.0]: 3+ saved events threshold for recommendations
-- [v1.0]: Supabase Edge Function for reminder cron
-- [v1.0]: Notification polling every 60s for bell updates
-- [v1.1]: Auto-grant owner (not organizer) on club approval
-- [v1.1]: Owner/organizer role distinction in club_members table
-- [v1.1]: Direct invitations from owners — no admin approval needed
-- [v1.1]: Copy-link invite UX for v1.1; email delivery deferred to v1.2
-- [v1.1]: is_club_owner() SECURITY DEFINER pattern — prevents RLS infinite recursion
-- [v1.1 05-01]: Backfill runs before CHECK constraint to normalize existing organizer rows for creators
-- [v1.1 05-01]: Self-removal guard uses (select auth.uid()) wrapper for PostgreSQL initPlan caching
-- [v1.1 05-01]: No invitee-access SELECT policy on club_invitations — deferred to Phase 7
-- [v1.1 06-01]: Member count and pending invites fetched server-side in page.tsx to avoid client-side waterfall
-- [v1.1 06-01]: Pending invites passed as null for organizers — prevents RLS exposure, keeps Overview clean
-- [v1.1 06-01]: router.replace (not push) for tab changes — avoids polluting browser history stack
-- [v1.1 06-01]: club_invitations added to supabase/types.ts (Phase 5 table was missing from local types)
-- [v1.1 06-02]: useCallback wrapping fetchEvents so retry button and useEffect share same fetcher without re-creation
-- [v1.1 06-02]: Suspense wraps CreateEventPageContent (useSearchParams caller) — required by Next.js App Router
-- [v1.1 06-02]: Badge className override for status colors (green/amber) rather than new variants on shared component
-- [v1.1 06-03]: transformEventFromDB cast pattern (event as Parameters<typeof transformEventFromDB>[0]) bridges Supabase row type to DBEvent — all event API routes must use this pattern
-- [v1.1 07-01]: POST /invites returns token only — URL construction is client-side, avoids hardcoding domain in API
-- [v1.1 07-01]: Invitee SELECT policy uses email sub-select from users table (consistent with Phase 5 RLS patterns)
-- [v1.1 07-01]: Owner revoke UPDATE policy added to invitee migration (MEM-08) — all club_invitations UPDATE policies co-located
-- [v1.1 07-02]: userId prop threads from server page (user.id from auth.getUser) through ClubDashboard to ClubMembersTab — avoids client-side auth call in component
-- [v1.1 07-02]: Invite revocation uses status update ('revoked') not hard delete — preserves invitation history
-- [v1.1 07-03]: RLS handles email match implicitly on invite lookup — query returns null for mismatched email, no explicit app-layer email comparison needed
-- [v1.1 07-03]: Success page shown (not immediate redirect) on invite acceptance — user sees "You're in!" confirmation
-- [v1.1 07-03]: Existing member silently redirects to club dashboard — idempotent, not an error condition
-- [v1.1 09-01]: Public SELECT RLS policy on club_followers enables anonymous follower count without app-layer auth checks
-- [v1.1 09-01]: Upsert with ignoreDuplicates makes follow idempotent — no prior check query needed
-- [v1.1 09-01]: GET /api/clubs/[id]/follow returns { is_following: false, is_member: false } for unauthenticated (not 401)
-- [v1.1 09-01]: Promise.all refactor in club API reduces sequential round-trips (3 parallel queries)
-- [v1.1 09-02]: FollowButton performs optimistic state update then reverts silently on API error
-- [v1.1 09-02]: Hover state on Following button shows Unfollow text and UserMinus icon (Instagram-style toggle affordance)
-- [v1.1 09-02]: Unauthenticated users see Follow button; clicking redirects to /auth/signin via router.push
-- [v1.1 09-02]: Profile page Following section queries club_followers directly with Supabase server client (not via API route)
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- Rework clubs from scratch (existing code too fragmented)
+- Fix clubs before social features (organizer UX is foundation)
+- URL-driven club context (`/my-clubs/[id]`), no global state
+- RLS as primary security boundary, not just API-level checks
 
 ### Pending Todos
 
-- Phase 4 from v1.0 (Cron Scheduler Configuration) deferred to v1.2
+None yet.
 
 ### Blockers/Concerns
 
-- Phase 5: is_club_owner() deployed with SECURITY DEFINER — verified callable in production, returns false without auth context (expected behavior)
-- Phase 8: clubs UPDATE is locked by 011_rls_audit.sql — owner UPDATE policy required before settings tab works
+- RLS policies must be established correctly in Phase 1 -- all subsequent phases inherit these patterns
+- Follower count denormalization (trigger vs live COUNT) needs decision during Phase 1 planning
+- Review rating UX (1-5 stars vs alternatives) needs decision during Phase 3 planning
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 09-02-PLAN.md — follow system UI (FollowButton, club profile count, dashboard stat, profile Following section); Phase 9 complete. All plans done.
-Resume file: None
+Last session: 2026-03-05T09:06:15.994Z
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-club-infrastructure-and-team-management/01-CONTEXT.md

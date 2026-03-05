@@ -81,14 +81,6 @@ export interface ClubMember {
   user?: User;
 }
 
-export interface ClubFollower {
-  id: string;
-  user_id: string;
-  club_id: string;
-  created_at: string;
-  club?: Club;
-}
-
 export interface OrganizerRequest {
   id: string;
   user_id: string;
@@ -164,22 +156,60 @@ export type RecommendationFeedbackAction =
   | "save"
   | "dismiss";
 
-/** Payload for logging recommendation feedback */
-export interface RecommendationFeedbackPayload {
-  user_id: string;
-  event_id: string;
-  recommendation_rank: number;
-  action: RecommendationFeedbackAction;
-  session_id?: string;
+/** A/B Testing Types */
+export type ExperimentStatus = "draft" | "running" | "paused" | "completed";
+export type ExperimentMetric = "ctr" | "save_rate" | "dismiss_rate";
+
+export interface Experiment {
+  id: string;
+  name: string;
+  description: string;
+  status: ExperimentStatus;
+  target_metric: ExperimentMetric;
+  start_date: string | null;
+  end_date: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  variants?: ExperimentVariant[];
 }
 
-/** Stored recommendation feedback row (matches recommendation_feedback table) */
-export interface RecommendationFeedback {
+export interface ExperimentVariant {
   id: string;
-  user_id: string;
-  event_id: string;
-  recommendation_rank: number;
-  action: RecommendationFeedbackAction;
-  session_id: string | null;
-  created_at: string;
+  experiment_id: string;
+  name: string;
+  config: Record<string, unknown>;
+  weight: number;
 }
+
+export interface ExperimentAssignment {
+  id: string;
+  experiment_id: string;
+  variant_id: string;
+  user_id: string;
+  assigned_at: string;
+}
+
+export interface VariantMetrics {
+  variant_id: string;
+  variant_name: string;
+  assignments: number;
+  impressions: number;
+  clicks: number;
+  saves: number;
+  dismisses: number;
+  ctr_percent: number;
+  save_rate_percent: number;
+  dismiss_rate_percent: number;
+}
+
+export interface ExperimentResults {
+  experiment: Experiment;
+  variant_metrics: VariantMetrics[];
+  significance: {
+    statistic: number;
+    p_value: number;
+    significant: boolean;
+  } | null;
+}
+

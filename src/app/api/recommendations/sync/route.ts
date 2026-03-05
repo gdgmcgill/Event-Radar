@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       const errorText = await response.text();
       console.error("Failed to sync event:", errorText);
       return NextResponse.json(
-        { error: "Failed to sync event", detail: errorText },
+        { error: "Failed to sync event" },
         { status: 500 }
       );
     }

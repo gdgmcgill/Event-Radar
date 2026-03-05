@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { type Event } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
-import { AlertCircle, RefreshCcw, ArrowLeft, ArrowRight, Clock } from "lucide-react";
+import { AlertCircle, RefreshCcw, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";

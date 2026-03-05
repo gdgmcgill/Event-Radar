@@ -1,168 +1,161 @@
 # Project Research Summary
 
-**Project:** Uni-Verse — Club Organizer Dashboard (v1.1)
-**Domain:** Role-based club management, member invitations, organizer dashboard on existing Next.js/Supabase platform
-**Researched:** 2026-02-25
+**Project:** Uni-Verse -- Club Management, Analytics, Reviews Milestone
+**Domain:** Campus event platform (organizer-facing tools)
+**Researched:** 2026-03-05
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Uni-Verse v1.1 is a subsequent milestone on a production Next.js 16 / Supabase / shadcn/ui platform. The milestone's core deliverable is a functional club organizer dashboard at `/my-clubs/[id]` — a dead link that already exists in the codebase. The scope is tightly bounded: add a tabbed dashboard, establish an owner vs organizer role distinction, build a member management system with email invitations, add club settings editing, and fix several surface-level UX gaps (context-aware public club page, club selector on event creation). The base infrastructure (auth, DB, API patterns, component library) is already in production and well-understood.
+Uni-Verse is an existing campus event discovery platform for McGill University that needs organizer-facing tools: club management dashboards, event analytics, post-event reviews, and multi-club support. The critical insight from research is that most of the data infrastructure already exists. The `user_interactions`, `event_popularity_scores`, `club_members`, `club_followers`, and `notifications` tables are all in place. This milestone is primarily a **presentation and workflow layer** on top of existing data, not a greenfield build. The recommended approach is to extend the current Next.js App Router monolith with Supabase RPC functions for analytics aggregation, add two new tables (event_reviews, review_responses), and build dashboard UI components using the existing shadcn/ui stack plus Recharts for charts.
 
-The recommended approach is database-first: all implementation must begin with a single SQL migration that adds a `CHECK (role IN ('owner', 'organizer'))` constraint on `club_members.role` and creates the `organizer_invites` table. Every other feature depends on this foundation. The dashboard should be built as a URL-param-driven tabbed shell that resolves user role server-side once and passes it as a prop — this eliminates redundant permission queries and centralizes authorization. The invite flow should launch as a copy-link mechanism (no email infrastructure required) and upgrade to Resend-delivered emails in v1.2.
+The biggest risk is security, not complexity. Supabase's anon key is public, meaning RLS policies are the real security boundary. If RLS policies on club-scoped data are too broad, organizers of one club can read another club's analytics, members, or reviews. The existing codebase already has application-level auth checks, but these are bypassed by direct client-side Supabase calls. Every new table and view must have RLS policies that join through `club_members` to verify the requesting user's membership. This must be established in the first phase and tested from the client SDK, not the SQL editor.
 
-The highest risks are all database-layer: specifically, RLS policy infinite recursion when self-referencing `club_members`, silent UPDATE failures on the `clubs` table (locked to admins by the security audit migration `011_rls_audit.sql`), and role escalation via the Supabase PostgREST endpoint. All three are avoidable by following the `is_club_owner()` SECURITY DEFINER function pattern already established in `011_rls_audit.sql` and by never using the service role client in organizer-facing routes. These are not speculative risks — they are confirmed gaps from direct inspection of the existing migration files.
+The second key risk is over-engineering analytics. The `user_interactions` table already tracks everything needed (views, clicks, saves, shares, calendar adds). The temptation is to build dashboards for all metrics at once. Research strongly recommends starting with exactly three metrics -- views, saves, and follower count change -- and adding more only when organizers ask for them. Compute aggregations in PostgreSQL (via RPC functions or views), not in JavaScript API routes.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The base stack requires no new major dependencies. Six missing shadcn/ui components must be added (`tabs`, `textarea`, `avatar`, `alert`, `tooltip`, `form`) via the shadcn CLI. Two new npm packages are required: `react-hook-form` with `@hookform/resolvers` for the settings form, and `resend` for email invitations (deferred to v1.2 in the architecture recommendation, but the package is scoped and ready). Zod is likely already a transitive dependency — verify with `npm ls zod` before installing.
+The existing stack (Next.js 16, TypeScript, Tailwind, shadcn/ui, Supabase, SWR, Zustand) stays unchanged. Three new libraries are needed, all officially supported by shadcn/ui. See [STACK.md](./STACK.md) for full details.
 
-**Core new additions:**
-- `shadcn/ui Tabs`: Primary dashboard navigation — Radix UI primitive, zero version conflicts with existing Radix packages
-- `react-hook-form@^7.54.0` + `@hookform/resolvers@^3.9.0`: Settings form state management — shadcn Form component is a thin wrapper around it; they are a matched pair
-- `zod@^3.23.0`: Schema validation for forms — already the project standard; verify if already installed as transitive dep
-- `resend@^4.0.0`: Transactional email for invitations — Next.js Route Handler native, no SMTP config; defer to v1.2 while copy-link invite ships first
+**New dependencies:**
+- **Recharts** (via `shadcn add chart`): Charting for analytics dashboards. shadcn/ui's Chart component wraps Recharts natively.
+- **React Hook Form + Zod 3.x** (via `shadcn add form`): Form validation for club settings, event creation, review submission. Do NOT use Zod 4.x (breaking changes, ecosystem not ready).
+- **TanStack Table** (via `shadcn add table`): Headless data tables for member lists and event management grids.
 
-Everything else (SWR, Zustand, Dialog, Badge, Card, Select, Input, Lucide, date-fns, react-easy-crop) is already installed and reusable without modification.
+**Not adding:** Tremor (redundant with shadcn), Chart.js/D3 (not React-native), Formik (controlled inputs, no shadcn integration), React Query (SWR already in codebase), Prisma/Drizzle (Supabase client is the ORM).
+
+**Database patterns (no new dependencies):** PostgreSQL views and RPC functions for analytics aggregation. Materialized views for expensive time-series queries (note: materialized views do not support RLS -- enforce access in API routes or via SECURITY DEFINER functions).
 
 ### Expected Features
 
-**Must have (table stakes — launch blockers):**
-- DB migration: `club_members.role` CHECK constraint (`'owner'`, `'organizer'`) — foundational prerequisite for all role-based logic
-- Auto-grant `owner` role to club creator on admin approval (one-line change in existing admin route)
-- `/my-clubs/[id]` tabbed dashboard — Overview, Events, Members, Settings tabs
-- Member list with roles visible and pending invitations visible
-- Owner vs organizer role distinction enforced at DB level
-- Direct organizer invitation by email (owner-only, copy-link UX for v1.1)
-- Club settings editing — owner-only: name, description, category, Instagram, logo
-- Club-context event creation from dashboard (pre-fills `clubId`, auto-approves for own club)
-- Context-aware public club page (three CTA states: visitor / organizer / owner)
+See [FEATURES.md](./FEATURES.md) for full analysis including dependency graph.
 
-**Should have (add within milestone if scope allows):**
-- Member removal by owner (with confirmation dialog, self-removal guard)
-- Invitation status tracking (pending / revoke)
-- Club selector on `/create-event` for organizers with multiple clubs
-- Updated post-creation messaging on `/clubs/create` success screen
+**Must have (table stakes):**
+- Club profile page (public) + editing -- foundation everything else builds on
+- Event creation flow with club selector for multi-club organizers
+- Auto-approval for own-club events -- organizers expect instant publishing
+- My clubs list with basic stats
+- Event list with status filtering + RSVP counts visible to organizers
+- Member/team management with invite flow
+- Follow/unfollow with follower count visibility
 
-**Defer to v1.2+:**
-- Email-delivered invitations via Resend (ship copy-link first, upgrade later)
-- Invitation expiry enforcement and re-send
-- Club analytics (event views, member growth) — interaction data already captured, analysis deferred
+**Should have (differentiators):**
+- Event-level analytics dashboard (views, saves, RSVPs per event)
+- Club-level analytics trends (follower growth, engagement over time)
+- Post-event review system (organizer-facing only)
+- Multi-club quick-switcher (Slack/Discord workspace-switcher pattern)
+- Event duplication ("create similar event")
+- Follower notifications on new event publish
 
-**Defer to v2+:**
-- Owner transfer flow — admin handles manually until graduation cycle data justifies the feature
-- Club archiving / soft-delete
-- Granular sub-organizer roles
+**Defer (later in milestone or v2):**
+- Club-level analytics trends (build after event analytics is solid)
+- Engagement comparison across events (power-user feature)
+- Public-facing reviews (moderation burden, defer until organizer reviews prove useful)
+- Ticketing/payments, real-time chat, custom registration forms, attendance check-in
 
 ### Architecture Approach
 
-The dashboard follows a server-shell / client-tab pattern: the page at `/my-clubs/[id]` is a Server Component that resolves the user's club role in a single DB query and passes it as a prop to a client-side `ClubDashboardTabs` component. Tab state lives in the URL search param (`?tab=members`), not React state, giving bookmarkable URLs and correct back-button behavior. Each tab component fetches its own data via client-side SWR calls. A new `components/clubs/` directory mirrors the existing `components/events/` structure. Three new API routes are needed (`/api/clubs/[id]/members`, `/api/clubs/[id]/invites`, `/api/invites/[token]`), plus a PATCH addition to the existing `/api/clubs/[id]` route.
+The architecture extends the existing monolith. No new services needed. The pattern is: Server Components for initial data loading and auth checks, Client Components for interactive tabs, API routes as thin pass-throughs to Supabase RPC functions for analytics. Club context is URL-driven (`/my-clubs/[id]`), not global state. See [ARCHITECTURE.md](./ARCHITECTURE.md) for component diagram and data flows.
 
 **Major components:**
-1. `/my-clubs/[id]/page.tsx` (Server Component) — role resolution, redirect guard, dashboard shell; passes `clubId` and `userRole` to all tabs as props
-2. `ClubDashboardTabs` — URL-param tab switcher; renders Overview / Events / Members / Settings tabs
-3. `ClubMembersTab` + `InviteOrganizerModal` — member list, remove-member (with confirmation dialog), invite-by-email with copy-link return
-4. `ClubSettingsTab` — react-hook-form + Zod settings form, owner-only, excludes `status` from updatable fields
-5. `organizer_invites` table + `is_club_owner()` SECURITY DEFINER function — DB foundation that prevents RLS infinite recursion
-6. Modified: `/api/admin/clubs/[id]` (role: organizer → owner), `/clubs/[id]` public page (context-aware CTA), `CreateEventForm` (wire `clubId` prop)
+1. **Club Dashboard (reworked)** -- Tab-based management hub (Overview, Events, Analytics, Reviews, Members, Settings). Server Component loads header data; each tab fetches its own data client-side.
+2. **Analytics system** -- Supabase RPC functions (`get_club_analytics`, `get_event_analytics`) aggregate existing `user_interactions` data. API routes are thin wrappers. Recharts renders charts in the Analytics tab.
+3. **Review system** -- Two new tables (`event_reviews`, `review_responses`). Students review past events they attended. Organizers see aggregated feedback in the Reviews tab. Reviews are organizer-facing only in this milestone.
+4. **Club Switcher** -- Dropdown navigation component that redirects to `/my-clubs/[other-id]`. No global state -- pure URL navigation.
 
 ### Critical Pitfalls
 
-1. **RLS infinite recursion on `club_members` self-reference** — Never use a raw `FROM club_members` subquery inside a `club_members` RLS policy. Create a `SECURITY DEFINER` function `is_club_owner(club_id UUID)` following the existing `is_admin()` pattern in `011_rls_audit.sql`. Must be designed in Phase 1 before any policy is written.
+See [PITFALLS.md](./PITFALLS.md) for full analysis with 11 identified pitfalls.
 
-2. **Owner cross-row SELECT blocked by existing RLS** — The existing `"Users see own memberships"` policy only returns the user's own row. An owner querying the member list gets an empty array with no error — extremely hard to debug (returns `{ data: [], error: null }`). Add `"Owners can view all club members"` policy using `is_club_owner()` in the Phase 1 migration.
-
-3. **`clubs` UPDATE silently fails for owners** — `011_rls_audit.sql` locked clubs UPDATE to admins only. Settings form saves will return 0 rows updated with no error. Add a scoped owner UPDATE policy in the same PR as the Settings tab. Never test with the service role client during development — it bypasses RLS and masks this problem.
-
-4. **Role escalation via PostgREST direct endpoint** — Any authenticated user can POST directly to Supabase's REST endpoint, bypassing the Next.js API route. The invite endpoint must harden at the DB layer: `WITH CHECK (role = 'organizer')` hardcoded, never from client payload. The `CHECK (role IN ('owner', 'organizer'))` constraint is the schema-level backstop.
-
-5. **Service role client in organizer routes** — The admin route pattern uses the service role client. Reusing it for organizer routes bypasses RLS entirely. All organizer-facing API routes must use the session client (`createClient()`) and rely on RLS. Service role is for admin routes only.
+1. **RLS policies that don't isolate club data** -- The anon key is public. If RLS is misconfigured, any authenticated user can query any club's data directly. Prevention: write RLS policies that join through `club_members`, test from client SDK before every release.
+2. **Authorization only at the API route level** -- Next.js App Router has many entry points (Server Components, Server Actions, direct client calls). Prevention: treat RLS as the primary security boundary, create a shared `verifyClubMembership()` utility, treat API checks as UX guardrails.
+3. **Over-engineering analytics** -- Building 15 charts nobody uses. Prevention: start with exactly 3 metrics (views, saves, follower change), pre-aggregate in PostgreSQL, add only on demand.
+4. **Multi-club state corruption** -- Switching clubs while editing can submit data to the wrong club. Prevention: club ID comes from URL params only, forms embed `club_id` at render time, no global "current club" state.
+5. **N+1 queries in club listing** -- Current `my-clubs/route.ts` runs 2 queries per club. Adding analytics multiplies this. Prevention: batch queries using Postgres views or relational selects from day one.
 
 ## Implications for Roadmap
 
-Based on research, the dependency chain from FEATURES.md and the build order from ARCHITECTURE.md converge on a clear 4-phase structure.
+### Phase 1: Club Management Foundation
 
-### Phase 1: Database Foundation
-**Rationale:** Every role-based feature — member list, invite flow, settings editing, context-aware CTAs — depends on the `club_members.role` CHECK constraint and the `is_club_owner()` function. Pitfalls 1, 2, 3, and 4 are all prevented at this layer. This must land before any application code.
-**Delivers:** Migrations deployed; `role` column constrained; `is_club_owner()` SECURITY DEFINER function live; owner cross-row SELECT and DELETE RLS policies; `organizer_invites` table with RLS; composite index on `club_members(club_id, role)`; auto-grant changed from `organizer` to `owner` in admin approval route.
-**Addresses:** DB migration (P1), auto-grant owner on approval (P1)
-**Avoids:** Infinite recursion (Pitfall 2), cross-row SELECT gap (Pitfall 1), role escalation (Pitfall 4)
+**Rationale:** Everything depends on the club profile and management infrastructure. The public club page, editing flow, and member management are prerequisites for analytics, reviews, and multi-club features. Also the phase where RLS patterns must be established correctly.
+**Delivers:** Complete club profile pages (public and organizer-facing), club settings editing, member management with invites, my-clubs list, auto-approval for organizer events, follower count display.
+**Addresses:** All table-stakes features from FEATURES.md except analytics and reviews.
+**Avoids:** Pitfalls 1 (RLS isolation), 2 (auth at data layer), 4 (multi-club state -- establish URL-based pattern here), 6 (N+1 queries), 7 (auto-approval edge cases), 9 (invitation token exposure), 11 (orphaned clubs).
 
-### Phase 2: Dashboard Shell + Read-Only Tabs
-**Rationale:** The page shell and URL-param tab navigation must exist before any tab content can be built. Events and Overview tabs are read-only and consume existing APIs — lowest risk, earliest confidence win. Resolves the dead link without shipping a broken or incomplete experience.
-**Delivers:** `/my-clubs/[id]` page with server-side role resolution and redirect guard; `ClubDashboardTabs` with URL-param routing; `ClubOverviewTab` (club info summary); `ClubEventsTab` consuming existing `GET /api/clubs/[id]/events` with no new API work.
-**Uses:** shadcn Tabs (new install), Next.js `useSearchParams`, SWR
-**Avoids:** Dead link going live before dashboard is complete (Pitfall 7 from PITFALLS.md)
+### Phase 2: Event Analytics Dashboard
 
-### Phase 3: Members Tab + Invite Flow
-**Rationale:** Member management is the core differentiator of the milestone. The invite flow lives inside the Members tab, so both must ship together. Both require Phase 1 RLS to be in place before testing is meaningful.
-**Delivers:** `GET + DELETE /api/clubs/[id]/members`; `ClubMembersTab` with role display, remove-member (confirmation dialog, self-removal guard); `InviteOrganizerModal` with copy-link UX; `POST /api/clubs/[id]/invites` + `GET /api/invites/[token]`; `/invites/[token]` accept page; pending invite list in Members tab.
-**Uses:** shadcn Avatar, Tooltip, Alert (new installs); react-hook-form for invite email input
-**Avoids:** Role escalation via invite payload (Pitfall 4), owner self-removal (Architecture anti-pattern 5), wrong CTAs visible to organizers (UX pitfall from PITFALLS.md)
+**Rationale:** Uses entirely existing data (`user_interactions`, `event_popularity_scores`). Zero migration risk. High organizer value -- this is the primary differentiator over competing campus platforms.
+**Delivers:** Event-level analytics (views, saves, RSVPs per event), club-level summary stats, Recharts-powered charts in the dashboard Analytics tab.
+**Uses:** Recharts (from STACK.md), Supabase RPC functions (from ARCHITECTURE.md).
+**Implements:** Analytics data flow -- RPC functions for aggregation, thin API routes, Analytics tab component.
+**Avoids:** Pitfall 3 (over-engineering -- start with 3 metrics), Pitfall 6 (pre-aggregate instead of N+1).
 
-### Phase 4: Settings Tab + Surface Fixes
-**Rationale:** Club settings editing requires a new RLS policy on the `clubs` table — it should not block the critical dashboard path. Surface fixes (context-aware public page, create-event club selector, post-creation messaging) are isolated and low-risk; they can be parallelized across this phase.
-**Delivers:** `PATCH /api/clubs/[id]` handler (explicitly excludes `status` from updatable columns); `ClubSettingsTab` with react-hook-form + Zod validation; owner UPDATE RLS policy on `clubs`; context-aware CTA on public club page (3 states: visitor / organizer / owner); club selector on `/create-event`; wired `CreateEventForm` `clubId` prop with auto-approval for own-club events; updated post-creation messaging.
-**Uses:** react-hook-form, @hookform/resolvers, Zod, shadcn Form, Textarea (new installs)
-**Avoids:** Silent UPDATE failure on clubs (Pitfall 3), wrong CTAs on public page (UX pitfall from PITFALLS.md), auto-approval scope too broad (Pitfall 6 from PITFALLS.md)
+### Phase 3: Post-Event Review System
+
+**Rationale:** Requires new database tables (`event_reviews`, `review_responses`) and a more complex validation flow (date checks, RSVP eligibility, uniqueness constraints). Best built after the dashboard shell is stable.
+**Delivers:** Student review submission form on past events, organizer-facing review aggregation in the Reviews tab, optional organizer responses.
+**Uses:** React Hook Form + Zod (from STACK.md), custom star rating component with Lucide icons.
+**Implements:** Review data flow from ARCHITECTURE.md -- new tables with RLS, review form, review aggregation RPC.
+**Avoids:** Pitfall 5 (pre-event/duplicate reviews -- enforce via CHECK + UNIQUE constraints in the migration), Pitfall 10 (unanchored ratings -- use attribute-based or simple anchored scale).
+
+### Phase 4: Multi-Club Polish and UX Enhancements
+
+**Rationale:** UX convenience layer that benefits from all dashboard tabs being complete. Low complexity, high daily-use value for organizers managing multiple clubs.
+**Delivers:** Club switcher dropdown, enhanced event creation with club selector, event duplication, follower notification on publish.
+**Implements:** ClubSwitcher component, enhanced EventCreateForm from ARCHITECTURE.md.
+**Avoids:** Pitfall 4 (state corruption -- pure URL navigation, no global club state).
 
 ### Phase Ordering Rationale
 
-- The dependency chain from FEATURES.md is unambiguous: DB constraint enables role distinction, which enables the dashboard, which enables member management, which enables invite flow.
-- ARCHITECTURE.md's 7-step build order maps cleanly onto 4 roadmap phases by grouping: DB work together, shell + low-risk tabs together, members + invites together (both need members API), settings + surface fixes together (both are isolated from the critical path).
-- Each phase produces a shippable increment. Phase 2 resolves the dead link. Phase 3 delivers the full member management loop. Phase 4 completes the organizer experience.
-- Pitfalls are front-loaded: the most dangerous issues (RLS infinite recursion, cross-row SELECT, role escalation) are all addressed in Phase 1 before any UI is built.
+- Phases follow a strict dependency chain: club management must exist before analytics can display data about clubs, reviews need the dashboard shell, and multi-club polish needs all tabs working.
+- Security patterns (RLS, auth utilities) are established in Phase 1 and inherited by all subsequent phases. Getting this wrong early means rewriting RLS for every new table.
+- Analytics before reviews because analytics has zero schema migration risk (uses existing tables only), while reviews require new tables and more complex validation.
+- Multi-club UX last because it is a convenience layer -- a nice dropdown that navigates between complete dashboards, not a foundation.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 3 (Invite Token Flow):** The acceptance flow has several edge cases that must be specified before implementation: email verification match (invitee email must match authenticated user), expired token handling, already-accepted token guard, invitee not yet registered (no account for that email). Define the UX for each state before writing a line of code.
-- **Phase 1 (RLS Policies):** The exact policy SQL should be reviewed by someone familiar with Supabase's SECURITY DEFINER behavior before the migration is run in production. Rollback from an infinite-recursion policy in production is high-cost (all `club_members` queries fail until the policy is manually dropped).
+- **Phase 2 (Analytics):** The specific RPC function implementations need careful design. Which exact aggregation queries perform well at McGill scale? Start minimal but validate query performance against realistic data volumes.
+- **Phase 3 (Reviews):** Rating UX design needs user input. Should it be 1-5 stars, thumbs up/down, or attribute-based? Research suggests attribute-based but the choice affects schema design.
 
-Phases with standard patterns (skip additional research):
-- **Phase 2 (Dashboard Shell):** URL-param tab state is a documented Next.js App Router pattern with official examples. No unknowns.
-- **Phase 4 (Settings Form):** react-hook-form + Zod + shadcn Form is a fully documented, stable integration. Official shadcn docs provide complete examples.
+Phases with standard patterns (skip deep research):
+- **Phase 1 (Club Management):** CRUD operations, RLS policies, tab-based dashboards -- all well-documented patterns in Next.js + Supabase. Existing codebase already demonstrates the pattern.
+- **Phase 4 (Multi-Club Polish):** Simple navigation component and form pre-filling. No novel patterns.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Decisions based on direct `package.json` and `src/components/ui/` inspection; shadcn + react-hook-form integration is official and documented |
-| Features | HIGH | Feature scope derived from PROJECT.md (first-party); competitor analysis (Slack, GitHub Orgs, Discord) cross-validates table stakes vs differentiators |
-| Architecture | HIGH | Based on direct codebase inspection of existing routes, components, schema; patterns traced from working code not documentation |
-| Pitfalls | HIGH | Pitfalls confirmed from direct inspection of `009_user_roles.sql` and `011_rls_audit.sql`; not speculative; recovery costs explicitly documented |
+| Stack | HIGH | All recommendations are officially supported by shadcn/ui. Versions verified against npm. Existing stack unchanged. |
+| Features | MEDIUM-HIGH | Feature landscape validated against Luma, Eventbrite, CampusGroups. Anti-features clearly scoped. Minor uncertainty on review system UX (rating scale design). |
+| Architecture | HIGH | All patterns derived from existing codebase analysis. No new services or paradigms. Extends proven patterns already in production. |
+| Pitfalls | HIGH | Critical pitfalls verified against Supabase docs and existing code inspection. N+1 pattern confirmed in current `my-clubs/route.ts`. RLS risks documented by Supabase themselves. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Resend free tier limits:** Confirmed as 3,000 emails/month from training data; verify current limit at resend.com before v1.2 email delivery feature. Not blocking for v1.1 copy-link approach.
-- **Logo upload in Settings tab:** ARCHITECTURE.md recommends deferring logo upload to v1.2 if it adds risk (Supabase Storage presigned URLs). PROJECT.md includes it in scope. Resolve during Phase 4 planning — ship text / category / Instagram fields first, add logo as a separate task within Phase 4.
-- **Invitee must have existing account:** A McGill email invite only works if the invitee has already signed up. The invite acceptance flow must surface a clear error to the owner: "No account found for this email. They must sign in with their McGill account first." Define this UX before Phase 3 implementation to avoid a confusing dead-end flow.
+- **Review rating UX:** Research identifies that bare 1-5 star ratings produce biased data, but the optimal alternative (attribute-based, binary, anchored scale) requires organizer input. Decide during Phase 3 planning.
+- **Materialized view refresh strategy:** If analytics queries become slow, materialized views are the solution, but they do not support RLS. The access control pattern for materialized view data (SECURITY DEFINER functions vs. API-level checks) needs to be decided before implementation.
+- **Follower count denormalization:** Research recommends a `follower_count` column with a Postgres trigger instead of live COUNT queries. This is a schema change that should be done early but is not in the existing codebase. Decide timing during Phase 1 planning.
+- **Event audit after member removal:** When an organizer is removed from a club, their auto-approved future events should be flagged for review. The trigger/mechanism for this is not designed yet.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `package.json` — confirmed installed dependencies and which shadcn components are missing
-- `src/components/ui/` directory — confirmed which shadcn components are absent
-- `supabase/migrations/009_user_roles.sql` — confirmed `club_members.role TEXT` has no CHECK constraint; confirmed existing RLS policies cover only own-row SELECT and admin ALL
-- `supabase/migrations/011_rls_audit.sql` — confirmed `clubs` UPDATE locked to admins only; confirmed `is_admin()` SECURITY DEFINER pattern available to reuse as `is_club_owner()`
-- `.planning/PROJECT.md` — v1.1 milestone scope, existing API capabilities, confirmed dead link
-- `CLAUDE.md` — tech stack, directory structure, database schema
-- Next.js App Router `useSearchParams` docs — URL-param tab state pattern (official)
-- Supabase RLS documentation — permissive policy OR logic behavior (official)
-- PostgreSQL SECURITY DEFINER docs — breaking recursive RLS evaluation (official)
+- Existing codebase analysis -- all architecture patterns, database schema, current component structure
+- [shadcn/ui documentation](https://ui.shadcn.com/) -- Chart, Form, DataTable component recommendations
+- [Supabase RLS documentation](https://supabase.com/docs/guides/database/postgres/row-level-security) -- security patterns
+- [Next.js App Router authentication guide](https://nextjs.org/docs/app/guides/authentication) -- auth boundary warnings
 
 ### Secondary (MEDIUM confidence)
-- shadcn/ui docs (ui.shadcn.com) — Form + react-hook-form + Zod integration pattern
-- Resend Next.js guide (resend.com/docs) — Route Handler integration; free tier limits
-- Slack, GitHub Orgs, Discord role hierarchy patterns — competitor analysis for feature table stakes
-
-### Tertiary (LOW confidence)
-- Club management software surveys (Wild Apricot, Join It, Gradnet) — feature landscape validation; used to confirm table stakes, not for implementation decisions
+- [Luma](https://help.luma.com/), [Eventbrite](https://www.eventbrite.com/organizer/features/event-management-software/), [CampusGroups](https://www.readyeducation.com/en-us/campusgroups) -- feature landscape benchmarking
+- [Supabase blog on PostgreSQL views](https://supabase.com/blog/postgresql-views) -- analytics aggregation patterns
+- [Multi-tenant RLS patterns](https://dev.to/blackie360/) -- club data isolation strategies
+- [Rating systems UX research](https://uxdesign.cc/the-ux-of-rating-systems-bc4f9d424b90) -- review system design
 
 ---
-*Research completed: 2026-02-25*
+*Research completed: 2026-03-05*
 *Ready for roadmap: yes*

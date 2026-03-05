@@ -1,252 +1,324 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-02-25
+**Analysis Date:** 2026-03-05
 
 ## Directory Layout
 
 ```
-src/
-├── app/                           # Next.js App Router (pages, layouts, API routes)
-│   ├── (public pages)/            # Public routes (about, help, privacy, terms, feedback, etc.)
-│   ├── api/                       # REST API endpoints
-│   │   ├── admin/                 # Admin operations (events, clubs, users, stats)
-│   │   ├── events/                # Event CRUD and operations (save, RSVP, popular, happening-now)
-│   │   ├── clubs/                 # Club management
-│   │   ├── interactions/          # User interaction tracking (views, clicks, saves)
-│   │   ├── recommendations/       # Event recommendations engine
-│   │   ├── profile/               # User profile operations
-│   │   ├── notifications/         # Notification delivery
-│   │   ├── auth/                  # OAuth callback, sign out
-│   │   └── cron/                  # Scheduled tasks (send reminders)
-│   ├── admin-login/               # Admin login page
-│   ├── calendar/                  # Calendar view page
-│   ├── categories/                # Category browsing page
-│   ├── clubs/                     # Club discovery and management pages
-│   ├── create-event/              # Event creation form page
-│   ├── events/[id]/               # Event detail page (dynamic route)
-│   ├── my-clubs/                  # User's clubs dashboard
-│   ├── my-events/                 # Saved events page
-│   ├── notifications/             # Notifications page
-│   ├── onboarding/                # Onboarding flow page
-│   ├── moderation/                # Admin moderation pages
-│   ├── profile/                   # User profile page
-│   ├── user-profile/              # User profile editing page
-│   ├── layout.tsx                 # Root layout with AuthProvider, Header, SideNavBar
-│   ├── page.tsx                   # Home page (main feed)
-│   ├── robots.ts                  # SEO robots.txt
-│   └── sitemap.ts                 # SEO sitemap
-│
-├── components/                    # Reusable React components
-│   ├── ui/                        # shadcn/ui primitives (button, input, dialog, etc.)
-│   ├── layout/                    # Header, SideNavBar, Footer, ThemeToggle
-│   ├── events/                    # Event-specific components (Card, Grid, Filters, Modal, etc.)
-│   ├── auth/                      # Auth components (SignInButton, SignOutButton)
-│   ├── clubs/                     # Club components (OrganizerRequestDialog)
-│   ├── profile/                   # Profile components (EditProfileModal, AvatarCropModal, etc.)
-│   ├── notifications/             # Notification UI (NotificationBell, NotificationList)
-│   ├── providers/                 # Context providers (AuthProvider)
-│   ├── redoc/                     # API documentation UI
-│   ├── shared/                    # Shared modals (EditEventModal)
-│   └── ErrorBoundary.tsx          # Error boundary wrapper
-│
-├── hooks/                         # Custom React hooks
-│   ├── useEvents.ts               # Fetch events with cursor pagination
-│   ├── useSavedEvents.ts          # Manage saved event IDs
-│   ├── useUser.ts                 # Fetch user profile
-│   ├── useTracking.ts             # Track user interactions
-│   └── *.test.ts                  # Hook tests
-│
-├── lib/                           # Utility functions and helpers
-│   ├── supabase/
-│   │   ├── client.ts              # Browser Supabase client factory
-│   │   ├── server.ts              # Server Supabase client factory
-│   │   ├── service.ts             # Service role client (admin operations)
-│   │   └── types.ts               # Generated Supabase database types
-│   ├── utils.ts                   # General utilities (cn, formatDate, formatTime, isMcGillEmail)
-│   ├── constants.ts               # Constants (EVENT_TAGS, EVENT_CATEGORIES, COLORS, API endpoints)
-│   ├── roles.ts                   # Role checking functions (isAdmin, isOrganizer)
-│   ├── classifier.ts              # Instagram event classifier (NLP)
-│   ├── classifier-pipeline.ts     # Classification pipeline with webhook integration
-│   ├── kmeans.ts                  # K-means clustering for recommendations
-│   ├── tagMapping.ts              # Event tag normalization
-│   ├── image-upload.ts            # Image download/upload to Supabase storage
-│   ├── admin.ts                   # Admin verification utilities
-│   ├── swagger.ts                 # OpenAPI/Swagger documentation generator
-│   └── *.test.ts                  # Utility tests
-│
-├── store/                         # Zustand state management
-│   └── useAuthStore.ts            # Global auth state (user, loading, initialize)
-│
-├── types/                         # TypeScript type definitions
-│   └── index.ts                   # Event, Club, User, SavedEvent, RSVP, Notification types
-│
-├── middleware.ts                  # Next.js middleware (auth, rate limiting, route protection)
-├── middlewareRateLimit.ts         # Rate limiting logic
-│
-└── __tests__/                     # Integration tests
-    └── api/
-        └── events/
-            └── rsvp.test.ts       # RSVP endpoint tests
+Event-Radar/
+├── src/                        # Main application source
+│   ├── app/                    # Next.js App Router (pages + API routes)
+│   │   ├── layout.tsx          # Root layout (AuthProvider, SideNavBar, Header, Footer)
+│   │   ├── page.tsx            # Home page (event discovery)
+│   │   ├── globals.css         # Global CSS / Tailwind imports
+│   │   ├── api/                # API route handlers
+│   │   │   ├── events/         # Event CRUD and queries
+│   │   │   ├── clubs/          # Club management
+│   │   │   ├── admin/          # Admin-only routes
+│   │   │   ├── recommendations/# Recommendation engine proxy
+│   │   │   ├── interactions/   # User interaction tracking
+│   │   │   ├── notifications/  # Notification management
+│   │   │   ├── user/           # User engagement/following
+│   │   │   ├── users/          # User profiles and saved events
+│   │   │   ├── profile/        # Profile avatar/interests
+│   │   │   ├── feedback/       # App feedback
+│   │   │   ├── cron/           # Scheduled jobs (send-reminders)
+│   │   │   ├── health/         # Health check
+│   │   │   ├── my-clubs/       # User's club memberships
+│   │   │   ├── onboarding/     # Onboarding completion
+│   │   │   └── organizer-requests/ # Club organizer applications
+│   │   ├── auth/               # Auth callback and signout routes
+│   │   ├── events/[id]/        # Event detail page
+│   │   ├── calendar/           # Calendar view
+│   │   ├── my-events/          # Saved events page
+│   │   ├── clubs/              # Club listing and detail pages
+│   │   ├── my-clubs/           # User's managed clubs
+│   │   ├── moderation/         # Admin moderation dashboard
+│   │   ├── create-event/       # Event creation page
+│   │   ├── profile/            # User profile page
+│   │   ├── user-profile/       # Public user profile
+│   │   ├── onboarding/         # New user onboarding
+│   │   ├── notifications/      # Notifications page
+│   │   ├── categories/         # Category browsing
+│   │   ├── invites/[token]/    # Club invite acceptance
+│   │   ├── admin-login/        # Admin login page
+│   │   ├── about/              # About page
+│   │   ├── help/               # Help page
+│   │   ├── feedback/           # Feedback submission page
+│   │   ├── docs/               # API documentation (Redoc)
+│   │   ├── privacy/            # Privacy policy
+│   │   ├── terms/              # Terms of service
+│   │   └── health/             # Health check page
+│   ├── components/             # Reusable React components
+│   │   ├── ui/                 # shadcn/ui primitives (button, card, dialog, etc.)
+│   │   ├── events/             # Event-specific components
+│   │   ├── clubs/              # Club-specific components
+│   │   ├── layout/             # Layout components (Header, SideNavBar, Footer)
+│   │   ├── auth/               # Auth components (SignInButton, SignOutButton)
+│   │   ├── notifications/      # Notification components
+│   │   ├── profile/            # Profile components
+│   │   ├── providers/          # Context providers (AuthProvider)
+│   │   ├── shared/             # Shared feature components
+│   │   ├── redoc/              # API doc rendering
+│   │   └── ErrorBoundary.tsx   # Error boundary component
+│   ├── hooks/                  # Custom React hooks
+│   ├── lib/                    # Utilities, constants, Supabase clients, classifier
+│   │   └── supabase/           # Supabase client factories and DB types
+│   ├── store/                  # Zustand state stores
+│   ├── types/                  # TypeScript type definitions
+│   └── __tests__/              # Test files (API route tests)
+├── AI/                         # Python recommendation service (Two-Tower model)
+├── backend/                    # Legacy Python similarity backend
+├── internal/                   # Internal team dashboard (Vite app)
+├── supabase/                   # Supabase config, migrations, edge functions
+│   ├── migrations/             # SQL migration files (001-013 + dated)
+│   ├── functions/              # Supabase Edge Functions
+│   └── config.toml             # Supabase project config
+├── scripts/                    # Utility/testing scripts
+├── docs/                       # Documentation files
+├── public/                     # Static assets
+├── .github/                    # GitHub Actions workflows
+├── .vercel/                    # Vercel deployment config
+├── next.config.js              # Next.js configuration
+├── tailwind.config.ts          # Tailwind CSS configuration
+├── tsconfig.json               # TypeScript configuration
+├── eslint.config.mjs           # ESLint configuration
+├── vitest.config.ts            # Vitest test configuration
+├── vercel.json                 # Vercel deployment settings
+├── package.json                # Dependencies and scripts
+└── CLAUDE.md                   # Claude Code instructions
 ```
 
 ## Directory Purposes
 
-**src/app/:**
-- Purpose: Next.js App Router pages, layouts, and API routes
-- Contains: Page components (.tsx), layout components, dynamic segments [id], API route handlers
-- Organized: By feature/domain (events, clubs, admin, etc.)
+**`src/app/`:**
+- Purpose: Next.js App Router pages and API routes
+- Contains: `page.tsx` files for each route, `route.ts` files for API endpoints
+- Key files: `layout.tsx` (root layout), `page.tsx` (home), `globals.css`
 
-**src/app/api/:**
-- Purpose: REST API endpoints
-- Contains: Route handlers returning JSON responses
-- Pattern: File-based routing (folder/route.ts); folders with [id] for dynamic segments
+**`src/app/api/`:**
+- Purpose: Server-side API route handlers
+- Contains: Route handlers organized by resource (events, clubs, users, admin, etc.)
+- Key files: `events/route.ts` (main event listing), `recommendations/route.ts` (rec engine proxy), `interactions/route.ts` (tracking)
 
-**src/components/:**
-- Purpose: Reusable React UI components
-- Contains: Functional components using hooks, Tailwind CSS, shadcn/ui
-- Organized: By feature/domain; `ui/` for primitive components
+**`src/app/api/admin/`:**
+- Purpose: Admin-only management endpoints
+- Contains: CRUD for events, clubs, users, organizer requests, stats, popularity calculation
+- Pattern: Each route calls `verifyAdmin()` before processing
 
-**src/hooks/:**
-- Purpose: Custom React hooks encapsulating logic
-- Contains: Data fetching, state management, side effects
-- Pattern: Returns hooks that can be called from components; includes test files
+**`src/app/moderation/`:**
+- Purpose: Admin moderation dashboard pages
+- Contains: Sub-pages for pending events, all events, users, clubs, organizer requests, stats
 
-**src/lib/:**
-- Purpose: Utility functions, integrations, constants
-- Contains: Formatting, validation, database clients, classification logic
-- Organized: By concern (supabase/, constants, classifiers)
+**`src/components/events/`:**
+- Purpose: All event-related UI components
+- Contains: `EventCard.tsx`, `EventGrid.tsx`, `EventFilters.tsx`, `EventDetailsModal.tsx`, `EventSearch.tsx`, `CreateEventForm.tsx`, `PopularEventsSection.tsx`, `RecommendedEventsSection.tsx`, `HappeningNowSection.tsx`, `RsvpButton.tsx`, and more
+- Key files: `EventCard.tsx` (core card component), `EventGrid.tsx` (grid layout with skeleton loading)
 
-**src/store/:**
-- Purpose: Global client-side state management
-- Contains: Zustand stores (currently just auth)
-- Pattern: `useAuthStore` provides user, loading, initialize, signOut
+**`src/components/ui/`:**
+- Purpose: shadcn/ui primitive components
+- Contains: `button.tsx`, `card.tsx`, `dialog.tsx`, `sheet.tsx`, `input.tsx`, `select.tsx`, `badge.tsx`, `tabs.tsx`, `dropdown-menu.tsx`, `carousel.tsx`, `slider.tsx`, `switch.tsx`, `skeleton.tsx`, `breadcrumb.tsx`, `EmptyState.tsx`
+- Note: Generated by shadcn CLI, do not manually edit (except `EmptyState.tsx` which is custom)
 
-**src/types/:**
-- Purpose: TypeScript interfaces matching database schema
-- Contains: Event, Club, User, SavedEvent, RSVP, Notification, UserInteraction
-- Single file: `index.ts` (currently 237 lines)
+**`src/components/layout/`:**
+- Purpose: App shell layout components
+- Contains: `Header.tsx` (top bar with mobile menu), `SideNavBar.tsx` (desktop sidebar navigation), `Footer.tsx`, `AppBreadcrumb.tsx`, `ThemeToggle.tsx`
 
-**src/__tests__/:**
-- Purpose: Integration/unit tests
-- Contains: Test files mirroring src/ structure
-- Current coverage: Limited (rsvp.test.ts, some hook tests)
+**`src/components/clubs/`:**
+- Purpose: Club-related UI components
+- Contains: `ClubDashboard.tsx`, `ClubOverviewTab.tsx`, `ClubEventsTab.tsx`, `ClubMembersTab.tsx`, `FollowButton.tsx`, `OrganizerRequestDialog.tsx`
+
+**`src/components/profile/`:**
+- Purpose: User profile UI components
+- Contains: `ProfileHeader.tsx`, `EditProfileButton.tsx`, `EditProfileModal.tsx`, `InterestTagSelector.tsx`, `InterestsCard.tsx`, `AvatarCropModal.tsx`
+
+**`src/hooks/`:**
+- Purpose: Custom React hooks for data fetching and side effects
+- Contains: `useEvents.ts` (paginated event fetching), `useUser.ts` (Supabase auth user), `useSavedEvents.ts` (saved event IDs), `useTracking.ts` (interaction tracking)
+
+**`src/lib/`:**
+- Purpose: Shared utilities, constants, and domain logic
+- Contains: Supabase client factories, utility functions, constants, event classifier, role helpers, admin verification, tag mapping, date validation, export utilities, image upload
+- Key files: `utils.ts` (cn, formatDate, formatTime, isMcGillEmail), `constants.ts` (EVENT_TAGS, EVENT_CATEGORIES, API_ENDPOINTS, MCGILL_COLORS), `classifier.ts` (Instagram post classifier), `admin.ts` (verifyAdmin)
+
+**`src/lib/supabase/`:**
+- Purpose: Supabase client factories for different execution contexts
+- Contains: `client.ts` (browser), `server.ts` (server components/API routes), `service.ts` (service role, bypasses RLS), `types.ts` (generated DB types)
+
+**`src/store/`:**
+- Purpose: Global state management (Zustand)
+- Contains: `useAuthStore.ts` - auth state with user profile, initialization, and sign-out
+
+**`src/types/`:**
+- Purpose: Shared TypeScript type definitions
+- Contains: `index.ts` with all interfaces (Event, Club, User, SavedEvent, Notification, EventFilter, etc.)
+
+**`AI/`:**
+- Purpose: Python Two-Tower recommendation service
+- Contains: FastAPI app, ML models, training scripts, config
+- Key files: `run.py` (entry point), `config.py`, `api/`, `services/`, `models/`
+
+**`backend/`:**
+- Purpose: Legacy Python similarity computation backend
+- Contains: `app.py`, `similarity.py`, `test_similarity.py`
+
+**`internal/`:**
+- Purpose: Internal team dashboard (separate Vite app)
+- Contains: Vite + TypeScript app for team admin tasks, data collection
+
+**`supabase/`:**
+- Purpose: Supabase project configuration and database migrations
+- Contains: `config.toml`, `migrations/` (19 SQL files), `functions/` (edge functions), `seed-beta-events.sql`
+
+**`scripts/`:**
+- Purpose: Utility and testing scripts
+- Contains: `check-feedback-loop.mjs`, `test-real-scrape.ts`, `test-scrape-pipeline.ts`
 
 ## Key File Locations
 
 **Entry Points:**
-- `src/app/page.tsx`: Home feed page (main entry point for users)
-- `src/app/auth/callback/route.ts`: OAuth redirect handler
-- `src/middleware.ts`: Request-level auth, rate limiting, route protection
-- `src/app/layout.tsx`: Root layout with AuthProvider, Header, Footer
+- `src/app/layout.tsx`: Root layout wrapping all pages
+- `src/app/page.tsx`: Home page / event discovery
+- `src/app/auth/callback/route.ts`: OAuth callback handler
 
 **Configuration:**
-- `.env.local`: Supabase credentials (DO NOT COMMIT)
-- `next.config.js`: Next.js build configuration
-- `tsconfig.json`: TypeScript strict mode enabled
-- `tailwind.config.ts`: Tailwind CSS theming
+- `next.config.js`: Next.js config
+- `tailwind.config.ts`: Tailwind theme with McGill brand colors
+- `tsconfig.json`: TypeScript config (strict mode, `@/` path alias)
+- `eslint.config.mjs`: ESLint config
+- `vitest.config.ts`: Test runner config
+- `vercel.json`: Vercel deployment config
+- `components.json`: shadcn/ui component config
+- `.prettierrc`: Prettier formatting config
 
 **Core Logic:**
-- `src/lib/supabase/client.ts`: Browser Supabase client for client components
-- `src/lib/supabase/server.ts`: Server Supabase client for API routes
+- `src/app/api/events/route.ts`: Main events API endpoint
+- `src/app/api/recommendations/route.ts`: Recommendation engine proxy
+- `src/app/api/interactions/route.ts`: User interaction tracking
+- `src/lib/classifier.ts`: Instagram post event classifier
+- `src/lib/classifier-pipeline.ts`: Full classification pipeline
 - `src/store/useAuthStore.ts`: Global auth state management
-- `src/hooks/useEvents.ts`: Main event fetching hook with cursor pagination
-
-**Data Models:**
-- `src/types/index.ts`: All TypeScript interfaces for domain entities
-
-**API Routes (by resource):**
-- `src/app/api/events/route.ts`: GET events with filtering/pagination
-- `src/app/api/events/[id]/save/route.ts`: POST/DELETE to save/unsave
-- `src/app/api/events/[id]/rsvp/route.ts`: GET/POST/DELETE RSVP
-- `src/app/api/events/popular/route.ts`: GET trending events
-- `src/app/api/recommendations/route.ts`: GET personalized recommendations
-- `src/app/api/admin/events/route.ts`: Admin event listing
-- `src/app/api/admin/events/[id]/status/route.ts`: Admin event approval
 
 **Testing:**
-- `src/hooks/useEvents.test.ts`: Hook unit tests
-- `src/__tests__/api/events/rsvp.test.ts`: Integration test for RSVP endpoint
+- `src/__tests__/api/events/`: API route tests
+- `src/lib/classifier.test.ts`: Classifier unit tests
+- `src/lib/classifier-pipeline.test.ts`: Pipeline tests
+- `src/lib/dateValidation.test.ts`: Date validation tests
+- `src/lib/exportUtils.test.ts`: Export utility tests
+- `src/lib/image-upload.test.ts`: Image upload tests
+- `src/lib/kmeans.test.ts`: K-means tests
+- `src/hooks/useEvents.test.ts`: Events hook tests
+- `src/components/events/EventFilters.test.tsx`: Component tests
+- `src/components/events/FilterSidebar.test.tsx`: Component tests
+- `src/components/ErrorBoundary.test.tsx`: Component tests
 
 ## Naming Conventions
 
 **Files:**
-- Components: PascalCase (e.g., `EventCard.tsx`, `Header.tsx`)
-- Utilities: camelCase (e.g., `utils.ts`, `tagMapping.ts`)
-- API routes: lowercase with dashes in folders (e.g., `route.ts` inside `src/app/api/admin/events/[id]/`)
-- Tests: Same name as file with `.test.ts` suffix (e.g., `useEvents.test.ts`)
+- Pages: `page.tsx` (Next.js convention)
+- API routes: `route.ts` (Next.js convention)
+- Components: `PascalCase.tsx` (e.g., `EventCard.tsx`, `SignInButton.tsx`)
+- Hooks: `camelCase.ts` with `use` prefix (e.g., `useEvents.ts`, `useTracking.ts`)
+- Utilities: `camelCase.ts` (e.g., `utils.ts`, `tagMapping.ts`, `dateValidation.ts`)
+- Tests: `*.test.ts` or `*.test.tsx` co-located with source
+- Store: `camelCase.ts` with `use` prefix (e.g., `useAuthStore.ts`)
 
 **Directories:**
-- Feature/domain folders: lowercase (e.g., `events`, `clubs`, `admin`)
-- Dynamic segments: [brackets] (e.g., `[id]` for dynamic routes)
-- Utility groups: lowercase (e.g., `supabase`, `ui`, `layout`)
-
-**Components:**
-- Page components: Named by feature (e.g., `HomePage`, `EventDetailPage`)
-- Modal/Dialog components: End with "Modal" or "Dialog" (e.g., `EventDetailsModal`, `EditProfileModal`)
-- Button/Action components: Verb-based (e.g., `SignInButton`, `SaveButton`, `RsvpButton`)
-- Section components: Named by content (e.g., `PopularEventsSection`, `HappeningNowSection`)
-
-**Hooks:**
-- Prefix "use" (e.g., `useEvents`, `useSavedEvents`, `useUser`)
-- Naming describes what they manage (e.g., `useAuthStore`, `useTracking`)
+- App routes: `kebab-case` (e.g., `my-events`, `create-event`, `admin-login`)
+- API routes: `kebab-case` (e.g., `saved-events`, `happening-now`, `upload-image`)
+- Dynamic segments: `[param]` (e.g., `[id]`, `[token]`)
+- Component groups: `kebab-case` (e.g., `ui`, `events`, `layout`)
 
 ## Where to Add New Code
 
-**New Feature (Event Search Enhancement):**
-- Primary code: `src/app/events/` or new route like `src/app/search/`
-- Component: `src/components/events/SearchFilters.tsx`
-- Hook: `src/hooks/useSearch.ts`
-- API endpoint: `src/app/api/search/route.ts`
-- Tests: `src/hooks/useSearch.test.ts`, `src/__tests__/api/search/route.test.ts`
-- Types: Add to `src/types/index.ts`
+**New Page:**
+- Create `src/app/{route-name}/page.tsx`
+- Mark as `"use client"` if it needs interactivity (most pages do)
+- Import components from `@/components/`, hooks from `@/hooks/`
 
-**New Component (Reusable UI):**
-- Implementation: `src/components/{feature}/{ComponentName}.tsx`
-- If generic: `src/components/ui/{componentName}.tsx`
-- Tests: Alongside component if complex (`ComponentName.test.tsx`)
+**New API Endpoint:**
+- Create `src/app/api/{resource}/{action}/route.ts`
+- Export named functions: `GET`, `POST`, `PATCH`, `DELETE`
+- Use `createClient()` from `@/lib/supabase/server` for authenticated queries
+- Use `verifyAdmin()` from `@/lib/admin` for admin-only routes
+- Return `NextResponse.json()` with appropriate status codes
+- Add Swagger JSDoc annotations for API documentation
 
-**New Page/Route:**
-- Create folder in `src/app/` matching route path
-- Add `page.tsx` for page or `route.ts` for API endpoint
-- Use existing layout if inheriting from parent
+**New Feature Component:**
+- Place in appropriate group: `src/components/events/`, `src/components/clubs/`, `src/components/profile/`, etc.
+- Use PascalCase file naming: `MyComponent.tsx`
+- For cross-cutting components: `src/components/shared/`
 
-**Utilities:**
-- General helper: Add to `src/lib/utils.ts`
-- Domain-specific: Create new file in `src/lib/` (e.g., `src/lib/recommendations.ts`)
-- Feature-specific classification: `src/lib/classifier.ts`
+**New UI Primitive:**
+- Use `npx shadcn@latest add {component}` to add shadcn/ui components
+- They go to `src/components/ui/`
+- Custom UI primitives: `src/components/ui/` with PascalCase (e.g., `EmptyState.tsx`)
 
-**Global State:**
-- Store in `src/store/` with Zustand (e.g., `src/store/useNotificationStore.ts`)
+**New Hook:**
+- Create `src/hooks/use{Name}.ts`
+- Mark as `"use client"` at the top
+- Follow pattern of existing hooks (state + effect + callbacks)
 
-**API Endpoints:**
-- CRUD for resource: `src/app/api/{resource}/route.ts` (list/create), `src/app/api/{resource}/[id]/route.ts` (read/update/delete)
-- Sub-resource actions: `src/app/api/{resource}/[id]/{action}/route.ts` (e.g., `/api/events/[id]/save/route.ts`)
-- Paginated lists: Use cursor pagination (see `useEvents` hook pattern)
+**New Utility Function:**
+- Add to `src/lib/utils.ts` for general utilities
+- Create a new file in `src/lib/` for domain-specific logic (e.g., `src/lib/dateValidation.ts`)
+
+**New Type Definition:**
+- Add to `src/types/index.ts` (all types in single barrel file)
+
+**New Store:**
+- Create `src/store/use{Name}Store.ts`
+- Use Zustand `create<State>()()` pattern matching `useAuthStore.ts`
+
+**New Database Migration:**
+- Create `supabase/migrations/{sequence}_{description}.sql`
+- Follow existing naming: numbered prefix (e.g., `014_...`) or timestamped (e.g., `20260305...`)
+
+**New Test:**
+- Co-locate with source file: `MyComponent.test.tsx` next to `MyComponent.tsx`
+- API tests: `src/__tests__/api/{resource}/`
 
 ## Special Directories
 
-**src/__tests__/:**
-- Purpose: Integration and unit tests
-- Generated: No (manually written)
+**`AI/`:**
+- Purpose: Standalone Python recommendation service (Two-Tower model)
+- Generated: No (manually maintained)
 - Committed: Yes
-- Pattern: Mirrors src/ structure for organization
+- Note: Has its own `requirements.txt`, `run.py` entry point, separate from the Next.js app
 
-**node_modules/:**
-- Purpose: Installed dependencies
-- Generated: Yes (via npm install)
-- Committed: No (in .gitignore)
+**`backend/`:**
+- Purpose: Legacy Python similarity backend
+- Generated: No
+- Committed: Yes
+- Note: Appears to be superseded by the `AI/` service
 
-**src/lib/supabase/types.ts:**
-- Purpose: Auto-generated Supabase database types
-- Generated: Yes (via `npx supabase gen types`)
-- Committed: Yes (should be regenerated when schema changes)
-- Note: Do not manually edit; regenerate from Supabase CLI
+**`internal/`:**
+- Purpose: Internal team dashboard (separate Vite + TypeScript app)
+- Generated: No
+- Committed: Yes (has its own `node_modules/`, `package.json`, `vite.config.ts`)
+- Note: Completely separate from the main Next.js app
 
-**public/:**
-- Purpose: Static assets
-- Generated: No (manually added)
+**`.next/`:**
+- Purpose: Next.js build output
+- Generated: Yes (by `npm run build` or `npm run dev`)
+- Committed: No (in `.gitignore`)
+
+**`node_modules/`:**
+- Purpose: npm dependencies
+- Generated: Yes (by `npm install`)
+- Committed: No (in `.gitignore`)
+
+**`supabase/migrations/`:**
+- Purpose: Database schema migrations
+- Generated: No (manually authored SQL)
+- Committed: Yes
+- Note: Applied via Supabase CLI or dashboard
+
+**`public/`:**
+- Purpose: Static assets served at root URL
+- Generated: No
 - Committed: Yes
 
 ---
 
-*Structure analysis: 2026-02-25*
+*Structure analysis: 2026-03-05*

@@ -95,7 +95,7 @@ export async function POST(
 
     if (error) {
       console.error("Error following club:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to follow club" }, { status: 500 });
     }
 
     return NextResponse.json({ message: "Followed" }, { status: 201 });
@@ -136,7 +136,7 @@ export async function DELETE(
 
     if (error) {
       console.error("Error unfollowing club:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to unfollow club" }, { status: 500 });
     }
 
     return NextResponse.json({ message: "Unfollowed" }, { status: 200 });

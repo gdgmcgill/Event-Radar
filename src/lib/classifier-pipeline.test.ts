@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   normalizeApifyOutput,
   buildWebhookPayload,
@@ -52,21 +51,22 @@ describe("buildWebhookPayload", () => {
 });
 
 describe("runPipelineWithImages", () => {
-  const mockUpload = vi.fn();
-  const mockGetPublicUrl = vi.fn();
-  const mockFrom = vi.fn(() => ({
+  const mockUpload = jest.fn();
+  const mockGetPublicUrl = jest.fn();
+  const mockFrom = jest.fn(() => ({
     upload: mockUpload,
     getPublicUrl: mockGetPublicUrl,
   }));
+   
   const mockSupabase = { storage: { from: mockFrom } } as any;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    jest.clearAllMocks();
+    global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       headers: { get: () => "image/jpeg" },
       arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
-    }));
+    }) as unknown as typeof fetch;
     mockUpload.mockResolvedValue({ data: { path: "1234-abcd.jpg" }, error: null });
     mockGetPublicUrl.mockReturnValue({
       data: { publicUrl: "https://project.supabase.co/storage/v1/object/public/event-images/1234-abcd.jpg" },

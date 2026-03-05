@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error("Analytics query error:", error);
       return NextResponse.json(
-        { error: "Failed to fetch analytics", detail: error.message },
+        { error: "Failed to fetch analytics" },
         { status: 500 }
       );
     }
@@ -80,6 +80,30 @@ export async function GET(request: NextRequest) {
           clickedRanks.length
         : null;
 
+    // Tag distribution from recent recommendation feedback
+    const { data: recentEvents } = await supabase
+      .from("recommendation_feedback")
+      .select("event_id")
+      .gte("created_at", sinceIso)
+      .eq("action", "impression");
+
+    const eventIds = [...new Set((recentEvents ?? []).map((r: { event_id: string }) => r.event_id))];
+
+    let tagDistribution: Record<string, number> = {};
+    if (eventIds.length > 0) {
+      const { data: events } = await supabase
+        .from("events")
+        .select("tags")
+        .in("id", eventIds);
+
+      for (const ev of (events ?? []) as { tags: string[] }[]) {
+        for (const tag of ev.tags ?? []) {
+          const key = tag.toLowerCase();
+          tagDistribution[key] = (tagDistribution[key] || 0) + 1;
+        }
+      }
+    }
+
     return NextResponse.json({
       period,
       since: sinceIso,
@@ -92,6 +116,10 @@ export async function GET(request: NextRequest) {
         save_rate_percent: Math.round(saveRate * 100) / 100,
         dismiss_rate_percent: Math.round(dismissRate * 100) / 100,
         avg_rank_of_clicked: avgRankOfClicked,
+      },
+      diversity: {
+        recommended_tag_distribution: tagDistribution,
+        unique_tags_shown: Object.keys(tagDistribution).length,
       },
     });
   } catch (error) {
