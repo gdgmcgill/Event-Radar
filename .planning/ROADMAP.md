@@ -13,7 +13,7 @@ This milestone transforms Uni-Verse from a student-only event discovery tool int
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Club Infrastructure and Team Management** - Public club pages, organizer management dashboard, team invites, and student follow/unfollow
-- [ ] **Phase 2: Event Management** - Event creation with club selector, event listing/editing, auto-approval, duplication, RSVP counts, and follower notifications
+- [x] **Phase 2: Event Management** - Event creation with club selector, event listing/editing, auto-approval, duplication, RSVP counts, and follower notifications
 - [ ] **Phase 3: Analytics and Reviews** - Event-level and club-level analytics dashboards with charts, plus post-event review submission and organizer-facing review aggregation
 
 ## Phase Details
@@ -47,8 +47,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Events tab with create flow, API enhancements for organizer view + RSVP counts, notification fanout
-- [ ] 02-02-PLAN.md — Edit and duplicate event capabilities with full flow verification
+- [x] 02-01-PLAN.md — Events tab with create flow, API enhancements for organizer view + RSVP counts, notification fanout
+- [x] 02-02-PLAN.md — Edit and duplicate event capabilities with full flow verification
 
 ### Phase 3: Analytics and Reviews
 **Goal**: Organizers can understand their event performance through analytics dashboards and receive structured feedback from attendees via post-event reviews
@@ -73,5 +73,5 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Club Infrastructure and Team Management | 3/3 | Complete | 2026-03-05 |
-| 2. Event Management | 1/2 | In Progress|  |
+| 2. Event Management | 2/2 | Complete | 2026-03-05 |
 | 3. Analytics and Reviews | 0/2 | Not started | - |
