@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. An organizer can view their "My Clubs" list, see all clubs they own or organize, and switch between clubs via a quick-switch dropdown without navigating back to the list
   4. A club owner can view members, invite new organizers via email link, and remove organizers -- and an invited user who opens the link is added to the club
   5. A student can follow and unfollow a club from its public page, and the follower count updates visibly
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 - [x] 01-01: Club API Foundation (teardown, migration, API routes, SWR hooks)
@@ -44,11 +44,11 @@ Plans:
   2. An organizer can view a list of their club's events with title, date, status, and RSVP counts, and can edit any event's details
   3. An organizer can duplicate an existing event to pre-fill a new event creation form for recurring events
   4. When a club publishes a new event, all followers of that club receive an in-app notification
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Events tab with create flow, API enhancements for organizer view + RSVP counts, notification fanout
+- [ ] 02-02-PLAN.md — Edit and duplicate event capabilities with full flow verification
 
 ### Phase 3: Analytics and Reviews
 **Goal**: Organizers can understand their event performance through analytics dashboards and receive structured feedback from attendees via post-event reviews

@@ -106,6 +106,43 @@ export async function POST(request: NextRequest) {
       ? "Event created and approved"
       : "Event submitted for review";
 
+    // Notification fanout for approved events with a club
+    if (status === "approved" && body.club_id) {
+      const fanout = async () => {
+        try {
+          const { data: clubInfo } = await supabase
+            .from("clubs")
+            .select("name")
+            .eq("id", body.club_id)
+            .single();
+
+          const clubName = clubInfo?.name || "A club";
+
+          const { data: followers } = await supabase
+            .from("club_followers")
+            .select("user_id")
+            .eq("club_id", body.club_id);
+
+          if (followers && followers.length > 0) {
+            await supabase.from("notifications").insert(
+              followers.map((f: { user_id: string }) => ({
+                user_id: f.user_id,
+                type: "new_event",
+                title: "New Event",
+                message: `${clubName} published: ${title.trim()}`,
+                event_id: data.id,
+                read: false,
+              }))
+            );
+          }
+        } catch (err) {
+          console.error("Notification fanout error:", err);
+        }
+      };
+      // Fire-and-forget
+      fanout();
+    }
+
     return NextResponse.json(
       { event: data, message },
       { status: 201 }

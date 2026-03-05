@@ -29,6 +29,25 @@ export function useClubEvents(clubId: string | null | undefined) {
 }
 
 /**
+ * Fetch all events for a club (organizer view with RSVP counts).
+ * Returns all statuses for club members, approved-only for non-members.
+ */
+export function useClubEventsManagement(clubId: string | null | undefined) {
+  const { data, error, isLoading, mutate } = useSWR(
+    clubId ? `/api/clubs/${clubId}/events` : null,
+    fetcher
+  );
+
+  return {
+    events: data?.events ?? [],
+    isOrganizer: data?.isOrganizer ?? false,
+    isLoading,
+    error,
+    mutate,
+  };
+}
+
+/**
  * Fetch members of a club (requires membership).
  */
 export function useClubMembers(clubId: string | null | undefined) {
