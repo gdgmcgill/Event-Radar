@@ -115,7 +115,6 @@ export async function GET(request: NextRequest) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       await adminClient.auth.admin.deleteUser(user.id);
-      console.log("[Callback] Deleted non-McGill auth user:", email);
     } catch (err) {
       console.error("[Callback] Failed to delete non-McGill auth user:", err);
     }
@@ -176,7 +175,6 @@ export async function GET(request: NextRequest) {
         .from("users")
         .update({ roles: newRoles })
         .eq("id", user.id);
-      console.log("[Callback] Auto-assigned admin role to:", email);
     }
   } catch (err) {
     console.error("[Callback] Failed to check onboarding status:", err);

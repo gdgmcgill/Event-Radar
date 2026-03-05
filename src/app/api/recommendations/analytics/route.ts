@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error("Analytics query error:", error);
       return NextResponse.json(
-        { error: "Failed to fetch analytics", detail: error.message },
+        { error: "Failed to fetch analytics" },
         { status: 500 }
       );
     }

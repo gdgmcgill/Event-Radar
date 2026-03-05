@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       if (upsertError) {
         console.error("Recommendation explicit feedback upsert error:", upsertError);
         return NextResponse.json(
-          { error: "Failed to store feedback", detail: upsertError.message },
+          { error: "Failed to store feedback" },
           { status: 500 }
         );
       }
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error("Recommendation feedback insert error:", error);
       return NextResponse.json(
-        { error: "Failed to store feedback", detail: error.message },
+        { error: "Failed to store feedback" },
         { status: 500 }
       );
     }

@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     if (eventsError) {
       console.error("Error fetching events:", eventsError);
       return NextResponse.json(
-        { error: "Failed to fetch events", details: eventsError },
+        { error: "Failed to fetch events" },
         { status: 500 }
       );
     }
@@ -155,10 +155,10 @@ export async function GET(request: NextRequest) {
       offset,
       sort: sortBy,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Unexpected error fetching popular events:", error);
     return NextResponse.json(
-      { error: "Internal server error", details: error?.message, stack: error?.stack },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

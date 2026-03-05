@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       const errorText = await response.text();
       console.error("Recommendation service error:", errorText);
       return NextResponse.json(
-        { error: "Recommendation service error", detail: errorText },
+        { error: "Recommendation service error" },
         { status: response.status }
       );
     }
