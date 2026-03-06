@@ -63,4 +63,4 @@ AI/models/*.pt
 /internal
 
 # planning artifacts
-.planning/
+# .planning/
