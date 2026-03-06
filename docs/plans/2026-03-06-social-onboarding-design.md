@@ -67,6 +67,7 @@ Everything existing, plus:
 - Public/private toggle
 - Friends list (mutual follows)
 - Event history section (past attended events) — **self-only, never shown to others**
+- Public stats: "N events attended" and "N events organized" (visible to everyone)
 - Edit support for new fields
 
 ### Public Profiles (`/users/[id]`)
@@ -76,6 +77,8 @@ New page. Shows: avatar, name, pronouns, year, faculty, interest tags, clubs fol
 - **Public profile:** all info visible to anyone, including saved/upcoming events and friends list
 - **Private profile, not friends:** only name, avatar, and Follow button
 - **Private profile, friends:** full access (same as public)
+
+Public stats: "N events attended" and "N events organized" (always visible regardless of privacy setting).
 
 Follow/unfollow button. "Friends" badge if mutual follow.
 
