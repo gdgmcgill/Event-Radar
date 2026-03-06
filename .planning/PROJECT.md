@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Uni-Verse is a campus event discovery platform for McGill University — the "Luma for McGill" with a recommendation system. Club organizers create and manage their club pages, post events, and track analytics. Students discover events, follow clubs, and (in the future) connect with friends to see who's attending. The platform bridges the gap between event organizers who need visibility and students who want to find relevant campus events.
+Uni-Verse is a campus event discovery platform for McGill University — the "Luma for McGill" with a recommendation system. Club organizers create and manage their club pages, post events, invite team members, track analytics, and receive structured feedback from attendees. Students discover events, follow clubs, save events, and rate past events. The platform bridges the gap between event organizers who need visibility and students who want to find relevant campus events.
 
 ## Core Value
 
@@ -21,17 +21,18 @@ Club organizers can effortlessly manage their clubs and post events, while stude
 - New users with <3 saved events see popularity-ranked fallback feed — existing
 - Instagram scraper pipeline classifies and ingests events — existing
 - User can select interest tags during onboarding — existing
+- Club organizers have a dedicated, functional club management experience (create, edit, post events, invite members, view analytics) — v2.0
+- Public club pages show logo, name, description, follower count, upcoming/past events — v2.0
+- Students can follow/unfollow clubs — v2.0
+- Club organizers see event-level analytics (RSVPs, saves, clicks) and club-level trends (follower growth, total attendees) — v2.0
+- Post-event review system where attendees rate events and organizers see aggregate feedback — v2.0
+- Multi-club support for organizers who run multiple clubs, with easy switching — v2.0
+- Smooth event creation flow with club selector for multi-club organizers — v2.0
+- Auto-approval for events posted by club organizers for their own clubs — v2.0
 
 ### Active
 
-- [ ] Club organizers have a dedicated, functional club management experience (create, edit, post events, invite members, view analytics)
-- [ ] Public club pages show logo, name, description, follower count, upcoming/past events
-- [ ] Students can follow/unfollow clubs
-- [ ] Club organizers see event-level analytics (RSVPs, attendance, clicks) and club-level trends (follower growth, total attendees)
-- [ ] Post-event review system where attendees rate events and organizers see aggregate feedback
-- [ ] Multi-club support for organizers who run multiple clubs, with easy switching
-- [ ] Smooth event creation flow with club selector for multi-club organizers
-- [ ] Auto-approval for events posted by club organizers for their own clubs
+(None yet — define with next milestone)
 
 ### Out of Scope
 
@@ -43,15 +44,13 @@ Club organizers can effortlessly manage their clubs and post events, while stude
 
 ## Context
 
-This is a brownfield project with an existing Next.js 16 / Supabase / TypeScript codebase. The current club functionality is broken and incomplete — there is no dedicated club management page, no analytics, and the organizer UX is fragmented across scattered pages. The decision is to rework clubs from scratch rather than salvage the existing broken implementation.
+Shipped v2.0 with 29,454 LOC TypeScript across Next.js 16 / Supabase / Tailwind + shadcn/ui.
 
-The platform has two user types:
-1. **Club organizers** — create clubs, post events, invite co-owners, track analytics. They are the supply side and the platform's backbone.
-2. **Students** — discover events, follow clubs, save events, provide feedback. They are the demand side.
+The club organizer experience is now fully functional: club management dashboard with settings, members, events, and analytics tabs. Public club pages with follow system. Event creation/editing/duplication with auto-approval. Post-event star rating reviews with aggregate data for organizers.
 
-The recommendation system (external Python/FastAPI Two-Tower model) is already functional. The event ingestion pipeline (Apify Instagram scraper) is also working. The core gap is the organizer experience.
+Database tables: events, clubs, users, saved_events, notifications, club_members, club_invitations, club_followers, user_interactions, reviews. RLS policies enforce owner-only mutations.
 
-Existing database has: events, clubs, users, saved_events, notifications, club_members, club_invitations, club_followers, user_interactions tables. Many have RLS policies but the application layer doesn't properly leverage them.
+Key technical patterns: URL-driven club context (/my-clubs/[id]), SWR hooks for all data fetching, fire-and-forget notification fanout, multi-mode form pattern (create/edit/duplicate), Recharts for analytics charts.
 
 ## Constraints
 
@@ -65,12 +64,17 @@ Existing database has: events, clubs, users, saved_events, notifications, club_m
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Rework clubs from scratch | Current code is too messy and fragmented to salvage | — Pending |
-| Fix clubs before social features | Organizer UX is the foundation — no events without organizers | — Pending |
-| Simple single-page club management | Organizers want simplicity, not a complex dashboard | — Pending |
-| Club list + quick-switch dropdown for multi-club | Best of both worlds — overview + fast navigation | — Pending |
-| Post-event reviews (organizer-facing first) | Validates the review concept before building public reviews | — Pending |
-| Sponsorships as separate milestone | Get core functionality right before adding monetization | — Pending |
+| Rework clubs from scratch | Current code is too messy and fragmented to salvage | Good |
+| Fix clubs before social features | Organizer UX is the foundation — no events without organizers | Good |
+| Simple single-page club management | Organizers want simplicity, not a complex dashboard | Good |
+| Club list + quick-switch dropdown for multi-club | Best of both worlds — overview + fast navigation | Good |
+| Post-event reviews (organizer-facing first) | Validates the review concept before building public reviews | Good |
+| Sponsorships as separate milestone | Get core functionality right before adding monetization | Good |
+| URL-driven club context (/my-clubs/[id]) | No global state needed, deep-linkable, SSR-friendly | Good |
+| RLS as primary security boundary | Database-level enforcement, not just API checks | Good |
+| Live COUNT for follower/member counts | Avoids trigger complexity, always accurate | Good |
+| Fire-and-forget notification fanout | Non-blocking, keeps event creation fast | Good |
+| Multi-mode form pattern (create/edit/duplicate) | Single component, less code, consistent UX | Good |
 
 ---
-*Last updated: 2026-03-05 after initialization*
+*Last updated: 2026-03-06 after v2.0 milestone*
