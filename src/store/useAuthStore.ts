@@ -8,6 +8,7 @@ interface AuthState {
   user: AppUser | null;
   loading: boolean;
   initialized: boolean;
+  hasClubs: boolean;
   initialize: () => void;
   signOut: () => Promise<void>;
 }
@@ -16,6 +17,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   loading: true,
   initialized: false,
+  hasClubs: false,
 
   initialize: () => {
     if (get().initialized) return;
@@ -48,25 +50,30 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
       set({ user: basicUser, loading: false });
 
-      // Fetch roles and interest_tags from public.users in the background
+      // Fetch roles, interest_tags, and club membership in parallel
       try {
-        const { data: profile } = await supabase
-          .from("users")
-          .select("roles, interest_tags")
-          .eq("id", authUser.id)
-          .single();
+        const [{ data: profile }, { count: clubCount }] = await Promise.all([
+          supabase
+            .from("users")
+            .select("roles, interest_tags")
+            .eq("id", authUser.id)
+            .single(),
+          supabase
+            .from("club_members")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", authUser.id),
+        ]);
 
-        if (profile) {
-          set((state) => ({
-            user: state.user
-              ? {
-                  ...state.user,
-                  roles: (profile.roles as AppUser["roles"]) ?? ["user"],
-                  interest_tags: (profile.interest_tags as string[]) ?? [],
-                }
-              : state.user,
-          }));
-        }
+        set((state) => ({
+          hasClubs: (clubCount ?? 0) > 0,
+          user: state.user && profile
+            ? {
+                ...state.user,
+                roles: (profile.roles as AppUser["roles"]) ?? ["user"],
+                interest_tags: (profile.interest_tags as string[]) ?? [],
+              }
+            : state.user,
+        }));
       } catch {
         // Profile fetch failure is non-fatal; user remains with defaults
       }
@@ -107,7 +114,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
 
       if (event === "SIGNED_OUT" || !session?.user) {
-        set({ user: null, loading: false });
+        set({ user: null, loading: false, hasClubs: false });
         return;
       }
 
