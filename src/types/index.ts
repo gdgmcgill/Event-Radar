@@ -67,6 +67,11 @@ export interface User {
   avatar_url: string | null;
   roles: UserRole[];
   interest_tags: string[];
+  pronouns?: string | null;
+  year?: string | null;
+  faculty?: string | null;
+  visibility?: "public" | "private";
+  onboarding_completed?: boolean;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -96,6 +101,21 @@ export interface ClubFollower {
   id: string;
   user_id: string;
   club_id: string;
+  created_at: string;
+}
+
+export interface UserFollow {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+}
+
+export interface EventInvite {
+  id: string;
+  inviter_id: string;
+  invitee_id: string;
+  event_id: string;
   created_at: string;
 }
 
