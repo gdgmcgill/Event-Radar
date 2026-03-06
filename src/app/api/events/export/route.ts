@@ -8,6 +8,8 @@ type EventRow = Database["public"]["Tables"]["events"]["Row"] & {
     approved_at?: string | null;
     source?: string | null;
     source_url?: string | null;
+    organizer?: string | null;
+    rsvp_count?: number | null;
     club?: ClubRow | null;
 };
 
