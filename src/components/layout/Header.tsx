@@ -18,7 +18,7 @@ import {
   type NavItem,
 } from "./navItems";
 import { cn } from "@/lib/utils";
-import { isAdmin, isOrganizer } from "@/lib/roles";
+import { isAdmin } from "@/lib/roles";
 
 function MobileNavSection({
   items,
@@ -66,13 +66,13 @@ function MobileNavSection({
 }
 
 export function Header() {
-  const { user, loading } = useAuthStore();
+  const { user, loading, hasClubs } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const isAuthenticated = !!user;
 
   const navItems = isAuthenticated ? baseNavItems : guestNavItems;
-  const showOrganizer = isAuthenticated && user && isOrganizer(user);
+  const showOrganizer = isAuthenticated && hasClubs;
   const showAdmin = isAuthenticated && user && isAdmin(user);
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
