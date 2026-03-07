@@ -327,17 +327,23 @@ function HomePageContent() {
             </div>
 
             {/* Result count feedback */}
-            {isFiltering && !loading && !errorMessage && (
-              <div className="text-sm text-muted-foreground">
-                Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""}
-                {searchQuery.trim() && (
-                  <> for &ldquo;{searchQuery.trim()}&rdquo;</>
-                )}
-                {selectedTags.length > 0 && (
-                  <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
-                )}
-              </div>
-            )}
+            <div
+              aria-live="polite"
+              aria-atomic="true"
+              className="text-sm text-muted-foreground min-h-[1.25rem]"
+            >
+              {isFiltering && !loading && !errorMessage && (
+                <>
+                  Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""}
+                  {searchQuery.trim() && (
+                    <> for &ldquo;{searchQuery.trim()}&rdquo;</>
+                  )}
+                  {selectedTags.length > 0 && (
+                    <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
+                  )}
+                </>
+              )}
+            </div>
 
             {/* Desktop Expandable Top Filter Panel */}
             <div
