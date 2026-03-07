@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyAdmin } from "@/lib/admin";
+import { sanitizeText } from "@/lib/sanitize";
 
 export async function GET(request: NextRequest) {
   const { supabase, isAdmin } = await verifyAdmin();
@@ -44,7 +45,12 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { title, description, start_date, end_date, location, organizer, tags, image_url, category } = body;
+  const { start_date, end_date, organizer, tags, image_url, category } = body;
+
+  // Sanitize text inputs to prevent XSS
+  const title = sanitizeText(body.title ?? "");
+  const description = sanitizeText(body.description ?? "");
+  const location = sanitizeText(body.location ?? "");
 
   if (!title || !start_date || !end_date) {
     return NextResponse.json(
