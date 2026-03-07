@@ -41,6 +41,7 @@ export const baseNavItems: NavItem[] = [
   { name: "Calendar", path: "/calendar", icon: Calendar },
   { name: "Categories", path: "/categories", icon: Tag },
   { name: "Clubs", path: "/clubs", icon: Building2 },
+  { name: "People", path: "/people", icon: Users },
   { name: "My Events", path: "/my-events", icon: Bookmark },
   { name: "Create Event", path: "/create-event", icon: Plus },
   { name: "Notifications", path: "/notifications", icon: Bell },

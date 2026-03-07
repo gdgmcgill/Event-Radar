@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Clock, AlertCircle, CheckCircle, XCircle, Bell } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle, XCircle, Bell, UserPlus, Users, Send } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Notification } from "@/types";
 
@@ -26,6 +26,21 @@ const typeConfig: Record<string, { icon: LucideIcon; color: string; bgColor: str
     icon: XCircle,
     color: "text-red-600 dark:text-red-400",
     bgColor: "bg-red-100 dark:bg-red-900/30",
+  },
+  new_follower: {
+    icon: UserPlus,
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+  },
+  new_friend: {
+    icon: Users,
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-900/30",
+  },
+  event_invite: {
+    icon: Send,
+    color: "text-indigo-600 dark:text-indigo-400",
+    bgColor: "bg-indigo-100 dark:bg-indigo-900/30",
   },
 };
 
