@@ -6,6 +6,7 @@ import {
   useRef,
   useCallback,
   forwardRef,
+  useId,
 } from "react";
 import { Search, X, Loader2, Calendar, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,9 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
 
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const internalRef = useRef<HTMLInputElement | null>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const dropdownRef = useRef<HTMLUListElement | null>(null);
+    const uid = useId();
+    const listboxId = `event-search-listbox-${uid}`;
     const router = useRouter();
 
     // Merge forwarded ref with internal ref
@@ -164,21 +167,27 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
 
     const renderSuggestions = () => {
       if (!showSuggestions || suggestions.length === 0) return null;
-      
+
       return (
-        <div 
+        <ul
+          id={listboxId}
+          role="listbox"
+          aria-label="Event suggestions"
           ref={dropdownRef}
           className="absolute top-full left-0 right-0 mt-2 bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[160px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 custom-scrollbar"
         >
           {suggestions.map((event, index) => (
-            <button
+            <li
               key={event.id}
+              id={`event-suggestion-${index}`}
+              role="option"
+              aria-selected={activeIndex === index}
               onClick={() => {
                 router.push(`/events/${event.id}`);
                 setShowSuggestions(false);
               }}
               className={cn(
-                "w-full text-left px-4 py-3 border-b flex flex-col gap-1.5 border-border/40 hover:bg-muted/60 transition-colors group",
+                "cursor-pointer w-full text-left px-4 py-3 border-b flex flex-col gap-1.5 border-border/40 hover:bg-muted/60 transition-colors group",
                 activeIndex === index && "bg-muted/80"
               )}
             >
@@ -198,9 +207,9 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
                   <span className="truncate max-w-[150px]">{event.location}</span>
                 </span>
               </div>
-            </button>
+            </li>
           ))}
-        </div>
+        </ul>
       );
     };
 
@@ -215,6 +224,13 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
                 suppressHydrationWarning
                 ref={setRefs}
                 type="text"
+                role="combobox"
+                aria-label="Search events"
+                aria-expanded={showSuggestions && suggestions.length > 0}
+                aria-autocomplete="list"
+                aria-haspopup="listbox"
+                aria-controls={listboxId}
+                aria-activedescendant={activeIndex >= 0 ? `event-suggestion-${activeIndex}` : undefined}
                 placeholder={placeholder}
                 value={searchQuery}
                 onChange={handleChange}
@@ -252,6 +268,13 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
         <Input
           ref={setRefs}
           type="text"
+          role="combobox"
+          aria-label="Search events"
+          aria-expanded={showSuggestions && suggestions.length > 0}
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
+          aria-controls={listboxId}
+          aria-activedescendant={activeIndex >= 0 ? `event-suggestion-${activeIndex}` : undefined}
           placeholder={placeholder}
           value={searchQuery}
           onChange={handleChange}
