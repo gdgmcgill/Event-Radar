@@ -160,12 +160,11 @@ export async function GET(request: NextRequest) {
   try {
     const { data: profile } = await (supabase as any)
       .from("users")
-      .select("interest_tags, roles")
+      .select("onboarding_completed, roles")
       .eq("id", user.id)
       .single();
 
-    const tags = profile?.interest_tags as string[] | null;
-    needsOnboarding = !tags || tags.length === 0;
+    needsOnboarding = !profile?.onboarding_completed;
 
     // Auto-assign admin role if email is in the hardcoded list
     const currentRoles = (profile?.roles as string[]) ?? ["user"];

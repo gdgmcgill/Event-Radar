@@ -34,7 +34,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, avatar_url, interest_tags } = body;
+    const { name, avatar_url, interest_tags, pronouns, year, faculty, visibility, onboarding_completed } = body;
 
     const updatePayload: Database["public"]["Tables"]["users"]["Update"] = {
       updated_at: new Date().toISOString(),
@@ -94,6 +94,61 @@ export async function PATCH(
         );
       }
       updatePayload.interest_tags = interest_tags;
+    }
+
+    // Validate pronouns
+    if (pronouns !== undefined) {
+      if (pronouns !== null && typeof pronouns !== "string") {
+        return NextResponse.json(
+          { error: "Pronouns must be a string or null" },
+          { status: 400 }
+        );
+      }
+      (updatePayload as Record<string, unknown>).pronouns = pronouns;
+    }
+
+    // Validate year
+    if (year !== undefined) {
+      if (year !== null && typeof year !== "string") {
+        return NextResponse.json(
+          { error: "Year must be a string or null" },
+          { status: 400 }
+        );
+      }
+      (updatePayload as Record<string, unknown>).year = year;
+    }
+
+    // Validate faculty
+    if (faculty !== undefined) {
+      if (faculty !== null && typeof faculty !== "string") {
+        return NextResponse.json(
+          { error: "Faculty must be a string or null" },
+          { status: 400 }
+        );
+      }
+      (updatePayload as Record<string, unknown>).faculty = faculty;
+    }
+
+    // Validate visibility
+    if (visibility !== undefined) {
+      if (visibility !== "public" && visibility !== "private") {
+        return NextResponse.json(
+          { error: "Visibility must be 'public' or 'private'" },
+          { status: 400 }
+        );
+      }
+      (updatePayload as Record<string, unknown>).visibility = visibility;
+    }
+
+    // Validate onboarding_completed
+    if (onboarding_completed !== undefined) {
+      if (typeof onboarding_completed !== "boolean") {
+        return NextResponse.json(
+          { error: "onboarding_completed must be a boolean" },
+          { status: 400 }
+        );
+      }
+      (updatePayload as Record<string, unknown>).onboarding_completed = onboarding_completed;
     }
 
     if (Object.keys(updatePayload).length === 1) { // only updated_at is set

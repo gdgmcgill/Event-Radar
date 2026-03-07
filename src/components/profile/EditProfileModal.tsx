@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import InterestTagSelector from "@/components/profile/InterestTagSelector";
+import { PRONOUNS, YEARS, FACULTIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import { Loader2 } from "lucide-react";
 
@@ -22,6 +23,10 @@ type EditProfileModalProps = {
     initialName: string;
     initialAvatarUrl: string;
     initialTags: EventTag[];
+    initialPronouns?: string;
+    initialYear?: string;
+    initialFaculty?: string;
+    initialVisibility?: string;
 };
 
 export default function EditProfileModal({
@@ -31,20 +36,30 @@ export default function EditProfileModal({
     initialName,
     initialAvatarUrl,
     initialTags,
+    initialPronouns = "",
+    initialYear = "",
+    initialFaculty = "",
+    initialVisibility = "public",
 }: EditProfileModalProps) {
     const router = useRouter();
     const [name, setName] = useState(initialName);
     const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
-    // Ensure we filter valid tags initially
     const [tags, setTags] = useState<EventTag[]>(
         Array.isArray(initialTags) ? initialTags.filter(Boolean) : []
     );
+    const [pronouns, setPronouns] = useState(initialPronouns);
+    const [year, setYear] = useState(initialYear);
+    const [faculty, setFaculty] = useState(initialFaculty);
+    const [visibility, setVisibility] = useState(initialVisibility);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
     const isValid = name.trim().length >= 2 && tags.length >= 3;
+
+    const selectClass =
+        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
     const handleSave = async () => {
         if (!isValid) return;
@@ -60,6 +75,10 @@ export default function EditProfileModal({
                     name: name.trim(),
                     avatar_url: avatarUrl.trim() || null,
                     interest_tags: tags,
+                    pronouns: pronouns || null,
+                    year: year || null,
+                    faculty: faculty || null,
+                    visibility,
                 }),
             });
 
@@ -70,9 +89,8 @@ export default function EditProfileModal({
             }
 
             setSuccess("Profile updated successfully!");
-            router.refresh(); // Refresh page data
+            router.refresh();
 
-            // Close after a brief delay to show success
             setTimeout(() => {
                 onOpenChange(false);
                 setSuccess(null);
@@ -94,7 +112,7 @@ export default function EditProfileModal({
                 <div className="space-y-6 py-4">
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label htmlFor="name" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            <label htmlFor="name" className="text-sm font-medium leading-none">
                                 Display Name
                             </label>
                             <Input
@@ -110,7 +128,7 @@ export default function EditProfileModal({
                         </div>
 
                         <div className="space-y-2">
-                            <label htmlFor="avatarUrl" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            <label htmlFor="avatarUrl" className="text-sm font-medium leading-none">
                                 Avatar URL (Optional)
                             </label>
                             <Input
@@ -120,11 +138,97 @@ export default function EditProfileModal({
                                 placeholder="https://example.com/avatar.jpg"
                             />
                         </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="edit-pronouns" className="text-sm font-medium leading-none">
+                                Pronouns
+                            </label>
+                            <select
+                                id="edit-pronouns"
+                                value={pronouns}
+                                onChange={(e) => setPronouns(e.target.value)}
+                                className={selectClass}
+                            >
+                                <option value="">Select pronouns...</option>
+                                {PRONOUNS.map((p) => (
+                                    <option key={p} value={p}>{p}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="edit-year" className="text-sm font-medium leading-none">
+                                Year
+                            </label>
+                            <select
+                                id="edit-year"
+                                value={year}
+                                onChange={(e) => setYear(e.target.value)}
+                                className={selectClass}
+                            >
+                                <option value="">Select year...</option>
+                                {YEARS.map((y) => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="edit-faculty" className="text-sm font-medium leading-none">
+                                Faculty
+                            </label>
+                            <select
+                                id="edit-faculty"
+                                value={faculty}
+                                onChange={(e) => setFaculty(e.target.value)}
+                                className={selectClass}
+                            >
+                                <option value="">Select faculty...</option>
+                                {FACULTIES.map((f) => (
+                                    <option key={f} value={f}>{f}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium leading-none">
+                                Profile Visibility
+                            </label>
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setVisibility("public")}
+                                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                                        visibility === "public"
+                                            ? "border-primary bg-primary/10 text-primary"
+                                            : "border-border text-muted-foreground hover:bg-accent"
+                                    }`}
+                                >
+                                    Public
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setVisibility("private")}
+                                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                                        visibility === "private"
+                                            ? "border-primary bg-primary/10 text-primary"
+                                            : "border-border text-muted-foreground hover:bg-accent"
+                                    }`}
+                                >
+                                    Private
+                                </button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {visibility === "private"
+                                    ? "Only friends can see your interests, clubs, and events."
+                                    : "Anyone can view your full profile."}
+                            </p>
+                        </div>
                     </div>
 
                     <div className="space-y-3">
                         <div className="space-y-1">
-                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            <label className="text-sm font-medium leading-none">
                                 Interests
                             </label>
                             <p className="text-sm text-muted-foreground">Select 3-5 interests.</p>

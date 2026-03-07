@@ -82,6 +82,40 @@ export const EVENT_CATEGORIES = {
  */
 export const RECOMMENDATION_THRESHOLD = 3;
 
+export const PRONOUNS = [
+  "he/him",
+  "she/her",
+  "they/them",
+  "he/they",
+  "she/they",
+  "any pronouns",
+  "prefer not to say",
+] as const;
+
+export const YEARS = [
+  "U0",
+  "U1",
+  "U2",
+  "U3",
+  "U4",
+  "Graduate",
+  "Alumni",
+] as const;
+
+export const FACULTIES = [
+  "Arts",
+  "Science",
+  "Engineering",
+  "Management",
+  "Medicine",
+  "Law",
+  "Education",
+  "Music",
+  "Dentistry",
+  "Agriculture & Environmental Sciences",
+  "Continuing Studies",
+] as const;
+
 export const API_ENDPOINTS = {
   ADMIN_CALCULATE_POPULARITY: "/api/admin/calculate-popularity",
   // A/B Testing endpoints

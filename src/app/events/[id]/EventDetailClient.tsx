@@ -24,7 +24,7 @@ import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventPopularityScore } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink, Share2, UserPlus } from "lucide-react";
 import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { RelatedEventCard } from "@/components/events/RelatedEventCard";
@@ -33,6 +33,8 @@ import { EventReviewsSection } from "@/components/events/EventReviewsSection";
 import { StarRating } from "@/components/events/StarRating";
 import { useEventReviews } from "@/hooks/useAnalytics";
 import { exportEventIcal } from "@/lib/exportUtils";
+import { FriendsGoing } from "@/components/events/FriendsGoing";
+import { InviteFriendsModal } from "@/components/events/InviteFriendsModal";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -56,6 +58,8 @@ export default function EventDetailClient() {
   const [popularity, setPopularity] = useState<EventPopularityScore | null>(null);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
   const [isExportingIcal, setIsExportingIcal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const { data: reviewData, mutate: mutateReviews } = useEventReviews(id ?? "");
 
   useEffect(() => {
@@ -196,6 +200,16 @@ export default function EventDetailClient() {
       setIsExportingIcal(false);
     }
   }, [event]);
+
+  const handleShare = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -343,7 +357,31 @@ export default function EventDetailClient() {
                   {isExportingIcal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
                   {isExportingIcal ? "Adding..." : "Add to Calendar"}
                 </Button>
+
+                <div className="flex gap-2">
+                  {user && (
+                    <Button
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={() => setShowInviteModal(true)}
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Invite Friends
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="flex-1 gap-2"
+                    onClick={handleShare}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    {linkCopied ? "Link Copied!" : "Share"}
+                  </Button>
+                </div>
               </div>
+
+              {/* Friends Going */}
+              {user && id && <FriendsGoing eventId={id} />}
             </CardContent>
           </Card>
         </div>
@@ -434,6 +472,14 @@ export default function EventDetailClient() {
             />
           )}
         </div>
+      )}
+
+      {user && id && (
+        <InviteFriendsModal
+          open={showInviteModal}
+          onOpenChange={setShowInviteModal}
+          eventId={id}
+        />
       )}
 
       <Dialog open={showSignInPrompt} onOpenChange={setShowSignInPrompt}>
