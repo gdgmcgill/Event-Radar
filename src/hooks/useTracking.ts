@@ -1,263 +1,173 @@
 "use client";
 
-/**
- * Custom hook for tracking user interactions with events
- * Provides debounced tracking helpers to avoid spamming the API
- */
+import { useCallback, useEffect, useRef } from "react";
+import type { RecommendationFeedbackAction, InteractionSource } from "@/types";
 
-import { useCallback, useRef, useEffect } from "react";
-import { API_ENDPOINTS } from "@/lib/constants";
-import type { InteractionType, InteractionSource, TrackInteractionPayload } from "@/types";
+function getSessionId(): string {
+  if (typeof window === "undefined") return "";
+  let s = sessionStorage.getItem("recommendation_session_id");
+  if (!s) {
+    s = crypto.randomUUID?.() ?? `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    sessionStorage.setItem("recommendation_session_id", s);
+  }
+  return s;
+}
+
+async function sendFeedback(payload: {
+  event_id: string;
+  recommendation_rank: number;
+  action: RecommendationFeedbackAction;
+  session_id?: string;
+}) {
+  try {
+    await fetch("/api/recommendations/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        user_id: "",
+        session_id: payload.session_id ?? getSessionId(),
+      }),
+    });
+  } catch (e) {
+    console.warn("Recommendation feedback failed:", e);
+  }
+}
+
+async function sendInteraction(payload: {
+  event_id: string;
+  interaction_type: string;
+  source?: InteractionSource | null;
+}) {
+  try {
+    await fetch("/api/interactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        session_id: getSessionId(),
+      }),
+    });
+  } catch (e) {
+    console.warn("Interaction tracking failed:", e);
+  }
+}
 
 interface UseTrackingOptions {
-  /** Default source for all interactions */
   source?: InteractionSource;
-  /** Session ID for grouping interactions */
-  sessionId?: string;
-  /** Debounce time in ms for view events (default: 1000) */
-  viewDebounceMs?: number;
-  /** Enable/disable tracking (default: true) */
-  enabled?: boolean;
 }
 
-interface TrackOptions {
-  source?: InteractionSource;
-  metadata?: Record<string, unknown>;
-}
+export function useTracking(options?: UseTrackingOptions) {
+  const source = options?.source ?? null;
 
-interface UseTrackingResult {
-  /** Track a view interaction (debounced) */
-  trackView: (eventId: string, options?: TrackOptions) => void;
-  /** Track a click interaction */
-  trackClick: (eventId: string, options?: TrackOptions) => void;
-  /** Track a save interaction */
-  trackSave: (eventId: string, options?: TrackOptions) => void;
-  /** Track an unsave interaction */
-  trackUnsave: (eventId: string, options?: TrackOptions) => void;
-  /** Track a share interaction */
-  trackShare: (eventId: string, options?: TrackOptions) => void;
-  /** Track a calendar add interaction */
-  trackCalendarAdd: (eventId: string, options?: TrackOptions) => void;
-  /** Generic track function */
-  track: (eventId: string, type: InteractionType, options?: TrackOptions) => void;
-}
-
-// Generate a unique session ID
-function generateSessionId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-// Get or create session ID from sessionStorage
-function getSessionId(): string {
-  if (typeof window === "undefined") {
-    return generateSessionId();
-  }
-
-  const storageKey = "tracking_session_id";
-  let sessionId = sessionStorage.getItem(storageKey);
-
-  if (!sessionId) {
-    sessionId = generateSessionId();
-    sessionStorage.setItem(storageKey, sessionId);
-  }
-
-  return sessionId;
-}
-
-export function useTracking(options: UseTrackingOptions = {}): UseTrackingResult {
-  const {
-    source: defaultSource,
-    sessionId: customSessionId,
-    viewDebounceMs = 1000,
-    enabled = true,
-  } = options;
-
-  // Session ID (stable across hook re-renders)
-  const sessionIdRef = useRef<string>(customSessionId || "");
-
-  // Track which events have already been viewed to avoid duplicate view tracking
-  const viewedEventsRef = useRef<Set<string>>(new Set());
-
-  // Debounce timers for view events
-  const viewTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-
-  // Initialize session ID on mount
-  useEffect(() => {
-    if (!sessionIdRef.current) {
-      sessionIdRef.current = getSessionId();
-    }
-  }, []);
-
-  // Cleanup timers on unmount
-  useEffect(() => {
-    const timers = viewTimersRef.current;
-    return () => {
-      timers.forEach((timer) => clearTimeout(timer));
-      timers.clear();
-    };
-  }, []);
-
-  /**
-   * Send tracking request to the API
-   */
-  const sendTrackingRequest = useCallback(
-    async (payload: TrackInteractionPayload) => {
-      if (!enabled) return;
-
-      try {
-        const response = await fetch(API_ENDPOINTS.INTERACTIONS, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          console.warn("Failed to track interaction:", await response.text());
-        }
-      } catch (error) {
-        // Silently fail - tracking should not break the app
-        console.warn("Error tracking interaction:", error);
-      }
-    },
-    [enabled]
-  );
-
-  /**
-   * Generic track function
-   */
-  const track = useCallback(
-    (eventId: string, type: InteractionType, trackOptions?: TrackOptions) => {
-      if (!enabled) return;
-
-      const payload: TrackInteractionPayload = {
+  const trackRecommendationImpression = useCallback(
+    (eventId: string, rank: number) => {
+      sendFeedback({
         event_id: eventId,
-        interaction_type: type,
-        source: trackOptions?.source || defaultSource,
-        session_id: sessionIdRef.current,
-        metadata: trackOptions?.metadata,
-      };
-
-      sendTrackingRequest(payload);
+        recommendation_rank: rank,
+        action: "impression",
+      });
     },
-    [enabled, defaultSource, sendTrackingRequest]
+    []
   );
 
-  /**
-   * Track view with debouncing
-   * Only tracks after user has been viewing for viewDebounceMs
-   * Also deduplicates views within the same session
-   */
-  const trackView = useCallback(
-    (eventId: string, trackOptions?: TrackOptions) => {
-      if (!enabled) return;
-
-      // Skip if already viewed in this session
-      if (viewedEventsRef.current.has(eventId)) {
-        return;
-      }
-
-      // Clear existing timer for this event
-      const existingTimer = viewTimersRef.current.get(eventId);
-      if (existingTimer) {
-        clearTimeout(existingTimer);
-      }
-
-      // Set new debounced timer
-      const timer = setTimeout(() => {
-        viewedEventsRef.current.add(eventId);
-        viewTimersRef.current.delete(eventId);
-        track(eventId, "view", trackOptions);
-      }, viewDebounceMs);
-
-      viewTimersRef.current.set(eventId, timer);
+  const trackRecommendationClick = useCallback(
+    (eventId: string, rank: number) => {
+      sendFeedback({
+        event_id: eventId,
+        recommendation_rank: rank,
+        action: "click",
+      });
     },
-    [enabled, viewDebounceMs, track]
+    []
   );
 
-  /**
-   * Track click interaction
-   */
+  const trackRecommendationSave = useCallback(
+    (eventId: string, rank: number) => {
+      sendFeedback({
+        event_id: eventId,
+        recommendation_rank: rank,
+        action: "save",
+      });
+    },
+    []
+  );
+
+  const trackRecommendationDismiss = useCallback(
+    (eventId: string, rank: number) => {
+      sendFeedback({
+        event_id: eventId,
+        recommendation_rank: rank,
+        action: "dismiss",
+      });
+    },
+    []
+  );
+
+  const submitThumbsFeedback = useCallback(
+    async (eventId: string, feedback: "positive" | "negative") => {
+      const res = await fetch("/api/recommendations/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id: eventId, feedback }),
+      });
+      if (!res.ok) throw new Error("Failed to submit feedback");
+      return res.json();
+    },
+    []
+  );
+
   const trackClick = useCallback(
-    (eventId: string, trackOptions?: TrackOptions) => {
-      track(eventId, "click", trackOptions);
+    (eventId: string) => {
+      sendInteraction({ event_id: eventId, interaction_type: "click", source });
     },
-    [track]
+    [source]
   );
 
-  /**
-   * Track save interaction
-   */
-  const trackSave = useCallback(
-    (eventId: string, trackOptions?: TrackOptions) => {
-      track(eventId, "save", trackOptions);
-    },
-    [track]
-  );
-
-  /**
-   * Track unsave interaction
-   */
-  const trackUnsave = useCallback(
-    (eventId: string, trackOptions?: TrackOptions) => {
-      track(eventId, "unsave", trackOptions);
-    },
-    [track]
-  );
-
-  /**
-   * Track share interaction
-   */
   const trackShare = useCallback(
-    (eventId: string, trackOptions?: TrackOptions) => {
-      track(eventId, "share", trackOptions);
+    (eventId: string) => {
+      sendInteraction({ event_id: eventId, interaction_type: "share", source });
     },
-    [track]
+    [source]
   );
 
-  /**
-   * Track calendar add interaction
-   */
   const trackCalendarAdd = useCallback(
-    (eventId: string, trackOptions?: TrackOptions) => {
-      track(eventId, "calendar_add", trackOptions);
+    (eventId: string) => {
+      sendInteraction({ event_id: eventId, interaction_type: "calendar_add", source });
     },
-    [track]
+    [source]
   );
 
   return {
-    trackView,
+    trackRecommendationImpression,
+    trackRecommendationClick,
+    trackRecommendationSave,
+    trackRecommendationDismiss,
+    submitThumbsFeedback,
     trackClick,
-    trackSave,
-    trackUnsave,
     trackShare,
     trackCalendarAdd,
-    track,
   };
 }
 
-/**
- * Hook for tracking a specific event's modal view
- * Automatically tracks view when the modal is opened
- */
 export function useTrackEventModal(
   eventId: string | null,
   isOpen: boolean,
   source?: InteractionSource
 ) {
-  const { trackView } = useTracking({ source });
-  const hasTrackedRef = useRef(false);
+  const tracked = useRef<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && eventId && !hasTrackedRef.current) {
-      trackView(eventId, { source: "modal" });
-      hasTrackedRef.current = true;
+    if (isOpen && eventId && tracked.current !== eventId) {
+      tracked.current = eventId;
+      sendInteraction({
+        event_id: eventId,
+        interaction_type: "view",
+        source: source ?? "modal",
+      });
     }
-
-    // Reset when modal closes
     if (!isOpen) {
-      hasTrackedRef.current = false;
+      tracked.current = null;
     }
-  }, [isOpen, eventId, trackView]);
+  }, [isOpen, eventId, source]);
 }

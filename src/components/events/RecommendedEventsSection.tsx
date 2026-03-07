@@ -6,6 +6,7 @@ import { EventCard } from "@/components/events/EventCard";
 import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
 import { AlertCircle, RefreshCcw, ArrowLeft, ArrowRight, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 import { RECOMMENDATION_THRESHOLD } from "@/lib/constants";
@@ -15,8 +16,12 @@ interface RecommendedEventsSectionProps {
   onEmpty?: () => void;
 }
 
+interface RecommendationWithExplanation extends Event {
+  explanation?: string;
+}
+
 interface RecommendationsResponse {
-  recommendations: Event[];
+  recommendations: RecommendationWithExplanation[];
   source?: "personalized" | "popular_fallback";
 }
 
@@ -25,6 +30,12 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<"personalized" | "popular_fallback">("personalized");
+  const [thumbsFeedbackByEventId, setThumbsFeedbackByEventId] = useState<
+    Record<string, "positive" | "negative">
+  >({});
+  const [explanationByEventId, setExplanationByEventId] = useState<
+    Record<string, string>
+  >({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showPrev, setShowPrev] = useState(false);
@@ -76,6 +87,28 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
 
       setSource(fetchedSource);
       setEvents(fetchedEvents);
+
+      const explanations: Record<string, string> = {};
+      for (const ev of fetchedEvents) {
+        if (ev.explanation) {
+          explanations[ev.id] = ev.explanation;
+        }
+      }
+      setExplanationByEventId(explanations);
+
+      // Hydrate existing thumbs feedback for these events
+      const ids = fetchedEvents.map((e) => e.id).join(",");
+      if (ids) {
+        try {
+          const fbRes = await fetch(`/api/recommendations/feedback?event_ids=${encodeURIComponent(ids)}`);
+          if (fbRes.ok) {
+            const fbData = (await fbRes.json()) as { feedback: Record<string, "positive" | "negative"> };
+            setThumbsFeedbackByEventId(fbData.feedback ?? {});
+          }
+        } catch {
+          // Feedback hydration is best-effort
+        }
+      }
     } catch (err) {
       console.error("Error fetching recommended events:", err);
       onEmpty?.();
@@ -83,6 +116,16 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
       setLoading(false);
     }
   };
+
+  const handleDismiss = useCallback((eventId: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+  }, []);
+
+  const handleSaveToggle = useCallback((eventId: string, saved: boolean) => {
+    if (saved) {
+      setEvents((prev) => prev.filter((e) => e.id !== eventId));
+    }
+  }, []);
 
   useEffect(() => {
     fetchRecommendedEvents();
@@ -127,12 +170,24 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
   return (
     <div className="mb-12 w-full isolate overflow-hidden rounded-2xl border border-border/60 bg-muted/40">
       <div className="px-6 pt-6 mb-6">
-        <h2 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-2">
-          {source === "popular_fallback" ? "Popular on Campus" : "Recommended For You"}
-          {source === "personalized" && (
-            <span className="text-sm font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full">New</span>
-          )}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-2">
+            {source === "popular_fallback" ? "Popular on Campus" : "Recommended For You"}
+            {source === "personalized" && (
+              <span className="text-sm font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full">New</span>
+            )}
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchRecommendedEvents}
+            disabled={loading}
+            className="gap-1.5 text-muted-foreground hover:text-primary"
+          >
+            <RefreshCcw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
         <p className="text-muted-foreground mt-1">
           {source === "popular_fallback"
             ? "Trending events from across campus"
@@ -154,13 +209,18 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {events.map((event) => (
+          {events.map((event, index) => (
             <div key={event.id} className="shrink-0 snap-start w-full sm:w-[46%] lg:w-[30%]">
               <EventCard
                 event={event}
                 showSaveButton={!!user}
                 isSaved={savedEventIds.has(event.id)}
                 trackingSource="recommendation"
+                recommendationRank={index + 1}
+                onDismiss={handleDismiss}
+                onSaveToggle={handleSaveToggle}
+                explanation={explanationByEventId[event.id] ?? null}
+                initialThumbsFeedback={thumbsFeedbackByEventId[event.id] ?? null}
                 onClick={onEventClick ? () => onEventClick(event) : undefined}
               />
             </div>

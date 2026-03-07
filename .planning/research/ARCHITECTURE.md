@@ -1,510 +1,524 @@
-# Architecture Research
+# Architecture Patterns
 
-**Domain:** Club organizer dashboard — tabbed UI, member management, invite flows, club settings editing
-**Researched:** 2026-02-25
-**Confidence:** HIGH — based on direct codebase inspection of existing routes, components, and schema
+**Domain:** Campus event platform -- club management, analytics, reviews
+**Researched:** 2026-03-05
+**Confidence:** HIGH (based on existing codebase analysis + established Next.js/Supabase patterns)
 
----
+## Current Architecture (As-Is)
 
-## Standard Architecture
-
-### System Overview
+The existing system follows a standard Next.js App Router monolith with Supabase as the backend:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Page Layer (App Router)                       │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌────────────────┐  ┌──────────────────┐  ┌─────────────────┐  │
-│  │ /my-clubs/[id] │  │  /clubs/[id]     │  │ /create-event   │  │
-│  │  (NEW)         │  │ (MODIFY CTAs)    │  │ (MODIFY)        │  │
-│  └───────┬────────┘  └────────┬─────────┘  └────────┬────────┘  │
-│          │                   │                      │           │
-├──────────┴───────────────────┴──────────────────────┴───────────┤
-│                    Client Component Layer                        │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────────┐  ┌───────────────┐  ┌───────────────────┐ │
-│  │ ClubDashboard    │  │ MemberList    │  │ InviteOrganizer   │ │
-│  │ Tabs (NEW)       │  │ (NEW)         │  │ Modal (NEW)       │ │
-│  └──────────────────┘  └───────────────┘  └───────────────────┘ │
-│  ┌──────────────────┐  ┌───────────────┐  ┌───────────────────┐ │
-│  │ ClubSettings     │  │ ClubOverview  │  │ CreateEventForm   │ │
-│  │ Form (NEW)       │  │ Tab (NEW)     │  │ (MODIFY — clubId) │ │
-│  └──────────────────┘  └───────────────┘  └───────────────────┘ │
-├─────────────────────────────────────────────────────────────────┤
-│                       API Route Layer                            │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────┐  ┌──────────────────────────────┐  │
-│  │ /api/clubs/[id]/members  │  │ /api/clubs/[id]/invites      │  │
-│  │ GET, DELETE (NEW)        │  │ POST, GET (NEW)              │  │
-│  └──────────────────────────┘  └──────────────────────────────┘  │
-│  ┌──────────────────────────┐  ┌──────────────────────────────┐  │
-│  │ /api/clubs/[id] PATCH    │  │ /api/clubs/[id]/events GET   │  │
-│  │ (ADD to existing route)  │  │ (EXISTS — use as-is)         │  │
-│  └──────────────────────────┘  └──────────────────────────────┘  │
-│  ┌──────────────────────────┐                                     │
-│  │ /api/invites/[token] GET │                                     │
-│  │ (NEW — accept invite)    │                                     │
-│  └──────────────────────────┘                                     │
-├─────────────────────────────────────────────────────────────────┤
-│                       Supabase Layer                             │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌────────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │ club_members   │  │ clubs        │  │ organizer_invites    │  │
-│  │ role: owner |  │  │ editable by  │  │ (NEW TABLE)          │  │
-│  │ organizer      │  │ owners only  │  │ token, email,        │  │
-│  │ (ADD constraint│  │              │  │ club_id, expires_at, │  │
-│  │  via migration)│  │              │  │ status               │  │
-│  └────────────────┘  └──────────────┘  └──────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+Browser (Client Components)
+    |
+    v
+Next.js App Router (API Routes + Server Components)
+    |
+    v
+Supabase (PostgreSQL + Auth + Storage + RLS)
+    |
+    v
+External: FastAPI Recommendation Service (Two-Tower model)
+External: Apify Instagram Scraper Pipeline
 ```
 
-### Component Responsibilities
+### Existing Component Map
 
-| Component | Responsibility | New vs Modified |
-|-----------|----------------|-----------------|
-| `/my-clubs/[id]/page.tsx` | Dashboard shell — resolves user role in club server-side, renders tab container | NEW |
-| `ClubDashboardTabs` | URL-param-driven tab switcher for Overview / Events / Members / Settings | NEW |
-| `ClubOverviewTab` | Club info summary, upcoming event count, quick-action buttons | NEW |
-| `ClubEventsTab` | Club event list with edit links; consumes existing `GET /api/clubs/[id]/events` | NEW |
-| `ClubMembersTab` | Member list; remove-member for owners; trigger invite modal | NEW |
-| `ClubSettingsTab` | Editable form for name, description, category, Instagram, logo; owner-only | NEW |
-| `InviteOrganizerModal` | Email input form; calls `POST /api/clubs/[id]/invites`; returns copy-link URL | NEW |
-| `CreateEventForm` | `clubId` prop already exists but is never passed — wire it up from club dashboard | MODIFY |
-| `/clubs/[id]/page.tsx` | Add context-aware CTA: hide "Request Organizer Access" for existing members | MODIFY |
-| `/create-event/page.tsx` | Add club selector dropdown for organizers with multiple clubs | MODIFY |
-| `SideNavBar` / `Header` | Role-based nav items already in place; no change required | NO CHANGE |
+| Component | Location | Status |
+|-----------|----------|--------|
+| Event discovery (home feed) | `src/app/page.tsx` | Working |
+| Event CRUD | `src/app/api/events/` | Working |
+| Club public pages | `src/app/clubs/[id]/page.tsx` | Working |
+| Club dashboard (organizer) | `src/app/my-clubs/[id]/page.tsx` | Skeleton -- tabs exist but settings/analytics empty |
+| Club list (organizer) | `src/app/my-clubs/page.tsx` | Working -- shows clubs with basic stats |
+| Interaction tracking | `src/app/api/interactions/route.ts` | Working -- tracks view/click/save/share/calendar_add |
+| Popularity scoring | `src/app/api/admin/calculate-popularity/` | Working -- batch RPC via `update_event_popularity` |
+| Follow/unfollow clubs | `src/app/api/clubs/[id]/follow/` | Working |
+| Member management | `src/app/api/clubs/[id]/members/` | Working -- owner can add/remove |
+| Invitation system | `src/app/api/clubs/[id]/invites/` | Working |
+| Admin moderation | `src/app/moderation/` | Working |
+| Notifications | `src/app/api/notifications/` | Working |
+| Recommendations | `src/app/api/recommendations/` | Working -- external FastAPI service |
 
----
+### Existing Database Tables
 
-## Recommended Project Structure
+| Table | Purpose | RLS |
+|-------|---------|-----|
+| `events` | Core event data with status workflow | Yes |
+| `clubs` | Club profiles | Yes |
+| `users` | User profiles with roles array | Yes |
+| `saved_events` | User-event bookmarks | Yes |
+| `club_members` | Organizer membership (owner/organizer roles) | Yes |
+| `club_invitations` | Pending invites with tokens | Yes |
+| `club_followers` | Student-club follow relationships | Yes |
+| `user_interactions` | Event interaction tracking (views, clicks, saves) | Yes |
+| `event_popularity_scores` | Precomputed popularity/trending scores | Yes |
+| `notifications` | User notification queue | Yes |
+
+## Recommended Architecture (To-Be)
+
+The new features (club management rework, analytics, reviews, multi-org) fit cleanly into the existing monolith. No new services needed -- extend the existing patterns.
+
+### High-Level Component Diagram
 
 ```
-src/
-├── app/
-│   ├── my-clubs/
-│   │   ├── page.tsx                         # Existing listing — no change
-│   │   └── [id]/
-│   │       └── page.tsx                     # NEW — dashboard shell + role resolution
-│   ├── clubs/
-│   │   └── [id]/
-│   │       └── page.tsx                     # MODIFY — context-aware CTAs
-│   ├── create-event/
-│   │   └── page.tsx                         # MODIFY — club selector for organizers
-│   ├── invites/
-│   │   └── [token]/
-│   │       └── page.tsx                     # NEW — accept invite redirect page
-│   └── api/
-│       ├── clubs/
-│       │   ├── route.ts                     # Existing POST — no change
-│       │   └── [id]/
-│       │       ├── route.ts                 # MODIFY — add PATCH for settings
-│       │       ├── events/
-│       │       │   └── route.ts             # EXISTS — no change needed
-│       │       ├── members/
-│       │       │   └── route.ts             # NEW — GET list, DELETE member
-│       │       └── invites/
-│       │           └── route.ts             # NEW — POST create, GET pending
-│       └── invites/
-│           └── [token]/
-│               └── route.ts                 # NEW — GET accept invite token
-├── components/
-│   └── clubs/                               # NEW directory
-│       ├── ClubDashboardTabs.tsx
-│       ├── ClubOverviewTab.tsx
-│       ├── ClubEventsTab.tsx
-│       ├── ClubMembersTab.tsx
-│       ├── ClubSettingsTab.tsx
-│       └── InviteOrganizerModal.tsx
-└── supabase/
-    └── migrations/
-        └── YYYYMMDD_club_organizer_v11.sql  # NEW — role constraint + invites table
++--------------------------------------------------+
+|                    BROWSER                         |
+|                                                    |
+|  Student Views          Organizer Views            |
+|  +-------------+       +-------------------+      |
+|  | Home Feed   |       | My Clubs List     |      |
+|  | Club Profile|       | Club Dashboard    |      |
+|  | Event Detail|       |  - Overview       |      |
+|  | Calendar    |       |  - Events         |      |
+|  | My Events   |       |  - Analytics  NEW |      |
+|  +------+------+       |  - Reviews    NEW |      |
+|         |              |  - Members        |      |
+|         |              |  - Settings   NEW |      |
+|         |              +--------+----------+      |
+|         |                       |                  |
+|  +------+------+       +-------+--------+         |
+|  | Review Form |       | Club Switcher  | NEW     |
+|  |    NEW      |       +-------+--------+         |
+|  +------+------+               |                  |
++--------+-------------------+---+------------------+
+         |                   |
+         v                   v
++--------------------------------------------------+
+|              NEXT.JS API LAYER                    |
+|                                                    |
+|  Existing Routes              New Routes           |
+|  /api/events/*               /api/clubs/[id]/      |
+|  /api/clubs/*                  analytics    NEW    |
+|  /api/interactions           /api/clubs/[id]/      |
+|  /api/recommendations          settings    NEW    |
+|  /api/notifications          /api/events/[id]/     |
+|  /api/admin/*                  reviews     NEW    |
+|                              /api/clubs/switch NEW |
++--------+-----------------------------------------+
+         |
+         v
++--------------------------------------------------+
+|              SUPABASE                             |
+|                                                    |
+|  Existing Tables        New Tables                 |
+|  events                 event_reviews       NEW   |
+|  clubs                  review_responses    NEW   |
+|  users                  (analytics via views       |
+|  saved_events            on user_interactions)     |
+|  club_members                                      |
+|  club_followers         New Functions              |
+|  club_invitations       get_club_analytics  NEW   |
+|  user_interactions      get_event_analytics NEW   |
+|  event_popularity       aggregate_reviews   NEW   |
+|  notifications                                     |
++--------------------------------------------------+
 ```
 
-### Structure Rationale
+### Component Boundaries
 
-- **`components/clubs/`:** Mirrors existing `components/events/` directory. All club dashboard components grouped together. Keeps dashboard concerns isolated from shared UI primitives in `components/ui/`.
-- **`app/api/clubs/[id]/members/` and `invites/`:** Follows established sub-route pattern — `/api/clubs/[id]/events/` already exists. Avoids query-param-based routing on the base `[id]/route.ts` handler.
-- **`app/api/invites/[token]/`:** Separate from clubs API because the token route is accessed by the invitee (not the club owner) and does not fit the owner-scoped `/api/clubs/[id]/...` namespace.
-- **Single migration file:** All schema changes (role check constraint, organizer_invites table, auto-grant role update) are atomic and reviewable together.
+| Component | Responsibility | Communicates With | Auth Requirement |
+|-----------|---------------|-------------------|------------------|
+| **Club Switcher** | Quick-switch dropdown for multi-club organizers | My Clubs API, Club Dashboard | Authenticated + club_organizer role |
+| **Club Dashboard (reworked)** | Single-page management hub with tabs | Club API, Analytics API, Events API, Reviews API, Members API | Club member (owner or organizer) |
+| **Analytics Tab** | Display event-level and club-level metrics | Analytics API (reads user_interactions + event_popularity_scores) | Club member |
+| **Reviews Tab** | Show aggregate review feedback, respond to reviews | Reviews API | Club member |
+| **Review Form (student)** | Post-event rating + optional text | Reviews API | Authenticated + attended/saved event |
+| **Club Settings Tab** | Edit club profile, logo, description, category | Club Settings API, Supabase Storage | Club owner only |
+| **Event Creation (enhanced)** | Club selector for multi-club organizers | Events Create API, My Clubs API | Club member for selected club |
 
----
+### Data Flow
 
-## Architectural Patterns
+#### 1. Club Management Flow
 
-### Pattern 1: URL-Param Driven Tabs (No useState)
+```
+Organizer visits /my-clubs
+    -> GET /api/my-clubs (fetches clubs where user is member)
+    -> Displays club cards with stats
 
-**What:** Active tab stored in URL search param (`?tab=members`), not React state. The page shell reads `searchParams.tab` and passes it to the tab component. Switching tabs is a shallow router push.
+Organizer clicks club card -> /my-clubs/[id]
+    -> Server Component fetches club + membership + counts
+    -> Renders ClubDashboard with tabs
 
-**When to use:** Dashboard tabs where bookmarkability and back-button behavior matter. Always prefer this over `useState` for primary navigation structures.
+Tab: Overview  -> Shows follower count, member count, quick stats
+Tab: Events    -> GET /api/clubs/[id]/events (filterable by status)
+Tab: Analytics -> GET /api/clubs/[id]/analytics (aggregated metrics)
+Tab: Reviews   -> GET /api/clubs/[id]/reviews (post-event feedback)
+Tab: Members   -> GET /api/clubs/[id]/members (existing)
+Tab: Settings  -> GET + PUT /api/clubs/[id]/settings (club profile editing)
+```
 
-**Trade-offs:** Slightly more boilerplate than useState. Gains shareable URLs, correct browser back behavior, and server-readable initial state.
+#### 2. Analytics Data Flow
 
-**Example:**
+Analytics are derived from **existing** `user_interactions` data. No new tracking instrumentation needed -- the interaction tracking system already captures views, clicks, saves, shares, and calendar_adds per event.
+
+```
+user_interactions (existing raw data)
+    |
+    v
+Supabase SQL View or RPC Function: get_club_analytics(club_id, date_range)
+    |
+    +-> Event-level: views, clicks, saves, conversion rates per event
+    +-> Club-level:  total views across events, follower growth (from club_followers),
+    |                top-performing events, engagement trends
+    +-> Time series: daily/weekly aggregation for charts
+    |
+    v
+GET /api/clubs/[id]/analytics?range=7d|30d|all
+    |
+    v
+Analytics Tab renders charts (use recharts -- already common in Next.js projects)
+```
+
+**Key architectural decision:** Compute analytics server-side in Supabase via SQL views or RPC functions, not in the API route. PostgreSQL is excellent at aggregation. The API route is a thin pass-through.
+
+#### 3. Review System Data Flow
+
+```
+Event ends (event_date in the past)
+    |
+    v
+Student who saved/RSVPd sees "Leave a review" prompt on Event Detail page
+    |
+    v
+POST /api/events/[id]/reviews
+    Body: { rating: 1-5, text?: string, tags?: string[] }
+    Validation: user saved the event, event is past, one review per user per event
+    |
+    v
+event_reviews table (new)
+    |
+    v
+Organizer views Reviews tab in Club Dashboard
+    GET /api/clubs/[id]/reviews -> aggregated across all club events
+    Shows: average rating, rating distribution, recent text reviews
+    |
+    v
+Organizer can respond (optional):
+    POST /api/events/[id]/reviews/[review_id]/response
+    -> review_responses table (new)
+```
+
+#### 4. Multi-Club Switching Flow
+
+```
+Organizer with multiple clubs visits /my-clubs
+    -> Sees all clubs in card grid (existing)
+
+From within /my-clubs/[id] dashboard:
+    -> Club Switcher dropdown in dashboard header
+    -> Shows other clubs the user manages
+    -> Clicking switches to /my-clubs/[other-id]
+    -> No separate API needed -- reuses GET /api/my-clubs data
+
+From event creation (/create-event):
+    -> Club selector dropdown (if user manages multiple clubs)
+    -> GET /api/my-clubs provides the list
+    -> Selected club_id is sent with event creation payload (existing field)
+```
+
+#### 5. Auto-Approval Flow (Enhancement to Existing)
+
+Already partially implemented in `src/app/api/events/create/route.ts`:
+
 ```typescript
-// app/my-clubs/[id]/page.tsx
-export default async function ClubDashboardPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: { tab?: string };
-}) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
-
+// Current code already does this:
+if (roles.includes("club_organizer") && body.club_id) {
   const { data: membership } = await supabase
     .from("club_members")
-    .select("role")
-    .eq("club_id", params.id)
+    .select("id")
     .eq("user_id", user.id)
+    .eq("club_id", body.club_id)
     .single();
-
-  if (!membership) redirect("/my-clubs"); // not a member of this club
-
-  const activeTab = searchParams.tab ?? "overview";
-  return <ClubDashboardTabs clubId={params.id} userRole={membership.role} activeTab={activeTab} />;
+  if (membership) {
+    status = "approved";  // Auto-approve
+  }
 }
 ```
 
-### Pattern 2: Role Resolution in Page Shell — One Query, Passed as Prop
+This pattern is correct and already working. No architectural change needed -- just ensure the event creation UI properly sends `club_id` when an organizer creates for their club.
 
-**What:** The dashboard page resolves the user's role (owner / organizer / null) server-side via a single membership query. `userRole` is passed as a prop to every tab. Tabs read the prop to conditionally render controls — they do NOT make independent membership checks.
+## New Database Objects
 
-**When to use:** Any route with role-differentiated views. Centralizes authorization in one place per request cycle.
+### Tables
 
-**Trade-offs:** One additional DB query on page load, but eliminates N redundant client-side permission queries across tabs.
+```sql
+-- Post-event reviews from students
+CREATE TABLE event_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  rating SMALLINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  review_text TEXT,
+  tags TEXT[] DEFAULT '{}',  -- e.g., ['well-organized', 'great-speakers']
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(event_id, user_id)  -- one review per user per event
+);
 
-**Example:**
-```typescript
-// ClubMembersTab.tsx — reads prop, does not query membership
-export function ClubMembersTab({ clubId, userRole }: { clubId: string; userRole: "owner" | "organizer" }) {
-  return (
-    <div>
-      <MemberList clubId={clubId} />
-      {userRole === "owner" && (
-        <Button onClick={() => setShowInviteModal(true)}>Invite Organizer</Button>
-      )}
-    </div>
+-- Organizer responses to reviews (optional, one per review)
+CREATE TABLE review_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  review_id UUID NOT NULL REFERENCES event_reviews(id) ON DELETE CASCADE UNIQUE,
+  responder_id UUID NOT NULL REFERENCES auth.users(id),
+  response_text TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### Views / Functions
+
+```sql
+-- Club-level analytics view (materializable later if needed)
+CREATE OR REPLACE FUNCTION get_club_analytics(
+  p_club_id UUID,
+  p_start_date TIMESTAMPTZ DEFAULT now() - INTERVAL '30 days',
+  p_end_date TIMESTAMPTZ DEFAULT now()
+)
+RETURNS JSON AS $$
+  -- Aggregates from user_interactions for all events belonging to club
+  -- Returns: total_views, total_clicks, total_saves, top_events,
+  --          daily_breakdown, follower_count, follower_growth
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Event-level analytics (extends existing popularity pattern)
+CREATE OR REPLACE FUNCTION get_event_analytics(
+  p_event_id UUID,
+  p_start_date TIMESTAMPTZ DEFAULT now() - INTERVAL '30 days'
+)
+RETURNS JSON AS $$
+  -- Returns: views, clicks, saves, shares, calendar_adds,
+  --          unique_viewers, daily_breakdown, source_breakdown
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Review aggregation for a club
+CREATE OR REPLACE FUNCTION get_club_review_summary(p_club_id UUID)
+RETURNS JSON AS $$
+  -- Returns: avg_rating, total_reviews, rating_distribution,
+  --          recent_reviews with text, common_tags
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### RLS Policies
+
+```sql
+-- event_reviews: anyone can read, only the reviewer can insert/update/delete their own
+ALTER TABLE event_reviews ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can read reviews" ON event_reviews FOR SELECT USING (true);
+CREATE POLICY "Users can create reviews" ON event_reviews FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own reviews" ON event_reviews FOR UPDATE
+  USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own reviews" ON event_reviews FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- review_responses: readable by all, writable by club members
+ALTER TABLE review_responses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can read responses" ON review_responses FOR SELECT USING (true);
+CREATE POLICY "Club members can respond" ON review_responses FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM club_members cm
+      JOIN event_reviews er ON er.id = review_id
+      JOIN events e ON e.id = er.event_id
+      WHERE cm.user_id = auth.uid() AND cm.club_id = e.club_id
+    )
   );
-}
 ```
 
-### Pattern 3: Session Client for Reads, Service Client for Privileged Writes
+## Patterns to Follow
 
-**What:** Member list and club event fetches use the session Supabase client (RLS enforced). Invite creation, member removal, and club settings updates use the service client after an explicit ownership check in the API route handler.
+### Pattern 1: Server Component Data Loading + Client Component Interactivity
 
-**When to use:** Same split already established in this codebase: `createClient()` from `@/lib/supabase/server` for user-scoped reads, `createServiceClient()` for cross-user writes or admin operations.
+The existing `my-clubs/[id]/page.tsx` (Server Component) + `ClubDashboard.tsx` (Client Component) pattern is the correct approach. Continue it.
 
-**Trade-offs:** Service client bypasses RLS entirely — explicit ownership verification in route code is mandatory. This is the correct tradeoff because the API route is the enforcement point.
+**What:** Server Component fetches initial data and authorization checks. Client Component handles tabs, state, and subsequent API calls within tabs.
 
-**Example:**
+**When:** Every dashboard-style page.
+
+**Example (existing, follow this pattern for new tabs):**
 ```typescript
-// POST /api/clubs/[id]/invites/route.ts
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = await createClient();                          // session client
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+// Server Component: src/app/my-clubs/[id]/page.tsx
+// - Authenticates user
+// - Checks club membership
+// - Fetches initial data in parallel
+// - Passes to Client Component
 
-  // Ownership check via RLS-enforced session client
-  const { data: membership } = await supabase
-    .from("club_members")
-    .select("role")
-    .eq("club_id", params.id)
-    .eq("user_id", user.id)
-    .single();
-  if (membership?.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  // Privileged write via service client
-  const serviceClient = createServiceClient();
-  const token = crypto.randomUUID();
-  const { error } = await serviceClient.from("organizer_invites").insert({
-    club_id: params.id,
-    email: body.email,
-    token,
-    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "pending",
-  });
-  if (error) return NextResponse.json({ error: "Failed to create invite" }, { status: 500 });
-
-  return NextResponse.json({ inviteUrl: `/invites/${token}` });
-}
+// Client Component: src/components/clubs/ClubDashboard.tsx
+// - Manages tab state via URL search params
+// - Each tab is a lazy-loaded component
+// - Tab components fetch their own data via API routes
 ```
 
-### Pattern 4: Token-Based Invite — No Email Infrastructure Required for MVP
+### Pattern 2: Parallel Data Fetching with Promise.all
 
-**What:** Owner submits an invitee's email. API creates an `organizer_invites` row with a UUID token and returns the invite URL. Owner copies and shares the link manually. Invitee visits `/invites/[token]`, which validates the token and auto-adds them as `organizer` in `club_members`.
+Already used consistently throughout the codebase. Continue using this pattern for all new routes.
 
-**When to use:** Any invite flow where email infrastructure (Resend, SendGrid) is not yet configured. Token link approach works immediately and can be upgraded to email-delivered links in a later milestone.
+**What:** Fetch independent data in parallel using `Promise.all`.
 
-**Trade-offs:** Owner must copy-paste the invite link for v1.1. Acceptable for the current milestone scope.
+**When:** Any API route or Server Component that needs multiple independent queries.
 
----
-
-## Data Flow
-
-### Dashboard Load Flow
-
-```
-User visits /my-clubs/[id]
-    ↓
-Server component: query club_members for user+club (session client, RLS)
-    ↓
-If no membership → redirect /my-clubs
-If membership found → resolve role ("owner" | "organizer")
-    ↓
-Render ClubDashboardTabs with { clubId, userRole, activeTab }
-    ↓
-Active tab component mounts → fetches its own data via client-side fetch
+```typescript
+const [clubResult, eventsResult, followerResult] = await Promise.all([
+  supabase.from("clubs").select("*").eq("id", clubId).single(),
+  supabase.from("events").select("*").eq("club_id", clubId),
+  supabase.from("club_followers").select("*", { count: "exact", head: true }).eq("club_id", clubId),
+]);
 ```
 
-### Club Settings Edit Flow
+### Pattern 3: Authorization at API + RLS Layers
 
-```
-Owner edits name/description in ClubSettingsTab
-    ↓
-PATCH /api/clubs/[id]
-    ↓ session client: verify caller is owner (RLS membership check)
-    ↓ service client: UPDATE clubs SET name=..., description=... WHERE id=...
-    ↓
-Return updated club row
-    ↓
-ClubSettingsTab updates local state, shows success toast (shadcn/ui)
-```
+The codebase uses a belt-and-suspenders approach: API routes check membership/role explicitly, and RLS policies provide a safety net. Continue this.
 
-### Organizer Invitation Flow
+**What:** Validate user role/membership in the API route handler before querying. RLS is the fallback, not the primary check.
 
-```
-Owner enters email in InviteOrganizerModal
-    ↓
-POST /api/clubs/[id]/invites
-    ↓ verify caller is owner (session client, RLS)
-    ↓ insert into organizer_invites (service client)
-    ↓
-API returns { inviteUrl: "/invites/[token]" }
-    ↓
-Modal shows link for owner to copy and share
-    ↓
-Invitee opens link → GET /api/invites/[token]
-    ↓ validate: token exists, not expired, status=pending, email matches user
-    ↓ insert into club_members (role: "organizer") via service client
-    ↓ update organizer_invites.status = "accepted"
-    ↓
-Redirect to /my-clubs/[clubId]?tab=overview
+**When:** Every protected API route.
+
+```typescript
+// 1. Authenticate
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+// 2. Authorize (check membership/role)
+const { data: membership } = await supabase
+  .from("club_members").select("role")
+  .eq("user_id", user.id).eq("club_id", clubId).single();
+if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+// 3. Proceed with query (RLS also enforces)
 ```
 
-### Member Removal Flow
+### Pattern 4: Heavy Computation in Supabase, Thin API Routes
+
+The existing `update_event_popularity` RPC function pattern is correct. Analytics aggregation belongs in PostgreSQL, not in Node.js API routes.
+
+**What:** Use Supabase RPC functions (`supabase.rpc()`) for any aggregation, scoring, or complex queries. API routes validate input, call the function, and return results.
+
+**When:** Analytics dashboards, review summaries, popularity calculations.
+
+### Pattern 5: URL-Driven Tab State
+
+The ClubDashboard uses URL search params (`?tab=events`) for tab state. This enables deep linking and browser back/forward. Continue this.
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Fetching All Data in the Server Component
+
+**What:** Loading analytics/reviews/member data for ALL tabs in the Server Component's initial render.
+
+**Why bad:** Wastes bandwidth and time. Most tabs won't be viewed.
+
+**Instead:** Server Component loads only the header data (club info, counts). Each tab component fetches its own data client-side when activated.
+
+### Anti-Pattern 2: Client-Side Analytics Aggregation
+
+**What:** Fetching raw `user_interactions` rows and aggregating in JavaScript.
+
+**Why bad:** Will not scale. Even with 1000 events, the raw interaction table could have millions of rows.
+
+**Instead:** Use Supabase RPC functions or SQL views for aggregation. Return pre-computed summaries to the client.
+
+### Anti-Pattern 3: Separate Analytics Service
+
+**What:** Building a separate microservice for analytics.
+
+**Why bad:** Over-engineering for the current scale (university campus). Adds deployment complexity, latency, and maintenance burden.
+
+**Instead:** PostgreSQL aggregation queries handle this perfectly at campus scale (< 100K interactions/month). Revisit if the platform expands to multi-university.
+
+### Anti-Pattern 4: Storing Computed Metrics in the Events Table
+
+**What:** Adding `view_count`, `save_count` columns directly to the `events` table and incrementing them on each interaction.
+
+**Why bad:** Race conditions, stale data, tight coupling. The existing codebase correctly uses a separate `event_popularity_scores` table with batch recomputation.
+
+**Instead:** Continue the existing pattern -- `user_interactions` for raw data, computed views/functions for aggregation, `event_popularity_scores` for cached results.
+
+### Anti-Pattern 5: Global State for Club Context
+
+**What:** Using React Context or Zustand to store "current club" globally for multi-club switching.
+
+**Why bad:** The club context is route-driven (`/my-clubs/[id]`). Global state creates sync issues with URL and makes deep linking unreliable.
+
+**Instead:** Club ID comes from the URL param. The switcher navigates to a new URL. Components read club ID from route params.
+
+## New API Routes
+
+| Route | Method | Purpose | Auth |
+|-------|--------|---------|------|
+| `GET /api/clubs/[id]/analytics` | GET | Club-level + event-level metrics | Club member |
+| `GET /api/clubs/[id]/analytics/events/[eventId]` | GET | Single event detailed analytics | Club member |
+| `PUT /api/clubs/[id]/settings` | PUT | Update club profile/description/logo | Club owner |
+| `GET /api/events/[id]/reviews` | GET | List reviews for an event | Public |
+| `POST /api/events/[id]/reviews` | POST | Submit a review | Authenticated + past event |
+| `PUT /api/events/[id]/reviews/[reviewId]` | PUT | Edit own review | Review author |
+| `DELETE /api/events/[id]/reviews/[reviewId]` | DELETE | Delete own review | Review author |
+| `POST /api/events/[id]/reviews/[reviewId]/response` | POST | Organizer responds to review | Club member |
+| `GET /api/clubs/[id]/reviews` | GET | Aggregated reviews across club events | Club member |
+
+## New/Modified Components
+
+| Component | Location | New/Modified |
+|-----------|----------|-------------|
+| `ClubDashboard` | `src/components/clubs/ClubDashboard.tsx` | Modified -- add Analytics, Reviews, Settings tabs |
+| `ClubAnalyticsTab` | `src/components/clubs/ClubAnalyticsTab.tsx` | New |
+| `ClubReviewsTab` | `src/components/clubs/ClubReviewsTab.tsx` | New |
+| `ClubSettingsTab` | `src/components/clubs/ClubSettingsTab.tsx` | New |
+| `ClubSwitcher` | `src/components/clubs/ClubSwitcher.tsx` | New -- dropdown in dashboard header |
+| `ReviewForm` | `src/components/events/ReviewForm.tsx` | New -- on event detail page |
+| `ReviewCard` | `src/components/events/ReviewCard.tsx` | New -- displays a single review |
+| `AnalyticsChart` | `src/components/clubs/AnalyticsChart.tsx` | New -- reusable chart wrapper |
+| `EventCreateForm` (enhanced) | `src/components/events/EventCreateForm.tsx` | Modified -- add club selector |
+
+## Suggested Build Order (Dependencies)
+
+The build order is driven by data dependencies and user value. Each layer builds on the previous:
 
 ```
-Owner clicks Remove in ClubMembersTab
-    ↓
-DELETE /api/clubs/[id]/members/[userId]
-    ↓ verify caller is owner (session client, RLS)
-    ↓ verify target is not caller (cannot remove yourself)
-    ↓ verify target is not another owner (cannot demote owners)
-    ↓ delete from club_members (service client)
-    ↓
-ClubMembersTab: optimistic remove row, re-fetch on error
+Phase 1: Club Settings + Profile Editing
+    |  (Foundation -- organizers can fully manage their club profile)
+    |  No dependencies on new tables.
+    |  Unblocks: public club pages look complete
+    v
+Phase 2: Analytics Dashboard
+    |  (High value -- organizers can see engagement)
+    |  Depends on: existing user_interactions table (no new tables)
+    |  Requires: new Supabase RPC functions + Analytics Tab component
+    |  Unblocks: organizer motivation to post more events
+    v
+Phase 3: Review System
+    |  (New tables: event_reviews, review_responses)
+    |  Depends on: events existing and being in the past
+    |  Requires: new tables, RLS policies, Review Form + Review Tab
+    |  Unblocks: feedback loop between students and organizers
+    v
+Phase 4: Multi-Club Polish + Club Switcher
+    (UX enhancement -- no new tables or APIs)
+    Depends on: dashboard tabs all working
+    Requires: ClubSwitcher component, enhanced event creation form
 ```
 
-### Auto-Grant Owner on Club Approval (Existing Route, One-Line Fix)
+**Rationale for this order:**
+1. Settings first because organizers need to set up their club before analytics/reviews matter.
+2. Analytics before reviews because analytics use existing data (zero migration risk) and provide immediate value.
+3. Reviews after analytics because reviews require new tables and a more complex validation flow (checking event dates, preventing duplicate reviews).
+4. Multi-club switching last because it is a UX convenience layer that benefits from all tabs being complete.
 
-```
-Admin approves club → POST /api/admin/clubs/[id] (existing route)
-    ↓ CURRENT: club_members.insert({ role: "organizer" })
-    ↓ CHANGE TO: club_members.insert({ role: "owner" })
-    ↓
-Creator is now "owner" — full dashboard access from day one
-```
+## Scalability Considerations
 
-### State Management
+| Concern | At 100 users | At 10K users | At 100K users |
+|---------|--------------|--------------|---------------|
+| Analytics queries | Direct SQL aggregation per request | Add database indexes on (club_id, created_at) for user_interactions | Materialized views refreshed on schedule |
+| Review volume | Direct queries fine | Index on (event_id, created_at) | Paginate reviews, cache aggregates |
+| Club switcher | Fetch all clubs per user | Same (organizers manage < 10 clubs) | Same |
+| Interaction tracking | Insert per interaction | Same (Supabase handles this) | Batch inserts, consider queueing |
+| Popularity scores | Batch recompute via cron | Same pattern, increase frequency | Incremental updates instead of full recompute |
 
-No global state store required. Each tab component manages its own fetch-on-mount data lifecycle. The page shell provides `clubId` and `userRole` as props (server-resolved). Tab-level mutations trigger local state re-fetches, matching the existing pattern in `my-clubs/page.tsx`.
-
----
-
-## New vs Modified — Explicit Inventory
-
-### New Files
-
-| File | Type | Purpose |
-|------|------|---------|
-| `src/app/my-clubs/[id]/page.tsx` | Page (Server Component) | Dashboard shell, role resolution |
-| `src/components/clubs/ClubDashboardTabs.tsx` | Component | URL-param tab switcher |
-| `src/components/clubs/ClubOverviewTab.tsx` | Component | Overview tab content |
-| `src/components/clubs/ClubEventsTab.tsx` | Component | Events tab — wraps existing events API |
-| `src/components/clubs/ClubMembersTab.tsx` | Component | Members tab, remove member |
-| `src/components/clubs/ClubSettingsTab.tsx` | Component | Settings form, owner-only |
-| `src/components/clubs/InviteOrganizerModal.tsx` | Component | Invite modal, returns copy-link |
-| `src/app/api/clubs/[id]/members/route.ts` | API Route | GET member list, DELETE member |
-| `src/app/api/clubs/[id]/invites/route.ts` | API Route | POST create invite, GET pending invites |
-| `src/app/api/invites/[token]/route.ts` | API Route | GET accept invite token |
-| `src/app/invites/[token]/page.tsx` | Page | Accept invite — validates token, redirects |
-| `supabase/migrations/YYYYMMDD_club_organizer_v11.sql` | Migration | role check constraint, organizer_invites table |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `src/app/api/clubs/[id]/route.ts` | Add PATCH handler for club settings (name, description, category, instagram, logo_url) |
-| `src/app/api/admin/clubs/[id]/route.ts` | Change auto-grant role from `"organizer"` to `"owner"` on club approval |
-| `src/app/clubs/[id]/page.tsx` | Add context-aware CTA: hide "Request Organizer Access" for existing organizers/owners |
-| `src/app/create-event/page.tsx` | Add club selector dropdown for organizers with multiple clubs |
-| `src/components/events/CreateEventForm.tsx` | Wire existing `clubId` prop: pre-fill club_id, auto-approve if organizer |
-
-### Unchanged Files
-
-| File | Reason |
-|------|--------|
-| `src/app/api/clubs/[id]/events/route.ts` | Returns club events for organizers already — no change needed |
-| `src/app/my-clubs/page.tsx` | Listing page links to `[id]` already; no change needed |
-| `src/components/layout/SideNavBar.tsx` | Role-based nav items already wired |
-| `src/lib/supabase/client.ts` + `server.ts` | Client/server split unchanged |
-
----
-
-## Build Order (Dependency-First)
-
-```
-Phase 1 — Database Foundation (everything depends on this)
-  1. SQL migration:
-     - Add CHECK constraint on club_members.role: ('owner', 'organizer')
-     - Create organizer_invites table (id, club_id, email, token, status, expires_at)
-     - Add RLS: only club owners can read/write their club's invites
-  2. Modify /api/admin/clubs/[id]: role "organizer" → "owner" in auto-grant insert
-
-Phase 2 — Dashboard Shell (other tabs depend on this existing)
-  3. /my-clubs/[id]/page.tsx — role resolution + redirect guard
-  4. ClubDashboardTabs.tsx — URL-param tab switcher
-
-Phase 3 — Overview + Events Tabs (lowest risk — read-only, existing APIs)
-  5. ClubOverviewTab.tsx — static club info display
-  6. ClubEventsTab.tsx — wraps existing GET /api/clubs/[id]/events (no new API)
-
-Phase 4 — Members API + Tab
-  7. GET + DELETE /api/clubs/[id]/members/route.ts
-  8. ClubMembersTab.tsx + InviteOrganizerModal.tsx
-
-Phase 5 — Invite Flow
-  9. POST /api/clubs/[id]/invites/route.ts
- 10. GET /api/invites/[token]/route.ts
- 11. /invites/[token]/page.tsx
-
-Phase 6 — Settings
- 12. PATCH /api/clubs/[id]/route.ts
- 13. ClubSettingsTab.tsx
-
-Phase 7 — Surface Fixes (isolated, can be done any time after Phase 1)
- 14. /clubs/[id] public page — context-aware CTA
- 15. /create-event — club selector for organizers
- 16. Wire CreateEventForm clubId prop
-```
-
-**Rationale:** Database migration is the hard dependency for all role-based logic. Dashboard shell must exist before tabs can be rendered. Events tab uses an existing API (lowest-risk, early confidence win). Members API before invite UI (invite is inside the members tab). Settings last (no upstream dependencies). Surface fixes are isolated and can slip to the end without blocking the core dashboard.
-
----
-
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| Current (campus app, ~1K users) | Direct Supabase queries per request — appropriate, no caching layer needed |
-| 10K users | Add column pruning to member list queries; paginate ClubEventsTab if clubs have >50 events |
-| 100K+ users | Move invite token validation to Supabase Edge Function; cache club membership checks |
-
-### Scaling Priorities
-
-1. **First bottleneck:** Member list and events list both fetched on tab mount. Add `stale-while-revalidate` headers on GET endpoints or adopt React Query with a short TTL.
-2. **Second bottleneck:** Logo upload (if added to settings). Use Supabase Storage presigned upload URLs server-side — do not stream large files through Next.js API routes.
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Permission Checks Inside Tab Components
-
-**What people do:** Each tab component independently queries `club_members` to check if the current user is an owner before rendering admin controls.
-
-**Why it's wrong:** N redundant DB queries per page load. Permission logic scattered across multiple files. Easy to miss one check and create a privilege escalation path.
-
-**Do this instead:** Resolve role once in the page shell server-side. Pass `userRole` as a prop to all tabs. Tabs only read the prop.
-
-### Anti-Pattern 2: Using Service Client for All Club API Operations
-
-**What people do:** Since some club API routes already use the service client for admin ops, developers reuse it for all operations including reads.
-
-**Why it's wrong:** Bypasses RLS entirely. A bug in ownership validation exposes all clubs' data to any authenticated user.
-
-**Do this instead:** Session client for reads (RLS enforces membership). Service client only for privileged writes — and only after explicit ownership verification in route code.
-
-### Anti-Pattern 3: useState for Tab Navigation
-
-**What people do:** `const [activeTab, setActiveTab] = useState("overview")` — tab state held in React.
-
-**Why it's wrong:** Refreshing the page resets to the default tab. Tabs are not bookmarkable. Back button does not restore the tab the user was on.
-
-**Do this instead:** Store active tab in URL search param (`?tab=members`). Use `router.push` or `<Link>` with shallow routing for tab switches.
-
-### Anti-Pattern 4: Blocking the Invite Feature on Email Infrastructure
-
-**What people do:** Defer the invite feature entirely until a transactional email provider (Resend, SendGrid) is configured and tested.
-
-**Why it's wrong:** Blocks a core v1.1 feature on an infrastructure dependency that can be added progressively.
-
-**Do this instead:** Implement token-based invite with a copy-link UX first. Return the invite URL from the API. Owner copies and shares it. Email delivery is a progressive enhancement for v1.2.
-
-### Anti-Pattern 5: Allowing Owners to Remove Themselves
-
-**What people do:** DELETE `/api/clubs/[id]/members/[userId]` removes any member including the requesting owner.
-
-**Why it's wrong:** Creates clubs with no owner — settings become inaccessible, members cannot be managed, and the club is in an unrecoverable state without admin intervention.
-
-**Do this instead:** API route must check `targetUserId !== requestingUserId` and also verify the target's role is not `"owner"` (or alternatively: only allow one owner removal path via admin). Return 400 with a clear error message.
-
----
-
-## Integration Points
-
-### Existing APIs Already Ready to Use
-
-| API | Current State | Integration |
-|-----|--------------|-------------|
-| `GET /api/clubs/[id]/events` | Exists, returns club events for organizers | ClubEventsTab fetches this directly — no changes |
-| `PATCH /api/events/[id]` | Exists, checks club membership | ClubEventsTab edit links point to existing edit form |
-| `GET /api/my-clubs` | Exists, returns clubs with stats | /my-clubs page listing — no change |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Dashboard page shell → Tab components | Props: `clubId`, `userRole`, `club` | Server-resolved role flows down as props; tabs own their own data fetches |
-| ClubMembersTab → InviteOrganizerModal | Callback prop `onInviteCreated` | Modal signals parent to refresh pending invite list |
-| ClubDashboardTabs → URL | `router.push("?tab=members")` | Shallow push; page shell re-renders with new searchParams.tab |
-| CreateEventForm ↔ Club dashboard | `clubId` prop (already defined, not wired) | Wire from ClubEventsTab "Create Event" button — no interface change to the form component |
-| Admin approval route → club_members | Direct DB insert with `role: "owner"` | One-line change to existing `/api/admin/clubs/[id]` route |
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Supabase Auth | Session client in API routes — unchanged | No new auth surface |
-| Supabase Storage | Logo upload via presigned URL | Defer to v1.2 if logo upload is risky; ship settings without logo field first |
-| Email (Resend) | Not required for v1.1 — token URL returned from API | Progressive enhancement for v1.2 |
-
----
+**At McGill scale (30K students, ~200 clubs, ~1K events/semester), all patterns described above will perform well without optimization. The existing architecture handles this comfortably.**
 
 ## Sources
 
-- Direct codebase inspection — HIGH confidence (primary source)
-  - `src/app/api/clubs/` (existing routes)
-  - `src/app/my-clubs/page.tsx` (existing listing, dead `[id]` link confirmed)
-  - `src/components/events/CreateEventForm.tsx` (clubId prop confirmed present, not wired)
-  - `src/app/api/admin/clubs/` (auto-grant insert confirmed)
-  - `.planning/PROJECT.md` v1.1 milestone context
-- Next.js App Router `searchParams` pattern for tab state — HIGH confidence (official Next.js docs)
-- Supabase RLS + service role client split — HIGH confidence (established pattern in this codebase)
-
----
-
-*Architecture research for: Club organizer dashboard — Uni-Verse v1.1*
-*Researched: 2026-02-25*
+- Existing codebase analysis (PRIMARY -- all patterns derived from current implementation)
+- Next.js App Router conventions (Server/Client Component boundaries)
+- Supabase RLS and RPC documentation patterns
+- PostgreSQL aggregation best practices for analytics workloads

@@ -4,12 +4,11 @@
  * Filter bar component for events
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
-import { X, Filter } from "lucide-react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EventBadge } from "./EventBadge";
 
@@ -41,12 +40,31 @@ interface EventFiltersProps {
  * @param {EventFiltersProps} props - The component props.
  * @returns The rendered horizontal event filter UI.
  */
-export function EventFilters({ onFilterChange, initialTags = [] }: EventFiltersProps) {
-  const [selectedTags, setSelectedTags] = useState<EventTag[]>(initialTags);
+function areTagsEqual(left: EventTag[], right: EventTag[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((tag, index) => tag === right[index]);
+}
+
+export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps) {
+  const [selectedTags, setSelectedTags] = useState<EventTag[]>(() => initialTags ?? []);
+  const lastSyncedTags = useRef(initialTags);
 
   // Sync with initial tags if they change
   useEffect(() => {
+    if (!initialTags) {
+      return;
+    }
+
+    if (lastSyncedTags.current && areTagsEqual(initialTags, lastSyncedTags.current)) {
+      return;
+    }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedTags(initialTags);
+    lastSyncedTags.current = initialTags;
   }, [initialTags]);
 
   const toggleTag = (tag: EventTag) => {

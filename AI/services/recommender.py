@@ -7,7 +7,7 @@ Handles embedding generation, scoring, and ranking.
 
 import torch
 import numpy as np
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 
 import sys
@@ -205,37 +205,79 @@ class RecommenderService:
         major: str,
         year_of_study: str,
         clubs_or_interests: List[str],
-        attended_events: Optional[List[str]] = None
+        attended_events: Optional[List[str]] = None,
     ) -> np.ndarray:
         """
         Generate a user embedding on-demand.
-        
-        Args:
-            major: User's major/field of study
-            year_of_study: Academic year
-            clubs_or_interests: List of clubs or interest areas
-            attended_events: Optional list of attended event descriptions
-            
-        Returns:
-            User embedding as numpy array
+
+        Returns a L2-normalised vector in the shared projection space (PROJECTION_DIM).
         """
-        # Build text representations for each field
         user_texts = UserTower.build_user_texts(
             major, year_of_study, clubs_or_interests, attended_events
         )
-        
-        # Get pretrained embeddings for all texts
         pretrained_embs = self.embedder.encode(user_texts)
-        
-        # Mean pool
         pooled = UserTower.mean_pool_embeddings(pretrained_embs)
-        pooled_tensor = torch.from_numpy(pooled).float().unsqueeze(0)
-        
-        # Project through user tower
+        pooled_tensor = torch.from_numpy(pooled.astype(np.float32)).unsqueeze(0)
         with torch.no_grad():
             user_embedding = self.user_tower(pooled_tensor)
-            
         return user_embedding.numpy().squeeze()
+
+    def _apply_feedback_in_projection_space(
+        self,
+        base_embedding: np.ndarray,
+        feedback: List[Dict[str, Any]],
+        alpha: float = 0.6,
+    ) -> np.ndarray:
+        """
+        Shift the user embedding in the shared 128-dim projection space.
+
+        For each feedback item we look up the event's *stored* projection-space
+        embedding from the vector store and add (positive) or subtract (negative)
+        it from the base user embedding, then re-normalise.
+
+        Working in projection space is critical because:
+        - Both user and event embeddings are L2-normalised unit vectors here.
+        - The dot-product similarity is computed in this space by FAISS.
+        - A random (untrained) MLP would scramble a sentence-space delta, making
+          it unpredictable; projection-space shifts are direct and guaranteed.
+
+        Args:
+            base_embedding: L2-normalised user embedding (shape: PROJECTION_DIM,).
+            feedback: List of dicts {event_id, feedback_type, tags}.
+            alpha: Strength of adjustment. 0.6 gives a clear ranking shift
+                   while staying close to the original user direction.
+
+        Returns:
+            Adjusted, L2-normalised embedding (same shape as base_embedding).
+        """
+        pos_embs: List[np.ndarray] = []
+        neg_embs: List[np.ndarray] = []
+
+        for item in feedback:
+            eid = item.get("event_id", "")
+            ft  = item.get("feedback_type", "")
+            if not eid or ft not in ("positive", "negative"):
+                continue
+            result = self.vector_store.get_event(eid)
+            if result is None:
+                continue  # event not yet indexed – skip gracefully
+            event_emb = result[0].astype(np.float32)  # already L2-normalised
+            if ft == "positive":
+                pos_embs.append(event_emb)
+            else:
+                neg_embs.append(event_emb)
+
+        adjusted = base_embedding.copy().astype(np.float32)
+
+        if pos_embs:
+            adjusted = adjusted + alpha * np.mean(pos_embs, axis=0)
+        if neg_embs:
+            adjusted = adjusted - alpha * np.mean(neg_embs, axis=0)
+
+        norm = np.linalg.norm(adjusted)
+        if norm > 0:
+            adjusted /= norm
+        return adjusted
     
     def recommend(
         self,
@@ -244,44 +286,63 @@ class RecommenderService:
         clubs_or_interests: List[str],
         attended_events: Optional[List[str]] = None,
         top_k: int = DEFAULT_TOP_K,
-        exclude_event_ids: Optional[List[str]] = None
+        exclude_event_ids: Optional[List[str]] = None,
+        feedback: Optional[List[Dict[str, Any]]] = None
     ) -> List[RecommendationResult]:
         """
         Get ranked event recommendations for a user.
-        
+
+
         Args:
             major: User's major
             year_of_study: Academic year
             clubs_or_interests: User's interests
             attended_events: Optional past event descriptions
             top_k: Number of recommendations to return
-            exclude_event_ids: Event IDs to exclude from results
-            
+            exclude_event_ids: Event IDs to always exclude (e.g. already saved)
+            feedback: Optional list of dicts with keys:
+                        { "event_id": str, "feedback_type": "positive"|"negative", "tags": [str] }
+                      Negatively-rated events are automatically excluded.
+                      Tags from rated events shift the user vector up/down.
+
         Returns:
-            List of RecommendationResult objects, sorted by score descending
+            List of RecommendationResult objects, sorted by score descending.
         """
         # Validate top_k
         top_k = min(max(1, top_k), MAX_TOP_K)
-        
-        # Generate user embedding
+
+        # Build the exclusion set: pre-saved events + negatively-rated events
+        all_exclusions: set = set(exclude_event_ids or [])
+        if feedback:
+            for item in feedback:
+                if item.get("feedback_type") == "negative" and item.get("event_id"):
+                    all_exclusions.add(item["event_id"])
+
+        # Step 1: compute the base user embedding (in projection space)
         user_embedding = self.embed_user(
             major, year_of_study, clubs_or_interests, attended_events
         )
-        
-        # Account for exclusions in search
-        search_k = top_k
-        if exclude_event_ids:
-            search_k = top_k + len(exclude_event_ids)
-            
+
+        # Step 2: apply feedback shift directly in projection space
+        if feedback:
+            user_embedding = self._apply_feedback_in_projection_space(
+                user_embedding, feedback
+            )
+
+        # Step 3: request ALL indexed events from FAISS so that no negatively-rated
+        # event can slip past the exclusion filter due to an insufficient search_k
+        search_k = self.vector_store.count
+
         # Search vector store
         results = self.vector_store.search(user_embedding, top_k=search_k)
-        
-        # Filter exclusions and format results
+
+        # Filter exclusions and collect top-K
         recommendations = []
         for event_id, score, metadata in results:
-            if exclude_event_ids and event_id in exclude_event_ids:
+            if event_id in all_exclusions:
                 continue
-                
+
+
             recommendations.append(RecommendationResult(
                 event_id=event_id,
                 score=score,
@@ -291,10 +352,11 @@ class RecommenderService:
                 hosting_club=metadata.hosting_club,
                 category=metadata.category
             ))
-            
+
             if len(recommendations) >= top_k:
                 break
-                
+
+
         return recommendations
     
     def get_event_count(self) -> int:

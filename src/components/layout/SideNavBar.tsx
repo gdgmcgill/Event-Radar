@@ -13,7 +13,7 @@ import {
   type NavItem,
 } from "./navItems";
 import { useAuthStore } from "@/store/useAuthStore";
-import { isAdmin, isOrganizer } from "@/lib/roles";
+import { isAdmin } from "@/lib/roles";
 
 function NavLink({
   item,
@@ -82,11 +82,11 @@ function SectionDivider({
 export function SideNavBar() {
   const [isHovered, setIsHovered] = useState(false);
   const pathname = usePathname();
-  const { user } = useAuthStore();
+  const { user, hasClubs } = useAuthStore();
   const isAuthenticated = !!user;
 
   const navItems = isAuthenticated ? baseNavItems : guestNavItems;
-  const showOrganizer = isAuthenticated && user && isOrganizer(user);
+  const showOrganizer = isAuthenticated && hasClubs;
   const showAdmin = isAuthenticated && user && isAdmin(user);
 
   return (

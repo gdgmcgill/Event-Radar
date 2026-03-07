@@ -1,205 +1,195 @@
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Building2,
-  Instagram,
-  Loader2,
-  CalendarDays,
-  ArrowLeft,
-  UserPlus,
-} from "lucide-react";
-import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
+import { notFound } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
-import type { Club, Event } from "@/types";
-import { EventTag } from "@/types";
-import { EVENT_CATEGORIES } from "@/lib/constants";
-import { EventCard } from "@/components/events/EventCard";
-import { OrganizerRequestDialog } from "@/components/clubs/OrganizerRequestDialog";
+import { Instagram, ExternalLink, Users, CalendarX } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { FollowButton } from "@/components/clubs/FollowButton";
-import { useAuthStore } from "@/store/useAuthStore";
+import { EventCard } from "@/components/events/EventCard";
+import type { Event } from "@/types";
+import type { Metadata } from "next";
 
-export default function ClubDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const [club, setClub] = useState<Club | null>(null);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isMember, setIsMember] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
-  const { user } = useAuthStore();
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
 
-  const fetchClub = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/clubs/${id}`);
-      if (!res.ok) {
-        setError(res.status === 404 ? "Club not found" : "Failed to load club");
-        return;
-      }
-      const data = await res.json();
-      setClub(data.club);
-      setEvents(data.events ?? []);
-      setFollowerCount(data.follower_count ?? 0);
-    } catch {
-      setError("Failed to load club");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: club } = await supabase
+    .from("clubs")
+    .select("name, description")
+    .eq("id", id)
+    .single();
 
-  const fetchFollowStatus = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await fetch(`/api/clubs/${id}/follow`);
-      if (res.ok) {
-        const data = await res.json();
-        setIsFollowing(data.is_following);
-        setIsMember(data.is_member);
-      }
-    } catch {
-      // Silently fail — follow status is non-critical
-    }
-  }, [id, user]);
-
-  useEffect(() => {
-    fetchClub();
-  }, [fetchClub]);
-
-  useEffect(() => {
-    if (user) {
-      fetchFollowStatus();
-    }
-  }, [fetchFollowStatus, user]);
-
-  const handleFollowChange = useCallback((nowFollowing: boolean) => {
-    setFollowerCount((prev) => prev + (nowFollowing ? 1 : -1));
-    setIsFollowing(nowFollowing);
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    );
+  if (!club) {
+    return { title: "Club Not Found" };
   }
 
-  if (error || !club) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-20">
-          <Building2 className="h-16 w-16 text-muted-foreground/30 mx-auto mb-6" />
-          <p className="text-xl font-semibold mb-2">{error || "Club not found"}</p>
-          <Link href="/clubs">
-            <Button variant="outline" className="mt-4">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Clubs
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
+  return {
+    title: `${club.name} | Uni-Verse`,
+    description: club.description ?? `Discover events by ${club.name} on Uni-Verse`,
+  };
+}
+
+export default async function ClubDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  // Parallel fetch: club, follower count, events, current user + follow status
+  const [clubResult, followerResult, eventsResult, userResult] = await Promise.all([
+    supabase.from("clubs").select("*").eq("id", id).single(),
+    supabase
+      .from("club_followers")
+      .select("*", { count: "exact", head: true })
+      .eq("club_id", id),
+    supabase
+      .from("events")
+      .select("*")
+      .eq("club_id", id)
+      .eq("status", "approved")
+      .order("event_date", { ascending: true }),
+    supabase.auth.getUser(),
+  ]);
+
+  if (clubResult.error || !clubResult.data) {
+    notFound();
+  }
+
+  const club = clubResult.data;
+  const followerCount = followerResult.count ?? 0;
+  // Attach club info to each event for EventCard display
+  const allEvents = (eventsResult.data ?? []).map((e) => ({
+    ...e,
+    club_id: e.club_id ?? id,
+    club: { id, name: club.name, logo_url: club.logo_url },
+  })) as unknown as Event[];
+
+  // Split events into upcoming and past
+  const today = new Date().toISOString().split("T")[0];
+  const upcomingEvents = allEvents
+    .filter((e) => e.event_date >= today)
+    .sort((a, b) => a.event_date.localeCompare(b.event_date));
+  const pastEvents = allEvents
+    .filter((e) => e.event_date < today)
+    .sort((a, b) => b.event_date.localeCompare(a.event_date));
+
+  // Check if current user follows this club
+  let isFollowing = false;
+  const currentUser = userResult.data?.user;
+  if (currentUser) {
+    const { data: followRow } = await supabase
+      .from("club_followers")
+      .select("id")
+      .eq("user_id", currentUser.id)
+      .eq("club_id", id)
+      .maybeSingle();
+    isFollowing = !!followRow;
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <AppBreadcrumb items={[{ label: "Clubs", href: "/clubs" }, { label: club.name }]} />
+    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
+      {/* Header Section */}
+      <Card className="overflow-hidden border-none shadow-lg">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row gap-6 items-start">
+            {/* Club Logo */}
+            <div className="flex-shrink-0">
+              {club.logo_url ? (
+                <Image
+                  src={club.logo_url}
+                  alt={`${club.name} logo`}
+                  width={96}
+                  height={96}
+                  className="rounded-xl object-cover w-24 h-24"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-xl bg-secondary/30 flex items-center justify-center">
+                  <Users className="h-10 w-10 text-muted-foreground/40" />
+                </div>
+              )}
+            </div>
 
-      {/* Club Header */}
-      <div className="flex items-start gap-4 mb-8">
-        {club.logo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={club.logo_url}
-            alt={club.name}
-            className="h-20 w-20 rounded-full object-cover flex-shrink-0"
-          />
-        ) : (
-          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Building2 className="h-10 w-10 text-primary" />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold text-foreground mb-1">
-            {club.name}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            {club.category && EVENT_CATEGORIES[club.category as EventTag] && (
-              <Badge variant="secondary">
-                {EVENT_CATEGORIES[club.category as EventTag].label}
-              </Badge>
-            )}
-            {club.instagram_handle && (
-              <a
-                href={`https://instagram.com/${club.instagram_handle.replace("@", "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Instagram className="h-4 w-4" />
-                @{club.instagram_handle.replace("@", "")}
-              </a>
-            )}
-            <span className="text-sm text-muted-foreground">
-              {followerCount} {followerCount === 1 ? "follower" : "followers"}
-            </span>
-          </div>
-          {club.description && (
-            <p className="text-muted-foreground">{club.description}</p>
-          )}
-        </div>
-      </div>
+            {/* Club Info */}
+            <div className="flex-1 space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl sm:text-3xl font-bold text-[#561c24]">
+                  {club.name}
+                </h1>
+                {club.category && (
+                  <Badge variant="secondary" className="text-sm">
+                    {club.category}
+                  </Badge>
+                )}
+              </div>
 
-      {/* Follow / Request Organizer Access buttons */}
-      <div className="mb-8 flex items-center gap-3">
-        {!isMember && (
-          <FollowButton
-            clubId={club.id}
-            initialIsFollowing={isFollowing}
-            onFollowChange={handleFollowChange}
-          />
-        )}
-        {user && !isMember && (
-          <>
-            <Button variant="outline" onClick={() => setRequestDialogOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Request Organizer Access
-            </Button>
-            <OrganizerRequestDialog
-              open={requestDialogOpen}
-              onOpenChange={setRequestDialogOpen}
-              clubId={club.id}
-              clubName={club.name}
-            />
-          </>
-        )}
-      </div>
+              {club.description && (
+                <p className="text-muted-foreground leading-relaxed">
+                  {club.description}
+                </p>
+              )}
+
+              {/* Stats Row */}
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <FollowButton
+                  clubId={id}
+                  initialFollowing={isFollowing}
+                  initialCount={followerCount}
+                />
+
+                {club.instagram_handle && (
+                  <Link
+                    href={`https://instagram.com/${club.instagram_handle.replace("@", "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#ED1B2F] transition-colors"
+                  >
+                    <Instagram className="h-4 w-4" />
+                    <span>{club.instagram_handle}</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Upcoming Events */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <CalendarDays className="h-5 w-5" />
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold text-[#561c24]">
           Upcoming Events
         </h2>
-        {events.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>No upcoming events for this club.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
+        {upcomingEvents.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {upcomingEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
+        ) : (
+          <EmptyState
+            icon={CalendarX}
+            title="No upcoming events"
+            description={`${club.name} hasn't posted any upcoming events yet. Follow them to get notified when they do!`}
+          />
         )}
-      </div>
+      </section>
+
+      {/* Past Events - only show if there are any */}
+      {pastEvents.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold text-[#561c24]">
+            Past Events
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pastEvents.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

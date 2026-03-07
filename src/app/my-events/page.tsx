@@ -10,11 +10,13 @@ import { EventGrid } from "@/components/events/EventGrid";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Button } from "@/components/ui/button";
 import { SignInButton } from "@/components/auth/SignInButton";
+import { exportEventsCsv } from "@/lib/exportUtils";
 import {
   Calendar,
   Heart,
   ArrowUpDown,
   Loader2,
+  FileSpreadsheet,
 } from "lucide-react";
 import type { Event } from "@/types";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -35,6 +37,7 @@ export default function MyEventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>("recent");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
 
   const fetchSavedEvents = useCallback(async () => {
     if (!user) return;
@@ -94,6 +97,20 @@ export default function MyEventsPage() {
     }
   };
 
+  const handleExportSavedEventsCsv = async () => {
+    if (events.length === 0) return;
+
+    try {
+      setIsExportingCsv(true);
+      const eventIds = events.map((event) => event.id);
+      await exportEventsCsv(eventIds, "my-saved-events.csv");
+    } catch (err) {
+      console.error("Error exporting saved events as CSV:", err);
+    } finally {
+      setIsExportingCsv(false);
+    }
+  };
+
   // Loading auth state
   if (authLoading) {
     return (
@@ -147,36 +164,53 @@ export default function MyEventsPage() {
 
         {/* Sort dropdown */}
         {events.length > 0 && (
-          <div className="relative">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowSortMenu(!showSortMenu)}
               className="flex items-center gap-2"
+              onClick={handleExportSavedEventsCsv}
+              disabled={isExportingCsv}
             >
-              <ArrowUpDown className="h-4 w-4" />
-              {SORT_LABELS[sort]}
+              {isExportingCsv ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4" />
+              )}
+              {isExportingCsv ? "Exporting..." : "Export CSV"}
             </Button>
-            {showSortMenu && (
-              <div className="absolute right-0 mt-2 w-48 rounded-md bg-card border shadow-lg z-10">
-                {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => {
-                      setSort(option);
-                      setShowSortMenu(false);
-                    }}
-                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-secondary/50 transition-colors ${
-                      sort === option
-                        ? "font-semibold text-primary"
-                        : "text-foreground"
-                    }`}
-                  >
-                    {SORT_LABELS[option]}
-                  </button>
-                ))}
-              </div>
-            )}
+
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSortMenu(!showSortMenu)}
+                className="flex items-center gap-2"
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                {SORT_LABELS[sort]}
+              </Button>
+              {showSortMenu && (
+                <div className="absolute right-0 mt-2 w-48 rounded-md bg-card border shadow-lg z-10">
+                  {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setSort(option);
+                        setShowSortMenu(false);
+                      }}
+                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-secondary/50 transition-colors ${
+                        sort === option
+                          ? "font-semibold text-primary"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {SORT_LABELS[option]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

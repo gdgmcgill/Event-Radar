@@ -1,144 +1,98 @@
 "use client";
 
+import Image from "next/image";
+import { Building2, ExternalLink, Users, Heart } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Users,
-  Mail,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Instagram,
-  Heart,
-} from "lucide-react";
 import type { Club } from "@/types";
 
 interface ClubOverviewTabProps {
   club: Club;
-  memberCount: number;
-  pendingInvitesCount: number | null;
-  role: "owner" | "organizer";
   followerCount: number;
+  memberCount: number;
+  onEditClick?: () => void;
 }
 
 export function ClubOverviewTab({
   club,
-  memberCount,
-  pendingInvitesCount,
-  role,
   followerCount,
+  memberCount,
+  onEditClick,
 }: ClubOverviewTabProps) {
-  const statusConfig = {
-    approved: {
-      icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-      label: "Approved",
-      className: "text-green-600",
-    },
-    pending: {
-      icon: <Clock className="h-5 w-5 text-amber-500" />,
-      label: "Pending",
-      className: "text-amber-600",
-    },
-    rejected: {
-      icon: <XCircle className="h-5 w-5 text-red-500" />,
-      label: "Rejected",
-      className: "text-red-600",
-    },
-  };
-
-  const status = statusConfig[club.status];
-
   return (
     <div className="space-y-6">
-      {/* Club Info Section */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                {club.name}
-              </h2>
-              {club.description ? (
-                <p className="text-muted-foreground">{club.description}</p>
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+            {/* Logo */}
+            <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-muted flex items-center justify-center">
+              {club.logo_url ? (
+                <Image
+                  src={club.logo_url}
+                  alt={club.name}
+                  width={96}
+                  height={96}
+                  className="h-24 w-24 rounded-xl object-cover"
+                />
               ) : (
-                <p className="text-muted-foreground italic">
-                  No description provided.
-                </p>
+                <Building2 className="h-10 w-10 text-muted-foreground" />
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              {club.category ? (
-                <Badge variant="outline">{club.category}</Badge>
-              ) : (
-                <Badge variant="outline" className="text-muted-foreground">
-                  Uncategorized
-                </Badge>
+            {/* Details */}
+            <div className="flex-1 text-center sm:text-left">
+              <h2 className="text-xl font-bold">{club.name}</h2>
+
+              {club.description && (
+                <p className="mt-2 text-muted-foreground">{club.description}</p>
               )}
 
-              {club.instagram_handle && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                {club.category && (
+                  <Badge variant="secondary">{club.category}</Badge>
+                )}
+                {club.instagram_handle && (
+                  <a
+                    href={`https://instagram.com/${club.instagram_handle.replace(/^@/, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                  >
+                    @{club.instagram_handle.replace(/^@/, "")}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+
+              {/* Stats */}
+              <div className="mt-4 flex items-center justify-center gap-6 sm:justify-start">
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Instagram className="h-4 w-4" />
-                  <span>@{club.instagram_handle}</span>
+                  <Heart className="h-4 w-4" />
+                  <span>
+                    {followerCount}{" "}
+                    {followerCount === 1 ? "follower" : "followers"}
+                  </span>
                 </div>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  <span>
+                    {memberCount} {memberCount === 1 ? "member" : "members"}
+                  </span>
+                </div>
+              </div>
+
+              {onEditClick && (
+                <button
+                  onClick={onEditClick}
+                  className="mt-4 text-sm font-medium text-primary hover:underline"
+                >
+                  Edit settings
+                </button>
               )}
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Members stat */}
-        <div className="p-4 rounded-lg border bg-card">
-          <div className="flex items-center gap-3 mb-2">
-            <Users className="h-5 w-5 text-primary" />
-            <span className="text-sm font-medium text-muted-foreground">
-              Members
-            </span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{memberCount}</p>
-        </div>
-
-        {/* Followers stat */}
-        <div className="p-4 rounded-lg border bg-card">
-          <div className="flex items-center gap-3 mb-2">
-            <Heart className="h-5 w-5 text-primary" />
-            <span className="text-sm font-medium text-muted-foreground">
-              Followers
-            </span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{followerCount}</p>
-        </div>
-
-        {/* Pending Invitations stat (owner only) */}
-        {role === "owner" && pendingInvitesCount !== null && (
-          <div className="p-4 rounded-lg border bg-card">
-            <div className="flex items-center gap-3 mb-2">
-              <Mail className="h-5 w-5 text-amber-500" />
-              <span className="text-sm font-medium text-muted-foreground">
-                Pending Invitations
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">
-              {pendingInvitesCount}
-            </p>
-          </div>
-        )}
-
-        {/* Club Status stat */}
-        <div className="p-4 rounded-lg border bg-card">
-          <div className="flex items-center gap-3 mb-2">
-            {status.icon}
-            <span className="text-sm font-medium text-muted-foreground">
-              Club Status
-            </span>
-          </div>
-          <p className={`text-2xl font-bold ${status.className}`}>
-            {status.label}
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

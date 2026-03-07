@@ -8,6 +8,7 @@ interface AuthState {
   user: AppUser | null;
   loading: boolean;
   initialized: boolean;
+  hasClubs: boolean;
   initialize: () => void;
   signOut: () => Promise<void>;
 }
@@ -16,15 +17,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   loading: true,
   initialized: false,
+  hasClubs: false,
 
   initialize: () => {
-    if (get().initialized) {
-      console.log("[Auth] Already initialized, skipping");
-      return;
-    }
+    if (get().initialized) return;
 
     set({ initialized: true });
-    console.log("[Auth] Initializing...");
 
     const supabase = createClient();
 
@@ -35,8 +33,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       created_at: string;
       updated_at?: string;
     }) => {
-      console.log("[Auth] Building user from auth data");
-
       // Set user immediately so the UI renders without waiting for DB
       const basicUser: AppUser = {
         id: authUser.id,
@@ -53,58 +49,51 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       };
 
       set({ user: basicUser, loading: false });
-      console.log("[Auth] User set immediately:", basicUser.email);
 
-      // Fetch roles and interest_tags from public.users in the background
+      // Fetch roles, interest_tags, and club membership in parallel
       try {
-        const { data: profile } = await supabase
-          .from("users")
-          .select("roles, interest_tags")
-          .eq("id", authUser.id)
-          .single();
+        const [{ data: profile }, { count: clubCount }] = await Promise.all([
+          supabase
+            .from("users")
+            .select("roles, interest_tags")
+            .eq("id", authUser.id)
+            .single(),
+          supabase
+            .from("club_members")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", authUser.id),
+        ]);
 
-        if (profile) {
-          set((state) => ({
-            user: state.user
-              ? {
-                  ...state.user,
-                  roles: (profile.roles as AppUser["roles"]) ?? ["user"],
-                  interest_tags: (profile.interest_tags as string[]) ?? [],
-                }
-              : state.user,
-          }));
-          console.log("[Auth] Updated profile: roles=%o, interest_tags=%d",
-            profile.roles, (profile.interest_tags as string[] | null)?.length ?? 0);
-        }
-      } catch (err) {
-        console.error("[Auth] Failed to fetch profile:", err);
+        set((state) => ({
+          hasClubs: (clubCount ?? 0) > 0,
+          user: state.user && profile
+            ? {
+                ...state.user,
+                roles: (profile.roles as AppUser["roles"]) ?? ["user"],
+                interest_tags: (profile.interest_tags as string[]) ?? [],
+              }
+            : state.user,
+        }));
+      } catch {
+        // Profile fetch failure is non-fatal; user remains with defaults
       }
     };
 
     // Initial fetch
     const initialFetch = async () => {
-      console.log("[Auth] Running initial fetch...");
-
       try {
         const {
           data: { user: authUser },
           error,
         } = await supabase.auth.getUser();
 
-        console.log("[Auth] Initial getUser:", {
-          email: authUser?.email,
-          error: error?.message,
-        });
-
         if (error || !authUser) {
-          console.log("[Auth] No user found, setting loading: false");
           set({ user: null, loading: false });
           return;
         }
 
         await fetchAndSetUser(authUser);
-      } catch (err) {
-        console.error("[Auth] Initial fetch error:", err);
+      } catch {
         set({ user: null, loading: false });
       }
     };
@@ -114,12 +103,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     let initialSessionHandled = false;
 
     supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[Auth] onAuthStateChange:", event, session?.user?.email);
-
       if (event === "INITIAL_SESSION" || (event === "SIGNED_IN" && !initialSessionHandled)) {
         initialSessionHandled = true;
         if (!session?.user) {
-          console.log("[Auth] No initial session, setting loading: false");
           set({ user: null, loading: false });
           return;
         }
@@ -128,8 +114,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
 
       if (event === "SIGNED_OUT" || !session?.user) {
-        console.log("[Auth] Signed out, clearing user");
-        set({ user: null, loading: false });
+        set({ user: null, loading: false, hasClubs: false });
         return;
       }
 
@@ -141,7 +126,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // Fallback: if no auth event has fired after 3s, run manual fetch
     setTimeout(async () => {
       if (!initialSessionHandled) {
-        console.log("[Auth] Auth event timeout, running fallback fetch");
         initialSessionHandled = true;
         initialFetch();
       }
@@ -149,8 +133,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   signOut: async () => {
-    console.log("[Auth] Signing out...");
-
     // Sign out via server route so cookies are properly cleared.
     // The browser client's signOut() hangs with @supabase/ssr,
     // leaving auth cookies intact and the user still logged in on refresh.

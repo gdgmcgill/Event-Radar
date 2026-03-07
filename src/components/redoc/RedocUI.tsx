@@ -3,7 +3,7 @@
 import { RedocStandalone } from 'redoc';
 
 type Props = {
-    spec: Record<string, any>,
+    spec: Record<string, unknown>,
 };
 
 function ReactSwagger({ spec }: Props) {

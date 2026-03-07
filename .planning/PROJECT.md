@@ -2,109 +2,79 @@
 
 ## What This Is
 
-Uni-Verse is a campus event discovery platform for McGill University. Students discover, filter, and save events happening on campus. Club organizers manage their clubs, create events, and collaborate with co-organizers through a unified dashboard experience.
+Uni-Verse is a campus event discovery platform for McGill University — the "Luma for McGill" with a recommendation system. Club organizers create and manage their club pages, post events, invite team members, track analytics, and receive structured feedback from attendees. Students discover events, follow clubs, save events, and rate past events. The platform bridges the gap between event organizers who need visibility and students who want to find relevant campus events.
 
 ## Core Value
 
-Club organizers must have a seamless, unified experience from club creation through event management — no broken flows, no dead ends, no unnecessary admin bottlenecks.
-
-## Current Milestone: v1.1 Club Organizer UX Overhaul
-
-**Goal:** Fix the fragmented club organizer flow so that creating a club, becoming its organizer, managing members, and creating events is one cohesive, intuitive experience.
-
-**Target features:**
-- Auto-grant organizer status to club creator upon admin approval
-- Club dashboard (`/my-clubs/[id]`) with tabs: Overview, Events, Members, Settings
-- Owner/organizer role distinction for member management
-- Direct organizer invitations (no admin approval needed)
-- Club-context event creation for organizers
-- Context-aware public club page (different CTAs for organizers vs regular users)
+Club organizers can effortlessly manage their clubs and post events, while students can discover and engage with campus events that matter to them — if organizers can't use the platform smoothly, there are no events, and without events, there are no students.
 
 ## Requirements
 
 ### Validated
 
-<!-- Shipped and confirmed valuable. -->
-
-- ✓ Event discovery with search and tag filtering — v1.0
-- ✓ Cursor-based event pagination — v1.0
-- ✓ Event saving/unsaving with heart button — v1.0
-- ✓ OAuth authentication (McGill-only, Azure/Google) — v1.0
-- ✓ User onboarding with interest tag selection — v1.0
-- ✓ Event detail pages — v1.0
-- ✓ Saved events page (My Events) — v1.0
-- ✓ Admin dashboard (event/club/user CRUD) — v1.0
-- ✓ Personalized recommendations via K-means clustering — v1.0
-- ✓ Popular events section with popularity scoring — v1.0
-- ✓ "Happening Now" events section — v1.0
-- ✓ User interaction tracking (views, clicks, saves, shares) — v1.0
-- ✓ Dark/light mode — v1.0
-- ✓ Calendar view — v1.0
-- ✓ Role-based access control (user, club_organizer, admin) — v1.0
-- ✓ Middleware route protection and session refresh — v1.0
-- ✓ Cold start fallback feed for new users — v1.0
-- ✓ In-app notification system (bell, inbox, admin triggers) — v1.0
-- ✓ Club creation with admin approval — v1.0
-- ✓ Organizer request flow — v1.0
-- ✓ Club browsing and detail pages — v1.0
-- ✓ Admin club moderation page — v1.0
-- ✓ Admin organizer request moderation — v1.0
-- ✓ My Clubs listing page — v1.0
+- User can sign in via Google OAuth with McGill email enforcement — existing
+- User sees personalized event recommendations via Two-Tower model — existing
+- User can save/unsave events — existing
+- User can browse and filter events by tags, search, and date — existing
+- Admin can approve/reject pending events and clubs — existing
+- User receives notifications for event reminders and admin actions — existing
+- New users with <3 saved events see popularity-ranked fallback feed — existing
+- Instagram scraper pipeline classifies and ingests events — existing
+- User can select interest tags during onboarding — existing
+- Club organizers have a dedicated, functional club management experience (create, edit, post events, invite members, view analytics) — v2.0
+- Public club pages show logo, name, description, follower count, upcoming/past events — v2.0
+- Students can follow/unfollow clubs — v2.0
+- Club organizers see event-level analytics (RSVPs, saves, clicks) and club-level trends (follower growth, total attendees) — v2.0
+- Post-event review system where attendees rate events and organizers see aggregate feedback — v2.0
+- Multi-club support for organizers who run multiple clubs, with easy switching — v2.0
+- Smooth event creation flow with club selector for multi-club organizers — v2.0
+- Auto-approval for events posted by club organizers for their own clubs — v2.0
 
 ### Active
 
-<!-- Current scope. Building toward these. -->
-
-- [ ] Club creator auto-granted organizer (owner) status upon admin approval
-- [ ] Club dashboard at `/my-clubs/[id]` with tabbed UI (Overview, Events, Members, Settings)
-- [ ] Owner vs organizer role distinction in `club_members` table
-- [ ] Organizer invitation system (owner invites by email, no admin approval)
-- [ ] Club settings editing (name, description, category, Instagram, logo) for owners
-- [ ] Club-context event creation from dashboard (pre-fills club_id, auto-approved)
-- [ ] Event management for organizers (view, edit events from dashboard)
-- [ ] Member list view for all organizers, management for owners
-- [ ] Context-aware public club page (different CTAs based on user's relationship to club)
-- [ ] Club selector on `/create-event` page for organizers
-- [ ] Updated post-creation messaging on `/clubs/create`
+(None yet — define with next milestone)
 
 ### Out of Scope
 
-<!-- Explicit boundaries. Includes reasoning to prevent re-adding. -->
-
-- Club deletion by organizers — admin-only destructive action for now
-- Event deletion by organizers — admin-only, organizers can edit but not delete
-- Club analytics/stats dashboard — deferred to future milestone
-- Club following/favoriting by regular users — deferred
-- Multi-level role hierarchy beyond owner/organizer — unnecessary complexity
-- Organizer request flow changes — existing admin-mediated flow remains for non-creators
+- User-to-user social features (friends, following users, attendance visibility, FOMO mechanics) — separate milestone after clubs are solid
+- Sponsored events and paid promotions — separate monetization milestone
+- Public-facing event reviews (student-visible review section) — defer until organizer-facing reviews are validated
+- Real-time chat or messaging — high complexity, not core to event discovery
+- Mobile app — web-first approach
 
 ## Context
 
-- `POST /api/admin/clubs/[id]` already auto-grants organizer + club_member on approval — but `club_members.role` uses generic "organizer" with no owner distinction
-- `club_members` table has `role TEXT` column with no CHECK constraint — needs owner/organizer distinction
-- `PATCH /api/events/[id]` supports editing by club organizers (checks membership) but no frontend exists
-- `GET /api/clubs/[id]/events` returns all events for a club (organizer-only) — ready for dashboard use
-- `CreateEventForm` accepts optional `clubId` prop but it's never passed from the UI
-- `/my-clubs` page links to `/my-clubs/[id]` but that page doesn't exist — dead link
-- Public club detail page shows "Request Organizer Access" to everyone including existing organizers
+Shipped v2.0 with 29,454 LOC TypeScript across Next.js 16 / Supabase / Tailwind + shadcn/ui.
+
+The club organizer experience is now fully functional: club management dashboard with settings, members, events, and analytics tabs. Public club pages with follow system. Event creation/editing/duplication with auto-approval. Post-event star rating reviews with aggregate data for organizers.
+
+Database tables: events, clubs, users, saved_events, notifications, club_members, club_invitations, club_followers, user_interactions, reviews. RLS policies enforce owner-only mutations.
+
+Key technical patterns: URL-driven club context (/my-clubs/[id]), SWR hooks for all data fetching, fire-and-forget notification fanout, multi-mode form pattern (create/edit/duplicate), Recharts for analytics charts.
 
 ## Constraints
 
-- **Stack**: Next.js App Router, Supabase, TypeScript strict mode, shadcn/ui, Tailwind CSS
-- **Auth**: All organizer endpoints require authenticated user with club_organizer role
-- **Database**: Changes via SQL migrations in `supabase/migrations/`
+- **Tech stack**: Next.js 16 (App Router), TypeScript strict mode, Tailwind CSS + shadcn/ui, Supabase (auth, DB, RLS) — must stay on existing stack
+- **Auth**: McGill email domain enforcement via Google OAuth — non-negotiable
 - **Branding**: McGill color palette (Red #ED1B2F, Burgundy #561c24, Sage #c7c7a3, Cream #e8d8c4)
-- **Existing patterns**: Follow established API route patterns (service client for admin ops, RLS for user ops)
+- **Deployment**: Vercel (US East) — existing infrastructure
+- **Database**: Supabase with RLS — security policies must be maintained
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Auto-grant organizer on club approval | Absurd to require creators to request access to their own club | — Pending |
-| Owner/organizer role distinction | Owners manage club settings + members; organizers create/edit events only | — Pending |
-| Direct invitations (no admin approval) | Owner's invitation is trusted — reduces admin bottleneck | — Pending |
-| Tabbed dashboard layout | Single hub for all club management — Overview/Events/Members/Settings | — Pending |
-| No event deletion for organizers | Prevents data loss; organizers edit, only admins delete | — Pending |
+| Rework clubs from scratch | Current code is too messy and fragmented to salvage | Good |
+| Fix clubs before social features | Organizer UX is the foundation — no events without organizers | Good |
+| Simple single-page club management | Organizers want simplicity, not a complex dashboard | Good |
+| Club list + quick-switch dropdown for multi-club | Best of both worlds — overview + fast navigation | Good |
+| Post-event reviews (organizer-facing first) | Validates the review concept before building public reviews | Good |
+| Sponsorships as separate milestone | Get core functionality right before adding monetization | Good |
+| URL-driven club context (/my-clubs/[id]) | No global state needed, deep-linkable, SSR-friendly | Good |
+| RLS as primary security boundary | Database-level enforcement, not just API checks | Good |
+| Live COUNT for follower/member counts | Avoids trigger complexity, always accurate | Good |
+| Fire-and-forget notification fanout | Non-blocking, keeps event creation fast | Good |
+| Multi-mode form pattern (create/edit/duplicate) | Single component, less code, consistent UX | Good |
 
 ---
-*Last updated: 2026-02-25 after milestone v1.1 initialization*
+*Last updated: 2026-03-06 after v2.0 milestone*

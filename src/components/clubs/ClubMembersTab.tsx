@@ -1,24 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { format, parseISO } from "date-fns";
+import { Users, Trash2, Copy, Check, Loader2, Send } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Users, Loader2, Trash2, Mail, Copy, Check, X } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { useClubMembers } from "@/hooks/useClubs";
+import { isMcGillEmail } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/EmptyState";
 
-interface MemberWithUser {
+interface MemberEntry {
   id: string;
   user_id: string;
-  role: string;
+  role: "owner" | "organizer";
   created_at: string;
   users: {
     id: string;
@@ -28,356 +32,288 @@ interface MemberWithUser {
   };
 }
 
-interface PendingInvite {
-  id: string;
-  invitee_email: string;
-  created_at: string;
-  token: string;
-}
-
 interface ClubMembersTabProps {
   clubId: string;
-  role: "owner" | "organizer";
-  userId: string;
+  clubName: string;
+  isOwner: boolean;
 }
 
-export function ClubMembersTab({ clubId, role, userId }: ClubMembersTabProps) {
-  const [members, setMembers] = useState<MemberWithUser[]>([]);
-  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProps) {
+  const { data, mutate, isLoading } = useClubMembers(clubId);
+  const members: MemberEntry[] = data?.members ?? [];
 
-  // Remove dialog state
-  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<MemberWithUser | null>(
-    null
-  );
-  const [removing, setRemoving] = useState(false);
+  const [removingMember, setRemovingMember] = useState<MemberEntry | null>(null);
+  const [removeLoading, setRemoveLoading] = useState(false);
 
-  // Invite form state
+  // Invite state
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/clubs/${clubId}/members`);
-      if (!res.ok) throw new Error("Failed to load members");
-      const data = await res.json();
-      setMembers(data.members ?? []);
-      setPendingInvites(data.pendingInvites ?? []);
-    } catch {
-      setError("Failed to load members");
-    } finally {
-      setLoading(false);
-    }
-  }, [clubId]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  function openRemoveDialog(member: MemberWithUser) {
-    setSelectedMember(member);
-    setRemoveDialogOpen(true);
-  }
-
-  async function handleRemove() {
-    if (!selectedMember) return;
-    setRemoving(true);
+  const handleRemove = async () => {
+    if (!removingMember) return;
+    setRemoveLoading(true);
     try {
       const res = await fetch(`/api/clubs/${clubId}/members`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: selectedMember.user_id }),
+        body: JSON.stringify({ memberId: removingMember.id }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to remove member");
+        const d = await res.json();
+        throw new Error(d.error || "Failed to remove member");
       }
-      setRemoveDialogOpen(false);
-      setSelectedMember(null);
-      fetchData();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to remove member");
+      await mutate();
+      setRemovingMember(null);
+    } catch {
+      // Error is handled by keeping the dialog open
     } finally {
-      setRemoving(false);
+      setRemoveLoading(false);
     }
-  }
+  };
 
-  async function handleInvite(e: React.FormEvent) {
-    e.preventDefault();
-    setInviteLoading(true);
+  const handleInvite = async () => {
     setInviteError(null);
     setInviteLink(null);
+
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email) {
+      setInviteError("Please enter an email address.");
+      return;
+    }
+    if (!isMcGillEmail(email)) {
+      setInviteError("Only McGill email addresses (@mcgill.ca or @mail.mcgill.ca) are accepted.");
+      return;
+    }
+
+    setInviteLoading(true);
     try {
       const res = await fetch(`/api/clubs/${clubId}/invites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail }),
+        body: JSON.stringify({ email }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create invitation");
-      const link = `${window.location.origin}/invites/${data.token}`;
+
+      const d = await res.json();
+      if (!res.ok) {
+        throw new Error(d.error || "Failed to send invite");
+      }
+
+      const link = `${window.location.origin}/invites/${d.invite.token}`;
       setInviteLink(link);
       setInviteEmail("");
-      fetchData();
-    } catch (e) {
-      setInviteError(
-        e instanceof Error ? e.message : "Failed to create invitation"
-      );
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setInviteLoading(false);
     }
-  }
+  };
 
-  async function handleCopy() {
+  const copyToClipboard = async () => {
     if (!inviteLink) return;
-    await navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  async function handleRevoke(inviteId: string) {
     try {
-      const res = await fetch(`/api/clubs/${clubId}/invites`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteId }),
-      });
-      if (!res.ok) throw new Error("Failed to revoke invitation");
-      fetchData();
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError("Failed to revoke invitation");
+      // Fallback: select and copy
     }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-14 animate-pulse rounded-lg bg-muted" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
-
-  const displayName = (member: MemberWithUser) =>
-    member.users.name ?? member.users.email;
-
-  const avatarLetter = (member: MemberWithUser) =>
-    (member.users.name ?? member.users.email).charAt(0).toUpperCase();
 
   return (
-    <div>
-      {/* Header row */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-semibold text-foreground">Members</h2>
-          {!loading && !error && (
-            <Badge variant="secondary">{members.length}</Badge>
-          )}
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* Member List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Members ({members.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {members.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="No members"
+              description="This club doesn't have any members yet."
+            />
+          ) : (
+            <div className="divide-y">
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Avatar / initials */}
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                      {member.users.name
+                        ? member.users.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2)
+                        : member.users.email[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {member.users.name || member.users.email}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {member.users.email}
+                      </p>
+                    </div>
+                  </div>
 
-      {/* Loading state */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span>Loading members...</span>
-        </div>
-      )}
-
-      {/* Error state */}
-      {!loading && error && (
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-          <p className="text-destructive font-medium">{error}</p>
-          <Button variant="outline" onClick={fetchData}>
-            Try Again
-          </Button>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!loading && !error && members.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-          <Users className="h-12 w-12 text-muted-foreground/50" />
-          <div>
-            <h3 className="text-lg font-semibold text-foreground mb-1">
-              No members found
-            </h3>
-            <p className="text-muted-foreground text-sm">
-              Invite organizers to help manage your club.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Member list */}
-      {!loading && !error && members.length > 0 && (
-        <div className="space-y-3">
-          {members.map((member) => (
-            <div
-              key={member.id}
-              className="flex items-center justify-between p-4 rounded-lg border bg-card"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                {/* Avatar placeholder */}
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-sm font-semibold text-primary">
-                    {avatarLetter(member)}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="font-medium text-foreground truncate">
-                    {displayName(member)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Joined {formatDate(member.created_at)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 ml-4 shrink-0">
-                {member.role === "owner" ? (
-                  <Badge
-                    variant="secondary"
-                    className="bg-red-100 text-red-800"
-                  >
-                    Owner
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Organizer</Badge>
-                )}
-
-                {role === "owner" &&
-                  member.role !== "owner" &&
-                  member.user_id !== userId && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openRemoveDialog(member)}
+                  <div className="flex items-center gap-3">
+                    <Badge
+                      className={
+                        member.role === "owner"
+                          ? "bg-[#561c24] text-white hover:bg-[#561c24]/90"
+                          : "bg-[#c7c7a3] text-foreground hover:bg-[#c7c7a3]/90"
+                      }
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  )}
-              </div>
+                      {member.role === "owner" ? "Owner" : "Organizer"}
+                    </Badge>
+                    <span className="hidden text-xs text-muted-foreground sm:inline">
+                      Joined{" "}
+                      {format(parseISO(member.created_at), "MMM d, yyyy")}
+                    </span>
+                    {isOwner && member.role !== "owner" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        onClick={() => setRemovingMember(member)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Invite by Email section — owner only */}
-      {role === "owner" && (
-        <>
-          <div className="my-8 border-t" />
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-muted-foreground" />
-              <h3 className="text-lg font-semibold text-foreground">
-                Invite an Organizer
-              </h3>
-            </div>
-            <form onSubmit={handleInvite} className="flex gap-2">
+      {/* Invite Section (owner only) */}
+      {isOwner && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Invite Organizer</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
               <Input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="organizer@mcgill.ca"
-                className="flex-1"
-                required
+                value={inviteEmail}
+                onChange={(e) => {
+                  setInviteEmail(e.target.value);
+                  setInviteError(null);
+                }}
+                disabled={inviteLoading}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleInvite();
+                  }
+                }}
               />
-              <Button type="submit" disabled={inviteLoading}>
+              <Button onClick={handleInvite} disabled={inviteLoading}>
                 {inviteLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "Send Invite"
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Invite
+                  </>
                 )}
               </Button>
-            </form>
+            </div>
 
             {inviteError && (
-              <p className="text-sm text-destructive">{inviteError}</p>
+              <p className="mt-2 text-sm text-destructive">{inviteError}</p>
             )}
 
             {inviteLink && (
-              <div className="flex gap-2 items-center">
-                <Input
-                  value={inviteLink}
-                  readOnly
-                  className="flex-1 text-sm"
-                />
-                <Button variant="outline" size="sm" onClick={handleCopy}>
-                  {copied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
+              <div className="mt-3 rounded-lg border bg-muted/50 p-3">
+                <p className="mb-2 text-sm font-medium">
+                  Invite link generated:
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded bg-background px-2 py-1 text-xs">
+                    {inviteLink}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyToClipboard}
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="mr-1 h-3 w-3" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="mr-1 h-3 w-3" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
-          </div>
-        </>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Pending Invitations section — owner only, shown when invites exist */}
-      {role === "owner" && pendingInvites.length > 0 && (
-        <div className="mt-8 space-y-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-foreground">
-              Pending Invitations
-            </h3>
-            <Badge variant="secondary">{pendingInvites.length}</Badge>
-          </div>
-          <div className="space-y-3">
-            {pendingInvites.map((invite) => (
-              <div
-                key={invite.id}
-                className="flex items-center justify-between p-4 rounded-lg border bg-card"
-              >
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="font-medium text-foreground truncate">
-                    {invite.invitee_email}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Invited {formatDate(invite.created_at)}
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRevoke(invite.id)}
-                >
-                  <X className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Member Removal Confirmation Dialog */}
-      <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+      {/* Remove Confirmation Dialog */}
+      <Dialog
+        open={!!removingMember}
+        onOpenChange={(open) => !open && setRemovingMember(null)}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Remove member?</DialogTitle>
+            <DialogTitle>Remove Member</DialogTitle>
             <DialogDescription>
-              This will remove{" "}
+              Remove{" "}
               <strong>
-                {selectedMember ? displayName(selectedMember) : "this member"}
+                {removingMember?.users.name || removingMember?.users.email}
               </strong>{" "}
-              from your club. They will lose organizer access.
+              from <strong>{clubName}</strong>? They will lose organizer access.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setRemoveDialogOpen(false)}
-              disabled={removing}
+              onClick={() => setRemovingMember(null)}
+              disabled={removeLoading}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleRemove}
-              disabled={removing}
+              disabled={removeLoading}
             >
-              {removing ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              {removeLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               Remove
             </Button>

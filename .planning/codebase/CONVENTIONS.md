@@ -1,286 +1,213 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-02-25
+**Analysis Date:** 2026-03-05
 
 ## Naming Patterns
 
 **Files:**
-- React components: PascalCase with `.tsx` extension (e.g., `EventCard.tsx`, `EventFilters.tsx`)
-- TypeScript utilities/logic: camelCase with `.ts` extension (e.g., `useEvents.ts`, `utils.ts`)
-- API routes: lowercase with `/` structure matching Next.js routing (e.g., `/api/events/route.ts`)
-- Test files: match source file name with `.test.ts` or `.test.tsx` suffix (e.g., `useEvents.test.ts`, `EventCard.test.tsx`)
-- Constants files: `constants.ts`, `tagMapping.ts`, `roles.ts` (lowercase with descriptive name)
+- React components: PascalCase (`EventCard.tsx`, `ErrorBoundary.tsx`, `FilterSidebar.tsx`)
+- Hooks: camelCase with `use` prefix (`useEvents.ts`, `useUser.ts`, `useSavedEvents.ts`)
+- Utility modules: camelCase (`utils.ts`, `constants.ts`, `dateValidation.ts`, `exportUtils.ts`, `classifier.ts`)
+- API routes: `route.ts` inside directory-based paths (`src/app/api/events/route.ts`, `src/app/api/events/[id]/rsvp/route.ts`)
+- Test files: co-located with source as `*.test.ts` / `*.test.tsx` (e.g., `src/lib/dateValidation.test.ts`, `src/components/ErrorBoundary.test.tsx`)
+- Zustand stores: camelCase with `use` prefix (`useAuthStore.ts`)
 
 **Functions:**
-- camelCase for all function names
-- Hooks start with `use` prefix (e.g., `useEvents`, `useTracking`, `useUser`)
-- Private/internal functions use `_` prefix or are defined locally in scope
-- API route handlers: `GET`, `POST`, `PATCH`, `DELETE` (uppercase - Next.js convention)
+- Use camelCase for all functions and methods: `formatDate()`, `handleSave()`, `buildQueryParams()`
+- React components use PascalCase: `EventCard()`, `ErrorBoundary`
+- Event handlers use `handle` prefix: `handleSave`, `handleCardClick`, `handleDismiss`, `handleThumbs`
+- Boolean-returning functions use `is` prefix: `isMcGillEmail()`, `isValidISODate()`, `isDateInFuture()`
+- Factory/builder functions use `make`/`create` prefix: `makeEvent()`, `createClient()`, `createMockEvent()`
 
 **Variables:**
-- camelCase for all variable names
-- State variables: `const [isLoading, setIsLoading] = useState(false)` pattern
-- Ref variables: camelCase with `Ref` suffix (e.g., `sessionIdRef`, `viewTimersRef`)
-- Constants/enums: UPPER_SNAKE_CASE (e.g., `MAX_LIMIT = 100`, `UUID_RE`)
+- Use camelCase: `eventsData`, `mockSupabase`, `queryResult`
+- Boolean state: `isSaved`, `isExportingCal`, `initialSessionHandled`
+- Constants: SCREAMING_SNAKE_CASE for module-level constants: `EVENT_TAGS`, `API_ENDPOINTS`, `MCGILL_COLORS`, `RECOMMENDATION_THRESHOLD`
+- Supabase column names use snake_case: `start_date`, `club_id`, `image_url`
 
 **Types:**
-- Interface names: PascalCase starting with capital letter (e.g., `Event`, `EventFilter`, `UseEventsResult`)
-- Enum names: PascalCase (e.g., `EventTag`, `NotificationType`)
-- Type aliases: PascalCase when they represent object types (e.g., `SortField`, `InteractionType`)
-- Database row types: `{TableName}Row` (e.g., `EventRow`)
+- Interfaces: PascalCase (`Event`, `Club`, `User`, `EventFilter`, `SavedEvent`)
+- Type aliases: PascalCase (`UserRole`, `RsvpStatus`, `InteractionSource`)
+- Enums: PascalCase with PascalCase members (`EventTag.ACADEMIC`, `EventTag.SOCIAL`)
+- Props interfaces: Component name + `Props` suffix (`EventCardProps`)
+- State interfaces: Component name + `State` suffix (`ErrorBoundaryState`)
+- Inline type definitions for local use: PascalCase (`EventRow`, `MockEvent`, `QueryResult`)
 
 ## Code Style
 
 **Formatting:**
-- Prettier configured with:
-  - `semi: true` - Semicolons required
-  - `singleQuote: false` - Double quotes
-  - `printWidth: 80` - Line width limit
-  - `tabWidth: 2` - 2-space indentation
-  - `trailingComma: "es5"` - Trailing commas in objects/arrays
-  - `useTabs: false` - Spaces, not tabs
+- Prettier with config at `.prettierrc`
+- Semicolons: always
+- Trailing commas: `es5`
+- Single quotes: no (double quotes for strings)
+- Print width: 80 characters
+- Tab width: 2 spaces
+- Tabs: no (spaces)
 
 **Linting:**
-- ESLint with `eslint-config-next/core-web-vitals` extends
-- TypeScript strict mode enabled (`"strict": true` in `tsconfig.json`)
-- No JavaScript allowed in TypeScript files unless explicitly allowed
+- ESLint 9 with flat config at `eslint.config.mjs`
+- Extends `eslint-config-next/core-web-vitals`
+- Ignores: `.claude/**`, `.next/**`, `AI/**`, `node_modules/**`, `demo-video/**`
+- Run with `npm run lint`
 
-**File Structure Pattern:**
-```typescript
-"use client";  // If needed for client components
-/**
- * JSDoc comment describing the module/component
- */
-
-// Imports (organized by type)
-import { external, libraries } from "package-name";
-import { internal, modules } from "@/path";
-
-// Type/Interface definitions
-interface ComponentProps {}
-type CustomType = "value1" | "value2";
-
-// Component/Function export
-export function ComponentName() {
-  // Implementation
-}
-```
+**TypeScript:**
+- Strict mode enabled in `tsconfig.json`
+- Target: ES2020
+- Module resolution: bundler
+- JSX: react-jsx
+- Path alias: `@/*` maps to `./src/*`
 
 ## Import Organization
 
 **Order:**
-1. External third-party packages (react, next, date-fns, etc.)
-2. Radix UI and UI component libraries (@radix-ui/*, shadcn/ui)
-3. Internal components and modules using `@/` alias
-4. Type imports using `import type`
-
-**Example from codebase:**
-```typescript
-import Link from "next/link";
-import Image from "next/image";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { formatDate, formatTime } from "@/lib/utils";
-import { type Event, type InteractionSource } from "@/types";
-```
+1. External framework imports (`next`, `react`)
+2. External library imports (`@supabase/ssr`, `lucide-react`, `zustand`)
+3. Internal absolute imports using `@/` alias (`@/lib/supabase/server`, `@/components/ui/card`, `@/types`)
+4. Relative imports (used sparingly, mainly in test files: `./dateValidation`, `./classifier`)
 
 **Path Aliases:**
-- `@/` maps to `src/` (defined in `tsconfig.json`)
-- Always use `@/` for internal imports, never relative paths like `../../../`
+- `@/*` maps to `src/*` -- use this for all non-relative imports
+- Relative imports (`./`) are acceptable within the same directory (e.g., test files importing their subject)
+
+**Import Style:**
+- Named imports preferred: `import { createClient } from "@/lib/supabase/server"`
+- Type-only imports when importing only types: `import type { Event } from "@/types"`, `import type { NextRequest } from "next/server"`
+- Mixed imports separate value and type: `import { type Event, EventTag } from "@/types"`
 
 ## Error Handling
 
-**Patterns:**
-- Try-catch blocks in async functions with proper error logging
-- Error messages logged with `console.error()` for debugging
-- Non-critical errors (like tracking) logged with `console.warn()` and fail silently
-- API routes return `NextResponse` with appropriate status codes and error objects
+**API Routes:**
+- Wrap entire handler in try/catch
+- Return `NextResponse.json({ error: message }, { status: code })` for errors
+- Use specific HTTP status codes: 400 for validation, 401 for auth, 403 for authorization, 404 for not found, 500 for server errors
+- Include `field` property in validation errors: `{ error: "message", field: "start_date" }`
+- Log errors with `console.error()` before returning error responses
+- Outer catch returns generic message: `{ error: "Failed to [action]" }`
 
-**Examples:**
 ```typescript
-// In hooks/useTracking.ts - non-critical error, silent fail
-try {
-  const response = await fetch(API_ENDPOINTS.INTERACTIONS, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    console.warn("Failed to track interaction:", await response.text());
+// Pattern from src/app/api/events/create/route.ts
+export async function POST(request: NextRequest) {
+  try {
+    // ... validation and business logic
+    if (authError || !user) {
+      return NextResponse.json({ error: "You must be signed in" }, { status: 401 });
+    }
+    // ... more logic
+    if (error) {
+      console.error("Error creating event:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ event: data }, { status: 201 });
+  } catch (error) {
+    console.error("Error in create event:", error);
+    return NextResponse.json({ error: "Failed to create event" }, { status: 500 });
   }
-} catch (error) {
-  // Silently fail - tracking should not break the app
-  console.warn("Error tracking interaction:", error);
 }
 ```
 
+**Client-Side Components:**
+- Try/catch around async operations (fetch calls)
+- Log errors with `console.error()`
+- Silently handle non-critical errors (e.g., tracking failures)
+- Use `ErrorBoundary` component for React error boundaries (`src/components/ErrorBoundary.tsx`)
+
 ```typescript
-// In hooks/useEvents.ts - critical error, user-facing
-try {
-  setLoading(true);
-  setError(null);
-  const result = await fetchPage({ cursor });
-  applyPageResult(result);
-} catch (err) {
-  console.error("Error fetching events:", err);
-  setError(err instanceof Error ? err : new Error("Failed to fetch events"));
-} finally {
-  setLoading(false);
-}
+// Pattern from src/components/events/EventCard.tsx
+const handleSave = async (e: React.MouseEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+  try {
+    const response = await fetch(`/api/events/${event.id}/save`, { method: "POST" });
+    if (!response.ok) throw new Error("Failed to save event");
+    const data = await response.json();
+    setIsSaved(data.saved);
+  } catch (error) {
+    console.error("Error saving event:", error);
+  }
+};
 ```
 
-**API Route Error Pattern:**
-```typescript
-// In src/app/api/events/[id]/route.ts
-try {
-  const { id } = await params;
-  const supabase = await createClient();
-  // ... logic
-  return NextResponse.json({ event }, { status: 200 });
-} catch (error) {
-  console.error("Error fetching event:", error);
-  return NextResponse.json(
-    { error: "Internal server error" },
-    { status: 500 }
-  );
-}
-```
+**Utility Functions:**
+- Return the input unchanged on parse failure rather than throwing (e.g., `formatDate()` returns the raw string on error)
+- Return null for "not found" cases (`extractDate()`, `extractLocation()`)
 
 ## Logging
 
-**Framework:** Native `console` (no dedicated logging library)
+**Framework:** `console` (console.error, console.log)
 
 **Patterns:**
-- `console.error()` - For critical errors that need investigation
-- `console.warn()` - For non-critical failures, warnings, and edge cases
-- `console.log()` - Rarely used; prefer structured error/warning logging
-- No logging in production-critical paths unless needed for monitoring
-
-**Locations:** Logs appear in:
-- Browser console (client components)
-- Server logs (API routes, server components)
+- API routes: `console.error("Error context:", error)` before returning error responses
+- Auth store: prefixed with `[Auth]` tag: `console.log("[Auth] Initializing...")`
+- Middleware: prefixed with `[Middleware]`: `console.error("[Middleware] Error:", e)`
+- No structured logging library in use
 
 ## Comments
 
 **When to Comment:**
-- Complex business logic requiring explanation (e.g., cursor pagination implementation)
-- Non-obvious type manipulations or data transformations
-- External API requirements or constraints
-- Workarounds for known issues
+- File-level JSDoc block at top of utility files describing purpose: `/** Utility functions for Uni-Verse */`
+- Function-level JSDoc with `@param` and `@returns` for utility functions in `src/lib/utils.ts`
+- Swagger/OpenAPI annotations on API route handlers using `@swagger` JSDoc blocks
+- Inline comments for non-obvious logic (cookie cleanup in middleware, Supabase query building)
+- Section dividers using comment lines: `// ─── Section Name ───`
 
 **JSDoc/TSDoc:**
-- Used extensively for functions, hooks, and exported types
-- Includes `@param` for function parameters
-- Includes `@returns` for return values
-- Format: Multi-line block comments with `/**` opening
-
-**Examples from codebase:**
-
-```typescript
-/**
- * Custom hook for fetching and managing events with cursor-based pagination
- */
-export function useEvents(options: UseEventsOptions = {}): UseEventsResult
-
-/**
- * Format an ISO date string to a readable format
- * @param dateString - ISO date string (e.g., "2024-01-15")
- * @returns Formatted date string (e.g., "January 15, 2024")
- */
-export function formatDate(dateString: string): string
-
-/**
- * Track view with debouncing
- * Only tracks after user has been viewing for viewDebounceMs
- * Also deduplicates views within the same session
- */
-const trackView = useCallback((eventId: string, trackOptions?: TrackOptions) => {
-```
+- Used on exported utility functions with `@param` and `@returns`
+- Used on API route handlers for Swagger documentation
+- Component props documented via TypeScript interface with inline `/** */` comments
+- Not universally applied -- many components and hooks lack JSDoc
 
 ## Function Design
 
-**Size:** Functions kept reasonably small; split complex logic into helpers
-- Most utility functions: 10-50 lines
-- Hooks with state management: 100-300 lines (acceptable for complex state)
-- API handlers: 50-200 lines
+**Size:** No enforced limit. Components range from small (50 lines) to large (`EventCard.tsx` at 362 lines). Utility functions are generally short (5-20 lines).
 
 **Parameters:**
-- Named parameters preferred over positional when 2+ arguments
-- Use interface/type for function option objects (e.g., `UseEventsOptions`)
-- Optional parameters documented with `?` and defaults provided
-
-```typescript
-// Good: Options object with documented properties
-interface UseEventsOptions {
-  filters?: EventFilter;
-  enabled?: boolean;
-  limit?: number;
-  sort?: SortField;
-  direction?: SortDirection;
-}
-
-export function useEvents(options: UseEventsOptions = {}): UseEventsResult
-```
+- Use options objects for hooks: `useEvents(options: UseEventsOptions = {})`
+- Destructure props in component signatures
+- Default parameter values provided inline: `showSaveButton = false`, `limit = 50`
 
 **Return Values:**
-- Explicitly typed return values using TypeScript return type annotations
-- Objects returned from hooks include all state and methods needed
-- Async functions return `Promise<T>`
+- API routes always return `NextResponse.json()`
+- Hooks return typed result objects with explicit interface definitions
+- Utility functions return simple types (string, boolean, null)
 
 ## Module Design
 
 **Exports:**
-- Named exports preferred (`export function`, `export interface`)
-- Default exports rarely used
-- Re-exports from `index.ts` create barrel files for organized imports
+- Named exports preferred: `export function EventCard()`, `export function createClient()`
+- Default exports used only for Zustand stores: `export default useAuthStore`
+- Types exported from barrel file: `src/types/index.ts`
+- Constants exported individually from `src/lib/constants.ts`
 
 **Barrel Files:**
-- Used in `src/types/index.ts` to export all type definitions
-- Allows `import { Event, User, Club } from "@/types"`
-- Not used heavily elsewhere; modules export directly
+- `src/types/index.ts` serves as the type barrel -- import all types from `@/types`
+- No barrel files for components -- import each component directly from its file
 
-**Example from `src/types/index.ts`:**
-```typescript
-export enum EventTag { ... }
-export interface Event { ... }
-export interface Club { ... }
-export interface User { ... }
-export type UserRole = 'user' | 'club_organizer' | 'admin';
-```
+## Component Patterns
 
-## React-Specific Patterns
+**Client vs Server:**
+- Client components marked with `"use client"` directive at top of file
+- API routes (server-only) do NOT include `"use client"`
+- Hooks always include `"use client"`
+- Pages default to client components with state management
 
-**Client Components:**
-- Use `"use client"` directive at top of file
-- State management: `useState` for local state, `useCallback` for memoized handlers
-- Refs: `useRef` for stable references (not re-created on render)
-- Side effects: `useEffect` with proper dependency arrays
+**Supabase Client Usage:**
+- Browser (client components/hooks): `import { createClient } from "@/lib/supabase/client"` -- synchronous
+- Server (API routes/middleware): `import { createClient } from "@/lib/supabase/server"` -- async, `await createClient()`
+- Service role (admin operations): `import { createServiceClient } from "@/lib/supabase/service"`
 
-**Server Components:**
-- Default in Next.js 16; no directive needed
-- API routes marked with `async` function handlers
-- Use `async/await` for Supabase queries
+**State Management:**
+- Zustand for global auth state: `src/store/useAuthStore.ts`
+- React useState/useEffect for component-local state
+- SWR for data fetching (dependency present in package.json)
+- Custom hooks for data fetching patterns: `useEvents`, `useSavedEvents`
 
-**Props Pattern:**
-```typescript
-interface EventCardProps {
-  event: Event;
-  onClick?: () => void;
-  showSaveButton?: boolean;
-  /** Description of optional prop */
-  trackingSource?: InteractionSource;
-}
-
-export function EventCard({
-  event,
-  onClick,
-  showSaveButton = false,
-  trackingSource,
-}: EventCardProps) {
-  // Implementation
-}
-```
+**Styling:**
+- Tailwind CSS utility classes inline on JSX elements
+- `cn()` helper from `src/lib/utils.ts` for conditional class merging
+- shadcn/ui primitives in `src/components/ui/` -- do not modify these directly
+- McGill brand colors defined in `src/lib/constants.ts` as `MCGILL_COLORS`
+- Dark mode supported via Tailwind `dark:` variants
 
 ---
 
-*Convention analysis: 2026-02-25*
+*Convention analysis: 2026-03-05*

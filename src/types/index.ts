@@ -3,6 +3,19 @@
  * These types match the Supabase database schema
  */
 
+export type UserRole = "user" | "admin" | "club_organizer";
+
+export type RsvpStatus = "going" | "interested";
+
+export type InteractionSource =
+  | "home"
+  | "search"
+  | "recommendation"
+  | "calendar"
+  | "direct"
+  | "modal"
+  | "my-events";
+
 export enum EventTag {
   ACADEMIC = "academic",
   SOCIAL = "social",
@@ -22,46 +35,38 @@ export interface Event {
   club_id: string;
   tags: EventTag[];
   image_url: string | null;
+  source_url?: string | null;
+  created_by?: string | null;
   created_at: string;
   updated_at: string;
   status: "pending" | "approved" | "rejected";
-  created_by: string | null;
   approved_by: string | null;
   approved_at: string | null;
-  source?: "manual" | "instagram" | "admin";
-  source_url?: string | null;
   // Relations
   club?: Club;
-  saved_by_users?: string[]; // Array of user IDs who saved this event
+  saved_by_users?: string[];
 }
 
 export interface Club {
   id: string;
   name: string;
+  description: string | null;
+  category?: string | null;
   instagram_handle: string | null;
   logo_url: string | null;
-  description: string | null;
-  category: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  created_by: string | null;
+  status?: "pending" | "approved" | "rejected";
+  created_by?: string | null;
   created_at: string;
   updated_at: string;
 }
 
-// =============================================
-// User Roles
-// =============================================
-
-export type UserRole = 'user' | 'club_organizer' | 'admin';
-
-// Matches public.users table schema
 export interface User {
   id: string;
   email: string;
   name: string | null;
   avatar_url: string | null;
-  interest_tags: string[];
   roles: UserRole[];
+  interest_tags: string[];
   created_at: string | null;
   updated_at: string | null;
 }
@@ -76,25 +81,22 @@ export interface ClubMember {
   user?: User;
 }
 
+export interface ClubInvitation {
+  id: string;
+  club_id: string;
+  inviter_id: string;
+  invitee_email: string;
+  token: string;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+}
+
 export interface ClubFollower {
   id: string;
   user_id: string;
   club_id: string;
   created_at: string;
-  club?: Club; // Populated when joining via GET /api/user/following
-}
-
-export interface OrganizerRequest {
-  id: string;
-  user_id: string;
-  club_id: string;
-  message: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  reviewed_by: string | null;
-  created_at: string;
-  updated_at: string;
-  club?: Club;
-  user?: User;
 }
 
 export interface SavedEvent {
@@ -107,139 +109,151 @@ export interface SavedEvent {
   user?: User;
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  message: string;
+  event_id?: string | null;
+  read: boolean;
+  created_at: string;
+}
+
 export interface EventFilter {
-  tags?: Array<EventTag | string>;
+  tags?: EventTag[];
   dateRange?: {
-    start?: Date;
+    start: Date;
     end?: Date;
   };
   searchQuery?: string;
   clubId?: string;
 }
 
-// =============================================
-// User Interaction Tracking Types
-// =============================================
-
-export type InteractionType = 'view' | 'click' | 'save' | 'unsave' | 'share' | 'calendar_add';
-
-export type InteractionSource = 'home' | 'search' | 'recommendation' | 'calendar' | 'direct' | 'modal' | 'my-events';
-
-export interface UserInteraction {
-  id: string;
-  user_id: string | null;
-  event_id: string;
-  interaction_type: InteractionType;
-  session_id: string | null;
-  source: InteractionSource | null;
-  metadata: Record<string, unknown>;
-  created_at: string;
+export interface EventPopularityScore {
+  popularity_score: number;
+  trending_score: number;
+  view_count: number;
+  click_count: number;
+  save_count: number;
+  calendar_add_count: number;
+  unique_viewers: number;
 }
 
 export interface TrackInteractionPayload {
   event_id: string;
-  interaction_type: InteractionType;
-  source?: InteractionSource;
-  session_id?: string;
+  interaction_type:
+    | "view"
+    | "click"
+    | "save"
+    | "unsave"
+    | "share"
+    | "calendar_add";
+  source?: InteractionSource | null;
+  session_id?: string | null;
   metadata?: Record<string, unknown>;
 }
 
-// =============================================
-// Event Popularity Types
-// =============================================
+/** Recommendation feedback action types */
+export type RecommendationFeedbackAction =
+  | "impression"
+  | "click"
+  | "save"
+  | "dismiss";
 
-export interface EventPopularityScore {
-  event_id: string;
-  view_count: number;
-  click_count: number;
-  save_count: number;
-  share_count: number;
-  calendar_add_count: number;
-  unique_viewers: number;
-  popularity_score: number;
-  trending_score: number;
-  last_calculated_at: string;
-}
+/** A/B Testing Types */
+export type ExperimentStatus = "draft" | "running" | "paused" | "completed";
+export type ExperimentMetric = "ctr" | "save_rate" | "dismiss_rate";
 
-export interface PopularEventsResponse {
-  events: (Event & { popularity?: EventPopularityScore })[];
-  total: number;
-}
-
-// =============================================
-// User Engagement Types
-// =============================================
-
-export interface TagCount {
-  tag: string;
-  count: number;
-}
-
-export interface ClubCount {
-  club_id: string;
-  count: number;
-}
-
-export interface UserEngagementSummary {
-  user_id: string;
-  total_views: number;
-  total_clicks: number;
-  total_saves: number;
-  total_shares: number;
-  total_calendar_adds: number;
-  favorite_tags: TagCount[];
-  favorite_clubs: ClubCount[];
-  last_active_at: string | null;
+export interface Experiment {
+  id: string;
+  name: string;
+  description: string;
+  status: ExperimentStatus;
+  target_metric: ExperimentMetric;
+  start_date: string | null;
+  end_date: string | null;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
+  variants?: ExperimentVariant[];
 }
 
-// =============================================
-// RSVP Types
-// =============================================
-
-export type RsvpStatus = 'going' | 'interested' | 'cancelled';
-
-export interface Rsvp {
+export interface ExperimentVariant {
   id: string;
+  experiment_id: string;
+  name: string;
+  config: Record<string, unknown>;
+  weight: number;
+}
+
+export interface ExperimentAssignment {
+  id: string;
+  experiment_id: string;
+  variant_id: string;
   user_id: string;
+  assigned_at: string;
+}
+
+export interface VariantMetrics {
+  variant_id: string;
+  variant_name: string;
+  assignments: number;
+  impressions: number;
+  clicks: number;
+  saves: number;
+  dismisses: number;
+  ctr_percent: number;
+  save_rate_percent: number;
+  dismiss_rate_percent: number;
+}
+
+export interface ExperimentResults {
+  experiment: Experiment;
+  variant_metrics: VariantMetrics[];
+  significance: {
+    statistic: number;
+    p_value: number;
+    significant: boolean;
+  } | null;
+}
+
+// ── Analytics Types ────────────────────────────────────────────────────────
+
+export interface EventAnalytics {
   event_id: string;
-  status: RsvpStatus;
-  created_at: string;
-  updated_at: string;
-  // Relations
-  event?: Event;
-  user?: User;
-}
-
-export interface RsvpCountSummary {
-  going: number;
-  interested: number;
-  total: number;
-}
-
-export interface EventRsvpInfo {
-  counts: RsvpCountSummary;
-  user_rsvp: Rsvp | null;
-}
-
-// =============================================
-// Notification Types
-// =============================================
-
-export type NotificationType =
-  | "event_reminder_24h"
-  | "event_reminder_1h"
-  | "event_approved"
-  | "event_rejected";
-
-export interface Notification {
-  id: string;
-  user_id: string;
-  event_id: string | null;
-  type: NotificationType | string; // string fallback for forward compatibility
   title: string;
-  message: string;
-  read: boolean;
+  event_date: string;
+  views: number;
+  clicks: number;
+  saves: number;
+  unique_viewers: number;
+  rsvp_going: number;
+  rsvp_interested: number;
+}
+
+export interface ClubAnalytics {
+  follower_growth: { date: string; count: number }[];
+  total_attendees: number;
+  popular_tags: { tag: string; count: number }[];
+  events: EventAnalytics[];
+}
+
+// ── Review Types ─────────────────────────────────────────────────────────
+
+export interface Review {
+  id: string;
+  user_id: string;
+  event_id: string;
+  rating: number;
+  comment: string | null;
   created_at: string;
 }
+
+export interface ReviewAggregate {
+  average_rating: number;
+  total_reviews: number;
+  distribution: { rating: number; count: number }[];
+  comments: { rating: number; comment: string; created_at: string }[];
+}
+

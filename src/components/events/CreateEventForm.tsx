@@ -4,15 +4,12 @@ import { useState, useEffect } from "react";
 import { classifyTags } from "@/lib/classifier";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle,
   Loader2,
-  Upload,
-  X,
   GraduationCap,
   Users,
   Trophy,
@@ -56,23 +53,56 @@ interface FormErrors {
 interface CreateEventFormProps {
   clubId?: string;
   onSuccess?: () => void;
+  initialData?: {
+    title: string;
+    description: string;
+    start_date?: string;
+    location: string;
+    tags: EventTag[];
+    image_url?: string | null;
+    category?: string | null;
+  };
+  eventId?: string;
+  mode?: "create" | "edit" | "duplicate";
 }
 
-export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
+export function CreateEventForm({
+  clubId,
+  onSuccess,
+  initialData,
+  eventId,
+  mode = "create",
+}: CreateEventFormProps) {
+  // Parse initial date/time for edit mode
+  const getInitialDateParts = () => {
+    if (initialData?.start_date && mode === "edit") {
+      const dt = new Date(initialData.start_date);
+      const date = dt.toISOString().split("T")[0];
+      const time = dt.toTimeString().slice(0, 5);
+      return { date, time };
+    }
+    return { date: "", time: "" };
+  };
+
+  const initialDateParts = getInitialDateParts();
+
   const [formData, setFormData] = useState<FormData>({
-    title: "",
-    description: "",
-    date: "",
-    time: "",
-    location: "",
-    tags: [],
+    title: initialData?.title ?? "",
+    description: initialData?.description ?? "",
+    date: initialDateParts.date,
+    time: initialDateParts.time,
+    location: initialData?.location ?? "",
+    tags: initialData?.tags ?? [],
     imageFile: null,
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>("");
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    initialData?.image_url ?? null
+  );
   const [suggestedTags, setSuggestedTags] = useState<EventTag[]>([]);
 
   useEffect(() => {
@@ -158,30 +188,57 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
       // Build the start_date as ISO string
       const startDate = new Date(`${formData.date}T${formData.time}`).toISOString();
 
-      const res = await fetch("/api/events/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          start_date: startDate,
-          end_date: startDate,
-          location: formData.location,
-          tags: formData.tags,
-          image_url: imageUrl,
-          category: formData.tags[0],
-          club_id: clubId,
-        }),
-      });
+      // Determine the image URL to send
+      const finalImageUrl = imageUrl ?? (formData.imageFile ? null : imagePreview);
+
+      let res: Response;
+
+      if (mode === "edit" && eventId) {
+        // PATCH only changed fields
+        const updates: Record<string, unknown> = {};
+        if (formData.title !== initialData?.title) updates.title = formData.title;
+        if (formData.description !== initialData?.description) updates.description = formData.description;
+        if (formData.location !== initialData?.location) updates.location = formData.location;
+        if (JSON.stringify(formData.tags) !== JSON.stringify(initialData?.tags)) updates.tags = formData.tags;
+        updates.start_date = startDate;
+        updates.end_date = startDate;
+        updates.category = formData.tags[0];
+        if (finalImageUrl !== initialData?.image_url) updates.image_url = finalImageUrl;
+
+        res = await fetch(`/api/events/${eventId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updates),
+        });
+      } else {
+        // POST for create and duplicate modes
+        res = await fetch("/api/events/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: formData.title,
+            description: formData.description,
+            start_date: startDate,
+            end_date: startDate,
+            location: formData.location,
+            tags: formData.tags,
+            image_url: finalImageUrl,
+            category: formData.tags[0],
+            club_id: clubId,
+          }),
+        });
+      }
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to create event");
+        throw new Error(data.error || (mode === "edit" ? "Failed to update event" : "Failed to create event"));
       }
 
+      setSuccessMessage(
+        mode === "edit" ? "Event updated!" : (data.message || "Event submitted!")
+      );
       setSuccess(true);
-      onSuccess?.();
       // Reset form
       setFormData({
         title: "",
@@ -202,18 +259,28 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
   };
 
   if (success) {
+    const isEdit = mode === "edit";
+    const isApproved = successMessage.toLowerCase().includes("approved");
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-card rounded-2xl border border-green-200 dark:border-green-900/50 p-8">
         <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-4">
           <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
         </div>
-        <h3 className="text-2xl font-bold text-foreground">Event Submitted!</h3>
+        <h3 className="text-2xl font-bold text-foreground">
+          {isEdit ? "Event Updated!" : isApproved ? "Event Published!" : "Event Submitted!"}
+        </h3>
         <p className="text-muted-foreground max-w-md">
-          Your event has been submitted for review. An admin will approve it shortly and it will appear on the platform.
+          {isEdit
+            ? "Your changes have been saved."
+            : isApproved
+              ? "Your event has been approved and is now live on the platform."
+              : "Your event has been submitted for review. An admin will approve it shortly."}
         </p>
-        <Button onClick={() => setSuccess(false)} className="mt-4">
-          Submit Another Event
-        </Button>
+        {!isEdit && (
+          <Button onClick={() => setSuccess(false)} className="mt-4 cursor-pointer">
+            Create Another Event
+          </Button>
+        )}
       </div>
     );
   }
@@ -397,10 +464,12 @@ export function CreateEventForm({ clubId, onSuccess }: CreateEventFormProps) {
         {submitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Submitting...
+            {mode === "edit" ? "Saving..." : "Submitting..."}
           </>
+        ) : mode === "edit" ? (
+          "Save Changes"
         ) : (
-          "Submit Event for Review"
+          "Create Event"
         )}
       </Button>
     </form>

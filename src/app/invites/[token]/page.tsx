@@ -1,170 +1,202 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import Image from "next/image";
 import Link from "next/link";
+import { Users, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Accept Invitation | Uni-Verse",
+};
 
 interface PageProps {
   params: Promise<{ token: string }>;
 }
 
-function InviteErrorPage({
-  icon,
+function ErrorCard({
+  icon: Icon,
   title,
   message,
 }: {
-  icon: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   message: string;
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="max-w-md w-full text-center space-y-6">
-        {icon}
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+    <div className="flex items-center justify-center min-h-[60vh] px-4">
+      <Card className="max-w-md w-full border-none shadow-lg">
+        <CardContent className="p-8 text-center space-y-4">
+          <Icon className="h-12 w-12 mx-auto text-destructive/70" />
+          <h1 className="text-xl font-semibold text-foreground">{title}</h1>
           <p className="text-muted-foreground">{message}</p>
-        </div>
-        <Link href="/">
-          <Button variant="outline" className="w-full">
-            Go to Home
-          </Button>
-        </Link>
-      </div>
+          <Link href="/">
+            <Button variant="outline" className="mt-2">
+              Go Home
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-export default async function InviteAcceptancePage({ params }: PageProps) {
+export default async function InvitePage({ params }: PageProps) {
   const { token } = await params;
   const supabase = await createClient();
 
-  // Step 1: Check authentication
+  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    // Redirect to home with signin prompt, preserving the invite URL for after login
-    redirect(`/?next=/invites/${token}`);
+    redirect(`/?signin=required&next=/invites/${token}`);
   }
 
-  // Step 2: Look up the invitation by token
-  // RLS "Invitees can view their own invitations" policy requires email match
-  // If the email doesn't match, the query returns null (RLS filters it out)
-  const { data: invite } = await supabase
+  // Look up invitation with club details
+  const { data: invitation, error: inviteError } = await supabase
     .from("club_invitations")
-    .select("id, club_id, invitee_email, status, expires_at")
+    .select("*")
     .eq("token", token)
+    .eq("status", "pending")
     .single();
 
-  // Step 3: Handle "not found" — could be invalid token OR email mismatch (RLS filtered)
-  if (!invite) {
+  // Token not found or already accepted
+  if (inviteError || !invitation) {
     return (
-      <InviteErrorPage
-        icon={<XCircle className="h-12 w-12 text-destructive" />}
-        title="Invitation not found"
-        message="This invitation link is invalid, or it was sent to a different email address. Make sure you are signed in with the email address the invitation was sent to."
+      <ErrorCard
+        icon={XCircle}
+        title="Invalid Invitation"
+        message="This invitation is no longer valid. It may have already been used or does not exist."
       />
     );
   }
 
-  // Step 4: Check if already accepted/revoked/expired status
-  if (invite.status !== "pending") {
-    const statusMessages: Record<string, string> = {
-      accepted: "This invitation has already been accepted.",
-      revoked: "This invitation has been revoked by the club owner.",
-      expired: "This invitation has expired.",
-    };
+  // Check expiration
+  if (new Date(invitation.expires_at) < new Date()) {
     return (
-      <InviteErrorPage
-        icon={<AlertTriangle className="h-12 w-12 text-amber-500" />}
-        title="Invitation unavailable"
-        message={statusMessages[invite.status] ?? "This invitation is no longer valid."}
+      <ErrorCard
+        icon={AlertTriangle}
+        title="Invitation Expired"
+        message="This invitation has expired. Please ask the club owner to send a new one."
       />
     );
   }
 
-  // Step 5: Check expiry
-  if (new Date(invite.expires_at) < new Date()) {
+  // Check email match (case-insensitive)
+  if (
+    user.email?.toLowerCase() !== invitation.invitee_email.toLowerCase()
+  ) {
     return (
-      <InviteErrorPage
-        icon={<AlertTriangle className="h-12 w-12 text-amber-500" />}
-        title="Invitation expired"
-        message="This invitation has expired. Ask the club owner to send a new one."
+      <ErrorCard
+        icon={XCircle}
+        title="Wrong Account"
+        message="This invitation was sent to a different email address. Please sign in with the correct account."
       />
     );
   }
 
-  // Step 6: Check if user is already a member (prevents duplicate key error)
+  // Check if already a member
   const { data: existingMember } = await supabase
     .from("club_members")
     .select("id")
     .eq("user_id", user.id)
-    .eq("club_id", invite.club_id)
-    .single();
+    .eq("club_id", invitation.club_id)
+    .maybeSingle();
 
   if (existingMember) {
-    // Already a member — just redirect to the club dashboard
-    redirect(`/my-clubs/${invite.club_id}?tab=overview`);
-  }
-
-  // Step 7: Insert into club_members as organizer
-  const { error: memberError } = await supabase
-    .from("club_members")
-    .insert({
-      club_id: invite.club_id,
-      user_id: user.id,
-      role: "organizer",
-    });
-
-  if (memberError) {
-    console.error("Error accepting invitation:", memberError);
     return (
-      <InviteErrorPage
-        icon={<XCircle className="h-12 w-12 text-destructive" />}
-        title="Something went wrong"
-        message="We could not add you to the club. Please try again or contact the club owner."
+      <ErrorCard
+        icon={AlertTriangle}
+        title="Already a Member"
+        message="You are already a member of this club."
       />
     );
   }
 
-  // Step 8: Mark invitation as accepted
-  // RLS "Invitees can accept their own invitations" policy allows this
-  await supabase
-    .from("club_invitations")
-    .update({ status: "accepted" })
-    .eq("id", invite.id);
-
-  // Step 9: Fetch club name for the success message
+  // Fetch club details for display
   const { data: club } = await supabase
     .from("clubs")
-    .select("name")
-    .eq("id", invite.club_id)
+    .select("id, name, logo_url")
+    .eq("id", invitation.club_id)
     .single();
 
-  // Step 10: Show success page with link to dashboard
-  // Using a success page instead of immediate redirect so the user sees confirmation
+  if (!club) {
+    return (
+      <ErrorCard
+        icon={XCircle}
+        title="Club Not Found"
+        message="The club associated with this invitation could not be found."
+      />
+    );
+  }
+
+  // Valid invitation -- auto-accept: insert member and mark invite as accepted
+  const [memberResult, updateResult] = await Promise.all([
+    supabase.from("club_members").insert({
+      user_id: user.id,
+      club_id: invitation.club_id,
+      role: "organizer",
+    }),
+    supabase
+      .from("club_invitations")
+      .update({ status: "accepted" })
+      .eq("id", invitation.id),
+  ]);
+
+  if (memberResult.error || updateResult.error) {
+    return (
+      <ErrorCard
+        icon={XCircle}
+        title="Something Went Wrong"
+        message="We could not complete your invitation acceptance. Please try again or contact the club owner."
+      />
+    );
+  }
+
+  // Success
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="max-w-md w-full text-center space-y-6">
-        <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-foreground">
-            You&apos;re in!
-          </h1>
-          <p className="text-muted-foreground">
-            You have been added as an organizer for{" "}
-            <span className="font-semibold text-foreground">
-              {club?.name ?? "the club"}
-            </span>
-            .
-          </p>
-        </div>
-        <Link href={`/my-clubs/${invite.club_id}?tab=overview`}>
-          <Button className="w-full">Go to Club Dashboard</Button>
-        </Link>
-      </div>
+    <div className="flex items-center justify-center min-h-[60vh] px-4">
+      <Card className="max-w-md w-full border-none shadow-lg">
+        <CardContent className="p-8 text-center space-y-6">
+          {/* Club Logo */}
+          <div className="flex justify-center">
+            {club.logo_url ? (
+              <Image
+                src={club.logo_url}
+                alt={`${club.name} logo`}
+                width={80}
+                height={80}
+                className="rounded-xl object-cover"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-xl bg-secondary/30 flex items-center justify-center">
+                <Users className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+            )}
+          </div>
+
+          <CheckCircle2 className="h-12 w-12 mx-auto text-green-600" />
+
+          <div className="space-y-2">
+            <h1 className="text-xl font-semibold text-foreground">
+              Welcome to {club.name}!
+            </h1>
+            <p className="text-muted-foreground">
+              You have been added as an organizer. You can now manage events and
+              invite other members.
+            </p>
+          </div>
+
+          <Link href={`/my-clubs/${club.id}`}>
+            <Button className="bg-[#ED1B2F] hover:bg-[#ED1B2F]/90 text-white mt-2">
+              Go to Club Dashboard
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   );
 }

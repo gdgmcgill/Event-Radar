@@ -1,169 +1,204 @@
 # External Integrations
 
-**Analysis Date:** 2026-02-25
+**Analysis Date:** 2026-03-05
 
 ## APIs & External Services
 
-**Authentication:**
-- Microsoft Azure OAuth - McGill university SSO via Azure AD
-  - SDK/Client: Supabase Auth with Azure provider
-  - Implementation: `src/app/auth/callback/route.ts`, `src/components/auth/SignInButton.tsx`
-  - Auth: Configured via Supabase dashboard (provider not in code)
-  - Handling: OAuth callback at `/auth/callback` with token exchange and user profile upsert
+**Recommendation Engine:**
+- Two-Tower Recommendation Service - AI-powered event recommendations
+  - Client: Plain `fetch()` calls in `src/app/api/recommendations/route.ts`
+  - Endpoint: `${RECOMMENDATION_API_URL}/recommend` (POST)
+  - Auth: None (internal service)
+  - Env var: `RECOMMENDATION_API_URL` (defaults to `http://localhost:8000`)
+  - Payload: User profile (major, year, interests), feedback signals, exclusion list
+  - Response: Ranked list of event IDs with scores
+  - Fallback: Returns empty recommendations with `source: "popular_fallback"` when service is unreachable
 
-**Event Data Ingestion:**
-- Webhook receiver for external event sources
-  - Endpoint: `/functions/v1/events-webhook` (Supabase Edge Function)
-  - Location: `supabase/functions/events-webhook/index.ts`
-  - Security: HMAC-SHA256 signature verification
-  - Payload structure: WebhookEvent with title, description, date, time, location, image_url, source_url, tags, capacity, price, registration_url
-
-**Image Sources:**
-- Unsplash - Free stock photos
-  - Allowed in Next.js image optimization config
-- Supabase Storage - Internal image hosting for club logos and event images
-  - Bucket access via Supabase client
+**Unsplash:**
+- Image hosting only (no API integration)
+- Allowed as remote image source in `next.config.js` (`images.unsplash.com`)
 
 ## Data Storage
 
-**Databases:**
-- Supabase PostgreSQL (v17)
-  - Connection: `NEXT_PUBLIC_SUPABASE_URL` (public anon key), `SUPABASE_SERVICE_ROLE_KEY` (server key)
-  - Client: @supabase/supabase-js (browser) and @supabase/ssr (server)
-  - Tables: events, clubs, users, saved_events, rsvps, interactions, user_engagement_summary, notifications, organizer_requests, club_members
+**Database:**
+- Supabase (PostgreSQL)
+  - Connection: `NEXT_PUBLIC_SUPABASE_URL`
+  - Anon key: `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - Service key: `SUPABASE_SERVICE_ROLE_KEY` (bypasses RLS)
+
+**Three Supabase client patterns:**
+
+1. **Browser client** - `src/lib/supabase/client.ts`
+   - Uses `createBrowserClient()` from `@supabase/ssr`
+   - For client components and React hooks
+   - Respects RLS policies
+
+2. **Server client** - `src/lib/supabase/server.ts`
+   - Uses `createServerClient()` from `@supabase/ssr`
+   - Cookie-based auth via `next/headers`
+   - For API routes and Server Components
+   - Respects RLS policies
+
+3. **Service client** - `src/lib/supabase/service.ts`
+   - Uses `createClient()` from `@supabase/supabase-js` with service role key
+   - Bypasses RLS entirely
+   - For admin routes and cron jobs only
+
+**Database types:** `src/lib/supabase/types.ts` (manually maintained, not auto-generated)
+
+**Core tables:**
+- `events` - Event data (title, description, dates, location, tags, status, club_id)
+- `clubs` - Organization profiles (name, description, instagram_handle, logo_url, status)
+- `users` - User profiles (email, name, avatar_url, roles, interest_tags)
+- `saved_events` - User-event bookmarks
+- `notifications` - In-app notification records
+- `user_interactions` - Event interaction tracking (views, clicks, saves, shares)
+- `event_popularity` - Computed popularity/trending scores
+- `user_engagement` - Aggregated user engagement metrics
+- `recommendation_feedback` - Implicit recommendation feedback (impressions, clicks, saves, dismisses)
+- `recommendation_explicit_feedback` - Explicit thumbs up/down feedback
+- `club_members` - Club membership with roles
+- `club_followers` - Club following relationships
+- `organizer_requests` - Requests to become club organizers
+- `feedback` - General app feedback
+
+**Migrations:** `supabase/migrations/` (27 migration files, sequentially numbered)
 
 **File Storage:**
-- Supabase Storage buckets (local dev at port 54328)
-  - File size limit: 50MiB per file
-  - Subdomain pattern: `{projectRef}.supabase.co`/storage
+- Supabase Storage - `event-images` bucket
+  - Used in `src/app/api/events/upload-image/route.ts`
+  - Max file size: 5MB
+  - Public URL generation via `getPublicUrl()`
+- Supabase Storage - avatar/logo uploads via `src/app/api/profile/avatar/route.ts` and `src/app/api/clubs/logo/route.ts`
 
 **Caching:**
-- SWR 2.3.7 - HTTP caching with deduplication
-- Zustand 5.0.9 - Client-side state persistence
-- Next.js built-in caching - For database queries via Supabase client
+- SWR (`swr` ^2.3.7) for client-side data caching
+- Vercel CDN cache headers on API routes (`s-maxage=60, stale-while-revalidate=300` in `vercel.json`)
+- In-memory rate limit store in `src/middlewareRateLimit.ts` (single-process only)
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Supabase Auth (hosted by Supabase)
-  - Primary method: Microsoft Azure OAuth (McGill SSO)
-  - Backup methods: Email/password, Google (configurable)
-  - Implementation in `src/lib/supabase/client.ts` (browser), `src/lib/supabase/server.ts` (server)
-
-**User Validation:**
-- McGill email enforcement: Only `*@mcgill.ca` or `*@mail.mcgill.ca` addresses allowed
-  - Validation: `src/app/auth/callback/route.ts` line 25-27
-  - Non-McGill users are deleted from auth system via service role key
-
-**Admin Assignment:**
-- Hardcoded admin email list via `ADMIN_EMAILS` environment variable
-  - Automatic role assignment on first login if email matches
-  - Location: `src/app/auth/callback/route.ts` lines 20-23, 176-182
+- Supabase Auth with Azure AD (Microsoft) OAuth
+  - Implementation: OAuth PKCE flow
+  - Callback handler: `src/app/auth/callback/route.ts`
+  - Sign-out: `src/app/auth/signout/route.ts`
+  - Domain restriction: McGill emails only (`@mcgill.ca` or `@mail.mcgill.ca`)
+  - Validation: `isMcGillEmail()` in `src/lib/utils.ts` and `src/app/auth/callback/route.ts`
+  - Non-McGill users are signed out and their `auth.users` row is deleted
 
 **Session Management:**
-- JWT tokens (default 3600s = 1 hour expiry)
-  - Refresh token rotation enabled
-  - Cookie-based session persistence via @supabase/ssr
-  - Token cleanup logic in `src/middleware.ts` to prevent stale cookies
+- Cookie-based sessions via `@supabase/ssr`
+- Middleware (`src/middleware.ts`) refreshes sessions on every request
+- Stale/orphaned auth cookie cleanup in middleware
+- Large token chunking support (Microsoft Azure tokens are large)
+
+**Authorization:**
+- Role-based: `user`, `admin`, `club_organizer` (defined in `src/types/index.ts`)
+- Admin auto-assignment via `ADMIN_EMAILS` env var at login (`src/app/auth/callback/route.ts`)
+- Protected routes enforced in middleware: `/my-events`, `/create-event`, `/notifications`, `/profile`
+- Onboarding redirect for new users (cookie-based `needs_onboarding` flag)
+
+**Client-side auth hook:**
+- `src/hooks/useUser.ts` - Manages auth state, listens for `onAuthStateChange`
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- Not detected - No Sentry, Rollbar, or similar service integration
+- None (console.error only)
 
 **Logs:**
-- Console logging throughout codebase
-  - Error logs in middleware, auth callback, API routes
-  - Health check logs for debugging
-  - Location: Various files use `console.error()`, `console.log()`
-
-**Health Checks:**
-- Comprehensive health endpoint at `GET /api/health`
-  - Location: `src/app/api/health/route.ts`
-  - Checks: Server, Database, Supabase Auth, Azure OAuth config, Environment variables, Memory usage
-  - Returns HTTP 200 (healthy) or 503 (unhealthy/degraded)
+- `console.log`, `console.error`, `console.warn` throughout
+- Prefixed with context tags like `[Callback]`, `[Middleware]`, `[Cron]`
 
 **Analytics:**
-- Event interaction tracking via custom `interactions` table
-  - Tracks: view, click, save, unsave, share, calendar_add events
-  - Location: `src/app/api/interactions/route.ts`
-  - Data stored in `public.interactions` table for engagement analysis
+- Custom event interaction tracking system
+  - Client hook: `src/hooks/useTracking.ts`
+  - API endpoint: `src/app/api/interactions/route.ts`
+  - Tracks: views, clicks, saves, unsaves, shares, calendar_add
+  - Session-based (crypto.randomUUID stored in sessionStorage)
+- Recommendation feedback tracking
+  - API endpoint: `src/app/api/recommendations/feedback/route.ts`
+  - Tracks: impressions, clicks, saves, dismisses
+  - Explicit feedback: thumbs up/down
+  - Analytics dashboard: `src/app/api/recommendations/analytics/route.ts`
+- Event popularity calculation
+  - API endpoint: `src/app/api/admin/calculate-popularity/route.ts`
+  - Computes popularity_score and trending_score
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Vercel (inferred from Next.js 16 App Router setup)
-- Supabase Cloud for database and auth
+- Vercel
+- Config: `vercel.json`
+- Region: `iad1` (US East - Washington DC)
+- Framework preset: `nextjs`
 
 **CI Pipeline:**
-- Not detected in codebase - No GitHub Actions, GitLab CI, or similar workflows committed
+- GitHub Actions (`.github/workflows/ci.yml`)
+- Triggers: push to `main`, PRs to `main`
+- Steps: checkout, setup Node 20, `npm ci`, lint, `tsc --noEmit`, `npm run build`
+- No automated test execution in CI
 
-**Environment Setup:**
-- Development: `npm run dev` starts Next.js (port 3000) and Supabase local stack (port 54321)
-- Production: `npm run build` → `npm run start`
+**Cron Jobs:**
+- Event reminder notifications: `src/app/api/cron/send-reminders/route.ts`
+  - Auth: Bearer token via `CRON_SECRET` env var
+  - Sends 24-hour and 1-hour reminders for saved events
+  - Likely triggered via Vercel Cron or external scheduler
 
-## Environment Configuration
+## Rate Limiting
 
-**Required env vars:**
-- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL (public, client-side)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Anon key for browser requests (public)
-- `SUPABASE_SERVICE_ROLE_KEY` - Service role for server operations only (secret)
-- `ADMIN_EMAILS` - Comma-separated list of emails to auto-assign admin role (optional)
-
-**Optional env vars:**
-- Supabase-specific: OpenAI API key for Supabase AI features (commented in config)
-- S3 configuration for OrioleDB storage (experimental)
-
-**Secrets location:**
-- `.env.local` (not committed, never read by tools)
-- Supabase dashboard for provider-specific secrets
-- Hardcoded lists in code: `ADMIN_EMAILS` (env var), OAuth provider config (Supabase dashboard)
+**Implementation:**
+- In-memory token bucket in `src/middlewareRateLimit.ts`
+- Applied at middleware level to all `/api/*` routes (except `/api/admin/*`)
+- Limits per IP per minute:
+  - GET: 100 requests
+  - POST/PUT/PATCH/DELETE: 30 requests
+- Returns HTTP 429 with `Retry-After` header when exceeded
+- Single-process only; needs distributed store (e.g., Upstash Redis) for multi-region
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- OAuth callback: `GET /auth/callback` - Receives authorization code from Azure OAuth
-  - Processes code exchange, creates/updates user profile, enforces McGill domain
-  - Returns redirect with success/error status
-  - Location: `src/app/auth/callback/route.ts`
+- Events webhook: `supabase/functions/events-webhook/index.ts` (Supabase Edge Function)
+  - Auth: HMAC-SHA256 signature verification
+  - Headers checked: `x-signature`, `x-hub-signature-256`, `x-webhook-signature`
+  - Env: `WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+  - Accepts batch event payloads, validates structure, inserts with `status: "pending"`
+  - Runtime: Deno (Supabase Edge Runtime)
 
-- Event webhook: `POST /functions/v1/events-webhook` - External event ingestion
-  - Validates HMAC-SHA256 signature
-  - Accepts array of events with standardized schema
-  - Maps external categories/tags to internal enum
-  - Location: `supabase/functions/events-webhook/index.ts`
+- OAuth callback: `src/app/auth/callback/route.ts`
+  - Handles Azure AD OAuth code exchange
+  - Creates/updates user profile, enforces McGill domain, assigns admin role
 
 **Outgoing:**
-- Not detected - No webhook calls to external services
-- Internal events via Supabase Realtime (not external)
+- None detected
 
-## Rate Limiting
+## Environment Configuration
 
-**API Rate Limits:**
-- Supabase auth: 30 sign-in/sign-up requests per 5 minutes per IP
-- 150 token refresh requests per 5 minutes per IP
-- Custom middleware rate limiting for public API endpoints
-  - Location: `src/middleware.ts` references `applyApiRateLimit()`
-  - Consumed by all routes via matcher pattern
+**Required env vars:**
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous/public key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (server-only)
+- `CRON_SECRET` - Bearer token for cron job endpoints
 
-## Middleware & Security
+**Optional env vars:**
+- `RECOMMENDATION_API_URL` - Recommendation service URL (default: `http://localhost:8000`)
+- `ADMIN_EMAILS` - Comma-separated admin email addresses for auto-role assignment
+- `WEBHOOK_SECRET` - HMAC secret for events webhook (Edge Function only)
 
-**Middleware:**
-- Session refresh via Supabase cookie handler
-- Route protection (redirect unauthenticated users from `/my-events`, `/create-event`, `/notifications`, `/profile`)
-- Onboarding guard (redirect users with `needs_onboarding` cookie)
-- Stale auth cookie cleanup
-- Location: `src/middleware.ts`
+**Secrets location:**
+- `.env.local` (local development, gitignored)
+- Vercel dashboard (production)
+- Supabase dashboard (Edge Function secrets)
 
-**Security Headers (via Next.js):**
-```
-X-Frame-Options: DENY
-X-Content-Type-Options: nosniff
-Referrer-Policy: strict-origin-when-cross-origin
-X-XSS-Protection: 1; mode=block
-Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
-```
+## Data Export
+
+**Formats:**
+- CSV export: `src/app/api/events/export/route.ts` (format=csv)
+- iCal export: `src/app/api/events/export/route.ts` (format=ical)
+- Supports filtering by tags, search, date range, club, specific event IDs
 
 ---
 
-*Integration audit: 2026-02-25*
+*Integration audit: 2026-03-05*

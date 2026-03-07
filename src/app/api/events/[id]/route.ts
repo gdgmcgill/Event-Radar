@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { transformEventFromDB } from "@/lib/tagMapping";
 import type { NextRequest } from "next/server";
+import { validateEventDates, isValidISODate } from "@/lib/dateValidation";
 
 interface RouteParams {
   params: Promise<{
@@ -210,6 +211,34 @@ export async function PATCH(
         { error: "No valid fields to update" },
         { status: 400 }
       );
+    }
+
+    // Validate date fields when present in the update payload.
+    // PATCH is a partial update so we validate only the fields being changed.
+    if ("start_date" in updates) {
+      // Reuse validateEventDates; it accepts end_date as optional.
+      const dateError = validateEventDates(
+        updates.start_date,
+        "end_date" in updates ? updates.end_date : undefined
+      );
+      if (dateError) {
+        return NextResponse.json(
+          { error: dateError.message, field: dateError.field },
+          { status: 400 }
+        );
+      }
+    } else if ("end_date" in updates) {
+      // Only end_date is being changed — validate its format alone.
+      if (!isValidISODate(updates.end_date)) {
+        return NextResponse.json(
+          {
+            error:
+              "end_date must be a valid ISO 8601 date (e.g. \"2026-03-15\" or \"2026-03-15T11:00:00Z\")",
+            field: "end_date",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const { data, error } = await supabase

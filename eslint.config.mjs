@@ -1,7 +1,7 @@
 import coreWebVitals from "eslint-config-next/core-web-vitals";
 
 const eslintConfig = [
-  { ignores: [".claude/**", "demo-video/**"] },
+  { ignores: [".claude/**", ".next/**", "AI/**", "node_modules/**", "demo-video/**"] },
   ...coreWebVitals,
 ];
 

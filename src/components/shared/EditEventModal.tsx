@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventTag } from "@/types";
 import { cn } from "@/lib/utils";
@@ -26,8 +25,6 @@ import {
   Palette,
   Heart,
   Sparkles,
-  X,
-  Upload,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { uploadEventImage } from "@/lib/upload-utils";
@@ -136,8 +133,6 @@ export function EditEventModal({
         const uploadedUrl = await uploadEventImage(imageFile);
         if (uploadedUrl) {
           finalImageUrl = uploadedUrl;
-        } else {
-          console.warn("Image upload failed, submitting without new image");
         }
       }
 

@@ -44,12 +44,10 @@ export function SignInButton({ variant = "default", className, redirectAfterLogi
       });
 
       if (error) {
-        console.error("Sign in error:", error.message);
         setIsLoading(false);
       }
       // If successful, user will be redirected - no need to reset loading
-    } catch (err) {
-      console.error("Unexpected sign in error:", err);
+    } catch {
       setIsLoading(false);
     }
   };

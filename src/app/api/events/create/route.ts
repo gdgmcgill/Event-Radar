@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { validateEventDates } from "@/lib/dateValidation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Description is required" }, { status: 400 });
     }
     if (!start_date) {
-      return NextResponse.json({ error: "Start date is required" }, { status: 400 });
+      return NextResponse.json({ error: "Start date is required", field: "start_date" }, { status: 400 });
     }
     if (!location || !location.trim()) {
       return NextResponse.json({ error: "Location is required" }, { status: 400 });
@@ -42,16 +43,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate start_date is in the future
-    const startDate = new Date(start_date);
-    if (isNaN(startDate.getTime())) {
-      return NextResponse.json({ error: "Invalid start date" }, { status: 400 });
-    }
-    if (startDate < new Date()) {
-      return NextResponse.json(
-        { error: "Event date must be in the future" },
-        { status: 400 }
-      );
+    // Validate date fields (strict ISO 8601 + future constraint)
+    const dateError = validateEventDates(start_date, end_date);
+    if (dateError) {
+      return NextResponse.json({ error: dateError.message, field: dateError.field }, { status: 400 });
     }
 
     // Get user profile with roles
@@ -110,6 +105,43 @@ export async function POST(request: NextRequest) {
     const message = status === "approved"
       ? "Event created and approved"
       : "Event submitted for review";
+
+    // Notification fanout for approved events with a club
+    if (status === "approved" && body.club_id) {
+      const fanout = async () => {
+        try {
+          const { data: clubInfo } = await supabase
+            .from("clubs")
+            .select("name")
+            .eq("id", body.club_id)
+            .single();
+
+          const clubName = clubInfo?.name || "A club";
+
+          const { data: followers } = await supabase
+            .from("club_followers")
+            .select("user_id")
+            .eq("club_id", body.club_id);
+
+          if (followers && followers.length > 0) {
+            await supabase.from("notifications").insert(
+              followers.map((f: { user_id: string }) => ({
+                user_id: f.user_id,
+                type: "new_event",
+                title: "New Event",
+                message: `${clubName} published: ${title.trim()}`,
+                event_id: data.id,
+                read: false,
+              }))
+            );
+          }
+        } catch (err) {
+          console.error("Notification fanout error:", err);
+        }
+      };
+      // Fire-and-forget
+      fanout();
+    }
 
     return NextResponse.json(
       { event: data, message },

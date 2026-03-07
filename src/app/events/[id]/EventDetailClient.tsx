@@ -24,11 +24,15 @@ import { formatDateTime } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventPopularityScore } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink, Share2, Check } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, Loader2, Eye, MousePointerClick, Bookmark, TrendingUp, Flame, ExternalLink } from "lucide-react";
 import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { RelatedEventCard } from "@/components/events/RelatedEventCard";
-import { useTracking } from "@/hooks/useTracking";
+import { ReviewPrompt } from "@/components/events/ReviewPrompt";
+import { EventReviewsSection } from "@/components/events/EventReviewsSection";
+import { StarRating } from "@/components/events/StarRating";
+import { useEventReviews } from "@/hooks/useAnalytics";
+import { exportEventIcal } from "@/lib/exportUtils";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -51,9 +55,8 @@ export default function EventDetailClient() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [popularity, setPopularity] = useState<EventPopularityScore | null>(null);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
-  const [copied, setCopied] = useState(false);
-
-  const { trackShare } = useTracking({ source: "direct" });
+  const [isExportingIcal, setIsExportingIcal] = useState(false);
+  const { data: reviewData, mutate: mutateReviews } = useEventReviews(id ?? "");
 
   useEffect(() => {
     if (!id) return;
@@ -162,24 +165,6 @@ export default function EventDetailClient() {
     fetchRelated();
   }, [event]);
 
-  const handleShare = useCallback(async () => {
-    const url = `${window.location.origin}/events/${id}`;
-    trackShare(id);
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: event?.title, text: event?.description, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name !== "AbortError") {
-        console.warn("Share failed:", err);
-      }
-    }
-  }, [id, event, trackShare]);
-
   const handleSave = useCallback(async () => {
     if (!user) {
       setShowSignInPrompt(true);
@@ -199,6 +184,18 @@ export default function EventDetailClient() {
       setSavingInProgress(false);
     }
   }, [user, id, savingInProgress]);
+
+  const handleAddToCalendar = useCallback(async () => {
+    if (!event) return;
+    try {
+      setIsExportingIcal(true);
+      await exportEventIcal(event.id, event.title);
+    } catch {
+      // Error already logged in exportUtils
+    } finally {
+      setIsExportingIcal(false);
+    }
+  }, [event]);
 
   if (loading) {
     return (
@@ -263,11 +260,12 @@ export default function EventDetailClient() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={handleShare}
-                    title="Share event"
+                    onClick={handleAddToCalendar}
+                    disabled={isExportingIcal}
+                    title="Add to calendar"
                     className="shrink-0"
                   >
-                    {copied ? <Check className="h-5 w-5 text-green-500" /> : <Share2 className="h-5 w-5" />}
+                    {isExportingIcal ? <Loader2 className="h-5 w-5 animate-spin" /> : <Calendar className="h-5 w-5" />}
                   </Button>
                   <Button
                     variant="outline"
@@ -327,9 +325,19 @@ export default function EventDetailClient() {
                 ))}
               </div>
 
-              {/* RSVP */}
-              <div className="pt-4 border-t">
+              {/* RSVP and Calendar Actions */}
+              <div className="pt-4 border-t space-y-3">
                 <RsvpButton eventId={event.id} userId={user?.id ?? null} />
+
+                <Button
+                  variant="outline"
+                  className="w-full border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleAddToCalendar}
+                  disabled={isExportingIcal}
+                >
+                  {isExportingIcal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
+                  {isExportingIcal ? "Adding..." : "Add to Calendar"}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -393,6 +401,35 @@ export default function EventDetailClient() {
           )}
         </div>
       </div>
+
+      {/* Reviews Section */}
+      {event && (
+        <div className="mt-8 space-y-4">
+          {/* Show ReviewPrompt if user can review */}
+          {user && reviewData?.can_review && !reviewData.user_review && (
+            <ReviewPrompt
+              eventId={event.id}
+              onReviewSubmitted={() => mutateReviews()}
+            />
+          )}
+
+          {/* Show user's existing review */}
+          {user && reviewData?.user_review && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Your rating:</span>
+              <StarRating value={reviewData.user_review.rating} readonly size="sm" />
+            </div>
+          )}
+
+          {/* Show aggregate reviews */}
+          {reviewData && reviewData.aggregate.total_reviews > 0 && (
+            <EventReviewsSection
+              eventId={event.id}
+              isOrganizer={false}
+            />
+          )}
+        </div>
+      )}
 
       <Dialog open={showSignInPrompt} onOpenChange={setShowSignInPrompt}>
         <DialogContent className="sm:max-w-sm">

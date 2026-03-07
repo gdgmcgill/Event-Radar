@@ -2,7 +2,6 @@
  * Tests for the event classifier
  */
 
-import { describe, it, expect } from "vitest";
 import {
   classifyPost,
   classifyBatch,

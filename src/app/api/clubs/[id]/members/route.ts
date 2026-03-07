@@ -1,176 +1,171 @@
-/**
- * GET /api/clubs/:id/members
- * List members (and pending invites for owners) for a specific club
- * Requires: club membership for this club
- *
- * DELETE /api/clubs/:id/members
- * Remove a member from the club
- * Requires: owner role for this club
- */
-
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 }
 
-export async function GET(
-  _request: NextRequest,
-  { params }: RouteParams
-) {
+/**
+ * GET /api/clubs/[id]/members
+ * Returns club members with user details. Requires club membership (owner or organizer).
+ */
+export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id: clubId } = await params;
     const supabase = await createClient();
 
-    // Verify authenticated user
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "You must be signed in" },
-        { status: 401 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify the caller is a member of this club and get their role
-    const { data: membership, error: membershipError } = await supabase
+    // Verify caller is a member of this club
+    const { data: callerMembership } = await supabase
       .from("club_members")
       .select("role")
       .eq("user_id", user.id)
       .eq("club_id", clubId)
-      .single();
+      .maybeSingle();
 
-    if (membershipError || !membership) {
+    if (!callerMembership) {
       return NextResponse.json(
-        { error: "You are not a member of this club" },
+        { error: "You must be a member of this club to view members" },
         { status: 403 }
       );
     }
 
-    // Fetch members via Supabase join query (RLS enforces access)
-    // Owners see all members; organizers see only themselves (per RLS policy)
+    // Fetch members - query club_members then fetch user details separately
+    // since Supabase generated types don't define the relationship
     const { data: members, error } = await supabase
       .from("club_members")
-      .select(`
-        id,
-        user_id,
-        role,
-        created_at,
-        users (
-          id,
-          email,
-          name,
-          avatar_url
-        )
-      `)
+      .select("id, user_id, role, created_at")
       .eq("club_id", clubId)
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("Error fetching club members:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to fetch members" },
+        { status: 500 }
+      );
     }
 
-    // Owners also see pending invitations
-    let pendingInvites: Array<{ id: string; invitee_email: string; created_at: string; token: string }> = [];
-    if (membership.role === "owner") {
-      const { data: invites } = await supabase
-        .from("club_invitations")
-        .select("id, invitee_email, created_at, token")
-        .eq("club_id", clubId)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
-      pendingInvites = invites ?? [];
+    if (!members || members.length === 0) {
+      return NextResponse.json({ members: [] });
     }
 
-    return NextResponse.json({ members: members ?? [], pendingInvites });
-  } catch (error) {
-    console.error("Error in GET club members:", error);
+    // Fetch user details for all members
+    const userIds = members.map((m) => m.user_id);
+    const { data: users } = await supabase
+      .from("users")
+      .select("id, email, name, avatar_url")
+      .in("id", userIds);
+
+    const userMap = new Map((users ?? []).map((u) => [u.id, u]));
+
+    const membersWithUsers = members.map((member) => ({
+      ...member,
+      user: userMap.get(member.user_id) ?? null,
+    }));
+
+    return NextResponse.json({ members: membersWithUsers });
+  } catch {
     return NextResponse.json(
-      { error: "Failed to fetch club members" },
+      { error: "Failed to fetch members" },
       { status: 500 }
     );
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+/**
+ * DELETE /api/clubs/[id]/members
+ * Remove a member from the club. Owner-only. Cannot remove self.
+ */
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: clubId } = await params;
     const supabase = await createClient();
 
-    // Verify authenticated user
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "You must be signed in" },
-        { status: 401 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Parse userId from request body
-    const { userId: targetUserId } = await request.json();
-
-    if (!targetUserId || typeof targetUserId !== "string") {
-      return NextResponse.json(
-        { error: "userId is required" },
-        { status: 400 }
-      );
-    }
-
-    // Check caller is an owner of this club
-    const { data: membership } = await supabase
+    // Verify caller is owner
+    const { data: callerMembership } = await supabase
       .from("club_members")
       .select("role")
       .eq("user_id", user.id)
       .eq("club_id", clubId)
-      .single();
+      .eq("role", "owner")
+      .maybeSingle();
 
-    if (!membership || membership.role !== "owner") {
+    if (!callerMembership) {
       return NextResponse.json(
         { error: "Only the club owner can remove members" },
         { status: 403 }
       );
     }
 
-    // Explicit self-removal guard before hitting DB (better UX error message)
-    if (targetUserId === user.id) {
+    const body = await request.json();
+    const { memberId } = body as { memberId: string };
+
+    if (!memberId) {
+      return NextResponse.json(
+        { error: "memberId is required" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch the target member to verify they're not the owner
+    const { data: targetMember } = await supabase
+      .from("club_members")
+      .select("user_id, role")
+      .eq("id", memberId)
+      .eq("club_id", clubId)
+      .maybeSingle();
+
+    if (!targetMember) {
+      return NextResponse.json(
+        { error: "Member not found" },
+        { status: 404 }
+      );
+    }
+
+    if (targetMember.user_id === user.id) {
       return NextResponse.json(
         { error: "You cannot remove yourself from the club" },
         { status: 400 }
       );
     }
 
-    // Delete the member row (DB-level self-removal guard is backup via CHECK constraint)
-    const { error: deleteError } = await supabase
-      .from("club_members")
-      .delete()
-      .eq("club_id", clubId)
-      .eq("user_id", targetUserId);
-
-    if (deleteError) {
-      console.error("Error removing club member:", deleteError);
-      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    if (targetMember.role === "owner") {
+      return NextResponse.json(
+        { error: "Cannot remove the club owner" },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ message: "Member removed" });
-  } catch (error) {
-    console.error("Error in DELETE club member:", error);
+    const { error } = await supabase
+      .from("club_members")
+      .delete()
+      .eq("id", memberId)
+      .eq("club_id", clubId);
+
+    if (error) {
+      return NextResponse.json(
+        { error: "Failed to remove member" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch {
     return NextResponse.json(
-      { error: "Failed to remove club member" },
+      { error: "Failed to remove member" },
       { status: 500 }
     );
   }

@@ -1,125 +1,103 @@
-/**
- * POST /api/clubs/:id/invites — Create an invitation for a McGill email
- * DELETE /api/clubs/:id/invites — Revoke a pending invitation (owner only)
- * Requires: owner role for this club
- */
-
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isMcGillEmail } from "@/lib/utils";
-import type { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+/**
+ * POST /api/clubs/[id]/invites
+ * Create an invitation for a McGill email. Owner-only.
+ */
+export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: clubId } = await params;
     const supabase = await createClient();
 
-    // Verify authenticated user
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "You must be signed in" },
-        { status: 401 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify the caller is an owner of this club
-    const { data: membership } = await supabase
+    // Verify caller is owner
+    const { data: callerMembership } = await supabase
       .from("club_members")
       .select("role")
       .eq("user_id", user.id)
       .eq("club_id", clubId)
-      .single();
+      .eq("role", "owner")
+      .maybeSingle();
 
-    if (!membership || membership.role !== "owner") {
+    if (!callerMembership) {
       return NextResponse.json(
         { error: "Only the club owner can send invitations" },
         { status: 403 }
       );
     }
 
-    // Parse and validate the invitee email from request body
-    const { email } = await request.json();
+    const body = await request.json();
+    const { email } = body as { email: string };
 
-    if (!email || typeof email !== "string") {
+    if (!email) {
       return NextResponse.json(
         { error: "Email is required" },
         { status: 400 }
       );
     }
 
-    // Validate it is a McGill email
-    if (!isMcGillEmail(email)) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isMcGillEmail(normalizedEmail)) {
       return NextResponse.json(
-        { error: "Only McGill email addresses can be invited" },
+        { error: "Must be a McGill email" },
         { status: 400 }
       );
     }
 
-    const normalizedEmail = email.toLowerCase();
-
-    // Verify the invitee has a Uni-Verse account (exists in users table)
-    const { data: invitee } = await supabase
+    // Check if already a member (look up user by email, then check membership)
+    const { data: existingUser } = await supabase
       .from("users")
       .select("id")
       .eq("email", normalizedEmail)
-      .single();
+      .maybeSingle();
 
-    if (!invitee) {
-      return NextResponse.json(
-        { error: "No Uni-Verse account found for this email address" },
-        { status: 400 }
-      );
+    if (existingUser) {
+      const { data: existingMembership } = await supabase
+        .from("club_members")
+        .select("id")
+        .eq("user_id", existingUser.id)
+        .eq("club_id", clubId)
+        .maybeSingle();
+
+      if (existingMembership) {
+        return NextResponse.json(
+          { error: "User is already a member" },
+          { status: 409 }
+        );
+      }
     }
 
-    // Check the invitee is not already a member of this club
-    const { data: existingMember } = await supabase
-      .from("club_members")
-      .select("id")
-      .eq("user_id", invitee.id)
-      .eq("club_id", clubId)
-      .single();
-
-    if (existingMember) {
-      return NextResponse.json(
-        { error: "This person is already a member of the club" },
-        { status: 400 }
-      );
-    }
-
-    // Check for existing pending invitation (avoid duplicates)
+    // Check for pending invite
     const { data: existingInvite } = await supabase
       .from("club_invitations")
       .select("id")
       .eq("club_id", clubId)
       .eq("invitee_email", normalizedEmail)
-      .eq("status", "pending")
-      .single();
+      .is("accepted_at", null)
+      .maybeSingle();
 
     if (existingInvite) {
       return NextResponse.json(
-        { error: "An invitation is already pending for this email" },
-        { status: 400 }
+        { error: "An active invitation already exists for this email" },
+        { status: 409 }
       );
     }
 
-    // Insert the invitation
-    // Note: role does NOT exist in club_invitations table — hardcoded organizer role is applied on acceptance
-    // token and expires_at have DB defaults (gen_random_uuid() and now() + 7 days)
-    const { data: invite, error: insertError } = await supabase
+    // Create invitation (token and expires_at have DB defaults)
+    const { data: invite, error } = await supabase
       .from("club_invitations")
       .insert({
         club_id: clubId,
@@ -129,90 +107,17 @@ export async function POST(
       .select("token")
       .single();
 
-    if (insertError || !invite) {
-      console.error("Error creating invitation:", insertError);
+    if (error) {
       return NextResponse.json(
-        { error: insertError?.message ?? "Failed to create invitation" },
+        { error: "Failed to create invitation" },
         { status: 500 }
       );
     }
 
-    // Return token only — URL construction is client-side
-    return NextResponse.json({ token: invite.token }, { status: 201 });
-  } catch (error) {
-    console.error("Error in POST club invite:", error);
+    return NextResponse.json({ invite: { token: invite.token } }, { status: 201 });
+  } catch {
     return NextResponse.json(
       { error: "Failed to create invitation" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: RouteParams
-) {
-  try {
-    const { id: clubId } = await params;
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "You must be signed in" },
-        { status: 401 }
-      );
-    }
-
-    // Verify caller is owner
-    const { data: membership } = await supabase
-      .from("club_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("club_id", clubId)
-      .single();
-
-    if (!membership || membership.role !== "owner") {
-      return NextResponse.json(
-        { error: "Only the club owner can revoke invitations" },
-        { status: 403 }
-      );
-    }
-
-    const { inviteId } = await request.json();
-
-    if (!inviteId) {
-      return NextResponse.json(
-        { error: "Invite ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // Update status to 'revoked' — preserves invitation history
-    const { error: updateError } = await supabase
-      .from("club_invitations")
-      .update({ status: "revoked" })
-      .eq("id", inviteId)
-      .eq("club_id", clubId)
-      .eq("status", "pending");
-
-    if (updateError) {
-      console.error("Error revoking invitation:", updateError);
-      return NextResponse.json(
-        { error: "Failed to revoke invitation" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ message: "Invitation revoked" });
-  } catch (error) {
-    console.error("Error in DELETE club invite:", error);
-    return NextResponse.json(
-      { error: "Failed to revoke invitation" },
       { status: 500 }
     );
   }

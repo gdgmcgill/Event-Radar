@@ -1,53 +1,32 @@
-/**
- * GET /api/clubs/:id/events
- * List events for a specific club (organizer dashboard)
- * Requires: club_organizer with membership for this club, or admin
- */
-
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { NextRequest } from "next/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+interface RsvpRow {
+  event_id: string;
+  status: string;
+}
+
+/**
+ * GET /api/clubs/[id]/events
+ * Returns approved events for public visitors.
+ * Returns all events with RSVP counts for club organizers/members.
+ */
+export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id: clubId } = await params;
     const supabase = await createClient();
 
-    // Verify authenticated user
+    // Check if the current user is a member of this club
+    let isOrganizer = false;
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "You must be signed in" },
-        { status: 401 }
-      );
-    }
-
-    // Get user roles
-    const { data: profile } = await supabase
-      .from("users")
-      .select("roles")
-      .eq("id", user.id)
-      .single();
-
-    const roles: string[] = profile?.roles ?? [];
-    let hasAccess = roles.includes("admin");
-
-    // Club organizer must have membership for this specific club
-    if (!hasAccess && roles.includes("club_organizer")) {
+    if (user) {
       const { data: membership } = await supabase
         .from("club_members")
         .select("id")
@@ -56,47 +35,69 @@ export async function GET(
         .single();
 
       if (membership) {
-        hasAccess = true;
+        isOrganizer = true;
       }
     }
 
-    if (!hasAccess) {
-      return NextResponse.json(
-        { error: "You do not have permission to view this club's events" },
-        { status: 403 }
-      );
-    }
-
-    // Parse query params for optional filtering
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-
+    // Build the query based on membership
     let query = supabase
       .from("events")
-      .select("*")
+      .select("*, club:clubs(id, name, logo_url)")
       .eq("club_id", clubId)
       .order("start_date", { ascending: false });
 
-    if (status) {
-      query = query.eq("status", status);
+    if (!isOrganizer) {
+      query = query.eq("status", "approved");
     }
 
     const { data: events, error } = await query;
 
     if (error) {
-      console.error("Error fetching club events:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to fetch events" },
+        { status: 500 }
+      );
     }
 
-    const transformedEvents = (events ?? []).map(event =>
-      transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
-    );
+    const eventList = events ?? [];
 
-    return NextResponse.json({ events: transformedEvents });
-  } catch (error) {
-    console.error("Error in club events:", error);
+    // For organizers, fetch RSVP counts
+    if (isOrganizer && eventList.length > 0) {
+      const eventIds = eventList.map((e) => e.id);
+
+      const { data: rsvps } = await supabase
+        .from("rsvps")
+        .select("event_id, status")
+        .in("event_id", eventIds);
+
+      // Group counts by event_id and status
+      const rsvpCounts: Record<string, { going: number; interested: number }> = {};
+      if (rsvps) {
+        for (const rsvp of rsvps as RsvpRow[]) {
+          if (!rsvpCounts[rsvp.event_id]) {
+            rsvpCounts[rsvp.event_id] = { going: 0, interested: 0 };
+          }
+          if (rsvp.status === "going") {
+            rsvpCounts[rsvp.event_id].going++;
+          } else if (rsvp.status === "interested") {
+            rsvpCounts[rsvp.event_id].interested++;
+          }
+        }
+      }
+
+      // Attach rsvp_counts to each event
+      const eventsWithRsvp = eventList.map((event) => ({
+        ...event,
+        rsvp_counts: rsvpCounts[event.id] || { going: 0, interested: 0 },
+      }));
+
+      return NextResponse.json({ events: eventsWithRsvp, isOrganizer: true });
+    }
+
+    return NextResponse.json({ events: eventList, isOrganizer: false });
+  } catch {
     return NextResponse.json(
-      { error: "Failed to fetch club events" },
+      { error: "Failed to fetch events" },
       { status: 500 }
     );
   }

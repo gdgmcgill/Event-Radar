@@ -6,59 +6,39 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
-import type { Database } from "@/lib/supabase/types";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { EventTag } from "@/types";
 
-type EventRow = Database["public"]["Tables"]["events"]["Row"];
-
-type SortField = "start_date" | "created_at" | "popularity_score" | "trending_score";
-type SortDirection = "asc" | "desc";
-
-type CursorPayload = {
-  sortValue: string | number;
+/** Shape of event row from DB (may use start_date/end_date/organizer or event_date/event_time/club_id) */
+type EventRow = {
   id: string;
+  title: string;
+  description: string;
+  location: string;
+  tags: string[];
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+  start_date?: string;
+  end_date?: string | null;
+  organizer?: string | null;
+  event_date?: string;
+  event_time?: string;
+  club_id?: string;
 };
 
-type EventWithPopularity = EventRow & {
-  popularity?: Array<{
-    popularity_score: number | null;
-    trending_score: number | null;
-  }>;
+// Mapping from database tags to EventTag enum
+const tagMapping: Record<string, EventTag> = {
+  'coding': EventTag.ACADEMIC,
+  'networking': EventTag.SOCIAL,
+  'hackathon': EventTag.ACADEMIC,
+  'career': EventTag.CAREER,
+  'sports': EventTag.SPORTS,
+  'wellness': EventTag.WELLNESS,
+  'cultural': EventTag.CULTURAL,
+  'social': EventTag.SOCIAL,
+  'academic': EventTag.ACADEMIC,
+  'technology': EventTag.ACADEMIC,
 };
-
-const SORT_FIELDS = new Set<SortField>([
-  "start_date",
-  "created_at",
-  "popularity_score",
-  "trending_score",
-]);
-const MAX_LIMIT = 100;
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const POSTGREST_FILTER_CHARS = /[(),]/;
-
-const decodeCursor = (cursor: string): CursorPayload | null => {
-  try {
-    const decoded = Buffer.from(cursor, "base64").toString("utf-8");
-    const payload = JSON.parse(decoded) as CursorPayload;
-    if (!payload || typeof payload.id !== "string" || !UUID_RE.test(payload.id)) {
-      return null;
-    }
-    if (typeof payload.sortValue === "number") {
-      if (!Number.isFinite(payload.sortValue)) return null;
-    } else if (typeof payload.sortValue === "string") {
-      if (POSTGREST_FILTER_CHARS.test(payload.sortValue)) return null;
-    } else {
-      return null;
-    }
-    return payload;
-  } catch {
-    return null;
-  }
-};
-
-const encodeCursor = (payload: CursorPayload): string =>
-  Buffer.from(JSON.stringify(payload)).toString("base64");
 
 /**
  * @swagger
@@ -69,32 +49,6 @@ const encodeCursor = (payload: CursorPayload): string =>
  *    tags:
  *      - Events
  *    parameters:
- *      - name: cursor
- *        description: Cursor for the next page (do not combine with before)
- *        in: query
- *        required: false
- *        schema:
- *          type: string
- *      - name: before
- *        description: Cursor for the previous page (do not combine with cursor)
- *        in: query
- *        required: false
- *        schema:
- *          type: string
- *      - name: sort
- *        description: Sort field for pagination
- *        in: query
- *        required: false
- *        schema:
- *          type: string
- *          enum: [start_date, created_at, popularity_score, trending_score]
- *      - name: direction
- *        description: Sort direction for pagination
- *        in: query
- *        required: false
- *        schema:
- *          type: string
- *          enum: [asc, desc]
  *      - name: tags
  *        description: Comma-separated list of tags
  *        in: query
@@ -119,17 +73,10 @@ const encodeCursor = (payload: CursorPayload): string =>
  *        required: false
  *        schema:
  *          type: string
- *      - name: clubId
- *        description: Filter by club id
- *        in: query
- *        required: false
- *        schema:
- *          type: string
  *      - name: page
- *        description: Page number for pagination (deprecated; use cursor/before)
+ *        description: Page number for pagination
  *        in: query
  *        required: false
- *        deprecated: true
  *        schema:
  *          type: integer
  *      - name: limit
@@ -208,12 +155,6 @@ const encodeCursor = (payload: CursorPayload): string =>
  *                  type: integer
  *                totalPages:
  *                  type: integer
- *                nextCursor:
- *                  type: string
- *                  nullable: true
- *                prevCursor:
- *                  type: string
- *                  nullable: true
  *        description: Events fetched successfully
  *      500:
  *        description: Internal server error
@@ -228,186 +169,106 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
-    const sortParam = searchParams.get("sort") || "start_date";
-    const directionParam = searchParams.get("direction") || "asc";
-    const clubId = searchParams.get("clubId");
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = Math.min(
-      Math.max(parseInt(searchParams.get("limit") || "50", 10), 1),
-      MAX_LIMIT
-    );
-    const cursor = searchParams.get("cursor");
-    const before = searchParams.get("before");
-    const usesLegacyPagination = searchParams.has("page") && !cursor && !before;
+    const idsParam = searchParams.get('ids');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
 
-    if (usesLegacyPagination) {
-      console.warn("Deprecated pagination: use cursor or before instead of page.");
-    }
-
-    if (!SORT_FIELDS.has(sortParam as SortField)) {
-      return NextResponse.json(
-        { error: "sort must be one of: start_date, created_at, popularity_score, trending_score" },
-        { status: 400 }
-      );
-    }
-
-    if (directionParam !== "asc" && directionParam !== "desc") {
-      return NextResponse.json(
-        { error: "direction must be 'asc' or 'desc'" },
-        { status: 400 }
-      );
-    }
-
-    if (cursor && before) {
-      return NextResponse.json(
-        { error: "cursor and before cannot be used together" },
-        { status: 400 }
-      );
-    }
-
-    const sort = sortParam as SortField;
-    const direction = directionParam as SortDirection;
-    const cursorToken = before || cursor;
-    const cursorPayload = cursorToken ? decodeCursor(cursorToken) : null;
-    if (cursorToken && !cursorPayload) {
-      return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
-    }
-
-    // Build Supabase query for approved events only
-    const isPopularitySort =
-      sort === "popularity_score" || sort === "trending_score";
-    const selectClause = isPopularitySort
-      ? "*, club:clubs(id, name, logo_url), popularity:event_popularity_scores(popularity_score, trending_score)"
-      : "*, club:clubs(id, name, logo_url)";
-    const isAsc = direction === "asc";
-    const queryAscending = before ? !isAsc : isAsc;
-
+    // Build Supabase query for events
     let eventsQuery = supabase
-      .from("events")
-      .select(selectClause, { count: "exact" })
-      .eq("status", "approved");
+      .from('events')
+      .select('*', { count: 'exact' })
+      .order('start_date', { ascending: true });
+
+    // Filter by IDs (e.g. for recommendation list)
+    if (idsParam) {
+      const ids = idsParam.split(',').map((id) => id.trim()).filter(Boolean);
+      if (ids.length > 0) {
+        eventsQuery = eventsQuery.in('id', ids);
+      }
+    }
 
     // Apply filters
     if (tags) {
       const tagArray = tags.split(',').map(tag => tag.trim());
-      eventsQuery = eventsQuery.overlaps("tags", tagArray);
+      eventsQuery = eventsQuery.overlaps('tags', tagArray);
     }
 
     if (search) {
-      const sanitized = search.replace(/[%_(),]/g, "");
-      if (sanitized) {
-        eventsQuery = eventsQuery.or(
-          `title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`
-        );
-      }
+      eventsQuery = eventsQuery.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
     if (dateFrom) {
-      eventsQuery = eventsQuery.gte("start_date", dateFrom);
+      eventsQuery = eventsQuery.gte('start_date', dateFrom);
     }
 
     if (dateTo) {
-      eventsQuery = eventsQuery.lte("start_date", dateTo);
+      eventsQuery = eventsQuery.lte('start_date', dateTo);
     }
-
-    if (clubId) {
-      eventsQuery = eventsQuery.eq("club_id", clubId);
-    }
-
-    if (isPopularitySort) {
-      eventsQuery = eventsQuery.order(sort, {
-        ascending: queryAscending,
-        foreignTable: "event_popularity_scores",
-        nullsFirst: queryAscending,
-      });
-    } else {
-      eventsQuery = eventsQuery.order(sort, { ascending: queryAscending });
-    }
-    eventsQuery = eventsQuery.order("id", { ascending: queryAscending });
 
     // Apply pagination
-    if (cursorPayload) {
-      const sortColumn = isPopularitySort
-        ? `event_popularity_scores.${sort}`
-        : sort;
-      const op = queryAscending ? "gt" : "lt";
-      const sortValue = cursorPayload.sortValue;
-      const orFilterBase = `${sortColumn}.${op}.${sortValue},and(${sortColumn}.eq.${sortValue},id.${op}.${cursorPayload.id})`;
-      const orFilter = !queryAscending
-        ? `${orFilterBase},${sortColumn}.is.null`
-        : orFilterBase;
-      eventsQuery = eventsQuery.or(orFilter).limit(limit + 1);
-    } else {
-      // For first page, still fetch limit + 1 to detect if nextCursor exists
-      const from = (page - 1) * limit;
-      const to = from + limit; // Note: limit, not limit - 1, so we fetch limit + 1 total
-      eventsQuery = eventsQuery.range(from, to);
-    }
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    eventsQuery = eventsQuery.range(from, to);
 
     // Execute events query
-    const { data: eventsData, error: eventsError, count } = await eventsQuery
-      .returns<EventWithPopularity[]>();
+    const { data: eventsData, error: eventsError, count } = await eventsQuery;
 
     if (eventsError) {
       console.error("Supabase error fetching events:", eventsError);
       return NextResponse.json({ error: eventsError.message }, { status: 500 });
     }
 
-    // Transform events using shared utility
-    let rawEvents = eventsData ?? [];
-    const hasExtra = rawEvents.length > limit;
-    if (hasExtra) {
-      rawEvents = rawEvents.slice(0, limit);
-    }
-    if (before) {
-      rawEvents = rawEvents.reverse();
-    }
+    // Transform events to match frontend expectations
+    const rows = (eventsData || []) as EventRow[];
+    const events = rows.map((event) => {
+      const startDateStr = event.start_date ?? event.event_date;
+      const startDate = new Date(startDateStr ?? "");
+      const endDate = event.end_date ? new Date(event.end_date) : null;
 
-    const getSortValue = (event: EventWithPopularity): string | number => {
-      if (sort === "popularity_score" || sort === "trending_score") {
-        const score = event.popularity?.[0]?.[sort];
-        return typeof score === "number" ? score : 0;
-      }
-      return event[sort] ?? "";
-    };
+      // Map database tags to EventTag enum values
+      const mappedTags = (event.tags || [])
+        .map((tag: string) => {
+          const lowerTag = tag.toLowerCase();
+          return tagMapping[lowerTag] || EventTag.SOCIAL;
+        })
+        .filter((tag, index, self) => self.indexOf(tag) === index);
 
-    let nextCursor: string | null = null;
-    let prevCursor: string | null = null;
+      const clubId = event.organizer ?? event.club_id ?? "unknown";
 
-    if (rawEvents.length > 0) {
-      const first = rawEvents[0];
-      const last = rawEvents[rawEvents.length - 1];
+      return {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        event_date: startDate.toISOString().split("T")[0],
+        event_time: startDateStr ? startDate.toTimeString().slice(0, 5) : (event.event_time ?? "00:00"),
+        location: event.location,
+        club_id: clubId,
+        tags: mappedTags,
+        image_url: event.image_url,
+        created_at: event.created_at,
+        updated_at: event.updated_at,
+        status: "approved" as const,
+        approved_by: null,
+        approved_at: null,
+        club: clubId !== "unknown" ? {
+          id: clubId,
+          name: typeof event.organizer === "string" ? event.organizer : clubId,
+          instagram_handle: null,
+          logo_url: null,
+          description: null,
+          created_at: event.created_at,
+          updated_at: event.updated_at,
+        } : null,
+        saved_by_users: [],
+      };
+    });
 
-      const firstCursor = encodeCursor({
-        sortValue: getSortValue(first),
-        id: first.id,
-      });
-      const lastCursor = encodeCursor({
-        sortValue: getSortValue(last),
-        id: last.id,
-      });
-
-      if (before) {
-        prevCursor = hasExtra ? firstCursor : null;
-        nextCursor = lastCursor;
-      } else {
-        prevCursor = cursorPayload ? firstCursor : null;
-        nextCursor = hasExtra ? lastCursor : null;
-      }
-    }
-
-    const events = rawEvents.map(event =>
-      transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
-    );
-
-    return NextResponse.json({
-      events,
+    return NextResponse.json({ 
+      events, 
       total: count || 0,
-      page: cursorPayload ? undefined : page,
+      page,
       limit,
-      totalPages: cursorPayload ? undefined : Math.ceil((count || 0) / limit),
-      nextCursor,
-      prevCursor,
+      totalPages: Math.ceil((count || 0) / limit)
     });
   } catch (error) {
     console.error("Error fetching events:", error);

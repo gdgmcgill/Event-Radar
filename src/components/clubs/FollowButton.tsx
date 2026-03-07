@@ -1,95 +1,81 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Heart, UserCheck, UserMinus, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 
 interface FollowButtonProps {
   clubId: string;
-  initialIsFollowing: boolean;
-  onFollowChange?: (isFollowing: boolean) => void;
+  initialFollowing: boolean;
+  initialCount: number;
 }
 
 export function FollowButton({
   clubId,
-  initialIsFollowing,
-  onFollowChange,
+  initialFollowing,
+  initialCount,
 }: FollowButtonProps) {
-  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
-  const [loading, setLoading] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const { user } = useAuthStore();
-  const router = useRouter();
+  const [isFollowing, setIsFollowing] = useState(initialFollowing);
+  const [followerCount, setFollowerCount] = useState(initialCount);
+  const [isLoading, setIsLoading] = useState(false);
+  const user = useAuthStore((s) => s.user);
 
-  async function handleToggle() {
+  const handleToggle = async () => {
     if (!user) {
-      router.push("/auth/signin");
+      // Redirect to sign-in with return URL
+      window.location.href = `/?signin=required&next=/clubs/${clubId}`;
       return;
     }
 
-    if (loading) return;
+    setIsLoading(true);
 
     // Optimistic update
-    const nextState = !isFollowing;
-    setIsFollowing(nextState);
-    onFollowChange?.(nextState);
-    setLoading(true);
+    const wasFollowing = isFollowing;
+    const prevCount = followerCount;
+    setIsFollowing(!wasFollowing);
+    setFollowerCount(wasFollowing ? prevCount - 1 : prevCount + 1);
 
     try {
-      const method = isFollowing ? "DELETE" : "POST";
-      const res = await fetch(`/api/clubs/${clubId}/follow`, { method });
-      if (!res.ok) {
-        // Revert on error
-        setIsFollowing(isFollowing);
-        onFollowChange?.(isFollowing);
-      }
+      const res = await fetch(`/api/clubs/${clubId}/follow`, {
+        method: wasFollowing ? "DELETE" : "POST",
+      });
+      if (!res.ok) throw new Error("Failed to toggle follow");
     } catch {
       // Revert on error
-      setIsFollowing(isFollowing);
-      onFollowChange?.(isFollowing);
+      setIsFollowing(wasFollowing);
+      setFollowerCount(prevCount);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }
-
-  if (loading) {
-    return (
-      <Button variant="outline" disabled>
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        {isFollowing ? "Following" : "Follow"}
-      </Button>
-    );
-  }
-
-  if (isFollowing) {
-    return (
-      <Button
-        variant="outline"
-        onClick={handleToggle}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {isHovered ? (
-          <>
-            <UserMinus className="mr-2 h-4 w-4" />
-            Unfollow
-          </>
-        ) : (
-          <>
-            <UserCheck className="mr-2 h-4 w-4" />
-            Following
-          </>
-        )}
-      </Button>
-    );
-  }
+  };
 
   return (
-    <Button variant="default" onClick={handleToggle}>
-      <Heart className="mr-2 h-4 w-4" />
-      Follow
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleToggle}
+      disabled={isLoading}
+      className={cn(
+        "gap-2 transition-all duration-200 cursor-pointer",
+        isFollowing
+          ? "text-[#ED1B2F] hover:text-[#ED1B2F]/80"
+          : "text-muted-foreground hover:text-[#ED1B2F]"
+      )}
+    >
+      <Heart
+        className={cn(
+          "h-5 w-5 transition-all duration-200",
+          isFollowing && "fill-[#ED1B2F]"
+        )}
+      />
+      <span className="font-medium">
+        {isFollowing ? "Following" : "Follow"}
+      </span>
+      <span className="text-sm text-muted-foreground">
+        {followerCount}
+      </span>
     </Button>
   );
 }

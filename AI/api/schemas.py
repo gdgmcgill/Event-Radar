@@ -47,21 +47,41 @@ class UserPayload(BaseModel):
         }
 
 
+class FeedbackItem(BaseModel):
+    """A single explicit feedback entry (thumbs up/down) for the recommendation engine."""
+    event_id: str = Field(..., description="Event ID that received feedback")
+    feedback_type: str = Field(
+        ...,
+        description="'positive' (thumbs up) or 'negative' (thumbs down)",
+        examples=["positive"]
+    )
+    tags: List[str] = Field(
+        default_factory=list,
+        description="Tags of the rated event (used for user vector adjustment)"
+    )
+
+
 class RecommendRequest(BaseModel):
     """Request body for /recommend endpoint."""
     
     user: UserPayload = Field(..., description="User metadata")
     top_k: int = Field(
-        default=10, 
-        ge=1, 
-        le=100,
-        description="Number of recommendations to return"
+        default=10,
+        ge=1,
+        description="Number of recommendations to return (clamped to MAX_TOP_K server-side)"
     )
     exclude_event_ids: Optional[List[str]] = Field(
         default=None,
         description="Event IDs to exclude from recommendations"
     )
-    
+    feedback: Optional[List[FeedbackItem]] = Field(
+        default=None,
+        description=(
+            "Explicit thumbs up/down feedback. "
+            "Negative-rated events are excluded; positive/negative tags shift the user vector."
+        )
+    )
+
     class Config:
         json_schema_extra = {
             "example": {

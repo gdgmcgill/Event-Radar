@@ -1,5 +1,3 @@
-// TODO(AS-6): Wire up recommendation sync to external AI service or remove this route
-
 /**
  * POST /api/recommendations/sync
  * Sync an event to the recommendation service
@@ -79,7 +77,7 @@ export async function POST(request: NextRequest) {
       const errorText = await response.text();
       console.error("Failed to sync event:", errorText);
       return NextResponse.json(
-        { error: "Failed to sync event", detail: errorText },
+        { error: "Failed to sync event" },
         { status: 500 }
       );
     }

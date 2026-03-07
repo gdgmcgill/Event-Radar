@@ -23,7 +23,7 @@ export function formatDate(dateString: string): string {
   try {
     const date = parseISO(dateString);
     return format(date, "MMMM d, yyyy");
-  } catch (error) {
+  } catch {
     return dateString;
   }
 }
@@ -40,7 +40,7 @@ export function formatTime(timeString: string): string {
     const ampm = hour >= 12 ? "PM" : "AM";
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${ampm}`;
-  } catch (error) {
+  } catch {
     return timeString;
   }
 }
@@ -63,5 +63,4 @@ export function formatDateTime(dateString: string, timeString: string): string {
 export function isMcGillEmail(email: string): boolean {
   return /^[^@]+@(mail\.)?mcgill\.ca$/i.test(email);
 }
-
 
