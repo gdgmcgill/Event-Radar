@@ -50,11 +50,18 @@ export function EventGrid({
 }: EventGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <ul
+        role="list"
+        aria-label="Loading events"
+        aria-busy="true"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+      >
         {Array.from({ length: 6 }).map((_, i) => (
-          <EventCardSkeleton key={i} />
+          <li key={i}>
+            <EventCardSkeleton />
+          </li>
         ))}
-      </div>
+      </ul>
     );
   }
 
@@ -82,12 +89,15 @@ export function EventGrid({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
+    <ul
+      role="list"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500"
+    >
       {events.map((event, index) => {
         const rank = getRecommendationRank(event.id);
         const isRecommendation = rank !== undefined;
         return (
-          <div
+          <li
             key={event.id}
             className="animate-in slide-in-from-bottom-4 duration-500"
             style={{
@@ -105,9 +115,9 @@ export function EventGrid({
               onDismiss={onDismissRecommendation}
               initialThumbsFeedback={thumbsFeedbackByEventId?.[event.id]}
             />
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }
