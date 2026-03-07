@@ -37,7 +37,7 @@ export function EventImage({
   height,
 }: EventImageProps) {
   const [currentSrc, setCurrentSrc] = useState<string | null>(
-    imageUrl || clubLogoUrl || "/placeholder-event.svg"
+    imageUrl || clubLogoUrl || "/placeholder-event.png"
   );
   const [fallbackLevel, setFallbackLevel] = useState<"event" | "club" | "default">(
     imageUrl ? "event" : clubLogoUrl ? "club" : "default"
@@ -50,7 +50,7 @@ export function EventImage({
       setFallbackLevel("club");
     } else if (fallbackLevel === "club" || (fallbackLevel === "event" && !clubLogoUrl)) {
       // Second fallback: use default placeholder
-      setCurrentSrc("/placeholder-event.svg");
+      setCurrentSrc("/placeholder-event.png");
       setFallbackLevel("default");
     }
     // If we're already at default, no further fallback
@@ -62,7 +62,7 @@ export function EventImage({
       <div className={cn("relative w-full h-full", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/placeholder-event.svg"
+          src="/placeholder-event.png"
           alt={alt}
           className={fill ? "absolute inset-0 w-full h-full object-cover" : ""}
           style={!fill && width && height ? { width, height } : undefined}
@@ -75,7 +75,7 @@ export function EventImage({
   if (fill) {
     return (
       <Image
-        src={currentSrc || "/placeholder-event.svg"}
+        src={currentSrc || "/placeholder-event.png"}
         alt={alt}
         fill
         sizes={sizes}
@@ -89,7 +89,7 @@ export function EventImage({
   // Fixed dimensions mode
   return (
     <Image
-      src={currentSrc || "/placeholder-event.svg"}
+      src={currentSrc || "/placeholder-event.png"}
       alt={alt}
       width={width || 400}
       height={height || 300}
