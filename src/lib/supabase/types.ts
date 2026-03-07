@@ -629,6 +629,30 @@ export interface Database {
         };
         Relationships: [];
       };
+      email_reminder_log: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          reminder_type: "reminder_24h" | "reminder_1h";
+          sent_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          reminder_type: "reminder_24h" | "reminder_1h";
+          sent_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          reminder_type?: "reminder_24h" | "reminder_1h";
+          sent_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
