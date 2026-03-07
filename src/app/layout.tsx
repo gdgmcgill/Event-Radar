@@ -78,7 +78,7 @@ export default function RootLayout({
             <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
               {/* Header - contains mobile menu */}
               <Header />
-              <main className="flex-1 p-6">{children}</main>
+              <main id="main-content" className="flex-1 p-6">{children}</main>
               <Footer />
             </div>
           </div>

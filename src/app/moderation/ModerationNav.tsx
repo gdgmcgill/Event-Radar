@@ -27,7 +27,7 @@ export function ModerationNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto border-b border-border pb-3">
+    <nav aria-label="Moderation navigation" className="flex items-center gap-1 overflow-x-auto border-b border-border pb-3">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.path;

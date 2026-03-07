@@ -90,9 +90,17 @@ export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps)
     <div className="w-full bg-card p-6 rounded-2xl border border-border/50 shadow-sm flex flex-col md:flex-row gap-6 md:items-start justify-between">
       
       {/* Search / Category Filters */}
-      <div className="flex-1 space-y-4">
+      <fieldset className="flex-1 space-y-4 border-0 p-0 m-0">
+        {/* legend must be first direct child of fieldset */}
+        <legend className="sr-only">Categories</legend>
+
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Categories</h3>
+          <span
+            className="text-sm font-medium text-muted-foreground uppercase tracking-wider"
+            aria-hidden="true"
+          >
+            Categories
+          </span>
           {selectedTags.length > 0 && (
             <Button
               variant="ghost"
@@ -104,7 +112,7 @@ export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps)
             </Button>
           )}
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
           {EVENT_TAGS.map((tag) => {
             const category = EVENT_CATEGORIES[tag];
@@ -113,6 +121,7 @@ export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps)
               <button
                 key={tag}
                 onClick={() => toggleTag(tag)}
+                aria-pressed={isSelected}
                 className={cn(
                   "rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 border",
                   isSelected
@@ -128,7 +137,7 @@ export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps)
             );
           })}
         </div>
-      </div>
+      </fieldset>
 
       {/* Selected Filters Display (Mobile only, desktop uses the inline clear button) */}
       {selectedTags.length > 0 && (
@@ -152,6 +161,7 @@ export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps)
                   <EventBadge tag={tag} className="py-1 px-3 pr-8 relative" />
                   <button
                     onClick={() => toggleTag(tag)}
+                    aria-label={`Remove ${category.label} filter`}
                     className="absolute z-10 -ml-7 flex items-center justify-center h-4 w-4 rounded-full bg-background/50 backdrop-blur-sm hover:bg-background/80 transition-colors"
                   >
                     <X className="h-3 w-3 text-foreground" />

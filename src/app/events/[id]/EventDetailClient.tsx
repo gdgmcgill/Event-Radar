@@ -281,7 +281,7 @@ export default function EventDetailClient() {
                     size="icon"
                     onClick={handleAddToCalendar}
                     disabled={isExportingIcal}
-                    title="Add to calendar"
+                    aria-label={isExportingIcal ? "Adding to calendar…" : "Add to calendar"}
                     className="shrink-0"
                   >
                     {isExportingIcal ? <Loader2 className="h-5 w-5 animate-spin" /> : <Calendar className="h-5 w-5" />}
@@ -291,7 +291,7 @@ export default function EventDetailClient() {
                     size="icon"
                     onClick={handleSave}
                     disabled={savingInProgress}
-                    title={saved ? "Unsave event" : "Save event"}
+                    aria-label={savingInProgress ? "Saving…" : saved ? "Unsave event" : "Save event"}
                     className="shrink-0"
                   >
                     <Heart

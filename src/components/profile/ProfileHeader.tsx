@@ -98,7 +98,7 @@ export default function ProfileHeader({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={currentAvatarUrl}
-      alt={name ?? "avatar"}
+      alt={name ? `${name}'s avatar` : "User avatar"}
       className="w-full h-full object-cover"
     />
   ) : (

@@ -79,6 +79,14 @@ export function Header() {
 
   return (
     <>
+      {/* Skip link — must be the first focusable element on the page */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground focus:font-medium focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        Skip to main content
+      </a>
+
       <header className="sticky top-0 z-50 w-full border-b border-border bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/60">
         <div className="container flex items-center justify-between h-16 px-4">
           {/* Left: Burger Menu (Mobile Only) + Title */}
@@ -86,7 +94,9 @@ export function Header() {
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors text-foreground hover:text-primary"
-              aria-label="Toggle Menu"
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-nav"
             >
               {isMobileMenuOpen ? (
                 <X className="w-6 h-6" />
@@ -132,7 +142,11 @@ export function Header() {
         {/* Mobile Menu Dropdown (Mobile Only) */}
         {isMobileMenuOpen && (
           <div className="lg:hidden border-t border-border bg-card">
-            <nav className="container px-4 py-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <nav
+              id="mobile-nav"
+              aria-label="Mobile navigation"
+              className="container px-4 py-4 grid grid-cols-2 gap-2 sm:grid-cols-4"
+            >
               <MobileNavSection
                 items={navItems}
                 pathname={pathname}
