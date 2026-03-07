@@ -31,6 +31,7 @@
     "react-easy-crop": "^5.5.6",
     "recharts": "^3.7.0",
     "redoc": "^2.5.2",
+    "supabase": "^2.77.0",
     "swagger-ui-react": "^5.30.2",
     "swr": "^2.3.7",
     "tailwind-merge": "^2.2.1",
