@@ -11,6 +11,10 @@ type EditProfileButtonProps = {
     initialName: string;
     initialAvatarUrl: string;
     initialTags: EventTag[];
+    initialPronouns?: string;
+    initialYear?: string;
+    initialFaculty?: string;
+    initialVisibility?: string;
 };
 
 export default function EditProfileButton(props: EditProfileButtonProps) {
