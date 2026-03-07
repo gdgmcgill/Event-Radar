@@ -134,7 +134,7 @@ export function SideNavBar() {
           )}
 
           {/* Navigation Items */}
-          <nav className="flex-1 px-3 space-y-1 py-4">
+          <nav aria-label="Main navigation" className="flex-1 px-3 space-y-1 py-4">
             {navItems
               .filter((item) => item.path !== "/profile")
               .map((item) => (
