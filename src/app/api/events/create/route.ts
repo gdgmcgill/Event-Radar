@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { validateEventDates } from "@/lib/dateValidation";
+import { sanitizeText } from "@/lib/sanitize";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,19 +22,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, start_date, end_date, location, tags, image_url, category } = body;
+    const { start_date, end_date, tags, image_url, category } = body;
+
+    // Sanitize text inputs to prevent XSS
+    const title = sanitizeText(body.title ?? "");
+    const description = sanitizeText(body.description ?? "");
+    const location = sanitizeText(body.location ?? "");
 
     // Validate required fields
-    if (!title || !title.trim()) {
+    if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
-    if (!description || !description.trim()) {
+    if (!description) {
       return NextResponse.json({ error: "Description is required" }, { status: 400 });
     }
     if (!start_date) {
       return NextResponse.json({ error: "Start date is required", field: "start_date" }, { status: 400 });
     }
-    if (!location || !location.trim()) {
+    if (!location) {
       return NextResponse.json({ error: "Location is required" }, { status: 400 });
     }
     if (!tags || !Array.isArray(tags) || tags.length === 0) {
@@ -81,11 +87,11 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from("events")
       .insert({
-        title: title.trim(),
-        description: description.trim(),
+        title,
+        description,
         start_date,
         end_date: end_date || start_date,
-        location: location.trim(),
+        location,
         organizer,
         tags: tags,
         image_url: image_url || null,
@@ -129,7 +135,7 @@ export async function POST(request: NextRequest) {
                 user_id: f.user_id,
                 type: "new_event",
                 title: "New Event",
-                message: `${clubName} published: ${title.trim()}`,
+                message: `${clubName} published: ${title}`,
                 event_id: data.id,
                 read: false,
               }))

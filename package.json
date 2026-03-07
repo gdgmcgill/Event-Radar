@@ -31,12 +31,11 @@
     "react-easy-crop": "^5.5.6",
     "recharts": "^3.7.0",
     "redoc": "^2.5.2",
-    "supabase": "^2.77.0",
+    "sanitize-html": "^2.17.1",
     "swagger-ui-react": "^5.30.2",
     "swr": "^2.3.7",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
-    "yaml": "^2.8.2",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
@@ -45,6 +44,7 @@
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@types/sanitize-html": "^2.16.1",
     "@types/swagger-ui-react": "^5.18.0",
     "autoprefixer": "^10.4.17",
     "eslint": "^9.39.1",
