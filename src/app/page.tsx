@@ -14,6 +14,7 @@ import { useEvents } from "@/hooks/useEvents";
 import { PopularEventsSection } from "@/components/events/PopularEventsSection";
 import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { HappeningNowSection } from "@/components/events/HappeningNowSection";
+import { FriendsActivitySection } from "@/components/events/FriendsActivitySection";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventGrid } from "@/components/events/EventGrid";
 import { EventSearch } from "@/components/events/EventSearch";
@@ -359,6 +360,11 @@ function HomePageContent() {
             {/* Happening Now Section */}
             {!isFiltering && (
               <HappeningNowSection />
+            )}
+
+            {/* Friends Activity Section */}
+            {!isFiltering && user && (
+              <FriendsActivitySection />
             )}
 
             {/* Popular / Recommended Section */}
