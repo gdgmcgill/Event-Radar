@@ -233,7 +233,7 @@ export function EventCard({
                 "h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
                 "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
               )}
-              title="Export to Calendar"
+              aria-label={isExportingCal ? "Exporting to calendar…" : "Export to calendar"}
             >
               {isExportingCal ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
             </Button>
@@ -248,7 +248,7 @@ export function EventCard({
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
                 )}
-                title={isSaved ? "Unsave event" : "Save event"}
+                aria-label={isSaved ? "Unsave event" : "Save event"}
               >
                 <Heart className={cn("h-4 w-4", isSaved && "fill-current")} />
               </Button>
