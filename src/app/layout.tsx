@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
-import { SideNavBar } from "@/components/layout/SideNavBar";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { AppShell } from "@/components/layout/AppShell";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -70,18 +68,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
         <AuthProvider>
-          <div className="flex min-h-screen">
-            {/* Side Navigation Bar - LEFT SIDE, desktop only */}
-            <SideNavBar />
-            
-            {/* Main Content Area - takes full width on mobile, adjusted for sidebar on desktop */}
-            <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
-              {/* Header - contains mobile menu */}
-              <Header />
-              <main id="main-content" className="flex-1 p-6">{children}</main>
-              <Footer />
-            </div>
-          </div>
+          <AppShell>{children}</AppShell>
         </AuthProvider>
       </body>
     </html>
