@@ -4,7 +4,27 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, Search, Calendar, MapPin } from "lucide-react";
+import {
+  Trash2,
+  Search,
+  Calendar,
+  MapPin,
+  Eye,
+  MousePointerClick,
+  Bookmark,
+  TrendingUp,
+  ArrowUpDown,
+} from "lucide-react";
+
+interface EventMetrics {
+  popularity_score: number;
+  trending_score: number;
+  view_count: number;
+  click_count: number;
+  save_count: number;
+  calendar_add_count: number;
+  unique_viewers: number;
+}
 
 interface AdminEvent {
   id: string;
@@ -17,7 +37,10 @@ interface AdminEvent {
   tags: string[] | null;
   status: string;
   created_at: string | null;
+  metrics: EventMetrics | null;
 }
+
+type SortField = "created_at" | "popularity_score" | "view_count" | "click_count" | "save_count";
 
 export default function ModerationEventsPage() {
   const [events, setEvents] = useState<AdminEvent[]>([]);
@@ -25,6 +48,8 @@ export default function ModerationEventsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortField>("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,6 +58,8 @@ export default function ModerationEventsPage() {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (searchQuery) params.set("search", searchQuery);
+      params.set("sort", sortBy);
+      params.set("direction", sortDir);
 
       const res = await fetch(`/api/admin/events?${params}`);
       if (res.ok) {
@@ -43,7 +70,16 @@ export default function ModerationEventsPage() {
       setLoading(false);
     }
     fetchEvents();
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, searchQuery, sortBy, sortDir]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortBy === field) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+    } else {
+      setSortBy(field);
+      setSortDir("desc");
+    }
+  };
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/admin/events/${id}`, { method: "DELETE" });
@@ -113,6 +149,31 @@ export default function ModerationEventsPage() {
         </select>
       </div>
 
+      {/* Sort Controls */}
+      <div className="flex flex-wrap gap-2">
+        <span className="text-sm text-muted-foreground self-center mr-1">Sort by:</span>
+        {([
+          { field: "created_at" as SortField, label: "Newest" },
+          { field: "popularity_score" as SortField, label: "Popularity" },
+          { field: "view_count" as SortField, label: "Views" },
+          { field: "click_count" as SortField, label: "Clicks" },
+          { field: "save_count" as SortField, label: "Saves" },
+        ]).map(({ field, label }) => (
+          <Button
+            key={field}
+            size="sm"
+            variant={sortBy === field ? "default" : "outline"}
+            onClick={() => toggleSort(field)}
+            className="gap-1 text-xs"
+          >
+            {label}
+            {sortBy === field && (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </Button>
+        ))}
+      </div>
+
       {/* Events List */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">
@@ -165,6 +226,31 @@ export default function ModerationEventsPage() {
                     ))}
                   </div>
                 )}
+
+                {/* Metrics */}
+                <div className="flex flex-wrap gap-3 mb-3 py-2 px-3 rounded-lg bg-secondary/30 text-sm">
+                  <span className="flex items-center gap-1.5 text-muted-foreground" title="Views">
+                    <Eye className="h-3.5 w-3.5" />
+                    <span className="font-medium text-foreground">{event.metrics?.view_count ?? 0}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 text-muted-foreground" title="Clicks">
+                    <MousePointerClick className="h-3.5 w-3.5" />
+                    <span className="font-medium text-foreground">{event.metrics?.click_count ?? 0}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 text-muted-foreground" title="Saves">
+                    <Bookmark className="h-3.5 w-3.5" />
+                    <span className="font-medium text-foreground">{event.metrics?.save_count ?? 0}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 text-muted-foreground" title="Popularity Score">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    <span className="font-medium text-foreground">
+                      {event.metrics?.popularity_score != null
+                        ? event.metrics.popularity_score.toFixed(1)
+                        : "—"}
+                    </span>
+                  </span>
+                </div>
+
                 <div className="flex items-center gap-2 flex-wrap">
                   {event.status !== "approved" && (
                     <Button
