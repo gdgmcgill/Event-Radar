@@ -11,6 +11,7 @@ import {
   ClipboardList,
   BarChart3,
   Building2,
+  ScrollText,
 } from "lucide-react";
 
 const navItems = [
@@ -21,6 +22,7 @@ const navItems = [
   { name: "Organizer Requests", path: "/moderation/organizer-requests", icon: ClipboardList },
   { name: "Clubs", path: "/moderation/clubs", icon: Building2 },
   { name: "Stats", path: "/moderation/stats", icon: BarChart3 },
+  { name: "Audit Log", path: "/moderation/audit-log", icon: ScrollText },
 ];
 
 export function ModerationNav() {

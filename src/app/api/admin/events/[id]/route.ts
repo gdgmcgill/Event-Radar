@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyAdmin } from "@/lib/admin";
+import { logAdminAction } from "@/lib/audit";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { supabase, isAdmin } = await verifyAdmin();
+  const { supabase, user, isAdmin } = await verifyAdmin();
   if (!isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -41,6 +42,22 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Log audit action
+  try {
+    if (user) {
+      await logAdminAction({
+        adminUserId: user.id,
+        adminEmail: user.email,
+        action: "updated",
+        targetType: "event",
+        targetId: id,
+        metadata: { fields_updated: Object.keys(body) },
+      });
+    }
+  } catch (auditErr) {
+    console.error("[Admin] Failed to log audit action:", auditErr);
+  }
+
   return NextResponse.json({ event: data });
 }
 
@@ -48,7 +65,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { supabase, isAdmin } = await verifyAdmin();
+  const { supabase, user, isAdmin } = await verifyAdmin();
   if (!isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -59,6 +76,21 @@ export async function DELETE(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Log audit action
+  try {
+    if (user) {
+      await logAdminAction({
+        adminUserId: user.id,
+        adminEmail: user.email,
+        action: "deleted",
+        targetType: "event",
+        targetId: id,
+      });
+    }
+  } catch (auditErr) {
+    console.error("[Admin] Failed to log audit action:", auditErr);
   }
 
   return NextResponse.json({ success: true });

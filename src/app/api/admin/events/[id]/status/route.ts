@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyAdmin } from "@/lib/admin";
 import { createServiceClient } from "@/lib/supabase/service";
+import { logAdminAction } from "@/lib/audit";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { supabase, isAdmin } = await verifyAdmin();
+  const { supabase, user, isAdmin } = await verifyAdmin();
   if (!isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -32,15 +33,32 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Fetch event details for notification and audit
+  const serviceClient = createServiceClient();
+  const { data: event } = await serviceClient
+    .from("events")
+    .select("title, created_by")
+    .eq("id", id)
+    .single();
+
+  // Log audit action
+  try {
+    if (user) {
+      await logAdminAction({
+        adminUserId: user.id,
+        adminEmail: user.email,
+        action: status as "approved" | "rejected",
+        targetType: "event",
+        targetId: id,
+        metadata: { event_title: event?.title },
+      });
+    }
+  } catch (auditErr) {
+    console.error("[Admin] Failed to log audit action:", auditErr);
+  }
+
   // Send notification to event creator
   try {
-    const serviceClient = createServiceClient();
-    const { data: event } = await serviceClient
-      .from("events")
-      .select("title, created_by")
-      .eq("id", id)
-      .single();
-
     if (event?.created_by) {
       const isApproved = status === "approved";
       await serviceClient.from("notifications").upsert(
