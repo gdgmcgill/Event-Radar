@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useClubEventsManagement } from "@/hooks/useClubs";
 import { CreateEventModal } from "@/components/events/CreateEventModal";
 import { CreateEventForm } from "@/components/events/CreateEventForm";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -16,7 +14,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
-import { Plus, Calendar, Users, Star, CalendarX, Pencil, Copy } from "lucide-react";
+import {
+  Plus,
+  Calendar,
+  CalendarX,
+  Pencil,
+  Copy,
+  Eye,
+  Trash2,
+  BarChart3,
+} from "lucide-react";
 import type { EventTag } from "@/types";
 
 interface ClubEventsTabProps {
@@ -40,22 +47,18 @@ interface EventWithRsvp {
   };
 }
 
-const statusConfig = {
-  approved: {
-    label: "Approved",
-    variant: "default" as const,
-    className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
-  },
-  pending: {
-    label: "Pending",
-    variant: "secondary" as const,
-    className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
-  },
-  rejected: {
-    label: "Rejected",
-    variant: "destructive" as const,
-    className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
-  },
+const getDisplayStatus = (event: EventWithRsvp): "published" | "draft" | "past" => {
+  const eventDate = new Date(event.start_date);
+  const now = new Date();
+  if (eventDate < now) return "past";
+  if (event.status === "approved") return "published";
+  return "draft";
+};
+
+const statusBadgeConfig = {
+  published: "bg-green-100 text-green-700 border border-green-200",
+  draft: "bg-slate-100 text-slate-600 border border-slate-200",
+  past: "bg-red-600/10 text-red-600 border border-red-600/20",
 };
 
 export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
@@ -66,108 +69,101 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 pt-4">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <Skeleton className="h-7 w-24" />
+          <Skeleton className="h-7 w-40" />
           <Skeleton className="h-9 w-32" />
         </div>
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-20 w-full rounded-xl" />
-        ))}
+        <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pt-4">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Events</h2>
-        <Button
+        <h4 className="text-lg font-bold">All Events</h4>
+        <button
           onClick={() => setCreateOpen(true)}
-          size="sm"
-          className="gap-1.5 rounded-xl cursor-pointer"
-          aria-label="Create a new event"
+          className="bg-red-600 hover:bg-red-600/90 text-white px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-red-600/20"
         >
           <Plus className="h-4 w-4" />
-          Create Event
-        </Button>
+          <span>Create Event</span>
+        </button>
       </div>
 
-      {/* Event List */}
+      {/* Events Table */}
       {events.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center py-12 text-center rounded-xl border-dashed">
-          <CalendarX className="h-10 w-10 text-muted-foreground/50 mb-3" />
-          <p className="text-muted-foreground font-medium">No events yet</p>
-          <p className="text-sm text-muted-foreground/70 mt-1">
-            Create your first event!
-          </p>
-        </Card>
+        <div className="bg-white rounded-xl border border-red-600/5 shadow-sm flex flex-col items-center justify-center py-16 text-center">
+          <CalendarX className="h-10 w-10 text-slate-300 mb-3" />
+          <p className="text-slate-500 font-medium">No events yet</p>
+          <p className="text-sm text-slate-400 mt-1">Create your first event!</p>
+        </div>
       ) : (
-        <div className="space-y-3">
-          {(events as EventWithRsvp[]).map((event) => {
-            const config = statusConfig[event.status];
-            const rsvp = event.rsvp_counts;
+        <div className="bg-white rounded-xl border border-red-600/5 overflow-hidden shadow-sm">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 border-b border-red-600/5">
+              <tr>
+                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Event Name</th>
+                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-center">Status</th>
+                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Date</th>
+                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-center">RSVPs</th>
+                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-red-600/5">
+              {(events as EventWithRsvp[]).map((event) => {
+                const displayStatus = getDisplayStatus(event);
+                const rsvp = event.rsvp_counts;
 
-            return (
-              <Card
-                key={event.id}
-                className="flex items-center justify-between p-4 rounded-xl hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-foreground truncate">
-                      {event.title}
-                    </h3>
-                    <Badge
-                      variant={config.variant}
-                      className={config.className}
-                    >
-                      {config.label}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {formatDate(event.start_date)}
-                    </span>
-                    {rsvp && (
-                      <>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          {rsvp.going} going
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Star className="h-3.5 w-3.5" />
-                          {rsvp.interested} interested
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 ml-2 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 cursor-pointer"
-                    aria-label="Edit event"
-                    onClick={() => setEditingEvent(event)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 cursor-pointer"
-                    aria-label="Duplicate event"
-                    onClick={() => setDuplicatingEvent(event)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
+                return (
+                  <tr key={event.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded bg-red-600/10 flex items-center justify-center text-red-600 shrink-0">
+                          <Calendar className="h-5 w-5" />
+                        </div>
+                        <span className="font-semibold">{event.title}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusBadgeConfig[displayStatus]}`}>
+                        {displayStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-500">{formatDate(event.start_date)}</td>
+                    <td className="px-6 py-4 text-center text-slate-500">
+                      {rsvp ? rsvp.going + rsvp.interested : 0}
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-1">
+                      {displayStatus === "past" ? (
+                        <button className="p-1.5 hover:text-red-600 transition-colors text-slate-400 rounded hover:bg-red-600/5">
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button
+                          className="p-1.5 hover:text-red-600 transition-colors text-slate-400 rounded hover:bg-red-600/5"
+                          onClick={() => setEditingEvent(event)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        className="p-1.5 hover:text-red-600 transition-colors text-slate-400 rounded hover:bg-red-600/5"
+                        onClick={() => setDuplicatingEvent(event)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <button className="p-1.5 hover:text-red-600 transition-colors text-slate-400 rounded hover:bg-red-600/5">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
