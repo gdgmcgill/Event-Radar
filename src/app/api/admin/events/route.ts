@@ -7,6 +7,7 @@ type MetricsSortField = "popularity_score" | "trending_score" | "view_count" | "
 const METRICS_SORT_FIELDS = new Set<string>(["popularity_score", "trending_score", "view_count", "click_count", "save_count"]);
 
 interface PopularityScores {
+  event_id: string;
   popularity_score: number;
   trending_score: number;
   view_count: number;
@@ -14,20 +15,6 @@ interface PopularityScores {
   save_count: number;
   calendar_add_count: number;
   unique_viewers: number;
-}
-
-interface EventWithPopularity {
-  id: string;
-  title: string;
-  description: string | null;
-  start_date: string;
-  end_date: string | null;
-  location: string | null;
-  organizer: string | null;
-  tags: string[] | null;
-  status: string;
-  created_at: string | null;
-  event_popularity_scores: PopularityScores[] | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -48,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("events")
-    .select("*, event_popularity_scores(*)", { count: "exact" });
+    .select("*", { count: "exact" });
 
   if (!sortByMetric) {
     query = query.order(sortBy as "created_at", { ascending: sortDir === "asc" });
@@ -70,11 +57,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  let events = ((data ?? []) as unknown as EventWithPopularity[]).map((event) => {
-    const scores = event.event_popularity_scores?.[0] ?? null;
-    const { event_popularity_scores: _, ...rest } = event;
+  const eventIds = (data ?? []).map((e: { id: string }) => e.id);
+  const { data: scoresData } = await supabase
+    .from("event_popularity_scores")
+    .select("*")
+    .in("event_id", eventIds);
+
+  const scoresMap = new Map<string, PopularityScores>();
+  for (const row of (scoresData ?? []) as PopularityScores[]) {
+    scoresMap.set(row.event_id, row);
+  }
+
+  let events = (data ?? []).map((event: { id: string }) => {
+    const scores = scoresMap.get(event.id) ?? null;
     return {
-      ...rest,
+      ...event,
       metrics: scores
         ? {
             popularity_score: scores.popularity_score,
