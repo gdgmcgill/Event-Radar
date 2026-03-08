@@ -13,6 +13,23 @@ export default function LandingLayout({
 }) {
   return (
     <div className="min-h-screen bg-[#f8f6f6] dark:bg-[#221012] text-slate-900 dark:text-slate-100 antialiased">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            html { scroll-behavior: smooth; }
+
+            @keyframes float-laptop {
+              0%, 100% { transform: rotateY(-8deg) rotateX(2deg) translateY(0px); }
+              50% { transform: rotateY(-8deg) rotateX(2deg) translateY(-12px); }
+            }
+
+            @keyframes float-phone {
+              0%, 100% { transform: translateY(-50%) rotateY(6deg) rotateX(-1deg) translateZ(0); }
+              50% { transform: translateY(calc(-50% - 16px)) rotateY(6deg) rotateX(-1deg) translateZ(0); }
+            }
+          `,
+        }}
+      />
       {children}
     </div>
   );
