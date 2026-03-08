@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { classifyTags } from "@/lib/classifier";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import { cn } from "@/lib/utils";
@@ -17,10 +16,16 @@ import {
   Palette,
   Heart,
   Sparkles,
+  Calendar,
+  Clock,
+  MapPin,
+  Camera,
+  Lightbulb,
+  ChevronRight,
+  ImageIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { uploadEventImage } from "@/lib/upload-utils";
-import { EventImageUpload } from "./EventImageUpload";
 
 const iconMap: Record<string, LucideIcon> = {
   GraduationCap,
@@ -167,6 +172,32 @@ export function CreateEventForm({
     }
   };
 
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setSubmitError("Image must be less than 5MB");
+      return;
+    }
+    handleImageChange(file);
+    setSubmitError(null);
+  };
+
+  const handleDiscard = () => {
+    setFormData({
+      title: "",
+      description: "",
+      date: "",
+      time: "",
+      location: "",
+      tags: [],
+      imageFile: null,
+    });
+    removeImage();
+    setErrors({});
+    setSubmitError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
@@ -258,6 +289,31 @@ export function CreateEventForm({
     }
   };
 
+  // Format the preview date/time
+  const formatPreviewDateTime = () => {
+    if (!formData.date && !formData.time) return null;
+    const parts: string[] = [];
+    if (formData.date) {
+      try {
+        const d = new Date(formData.date + "T00:00:00");
+        parts.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase());
+      } catch {
+        parts.push(formData.date);
+      }
+    }
+    if (formData.time) {
+      try {
+        const [h, m] = formData.time.split(":");
+        const d = new Date();
+        d.setHours(parseInt(h), parseInt(m));
+        parts.push(d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
+      } catch {
+        parts.push(formData.time);
+      }
+    }
+    return parts.join(" \u2022 ");
+  };
+
   if (success) {
     const isEdit = mode === "edit";
     const isApproved = successMessage.toLowerCase().includes("approved");
@@ -285,193 +341,345 @@ export function CreateEventForm({
     );
   }
 
+  const selectedCategory = formData.tags.length > 0 ? formData.tags[0] : null;
+  const selectedCategoryLabel = selectedCategory ? EVENT_CATEGORIES[selectedCategory].label : null;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Submit Error */}
-      {submitError && (
-        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-          {submitError}
-        </div>
-      )}
-
-      {/* Title */}
-      <div className="space-y-2">
-        <label htmlFor="title" className="text-sm font-semibold text-foreground">
-          Event Title <span className="text-destructive">*</span>
-        </label>
-        <Input
-          id="title"
-          value={formData.title}
-          onChange={(e) => {
-            setFormData((prev) => ({ ...prev, title: e.target.value }));
-            if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
-          }}
-          placeholder="e.g., AI Workshop: Introduction to Machine Learning"
-          className={cn("rounded-xl", errors.title && "border-destructive")}
-        />
-        {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
-      </div>
-
-      {/* Description */}
-      <div className="space-y-2">
-        <label htmlFor="description" className="text-sm font-semibold text-foreground">
-          Description <span className="text-destructive">*</span>
-        </label>
-        <textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => {
-            setFormData((prev) => ({ ...prev, description: e.target.value }));
-            if (errors.description) setErrors((prev) => ({ ...prev, description: undefined }));
-          }}
-          placeholder="Describe your event - what will attendees experience?"
-          rows={4}
-          className={cn(
-            "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y",
-            errors.description && "border-destructive"
+    <div className="flex flex-col lg:flex-row gap-10">
+      {/* Form Section */}
+      <div className="flex-1 space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Submit Error */}
+          {submitError && (
+            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              {submitError}
+            </div>
           )}
-        />
-        {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
-      </div>
 
-      {/* Date & Time */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label htmlFor="date" className="text-sm font-semibold text-foreground">
-            Date <span className="text-destructive">*</span>
-          </label>
-          <Input
-            id="date"
-            type="date"
-            value={formData.date}
-            onChange={(e) => {
-              setFormData((prev) => ({ ...prev, date: e.target.value }));
-              if (errors.date) setErrors((prev) => ({ ...prev, date: undefined }));
-            }}
-            className={cn("rounded-xl", errors.date && "border-destructive")}
-          />
-          {errors.date && <p className="text-xs text-destructive">{errors.date}</p>}
-        </div>
-        <div className="space-y-2">
-          <label htmlFor="time" className="text-sm font-semibold text-foreground">
-            Time <span className="text-destructive">*</span>
-          </label>
-          <Input
-            id="time"
-            type="time"
-            value={formData.time}
-            onChange={(e) => {
-              setFormData((prev) => ({ ...prev, time: e.target.value }));
-              if (errors.time) setErrors((prev) => ({ ...prev, time: undefined }));
-            }}
-            className={cn("rounded-xl", errors.time && "border-destructive")}
-          />
-          {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
-        </div>
-      </div>
+          {/* Category Selection */}
+          <section className="space-y-4">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Category</h3>
 
-      {/* Location */}
-      <div className="space-y-2">
-        <label htmlFor="location" className="text-sm font-semibold text-foreground">
-          Location <span className="text-destructive">*</span>
-        </label>
-        <Input
-          id="location"
-          value={formData.location}
-          onChange={(e) => {
-            setFormData((prev) => ({ ...prev, location: e.target.value }));
-            if (errors.location) setErrors((prev) => ({ ...prev, location: undefined }));
-          }}
-          placeholder="e.g., Trottier Building, Room 2120"
-          className={cn("rounded-xl", errors.location && "border-destructive")}
-        />
-        {errors.location && <p className="text-xs text-destructive">{errors.location}</p>}
-      </div>
+            {suggestedTags.length > 0 && (
+              <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl space-y-2">
+                <p className="text-xs font-medium text-primary flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Suggested based on your details
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestedTags.map((tag) => {
+                    const cat = EVENT_CATEGORIES[tag];
+                    const Icon = iconMap[cat.icon] || Heart;
+                    return (
+                      <button
+                        key={`suggested-${tag}`}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs font-medium"
+                      >
+                        <Icon className="h-3 w-3" />
+                        {cat.label}
+                        <span className="text-[10px] opacity-70 ml-1">+ Add</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-      {/* Tags / Categories */}
-      <div className="space-y-3">
-        <label className="text-sm font-semibold text-foreground">
-          Categories <span className="text-destructive">*</span>
-        </label>
-        <p className="text-xs text-muted-foreground">Select all that apply</p>
-
-        {suggestedTags.length > 0 && (
-          <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-xl space-y-2">
-            <p className="text-xs font-medium text-primary flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" /> Suggested based on your details
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {suggestedTags.map((tag) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {EVENT_TAGS.map((tag) => {
                 const cat = EVENT_CATEGORIES[tag];
                 const Icon = iconMap[cat.icon] || Heart;
+                const isSelected = formData.tags.includes(tag);
                 return (
                   <button
-                    key={`suggested-${tag}`}
+                    key={tag}
                     type="button"
                     onClick={() => toggleTag(tag)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs font-medium"
+                    className={cn(
+                      "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-200",
+                      isSelected
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-primary/50"
+                    )}
                   >
-                    <Icon className="h-3 w-3" />
-                    {cat.label}
-                    <span className="text-[10px] opacity-70 ml-1">+ Add</span>
+                    <Icon className="h-7 w-7 mb-2" />
+                    <span className="text-xs font-bold uppercase tracking-wider">{cat.label}</span>
                   </button>
                 );
               })}
             </div>
-          </div>
-        )}
+            {errors.tags && <p className="text-xs text-destructive">{errors.tags}</p>}
+          </section>
 
-        <div className="flex flex-wrap gap-3">
-          {EVENT_TAGS.map((tag) => {
-            const cat = EVENT_CATEGORIES[tag];
-            const Icon = iconMap[cat.icon] || Heart;
-            const isSelected = formData.tags.includes(tag);
-            return (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => toggleTag(tag)}
+          {/* Event Title */}
+          <div className="space-y-2">
+            <label htmlFor="title" className="text-sm font-bold text-slate-700 dark:text-slate-300">
+              Event Title
+            </label>
+            <input
+              id="title"
+              type="text"
+              value={formData.title}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, title: e.target.value }));
+                if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
+              }}
+              placeholder="e.g. Annual Tech Symposium 2024"
+              className={cn(
+                "w-full px-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
+                errors.title && "border-destructive"
+              )}
+            />
+            {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <label htmlFor="description" className="text-sm font-bold text-slate-700 dark:text-slate-300">
+              Description
+            </label>
+            <textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, description: e.target.value }));
+                if (errors.description) setErrors((prev) => ({ ...prev, description: undefined }));
+              }}
+              placeholder="Describe your event - what will attendees experience?"
+              rows={3}
+              className={cn(
+                "w-full px-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm resize-y",
+                errors.description && "border-destructive"
+              )}
+            />
+            {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
+          </div>
+
+          {/* Date & Time */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label htmlFor="date" className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                Date
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, date: e.target.value }));
+                    if (errors.date) setErrors((prev) => ({ ...prev, date: undefined }));
+                  }}
+                  className={cn(
+                    "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
+                    errors.date && "border-destructive"
+                  )}
+                />
+              </div>
+              {errors.date && <p className="text-xs text-destructive">{errors.date}</p>}
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="time" className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                Time
+              </label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <input
+                  id="time"
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, time: e.target.value }));
+                    if (errors.time) setErrors((prev) => ({ ...prev, time: undefined }));
+                  }}
+                  className={cn(
+                    "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
+                    errors.time && "border-destructive"
+                  )}
+                />
+              </div>
+              {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
+            </div>
+          </div>
+
+          {/* Location */}
+          <div className="space-y-2">
+            <label htmlFor="location" className="text-sm font-bold text-slate-700 dark:text-slate-300">
+              Location
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                id="location"
+                type="text"
+                value={formData.location}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, location: e.target.value }));
+                  if (errors.location) setErrors((prev) => ({ ...prev, location: undefined }));
+                }}
+                placeholder="University Hall, Room 302"
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all duration-200 text-sm font-medium",
-                  isSelected
-                    ? `${cat.borderColor} ${cat.selectedBg} ${cat.color}`
-                    : "border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-muted/50"
+                  "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
+                  errors.location && "border-destructive"
                 )}
-              >
-                <Icon className="h-4 w-4" />
-                {cat.label}
-                {isSelected && <CheckCircle className="h-3.5 w-3.5" />}
-              </button>
-            );
-          })}
-        </div>
-        {errors.tags && <p className="text-xs text-destructive">{errors.tags}</p>}
+              />
+            </div>
+            {errors.location && <p className="text-xs text-destructive">{errors.location}</p>}
+          </div>
+
+          {/* Cover Image */}
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+              Cover Image
+            </label>
+            {imagePreview ? (
+              <div className="relative rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 h-48 group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePreview}
+                  alt="Event image preview"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur flex items-center justify-center text-slate-600 hover:text-destructive transition-colors shadow-md"
+                >
+                  <span className="text-lg leading-none">&times;</span>
+                </button>
+              </div>
+            ) : (
+              <label className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-8 flex flex-col items-center justify-center bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                  <Camera className="h-5 w-5" />
+                </div>
+                <p className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-300">Click to upload or drag and drop</p>
+                <p className="text-xs text-slate-500 mt-1">Recommended size: 1200x600px (Max 5MB)</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileInput}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-4 pt-4">
+            <button
+              type="button"
+              onClick={handleDiscard}
+              className="px-6 py-3 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+            >
+              Discard Draft
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-8 py-3 rounded-lg font-bold bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {mode === "edit" ? "Saving..." : "Publishing..."}
+                </>
+              ) : mode === "edit" ? (
+                "Save Changes"
+              ) : (
+                "Publish Event"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
-      <EventImageUpload
-        imagePreview={imagePreview}
-        onImageChange={handleImageChange}
-        onImageRemove={removeImage}
-        setError={setSubmitError}
-      />
+      {/* Preview Sidebar */}
+      <aside className="lg:w-96 space-y-6">
+        <div className="sticky top-24">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Live Preview</h3>
+            <span className="text-xs font-bold px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded">
+              Card View
+            </span>
+          </div>
 
-      {/* Submit */}
-      <Button
-        type="submit"
-        disabled={submitting}
-        className="w-full sm:w-auto px-8 py-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
-      >
-        {submitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {mode === "edit" ? "Saving..." : "Submitting..."}
-          </>
-        ) : mode === "edit" ? (
-          "Save Changes"
-        ) : (
-          "Create Event"
-        )}
-      </Button>
-    </form>
+          {/* Preview Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="relative h-48 bg-slate-200 dark:bg-slate-800">
+              {imagePreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <ImageIcon className="h-12 w-12 text-slate-400" />
+                </div>
+              )}
+              {selectedCategoryLabel && (
+                <div className="absolute top-3 right-3 px-3 py-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full text-[10px] font-black uppercase tracking-widest text-primary">
+                  {selectedCategoryLabel}
+                </div>
+              )}
+            </div>
+            <div className="p-6">
+              {formatPreviewDateTime() && (
+                <div className="flex items-center gap-2 text-primary font-bold text-xs mb-2">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>{formatPreviewDateTime()}</span>
+                </div>
+              )}
+              <h4 className="text-xl font-black text-slate-900 dark:text-white leading-tight mb-2">
+                {formData.title || "Event Title"}
+              </h4>
+              {formData.location && (
+                <div className="flex items-center gap-1.5 text-slate-500 text-sm mb-4">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span>{formData.location}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex -space-x-2">
+                  <div className="h-8 w-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-300" />
+                  <div className="h-8 w-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-300" />
+                  <div className="h-8 w-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-300" />
+                  <div className="h-8 w-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                    +42
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-primary">View Details</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Success Tips */}
+          <div className="mt-8 p-6 bg-primary/5 rounded-2xl border border-primary/10">
+            <h4 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-3">
+              <Lightbulb className="h-5 w-5 text-primary" />
+              Success Tips
+            </h4>
+            <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-3 leading-relaxed">
+              <li className="flex gap-2">
+                <span className="text-primary">&#8226;</span>
+                <span>High-quality images get 3x more engagement from the community.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">&#8226;</span>
+                <span>Clearly specify the location to help students find your venue easily.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">&#8226;</span>
+                <span>Choose the right category to appear in relevant search filters.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+    </div>
   );
 }
