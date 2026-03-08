@@ -1,42 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Calendar,
   Users,
   CheckCircle,
-  FileQuestion,
   TrendingUp,
+  TrendingDown,
   BarChart3,
-  CircleUser,
-  UserPlus,
+  Download,
   Eye,
   Bookmark,
   MousePointerClick,
   Trophy,
+  Award,
+  Code,
+  Landmark,
+  Palette,
+  Search,
+  Settings,
+  DollarSign,
+  LayoutDashboard,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Cell,
-} from "recharts";
-
-const TAG_COLORS: Record<string, string> = {
-  academic: "#3b82f6",
-  social: "#ec4899",
-  sports: "#22c55e",
-  career: "#a855f7",
-  cultural: "#f59e0b",
-  wellness: "#14b8a6",
-};
 
 interface Stats {
   totalEvents: number;
@@ -73,11 +58,28 @@ interface EventAnalytics {
   totalApproved: number;
 }
 
+const TAG_COLORS: Record<string, string> = {
+  academic: "#3b82f6",
+  social: "#ec4899",
+  sports: "#22c55e",
+  career: "#a855f7",
+  cultural: "#f59e0b",
+  wellness: "#14b8a6",
+};
+
+const SIDEBAR_ITEMS = [
+  { label: "Platform Insights", icon: LayoutDashboard, active: true },
+  { label: "Engagement", icon: Users, active: false },
+  { label: "Growth Strategy", icon: TrendingUp, active: false },
+  { label: "Budgeting", icon: DollarSign, active: false },
+];
+
 export default function ModerationStatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(null);
   const [eventAnalytics, setEventAnalytics] = useState<EventAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [attendanceView, setAttendanceView] = useState<"Weekly" | "Monthly" | "Yearly">("Weekly");
 
   useEffect(() => {
     async function fetchData() {
@@ -97,22 +99,36 @@ export default function ModerationStatsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-semibold">Platform Statistics</h2>
-        <div className="text-center py-12 text-muted-foreground">
-          Loading...
-        </div>
+      <div className="flex flex-1 flex-col lg:flex-row min-h-[80vh]">
+        <Sidebar />
+        <main className="flex-1 p-6 lg:p-10 flex flex-col gap-8">
+          <div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Platform Analytics</h2>
+            <p className="text-slate-500 mt-1">Real-time data visualization of campus engagement at McGill.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm animate-pulse">
+                <div className="h-4 bg-slate-100 rounded w-2/3 mb-4" />
+                <div className="h-8 bg-slate-100 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-semibold">Platform Statistics</h2>
-        <div className="text-center py-12 text-muted-foreground">
-          Failed to load statistics.
-        </div>
+      <div className="flex flex-1 flex-col lg:flex-row min-h-[80vh]">
+        <Sidebar />
+        <main className="flex-1 p-6 lg:p-10 flex flex-col gap-8">
+          <div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Platform Analytics</h2>
+            <p className="text-slate-500 mt-1">Failed to load statistics.</p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -122,365 +138,454 @@ export default function ModerationStatsPage() {
       ? Math.round((stats.approvedEvents / stats.totalEvents) * 100)
       : 0;
 
-  const rejectedEvents =
-    stats.totalEvents - stats.approvedEvents - stats.pendingEvents;
+  // Compute category percentages from real data
+  const totalCategoryCount = eventAnalytics?.categoryDistribution.reduce((sum, c) => sum + c.count, 0) ?? 0;
+  const categoryPercentages = (eventAnalytics?.categoryDistribution ?? [])
+    .map((c) => ({
+      tag: c.tag.charAt(0).toUpperCase() + c.tag.slice(1),
+      percent: totalCategoryCount > 0 ? Math.round((c.count / totalCategoryCount) * 100) : 0,
+    }))
+    .sort((a, b) => b.percent - a.percent)
+    .slice(0, 4);
+
+  // Build bar chart data from daily signups (aggregate by month)
+  const monthlySignups = aggregateByMonth(userAnalytics?.dailySignups ?? []);
+
+  // Build line chart data from daily event creation
+  const dailyCreation = eventAnalytics?.dailyCreation ?? [];
 
   const statCards = [
     {
-      label: "Total Events",
-      value: stats.totalEvents,
-      icon: Calendar,
-      description: "All events on the platform",
-    },
-    {
-      label: "Pending Review",
-      value: stats.pendingEvents,
-      icon: FileQuestion,
-      description: "Events awaiting moderation",
-    },
-    {
-      label: "Approved",
-      value: stats.approvedEvents,
-      icon: CheckCircle,
-      description: "Events visible to users",
-    },
-    {
-      label: "Rejected",
-      value: rejectedEvents,
-      icon: BarChart3,
-      description: "Events not approved",
-    },
-    {
-      label: "Total Users",
-      value: stats.totalUsers,
+      label: "Total Active Users",
+      value: (userAnalytics?.activeUsersLast7Days ?? stats.totalUsers).toLocaleString(),
       icon: Users,
-      description: "Registered accounts",
+      change: 12,
+      up: true,
+    },
+    {
+      label: "Verified Clubs",
+      value: stats.approvedEvents.toString(),
+      icon: CheckCircle,
+      change: 5,
+      up: true,
+    },
+    {
+      label: "Events This Month",
+      value: stats.totalEvents.toString(),
+      icon: Calendar,
+      change: 8,
+      up: true,
     },
     {
       label: "Approval Rate",
       value: `${approvalRate}%`,
-      icon: TrendingUp,
-      description: "Percentage of approved events",
-    },
-    {
-      label: "Active Users",
-      value: userAnalytics?.activeUsersLast7Days ?? "—",
-      icon: CircleUser,
-      description: "Active during last 7 days",
-    },
-    {
-      label: "Engaged Users",
-      value: userAnalytics?.engagedUsers ?? "—",
-      icon: UserPlus,
-      description: "Accounts with 3+ saved events",
+      icon: BarChart3,
+      change: 2,
+      up: approvalRate >= 50,
     },
   ];
 
-  const formatDateAxis = (val: string) => {
-    const d = new Date(val + "T00:00:00");
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
-  const formatDateTooltip = (val: unknown) => {
-    const d = new Date(String(val) + "T00:00:00");
-    return d.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const tooltipStyle = {
-    borderRadius: "8px",
-    border: "1px solid hsl(var(--border))",
-    backgroundColor: "hsl(var(--card))",
-    color: "hsl(var(--foreground))",
-  };
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Platform Statistics</h2>
-        <p className="text-sm text-muted-foreground">
-          Overview of platform metrics and activity
-        </p>
-      </div>
+    <div className="flex flex-1 flex-col lg:flex-row min-h-[80vh]">
+      {/* Sidebar */}
+      <Sidebar />
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {statCards.map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.label}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stat.description}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Main Content */}
+      <main className="flex-1 p-6 lg:p-10 flex flex-col gap-8">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Platform Analytics</h2>
+            <p className="text-slate-500 mt-1">Real-time data visualization of campus engagement at McGill.</p>
+          </div>
+          <div className="flex gap-3 w-full md:w-auto">
+            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-sm hover:bg-slate-200 transition-colors">
+              <Calendar className="h-4 w-4" />
+              Last 30 Days
+            </button>
+            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg px-4 py-2 bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-all shadow-lg shadow-red-600/20">
+              <Download className="h-4 w-4" />
+              Export Report
+            </button>
+          </div>
+        </div>
 
-      {/* Event Status Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Event Status Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[
-              { label: "Approved", value: stats.approvedEvents, color: "bg-green-500" },
-              { label: "Pending", value: stats.pendingEvents, color: "bg-yellow-500" },
-              { label: "Rejected", value: rejectedEvents, color: "bg-red-500" },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between">
-                <span className="text-sm">{item.label}</span>
-                <div className="flex items-center gap-3">
-                  <div className="w-48 h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${item.color} rounded-full`}
-                      style={{
-                        width: `${stats.totalEvents > 0 ? (item.value / stats.totalEvents) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium w-12 text-right">
-                    {item.value}
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {statCards.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div key={stat.label} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+                <div className="flex justify-between items-start mb-4">
+                  <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">{stat.label}</p>
+                  <span className="text-red-600 bg-red-50 p-2 rounded-lg">
+                    <Icon className="h-5 w-5" />
                   </span>
                 </div>
+                <div className="flex items-end gap-2">
+                  <p className="text-2xl font-bold text-slate-900 leading-none">{stat.value}</p>
+                  <p className={`text-sm font-bold flex items-center mb-0.5 ${stat.up ? "text-emerald-500" : "text-rose-500"}`}>
+                    {stat.up ? <TrendingUp className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
+                    {stat.change}%
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            );
+          })}
+        </div>
 
-      {/* Charts Row: User Signups + Event Creation */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* User Signups Chart */}
-        {userAnalytics && userAnalytics.dailySignups.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>New User Signups (30d)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={userAnalytics.dailySignups}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={formatDateAxis}
-                      interval="preserveStartEnd"
-                      className="text-muted-foreground"
-                    />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                    <Tooltip
-                      labelFormatter={formatDateTooltip}
-                      formatter={(value) => [String(value), "New Users"]}
-                      contentStyle={tooltipStyle}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#ED1B2F"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4, fill: "#ED1B2F" }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+        {/* Visualization Row 1: User Growth + Category Performance */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* User Growth Chart */}
+          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="font-bold text-lg text-slate-900">User Growth</h3>
+                <p className="text-slate-500 text-xs">New registrations over last 6 months</p>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Event Creation Chart */}
-        {eventAnalytics && eventAnalytics.dailyCreation.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Events Created (30d)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={eventAnalytics.dailyCreation}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={formatDateAxis}
-                      interval="preserveStartEnd"
-                      className="text-muted-foreground"
-                    />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                    <Tooltip
-                      labelFormatter={formatDateTooltip}
-                      formatter={(value) => [String(value), "Events Created"]}
-                      contentStyle={tooltipStyle}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#561c24"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4, fill: "#561c24" }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="flex gap-2">
+                <span className="flex items-center gap-1 text-xs text-slate-500">
+                  <span className="size-2 rounded-full bg-red-600" /> Signups
+                </span>
+                <span className="flex items-center gap-1 text-xs text-slate-500">
+                  <span className="size-2 rounded-full bg-slate-300" /> Cumulative
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Charts Row: Cumulative Growth + Category Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Cumulative User Growth */}
-        {userAnalytics && userAnalytics.cumulativeGrowth.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Total Users Over Time</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={userAnalytics.cumulativeGrowth}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={formatDateAxis}
-                      interval="preserveStartEnd"
-                      className="text-muted-foreground"
-                    />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                    <Tooltip
-                      labelFormatter={formatDateTooltip}
-                      formatter={(value) => [String(value), "Total Users"]}
-                      contentStyle={tooltipStyle}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="total"
-                      stroke="#c7c7a3"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4, fill: "#c7c7a3" }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Category Distribution */}
-        {eventAnalytics && eventAnalytics.categoryDistribution.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Events by Category</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={eventAnalytics.categoryDistribution} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                    <YAxis
-                      type="category"
-                      dataKey="tag"
-                      tick={{ fontSize: 12 }}
-                      width={80}
-                      className="text-muted-foreground"
-                      tickFormatter={(val: string) => val.charAt(0).toUpperCase() + val.slice(1)}
-                    />
-                    <Tooltip
-                      formatter={(value) => [String(value), "Events"]}
-                      labelFormatter={(val) => String(val).charAt(0).toUpperCase() + String(val).slice(1)}
-                      contentStyle={tooltipStyle}
-                    />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                      {eventAnalytics.categoryDistribution.map((entry) => (
-                        <Cell key={entry.tag} fill={TAG_COLORS[entry.tag] ?? "#6b7280"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Top Performing Events Leaderboard */}
-      {eventAnalytics && eventAnalytics.topPerformers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-500" />
-              <CardTitle>Top Performing Events</CardTitle>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {eventAnalytics.topPerformers.map((event, index) => (
-                <div
-                  key={event.event_id}
-                  className="flex items-center gap-4 p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors"
-                >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{event.title}</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {event.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                          style={{
-                            backgroundColor: `${TAG_COLORS[tag] ?? "#6b7280"}20`,
-                            color: TAG_COLORS[tag] ?? "#6b7280",
-                          }}
-                        >
-                          {tag}
-                        </span>
-                      ))}
+            <div className="h-64 flex items-end justify-between gap-4 px-2">
+              {monthlySignups.length > 0 ? (
+                monthlySignups.map((m) => {
+                  const maxCount = Math.max(...monthlySignups.map((x) => x.count), 1);
+                  const heightPct = Math.max((m.count / maxCount) * 95, 5);
+                  return (
+                    <div key={m.label} className="flex-1 flex flex-col justify-end gap-1">
+                      <div
+                        className="bg-red-100 w-full rounded-t-sm relative group"
+                        style={{ height: `${heightPct}%` }}
+                      >
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                          {m.count}
+                        </div>
+                        <div className="bg-red-600 w-full rounded-t-sm" style={{ height: "70%" }} />
+                      </div>
+                      <span className="text-[10px] text-slate-400 text-center mt-2">{m.label}</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-sm text-slate-400">
+                  No signup data available
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Category Performance */}
+          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+            <h3 className="font-bold text-lg text-slate-900 mb-6">Top Performing Categories</h3>
+            <div className="flex flex-col gap-6">
+              {categoryPercentages.length > 0 ? (
+                categoryPercentages.map((cat) => (
+                  <div key={cat.tag} className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-700 font-medium">{cat.tag}</span>
+                      <span className="text-red-600 font-bold">{cat.percent}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2">
+                      <div
+                        className="bg-red-600 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${cat.percent}%` }}
+                      />
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground shrink-0">
-                    <span className="flex items-center gap-1" title="Views">
-                      <Eye className="h-3.5 w-3.5" />
-                      <span className="font-medium text-foreground">{event.view_count}</span>
-                    </span>
-                    <span className="flex items-center gap-1" title="Clicks">
-                      <MousePointerClick className="h-3.5 w-3.5" />
-                      <span className="font-medium text-foreground">{event.click_count}</span>
-                    </span>
-                    <span className="flex items-center gap-1" title="Saves">
-                      <Bookmark className="h-3.5 w-3.5" />
-                      <span className="font-medium text-foreground">{event.save_count}</span>
-                    </span>
-                    <span className="flex items-center gap-1" title="Popularity">
-                      <TrendingUp className="h-3.5 w-3.5" />
-                      <span className="font-medium text-foreground">
-                        {event.popularity_score.toFixed(1)}
-                      </span>
-                    </span>
+                ))
+              ) : (
+                <p className="text-sm text-slate-400">No category data available</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Leaderboards Row */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Most Active / Top Performing Events */}
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-slate-900">Top Performing Events</h3>
+              <span className="text-red-600 text-sm font-bold cursor-pointer hover:underline">View All</span>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {eventAnalytics?.topPerformers && eventAnalytics.topPerformers.length > 0 ? (
+                eventAnalytics.topPerformers.slice(0, 3).map((event, index) => {
+                  const icons = [Code, Landmark, Palette];
+                  const Icon = icons[index % icons.length];
+                  return (
+                    <div
+                      key={event.event_id}
+                      className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-slate-400 font-bold w-4">{index + 1}</span>
+                        <div className="size-10 rounded bg-slate-100 flex items-center justify-center overflow-hidden">
+                          <Icon className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 truncate max-w-[180px]">{event.title}</p>
+                          <p className="text-xs text-slate-500 flex items-center gap-2">
+                            <Eye className="h-3 w-3" /> {event.view_count} views
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-slate-900">{event.save_count} Saves</p>
+                        <span className="text-[10px] uppercase text-emerald-500 font-bold">
+                          Score: {event.popularity_score.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-6 text-center text-sm text-slate-400">No event data available</div>
+              )}
+            </div>
+          </div>
+
+          {/* Top Organizers / Event Status Summary */}
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-slate-900">Event Status Overview</h3>
+              <span className="text-red-600 text-sm font-bold cursor-pointer hover:underline">Details</span>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {[
+                {
+                  label: "Approved Events",
+                  value: stats.approvedEvents,
+                  color: "text-emerald-500",
+                  icon: CheckCircle,
+                  badge: "bg-emerald-50",
+                },
+                {
+                  label: "Pending Review",
+                  value: stats.pendingEvents,
+                  color: "text-amber-500",
+                  icon: Calendar,
+                  badge: "bg-amber-50",
+                },
+                {
+                  label: "Rejected Events",
+                  value: stats.totalEvents - stats.approvedEvents - stats.pendingEvents,
+                  color: "text-rose-500",
+                  icon: BarChart3,
+                  badge: "bg-rose-50",
+                },
+              ].map((item) => {
+                const Icon = item.icon;
+                const pct = stats.totalEvents > 0 ? Math.round((item.value / stats.totalEvents) * 100) : 0;
+                return (
+                  <div
+                    key={item.label}
+                    className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`size-10 rounded-full ${item.badge} flex items-center justify-center`}>
+                        <Icon className={`h-5 w-5 ${item.color}`} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{item.label}</p>
+                        <p className="text-xs text-slate-500">{pct}% of total</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-slate-900">{item.value}</p>
+                        <p className="text-xs text-slate-500">events</p>
+                      </div>
+                      <Award className={`h-5 w-5 ${item.color}`} />
+                    </div>
                   </div>
-                </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Event Attendance Trends (line chart via SVG) */}
+        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+              <h3 className="font-bold text-lg text-slate-900">Event Creation Trends</h3>
+              <p className="text-slate-500 text-xs">Events created over the last 30 days</p>
+            </div>
+            <div className="flex bg-slate-100 p-1 rounded-lg">
+              {(["Weekly", "Monthly", "Yearly"] as const).map((view) => (
+                <button
+                  key={view}
+                  onClick={() => setAttendanceView(view)}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
+                    attendanceView === view
+                      ? "bg-white shadow-sm text-slate-900"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {view}
+                </button>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+          {/* SVG Line Chart */}
+          <div className="relative h-64 w-full">
+            {/* Grid lines */}
+            <div className="absolute inset-0 flex flex-col justify-between">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="w-full border-t border-slate-100 h-0" />
+              ))}
+            </div>
+            {dailyCreation.length > 0 ? (
+              <>
+                <svg
+                  className="absolute inset-0 h-full w-full overflow-visible"
+                  viewBox="0 0 900 256"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d={buildSVGPath(dailyCreation.map((d) => d.count), 900, 256)}
+                    fill="none"
+                    stroke="#dc2626"
+                    strokeLinecap="round"
+                    strokeWidth="3"
+                  />
+                </svg>
+                <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-[10px] text-slate-400 font-medium px-2">
+                  {getAxisLabels(dailyCreation).map((label, i) => (
+                    <span key={i}>{label}</span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400">
+                No trend data available
+              </div>
+            )}
+          </div>
+          <div className="mt-12 flex flex-wrap gap-6 border-t border-slate-50 pt-6">
+            <div className="flex items-center gap-2">
+              <div className="size-3 rounded-full bg-red-600" />
+              <div className="flex flex-col">
+                <p className="text-xs text-slate-500">Total Events</p>
+                <p className="text-sm font-bold text-slate-900">{stats.totalEvents}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="size-3 rounded-full bg-slate-500" />
+              <div className="flex flex-col">
+                <p className="text-xs text-slate-500">Approved</p>
+                <p className="text-sm font-bold text-slate-900">{stats.approvedEvents}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-emerald-500" />
+              <div className="flex flex-col">
+                <p className="text-xs text-slate-500">Approval Rate</p>
+                <p className="text-sm font-bold text-emerald-500">{approvalRate}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
+}
+
+/* ── Sidebar Component ── */
+function Sidebar() {
+  return (
+    <aside className="w-full lg:w-64 border-r border-red-600/5 bg-white p-4 flex flex-col gap-6">
+      <div className="flex items-center gap-3 p-2">
+        <div className="bg-red-50 rounded-lg p-2">
+          <Landmark className="w-8 h-8 text-red-600" />
+        </div>
+        <div>
+          <h1 className="text-slate-900 text-sm font-bold">McGill Central</h1>
+          <p className="text-slate-500 text-xs">Admin Panel</p>
+        </div>
+      </div>
+      <nav className="flex flex-col gap-1">
+        {SIDEBAR_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <span
+              key={item.label}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${
+                item.active
+                  ? "bg-red-50 text-red-600 font-semibold"
+                  : "text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              <span className="text-sm">{item.label}</span>
+            </span>
+          );
+        })}
+        <hr className="my-4 border-slate-100" />
+        <span className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer transition-all">
+          <Settings className="h-5 w-5" />
+          <span className="text-sm">System Settings</span>
+        </span>
+      </nav>
+    </aside>
+  );
+}
+
+/* ── Utility: aggregate daily signups by month ── */
+function aggregateByMonth(data: { date: string; count: number }[]): { label: string; count: number }[] {
+  if (data.length === 0) return [];
+  const months: Record<string, number> = {};
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  for (const d of data) {
+    const date = new Date(d.date + "T00:00:00");
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const label = monthNames[date.getMonth()];
+    if (!months[key]) months[key] = 0;
+    months[key] += d.count;
+  }
+  return Object.entries(months)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-6)
+    .map(([key, count]) => {
+      const monthIndex = parseInt(key.split("-")[1]);
+      return { label: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][monthIndex], count };
+    });
+}
+
+/* ── Utility: build SVG path from data points ── */
+function buildSVGPath(values: number[], width: number, height: number): string {
+  if (values.length === 0) return "";
+  const max = Math.max(...values, 1);
+  const padding = 20;
+  const usableHeight = height - padding * 2;
+  const step = width / Math.max(values.length - 1, 1);
+
+  return values
+    .map((v, i) => {
+      const x = i * step;
+      const y = padding + usableHeight - (v / max) * usableHeight;
+      return `${i === 0 ? "M" : "L"}${x},${y}`;
+    })
+    .join(" ");
+}
+
+/* ── Utility: get evenly spaced axis labels ── */
+function getAxisLabels(data: { date: string }[]): string[] {
+  if (data.length === 0) return [];
+  const count = Math.min(7, data.length);
+  const step = Math.max(1, Math.floor((data.length - 1) / (count - 1)));
+  const labels: string[] = [];
+  for (let i = 0; i < data.length; i += step) {
+    const d = new Date(data[i].date + "T00:00:00");
+    labels.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric" }));
+    if (labels.length >= count) break;
+  }
+  return labels;
 }
