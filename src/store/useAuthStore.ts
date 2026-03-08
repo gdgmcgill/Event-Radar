@@ -43,6 +43,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           null,
         avatar_url: (authUser.user_metadata?.avatar_url as string) ?? null,
         interest_tags: [],
+        saved_events_count: 0,
         roles: ["user"],
         created_at: authUser.created_at,
         updated_at: authUser.updated_at ?? authUser.created_at,

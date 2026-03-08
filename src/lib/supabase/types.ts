@@ -132,6 +132,7 @@ export interface Database {
           avatar_url: string | null;
           roles: ("user" | "admin" | "club_organizer")[];
           interest_tags: string[];
+          saved_events_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -143,6 +144,7 @@ export interface Database {
           avatar_url?: string | null;
           roles?: ("user" | "admin" | "club_organizer")[];
           interest_tags?: string[];
+          saved_events_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -154,6 +156,7 @@ export interface Database {
           avatar_url?: string | null;
           roles?: ("user" | "admin" | "club_organizer")[];
           interest_tags?: string[];
+          saved_events_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -238,7 +241,15 @@ export interface Database {
           read?: boolean;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "notifications_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       organizer_requests: {
         Row: {
@@ -302,30 +313,72 @@ export interface Database {
           id: string;
           user_id: string | null;
           event_id: string;
-          interaction_type: string;
-          source: string | null;
+          interaction_type:
+            | "view"
+            | "click"
+            | "save"
+            | "unsave"
+            | "share"
+            | "calendar_add";
           session_id: string | null;
-          metadata: Json;
+          source:
+            | "home"
+            | "search"
+            | "recommendation"
+            | "calendar"
+            | "direct"
+            | "modal"
+            | "my-events"
+            | null;
+          metadata: Record<string, unknown>;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id?: string | null;
           event_id: string;
-          interaction_type: string;
-          source?: string | null;
+          interaction_type:
+            | "view"
+            | "click"
+            | "save"
+            | "unsave"
+            | "share"
+            | "calendar_add";
           session_id?: string | null;
-          metadata?: Json;
+          source?:
+            | "home"
+            | "search"
+            | "recommendation"
+            | "calendar"
+            | "direct"
+            | "modal"
+            | "my-events"
+            | null;
+          metadata?: Record<string, unknown>;
           created_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string | null;
           event_id?: string;
-          interaction_type?: string;
-          source?: string | null;
+          interaction_type?:
+            | "view"
+            | "click"
+            | "save"
+            | "unsave"
+            | "share"
+            | "calendar_add";
           session_id?: string | null;
-          metadata?: Json;
+          source?:
+            | "home"
+            | "search"
+            | "recommendation"
+            | "calendar"
+            | "direct"
+            | "modal"
+            | "my-events"
+            | null;
+          metadata?: Record<string, unknown>;
           created_at?: string;
         };
         Relationships: [];
