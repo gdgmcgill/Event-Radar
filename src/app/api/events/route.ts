@@ -73,6 +73,20 @@ const tagMapping: Record<string, EventTag> = {
  *        required: false
  *        schema:
  *          type: string
+ *      - name: timeOfDay
+ *        description: Filter by time of day (morning 6-12, afternoon 12-17, evening 17-22, night 22-6)
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *          enum: [morning, afternoon, evening, night]
+ *      - name: dayType
+ *        description: Filter by day type
+ *        in: query
+ *        required: false
+ *        schema:
+ *          type: string
+ *          enum: [weekday, weekend]
  *      - name: page
  *        description: Page number for pagination
  *        in: query
@@ -170,8 +184,28 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
     const idsParam = searchParams.get('ids');
+    const timeOfDay = searchParams.get('timeOfDay');
+    const dayType = searchParams.get('dayType');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
+
+    // Validate timeOfDay and dayType values
+    const validTimeOfDay = ['morning', 'afternoon', 'evening', 'night'];
+    const validDayType = ['weekday', 'weekend'];
+
+    if (timeOfDay && !validTimeOfDay.includes(timeOfDay)) {
+      return NextResponse.json(
+        { error: `Invalid timeOfDay value. Must be one of: ${validTimeOfDay.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    if (dayType && !validDayType.includes(dayType)) {
+      return NextResponse.json(
+        { error: `Invalid dayType value. Must be one of: ${validDayType.join(', ')}` },
+        { status: 400 }
+      );
+    }
 
     // Build Supabase query for events
     let eventsQuery = supabase
@@ -193,8 +227,35 @@ export async function GET(request: NextRequest) {
       eventsQuery = eventsQuery.overlaps('tags', tagArray);
     }
 
+    // Fuzzy search: use pg_trgm RPC to get ranked event IDs, then filter
+    let fuzzyRankedIds: string[] | null = null;
     if (search) {
-      eventsQuery = eventsQuery.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+      const { data: searchResults, error: searchError } = await (supabase as any).rpc(
+        'search_events_fuzzy',
+        { search_term: search, result_limit: limit }
+      );
+
+      if (searchError) {
+        console.error('Fuzzy search RPC error:', searchError);
+        // Fallback to basic ILIKE search if RPC fails
+        eventsQuery = eventsQuery.or(
+          `title.ilike.%${search}%,description.ilike.%${search}%`
+        );
+      } else if (searchResults && (searchResults as { event_id: string }[]).length > 0) {
+        fuzzyRankedIds = (searchResults as { event_id: string; rank: number }[]).map(
+          (r) => r.event_id
+        );
+        eventsQuery = eventsQuery.in('id', fuzzyRankedIds);
+      } else {
+        // No fuzzy matches — return empty result
+        return NextResponse.json({
+          events: [],
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+        });
+      }
     }
 
     if (dateFrom) {
@@ -203,6 +264,21 @@ export async function GET(request: NextRequest) {
 
     if (dateTo) {
       eventsQuery = eventsQuery.lte('start_date', dateTo);
+    }
+
+    // Time-based filtering (requires RPC since Supabase JS can't do EXTRACT)
+    if (timeOfDay || dayType) {
+      const { data: timeFilteredIds } = await (supabase as any).rpc('get_event_ids_by_time_filter', {
+        time_of_day: timeOfDay,
+        day_type: dayType,
+      });
+
+      if (timeFilteredIds && timeFilteredIds.length > 0) {
+        const ids = timeFilteredIds.map((r: { event_id: string }) => r.event_id);
+        eventsQuery = eventsQuery.in('id', ids);
+      } else {
+        return NextResponse.json({ events: [], total: 0, page, limit, totalPages: 0 });
+      }
     }
 
     // Apply pagination
@@ -219,7 +295,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform events to match frontend expectations
-    const rows = (eventsData || []) as EventRow[];
+    let rows = (eventsData || []) as EventRow[];
+
+    // Re-sort by fuzzy rank order when fuzzy search was used
+    if (fuzzyRankedIds) {
+      const orderMap = new Map(fuzzyRankedIds.map((id, idx) => [id, idx]));
+      rows = rows.slice().sort((a, b) => {
+        const aIdx = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+        const bIdx = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+        return aIdx - bIdx;
+      });
+    }
+
     const events = rows.map((event) => {
       const startDateStr = event.start_date ?? event.event_date;
       const startDate = new Date(startDateStr ?? "");
