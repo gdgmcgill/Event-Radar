@@ -5,7 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Calendar, MapPin } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle, XCircle, Calendar, MapPin, Pencil } from "lucide-react";
 
 interface PendingEvent {
   id: string;
@@ -24,6 +27,8 @@ export default function ModerationPendingEventsPage() {
   const [events, setEvents] = useState<PendingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<PendingEvent | null>(null);
+  const [editForm, setEditForm] = useState<Partial<PendingEvent>>({});
 
   const fetchPending = useCallback(async () => {
     const supabase = createClient();
@@ -52,6 +57,64 @@ export default function ModerationPendingEventsPage() {
 
       if (res.ok) {
         setEvents((prev) => prev.filter((e) => e.id !== eventId));
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const openEdit = (event: PendingEvent) => {
+    setEditingEvent(event);
+    setEditForm({
+      title: event.title,
+      description: event.description,
+      start_date: event.start_date,
+      end_date: event.end_date,
+      location: event.location,
+      organizer: event.organizer,
+      tags: event.tags,
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editingEvent) return;
+    setActionLoading(editingEvent.id);
+    try {
+      const res = await fetch(`/api/admin/events/${editingEvent.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (res.ok) {
+        setEvents((prev) =>
+          prev.map((e) =>
+            e.id === editingEvent.id ? { ...e, ...editForm } : e
+          )
+        );
+        setEditingEvent(null);
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const saveAndApprove = async () => {
+    if (!editingEvent) return;
+    setActionLoading(editingEvent.id);
+    try {
+      await fetch(`/api/admin/events/${editingEvent.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const res = await fetch(`/api/admin/events/${editingEvent.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      });
+      if (res.ok) {
+        setEvents((prev) => prev.filter((e) => e.id !== editingEvent.id));
+        setEditingEvent(null);
       }
     } finally {
       setActionLoading(null);
@@ -136,12 +199,90 @@ export default function ModerationPendingEventsPage() {
                     <XCircle className="mr-2 h-4 w-4" />
                     Reject
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEdit(event)}
+                    disabled={actionLoading === event.id}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Event</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                value={editForm.title ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                value={editForm.description ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                rows={4}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Start Date</label>
+                <Input
+                  type="datetime-local"
+                  value={editForm.start_date ? new Date(editForm.start_date).toISOString().slice(0, 16) : ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, start_date: new Date(e.target.value).toISOString() }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">End Date</label>
+                <Input
+                  type="datetime-local"
+                  value={editForm.end_date ? new Date(editForm.end_date).toISOString().slice(0, 16) : ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, end_date: new Date(e.target.value).toISOString() }))}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Location</label>
+              <Input
+                value={editForm.location ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Tags (comma-separated)</label>
+              <Input
+                value={(editForm.tags ?? []).join(", ")}
+                onChange={(e) => setEditForm((f) => ({ ...f, tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) }))}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditingEvent(null)}>
+              Cancel
+            </Button>
+            <Button variant="secondary" onClick={saveEdit} disabled={actionLoading === editingEvent?.id}>
+              Save
+            </Button>
+            <Button onClick={saveAndApprove} disabled={actionLoading === editingEvent?.id}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Save &amp; Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
