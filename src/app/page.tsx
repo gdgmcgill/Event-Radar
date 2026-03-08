@@ -1,28 +1,18 @@
 "use client";
 
 /**
- * Home page - Main event calendar/browse view
+ * Home page - Netflix-style event feed
  */
 
-import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Suspense, useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import type { Event, EventTag } from "@/types";
+import type { Event } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 import { useEvents } from "@/hooks/useEvents";
-
-import { PopularEventsSection } from "@/components/events/PopularEventsSection";
-import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
-import { HappeningNowSection } from "@/components/events/HappeningNowSection";
-import { FriendsActivitySection } from "@/components/events/FriendsActivitySection";
-import { EventFilters } from "@/components/events/EventFilters";
-import { EventGrid } from "@/components/events/EventGrid";
-import { EventSearch } from "@/components/events/EventSearch";
-import { Filter, RefreshCcw, AlertCircle, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { HomeFeed } from "@/components/events/HomeFeed";
+import { AlertCircle, X } from "lucide-react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { cn } from "@/lib/utils";
-import { RECOMMENDATION_THRESHOLD } from "@/lib/constants";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   not_mcgill: "Please sign in with a McGill email (@mcgill.ca or @mail.mcgill.ca).",
@@ -30,16 +20,6 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   no_code: "Authentication error. Please try again.",
   not_authenticated: "Could not verify your account. Please try again.",
 };
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-
-type ScoredEvent = Event & { score?: number };
 
 export default function HomePage() {
   return (
@@ -50,21 +30,19 @@ export default function HomePage() {
 }
 
 function HomePageContent() {
-  const [recommendationFailed, setRecommendationFailed] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTags, setSelectedTags] = useState<EventTag[]>([]);
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [popularEventIds, setPopularEventIds] = useState<Set<string>>(new Set());
-  const [searchKey, setSearchKey] = useState(0);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const filterContainerRef = useRef<HTMLDivElement>(null);
-  const filterToggleRef = useRef<HTMLButtonElement>(null);
+  const [localSavedIds, setLocalSavedIds] = useState<Set<string>>(new Set());
   const user = useAuthStore((s) => s.user);
   const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Derive auth error from search params (avoiding setState in effect)
+  // Sync server saved IDs into local state
+  useEffect(() => {
+    if (!isSavedLoading) {
+      setLocalSavedIds(new Set(savedEventIds));
+    }
+  }, [savedEventIds, isSavedLoading]);
+
   const authError = useMemo(() => {
     const errorCode = searchParams.get("error");
     const signinRequired = searchParams.get("signin");
@@ -76,28 +54,11 @@ function HomePageContent() {
     return null;
   }, [searchParams]);
 
-  // Add click-outside listener for desktop sidebar
   useEffect(() => {
-    if (!isDesktopFilterOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        filterContainerRef.current &&
-        !filterContainerRef.current.contains(event.target as Node) &&
-        filterToggleRef.current &&
-        !filterToggleRef.current.contains(event.target as Node)
-      ) {
-        setIsDesktopFilterOpen(false);
-      }
+    if (authError) {
+      router.replace("/");
     }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isDesktopFilterOpen]);
-
-  const NUMBER_OF_EVENTS_PER_BATCH = 20;
+  }, [authError, router]);
 
   const todayStart = useMemo(() => {
     const dateOnly = new Date().toISOString().split("T")[0];
@@ -105,104 +66,60 @@ function HomePageContent() {
   }, []);
 
   const upcomingFilters = useMemo(
-    () => ({
-      dateRange: {
-        start: todayStart,
-      },
-    }),
+    () => ({ dateRange: { start: todayStart } }),
     [todayStart]
   );
 
-  const {
-    events,
-    loading,
-    loadingMore,
-    error,
-    nextCursor,
-    loadMore,
-    refetch,
-  } = useEvents({
+  const { events, loading } = useEvents({
     filters: upcomingFilters,
-    limit: NUMBER_OF_EVENTS_PER_BATCH,
+    limit: 50,
     sort: "start_date",
     direction: "asc",
   });
 
-  const canShowRecommendations = savedEventIds.size >= RECOMMENDATION_THRESHOLD;
+  const featuredEvents = useMemo(
+    () => events.filter((e: Event) => e.image_url).slice(0, 5),
+    [events]
+  );
 
-  // Clear query params when auth error is present
-  useEffect(() => {
-    if (authError) {
-      router.replace("/");
-    }
-  }, [authError, router]);
-
-  // Global "/" keyboard shortcut to focus search
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-      if (e.key === "/") {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const applyFilters = useCallback(
-    (list: ScoredEvent[]) => {
-      let result = list;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        result = result.filter(
-          (e) =>
-            e.title.toLowerCase().includes(q) ||
-            e.description.toLowerCase().includes(q)
-        );
-      }
-      if (selectedTags.length > 0) {
-        result = result.filter((e) =>
-          e.tags.some((tag) => selectedTags.includes(tag))
-        );
-      }
-      return result;
+  const handleEventClick = useCallback(
+    (eventId: string) => {
+      router.push(`/events/${eventId}`);
     },
-    [searchQuery, selectedTags]
+    [router]
   );
 
-  const filteredEvents = useMemo(
-    () => applyFilters(events),
-    [events, applyFilters]
-  );
+  const handleSaveEvent = useCallback(
+    async (eventId: string) => {
+      if (!user) return;
+      const wasSaved = localSavedIds.has(eventId);
 
-  const handleSearchChange = useCallback((query: string) => {
-    setSearchQuery(query);
-  }, []);
+      // Optimistic update
+      setLocalSavedIds((prev) => {
+        const next = new Set(prev);
+        if (wasSaved) next.delete(eventId);
+        else next.add(eventId);
+        return next;
+      });
 
-  const handleFilterChange = useCallback(
-    (filters: { tags?: EventTag[]; dateRange?: { start: Date; end: Date }; clubId?: string }) => {
-      setSelectedTags(filters.tags ?? []);
+      try {
+        await fetch("/api/events/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event_id: eventId }),
+        });
+      } catch {
+        // Revert on failure
+        setLocalSavedIds((prev) => {
+          const next = new Set(prev);
+          if (wasSaved) next.add(eventId);
+          else next.delete(eventId);
+          return next;
+        });
+      }
     },
-    []
+    [user, localSavedIds]
   );
-
-  const handleClearFilters = useCallback(() => {
-    setSearchQuery("");
-    setSelectedTags([]);
-    setSearchKey((k) => k + 1);
-  }, []);
-
-  const isFiltering = searchQuery.trim().length > 0 || selectedTags.length > 0;
-  const canLoadMore = !!nextCursor;
-  const errorMessage = typeof error === 'string' ? error : error?.message || null;
 
   return (
     <ErrorBoundary fallbackMessage="We couldn't load events right now.">
@@ -227,209 +144,20 @@ function HomePageContent() {
           </div>
         )}
 
-        {/* Hero Section */}
-        <section className="relative w-full pt-16 pb-32 md:pt-20 md:pb-40 bg-secondary/30">
-          <div className="container mx-auto px-4 relative z-30 flex flex-col items-center text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              Live on Campus
-            </div>
-
-            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-foreground mb-6 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 leading-[1.1]">
-              Find your next <span className="text-primary">experience.</span>
-            </h1>
-
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200 leading-relaxed">
-              Discover workshops, hackathons, and social events happening right now at McGill University.
-            </p>
-
-            {/* Centralized Search */}
-            <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 flex justify-center">
-              <EventSearch
-                key={searchKey}
-                ref={searchInputRef}
-                onSearchChange={handleSearchChange}
-                variant="hero"
-                placeholder="Search events, clubs, or categories..."
-              />
-            </div>
+        {/* Netflix-style Home Feed */}
+        {loading ? (
+          <div className="flex items-center justify-center h-96">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ED1B2F]" />
           </div>
-
-          {/* Decorative Background Elements */}
-          <div className="absolute inset-0 -z-10 overflow-hidden">
-            <div className="absolute -top-[30%] -left-[10%] w-[60%] h-[60%] rounded-full bg-primary/5 blur-[120px]"></div>
-            <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-accent/10 blur-[100px]"></div>
-          </div>
-        </section>
-
-        <div className="container mx-auto px-4 py-12 -mt-16 relative z-20">
-          <div className="flex flex-col gap-8">
-
-            {/* Header & Filters */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/40">
-              <h2 className="text-3xl font-bold text-foreground tracking-tight">
-                Upcoming Events
-              </h2>
-
-              <div className="flex items-center gap-2">
-                {/* Desktop Quick Filters Toggle */}
-                <div className="hidden md:block">
-                  <Button
-                    ref={filterToggleRef}
-                    variant={isDesktopFilterOpen ? "secondary" : "outline"}
-                    className={cn(
-                      "gap-2 rounded-xl transition-all shadow-sm",
-                      isDesktopFilterOpen
-                        ? "bg-secondary text-secondary-foreground"
-                        : "border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary"
-                    )}
-                    onClick={() => setIsDesktopFilterOpen(!isDesktopFilterOpen)}
-                  >
-                    <Filter className="h-4 w-4" />
-                    Filters
-                    {selectedTags.length > 0 && (
-                      <span className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                        {selectedTags.length}
-                      </span>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Mobile Filter Toggle */}
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" className="md:hidden gap-2 rounded-xl border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:text-primary transition-all shadow-sm">
-                      <Filter className="h-4 w-4" />
-                      Filters
-                      {selectedTags.length > 0 && (
-                        <span className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                          {selectedTags.length}
-                        </span>
-                      )}
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-[300px] sm:w-[400px] border-l-border/60">
-                    <SheetHeader>
-                      <SheetTitle className="text-2xl font-bold">Filters</SheetTitle>
-                      <SheetDescription>
-                        Refine your event search by category, date, or club.
-                      </SheetDescription>
-                    </SheetHeader>
-                    <div className="py-6">
-                      <EventFilters onFilterChange={handleFilterChange} initialTags={selectedTags} />
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              </div>
-            </div>
-
-            {/* Result count feedback */}
-            <div
-              aria-live="polite"
-              aria-atomic="true"
-              className="text-sm text-muted-foreground min-h-[1.25rem]"
-            >
-              {isFiltering && !loading && !errorMessage && (
-                <>
-                  Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""}
-                  {searchQuery.trim() && (
-                    <> for &ldquo;{searchQuery.trim()}&rdquo;</>
-                  )}
-                  {selectedTags.length > 0 && (
-                    <> in {selectedTags.length} categor{selectedTags.length !== 1 ? "ies" : "y"}</>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Desktop Expandable Top Filter Panel */}
-            <div
-              ref={filterContainerRef}
-              className={cn(
-                "hidden md:block transition-all duration-300 ease-in-out overflow-hidden origin-top",
-                isDesktopFilterOpen
-                  ? "opacity-100 scale-y-100 mb-8 max-h-[400px]"
-                  : "opacity-0 scale-y-95 mb-0 max-h-0"
-              )}
-            >
-              <div className="pt-2">
-                <EventFilters
-                  onFilterChange={handleFilterChange}
-                  initialTags={selectedTags}
-                />
-              </div>
-            </div>
-
-            {/* Happening Now Section */}
-            {!isFiltering && (
-              <HappeningNowSection />
-            )}
-
-            {/* Friends Activity Section */}
-            {!isFiltering && user && (
-              <FriendsActivitySection />
-            )}
-
-            {/* Popular / Recommended Section */}
-            {!isFiltering && (
-              !user || recommendationFailed ? (
-                <PopularEventsSection
-                  onEventsLoaded={(ids) => setPopularEventIds(new Set(ids))}
-                />
-              ) : !isSavedLoading ? (
-                <RecommendedEventsSection
-                  onEmpty={() => setRecommendationFailed(true)}
-                />
-              ) : null
-            )}
-
-            {/* Main Content */}
-            <div className="min-h-[500px]">
-              {errorMessage ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-card rounded-2xl border border-destructive/20 p-8">
-                  <div className="rounded-full bg-destructive/10 p-4">
-                    <AlertCircle className="h-8 w-8 text-destructive" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-bold text-foreground">Something went wrong</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">{errorMessage}</p>
-                  </div>
-                  <Button onClick={refetch} variant="outline" className="gap-2">
-                    <RefreshCcw className="h-4 w-4" />
-                    Try Again
-                  </Button>
-                </div>
-              ) : (
-                <EventGrid
-                  events={filteredEvents.filter((e) => !popularEventIds.has(e.id))}
-                  loading={loading}
-                  showSaveButton={!!user}
-                  savedEventIds={savedEventIds}
-                  trackingSource="home"
-                  hasFilters={isFiltering}
-                  onClearFilters={handleClearFilters}
-                />
-              )}
-            </div>
-
-            {/* Load More Button */}
-            {canLoadMore && !errorMessage && (
-              <div className="flex justify-center mt-8">
-                <Button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {loadingMore ? "Loading..." : "Load More Events"}
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+        ) : (
+          <HomeFeed
+            events={events}
+            featuredEvents={featuredEvents}
+            onEventClick={handleEventClick}
+            onSaveEvent={handleSaveEvent}
+            savedEventIds={Array.from(localSavedIds)}
+          />
+        )}
       </div>
     </ErrorBoundary>
   );
