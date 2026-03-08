@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import EditProfileModal from "./EditProfileModal";
 import type { EventTag } from "@/types";
@@ -22,15 +21,12 @@ export default function EditProfileButton(props: EditProfileButtonProps) {
 
     return (
         <>
-            <Button
+            <button
                 onClick={() => setOpen(true)}
-                variant="outline"
-                size="sm"
-                className="gap-2"
+                className="flex-1 bg-red-600 text-white py-2.5 rounded-lg font-bold hover:bg-red-700 transition-all flex items-center justify-center gap-2"
             >
-                <Pencil className="w-4 h-4" />
-                Edit Profile
-            </Button>
+                <Pencil className="h-4 w-4" /> Edit Profile
+            </button>
 
             <EditProfileModal
                 open={open}

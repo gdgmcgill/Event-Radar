@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EventBadge } from "@/components/events/EventBadge";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
-import { Pencil, Save, X, Sparkles } from "lucide-react";
+import { Pencil, Save, X, Heart } from "lucide-react";
 import InterestTagSelector from "@/components/profile/InterestTagSelector";
 
 type InterestsCardProps = {
@@ -76,103 +74,87 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
   };
 
   return (
-    <Card className="bg-card border border-border shadow-sm overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <CardTitle className="text-lg font-semibold text-foreground">
-            Your Interests
-          </CardTitle>
-        </div>
-        {!isEditing && (
-          <Button
-            variant="ghost"
-            size="sm"
+    <div className="bg-white rounded-xl p-6 shadow-sm border border-red-600/5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold flex items-center gap-2">
+          <Heart className="h-5 w-5 text-red-600" /> My Interests
+        </h3>
+        {!isEditing && selectedTags.length > 0 && (
+          <button
             onClick={handleEdit}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-xs text-red-600 font-bold hover:underline"
           >
-            <Pencil className="w-4 h-4 mr-1.5" />
-            {selectedTags.length === 0 ? "Add" : "Edit"}
-          </Button>
+            Edit
+          </button>
         )}
-      </CardHeader>
+      </div>
 
-      <CardContent className="pt-0">
-        {isEditing ? (
-          <div className="space-y-5">
-            {/* Editing Mode - Tag Grid */}
-            <InterestTagSelector
-              selected={editingTags}
-              onChange={(tags) => {
-                setEditingTags(tags);
-                setError(null);
-              }}
-            />
+      {isEditing ? (
+        <div className="space-y-4">
+          <InterestTagSelector
+            selected={editingTags}
+            onChange={(tags) => {
+              setEditingTags(tags);
+              setError(null);
+            }}
+          />
 
-            {/* Error Display */}
-            {error && (
-              <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg border border-destructive/20">
-                {error}
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-2 border-t border-border">
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                size="sm"
-                className="gap-2"
-              >
-                <Save className="h-4 w-4" />
-                {isSaving ? "Saving..." : "Save changes"}
-              </Button>
-              <Button
-                onClick={handleCancel}
-                variant="ghost"
-                size="sm"
-                className="gap-2 text-muted-foreground"
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </Button>
+          {error && (
+            <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg border border-red-200">
+              {error}
             </div>
+          )}
+
+          <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              size="sm"
+              className="gap-2 bg-red-600 hover:bg-red-700"
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+            <Button
+              onClick={handleCancel}
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-slate-500"
+            >
+              <X className="h-4 w-4" />
+              Cancel
+            </Button>
           </div>
-        ) : (
-          /* Display Mode */
-          <div>
-            {selectedTags.length === 0 ? (
-              <div className="py-8 text-center">
-                <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                  <Sparkles className="w-6 h-6 text-muted-foreground/50" />
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  No interests added yet
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleEdit}
-                  className="text-primary"
-                >
-                  Add your first interest
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {selectedTags.map((tag) => (
-                  <EventBadge 
-                    key={tag} 
-                    tag={tag} 
-                    variant="glowing" 
-                    className="px-3 py-1 text-sm" 
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      ) : (
+        <div>
+          {selectedTags.length === 0 ? (
+            <div className="py-6 text-center">
+              <p className="text-sm text-slate-500 mb-3">No interests added yet</p>
+              <button
+                onClick={handleEdit}
+                className="text-sm text-red-600 font-semibold hover:underline"
+              >
+                Add your first interest
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {selectedTags.map((tag) => {
+                const category = EVENT_CATEGORIES[tag];
+                return (
+                  <span
+                    key={tag}
+                    className="px-3 py-1 bg-red-600/10 text-red-600 text-sm font-medium rounded-full"
+                  >
+                    {category?.label ?? tag}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

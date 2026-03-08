@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import Image from "next/image";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, Pencil } from "lucide-react";
 import AvatarCropModal from "@/components/profile/AvatarCropModal";
 
 type ProfileHeaderProps = {
@@ -99,66 +98,73 @@ export default function ProfileHeader({
     <img
       src={currentAvatarUrl}
       alt={name ? `${name}'s avatar` : "User avatar"}
-      className="w-full h-full object-cover"
+      className="w-full h-full rounded-full object-cover"
     />
   ) : (
-    <span className="text-2xl font-semibold text-primary">
+    <span className="text-3xl font-semibold text-red-600">
       {initials || "U"}
     </span>
   );
 
   return (
-    <div className="flex items-center gap-6">
-      {/* Avatar */}
-      <div className="relative">
+    <div className="relative mb-4">
+      {/* Large circular avatar with primary border */}
+      <div
+        onClick={handleAvatarClick}
+        className={`relative h-40 w-40 rounded-full border-4 border-red-600 p-1 bg-[#f8f6f6] ${
+          editable ? "cursor-pointer group" : ""
+        }`}
+      >
         <div
-          onClick={handleAvatarClick}
-          className={`relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-background shadow-xl flex items-center justify-center ${currentAvatarUrl
-            ? ""
-            : "bg-gradient-to-br from-primary/20 to-primary/5"
-            } ${editable ? "cursor-pointer group" : ""}`}
+          className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center ${
+            currentAvatarUrl
+              ? ""
+              : "bg-gradient-to-br from-red-600/20 to-red-600/5"
+          }`}
         >
           {avatarContent}
 
           {/* Upload overlay */}
           {editable && !uploading && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera className="w-6 h-6 text-white" />
+            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="w-8 h-8 text-white" />
             </div>
           )}
 
           {/* Loading spinner */}
           {uploading && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 text-white animate-spin" />
+            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-white animate-spin" />
             </div>
           )}
         </div>
-
-        {/* Hidden file input */}
-        {editable && (
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        )}
       </div>
 
-      {/* User Info */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">
-          {name ?? email ?? "User"}
-        </h1>
-        {email && (
-          <p className="text-sm text-muted-foreground">{email}</p>
-        )}
-        {error && (
-          <p className="text-sm text-red-500">{error}</p>
-        )}
-      </div>
+      {/* Edit button overlay on avatar */}
+      {editable && (
+        <button
+          onClick={handleAvatarClick}
+          className="absolute bottom-2 right-2 bg-red-600 text-white p-1.5 rounded-full border-2 border-white shadow-md hover:bg-red-700 transition-colors"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      {/* Hidden file input */}
+      {editable && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+      )}
+
+      {/* Error message */}
+      {error && (
+        <p className="text-sm text-red-500 mt-2 text-center">{error}</p>
+      )}
 
       {cropImageSrc && (
         <AvatarCropModal
