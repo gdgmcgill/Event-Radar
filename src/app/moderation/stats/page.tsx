@@ -2,36 +2,73 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, CheckCircle, FileQuestion, TrendingUp, BarChart3 } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  CheckCircle,
+  FileQuestion,
+  TrendingUp,
+  BarChart3,
+  CircleUser,
+  UserPlus,
+} from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 
 interface Stats {
   totalEvents: number;
   pendingEvents: number;
   approvedEvents: number;
   totalUsers: number;
+  activeUsers: number;
+  engagedUsers: number;
+}
+
+interface UserAnalytics {
+  dailySignups: { date: string; count: number }[];
+  cumulativeGrowth: { date: string; total: number }[];
+  activeUsersLast7Days: number;
+  engagedUsers: number;
+  totalUsers: number;
 }
 
 export default function ModerationStatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchStats() {
-      const res = await fetch("/api/admin/stats");
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data);
+    async function fetchData() {
+      const [statsRes, analyticsRes] = await Promise.all([
+        fetch("/api/admin/stats"),
+        fetch("/api/admin/analytics/users"),
+      ]);
+
+      if (statsRes.ok) {
+        setStats(await statsRes.json());
+      }
+      if (analyticsRes.ok) {
+        setAnalytics(await analyticsRes.json());
       }
       setLoading(false);
     }
-    fetchStats();
+    fetchData();
   }, []);
 
   if (loading) {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-semibold">Platform Statistics</h2>
-        <div className="text-center py-12 text-muted-foreground">Loading...</div>
+        <div className="text-center py-12 text-muted-foreground">
+          Loading...
+        </div>
       </div>
     );
   }
@@ -52,7 +89,8 @@ export default function ModerationStatsPage() {
       ? Math.round((stats.approvedEvents / stats.totalEvents) * 100)
       : 0;
 
-  const rejectedEvents = stats.totalEvents - stats.approvedEvents - stats.pendingEvents;
+  const rejectedEvents =
+    stats.totalEvents - stats.approvedEvents - stats.pendingEvents;
 
   const statCards = [
     {
@@ -90,6 +128,18 @@ export default function ModerationStatsPage() {
       value: `${approvalRate}%`,
       icon: TrendingUp,
       description: "Percentage of approved events",
+    },
+    {
+      label: "Active Users",
+      value: analytics?.activeUsersLast7Days ?? "—",
+      icon: CircleUser,
+      description: "Active during last 7 days",
+    },
+    {
+      label: "Engaged Users",
+      value: analytics?.engagedUsers ?? "—",
+      icon: UserPlus,
+      description: "Accounts with 3+ saved events",
     },
   ];
 
@@ -179,6 +229,121 @@ export default function ModerationStatsPage() {
           </div>
         </CardContent>
       </Card>
+      {/* User Growth Chart */}
+      {analytics && analytics.dailySignups.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>New User Signups (Last 30 Days)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics.dailySignups}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(val: string) => {
+                      const d = new Date(val + "T00:00:00");
+                      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    }}
+                    interval="preserveStartEnd"
+                    className="text-muted-foreground"
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11 }}
+                    className="text-muted-foreground"
+                  />
+                  <Tooltip
+                    labelFormatter={(val) => {
+                      const d = new Date(String(val) + "T00:00:00");
+                      return d.toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      });
+                    }}
+                    formatter={(value) => [String(value), "New Users"]}
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "hsl(var(--card))",
+                      color: "hsl(var(--foreground))",
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#ED1B2F"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4, fill: "#ED1B2F" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cumulative User Growth */}
+      {analytics && analytics.cumulativeGrowth.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Users Over Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics.cumulativeGrowth}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(val: string) => {
+                      const d = new Date(val + "T00:00:00");
+                      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    }}
+                    interval="preserveStartEnd"
+                    className="text-muted-foreground"
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11 }}
+                    className="text-muted-foreground"
+                  />
+                  <Tooltip
+                    labelFormatter={(val) => {
+                      const d = new Date(String(val) + "T00:00:00");
+                      return d.toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      });
+                    }}
+                    formatter={(value) => [String(value), "Total Users"]}
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "hsl(var(--card))",
+                      color: "hsl(var(--foreground))",
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#c7c7a3"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4, fill: "#c7c7a3" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

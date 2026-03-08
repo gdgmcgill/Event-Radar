@@ -5,7 +5,7 @@
 
 export type UserRole = "user" | "admin" | "club_organizer";
 
-export type RsvpStatus = "going" | "interested";
+export type RsvpStatus = "going" | "interested" | "cancelled";
 
 export type InteractionSource =
   | "home"
@@ -54,8 +54,8 @@ export interface Club {
   category?: string | null;
   instagram_handle: string | null;
   logo_url: string | null;
-  status?: "pending" | "approved" | "rejected";
-  created_by?: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,6 +65,7 @@ export interface User {
   email: string;
   name: string | null;
   avatar_url: string | null;
+  saved_events_count: number;
   roles: UserRole[];
   interest_tags: string[];
   pronouns?: string | null;
@@ -158,6 +159,25 @@ export interface EventPopularityScore {
   save_count: number;
   calendar_add_count: number;
   unique_viewers: number;
+}
+
+export type InteractionType =
+  | "view"
+  | "click"
+  | "save"
+  | "unsave"
+  | "share"
+  | "calendar_add";
+
+export interface UserInteraction {
+  id: string;
+  user_id: string | null;
+  event_id: string;
+  interaction_type: InteractionType;
+  session_id: string | null;
+  source: InteractionSource | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface TrackInteractionPayload {
@@ -276,4 +296,3 @@ export interface ReviewAggregate {
   distribution: { rating: number; count: number }[];
   comments: { rating: number; comment: string; created_at: string }[];
 }
-

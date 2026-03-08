@@ -1,6 +1,10 @@
 /**
  * POST /api/events/:id/save - Toggle save/unsave for the authenticated user
  * DELETE /api/events/:id/save - Unsave an event
+ *
+ * Note: users.saved_events_count is updated automatically by a Postgres trigger
+ * (saved_events_count_trigger) on the saved_events table. No manual increment/
+ * decrement is needed here.
  */
 
 import { NextResponse } from "next/server";
