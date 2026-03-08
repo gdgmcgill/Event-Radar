@@ -8,8 +8,9 @@ import { Footer } from "./Footer";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === "/landing";
+  const isModeration = pathname.startsWith("/moderation");
 
-  if (isLanding) {
+  if (isLanding || isModeration) {
     return (
       <div className="flex min-h-screen">
         <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
