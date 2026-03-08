@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { validateEventDates } from "@/lib/dateValidation";
 import { sanitizeText } from "@/lib/sanitize";
+import { computeEventContentHash } from "@/lib/contentHash";
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,6 +66,23 @@ export async function POST(request: NextRequest) {
     const organizer = profile?.name || profile?.email || user.email || "Unknown";
     const roles: string[] = profile?.roles ?? [];
 
+    // Compute content hash for duplicate detection
+    const contentHash = await computeEventContentHash(title, start_date, organizer);
+
+    // Check for duplicate events
+    const { data: existing } = await supabase
+      .from("events")
+      .select("id")
+      .eq("content_hash", contentHash)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json(
+        { error: "A similar event already exists with the same title, date, and organizer" },
+        { status: 409 }
+      );
+    }
+
     // Determine event status based on user roles
     let status: "pending" | "approved" = "pending";
 
@@ -99,6 +117,7 @@ export async function POST(request: NextRequest) {
         club_id: body.club_id || null,
         status,
         created_by: user.id,
+        content_hash: contentHash,
       })
       .select()
       .single();

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyAdmin } from "@/lib/admin";
 import { sanitizeText } from "@/lib/sanitize";
+import { logAdminAction } from "@/lib/audit";
+import { computeEventContentHash } from "@/lib/contentHash";
 
 type MetricsSortField = "popularity_score" | "trending_score" | "view_count" | "click_count" | "save_count";
 const METRICS_SORT_FIELDS = new Set<string>(["popularity_score", "trending_score", "view_count", "click_count", "save_count"]);
@@ -120,6 +122,23 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Compute content hash for duplicate detection
+  const contentHash = await computeEventContentHash(title, start_date, organizer || "");
+
+  // Check for duplicate events
+  const { data: existing } = await supabase
+    .from("events")
+    .select("id")
+    .eq("content_hash", contentHash)
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json(
+      { error: "A similar event already exists with the same title, date, and organizer" },
+      { status: 409 }
+    );
+  }
+
   const { data, error } = await supabase
     .from("events")
     .insert({
@@ -133,12 +152,27 @@ export async function POST(request: NextRequest) {
       image_url: image_url || null,
       category: category || null,
       status: "approved",
+      content_hash: contentHash,
     })
     .select()
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Log audit action
+  try {
+    await logAdminAction({
+      adminUserId: user.id,
+      adminEmail: user.email,
+      action: "created",
+      targetType: "event",
+      targetId: data.id,
+      metadata: { title },
+    });
+  } catch (auditErr) {
+    console.error("[Admin] Failed to log audit action:", auditErr);
   }
 
   return NextResponse.json({ event: data }, { status: 201 });
