@@ -39,7 +39,7 @@ export interface Event {
   created_by?: string | null;
   created_at: string;
   updated_at: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "archived";
   approved_by: string | null;
   approved_at: string | null;
   // Relations

@@ -207,10 +207,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build Supabase query for events
+    // Build Supabase query for events — exclude archived events from browse/search
     let eventsQuery = supabase
       .from('events')
       .select('*', { count: 'exact' })
+      .neq('status', 'archived' as never)
       .order('start_date', { ascending: true });
 
     // Filter by IDs (e.g. for recommendation list)
