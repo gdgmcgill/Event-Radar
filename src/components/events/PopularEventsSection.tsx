@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { type Event, type EventPopularityScore } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
 import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
-import { AlertCircle, RefreshCcw } from "lucide-react";
+import { AlertCircle, RefreshCcw, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
@@ -51,12 +51,9 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
 
   if (loading && events.length === 0) {
     return (
-      <div className="mb-12 rounded-2xl border border-border/60 bg-muted/40 p-6">
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold text-foreground tracking-tight">Popular This Week</h2>
-          <p className="text-muted-foreground mt-1">See what&apos;s popular between McGill students this week</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="rounded-2xl border border-border/60 bg-card p-6">
+        <SectionHeader />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
           {[1, 2, 3].map((i) => (
             <EventCardSkeleton key={i} />
           ))}
@@ -67,10 +64,10 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
 
   if (error) {
     return (
-      <div className="mb-12 flex flex-col items-center justify-center py-10 text-center space-y-4 bg-card rounded-2xl border border-destructive/20 p-6">
+      <div className="flex flex-col items-center justify-center py-10 text-center space-y-4 bg-card rounded-2xl border border-destructive/20 p-6">
         <AlertCircle className="h-6 w-6 text-destructive" />
         <p className="text-muted-foreground">{error}</p>
-        <Button onClick={fetchPopularEvents} variant="outline" size="sm" className="gap-2">
+        <Button onClick={fetchPopularEvents} variant="outline" size="sm" className="gap-2 cursor-pointer">
           <RefreshCcw className="h-3 w-3" />
           Try Again
         </Button>
@@ -83,13 +80,9 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
   }
 
   return (
-    <div className="mb-12 rounded-2xl border border-border/60 bg-muted/40 p-6">
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-foreground tracking-tight">Popular This Week</h2>
-        <p className="text-muted-foreground mt-1">See what&apos;s popular between McGill students this week</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="rounded-2xl border border-border/60 bg-card p-6">
+      <SectionHeader />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
         {events.map((event, i) => (
           <EventCard
             key={event.id}
@@ -103,6 +96,20 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
             popularity={event.popularity}
           />
         ))}
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader() {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 text-primary">
+        <TrendingUp className="h-5 w-5" />
+      </div>
+      <div>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">Popular This Week</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">See what&apos;s popular between McGill students this week</p>
       </div>
     </div>
   );

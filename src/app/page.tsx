@@ -1,16 +1,20 @@
 "use client";
 
 /**
- * Home page - Netflix-style event feed
+ * Home page - Modular event discovery feed
  */
 
 import { Suspense, useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Event } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useSavedEvents } from "@/hooks/useSavedEvents";
 import { useEvents } from "@/hooks/useEvents";
-import { HomeFeed } from "@/components/events/HomeFeed";
+import { HeroSection } from "@/components/events/HeroSection";
+import { HappeningNowSection } from "@/components/events/HappeningNowSection";
+import { PopularEventsSection } from "@/components/events/PopularEventsSection";
+import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
+import { FriendsActivitySection } from "@/components/events/FriendsActivitySection";
+import { CategoryBrowser } from "@/components/events/CategoryBrowser";
 import { AlertCircle, X } from "lucide-react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -30,18 +34,9 @@ export default function HomePage() {
 }
 
 function HomePageContent() {
-  const [localSavedIds, setLocalSavedIds] = useState<Set<string>>(new Set());
   const user = useAuthStore((s) => s.user);
-  const { savedEventIds, isLoading: isSavedLoading } = useSavedEvents(!!user);
   const searchParams = useSearchParams();
   const router = useRouter();
-
-  // Sync server saved IDs into local state
-  useEffect(() => {
-    if (!isSavedLoading) {
-      setLocalSavedIds(new Set(savedEventIds));
-    }
-  }, [savedEventIds, isSavedLoading]);
 
   const authError = useMemo(() => {
     const errorCode = searchParams.get("error");
@@ -77,48 +72,11 @@ function HomePageContent() {
     direction: "asc",
   });
 
-  const featuredEvents = useMemo(
-    () => events.filter((e: Event) => e.image_url).slice(0, 5),
-    [events]
-  );
-
   const handleEventClick = useCallback(
-    (eventId: string) => {
-      router.push(`/events/${eventId}`);
+    (event: Event) => {
+      router.push(`/events/${event.id}`);
     },
     [router]
-  );
-
-  const handleSaveEvent = useCallback(
-    async (eventId: string) => {
-      if (!user) return;
-      const wasSaved = localSavedIds.has(eventId);
-
-      // Optimistic update
-      setLocalSavedIds((prev) => {
-        const next = new Set(prev);
-        if (wasSaved) next.delete(eventId);
-        else next.add(eventId);
-        return next;
-      });
-
-      try {
-        await fetch("/api/events/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ event_id: eventId }),
-        });
-      } catch {
-        // Revert on failure
-        setLocalSavedIds((prev) => {
-          const next = new Set(prev);
-          if (wasSaved) next.add(eventId);
-          else next.delete(eventId);
-          return next;
-        });
-      }
-    },
-    [user, localSavedIds]
   );
 
   return (
@@ -135,7 +93,7 @@ function HomePageContent() {
               <button
                 type="button"
                 onClick={() => router.replace("/")}
-                className="text-destructive/70 hover:text-destructive transition-colors"
+                className="text-destructive/70 hover:text-destructive transition-colors cursor-pointer"
                 aria-label="Dismiss"
               >
                 <X className="h-4 w-4" />
@@ -144,20 +102,28 @@ function HomePageContent() {
           </div>
         )}
 
-        {/* Netflix-style Home Feed */}
-        {loading ? (
-          <div className="flex items-center justify-center h-96">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ED1B2F]" />
-          </div>
-        ) : (
-          <HomeFeed
-            events={events}
-            featuredEvents={featuredEvents}
-            onEventClick={handleEventClick}
-            onSaveEvent={handleSaveEvent}
-            savedEventIds={Array.from(localSavedIds)}
-          />
-        )}
+        {/* Hero Section */}
+        <HeroSection />
+
+        {/* Content Sections */}
+        <div className="container mx-auto px-4 md:px-6 lg:px-8 flex flex-col gap-10 md:gap-14 pb-20 -mt-8 relative z-10">
+          {/* Happening Now */}
+          <HappeningNowSection onEventClick={handleEventClick} />
+
+          {/* Popular This Week */}
+          <PopularEventsSection onEventClick={handleEventClick} />
+
+          {/* Recommended For You */}
+          {user && <RecommendedEventsSection onEventClick={handleEventClick} />}
+
+          {/* Friends Activity */}
+          {user && <FriendsActivitySection />}
+
+          {/* Browse by Category */}
+          {!loading && events.length > 0 && (
+            <CategoryBrowser events={events} onEventClick={handleEventClick} />
+          )}
+        </div>
       </div>
     </ErrorBoundary>
   );

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { type Event } from "@/types";
 import { EventCard } from "@/components/events/EventCard";
 import { EventCardSkeleton } from "@/components/events/EventCardSkeleton";
-import { AlertCircle, RefreshCcw, ArrowLeft, ArrowRight, BookmarkPlus } from "lucide-react";
+import { AlertCircle, RefreshCcw, ChevronLeft, ChevronRight, BookmarkPlus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -96,7 +96,6 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
       }
       setExplanationByEventId(explanations);
 
-      // Hydrate existing thumbs feedback for these events
       const ids = fetchedEvents.map((e) => e.id).join(",");
       if (ids) {
         try {
@@ -134,12 +133,11 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
 
   if (loading && events.length === 0) {
     return (
-      <div className="mb-12 w-full isolate overflow-hidden rounded-2xl border border-border/60 bg-muted/40">
+      <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
         <div className="px-6 pt-6 mb-6">
-          <h2 className="text-3xl font-bold text-foreground tracking-tight">Recommended For You</h2>
-          <p className="text-muted-foreground mt-1">Based on your interests and saved events</p>
+          <SectionHeader source="personalized" />
         </div>
-        <div className="px-4 sm:px-12 pb-6">
+        <div className="px-4 sm:px-6 pb-6">
           <div className="flex gap-4 overflow-hidden">
             {[1, 2, 3].map((i) => (
               <div key={i} className="shrink-0 w-full sm:w-[46%] lg:w-[30%]">
@@ -154,10 +152,10 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
 
   if (error) {
     return (
-      <div className="mb-12 flex flex-col items-center justify-center py-10 text-center space-y-4 bg-card rounded-2xl border border-destructive/20 p-6">
+      <div className="flex flex-col items-center justify-center py-10 text-center space-y-4 bg-card rounded-2xl border border-destructive/20 p-6">
         <AlertCircle className="h-6 w-6 text-destructive" />
         <p className="text-muted-foreground">{error}</p>
-        <Button onClick={fetchRecommendedEvents} variant="outline" size="sm" className="gap-2">
+        <Button onClick={fetchRecommendedEvents} variant="outline" size="sm" className="gap-2 cursor-pointer">
           <RefreshCcw className="h-3 w-3" />
           Try Again
         </Button>
@@ -168,35 +166,25 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
   if (events.length === 0) return null;
 
   return (
-    <div className="mb-12 w-full isolate overflow-hidden rounded-2xl border border-border/60 bg-muted/40">
-      <div className="px-6 pt-6 mb-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-2">
-            {source === "popular_fallback" ? "Popular on Campus" : "Recommended For You"}
-            {source === "personalized" && (
-              <span className="text-sm font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full">New</span>
-            )}
-          </h2>
+    <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+      <div className="px-6 pt-6 mb-4">
+        <div className="flex items-start justify-between gap-4">
+          <SectionHeader source={source} />
           <Button
             variant="ghost"
             size="sm"
             onClick={fetchRecommendedEvents}
             disabled={loading}
-            className="gap-1.5 text-muted-foreground hover:text-primary"
+            className="gap-1.5 text-muted-foreground hover:text-primary cursor-pointer flex-shrink-0"
           >
             <RefreshCcw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
             Refresh
           </Button>
         </div>
-        <p className="text-muted-foreground mt-1">
-          {source === "popular_fallback"
-            ? "Trending events from across campus"
-            : "Based on your interests and saved events"}
-        </p>
         {source === "popular_fallback" && !isLoading && (() => {
           const remaining = Math.max(0, RECOMMENDATION_THRESHOLD - savedEventIds.size);
           return remaining > 0 ? (
-            <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5">
+            <p className="text-sm text-muted-foreground mt-3 flex items-center gap-1.5">
               <BookmarkPlus className="h-4 w-4 text-primary" />
               Save {remaining} more event{remaining !== 1 ? "s" : ""} to unlock personalized recommendations
             </p>
@@ -204,10 +192,11 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
         })()}
       </div>
 
-      <div className="relative px-4 sm:px-12 pb-6">
+      <div className="relative px-4 sm:px-6 pb-6">
         <div
           ref={scrollRef}
-          className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {events.map((event, index) => (
             <div key={event.id} className="shrink-0 snap-start w-full sm:w-[46%] lg:w-[30%]">
@@ -230,21 +219,44 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
         {showPrev && (
           <button
             onClick={scrollPrev}
-            className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full border border-input bg-background shadow-sm items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full border border-border bg-card shadow-md items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
             aria-label="Scroll left"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
         )}
         {showNext && (
           <button
             onClick={scrollNext}
-            className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full border border-input bg-background shadow-sm items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full border border-border bg-card shadow-md items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
             aria-label="Scroll right"
           >
-            <ArrowRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ source }: { source: "personalized" | "popular_fallback" }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 text-primary">
+        <Sparkles className="h-5 w-5" />
+      </div>
+      <div>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight flex items-center gap-2">
+          {source === "popular_fallback" ? "Popular on Campus" : "Recommended For You"}
+          {source === "personalized" && (
+            <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">New</span>
+          )}
+        </h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {source === "popular_fallback"
+            ? "Trending events from across campus"
+            : "Based on your interests and saved events"}
+        </p>
       </div>
     </div>
   );

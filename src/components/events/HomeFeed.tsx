@@ -378,7 +378,7 @@ function CompactCard({ event, onEventClick }: CompactCardProps) {
 
   return (
     <div
-      className="w-full bg-muted/50 dark:bg-[#ED1B2F]/5 rounded-2xl border border-transparent hover:border-[#ED1B2F]/20 transition-all cursor-pointer overflow-hidden group"
+      className="flex-shrink-0 w-72 md:w-80 bg-muted/50 dark:bg-[#ED1B2F]/5 rounded-2xl border border-transparent hover:border-[#ED1B2F]/20 transition-all cursor-pointer overflow-hidden group"
       onClick={() => onEventClick?.(event.id)}
       role="button"
       tabIndex={0}
@@ -387,17 +387,17 @@ function CompactCard({ event, onEventClick }: CompactCardProps) {
       }}
     >
       {/* Event image */}
-      <div className="relative h-32 overflow-hidden">
+      <div className="relative aspect-[16/9] overflow-hidden">
         <Image
           src={event.image_url || "/placeholder-event.png"}
           alt={event.title}
           fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          sizes="(max-width: 768px) 288px, 320px"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
         {/* Category badge */}
         {category && (
-          <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-white/90 dark:bg-black/60 backdrop-blur-md text-[#ED1B2F] dark:text-white text-[10px] font-bold rounded-md uppercase tracking-wide flex items-center gap-1">
+          <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 dark:bg-black/60 backdrop-blur-md text-[#ED1B2F] dark:text-white text-[10px] font-bold rounded-lg uppercase tracking-wide flex items-center gap-1.5">
             <Icon className="h-3 w-3" />
             {category.label}
           </div>
@@ -405,18 +405,21 @@ function CompactCard({ event, onEventClick }: CompactCardProps) {
       </div>
 
       {/* Content */}
-      <div className="p-3.5">
-        <h4 className="font-bold text-sm leading-tight line-clamp-1 mb-1 group-hover:text-[#ED1B2F] transition-colors">
+      <div className="p-4">
+        <h4 className="font-bold text-sm leading-tight line-clamp-2 mb-1 group-hover:text-[#ED1B2F] transition-colors">
           {event.title}
         </h4>
-        <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
+        <p className="text-xs text-muted-foreground line-clamp-1 mb-3">
           {event.location}
+        </p>
+        <p className="text-xs text-muted-foreground line-clamp-2 mb-4">
+          {event.description}
         </p>
         <div className="flex justify-between items-center">
           <span className="text-[10px] font-bold text-[#ED1B2F] uppercase">
             {formatDate(event.event_date).split(",")[0]} &middot; {formatTime(event.event_time)}
           </span>
-          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-[#ED1B2F] transition-colors" />
+          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-[#ED1B2F] transition-colors" />
         </div>
       </div>
     </div>
@@ -439,7 +442,7 @@ function PersonalizedCard({ event, onEventClick, onSaveEvent, isSaved }: Persona
 
   return (
     <div
-      className="w-full bg-card dark:bg-background rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden group"
+      className="flex-shrink-0 w-68 md:w-72 bg-card dark:bg-background p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
       onClick={() => onEventClick?.(event.id)}
       role="button"
       tabIndex={0}
@@ -447,46 +450,28 @@ function PersonalizedCard({ event, onEventClick, onSaveEvent, isSaved }: Persona
         if (e.key === "Enter" || e.key === " ") onEventClick?.(event.id);
       }}
     >
-      {/* Event image */}
-      <div className="relative h-32 overflow-hidden">
-        <Image
-          src={event.image_url || "/placeholder-event.png"}
-          alt={event.title}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        {/* Category badge */}
-        {category && (
-          <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-white/90 dark:bg-black/60 backdrop-blur-md text-[#ED1B2F] dark:text-white text-[10px] font-bold rounded-md uppercase tracking-wide flex items-center gap-1">
-            <Icon className="h-3 w-3" />
-            {category.label}
-          </div>
-        )}
+      <div className="text-[#ED1B2F] mb-4">
+        <Icon className="h-10 w-10" />
       </div>
-
-      {/* Content */}
-      <div className="p-4">
-        <h4 className="font-bold text-sm leading-tight mb-1 line-clamp-1 group-hover:text-[#ED1B2F] transition-colors">{event.title}</h4>
-        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-          {event.description}
-        </p>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-          <Clock className="h-3 w-3 flex-shrink-0" />
-          <span className="truncate">{formatDate(event.event_date)} at {formatTime(event.event_time)}</span>
-        </div>
-        <Button
-          variant="secondary"
-          className="w-full font-bold text-xs h-8"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSaveEvent?.(event.id);
-          }}
-        >
-          <Bookmark className={cn("h-3.5 w-3.5 mr-1.5", isSaved && "fill-current")} />
-          {isSaved ? "Saved" : "Save to Calendar"}
-        </Button>
+      <h4 className="font-bold text-xl mb-2 line-clamp-2">{event.title}</h4>
+      <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+        {event.description}
+      </p>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+        <Clock className="h-3.5 w-3.5" />
+        <span>{formatDate(event.event_date)} at {formatTime(event.event_time)}</span>
       </div>
+      <Button
+        variant="secondary"
+        className="w-full font-bold text-sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSaveEvent?.(event.id);
+        }}
+      >
+        <Bookmark className={cn("h-4 w-4 mr-2", isSaved && "fill-current")} />
+        {isSaved ? "Saved" : "Save to Calendar"}
+      </Button>
     </div>
   );
 }
@@ -646,15 +631,15 @@ export function HomeFeed({
           return (
             <section key={tag}>
               <SectionHeader title={category.label} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {categoryEvents.slice(0, 3).map((event) => (
+              <ScrollRow>
+                {categoryEvents.map((event) => (
                   <CompactCard
                     key={event.id}
                     event={event}
                     onEventClick={onEventClick}
                   />
                 ))}
-              </div>
+              </ScrollRow>
             </section>
           );
         })}
@@ -672,8 +657,8 @@ export function HomeFeed({
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {personalizedEvents.slice(0, 3).map((event) => (
+            <ScrollRow>
+              {personalizedEvents.map((event) => (
                 <PersonalizedCard
                   key={event.id}
                   event={event}
@@ -682,7 +667,7 @@ export function HomeFeed({
                   isSaved={savedSet.has(event.id)}
                 />
               ))}
-            </div>
+            </ScrollRow>
           </section>
         )}
       </div>
