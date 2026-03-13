@@ -25,8 +25,8 @@ const themeScript = `
 
 export const metadata: Metadata = {
   title: {
-    default: "Uni-Verse | McGill Campus Events",
-    template: "%s | Uni-Verse",
+    default: "UNI-VERSE | McGill Campus Events",
+    template: "%s | UNI-VERSE",
   },
   description:
     "Discover workshops, hackathons, and social events happening at McGill University. Save events, get personalized recommendations, and never miss what's happening on campus.",
@@ -41,14 +41,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_CA",
-    siteName: "Uni-Verse",
-    title: "Uni-Verse | McGill Campus Events",
+    siteName: "UNI-VERSE",
+    title: "UNI-VERSE | McGill Campus Events",
     description:
       "Discover workshops, hackathons, and social events happening at McGill University.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Uni-Verse | McGill Campus Events",
+    title: "UNI-VERSE | McGill Campus Events",
     description:
       "Discover workshops, hackathons, and social events happening at McGill University.",
   },

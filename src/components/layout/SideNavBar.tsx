@@ -14,9 +14,8 @@ import {
 } from "./navItems";
 import { useAuthStore } from "@/store/useAuthStore";
 import { isAdmin } from "@/lib/roles";
-import { PlusCircle, MoreVertical, Bell } from "lucide-react";
+import { PlusCircle, Settings, Bell, ChevronRight } from "lucide-react";
 import { useNotificationCount } from "@/hooks/useNotificationCount";
-import ThemeToggle from "./ThemeToggle";
 
 const EASE = "cubic-bezier(0.4,0,0.2,1)";
 
@@ -42,7 +41,7 @@ function NavLink({
         collapsed ? "justify-center p-3" : "px-4 py-3",
         isActive
           ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
-          : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
+          : "text-muted-foreground hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
       )}
       style={{ transitionTimingFunction: EASE }}
     >
@@ -82,7 +81,7 @@ function NotificationNavLink({
         collapsed ? "justify-center p-3" : "px-4 py-3",
         isActive
           ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
-          : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
+          : "text-muted-foreground hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
       )}
       style={{ transitionTimingFunction: EASE }}
     >
@@ -145,8 +144,8 @@ export function SideNavBar() {
           "hidden lg:flex flex-col fixed inset-y-0 left-0 z-50 overflow-hidden",
           "transition-[width,padding] duration-200",
           collapsed ? "w-[72px] py-5 px-1" : "w-72 p-6",
-          "bg-white/90 dark:bg-card/90 backdrop-blur-2xl",
-          "border-r border-slate-200/60 dark:border-border/40"
+          "bg-card/90 backdrop-blur-2xl",
+          "border-r border-border"
         )}
         style={{ transitionTimingFunction: EASE }}
       >
@@ -162,7 +161,7 @@ export function SideNavBar() {
         >
           <Image
             src="/uni-verse_logo.png"
-            alt="Uni-Verse"
+            alt="UNI-VERSE"
             width={64}
             height={64}
             className="flex-shrink-0 object-contain transition-[width,height] duration-200"
@@ -181,10 +180,10 @@ export function SideNavBar() {
               transitionTimingFunction: EASE,
             }}
           >
-            <h1 className="text-lg font-black uppercase tracking-widest text-slate-900 dark:text-foreground leading-none">
+            <h1 className="text-lg font-black uppercase tracking-widest text-foreground leading-none">
               UNI-VERSE
             </h1>
-            <p className="text-[10px] font-medium text-slate-400 dark:text-muted-foreground uppercase tracking-widest mt-1">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mt-1">
               McGill University
             </p>
           </div>
@@ -208,12 +207,12 @@ export function SideNavBar() {
                 style={{ transitionTimingFunction: EASE }}
               >
                 <div className={cn(
-                  "border-t border-slate-200/60 dark:border-border/40 mt-3",
+                  "border-t border-border mt-3",
                   "transition-[padding] duration-200",
                   collapsed ? "pt-3" : "pt-5 pb-1 px-4"
                 )} style={{ transitionTimingFunction: EASE }}>
                   <span
-                    className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground uppercase tracking-widest transition-opacity duration-200"
+                    className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest transition-opacity duration-200"
                     style={{
                       opacity: collapsed ? 0 : 1,
                       transitionTimingFunction: EASE,
@@ -236,12 +235,12 @@ export function SideNavBar() {
                 style={{ transitionTimingFunction: EASE }}
               >
                 <div className={cn(
-                  "border-t border-slate-200/60 dark:border-border/40 mt-3",
+                  "border-t border-border mt-3",
                   "transition-[padding] duration-200",
                   collapsed ? "pt-3" : "pt-5 pb-1 px-4"
                 )} style={{ transitionTimingFunction: EASE }}>
                   <span
-                    className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground uppercase tracking-widest transition-opacity duration-200"
+                    className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest transition-opacity duration-200"
                     style={{
                       opacity: collapsed ? 0 : 1,
                       transitionTimingFunction: EASE,
@@ -259,18 +258,7 @@ export function SideNavBar() {
         </nav>
 
         {/* ── Bottom Section ── */}
-        <div className="mt-auto space-y-3 pt-4">
-          {/* Theme Toggle */}
-          <div
-            className={cn(
-              "flex items-center transition-all duration-200",
-              collapsed ? "justify-center" : "px-2"
-            )}
-            style={{ transitionTimingFunction: EASE }}
-          >
-            <ThemeToggle />
-          </div>
-
+        <div className="mt-auto pt-4 space-y-2">
           {/* Create Event */}
           {isAuthenticated && (
             <Link
@@ -299,59 +287,91 @@ export function SideNavBar() {
             </Link>
           )}
 
-          {/* User Profile */}
-          {isAuthenticated && user && (
-            <div
+          {/* Settings */}
+          {isAuthenticated && (
+            <Link
+              href="/settings"
+              title={collapsed ? "Settings" : undefined}
               className={cn(
-                "flex items-center overflow-hidden rounded-xl",
-                "transition-[padding] duration-200",
-                collapsed ? "justify-center p-3" : "px-4 py-3"
+                "group flex items-center rounded-xl font-medium whitespace-nowrap overflow-hidden",
+                "transition-[padding,background-color,color,box-shadow] duration-200",
+                collapsed ? "justify-center p-3" : "px-4 py-3",
+                pathname === "/settings"
+                  ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
+                  : "text-muted-foreground hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
               )}
               style={{ transitionTimingFunction: EASE }}
             >
-              <Link href="/profile" className="flex items-center min-w-0">
-                {user.avatar_url ? (
-                  <Image
-                    src={user.avatar_url}
-                    alt={user.name || "User"}
-                    width={36}
-                    height={36}
-                    className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/10 flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 ring-2 ring-primary/10">
-                    {(user.name || "U").charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div
-                  className="min-w-0 overflow-hidden transition-[max-width,opacity,margin] duration-200"
-                  style={{
-                    maxWidth: collapsed ? 0 : 140,
-                    opacity: collapsed ? 0 : 1,
-                    marginLeft: collapsed ? 0 : 12,
-                    transitionTimingFunction: EASE,
-                  }}
-                >
-                  <p className="text-sm font-bold leading-none text-slate-900 dark:text-foreground truncate">
-                    {user.name || "User"}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-muted-foreground truncate mt-0.5">
-                    {user.year || user.email}
-                  </p>
-                </div>
-              </Link>
+              <Settings className="w-5 h-5 flex-shrink-0" />
               <div
                 className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
                 style={{
-                  maxWidth: collapsed ? 0 : 20,
+                  maxWidth: collapsed ? 0 : 160,
                   opacity: collapsed ? 0 : 1,
-                  marginLeft: collapsed ? 0 : "auto",
+                  marginLeft: collapsed ? 0 : 16,
                   transitionTimingFunction: EASE,
                 }}
               >
-                <MoreVertical className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                <span>Settings</span>
               </div>
-            </div>
+            </Link>
+          )}
+
+          {/* User Profile */}
+          {isAuthenticated && user && (
+            <Link
+              href="/profile"
+              title={collapsed ? user.name || "Profile" : undefined}
+              className={cn(
+                "group flex items-center overflow-hidden rounded-xl",
+                "hover:bg-primary/5 dark:hover:bg-primary/10",
+                "transition-[padding,background-color] duration-200",
+                collapsed ? "justify-center p-2" : "px-3 py-2.5"
+              )}
+              style={{ transitionTimingFunction: EASE }}
+            >
+              {user.avatar_url ? (
+                <Image
+                  src={user.avatar_url}
+                  alt={user.name || "User"}
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-primary/10 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0 ring-2 ring-primary/10">
+                  {(user.name || "U").charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div
+                className="min-w-0 flex-1 overflow-hidden transition-[max-width,opacity,margin] duration-200"
+                style={{
+                  maxWidth: collapsed ? 0 : 140,
+                  opacity: collapsed ? 0 : 1,
+                  marginLeft: collapsed ? 0 : 10,
+                  transitionTimingFunction: EASE,
+                }}
+              >
+                <p className="text-sm font-semibold leading-tight text-foreground truncate">
+                  {user.name || "User"}
+                </p>
+                {user.year && (
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {user.year}
+                  </p>
+                )}
+              </div>
+              <div
+                className="overflow-hidden transition-[max-width,opacity] duration-200"
+                style={{
+                  maxWidth: collapsed ? 0 : 16,
+                  opacity: collapsed ? 0 : 0.4,
+                  transitionTimingFunction: EASE,
+                }}
+              >
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+              </div>
+            </Link>
           )}
         </div>
       </aside>

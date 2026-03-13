@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { Menu, X, PlusCircle } from "lucide-react";
+import { Menu, X, PlusCircle, Settings } from "lucide-react";
 import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
 import {
@@ -40,7 +40,7 @@ function MobileNavLink({
         "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200",
         isActive
           ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
-          : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
+          : "text-muted-foreground hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
       )}
     >
       <Icon className="w-5 h-5 flex-shrink-0" />
@@ -63,8 +63,8 @@ function MobileNavSection({
   return (
     <>
       {label && (
-        <div className="border-t border-slate-200/60 dark:border-border/40 mt-2 pt-4 pb-1 px-4">
-          <span className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground uppercase tracking-widest">
+        <div className="border-t border-border mt-2 pt-4 pb-1 px-4">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
             {label}
           </span>
         </div>
@@ -110,7 +110,7 @@ export function Header() {
         Skip to main content
       </a>
 
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 dark:border-border/40 bg-white/90 dark:bg-card/90 backdrop-blur-2xl">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-card/90 backdrop-blur-2xl">
         <div className="flex items-center justify-between h-16 px-4">
           {/* Left: Burger + Logo */}
           <div className="flex items-center gap-3">
@@ -120,7 +120,7 @@ export function Header() {
                 "p-2 rounded-xl transition-all duration-200",
                 isMobileMenuOpen
                   ? "bg-primary text-white shadow-md shadow-primary/10"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary"
+                  : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
               )}
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMobileMenuOpen}
@@ -139,16 +139,16 @@ export function Header() {
             >
               <Image
                 src="/uni-verse_logo.png"
-                alt="Uni-Verse"
+                alt="UNI-VERSE"
                 width={36}
                 height={36}
                 className="h-9 w-9 object-contain"
               />
               <div>
-                <h1 className="text-base font-black uppercase tracking-widest text-slate-900 dark:text-foreground leading-none">
+                <h1 className="text-base font-black uppercase tracking-widest text-foreground leading-none">
                   UNI-VERSE
                 </h1>
-                <p className="text-[9px] font-medium text-slate-400 dark:text-muted-foreground uppercase tracking-widest mt-0.5">
+                <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest mt-0.5">
                   McGill University
                 </p>
               </div>
@@ -175,7 +175,7 @@ export function Header() {
 
         {/* Mobile Menu Drawer */}
         {isMobileMenuOpen && (
-          <div className="border-t border-slate-200/60 dark:border-border/40 bg-white/95 dark:bg-card/95 backdrop-blur-2xl">
+          <div className="border-t border-border bg-card/95 backdrop-blur-2xl">
             <nav
               id="mobile-nav"
               aria-label="Mobile navigation"
@@ -207,7 +207,7 @@ export function Header() {
 
               {/* Create Event + Profile — matching sidebar bottom section */}
               {isAuthenticated && (
-                <div className="border-t border-slate-200/60 dark:border-border/40 mt-2 pt-4 space-y-2">
+                <div className="border-t border-border mt-2 pt-4 space-y-2">
                   <Link
                     href="/create-event"
                     onClick={closeMobileMenu}
@@ -237,15 +237,29 @@ export function Header() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-sm font-bold leading-none text-slate-900 dark:text-foreground truncate">
+                        <p className="text-sm font-bold leading-none text-foreground truncate">
                           {user.name || "User"}
                         </p>
-                        <p className="text-xs text-slate-500 dark:text-muted-foreground truncate mt-0.5">
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
                           {user.year || user.email}
                         </p>
                       </div>
                     </Link>
                   )}
+
+                  <Link
+                    href="/settings"
+                    onClick={closeMobileMenu}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200",
+                      pathname === "/settings"
+                        ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
+                        : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                    )}
+                  >
+                    <Settings className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm">Settings</span>
+                  </Link>
 
                   <SignOutButton variant="outline" className="w-full rounded-xl" />
                 </div>

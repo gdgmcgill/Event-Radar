@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Uni-Verse | The Pulse of McGill",
+  title: "UNI-VERSE | The Pulse of McGill",
   description:
     "Experience the ultimate campus hub. Discover exclusive events, connect with clubs, and never miss what's happening at McGill University.",
 };

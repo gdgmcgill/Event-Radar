@@ -15,6 +15,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isModeration = pathname.startsWith("/moderation");
   const isHomepage = pathname === "/";
   const isEventDetail = /^\/events\/[^/]+$/.test(pathname);
+  const isClubs = pathname === "/clubs";
+  const isAbout = pathname === "/about";
+  const isFriends = pathname === "/friends";
 
   if (isLanding || isModeration) {
     return (
@@ -44,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
         <main
           id="main-content"
-          className={isHomepage || isEventDetail ? "flex-1" : "flex-1 p-6"}
+          className={isHomepage || isEventDetail || isClubs || isAbout || isFriends ? "flex-1" : "flex-1 p-6"}
         >
           {children}
         </main>

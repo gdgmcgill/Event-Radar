@@ -1,126 +1,69 @@
 import Link from "next/link";
 
+const LINKS = [
+  { label: "About", href: "/about" },
+  { label: "Help & FAQ", href: "/help" },
+  { label: "Feedback", href: "/feedback" },
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
+] as const;
+
 export function Footer() {
   return (
-    <footer className="border-t bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* About Section */}
-          <div>
-            <h3 className="font-semibold mb-4">About Uni-Verse</h3>
-            <p className="text-sm text-muted-foreground">
-              Discover and explore campus events at McGill University. Find
-              academic talks, social gatherings, sports events, and more.
+    <footer className="relative">
+      {/* Top separator */}
+      <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+      <div className="px-6 md:px-10 lg:px-12 py-10 md:py-14">
+        <div className="max-w-4xl mx-auto flex flex-col items-center text-center gap-8">
+          {/* Brand */}
+          <div className="space-y-2">
+            <h3 className="text-xl font-black tracking-tight text-foreground">
+              UNI-VERSE
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Campus event discovery for McGill University.
             </p>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
+          {/* Links — horizontal row with dot separators */}
+          <nav className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+            {LINKS.map((link, i) => (
+              <span key={link.label} className="flex items-center gap-2">
                 <Link
-                  href="/"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  href={link.href}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
                 >
-                  Browse Events
+                  {link.label}
                 </Link>
-              </li>
-              <li>
-                <Link
-                  href="/calendar"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Calendar
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/my-events"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  My Events
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/about"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  About
-                </Link>
-              </li>
-            </ul>
-          </div>
+                {i < LINKS.length - 1 && (
+                  <span className="text-border select-none" aria-hidden>
+                    ·
+                  </span>
+                )}
+              </span>
+            ))}
+          </nav>
 
-          {/* Support */}
-          <div>
-            <h3 className="font-semibold mb-4">Support</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/help"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Help & FAQ
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/feedback"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Send Feedback
-                </Link>
-              </li>
-              <li>
-                <a
-                  href="mailto:universe.mcgill@gmail.com"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  universe.mcgill@gmail.com
-                </a>
-              </li>
-            </ul>
-          </div>
+          {/* Contact */}
+          <a
+            href="mailto:universe.mcgill@gmail.com"
+            className="text-sm text-muted-foreground hover:text-primary transition-colors duration-200"
+          >
+            universe.mcgill@gmail.com
+          </a>
 
-          {/* Legal */}
-          <div>
-            <h3 className="font-semibold mb-4">Legal</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/privacy"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/terms"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Terms of Service
-                </Link>
-              </li>
-            </ul>
+          {/* Attribution */}
+          <div className="pt-6 border-t border-border/40 w-full">
+            <p className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()} UNI-VERSE · A{" "}
+              <span className="font-semibold text-foreground">GDG McGill</span>{" "}
+              project, powered by{" "}
+              <span className="font-semibold text-foreground">Apollo Labs</span>
+            </p>
           </div>
-        </div>
-
-        <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground space-y-1">
-          <p>
-            © {new Date().getFullYear()} Uni-Verse. A{" "}
-            <span className="font-semibold text-foreground">GDG McGill</span>{" "}
-            project, powered by{" "}
-            <span className="font-semibold text-foreground">Apollo Labs</span>.
-          </p>
-          <p className="text-xs">
-            Built for the McGill University community.
-          </p>
         </div>
       </div>
     </footer>
   );
 }
-

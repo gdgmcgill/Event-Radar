@@ -1,8 +1,6 @@
 import {
   Home,
   Calendar,
-  Tag,
-  Bookmark,
   Bell,
   Plus,
   Info,
@@ -14,7 +12,6 @@ import {
   Building2,
   ClipboardList,
   BarChart3,
-  HelpCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -27,25 +24,19 @@ export interface NavItem {
 /** Visible to unauthenticated visitors */
 export const guestNavItems: NavItem[] = [
   { name: "Home", path: "/", icon: Home },
-  { name: "Calendar", path: "/calendar", icon: Calendar },
-  { name: "Categories", path: "/categories", icon: Tag },
   { name: "Clubs", path: "/clubs", icon: Building2 },
   { name: "About", path: "/about", icon: Info },
-  { name: "Help", path: "/help", icon: HelpCircle },
 ];
 
 /** Visible to every authenticated user (replaces authenticatedNavItems) */
 export const baseNavItems: NavItem[] = [
   { name: "Profile", path: "/profile", icon: User },
   { name: "Home", path: "/", icon: Home },
-  { name: "Calendar", path: "/calendar", icon: Calendar },
-  { name: "Categories", path: "/categories", icon: Tag },
+  { name: "My Events", path: "/calendar", icon: Calendar },
   { name: "Clubs", path: "/clubs", icon: Building2 },
-  { name: "People", path: "/people", icon: Users },
-  { name: "My Events", path: "/my-events", icon: Bookmark },
+  { name: "Friends", path: "/friends", icon: Users },
   { name: "Create Event", path: "/create-event", icon: Plus },
   { name: "Notifications", path: "/notifications", icon: Bell },
-  { name: "Help", path: "/help", icon: HelpCircle },
 ];
 
 /** Extra items for club organizers */

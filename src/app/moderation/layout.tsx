@@ -40,7 +40,7 @@ export default async function ModerationLayout({
             <div className="size-8 bg-red-600 rounded-lg flex items-center justify-center text-white">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
             </div>
-            <h2 className="text-slate-900 text-lg font-bold leading-tight tracking-tight">Uni-Verse Admin</h2>
+            <h2 className="text-slate-900 text-lg font-bold leading-tight tracking-tight">UNI-VERSE Admin</h2>
           </div>
           <label className="hidden md:flex flex-col min-w-64 h-10">
             <div className="flex w-full flex-1 items-stretch rounded-lg h-full">
@@ -81,7 +81,7 @@ export default async function ModerationLayout({
           <div className="max-w-6xl mx-auto space-y-8">
             {children}
             <footer className="mt-20 py-8 border-t border-slate-200 text-center">
-              <p className="text-slate-400 text-sm">&copy; 2023 McGill University Uni-Verse. All rights reserved.</p>
+              <p className="text-slate-400 text-sm">&copy; 2023 McGill University UNI-VERSE. All rights reserved.</p>
               <div className="flex justify-center gap-6 mt-4">
                 <span className="text-xs text-slate-500 hover:text-red-600 cursor-pointer">Documentation</span>
                 <span className="text-xs text-slate-500 hover:text-red-600 cursor-pointer">Privacy Policy</span>
