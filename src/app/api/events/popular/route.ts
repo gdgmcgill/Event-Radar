@@ -97,10 +97,11 @@ export async function GET(request: NextRequest) {
       .from("events")
       .select(`
         *,
+        club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at),
         popularity:event_popularity_scores(*)
       `)
       .eq("status", "approved")
-      .gte("start_date", new Date().toISOString())
+      .gte("start_date", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
       .order("start_date", { ascending: true });
 
     if (eventsError) {

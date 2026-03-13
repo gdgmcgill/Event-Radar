@@ -80,16 +80,15 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
         <h3 className="text-2xl font-extrabold text-foreground tracking-tight">Trending Now</h3>
       </div>
       <ScrollRow className="px-6 md:px-10 lg:px-12">
-          {events.map((event) => {
-            const badge =
-              event.popularity?.trending_score && event.popularity.trending_score >= 5
-                ? "Trending"
-                : undefined;
+          {events.map((event, index) => {
+            const badge = `#${index + 1}`;
+            const badgeVariant = index >= 3 ? ("glass" as const) : ("default" as const);
             return (
               <div key={event.id} className="min-w-[260px] sm:min-w-[280px] md:min-w-[320px] w-[calc(85vw-2rem)] sm:w-[300px] md:w-[340px] lg:w-[320px] flex-shrink-0">
                 <DiscoveryCard
                   event={event}
                   badge={badge}
+                  badgeVariant={badgeVariant}
                   onClick={onEventClick ? () => onEventClick(event) : undefined}
                 />
               </div>

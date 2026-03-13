@@ -6,9 +6,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
-import { EventTag } from "@/types";
+import { transformEventFromDB } from "@/lib/tagMapping";
 
-/** Shape of event row from DB (may use start_date/end_date/organizer or event_date/event_time/club_id) */
+/** Shape of event row from DB */
 type EventRow = {
   id: string;
   title: string;
@@ -24,20 +24,7 @@ type EventRow = {
   event_date?: string;
   event_time?: string;
   club_id?: string;
-};
-
-// Mapping from database tags to EventTag enum
-const tagMapping: Record<string, EventTag> = {
-  'coding': EventTag.ACADEMIC,
-  'networking': EventTag.SOCIAL,
-  'hackathon': EventTag.ACADEMIC,
-  'career': EventTag.CAREER,
-  'sports': EventTag.SPORTS,
-  'wellness': EventTag.WELLNESS,
-  'cultural': EventTag.CULTURAL,
-  'social': EventTag.SOCIAL,
-  'academic': EventTag.ACADEMIC,
-  'technology': EventTag.ACADEMIC,
+  club?: Record<string, unknown> | null;
 };
 
 /**
@@ -210,7 +197,7 @@ export async function GET(request: NextRequest) {
     // Build Supabase query for events
     let eventsQuery = supabase
       .from('events')
-      .select('*', { count: 'exact' })
+      .select('*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)', { count: 'exact' })
       .order('start_date', { ascending: true });
 
     // Filter by IDs (e.g. for recommendation list)
@@ -295,7 +282,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform events to match frontend expectations
-    let rows = (eventsData || []) as EventRow[];
+    let rows = (eventsData || []) as unknown as EventRow[];
 
     // Re-sort by fuzzy rank order when fuzzy search was used
     if (fuzzyRankedIds) {
@@ -307,48 +294,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const events = rows.map((event) => {
-      const startDateStr = event.start_date ?? event.event_date;
-      const startDate = new Date(startDateStr ?? "");
-      const endDate = event.end_date ? new Date(event.end_date) : null;
-
-      // Map database tags to EventTag enum values
-      const mappedTags = (event.tags || [])
-        .map((tag: string) => {
-          const lowerTag = tag.toLowerCase();
-          return tagMapping[lowerTag] || EventTag.SOCIAL;
-        })
-        .filter((tag, index, self) => self.indexOf(tag) === index);
-
-      const clubId = event.organizer ?? event.club_id ?? "unknown";
-
-      return {
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        event_date: startDate.toISOString().split("T")[0],
-        event_time: startDateStr ? startDate.toTimeString().slice(0, 5) : (event.event_time ?? "00:00"),
-        location: event.location,
-        club_id: clubId,
-        tags: mappedTags,
-        image_url: event.image_url,
-        created_at: event.created_at,
-        updated_at: event.updated_at,
-        status: "approved" as const,
-        approved_by: null,
-        approved_at: null,
-        club: clubId !== "unknown" ? {
-          id: clubId,
-          name: typeof event.organizer === "string" ? event.organizer : clubId,
-          instagram_handle: null,
-          logo_url: null,
-          description: null,
-          created_at: event.created_at,
-          updated_at: event.updated_at,
-        } : null,
-        saved_by_users: [],
-      };
-    });
+    const events = rows.map((event) =>
+      transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
+    );
 
     return NextResponse.json({ 
       events, 

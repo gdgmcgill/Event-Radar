@@ -18,7 +18,7 @@ export async function GET() {
     // Query events starting within the next 2 hours
     const { data: eventsData, error } = await supabase
       .from("events")
-      .select("*")
+      .select("*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)")
       .eq("status", "approved")
       .gte("start_date", nowISO)
       .lte("start_date", soonISO)
@@ -31,7 +31,7 @@ export async function GET() {
     }
 
     const events = (eventsData || []).map(event =>
-      transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
+      transformEventFromDB(event as unknown as Parameters<typeof transformEventFromDB>[0])
     );
 
     return NextResponse.json({

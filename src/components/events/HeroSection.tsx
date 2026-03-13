@@ -148,11 +148,7 @@ export function HeroSection() {
               ?.scrollIntoView({ behavior: "smooth" });
           }}
           secondaryLabel="Learn More"
-          onSecondary={() => {
-            document
-              .getElementById("discovery-feed")
-              ?.scrollIntoView({ behavior: "smooth" });
-          }}
+          onSecondary={() => router.push("/about")}
         />
       </section>
     );

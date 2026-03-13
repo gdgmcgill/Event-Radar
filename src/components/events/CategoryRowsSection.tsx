@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { type Event, type EventTag } from "@/types";
+import { type Event, EventTag } from "@/types";
 import { EVENT_CATEGORIES, EVENT_TAGS } from "@/lib/constants";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import { ScrollRow } from "@/components/events/ScrollRow";
@@ -14,8 +14,6 @@ import {
   Heart,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-
 const TAG_ICONS: Record<string, LucideIcon> = {
   GraduationCap,
   Users,
@@ -28,9 +26,10 @@ const TAG_ICONS: Record<string, LucideIcon> = {
 interface CategoryRowsSectionProps {
   events: Event[];
   onEventClick?: (event: Event) => void;
+  onCategoryClick?: (tag: EventTag) => void;
 }
 
-export function CategoryRowsSection({ events, onEventClick }: CategoryRowsSectionProps) {
+export function CategoryRowsSection({ events, onEventClick, onCategoryClick }: CategoryRowsSectionProps) {
   const eventsByTag = useMemo(() => {
     const map = new Map<EventTag, Event[]>();
     for (const tag of EVENT_TAGS) {
@@ -45,8 +44,20 @@ export function CategoryRowsSection({ events, onEventClick }: CategoryRowsSectio
     return map;
   }, [events]);
 
+  // Display order for homepage category rows
+  const categoryOrder: EventTag[] = [
+    EventTag.CAREER,
+    EventTag.ACADEMIC,
+    EventTag.SOCIAL,
+    EventTag.CULTURAL,
+    EventTag.SPORTS,
+    ...EVENT_TAGS.filter(
+      (t) => ![EventTag.CAREER, EventTag.ACADEMIC, EventTag.SOCIAL, EventTag.CULTURAL, EventTag.SPORTS].includes(t)
+    ),
+  ];
+
   // Only render rows for categories that have events
-  const activeCategories = EVENT_TAGS.filter(
+  const activeCategories = categoryOrder.filter(
     (tag) => (eventsByTag.get(tag)?.length ?? 0) > 0
   );
 
@@ -74,12 +85,14 @@ export function CategoryRowsSection({ events, onEventClick }: CategoryRowsSectio
                   {tagEvents.length} event{tagEvents.length !== 1 ? "s" : ""}
                 </span>
               </h3>
-              <Link
-                href={`/categories?tag=${tag}`}
-                className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
-              >
-                See All
-              </Link>
+              {onCategoryClick && (
+                <button
+                  onClick={() => onCategoryClick(tag)}
+                  className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                >
+                  See All
+                </button>
+              )}
             </div>
             <ScrollRow className="px-6 md:px-10 lg:px-12">
               {tagEvents.map((event) => (

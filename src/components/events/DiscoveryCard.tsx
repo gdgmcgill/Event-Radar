@@ -9,9 +9,10 @@ interface DiscoveryCardProps {
   event: Event;
   onClick?: () => void;
   badge?: string;
+  badgeVariant?: "default" | "glass";
 }
 
-export function DiscoveryCard({ event, onClick, badge }: DiscoveryCardProps) {
+export function DiscoveryCard({ event, onClick, badge, badgeVariant = "default" }: DiscoveryCardProps) {
   const handleClick = (e: React.MouseEvent) => {
     if (onClick) {
       e.preventDefault();
@@ -53,7 +54,13 @@ export function DiscoveryCard({ event, onClick, badge }: DiscoveryCardProps) {
         {/* Badge (Live, Selling Fast, etc.) */}
         {badge && (
           <div className="absolute top-4 right-4">
-            <span className="bg-primary text-white text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-lg">
+            <span
+              className={
+                badgeVariant === "glass"
+                  ? "bg-white/10 backdrop-blur-md text-white border border-white/20 text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-lg"
+                  : "bg-primary text-white text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-lg"
+              }
+            >
               {badge}
             </span>
           </div>
