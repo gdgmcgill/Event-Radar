@@ -11,6 +11,12 @@ export const EVENT_TAGS: EventTag[] = [
   EventTag.CAREER,
   EventTag.CULTURAL,
   EventTag.WELLNESS,
+  EventTag.MUSIC,
+  EventTag.TECH,
+  EventTag.FOOD,
+  EventTag.VOLUNTEER,
+  EventTag.ARTS,
+  EventTag.NETWORKING,
 ];
 
 export const EVENT_CATEGORIES = {
@@ -73,6 +79,66 @@ export const EVENT_CATEGORIES = {
     icon: "Heart",
     baseColor: "#14b8a6", // tailwind teal-500
     badgeTheme: "bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border-teal-500/30 text-teal-700 dark:text-teal-300 ring-2 ring-teal-500/25 dark:ring-teal-400/30",
+  },
+  [EventTag.MUSIC]: {
+    label: "Music",
+    color: "bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300",
+    borderColor: "border-rose-400 dark:border-rose-500",
+    selectedBg: "bg-rose-50 dark:bg-rose-950/40",
+    checkColor: "bg-rose-600 text-white",
+    icon: "Music",
+    baseColor: "#e11d48", // tailwind rose-600
+    badgeTheme: "bg-gradient-to-r from-rose-500/10 to-pink-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/25 dark:ring-rose-400/30",
+  },
+  [EventTag.TECH]: {
+    label: "Tech",
+    color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300",
+    borderColor: "border-indigo-400 dark:border-indigo-500",
+    selectedBg: "bg-indigo-50 dark:bg-indigo-950/40",
+    checkColor: "bg-indigo-600 text-white",
+    icon: "Cpu",
+    baseColor: "#6366f1", // tailwind indigo-500
+    badgeTheme: "bg-gradient-to-r from-indigo-500/10 to-violet-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/25 dark:ring-indigo-400/30",
+  },
+  [EventTag.FOOD]: {
+    label: "Food & Drink",
+    color: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300",
+    borderColor: "border-amber-400 dark:border-amber-500",
+    selectedBg: "bg-amber-50 dark:bg-amber-950/40",
+    checkColor: "bg-amber-600 text-white",
+    icon: "UtensilsCrossed",
+    baseColor: "#f59e0b", // tailwind amber-500
+    badgeTheme: "bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/25 dark:ring-amber-400/30",
+  },
+  [EventTag.VOLUNTEER]: {
+    label: "Volunteer",
+    color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300",
+    borderColor: "border-emerald-400 dark:border-emerald-500",
+    selectedBg: "bg-emerald-50 dark:bg-emerald-950/40",
+    checkColor: "bg-emerald-600 text-white",
+    icon: "HandHeart",
+    baseColor: "#10b981", // tailwind emerald-500
+    badgeTheme: "bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/25 dark:ring-emerald-400/30",
+  },
+  [EventTag.ARTS]: {
+    label: "Arts",
+    color: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/50 dark:text-fuchsia-300",
+    borderColor: "border-fuchsia-400 dark:border-fuchsia-500",
+    selectedBg: "bg-fuchsia-50 dark:bg-fuchsia-950/40",
+    checkColor: "bg-fuchsia-600 text-white",
+    icon: "Paintbrush",
+    baseColor: "#d946ef", // tailwind fuchsia-500
+    badgeTheme: "bg-gradient-to-r from-fuchsia-500/10 to-pink-500/10 border-fuchsia-500/30 text-fuchsia-700 dark:text-fuchsia-300 ring-2 ring-fuchsia-500/25 dark:ring-fuchsia-400/30",
+  },
+  [EventTag.NETWORKING]: {
+    label: "Networking",
+    color: "bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300",
+    borderColor: "border-sky-400 dark:border-sky-500",
+    selectedBg: "bg-sky-50 dark:bg-sky-950/40",
+    checkColor: "bg-sky-600 text-white",
+    icon: "Handshake",
+    baseColor: "#0ea5e9", // tailwind sky-500
+    badgeTheme: "bg-gradient-to-r from-sky-500/10 to-blue-500/10 border-sky-500/30 text-sky-700 dark:text-sky-300 ring-2 ring-sky-500/25 dark:ring-sky-400/30",
   },
 } as const;
 

@@ -23,6 +23,12 @@ export enum EventTag {
   CAREER = "career",
   CULTURAL = "cultural",
   WELLNESS = "wellness",
+  MUSIC = "music",
+  TECH = "tech",
+  FOOD = "food",
+  VOLUNTEER = "volunteer",
+  ARTS = "arts",
+  NETWORKING = "networking",
 }
 
 export interface Event {

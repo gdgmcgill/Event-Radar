@@ -10,6 +10,7 @@ interface AuthState {
   initialized: boolean;
   hasClubs: boolean;
   initialize: () => void;
+  updateUser: (fields: Partial<AppUser>) => void;
   signOut: () => Promise<void>;
 }
 
@@ -131,6 +132,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         initialFetch();
       }
     }, 3000);
+  },
+
+  updateUser: (fields) => {
+    set((state) => ({
+      user: state.user ? { ...state.user, ...fields } : state.user,
+    }));
   },
 
   signOut: async () => {
