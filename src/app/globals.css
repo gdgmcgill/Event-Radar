@@ -4,74 +4,67 @@
 
 @layer base {
   :root {
-    /* Custom Palette:
-       #561c24 (Burgundy) -> 352 51% 22%
-       #6d2932 (Muted Red) -> 352 45% 29%
-       #c7c7a3 (Sage) -> 60 23% 71%
-       #e8d8c4 (Cream) -> 33 40% 84%
-       #ED1B2F (McGill Red) -> 354 85% 52%
-    */
-    
-    --background: 33 40% 96%; /* Very light cream */
-    --foreground: 352 51% 22%; /* Burgundy */
+    /* Light theme: Clean white + neutral grays + McGill Red accents */
+    --background: 0 0% 100%;          /* Pure white (#FFFFFF) */
+    --foreground: 0 0% 9%;            /* Near-black text (#171717) */
 
-    --card: 0 0% 100%;
-    --card-foreground: 352 51% 22%;
+    --card: 0 0% 100%;                /* White cards */
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 352 51% 22%;
+    --popover-foreground: 0 0% 9%;
 
-    --primary: 354 85% 52%; /* McGill Red */
+    --primary: 354 85% 52%;           /* McGill Red (#ED1B2F) */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 33 40% 84%; /* Cream */
-    --secondary-foreground: 352 51% 22%;
+    --secondary: 0 0% 96%;            /* Light gray (#F5F5F5) */
+    --secondary-foreground: 0 0% 9%;
 
-    --muted: 60 23% 90%; /* Very light sage/grey */
-    --muted-foreground: 352 45% 40%; /* Muted text */
+    --muted: 0 0% 96%;                /* Light gray (#F5F5F5) */
+    --muted-foreground: 0 0% 45%;     /* Medium gray (#737373) */
 
-    --accent: 33 40% 84%; /* Cream */
-    --accent-foreground: 352 51% 22%;
+    --accent: 0 0% 96%;               /* Light gray */
+    --accent-foreground: 0 0% 9%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 60 10% 85%; /* Light sage border */
-    --input: 60 10% 85%;
-    --ring: 354 85% 52%;
+    --border: 0 0% 90%;               /* Clean gray border (#E5E5E5) */
+    --input: 0 0% 90%;
+    --ring: 354 85% 52%;              /* McGill Red focus ring */
 
     --radius: 0.75rem;
   }
 
-  /* Dark theme: Deep dark mode + glass borders + McGill red accents */
+  /* Dark theme: Deep dark mode + glass borders + McGill Red accents */
   .dark {
-    --background: 240 6% 4%;       /* Deep rich black (#09090B) */
-    --foreground: 0 0% 98%;        /* Off-white text */
+    --background: 240 6% 4%;          /* Deep rich black (#09090B) */
+    --foreground: 0 0% 98%;           /* Off-white text */
 
-    --card: 240 5% 10%;            /* Surface almost black for cards (#18181B) */
+    --card: 240 5% 10%;               /* Surface almost black (#18181B) */
     --card-foreground: 0 0% 98%;
 
     --popover: 240 5% 10%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 354 85% 52%;        /* McGill Red */
+    --primary: 354 85% 52%;           /* McGill Red */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4% 16%;       /* Dark surface hover (#27272A) */
+    --secondary: 240 4% 16%;          /* Dark surface (#27272A) */
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 5% 16%;           /* Muted backgrounds */
-    --muted-foreground: 240 5% 65%;/* Muted text (grey) */
+    --muted: 240 5% 16%;              /* Muted backgrounds */
+    --muted-foreground: 240 5% 65%;   /* Muted text (grey) */
 
-    --accent: 240 5% 16%;          
+    --accent: 240 5% 16%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 63%;
     --destructive-foreground: 0 0% 10%;
 
-    --border: 240 5% 16%;          /* #27272A for borders */
-    --input: 240 5% 16%;           
-    --ring: 354 85% 52%;           /* McGill Red focus ring */
+    --border: 240 5% 16%;             /* #27272A borders */
+    --input: 240 5% 16%;
+    --ring: 354 85% 52%;              /* McGill Red focus ring */
   }
 }
 

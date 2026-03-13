@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { EventDetailView } from "@/components/events/EventDetailView";
-import { AppBreadcrumb } from "@/components/layout/AppBreadcrumb";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { ReviewPrompt } from "@/components/events/ReviewPrompt";
 import { EventReviewsSection } from "@/components/events/EventReviewsSection";
@@ -27,7 +25,6 @@ import { FriendsGoing } from "@/components/events/FriendsGoing";
 import { InviteFriendsModal } from "@/components/events/InviteFriendsModal";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useEventReviews } from "@/hooks/useAnalytics";
-import { exportEventIcal } from "@/lib/exportUtils";
 import type { Event, ReviewAggregate } from "@/types";
 import { Loader2, UserPlus } from "lucide-react";
 
@@ -37,12 +34,9 @@ export default function EventDetailClient() {
   const from = searchParams.get("from");
   const user = useAuthStore((s) => s.user);
 
-  function getBreadcrumbItems(title: string) {
-    if (from === "my-events") {
-      return [{ label: "My Events", href: "/my-events" }, { label: title }];
-    }
-    return [{ label: "Home", href: "/" }, { label: title }];
-  }
+  const backHref = from === "my-events" ? "/my-events" : "/";
+  const backLabel =
+    from === "my-events" ? "Back to My Events" : "Back to Events";
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +46,9 @@ export default function EventDetailClient() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const { data: reviewData, mutate: mutateReviews } = useEventReviews(id ?? "");
+  const { data: reviewData, mutate: mutateReviews } = useEventReviews(
+    id ?? ""
+  );
 
   // Build ReviewAggregate for EventDetailView
   const reviewAggregate: ReviewAggregate | undefined =
@@ -113,7 +109,9 @@ export default function EventDetailClient() {
       const tagsParam = event.tags.join(",");
       const now = new Date().toISOString();
       try {
-        const res = await fetch(`/api/events?tags=${tagsParam}&limit=6&dateFrom=${now}`);
+        const res = await fetch(
+          `/api/events?tags=${tagsParam}&limit=6&dateFrom=${now}`
+        );
         if (!res.ok) return;
         const data = await res.json();
         const filtered = (data.events as Event[])
@@ -122,7 +120,9 @@ export default function EventDetailClient() {
         if (filtered.length > 0) {
           setRelatedEvents(filtered);
         } else {
-          const fallbackRes = await fetch(`/api/events?limit=6&dateFrom=${now}`);
+          const fallbackRes = await fetch(
+            `/api/events?limit=6&dateFrom=${now}`
+          );
           if (!fallbackRes.ok) return;
           const fallbackData = await fallbackRes.json();
           setRelatedEvents(
@@ -175,37 +175,28 @@ export default function EventDetailClient() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-6 sm:py-8">
-        <AppBreadcrumb items={getBreadcrumbItems("Error")} />
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-          <p className="text-muted-foreground">{error}</p>
-          <Button onClick={() => window.location.reload()} variant="outline">
-            Try Again
-          </Button>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 px-6">
+        <p className="text-muted-foreground">{error}</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Try Again
+        </Button>
       </div>
     );
   }
 
   if (!event) {
     return (
-      <div className="container mx-auto px-4 py-6 sm:py-8">
-        <AppBreadcrumb items={getBreadcrumbItems("Not Found")} />
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-2">
-          <h2 className="text-2xl font-bold">Event not found</h2>
-          <p className="text-muted-foreground">
-            This event may have been removed or doesn&apos;t exist.
-          </p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-2 px-6">
+        <h2 className="text-2xl font-bold">Event not found</h2>
+        <p className="text-muted-foreground">
+          This event may have been removed or doesn&apos;t exist.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 sm:py-8">
-      <AppBreadcrumb items={getBreadcrumbItems(event.title)} />
-
-      {/* New Enhanced Event Detail View */}
+    <>
       <EventDetailView
         event={event}
         similarEvents={relatedEvents}
@@ -214,6 +205,8 @@ export default function EventDetailClient() {
         onShare={handleShare}
         onEventClick={handleEventClick}
         reviews={reviewAggregate}
+        backHref={backHref}
+        backLabel={backLabel}
       >
         {/* RSVP, Friends Going, Invite — rendered inside left column */}
         <div className="space-y-4">
@@ -224,7 +217,7 @@ export default function EventDetailClient() {
           {user && (
             <Button
               variant="outline"
-              className="w-full gap-2"
+              className="w-full gap-2 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
               onClick={() => setShowInviteModal(true)}
             >
               <UserPlus className="h-4 w-4" />
@@ -242,7 +235,11 @@ export default function EventDetailClient() {
           {user && reviewData?.user_review && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Your rating:</span>
-              <StarRating value={reviewData.user_review.rating} readonly size="sm" />
+              <StarRating
+                value={reviewData.user_review.rating}
+                readonly
+                size="sm"
+              />
             </div>
           )}
           {reviewData && reviewData.aggregate.total_reviews > 0 && (
@@ -264,7 +261,8 @@ export default function EventDetailClient() {
           <DialogHeader>
             <DialogTitle>Sign in to save events</DialogTitle>
             <DialogDescription>
-              Create an account or sign in with your McGill email to save events and get personalised recommendations.
+              Create an account or sign in with your McGill email to save events
+              and get personalised recommendations.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center pt-2">
@@ -272,6 +270,6 @@ export default function EventDetailClient() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

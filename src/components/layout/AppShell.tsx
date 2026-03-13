@@ -4,9 +4,13 @@ import { usePathname } from "next/navigation";
 import { SideNavBar } from "./SideNavBar";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
+import { SignInButton } from "@/components/auth/SignInButton";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user } = useAuthStore();
+  const isAuthenticated = !!user;
   const isLanding = pathname === "/landing";
   const isModeration = pathname.startsWith("/moderation");
   const isHomepage = pathname === "/";
@@ -32,13 +36,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="lg:hidden">
           <Header />
         </div>
+        {/* Desktop top-right sign-in for guests */}
+        {!isAuthenticated && (
+          <div className="hidden lg:flex absolute top-5 right-6 z-50">
+            <SignInButton variant="default" />
+          </div>
+        )}
         <main
           id="main-content"
           className={isHomepage || isEventDetail ? "flex-1" : "flex-1 p-6"}
         >
           {children}
         </main>
-        {!isHomepage && <Footer />}
+        {!isHomepage && !isEventDetail && <Footer />}
       </div>
     </div>
   );
