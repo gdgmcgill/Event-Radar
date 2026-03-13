@@ -229,6 +229,118 @@ export const QUICK_FILTERS: QuickFilter[] = [
 ];
 
 /**
+ * Lookup for quick-filter tag metadata, keyed by tag string.
+ * Same shape as EVENT_CATEGORIES so InterestTagSelector can render them uniformly.
+ * Only includes quick-filter tags NOT already in EventTag.
+ */
+export const QUICK_FILTER_CATEGORIES: Record<string, {
+  label: string;
+  icon: string;
+  baseColor: string;
+  badgeTheme: string;
+  borderColor: string;
+  selectedBg: string;
+  checkColor: string;
+  color: string;
+}> = {
+  hackathon: {
+    label: "Hackathon",
+    icon: "Code",
+    baseColor: "#6366f1",
+    badgeTheme: "bg-gradient-to-r from-indigo-500/10 to-violet-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/25 dark:ring-indigo-400/30",
+    borderColor: "border-indigo-400 dark:border-indigo-500",
+    selectedBg: "bg-indigo-50 dark:bg-indigo-950/40",
+    checkColor: "bg-indigo-600 text-white",
+    color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300",
+  },
+  competition: {
+    label: "Case Comp",
+    icon: "Award",
+    baseColor: "#f59e0b",
+    badgeTheme: "bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/25 dark:ring-amber-400/30",
+    borderColor: "border-amber-400 dark:border-amber-500",
+    selectedBg: "bg-amber-50 dark:bg-amber-950/40",
+    checkColor: "bg-amber-600 text-white",
+    color: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300",
+  },
+  guest_speaker: {
+    label: "Guest Speaker",
+    icon: "Mic",
+    baseColor: "#8b5cf6",
+    badgeTheme: "bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-violet-500/30 text-violet-700 dark:text-violet-300 ring-2 ring-violet-500/25 dark:ring-violet-400/30",
+    borderColor: "border-violet-400 dark:border-violet-500",
+    selectedBg: "bg-violet-50 dark:bg-violet-950/40",
+    checkColor: "bg-violet-600 text-white",
+    color: "bg-violet-100 text-violet-800 dark:bg-violet-900/50 dark:text-violet-300",
+  },
+  free_food: {
+    label: "Free Food",
+    icon: "UtensilsCrossed",
+    baseColor: "#ef4444",
+    badgeTheme: "bg-gradient-to-r from-red-500/10 to-rose-500/10 border-red-500/30 text-red-700 dark:text-red-300 ring-2 ring-red-500/25 dark:ring-red-400/30",
+    borderColor: "border-red-400 dark:border-red-500",
+    selectedBg: "bg-red-50 dark:bg-red-950/40",
+    checkColor: "bg-red-600 text-white",
+    color: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300",
+  },
+  workshop: {
+    label: "Workshop",
+    icon: "Wrench",
+    baseColor: "#10b981",
+    badgeTheme: "bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/25 dark:ring-emerald-400/30",
+    borderColor: "border-emerald-400 dark:border-emerald-500",
+    selectedBg: "bg-emerald-50 dark:bg-emerald-950/40",
+    checkColor: "bg-emerald-600 text-white",
+    color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300",
+  },
+  party: {
+    label: "Party",
+    icon: "PartyPopper",
+    baseColor: "#d946ef",
+    badgeTheme: "bg-gradient-to-r from-fuchsia-500/10 to-pink-500/10 border-fuchsia-500/30 text-fuchsia-700 dark:text-fuchsia-300 ring-2 ring-fuchsia-500/25 dark:ring-fuchsia-400/30",
+    borderColor: "border-fuchsia-400 dark:border-fuchsia-500",
+    selectedBg: "bg-fuchsia-50 dark:bg-fuchsia-950/40",
+    checkColor: "bg-fuchsia-600 text-white",
+    color: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/50 dark:text-fuchsia-300",
+  },
+  fitness: {
+    label: "Fitness",
+    icon: "Dumbbell",
+    baseColor: "#84cc16",
+    badgeTheme: "bg-gradient-to-r from-lime-500/10 to-green-500/10 border-lime-500/30 text-lime-700 dark:text-lime-300 ring-2 ring-lime-500/25 dark:ring-lime-400/30",
+    borderColor: "border-lime-400 dark:border-lime-500",
+    selectedBg: "bg-lime-50 dark:bg-lime-950/40",
+    checkColor: "bg-lime-600 text-white",
+    color: "bg-lime-100 text-lime-800 dark:bg-lime-900/50 dark:text-lime-300",
+  },
+  info_session: {
+    label: "Info Session",
+    icon: "Info",
+    baseColor: "#06b6d4",
+    badgeTheme: "bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300 ring-2 ring-cyan-500/25 dark:ring-cyan-400/30",
+    borderColor: "border-cyan-400 dark:border-cyan-500",
+    selectedBg: "bg-cyan-50 dark:bg-cyan-950/40",
+    checkColor: "bg-cyan-600 text-white",
+    color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-300",
+  },
+};
+
+/**
+ * All tags that are valid as user interest selections.
+ * Combines broad EventTag values with granular quick-filter tags.
+ */
+export const VALID_INTEREST_TAGS: string[] = [
+  ...Object.values(EventTag),
+  ...Object.keys(QUICK_FILTER_CATEGORIES),
+];
+
+/**
+ * Quick-filter tags that are not already covered by EventTag.
+ * Used to render the "More Interests" section in InterestTagSelector.
+ */
+export const EXTRA_INTEREST_TAGS: string[] = Object.keys(QUICK_FILTER_CATEGORIES);
+
+/**
  * Minimum number of saved events required before showing personalized recommendations.
  * Below this threshold, users see the popularity-ranked fallback feed.
  */

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import InterestTagSelector from "@/components/profile/InterestTagSelector";
 import { PRONOUNS, YEARS, FACULTIES } from "@/lib/constants";
-import type { EventTag } from "@/types";
 import { ChevronRight, ChevronLeft, Sparkles, Check } from "lucide-react";
 
 type OnboardingWizardProps = {
@@ -26,7 +25,7 @@ export function OnboardingWizard({
   const [pronouns, setPronouns] = useState("");
   const [year, setYear] = useState("");
   const [faculty, setFaculty] = useState("");
-  const [tags, setTags] = useState<EventTag[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +39,7 @@ export function OnboardingWizard({
       case 1:
         return name.trim().length >= 2;
       case 2:
-        return tags.length >= 3 && tags.length <= 5;
+        return tags.length >= 3 && tags.length <= 8;
       case 3:
         return true;
       default:
@@ -234,7 +233,7 @@ export function OnboardingWizard({
               selected={tags}
               onChange={setTags}
               min={3}
-              max={5}
+              max={8}
             />
           </div>
         )}
