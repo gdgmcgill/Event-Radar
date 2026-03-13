@@ -11,9 +11,8 @@ CREATE TABLE featured_events (
   CONSTRAINT featured_events_date_order CHECK (ends_at > starts_at)
 );
 
--- Only one active/upcoming featured entry per event
-CREATE UNIQUE INDEX featured_events_active_event
-  ON featured_events (event_id) WHERE ends_at > now();
+-- Index for fast lookups by event_id
+CREATE INDEX featured_events_event_id ON featured_events (event_id);
 
 -- RLS
 ALTER TABLE featured_events ENABLE ROW LEVEL SECURITY;
