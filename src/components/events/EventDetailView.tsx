@@ -1,7 +1,7 @@
 // src/components/events/EventDetailView.tsx
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +16,6 @@ import {
   Share2,
   Check,
   Star,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   Twitter,
   Facebook,
@@ -48,8 +46,6 @@ export function EventDetailView({
 }: EventDetailViewProps) {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(isSaved);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
   const eventUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/events/${event.id}`
@@ -104,16 +100,6 @@ export function EventDetailView({
     setSaved((prev) => !prev);
     onSave?.();
   }, [onSave]);
-
-  const scrollSimilar = useCallback((direction: "left" | "right") => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const scrollAmount = 280;
-    container.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
-      behavior: "smooth",
-    });
-  }, []);
 
   const primaryTag = event.tags[0] as EventTag | undefined;
   const categoryInfo = primaryTag ? EVENT_CATEGORIES[primaryTag] : null;
@@ -422,28 +408,10 @@ export function EventDetailView({
                   <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                     Similar Events
                   </h3>
-                  {similarEvents.length > 2 && (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => scrollSimilar("left")}
-                        className="size-7 rounded-full flex items-center justify-center bg-[#ED1B2F]/10 text-[#ED1B2F] hover:bg-[#ED1B2F]/20 transition-colors"
-                        aria-label="Scroll similar events left"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => scrollSimilar("right")}
-                        className="size-7 rounded-full flex items-center justify-center bg-[#ED1B2F]/10 text-[#ED1B2F] hover:bg-[#ED1B2F]/20 transition-colors"
-                        aria-label="Scroll similar events right"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {/* Vertical list on sidebar (matches Stitch design) */}
-                <div ref={scrollContainerRef} className="space-y-3">
+                <div className="space-y-3">
                   {similarEvents.slice(0, 5).map((similarEvent) => {
                     const simTag = similarEvent.tags[0] as EventTag | undefined;
                     const simCat = simTag ? EVENT_CATEGORIES[simTag] : null;

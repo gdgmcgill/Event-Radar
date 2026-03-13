@@ -1,16 +1,15 @@
 // src/components/events/HomeFeed.tsx
 "use client";
 
-import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn, formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES, EVENT_TAGS } from "@/lib/constants";
 import type { Event, EventTag } from "@/types";
+import { ScrollRow } from "@/components/events/ScrollRow";
 import {
-  ChevronLeft,
-  ChevronRight,
   Heart,
   MapPin,
   Calendar,
@@ -47,93 +46,6 @@ const TAG_ICON_MAP: Record<string, LucideIcon> = {
   Palette,
   Heart,
 };
-
-// ── Scroll Row (reusable horizontal scroll container) ────────────────────────
-
-interface ScrollRowProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-function ScrollRow({ children, className }: ScrollRowProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 0);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", checkScroll, { passive: true });
-    const observer = new ResizeObserver(checkScroll);
-    observer.observe(el);
-    return () => {
-      el.removeEventListener("scroll", checkScroll);
-      observer.disconnect();
-    };
-  }, [checkScroll]);
-
-  const scroll = (direction: "left" | "right") => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({
-      left: direction === "left" ? -el.clientWidth * 0.75 : el.clientWidth * 0.75,
-      behavior: "smooth",
-    });
-  };
-
-  return (
-    <div className="relative group/scroll">
-      {canScrollLeft && (
-        <>
-          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={() => scroll("left")}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full shadow-lg bg-card/90 backdrop-blur-sm border border-border/50 opacity-0 group-hover/scroll:opacity-100 transition-opacity"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-        </>
-      )}
-
-      <div
-        ref={scrollRef}
-        className={cn(
-          "flex gap-6 overflow-x-auto pb-4 scroll-smooth",
-          className,
-        )}
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
-        {children}
-      </div>
-
-      {canScrollRight && (
-        <>
-          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={() => scroll("right")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full shadow-lg bg-card/90 backdrop-blur-sm border border-border/50 opacity-0 group-hover/scroll:opacity-100 transition-opacity"
-            aria-label="Scroll right"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </>
-      )}
-    </div>
-  );
-}
 
 // ── Hero Banner ──────────────────────────────────────────────────────────────
 

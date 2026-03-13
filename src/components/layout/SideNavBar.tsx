@@ -64,12 +64,8 @@ export function SideNavBar() {
   const pathname = usePathname();
   const { user, hasClubs } = useAuthStore();
   const isAuthenticated = !!user;
-  const isHomepage = pathname === "/";
-
-  // On homepage the sidebar starts collapsed and expands on hover
-  const canCollapse = isHomepage;
   const [hovered, setHovered] = useState(false);
-  const collapsed = canCollapse && !hovered;
+  const collapsed = !hovered;
 
   // Select the right nav items but filter out Profile (shown separately)
   const coreNavItems = isAuthenticated
@@ -87,8 +83,8 @@ export function SideNavBar() {
     <>
       {/* Desktop Side Navigation */}
       <aside
-        onMouseEnter={() => canCollapse && setHovered(true)}
-        onMouseLeave={() => canCollapse && setHovered(false)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         className={cn(
           "hidden lg:flex flex-col fixed inset-y-0 left-0 z-50 overflow-hidden",
           "transition-[width,padding] duration-200",
@@ -289,7 +285,7 @@ export function SideNavBar() {
       </aside>
 
       {/* Spacer — collapsed width so main content doesn't shift on hover */}
-      <div className={cn("hidden lg:block flex-shrink-0", canCollapse ? "w-[72px]" : "w-72")} />
+      <div className="hidden lg:block flex-shrink-0 w-[72px]" />
     </>
   );
 }

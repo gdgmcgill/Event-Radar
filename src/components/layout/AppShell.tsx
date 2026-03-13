@@ -27,9 +27,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <SideNavBar />
       <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
-        {/* On homepage: header is mobile-only (sidebar handles desktop nav).
-            On other pages: header shows on all sizes. */}
-        <div className={isHomepage ? "lg:hidden" : ""}>
+        {/* Header is mobile-only — sidebar handles desktop nav */}
+        <div className="lg:hidden">
           <Header />
         </div>
         <main

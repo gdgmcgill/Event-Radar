@@ -3,7 +3,7 @@
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event, EventTag } from "@/types";
 import { EventCard } from "./EventCard";
-import { HorizontalEventScroll } from "./HorizontalEventScroll";
+import { ScrollRow } from "./ScrollRow";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   GraduationCap,
@@ -67,14 +67,15 @@ export function CategorySection({
           <p className="text-muted-foreground text-sm">No events in this category yet</p>
         </div>
       ) : (
-        <HorizontalEventScroll 
+        <ScrollRow
           onNearEnd={onLoadMore}
           hasMore={hasMore}
+          className="gap-6"
         >
           {events.map((event) => (
             <div
               key={event.id}
-              className="snap-start shrink-0 w-[300px] sm:w-[340px]"
+              className="shrink-0 w-[300px] sm:w-[340px]"
             >
               <EventCard
                 event={event}
@@ -85,7 +86,7 @@ export function CategorySection({
               />
             </div>
           ))}
-        </HorizontalEventScroll>
+        </ScrollRow>
       )}
     </section>
   );
