@@ -16,7 +16,7 @@ import {
   ChevronRight,
   Code,
 } from "lucide-react";
-import { EVENT_CATEGORIES } from "@/lib/constants";
+import { EVENT_CATEGORIES, QUICK_FILTER_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import FollowUserButton from "@/components/users/FollowUserButton";
 
@@ -180,13 +180,13 @@ export default async function UserProfilePage({
               </h3>
               <div className="flex flex-wrap gap-2">
                 {(target.interest_tags as string[]).map((tag) => {
-                  const category = EVENT_CATEGORIES[tag as EventTag];
+                  const label = EVENT_CATEGORIES[tag as EventTag]?.label ?? QUICK_FILTER_CATEGORIES[tag]?.label ?? tag;
                   return (
                     <span
                       key={tag}
                       className="px-3 py-1 bg-red-600/10 text-red-600 text-sm font-medium rounded-full"
                     >
-                      {category?.label ?? tag}
+                      {label}
                     </span>
                   );
                 })}
