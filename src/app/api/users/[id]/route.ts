@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { EventTag } from "@/types";
+import { VALID_INTEREST_TAGS } from "@/lib/constants";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
 
@@ -84,8 +84,7 @@ export async function PATCH(
         );
       }
 
-      const validTags = Object.values(EventTag);
-      const isValid = interest_tags.every((tag) => validTags.includes(tag as EventTag));
+      const isValid = interest_tags.every((tag: string) => VALID_INTEREST_TAGS.includes(tag));
 
       if (!isValid) {
         return NextResponse.json(

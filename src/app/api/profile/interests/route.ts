@@ -6,7 +6,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
-import { EventTag } from "@/types";
+import { VALID_INTEREST_TAGS } from "@/lib/constants";
 import type { Database } from "@/lib/supabase/types";
 
 export async function PUT(request: NextRequest) {
@@ -34,9 +34,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Validate that all tags are valid EventTag values
-    const validTags = Object.values(EventTag);
-    const isValid = interest_tags.every((tag) => validTags.includes(tag as EventTag));
+    // Validate that all tags are valid interest tags (EventTag + quick filters)
+    const isValid = interest_tags.every((tag: string) => VALID_INTEREST_TAGS.includes(tag));
 
     if (!isValid) {
       return NextResponse.json(
