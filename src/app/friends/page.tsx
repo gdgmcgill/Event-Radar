@@ -185,11 +185,12 @@ export default function FriendsPage() {
   return (
     <div className="flex-1 min-w-0">
       {/* ── Hero Section (matches /clubs hero) ─────────────────────── */}
-      <section className="relative w-full h-[50vh] min-h-[340px] max-h-[500px] overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-background to-background" />
+      <section className="relative w-full h-[60vh] min-h-[400px] max-h-[600px] overflow-hidden">
+        {/* Background — dark base with subtle primary accent */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-950 to-black" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-primary/5" />
         {/* Grid texture */}
-        <div className="absolute inset-0 bg-grid-black/[0.04] dark:bg-grid-white/[0.02]" />
+        <div className="absolute inset-0 bg-grid-white/[0.03]" />
 
         {/* Globe — anchored to the right of the hero, vertically centered */}
         <div className="absolute right-4 lg:right-[5%] top-1/2 -translate-y-1/2 hidden md:block pointer-events-auto z-0">
@@ -200,18 +201,18 @@ export default function FriendsPage() {
         </div>
 
         {/* Bottom blend into page background */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent z-10" />
+        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background from-10% via-background/40 via-50% to-transparent z-10" />
 
         <div className="absolute bottom-0 left-0 p-6 md:p-10 lg:p-12 w-full lg:w-3/4 pb-28 md:pb-32 z-10">
-          <span className="inline-block px-5 py-2 bg-primary/10 dark:bg-white/10 backdrop-blur-xl text-primary dark:text-white text-xs font-black uppercase tracking-[0.2em] rounded-full mb-6 border border-primary/20 dark:border-white/20 shadow-xl">
+          <span className="inline-block px-5 py-2 bg-white/20 dark:bg-white/10 backdrop-blur-xl text-white text-xs font-black uppercase tracking-[0.2em] rounded-full mb-6 border border-white/30 dark:border-white/15 shadow-xl [text-shadow:0_1px_3px_rgba(0,0,0,0.3)]">
             Campus Network
           </span>
 
-          <h2 className="text-foreground dark:text-white text-4xl sm:text-5xl lg:text-7xl font-black leading-[0.9] tracking-tighter mb-6">
+          <h2 className="text-white text-4xl sm:text-5xl lg:text-7xl font-black leading-[0.9] tracking-tighter mb-6">
             Find Your People
           </h2>
 
-          <p className="text-foreground/80 dark:text-white/80 text-lg lg:text-xl font-medium max-w-xl mb-8 leading-relaxed">
+          <p className="text-white/80 text-lg lg:text-xl font-medium max-w-xl mb-8 leading-relaxed">
             Connect with students who share your interests. See what events
             your friends are attending and never go alone.
           </p>
@@ -219,7 +220,7 @@ export default function FriendsPage() {
           <div className="flex items-center gap-4">
             <a
               href="#friends-feed"
-              className="px-8 md:px-10 py-4 md:py-5 bg-primary text-white text-base md:text-lg font-bold rounded-2xl hover:brightness-110 transition-all shadow-2xl shadow-primary/40 flex items-center gap-3"
+              className="px-8 md:px-10 py-4 md:py-5 bg-primary text-white text-base md:text-lg font-bold rounded-2xl hover:brightness-110 transition-all shadow-lg shadow-primary/20 flex items-center gap-3"
             >
               Browse People
             </a>
