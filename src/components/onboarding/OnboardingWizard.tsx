@@ -120,7 +120,7 @@ export function OnboardingWizard({
             )}
             <div className="space-y-2">
               <h1 className="text-3xl font-bold tracking-tight">
-                Welcome to Uni-Verse{firstName !== "there" ? `, ${firstName}` : ""}!
+                Welcome to UNI-VERSE{firstName !== "there" ? `, ${firstName}` : ""}!
               </h1>
               <p className="text-muted-foreground">
                 Let&apos;s set up your profile so you can discover the best events on campus.
