@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Terms and conditions for using the Uni-Verse campus event platform.",
+    "Terms and conditions for using the UNI-VERSE campus event platform.",
 };
 
 export default function TermsOfServicePage() {
@@ -32,9 +32,9 @@ export default function TermsOfServicePage() {
               1. Acceptance of Terms
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              By accessing or using Uni-Verse (&quot;the Platform&quot;), you
+              By accessing or using UNI-VERSE (&quot;the Platform&quot;), you
               agree to be bound by these Terms of Service. If you do not agree to
-              these terms, please do not use the Platform. Uni-Verse is operated
+              these terms, please do not use the Platform. UNI-VERSE is operated
               by GDG McGill for the McGill University community.
             </p>
           </div>
@@ -44,7 +44,7 @@ export default function TermsOfServicePage() {
               2. Eligibility
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              Uni-Verse is available to members of the McGill University
+              UNI-VERSE is available to members of the McGill University
               community. To access authenticated features (saving events, RSVPs,
               recommendations, event submission), you must sign in with a valid
               McGill email address (
@@ -82,7 +82,7 @@ export default function TermsOfServicePage() {
               4. Event Submissions
             </h2>
             <p className="text-muted-foreground leading-relaxed mb-3">
-              If you are a club organizer submitting events to Uni-Verse:
+              If you are a club organizer submitting events to UNI-VERSE:
             </p>
             <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
               <li>
@@ -112,7 +112,7 @@ export default function TermsOfServicePage() {
               5. Acceptable Use
             </h2>
             <p className="text-muted-foreground leading-relaxed mb-3">
-              When using Uni-Verse, you agree not to:
+              When using UNI-VERSE, you agree not to:
             </p>
             <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
               <li>
@@ -140,7 +140,7 @@ export default function TermsOfServicePage() {
               6. Intellectual Property
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              The Uni-Verse platform, including its design, code, and branding,
+              The UNI-VERSE platform, including its design, code, and branding,
               is the property of GDG McGill. Event content submitted by
               organizers remains the property of the respective clubs and
               organizations. By submitting an event, you grant us a
@@ -154,7 +154,7 @@ export default function TermsOfServicePage() {
             </h2>
             <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
               <li>
-                Uni-Verse is provided &quot;as is&quot; without warranties of any
+                UNI-VERSE is provided &quot;as is&quot; without warranties of any
                 kind, express or implied.
               </li>
               <li>
@@ -166,7 +166,7 @@ export default function TermsOfServicePage() {
                 events listed on the Platform.
               </li>
               <li>
-                Event attendance is at your own risk. Uni-Verse is a discovery
+                Event attendance is at your own risk. UNI-VERSE is a discovery
                 tool, not an event organizer.
               </li>
             </ul>
@@ -178,10 +178,10 @@ export default function TermsOfServicePage() {
             </h2>
             <p className="text-muted-foreground leading-relaxed">
               To the maximum extent permitted by law, GDG McGill and the
-              Uni-Verse team shall not be liable for any indirect, incidental, or
+              UNI-VERSE team shall not be liable for any indirect, incidental, or
               consequential damages arising from your use of the Platform. Our
               total liability shall not exceed the amount you have paid to use
-              the Platform (which is $0, as Uni-Verse is free).
+              the Platform (which is $0, as UNI-VERSE is free).
             </p>
           </div>
 
@@ -190,7 +190,7 @@ export default function TermsOfServicePage() {
               9. Termination
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              We may suspend or terminate your access to Uni-Verse at any time
+              We may suspend or terminate your access to UNI-VERSE at any time
               for violation of these terms or for any other reason at our
               discretion. You may delete your account at any time by contacting
               us at{" "}

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "How Uni-Verse collects, uses, and protects your personal data.",
+  description: "How UNI-VERSE collects, uses, and protects your personal data.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -31,7 +31,7 @@ export default function PrivacyPolicyPage() {
               1. Introduction
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              Uni-Verse (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) is a
+              UNI-VERSE (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) is a
               campus event discovery platform built by GDG McGill for students at
               McGill University. This Privacy Policy explains how we collect,
               use, and protect your personal information when you use our
@@ -44,7 +44,7 @@ export default function PrivacyPolicyPage() {
               2. Information We Collect
             </h2>
             <p className="text-muted-foreground leading-relaxed mb-3">
-              We collect the following information when you use Uni-Verse:
+              We collect the following information when you use UNI-VERSE:
             </p>
             <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
               <li>
@@ -107,7 +107,7 @@ export default function PrivacyPolicyPage() {
               5. McGill Email Requirement
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              Uni-Verse requires a valid McGill email address (
+              UNI-VERSE requires a valid McGill email address (
               <span className="font-medium text-foreground">@mcgill.ca</span> or{" "}
               <span className="font-medium text-foreground">
                 @mail.mcgill.ca
@@ -177,7 +177,7 @@ export default function PrivacyPolicyPage() {
             <p className="text-muted-foreground leading-relaxed">
               We may update this Privacy Policy from time to time. We will notify
               users of significant changes via email or an in-app notification.
-              Continued use of Uni-Verse after changes constitutes acceptance of
+              Continued use of UNI-VERSE after changes constitutes acceptance of
               the updated policy.
             </p>
           </div>

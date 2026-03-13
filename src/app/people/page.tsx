@@ -240,7 +240,7 @@ export default function PeoplePage() {
       <footer className="mt-auto border-t border-red-600/5 bg-white dark:bg-slate-900 py-6 px-4 md:px-10">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
           <div className="flex items-center gap-6">
-            <span>&copy; 2024 Uni-Verse Campus Network</span>
+            <span>&copy; 2024 UNI-VERSE Campus Network</span>
             <a className="hover:text-[#ED1B2F]" href="#">
               Privacy Policy
             </a>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Accept Invitation | Uni-Verse",
+  title: "Accept Invitation | UNI-VERSE",
 };
 
 interface PageProps {

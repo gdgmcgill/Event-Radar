@@ -47,10 +47,10 @@ const SECTIONS: Section[] = [
     icon: LogIn,
     faqs: [
       {
-        question: "Who can sign up for Uni-Verse?",
+        question: "Who can sign up for UNI-VERSE?",
         answer: (
           <p>
-            Uni-Verse is open to all McGill University community members. You
+            UNI-VERSE is open to all McGill University community members. You
             must have a valid McGill email address ending in{" "}
             <code className="bg-muted px-1 rounded text-sm">@mcgill.ca</code>{" "}
             or{" "}
@@ -69,7 +69,7 @@ const SECTIONS: Section[] = [
             (or in the sidebar on desktop). You&apos;ll be redirected to
             McGill&apos;s Microsoft login page. Enter your McGill credentials
             and you&apos;ll be signed in automatically — no separate password
-            needed for Uni-Verse.
+            needed for UNI-VERSE.
           </p>
         ),
       },
@@ -136,7 +136,7 @@ const SECTIONS: Section[] = [
         question: "How do email reminders work?",
         answer: (
           <p>
-            When you save or RSVP to an event, Uni-Verse can send you an email
+            When you save or RSVP to an event, UNI-VERSE can send you an email
             reminder before the event starts. You can control whether you
             receive reminders from your{" "}
             <Link href="/profile" className="text-primary hover:underline">
@@ -317,7 +317,7 @@ const SECTIONS: Section[] = [
         question: "How does the recommendation feed work?",
         answer: (
           <p>
-            Uni-Verse surfaces events based on the interest tags you selected
+            UNI-VERSE surfaces events based on the interest tags you selected
             during onboarding (Academic, Social, Sports, Career, Cultural,
             Wellness). Events matching your tags are ranked higher in your
             feed. As you save and interact with events, the recommendations
@@ -553,7 +553,7 @@ export default function HelpPage() {
             Help & FAQ
           </h1>
           <p className="text-muted-foreground mb-8">
-            Everything you need to know about Uni-Verse. Can&apos;t find your
+            Everything you need to know about UNI-VERSE. Can&apos;t find your
             answer?{" "}
             <a
               href={`mailto:${CONTACT_EMAIL}`}

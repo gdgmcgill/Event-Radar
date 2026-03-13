@@ -29,7 +29,7 @@ const FEEDBACK_TYPES: {
     value: "general",
     label: "General Feedback",
     icon: MessageSquare,
-    description: "Share your thoughts about Uni-Verse",
+    description: "Share your thoughts about UNI-VERSE",
   },
 ];
 
@@ -91,7 +91,7 @@ export default function FeedbackPage() {
                 Thanks for your feedback!
               </h2>
               <p className="text-muted-foreground">
-                Your feedback helps us improve Uni-Verse for the McGill
+                Your feedback helps us improve UNI-VERSE for the McGill
                 community. We&apos;ll review it and follow up if needed.
               </p>
               <Button
@@ -119,7 +119,7 @@ export default function FeedbackPage() {
             Send Feedback
           </h1>
           <p className="text-lg text-muted-foreground">
-            Help us improve Uni-Verse during our beta. Report bugs, suggest
+            Help us improve UNI-VERSE during our beta. Report bugs, suggest
             features, or share your thoughts.
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function FeedbackPage() {
                       ? "What happened? What did you expect? Steps to reproduce..."
                       : type === "feature"
                         ? "Describe the feature you'd like to see..."
-                        : "Share your thoughts about Uni-Verse..."
+                        : "Share your thoughts about UNI-VERSE..."
                   }
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                 />
