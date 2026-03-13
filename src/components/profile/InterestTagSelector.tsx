@@ -55,33 +55,30 @@ type InterestTagSelectorProps = {
   selected: string[];
   onChange: (tags: string[]) => void;
   min?: number;
-  max?: number;
 };
 
 export default function InterestTagSelector({
   selected,
   onChange,
   min = 3,
-  max = 8,
 }: InterestTagSelectorProps) {
   const toggle = useCallback(
     (tag: string) => {
       if (selected.includes(tag)) {
         onChange(selected.filter((t) => t !== tag));
-      } else if (selected.length < max) {
+      } else {
         onChange([...selected, tag]);
       }
     },
-    [selected, onChange, max]
+    [selected, onChange]
   );
 
   const count = selected.length;
-  const isValid = count >= min && count <= max;
+  const isValid = count >= min;
 
   const renderTag = (tag: string, category: { label: string; icon: string; borderColor: string; selectedBg: string; checkColor: string; color: string }) => {
     const Icon = TAG_ICONS[category.icon];
     const isSelected = selected.includes(tag);
-    const atMax = count >= max && !isSelected;
 
     return (
       <button
@@ -90,14 +87,12 @@ export default function InterestTagSelector({
         role="checkbox"
         aria-checked={isSelected}
         aria-label={`${category.label}${isSelected ? " (selected)" : ""}`}
-        disabled={atMax}
         onClick={() => toggle(tag)}
         className={cn(
           "relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           isSelected
             ? cn(category.borderColor, category.selectedBg, "shadow-sm scale-[1.03]")
-            : "border-border bg-card hover:border-primary/40 hover:bg-accent/50",
-          atMax && "opacity-50 cursor-not-allowed"
+            : "border-border bg-card hover:border-primary/40 hover:bg-accent/50"
         )}
       >
         {/* Checkmark badge */}
@@ -175,7 +170,7 @@ export default function InterestTagSelector({
         </span>{" "}
         selected{" "}
         <span className="text-muted-foreground">
-          ({min}–{max} required)
+          (at least {min})
         </span>
       </p>
     </div>

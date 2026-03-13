@@ -237,7 +237,6 @@ export default function EditProfileModal({
                                 selected={tags}
                                 onChange={setTags}
                                 min={3}
-                                max={5}
                             />
                         </div>
                     </div>

@@ -590,7 +590,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
               {settingsSection === "interests" && (
                 <div className="space-y-6">
                   <SettingsCard icon={Sparkles} title="Interest Tags" description="Select 3–6 to personalise your event feed and recommendations">
-                    <InterestTagSelector selected={tags} onChange={setTags} min={3} max={6} />
+                    <InterestTagSelector selected={tags} onChange={setTags} min={3} />
                     {tags.length > 0 && tags.length < 3 && <p className="text-xs text-destructive mt-4">Pick at least 3 interests.</p>}
                   </SettingsCard>
                   <SaveBar onSave={handleSave} saving={saving} saved={saved} error={error} disabled={!isInterestsValid} />
