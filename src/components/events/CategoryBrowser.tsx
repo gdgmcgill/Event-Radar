@@ -81,14 +81,14 @@ export function CategoryBrowser({ events, onEventClick }: CategoryBrowserProps) 
       </div>
 
       {/* Category Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-4 mb-6" style={{ scrollbarWidth: "none" }}>
+      <div className="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar custom-scrollbar -mx-4 px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
         <button
           onClick={() => setActiveTag("all")}
           className={cn(
-            "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer",
+            "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer border",
             activeTag === "all"
-              ? "bg-primary text-primary-foreground shadow-md"
-              : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              ? "bg-primary text-white border-primary/50 shadow-md"
+              : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
           )}
         >
           All Events
@@ -103,19 +103,19 @@ export function CategoryBrowser({ events, onEventClick }: CategoryBrowserProps) 
               key={tag}
               onClick={() => setActiveTag(tag)}
               className={cn(
-                "flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer",
+                "flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer border",
                 activeTag === tag
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  ? "bg-primary text-white border-primary/50 shadow-md"
+                  : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
               )}
             >
               <Icon className="h-3.5 w-3.5" />
               {category.label}
               <span className={cn(
-                "text-xs px-1.5 py-0.5 rounded-full",
+                "text-xs px-1.5 py-0.5 rounded-full ring-1",
                 activeTag === tag
-                  ? "bg-primary-foreground/20 text-primary-foreground"
-                  : "bg-background text-muted-foreground"
+                  ? "bg-white/20 text-white ring-white/20"
+                  : "bg-foreground/10 text-muted-foreground ring-foreground/10"
               )}>
                 {count}
               </span>
@@ -124,20 +124,26 @@ export function CategoryBrowser({ events, onEventClick }: CategoryBrowserProps) 
         })}
       </div>
 
-      {/* Event Grid */}
+      {/* Event Grid -> Horizontal Scroll */}
       {displayEvents.length === 0 ? (
-        <div className="flex items-center justify-center h-48 rounded-2xl border border-dashed border-border/60 bg-muted/30">
+        <div className="flex items-center justify-center h-48 rounded-2xl border border-dashed border-border bg-muted">
           <p className="text-muted-foreground text-sm">No events in this category yet</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+        <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar custom-scrollbar -mx-4 px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
           {displayEvents.map((event) => (
-            <CategoryEventCard
-              key={event.id}
-              event={event}
-              onEventClick={onEventClick}
-            />
+            <div key={event.id} className="snap-start shrink-0 w-[280px] md:w-[320px]">
+              <CategoryEventCard
+                event={event}
+                onEventClick={onEventClick}
+              />
+            </div>
           ))}
+          <div className="snap-start shrink-0 w-[40px] md:w-[100px] flex items-center justify-center">
+            <button className="h-full rounded-2xl w-full border border-border text-muted-foreground hover:text-primary backdrop-blur-sm bg-muted transition-colors cursor-pointer" onClick={() => {}}>
+                See All
+            </button>
+          </div>
         </div>
       )}
     </section>
@@ -158,7 +164,7 @@ function CategoryEventCard({ event, onEventClick }: CategoryEventCardProps) {
 
   return (
     <div
-      className="group bg-card rounded-2xl border border-border/50 overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300 cursor-pointer"
+      className="group bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 hover:shadow-[0_8px_30px_rgba(237,27,47,0.15)] transition-all duration-300 cursor-pointer relative z-0"
       onClick={() => onEventClick?.(event)}
       role="button"
       tabIndex={0}
@@ -173,29 +179,32 @@ function CategoryEventCard({ event, onEventClick }: CategoryEventCardProps) {
           alt={event.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-cover transition-transform duration-700 group-hover:scale-110"
         />
 
         {/* Category badge */}
         {category && (
-          <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-card/90 backdrop-blur-md text-xs font-semibold shadow-sm">
+          <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-card/80 dark:bg-black/60 border border-border backdrop-blur-md text-[10px] sm:text-xs font-semibold shadow-sm">
             <Icon className="h-3 w-3 text-primary" />
-            <span className="text-foreground">{category.label}</span>
+            <span className="text-card-foreground/90">{category.label}</span>
           </div>
         )}
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {/* Dark overlay blend */}
+        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
+        
+        {/* Hover overlay focus block */}
+        <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 pt-2 relative z-10">
         {event.club && (
-          <p className="text-[11px] font-semibold text-primary uppercase tracking-wider mb-1">
+          <p className="text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/10 inline-block px-2 py-0.5 rounded-full mb-2">
             {event.club.name}
           </p>
         )}
-        <h4 className="font-bold text-sm leading-tight line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+        <h4 className="font-bold text-sm leading-tight line-clamp-2 mb-2 group-hover:text-primary transition-colors text-card-foreground">
           {event.title}
         </h4>
 
@@ -214,8 +223,8 @@ function CategoryEventCard({ event, onEventClick }: CategoryEventCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
-          <span className="text-xs font-medium text-muted-foreground">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+          <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
             View details
           </span>
           <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />

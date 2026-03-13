@@ -9,6 +9,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === "/landing";
   const isModeration = pathname.startsWith("/moderation");
+  const isHomepage = pathname === "/";
 
   if (isLanding || isModeration) {
     return (
@@ -26,11 +27,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <SideNavBar />
       <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
-        <Header />
-        <main id="main-content" className="flex-1 p-6">
+        {/* On homepage: header is mobile-only (sidebar handles desktop nav).
+            On other pages: header shows on all sizes. */}
+        <div className={isHomepage ? "lg:hidden" : ""}>
+          <Header />
+        </div>
+        <main
+          id="main-content"
+          className={isHomepage ? "flex-1" : "flex-1 p-6"}
+        >
           {children}
         </main>
-        <Footer />
+        {!isHomepage && <Footer />}
       </div>
     </div>
   );

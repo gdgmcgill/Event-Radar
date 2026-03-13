@@ -1,10 +1,6 @@
 "use client";
 
-/**
- * Home page - Modular event discovery feed
- */
-
-import { Suspense, useState, useEffect, useMemo, useCallback } from "react";
+import { Suspense, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Event } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -14,7 +10,8 @@ import { HappeningNowSection } from "@/components/events/HappeningNowSection";
 import { PopularEventsSection } from "@/components/events/PopularEventsSection";
 import { RecommendedEventsSection } from "@/components/events/RecommendedEventsSection";
 import { FriendsActivitySection } from "@/components/events/FriendsActivitySection";
-import { CategoryBrowser } from "@/components/events/CategoryBrowser";
+import { UpcomingThisWeekSection } from "@/components/events/UpcomingThisWeekSection";
+import { CategoryRowsSection } from "@/components/events/CategoryRowsSection";
 import { AlertCircle, X } from "lucide-react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -49,12 +46,6 @@ function HomePageContent() {
     return null;
   }, [searchParams]);
 
-  useEffect(() => {
-    if (authError) {
-      router.replace("/");
-    }
-  }, [authError, router]);
-
   const todayStart = useMemo(() => {
     const dateOnly = new Date().toISOString().split("T")[0];
     return new Date(dateOnly);
@@ -67,7 +58,7 @@ function HomePageContent() {
 
   const { events, loading } = useEvents({
     filters: upcomingFilters,
-    limit: 50,
+    limit: 100,
     sort: "start_date",
     direction: "asc",
   });
@@ -81,11 +72,11 @@ function HomePageContent() {
 
   return (
     <ErrorBoundary fallbackMessage="We couldn't load events right now.">
-      <div className="flex flex-col min-h-screen bg-background font-sans">
+      <div className="flex flex-col min-h-screen bg-background">
         {/* Auth Error Banner */}
         {authError && (
-          <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-3">
-            <div className="container mx-auto flex items-center justify-between gap-4">
+          <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-3 relative z-50">
+            <div className="flex items-center justify-between gap-4 px-6 md:px-10 lg:px-12">
               <div className="flex items-center gap-2 text-sm text-destructive">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{authError}</span>
@@ -102,15 +93,15 @@ function HomePageContent() {
           </div>
         )}
 
-        {/* Hero Section */}
+        {/* Hero Section — full bleed */}
         <HeroSection />
 
-        {/* Content Sections */}
-        <div className="container mx-auto px-4 md:px-6 lg:px-8 flex flex-col gap-10 md:gap-14 pb-20 -mt-8 relative z-10">
+        {/* Discovery Feed Rows — Netflix-style vertical scroll */}
+        <div className="pb-32 relative z-20 space-y-14">
           {/* Happening Now */}
           <HappeningNowSection onEventClick={handleEventClick} />
 
-          {/* Popular This Week */}
+          {/* Trending Now (Popular) */}
           <PopularEventsSection onEventClick={handleEventClick} />
 
           {/* Recommended For You */}
@@ -119,9 +110,14 @@ function HomePageContent() {
           {/* Friends Activity */}
           {user && <FriendsActivitySection />}
 
-          {/* Browse by Category */}
+          {/* Upcoming This Week */}
           {!loading && events.length > 0 && (
-            <CategoryBrowser events={events} onEventClick={handleEventClick} />
+            <UpcomingThisWeekSection events={events} onEventClick={handleEventClick} />
+          )}
+
+          {/* Category Rows — one horizontal row per category */}
+          {!loading && events.length > 0 && (
+            <CategoryRowsSection events={events} onEventClick={handleEventClick} />
           )}
         </div>
       </div>

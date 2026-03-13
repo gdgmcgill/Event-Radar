@@ -36,41 +36,41 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 60 23% 71%; /* Sage */
-    --input: 60 23% 71%;
+    --border: 60 10% 85%; /* Light sage border */
+    --input: 60 10% 85%;
     --ring: 354 85% 52%;
 
     --radius: 0.75rem;
   }
 
-  /* Dark theme: Dark grey + McGill red accents */
+  /* Dark theme: Deep dark mode + glass borders + McGill red accents */
   .dark {
-    --background: 0 0% 12%;        /* Very dark grey (#1f1f1f) */
-    --foreground: 0 0% 90%;        /* Off-white text */
+    --background: 240 6% 4%;       /* Deep rich black (#09090B) */
+    --foreground: 0 0% 98%;        /* Off-white text */
 
-    --card: 0 0% 18%;              /* Dark grey for cards (#2d2d2d) */
-    --card-foreground: 0 0% 90%;
+    --card: 240 5% 10%;            /* Surface almost black for cards (#18181B) */
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 18%;
-    --popover-foreground: 0 0% 90%;
+    --popover: 240 5% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 354 85% 52%;        /* McGill Red (unchanged for brand consistency) */
+    --primary: 354 85% 52%;        /* McGill Red */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 25%;         /* Medium grey for secondary elements */
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 240 4% 16%;       /* Dark surface hover (#27272A) */
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 30%;             /* Slightly lighter grey for muted backgrounds */
-    --muted-foreground: 0 0% 65%;  /* Muted text (grey) */
+    --muted: 240 5% 16%;           /* Muted backgrounds */
+    --muted-foreground: 240 5% 65%;/* Muted text (grey) */
 
-    --accent: 0 0% 25%;            /* Grey accent to complement McGill red */
-    --accent-foreground: 0 0% 90%;
+    --accent: 240 5% 16%;          
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 63%;
     --destructive-foreground: 0 0% 10%;
 
-    --border: 0 0% 25%;            /* Grey borders */
-    --input: 0 0% 25%;             /* Grey input backgrounds */
+    --border: 240 5% 16%;          /* #27272A for borders */
+    --input: 240 5% 16%;           
     --ring: 354 85% 52%;           /* McGill Red focus ring */
   }
 }

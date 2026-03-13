@@ -184,29 +184,33 @@ export function EventCard({
   return (
     <div ref={cardRef} className="h-full">
     <Link href={`/events/${event.id}${trackingSource ? `?from=${trackingSource}` : ""}`} onClick={handleCardClick} className="block h-full group">
-      <Card className="h-full overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card rounded-2xl flex flex-col">
+      <Card className="h-full overflow-hidden border border-border shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(237,27,47,0.15)] hover:-translate-y-1 bg-card rounded-2xl flex flex-col relative z-0">
+        
+        {/* Hover Ambient Glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl z-[-1]" />
+
         {/* Image Section */}
-        <div className="relative h-52 w-full overflow-hidden bg-secondary/20">
+        <div className="relative h-56 w-full overflow-hidden bg-muted">
           {event.image_url ? (
             <Image
               src={event.image_url}
               alt={event.title}
               fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              className="object-cover transition-transform duration-700 group-hover:scale-110"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground/40 bg-secondary/30">
+            <div className="flex h-full items-center justify-center text-muted-foreground/20">
               <Image
                 src="/placeholder-event.png"
                 alt="No Image"
                 fill
-                className="object-cover opacity-80 transition-transform duration-700 group-hover:scale-105"
+                className="object-cover opacity-50 mix-blend-luminosity transition-transform duration-700 group-hover:scale-110 group-hover:mix-blend-normal"
               />
             </div>
           )}
           
-          {/* Gradient Overlay for Text Readability if needed, mostly stylistic here */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 dark:from-white/6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          {/* Heavy gradient overlay to blend image into the card body */}
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
 
           {/* Popularity / Trending Badges — only for non-ranked cards */}
           {!rank && popularity && (popularity.trending_score > 0 || popularity.popularity_score > 0) && (
@@ -235,8 +239,8 @@ export function EventCard({
               onClick={handleExportCalendar}
               disabled={isExportingCal}
               className={cn(
-                "h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
-                "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
+                "h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border transition-all duration-300 hover:scale-110",
+                "bg-background/50 dark:bg-black/50 text-muted-foreground hover:text-foreground"
               )}
               aria-label={isExportingCal ? "Exporting to calendar…" : "Export to calendar"}
             >
@@ -249,10 +253,10 @@ export function EventCard({
                 onClick={handleSave}
                 disabled={isSaving}
                 className={cn(
-                  "h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border/40 transition-all duration-300 hover:scale-110",
+                  "h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border transition-all duration-300 hover:scale-110",
                   isSaved
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-card/90 text-muted-foreground hover:text-primary hover:bg-card"
+                    ? "bg-primary text-white border-primary/50"
+                    : "bg-background/50 dark:bg-black/50 text-muted-foreground hover:text-foreground hover:border-border"
                 )}
                 aria-label={isSaving ? "Saving…" : isSaved ? "Unsave event" : "Save event"}
               >
@@ -260,13 +264,20 @@ export function EventCard({
               </Button>
             )}
           </div>
+          
+          {/* Glass Date Badge Floating over Image */}
+          <div className="absolute bottom-3 left-3 flex flex-col bg-card/90 dark:bg-black/60 backdrop-blur-md border border-border rounded-lg px-3 py-1.5 shadow-xl">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">{new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' })}</span>
+            <span className="text-xl font-bold leading-none text-card-foreground">{new Date(event.event_date).getDate()}</span>
+          </div>
+
           {/* Not interested (recommendation cards only) */}
           {trackingSource === "recommendation" && (
             <Button
               variant="ghost"
               size="icon"
               onClick={handleDismiss}
-              className="absolute bottom-3 left-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-white/20 bg-white/80 text-muted-foreground hover:bg-destructive/90 hover:text-destructive-foreground transition-all duration-300 opacity-80 hover:opacity-100"
+              className="absolute bottom-3 right-3 h-9 w-9 rounded-full shadow-lg backdrop-blur-md border border-border bg-card/80 dark:bg-black/60 text-muted-foreground hover:bg-destructive/90 hover:text-destructive transition-all duration-300 opacity-80 hover:opacity-100"
               aria-label="Not interested"
             >
               <X className="h-4 w-4" />
@@ -275,14 +286,14 @@ export function EventCard({
         </div>
 
         {/* Content Section */}
-        <div className="flex flex-col flex-grow p-5 gap-3">
+        <div className="flex flex-col flex-grow p-5 pt-2 gap-3 relative z-10">
           <div className="space-y-1">
             {event.club && (
-              <p className="text-xs font-semibold text-primary uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/10 inline-block px-2 py-0.5 rounded-full mb-1">
                 {event.club.name}
               </p>
             )}
-            <h3 className="text-lg font-bold leading-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
+            <h3 className="text-xl font-bold leading-tight text-card-foreground group-hover:text-primary transition-colors line-clamp-2">
               {event.title}
             </h3>
           </div>
@@ -291,17 +302,13 @@ export function EventCard({
             {event.description}
           </p>
 
-          <div className="mt-auto pt-4 space-y-2.5 text-sm text-muted-foreground/80 font-medium">
+          <div className="mt-auto pt-4 space-y-2 text-xs text-muted-foreground font-medium">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary/80" />
-              <span>{formatDate(event.event_date)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary/80" />
+              <Clock className="h-3.5 w-3.5" />
               <span>{formatTime(event.event_time)}</span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary/80" />
+              <MapPin className="h-3.5 w-3.5" />
               <span className="line-clamp-1">{event.location}</span>
             </div>
           </div>

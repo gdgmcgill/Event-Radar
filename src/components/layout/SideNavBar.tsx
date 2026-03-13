@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   guestNavItems,
@@ -14,15 +14,16 @@ import {
 } from "./navItems";
 import { useAuthStore } from "@/store/useAuthStore";
 import { isAdmin } from "@/lib/roles";
+import { PlusCircle, MoreVertical, Compass } from "lucide-react";
 
 function NavLink({
   item,
   pathname,
-  isHovered,
+  collapsed,
 }: {
   item: NavItem;
   pathname: string;
-  isHovered: boolean;
+  collapsed: boolean;
 }) {
   const Icon = item.icon;
   const isActive = pathname === item.path;
@@ -30,26 +31,20 @@ function NavLink({
   return (
     <Link
       href={item.path}
+      title={collapsed ? item.name : undefined}
       className={cn(
-        "flex items-center px-3 py-3 rounded-xl transition-all duration-200 group",
+        "flex items-center rounded-xl font-medium transition-all duration-200 whitespace-nowrap overflow-hidden",
+        collapsed ? "justify-center px-0 py-3" : "gap-4 px-4 py-3",
         isActive
-          ? "bg-primary/10 text-primary font-semibold"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
+          : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
       )}
     >
-      <Icon
-        className={cn(
-          "w-5 h-5 flex-shrink-0 transition-colors",
-          isActive
-            ? "text-primary"
-            : "text-muted-foreground group-hover:text-foreground",
-          isHovered ? "mr-3" : "mx-auto"
-        )}
-      />
+      <Icon className="w-5 h-5 flex-shrink-0" />
       <span
         className={cn(
-          "whitespace-nowrap overflow-hidden transition-all duration-300",
-          isHovered ? "opacity-100 w-auto" : "opacity-0 w-0"
+          "transition-all duration-300",
+          collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
         )}
       >
         {item.name}
@@ -58,134 +53,181 @@ function NavLink({
   );
 }
 
-function SectionDivider({
-  label,
-  isHovered,
-}: {
-  label: string;
-  isHovered: boolean;
-}) {
-  return (
-    <div className="pt-4 pb-1">
-      <span
-        className={cn(
-          "text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 transition-all duration-300",
-          isHovered ? "opacity-100" : "opacity-0"
-        )}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
 export function SideNavBar() {
-  const [isHovered, setIsHovered] = useState(false);
   const pathname = usePathname();
   const { user, hasClubs } = useAuthStore();
   const isAuthenticated = !!user;
+  const isHomepage = pathname === "/";
 
-  const navItems = isAuthenticated ? baseNavItems : guestNavItems;
+  // On homepage the sidebar starts collapsed and expands on hover
+  const canCollapse = isHomepage;
+  const [hovered, setHovered] = useState(false);
+  const collapsed = canCollapse && !hovered;
+
+  // Select the right nav items but filter out Profile (shown separately)
+  const coreNavItems = isAuthenticated
+    ? baseNavItems.filter(
+        (item) =>
+          item.path !== "/profile" &&
+          item.path !== "/create-event" &&
+          item.path !== "/notifications"
+      )
+    : guestNavItems;
   const showOrganizer = isAuthenticated && hasClubs;
   const showAdmin = isAuthenticated && user && isAdmin(user);
 
+  const sidebarWidth = collapsed ? "w-20" : "w-72";
+
   return (
     <>
-      {/* Desktop Side Navigation Bar - HIDDEN ON MOBILE */}
-      <div
+      {/* Desktop Side Navigation */}
+      <aside
+        onMouseEnter={() => canCollapse && setHovered(true)}
+        onMouseLeave={() => canCollapse && setHovered(false)}
         className={cn(
-          "hidden lg:flex flex-col fixed top-0 left-0 h-full bg-card transition-all duration-300 ease-out z-40 shadow-sm",
-          isHovered ? "w-64" : "w-20"
+          "hidden lg:flex flex-col fixed inset-y-0 left-0 z-50 transition-all duration-300 overflow-hidden",
+          sidebarWidth,
+          collapsed ? "p-3" : "p-6",
+          "bg-white/85 dark:bg-card/85 backdrop-blur-2xl",
+          "border-r border-primary/8 dark:border-border/40"
         )}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="flex flex-col h-full">
-          {/* User Info - Top (only shown when authenticated) */}
-          {isAuthenticated && (
-            <div className="p-3 pt-2 pb-0">
-              <Link
-                href="/profile"
-                className={cn(
-                  "flex items-center p-2 rounded-lg transition-colors hover:bg-muted",
-                  pathname === "/profile" && "bg-primary/10"
-                )}
-              >
-                <div
-                  className={cn(
-                    "w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0",
-                    !isHovered && "mx-auto"
-                  )}
-                >
-                  <User className="w-5 h-5 text-primary" />
+        {/* Logo */}
+        <div className={cn("flex items-center mb-10 whitespace-nowrap overflow-hidden", collapsed ? "justify-center px-0" : "gap-3 px-2")}>
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20 flex-shrink-0">
+              <Compass className="h-5 w-5" />
+            </div>
+            <div
+              className={cn(
+                "transition-all duration-300 overflow-hidden",
+                collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+              )}
+            >
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-foreground leading-none">
+                Uni-Verse
+              </h1>
+              <p className="text-xs font-semibold text-primary/80 uppercase tracking-wider mt-1">
+                McGill University
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        {/* Navigation */}
+        <nav aria-label="Main navigation" className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden">
+          {coreNavItems.map((item) => (
+            <NavLink key={item.path} item={item} pathname={pathname} collapsed={collapsed} />
+          ))}
+
+          {showOrganizer && (
+            <>
+              {collapsed ? (
+                <div className="pt-4 border-t border-border/40 mt-2" />
+              ) : (
+                <div className="pt-6 pb-2 px-4 text-xs font-bold text-slate-400 dark:text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                  Organizer
                 </div>
-                {isHovered && (
-                  <div className="ml-3 flex-1 min-w-0 animate-in fade-in duration-300">
-                    <p className="text-sm font-semibold text-foreground truncate">
-                      {user?.name || "User"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user?.email}
-                    </p>
-                  </div>
-                )}
-              </Link>
+              )}
+              {organizerNavItems.map((item) => (
+                <NavLink key={item.path} item={item} pathname={pathname} collapsed={collapsed} />
+              ))}
+            </>
+          )}
+
+          {showAdmin && (
+            <>
+              {collapsed ? (
+                <div className="pt-4 border-t border-border/40 mt-2" />
+              ) : (
+                <div className="pt-6 pb-2 px-4 text-xs font-bold text-slate-400 dark:text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                  Moderation
+                </div>
+              )}
+              {adminNavItems.map((item) => (
+                <NavLink key={item.path} item={item} pathname={pathname} collapsed={collapsed} />
+              ))}
+            </>
+          )}
+        </nav>
+
+        {/* Bottom Section */}
+        <div className="mt-auto space-y-4">
+          {/* Create Event CTA */}
+          {isAuthenticated && (
+            <div className={cn("transition-all duration-300 overflow-hidden", collapsed ? "px-0" : "")}>
+              {collapsed ? (
+                <Link
+                  href="/create-event"
+                  title="Create Event"
+                  className="flex items-center justify-center w-10 h-10 mx-auto bg-primary text-white rounded-xl hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+                >
+                  <PlusCircle className="h-5 w-5" />
+                </Link>
+              ) : (
+                <div className="bg-primary/5 dark:bg-primary/10 rounded-2xl p-4 border border-primary/10">
+                  <p className="text-sm font-bold text-slate-800 dark:text-foreground mb-1 whitespace-nowrap">
+                    Hosting something?
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-muted-foreground mb-3 whitespace-nowrap">
+                    Share your club&apos;s next big event.
+                  </p>
+                  <Link
+                    href="/create-event"
+                    className="w-full py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    Create Event
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Navigation Items */}
-          <nav aria-label="Main navigation" className="flex-1 px-3 space-y-1 py-4">
-            {navItems
-              .filter((item) => item.path !== "/profile")
-              .map((item) => (
-                <NavLink
-                  key={item.path}
-                  item={item}
-                  pathname={pathname}
-                  isHovered={isHovered}
-                />
-              ))}
-
-            {/* Organizer section */}
-            {showOrganizer && (
-              <>
-                <SectionDivider label="Organizer" isHovered={isHovered} />
-                {organizerNavItems.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    item={item}
-                    pathname={pathname}
-                    isHovered={isHovered}
+          {/* User Profile */}
+          {isAuthenticated && user && (
+            <div className={cn("flex items-center overflow-hidden", collapsed ? "justify-center" : "gap-3 px-2")}>
+              <Link href="/profile" className={cn("flex items-center", collapsed ? "" : "gap-3 flex-1 min-w-0")}>
+                {user.avatar_url ? (
+                  <Image
+                    src={user.avatar_url}
+                    alt={user.name || "User"}
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/10 flex-shrink-0"
                   />
-                ))}
-              </>
-            )}
-
-            {/* Admin / Moderation section */}
-            {showAdmin && (
-              <>
-                <SectionDivider label="Moderation" isHovered={isHovered} />
-                {adminNavItems.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    item={item}
-                    pathname={pathname}
-                    isHovered={isHovered}
-                  />
-                ))}
-              </>
-            )}
-          </nav>
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 ring-2 ring-primary/10">
+                    {(user.name || "U").charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div
+                  className={cn(
+                    "flex-1 min-w-0 transition-all duration-300 overflow-hidden",
+                    collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                  )}
+                >
+                  <p className="text-sm font-bold leading-none text-slate-900 dark:text-foreground truncate">
+                    {user.name || "User"}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-muted-foreground truncate">
+                    {user.year || user.email}
+                  </p>
+                </div>
+              </Link>
+              <MoreVertical
+                className={cn(
+                  "h-4 w-4 text-slate-400 flex-shrink-0 transition-all duration-300",
+                  collapsed ? "w-0 opacity-0" : "opacity-100"
+                )}
+              />
+            </div>
+          )}
         </div>
-      </div>
+      </aside>
 
-      {/* Spacer to push content */}
-      <div
-        className={cn(
-          "hidden lg:block transition-all duration-300 flex-shrink-0",
-          isHovered ? "w-64" : "w-20"
-        )}
-      />
+      {/* Spacer — always uses the collapsed width so main content doesn't shift on hover */}
+      <div className={cn("hidden lg:block flex-shrink-0 transition-all duration-300", canCollapse ? "w-20" : "w-72")} />
     </>
   );
 }
