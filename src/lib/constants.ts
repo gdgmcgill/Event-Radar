@@ -122,5 +122,19 @@ export const API_ENDPOINTS = {
   ADMIN_EXPERIMENTS: "/api/admin/experiments",
   ADMIN_EXPERIMENT_DETAIL: (id: string) => `/api/admin/experiments/${id}`,
   ADMIN_EXPERIMENT_RESULTS: (id: string) => `/api/admin/experiments/${id}/results`,
+  // Featured events
+  FEATURED_EVENTS: "/api/events/featured",
+  ADMIN_FEATURED: "/api/admin/featured",
+  ADMIN_FEATURED_DETAIL: (id: string) => `/api/admin/featured/${id}`,
 };
+
+export const HERO_FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1576495199011-eb94736d05d6?q=80&w=2872&auto=format&fit=crop";
+
+export const FEATURED_DURATION_PRESETS = [
+  { label: "3 days", days: 3 },
+  { label: "7 days", days: 7 },
+  { label: "14 days", days: 14 },
+  { label: "30 days", days: 30 },
+] as const;
 

@@ -296,3 +296,17 @@ export interface ReviewAggregate {
   distribution: { rating: number; count: number }[];
   comments: { rating: number; comment: string; created_at: string }[];
 }
+
+// ── Featured Events Types ─────────────────────────────────────────────
+
+export interface FeaturedEvent {
+  id: string;
+  event_id: string;
+  sponsor_name: string | null;
+  priority: number;
+  starts_at: string;
+  ends_at: string;
+  created_by: string;
+  created_at: string;
+  event: Event;
+}
