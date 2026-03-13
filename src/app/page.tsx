@@ -97,7 +97,7 @@ function HomePageContent() {
         <HeroSection />
 
         {/* Discovery Feed Rows — Netflix-style vertical scroll */}
-        <div className="pb-32 relative z-20 space-y-14">
+        <div id="discovery-feed" className="pb-32 relative z-20 space-y-14">
           {/* Happening Now */}
           <HappeningNowSection onEventClick={handleEventClick} />
 
