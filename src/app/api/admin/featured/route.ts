@@ -11,7 +11,7 @@ export async function GET() {
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("featured_events")
       .select("*, event:events(id, title, image_url, event_date, event_time, status)")
       .order("ends_at", { ascending: false });
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       ? sanitizeText(body.sponsor_name)
       : null;
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("featured_events")
       .insert({
         event_id,

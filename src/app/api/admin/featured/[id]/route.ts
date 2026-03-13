@@ -34,7 +34,7 @@ export async function PATCH(
       );
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("featured_events")
       .update(updates)
       .eq("id", id)
@@ -79,7 +79,7 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("featured_events")
       .delete()
       .eq("id", id);
