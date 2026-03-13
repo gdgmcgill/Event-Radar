@@ -9,6 +9,12 @@ import {
   Palette,
   Heart,
   Check,
+  Music,
+  Cpu,
+  UtensilsCrossed,
+  HandHeart,
+  Paintbrush,
+  Handshake,
 } from "lucide-react";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
@@ -22,6 +28,12 @@ const TAG_ICONS: Record<string, LucideIcon> = {
   Briefcase,
   Palette,
   Heart,
+  Music,
+  Cpu,
+  UtensilsCrossed,
+  HandHeart,
+  Paintbrush,
+  Handshake,
 };
 
 
@@ -36,7 +48,7 @@ export default function InterestTagSelector({
   selected,
   onChange,
   min = 3,
-  max = 5,
+  max = 6,
 }: InterestTagSelectorProps) {
   const toggle = useCallback(
     (tag: EventTag) => {
@@ -55,7 +67,7 @@ export default function InterestTagSelector({
   return (
     <div className="space-y-4">
       <div
-        className="grid grid-cols-2 sm:grid-cols-3 gap-3"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
         role="group"
         aria-label="Interest tags"
       >
