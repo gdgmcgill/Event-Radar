@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, XCircle, Calendar, MapPin, Pencil } from "lucide-react";
+import { CheckCircle, XCircle, Calendar, MapPin, Pencil, Star } from "lucide-react";
+import { FeatureEventModal } from "@/components/moderation/FeatureEventModal";
 
 interface PendingEvent {
   id: string;
@@ -29,6 +30,7 @@ export default function ModerationPendingEventsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<PendingEvent | null>(null);
   const [editForm, setEditForm] = useState<Partial<PendingEvent>>({});
+  const [featuringEvent, setFeaturingEvent] = useState<PendingEvent | null>(null);
 
   const fetchPending = useCallback(async () => {
     const supabase = createClient();
@@ -208,11 +210,31 @@ export default function ModerationPendingEventsPage() {
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFeaturingEvent(event)}
+                    disabled={actionLoading === event.id || event.status !== "approved"}
+                    title={event.status !== "approved" ? "Approve the event first" : "Feature this event"}
+                  >
+                    <Star className="mr-2 h-4 w-4" />
+                    Feature
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
+      )}
+
+      {featuringEvent && (
+        <FeatureEventModal
+          open={!!featuringEvent}
+          onOpenChange={(open) => !open && setFeaturingEvent(null)}
+          eventId={featuringEvent.id}
+          eventTitle={featuringEvent.title}
+          onSubmit={() => setFeaturingEvent(null)}
+        />
       )}
 
       <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
