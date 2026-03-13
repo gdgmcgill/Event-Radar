@@ -39,7 +39,7 @@ export function OnboardingWizard({
       case 1:
         return name.trim().length >= 2;
       case 2:
-        return tags.length >= 3 && tags.length <= 8;
+        return tags.length >= 3;
       case 3:
         return true;
       default:
@@ -233,7 +233,6 @@ export function OnboardingWizard({
               selected={tags}
               onChange={setTags}
               min={3}
-              max={8}
             />
           </div>
         )}
