@@ -14,7 +14,9 @@ import {
 } from "./navItems";
 import { useAuthStore } from "@/store/useAuthStore";
 import { isAdmin } from "@/lib/roles";
-import { PlusCircle, MoreVertical } from "lucide-react";
+import { PlusCircle, MoreVertical, Bell } from "lucide-react";
+import { useNotificationCount } from "@/hooks/useNotificationCount";
+import ThemeToggle from "./ThemeToggle";
 
 const EASE = "cubic-bezier(0.4,0,0.2,1)";
 
@@ -55,6 +57,60 @@ function NavLink({
         }}
       >
         <span>{item.name}</span>
+      </div>
+    </Link>
+  );
+}
+
+function NotificationNavLink({
+  pathname,
+  collapsed,
+}: {
+  pathname: string;
+  collapsed: boolean;
+}) {
+  const unreadCount = useNotificationCount();
+  const isActive = pathname === "/notifications";
+
+  return (
+    <Link
+      href="/notifications"
+      title={collapsed ? "Notifications" : undefined}
+      className={cn(
+        "group relative flex items-center rounded-xl font-medium whitespace-nowrap overflow-hidden mb-2",
+        "transition-[padding,background-color,color,box-shadow] duration-200",
+        collapsed ? "justify-center p-3" : "px-4 py-3",
+        isActive
+          ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
+          : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
+      )}
+      style={{ transitionTimingFunction: EASE }}
+    >
+      <div className="relative flex-shrink-0">
+        <Bell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span
+            className={cn(
+              "absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[10px] font-bold min-w-[16px] h-[16px] px-0.5",
+              isActive
+                ? "bg-white text-primary"
+                : "bg-primary text-white"
+            )}
+          >
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </div>
+      <div
+        className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
+        style={{
+          maxWidth: collapsed ? 0 : 160,
+          opacity: collapsed ? 0 : 1,
+          marginLeft: collapsed ? 0 : 16,
+          transitionTimingFunction: EASE,
+        }}
+      >
+        <span>Notifications</span>
       </div>
     </Link>
   );
@@ -134,6 +190,11 @@ export function SideNavBar() {
           </div>
         </Link>
 
+        {/* ── Notifications (prominent, above nav) ── */}
+        {isAuthenticated && (
+          <NotificationNavLink pathname={pathname} collapsed={collapsed} />
+        )}
+
         {/* ── Navigation ── */}
         <nav aria-label="Main navigation" className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden">
           {coreNavItems.map((item) => (
@@ -199,6 +260,17 @@ export function SideNavBar() {
 
         {/* ── Bottom Section ── */}
         <div className="mt-auto space-y-3 pt-4">
+          {/* Theme Toggle */}
+          <div
+            className={cn(
+              "flex items-center transition-all duration-200",
+              collapsed ? "justify-center" : "px-2"
+            )}
+            style={{ transitionTimingFunction: EASE }}
+          >
+            <ThemeToggle />
+          </div>
+
           {/* Create Event */}
           {isAuthenticated && (
             <Link

@@ -1,30 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNotificationCount } from "@/hooks/useNotificationCount";
 
 export function NotificationBell() {
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const res = await fetch("/api/notifications");
-        if (!res.ok) return;
-        const data = await res.json();
-        setUnreadCount(data.unread_count || 0);
-      } catch {
-        // Silently fail - bell just won't show count
-      }
-    };
-
-    fetchCount();
-    // Poll every 60 seconds for new notifications
-    const interval = setInterval(fetchCount, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  const unreadCount = useNotificationCount();
 
   return (
     <Link
