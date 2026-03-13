@@ -14,7 +14,9 @@ import {
 } from "./navItems";
 import { useAuthStore } from "@/store/useAuthStore";
 import { isAdmin } from "@/lib/roles";
-import { PlusCircle, MoreVertical, Compass } from "lucide-react";
+import { PlusCircle, MoreVertical } from "lucide-react";
+
+const EASE = "cubic-bezier(0.4,0,0.2,1)";
 
 function NavLink({
   item,
@@ -33,22 +35,27 @@ function NavLink({
       href={item.path}
       title={collapsed ? item.name : undefined}
       className={cn(
-        "flex items-center rounded-xl font-medium transition-all duration-200 whitespace-nowrap overflow-hidden",
-        collapsed ? "justify-center px-0 py-3" : "gap-4 px-4 py-3",
+        "group flex items-center rounded-xl font-medium whitespace-nowrap overflow-hidden",
+        "transition-[padding,background-color,color,box-shadow] duration-200",
+        collapsed ? "justify-center p-3" : "px-4 py-3",
         isActive
           ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
           : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
       )}
+      style={{ transitionTimingFunction: EASE }}
     >
       <Icon className="w-5 h-5 flex-shrink-0" />
-      <span
-        className={cn(
-          "transition-all duration-300",
-          collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-        )}
+      <div
+        className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
+        style={{
+          maxWidth: collapsed ? 0 : 160,
+          opacity: collapsed ? 0 : 1,
+          marginLeft: collapsed ? 0 : 16,
+          transitionTimingFunction: EASE,
+        }}
       >
-        {item.name}
-      </span>
+        <span>{item.name}</span>
+      </div>
     </Link>
   );
 }
@@ -76,8 +83,6 @@ export function SideNavBar() {
   const showOrganizer = isAuthenticated && hasClubs;
   const showAdmin = isAuthenticated && user && isAdmin(user);
 
-  const sidebarWidth = collapsed ? "w-20" : "w-72";
-
   return (
     <>
       {/* Desktop Side Navigation */}
@@ -85,50 +90,82 @@ export function SideNavBar() {
         onMouseEnter={() => canCollapse && setHovered(true)}
         onMouseLeave={() => canCollapse && setHovered(false)}
         className={cn(
-          "hidden lg:flex flex-col fixed inset-y-0 left-0 z-50 transition-all duration-300 overflow-hidden",
-          sidebarWidth,
-          collapsed ? "p-3" : "p-6",
-          "bg-white/85 dark:bg-card/85 backdrop-blur-2xl",
-          "border-r border-primary/8 dark:border-border/40"
+          "hidden lg:flex flex-col fixed inset-y-0 left-0 z-50 overflow-hidden",
+          "transition-[width,padding] duration-200",
+          collapsed ? "w-[72px] py-5 px-1" : "w-72 p-6",
+          "bg-white/90 dark:bg-card/90 backdrop-blur-2xl",
+          "border-r border-slate-200/60 dark:border-border/40"
         )}
+        style={{ transitionTimingFunction: EASE }}
       >
-        {/* Logo */}
-        <div className={cn("flex items-center mb-10 whitespace-nowrap overflow-hidden", collapsed ? "justify-center px-0" : "gap-3 px-2")}>
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20 flex-shrink-0">
-              <Compass className="h-5 w-5" />
-            </div>
-            <div
-              className={cn(
-                "transition-all duration-300 overflow-hidden",
-                collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-              )}
-            >
-              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-foreground leading-none">
-                Uni-Verse
-              </h1>
-              <p className="text-xs font-semibold text-primary/80 uppercase tracking-wider mt-1">
-                McGill University
-              </p>
-            </div>
-          </Link>
-        </div>
+        {/* ── Logo ── */}
+        <Link
+          href="/"
+          className={cn(
+            "flex items-center whitespace-nowrap overflow-hidden rounded-xl mb-8",
+            "transition-[padding] duration-200",
+            collapsed ? "justify-center p-0" : "px-4 py-3"
+          )}
+          style={{ transitionTimingFunction: EASE }}
+        >
+          <Image
+            src="/uni-verse_logo.png"
+            alt="Uni-Verse"
+            width={64}
+            height={64}
+            className="flex-shrink-0 object-contain transition-[width,height] duration-200"
+            style={{
+              width: collapsed ? 36 : 36,
+              height: collapsed ? 36 : 36,
+              transitionTimingFunction: EASE,
+            }}
+          />
+          <div
+            className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
+            style={{
+              maxWidth: collapsed ? 0 : 200,
+              opacity: collapsed ? 0 : 1,
+              marginLeft: collapsed ? 0 : 12,
+              transitionTimingFunction: EASE,
+            }}
+          >
+            <h1 className="text-lg font-black uppercase tracking-widest text-slate-900 dark:text-foreground leading-none">
+              UNI-VERSE
+            </h1>
+            <p className="text-[10px] font-medium text-slate-400 dark:text-muted-foreground uppercase tracking-widest mt-1">
+              McGill University
+            </p>
+          </div>
+        </Link>
 
-        {/* Navigation */}
-        <nav aria-label="Main navigation" className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden">
+        {/* ── Navigation ── */}
+        <nav aria-label="Main navigation" className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden">
           {coreNavItems.map((item) => (
             <NavLink key={item.path} item={item} pathname={pathname} collapsed={collapsed} />
           ))}
 
           {showOrganizer && (
             <>
-              {collapsed ? (
-                <div className="pt-4 border-t border-border/40 mt-2" />
-              ) : (
-                <div className="pt-6 pb-2 px-4 text-xs font-bold text-slate-400 dark:text-muted-foreground uppercase tracking-widest whitespace-nowrap">
-                  Organizer
+              <div
+                className="overflow-hidden whitespace-nowrap transition-[padding,opacity,border-color] duration-200"
+                style={{ transitionTimingFunction: EASE }}
+              >
+                <div className={cn(
+                  "border-t border-slate-200/60 dark:border-border/40 mt-3",
+                  "transition-[padding] duration-200",
+                  collapsed ? "pt-3" : "pt-5 pb-1 px-4"
+                )} style={{ transitionTimingFunction: EASE }}>
+                  <span
+                    className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground uppercase tracking-widest transition-opacity duration-200"
+                    style={{
+                      opacity: collapsed ? 0 : 1,
+                      transitionTimingFunction: EASE,
+                    }}
+                  >
+                    Organizer
+                  </span>
                 </div>
-              )}
+              </div>
               {organizerNavItems.map((item) => (
                 <NavLink key={item.path} item={item} pathname={pathname} collapsed={collapsed} />
               ))}
@@ -137,13 +174,26 @@ export function SideNavBar() {
 
           {showAdmin && (
             <>
-              {collapsed ? (
-                <div className="pt-4 border-t border-border/40 mt-2" />
-              ) : (
-                <div className="pt-6 pb-2 px-4 text-xs font-bold text-slate-400 dark:text-muted-foreground uppercase tracking-widest whitespace-nowrap">
-                  Moderation
+              <div
+                className="overflow-hidden whitespace-nowrap transition-[padding,opacity,border-color] duration-200"
+                style={{ transitionTimingFunction: EASE }}
+              >
+                <div className={cn(
+                  "border-t border-slate-200/60 dark:border-border/40 mt-3",
+                  "transition-[padding] duration-200",
+                  collapsed ? "pt-3" : "pt-5 pb-1 px-4"
+                )} style={{ transitionTimingFunction: EASE }}>
+                  <span
+                    className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground uppercase tracking-widest transition-opacity duration-200"
+                    style={{
+                      opacity: collapsed ? 0 : 1,
+                      transitionTimingFunction: EASE,
+                    }}
+                  >
+                    Moderation
+                  </span>
                 </div>
-              )}
+              </div>
               {adminNavItems.map((item) => (
                 <NavLink key={item.path} item={item} pathname={pathname} collapsed={collapsed} />
               ))}
@@ -151,83 +201,95 @@ export function SideNavBar() {
           )}
         </nav>
 
-        {/* Bottom Section */}
-        <div className="mt-auto space-y-4">
-          {/* Create Event CTA */}
+        {/* ── Bottom Section ── */}
+        <div className="mt-auto space-y-3 pt-4">
+          {/* Create Event */}
           {isAuthenticated && (
-            <div className={cn("transition-all duration-300 overflow-hidden", collapsed ? "px-0" : "")}>
-              {collapsed ? (
-                <Link
-                  href="/create-event"
-                  title="Create Event"
-                  className="flex items-center justify-center w-10 h-10 mx-auto bg-primary text-white rounded-xl hover:brightness-110 transition-all shadow-lg shadow-primary/20"
-                >
-                  <PlusCircle className="h-5 w-5" />
-                </Link>
-              ) : (
-                <div className="bg-primary/5 dark:bg-primary/10 rounded-2xl p-4 border border-primary/10">
-                  <p className="text-sm font-bold text-slate-800 dark:text-foreground mb-1 whitespace-nowrap">
-                    Hosting something?
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-muted-foreground mb-3 whitespace-nowrap">
-                    Share your club&apos;s next big event.
-                  </p>
-                  <Link
-                    href="/create-event"
-                    className="w-full py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                    Create Event
-                  </Link>
-                </div>
+            <Link
+              href="/create-event"
+              title="Create Event"
+              className={cn(
+                "flex items-center justify-center bg-primary text-white rounded-xl",
+                "hover:brightness-110 shadow-lg shadow-primary/20 cursor-pointer",
+                "transition-[padding] duration-200",
+                collapsed ? "p-3" : "py-2.5 px-4"
               )}
-            </div>
+              style={{ transitionTimingFunction: EASE }}
+            >
+              <PlusCircle className="w-5 h-5 flex-shrink-0" />
+              <div
+                className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
+                style={{
+                  maxWidth: collapsed ? 0 : 120,
+                  opacity: collapsed ? 0 : 1,
+                  marginLeft: collapsed ? 0 : 8,
+                  transitionTimingFunction: EASE,
+                }}
+              >
+                <span className="whitespace-nowrap text-sm font-bold">Create Event</span>
+              </div>
+            </Link>
           )}
 
           {/* User Profile */}
           {isAuthenticated && user && (
-            <div className={cn("flex items-center overflow-hidden", collapsed ? "justify-center" : "gap-3 px-2")}>
-              <Link href="/profile" className={cn("flex items-center", collapsed ? "" : "gap-3 flex-1 min-w-0")}>
+            <div
+              className={cn(
+                "flex items-center overflow-hidden rounded-xl",
+                "transition-[padding] duration-200",
+                collapsed ? "justify-center p-3" : "px-4 py-3"
+              )}
+              style={{ transitionTimingFunction: EASE }}
+            >
+              <Link href="/profile" className="flex items-center min-w-0">
                 {user.avatar_url ? (
                   <Image
                     src={user.avatar_url}
                     alt={user.name || "User"}
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/10 flex-shrink-0"
+                    width={36}
+                    height={36}
+                    className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/10 flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 ring-2 ring-primary/10">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 ring-2 ring-primary/10">
                     {(user.name || "U").charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div
-                  className={cn(
-                    "flex-1 min-w-0 transition-all duration-300 overflow-hidden",
-                    collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-                  )}
+                  className="min-w-0 overflow-hidden transition-[max-width,opacity,margin] duration-200"
+                  style={{
+                    maxWidth: collapsed ? 0 : 140,
+                    opacity: collapsed ? 0 : 1,
+                    marginLeft: collapsed ? 0 : 12,
+                    transitionTimingFunction: EASE,
+                  }}
                 >
                   <p className="text-sm font-bold leading-none text-slate-900 dark:text-foreground truncate">
                     {user.name || "User"}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-muted-foreground truncate">
+                  <p className="text-xs text-slate-500 dark:text-muted-foreground truncate mt-0.5">
                     {user.year || user.email}
                   </p>
                 </div>
               </Link>
-              <MoreVertical
-                className={cn(
-                  "h-4 w-4 text-slate-400 flex-shrink-0 transition-all duration-300",
-                  collapsed ? "w-0 opacity-0" : "opacity-100"
-                )}
-              />
+              <div
+                className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
+                style={{
+                  maxWidth: collapsed ? 0 : 20,
+                  opacity: collapsed ? 0 : 1,
+                  marginLeft: collapsed ? 0 : "auto",
+                  transitionTimingFunction: EASE,
+                }}
+              >
+                <MoreVertical className="h-4 w-4 text-slate-400 flex-shrink-0" />
+              </div>
             </div>
           )}
         </div>
       </aside>
 
-      {/* Spacer — always uses the collapsed width so main content doesn't shift on hover */}
-      <div className={cn("hidden lg:block flex-shrink-0 transition-all duration-300", canCollapse ? "w-20" : "w-72")} />
+      {/* Spacer — collapsed width so main content doesn't shift on hover */}
+      <div className={cn("hidden lg:block flex-shrink-0", canCollapse ? "w-[72px]" : "w-72")} />
     </>
   );
 }
