@@ -327,9 +327,9 @@ export function SideNavBar() {
                 <p className="text-sm font-semibold leading-tight text-foreground truncate">
                   {user.name || "User"}
                 </p>
-                {user.year && (
+                {(user.faculty || user.year) && (
                   <p className="text-[11px] text-muted-foreground truncate">
-                    {user.year}
+                    {[user.faculty, user.year].filter(Boolean).join(" · ")}
                   </p>
                 )}
               </div>
