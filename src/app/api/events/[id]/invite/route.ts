@@ -80,7 +80,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       event_id: eventId,
     }));
 
-    await (supabase as any).from("notifications").insert(notifications);
+    await supabase.from("notifications").insert(notifications);
 
     return NextResponse.json({ sent: validInvitees.length });
   } catch {

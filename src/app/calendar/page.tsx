@@ -1,612 +1,1052 @@
 "use client";
 
-/**
- * Calendar page - Monthly calendar view of events
- * Design: Stitch calendar layout with sidebar filters, featured section, and footer
- */
-
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useAuthStore } from "@/store/useAuthStore";
 import type { Event, EventTag } from "@/types";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Button } from "@/components/ui/button";
+import { SignInButton } from "@/components/auth/SignInButton";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { useTracking } from "@/hooks/useTracking";
 import {
   ChevronLeft,
   ChevronRight,
-  Calendar as CalendarIcon,
+  Clock,
+  MapPin,
+  Download,
   CalendarOff,
-  Share,
-  RefreshCw,
-  Star,
-  Compass,
-  BookOpen,
-  Rocket,
+  LogIn,
+  Bookmark,
+  BookmarkCheck,
+  CheckCircle2,
+  Sparkles,
+  Calendar as CalendarIcon,
 } from "lucide-react";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { cn } from "@/lib/utils";
-import { useTracking } from "@/hooks/useTracking";
-import { EVENT_CATEGORIES } from "@/lib/constants";
-import { useEvents } from "@/hooks/useEvents";
 
-/** Map each tag to its Stitch-design sidebar color */
-const CATEGORY_SIDEBAR_COLORS: Record<
-  string,
-  { bg: string; border: string; text: string; ring: string }
-> = {
-  academic: {
-    bg: "bg-blue-500",
-    border: "border-blue-500",
-    text: "text-blue-600",
-    ring: "ring-blue-500/50",
-  },
-  social: {
-    bg: "bg-red-600",
-    border: "border-red-600",
-    text: "text-red-600",
-    ring: "ring-red-600/50",
-  },
-  sports: {
-    bg: "bg-orange-500",
-    border: "border-orange-500",
-    text: "text-orange-600",
-    ring: "ring-orange-500/50",
-  },
-  career: {
-    bg: "bg-emerald-500",
-    border: "border-emerald-500",
-    text: "text-emerald-600",
-    ring: "ring-emerald-500/50",
-  },
-  cultural: {
-    bg: "bg-purple-500",
-    border: "border-purple-500",
-    text: "text-purple-600",
-    ring: "ring-purple-500/50",
-  },
-  wellness: {
-    bg: "bg-pink-500",
-    border: "border-pink-500",
-    text: "text-pink-600",
-    ring: "ring-pink-500/50",
-  },
-};
+/* ═══════════════════════════════════════════════════════
+   Category color maps
+   ═══════════════════════════════════════════════════════ */
 
-/** Map each tag to the event strip colors used inside calendar cells */
-const CATEGORY_STRIP_COLORS: Record<
+const STRIP_COLORS: Record<
   string,
   { bg: string; border: string; text: string }
 > = {
   academic: {
-    bg: "bg-blue-500/10",
-    border: "border-blue-500",
-    text: "text-blue-600",
+    bg: "bg-blue-500/20",
+    border: "border-blue-500/30",
+    text: "text-blue-600 dark:text-blue-400",
   },
   social: {
-    bg: "bg-red-600/10",
-    border: "border-red-600",
-    text: "text-red-600",
+    bg: "bg-pink-500/20",
+    border: "border-pink-500/30",
+    text: "text-pink-600 dark:text-pink-400",
   },
   sports: {
-    bg: "bg-orange-500/10",
-    border: "border-orange-500",
-    text: "text-orange-600",
+    bg: "bg-green-500/20",
+    border: "border-green-500/30",
+    text: "text-green-600 dark:text-green-400",
   },
   career: {
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500",
-    text: "text-emerald-600",
+    bg: "bg-purple-500/20",
+    border: "border-purple-500/30",
+    text: "text-purple-600 dark:text-purple-400",
   },
   cultural: {
-    bg: "bg-purple-500/10",
-    border: "border-purple-500",
-    text: "text-purple-600",
+    bg: "bg-orange-500/20",
+    border: "border-orange-500/30",
+    text: "text-orange-600 dark:text-orange-400",
   },
   wellness: {
-    bg: "bg-pink-500/10",
-    border: "border-pink-500",
-    text: "text-pink-600",
+    bg: "bg-teal-500/20",
+    border: "border-teal-500/30",
+    text: "text-teal-600 dark:text-teal-400",
   },
 };
 
-/** Get the primary category strip color for an event */
-function getEventStripClasses(tags: EventTag[]) {
+const ACCENT_COLORS: Record<
+  string,
+  { bar: string; label: string; hoverBorder: string }
+> = {
+  academic: {
+    bar: "bg-blue-500",
+    label: "text-blue-600 dark:text-blue-400",
+    hoverBorder: "hover:border-blue-500/50",
+  },
+  social: {
+    bar: "bg-pink-500",
+    label: "text-pink-600 dark:text-pink-400",
+    hoverBorder: "hover:border-pink-500/50",
+  },
+  sports: {
+    bar: "bg-green-500",
+    label: "text-green-600 dark:text-green-400",
+    hoverBorder: "hover:border-green-500/50",
+  },
+  career: {
+    bar: "bg-purple-500",
+    label: "text-purple-600 dark:text-purple-400",
+    hoverBorder: "hover:border-purple-500/50",
+  },
+  cultural: {
+    bar: "bg-orange-500",
+    label: "text-orange-600 dark:text-orange-400",
+    hoverBorder: "hover:border-orange-500/50",
+  },
+  wellness: {
+    bar: "bg-teal-500",
+    label: "text-teal-600 dark:text-teal-400",
+    hoverBorder: "hover:border-teal-500/50",
+  },
+};
+
+const DOT_COLORS: Record<string, string> = {
+  academic: "bg-blue-500",
+  social: "bg-pink-500",
+  sports: "bg-green-500",
+  career: "bg-purple-500",
+  cultural: "bg-orange-500",
+  wellness: "bg-teal-500",
+};
+
+const DEFAULT_STRIP = {
+  bg: "bg-primary/20",
+  border: "border-primary/30",
+  text: "text-primary",
+};
+const DEFAULT_ACCENT = {
+  bar: "bg-primary",
+  label: "text-primary",
+  hoverBorder: "hover:border-primary/50",
+};
+
+function getStripColors(tags?: EventTag[]) {
   const primary = tags?.[0];
-  return (
-    CATEGORY_STRIP_COLORS[primary] ?? {
-      bg: "bg-red-600/10",
-      border: "border-red-600",
-      text: "text-red-600",
-    }
-  );
+  return primary ? (STRIP_COLORS[primary] ?? DEFAULT_STRIP) : DEFAULT_STRIP;
 }
 
-/** Get the badge bg color for featured cards */
-function getFeaturedBadgeBg(tags: EventTag[]) {
+function getAccentColors(tags?: EventTag[]) {
   const primary = tags?.[0];
-  return CATEGORY_SIDEBAR_COLORS[primary]?.bg ?? "bg-red-600";
+  return primary
+    ? (ACCENT_COLORS[primary] ?? DEFAULT_ACCENT)
+    : DEFAULT_ACCENT;
 }
+
+/* ═══════════════════════════════════════════════════════
+   Calendar helpers
+   ═══════════════════════════════════════════════════════ */
+
+function buildMonthGrid(year: number, month: number) {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startingDay = firstDay.getDay();
+
+  const days: { date: Date; isCurrentMonth: boolean }[] = [];
+
+  const prevMonthEnd = new Date(year, month, 0).getDate();
+  for (let i = startingDay - 1; i >= 0; i--) {
+    days.push({
+      date: new Date(year, month - 1, prevMonthEnd - i),
+      isCurrentMonth: false,
+    });
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    days.push({ date: new Date(year, month, d), isCurrentMonth: true });
+  }
+
+  let nextDay = 1;
+  while (days.length % 7 !== 0) {
+    days.push({
+      date: new Date(year, month + 1, nextDay++),
+      isCurrentMonth: false,
+    });
+  }
+
+  return days;
+}
+
+function getWeekDays(date: Date) {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay()); // Go to Sunday
+  const days: Date[] = [];
+  for (let i = 0; i < 7; i++) {
+    days.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return days;
+}
+
+function dateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatTime(time: string) {
+  if (!time) return "";
+  const [h, m] = time.split(":");
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${m} ${ampm}`;
+}
+
+function formatDateHeading(dateStr: string) {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   iCal export
+   ═══════════════════════════════════════════════════════ */
+
+function escapeIcal(text: string) {
+  return text
+    .replace(/\\/g, "\\\\")
+    .replace(/\r\n|\n|\r/g, "\\n")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,");
+}
+
+function generateIcal(events: CalendarEvent[]) {
+  const lb = "\r\n";
+  const dtstamp = new Date()
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .split(".")[0] + "Z";
+
+  const vevents = events.map((event) => {
+    const datePart = event.event_date.replace(/-/g, "");
+    const timePart = event.event_time
+      ? event.event_time.replace(":", "") + "00"
+      : "000000";
+
+    return [
+      "BEGIN:VEVENT",
+      `UID:${event.id}@uni-verse`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART:${datePart}T${timePart}`,
+      `SUMMARY:${escapeIcal(event.title)}`,
+      `DESCRIPTION:${escapeIcal(event.description || "")}`,
+      `LOCATION:${escapeIcal(event.location || "")}`,
+      "END:VEVENT",
+    ].join(lb);
+  });
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Uni-Verse//EN",
+    "CALSCALE:GREGORIAN",
+    ...vevents,
+    "END:VCALENDAR",
+  ].join(lb);
+}
+
+function downloadIcal(events: CalendarEvent[]) {
+  const ical = generateIcal(events);
+  const blob = new Blob([ical], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "uni-verse-calendar.ics";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Types
+   ═══════════════════════════════════════════════════════ */
+
+type CalendarEvent = Omit<Event, "club"> & {
+  club?: { id: string; name: string; logo_url: string | null };
+  is_saved?: boolean;
+  rsvp_status?: string | null;
+};
+
+type CalendarView = "Month" | "Week" | "List";
+
+/* ═══════════════════════════════════════════════════════
+   Page
+   ═══════════════════════════════════════════════════════ */
 
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const { user, loading: authLoading } = useAuthStore();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
-    () => new Set(Object.keys(EVENT_CATEGORIES))
-  );
-  const [calendarView, setCalendarView] = useState<"Month" | "Week" | "Day">(
-    "Month"
-  );
-
-  const now = new Date();
-  const startOfMonthRef = useRef(
-    new Date(now.getFullYear(), now.getMonth(), 1)
-  );
-
-  const { events, loading, loadAll } = useEvents({
-    enabled: false,
-    limit: 100,
-    sort: "start_date",
-    direction: "asc",
-  });
-
-  useEffect(() => {
-    loadAll({
-      filters: {
-        dateRange: {
-          start: startOfMonthRef.current,
-        },
-      },
-    });
-  }, [loadAll]);
-
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    return { daysInMonth, startingDayOfWeek, year, month };
-  };
-
-  const getEventsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0];
-    return events.filter(
-      (event: Event) =>
-        event.event_date === dateStr &&
-        event.tags?.some((t) => selectedCategories.has(t))
-    );
-  };
-
-  const navigateMonth = (direction: "prev" | "next") => {
-    setCurrentDate((prev: Date) => {
-      const newDate = new Date(prev);
-      if (direction === "prev") {
-        newDate.setMonth(prev.getMonth() - 1);
-      } else {
-        newDate.setMonth(prev.getMonth() + 1);
-      }
-      return newDate;
-    });
-  };
-
-  const toggleCategory = (tag: string) => {
-    setSelectedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(tag)) {
-        next.delete(tag);
-      } else {
-        next.add(tag);
-      }
-      return next;
-    });
-  };
-
-  const { daysInMonth, startingDayOfWeek, year, month } =
-    getDaysInMonth(currentDate);
-  const monthName = currentDate.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-  const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
-  const showSkeleton = loading && events.length === 0;
-  const showSpinner = loading && !showSkeleton;
-
-  // Create calendar grid
-  const calendarDays: (Date | null)[] = [];
-  for (let i = 0; i < startingDayOfWeek; i++) {
-    calendarDays.push(null);
-  }
-  for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push(new Date(year, month, day));
-  }
-  // Pad trailing cells so we fill complete weeks
-  while (calendarDays.length % 7 !== 0) {
-    calendarDays.push(null);
-  }
+  const [calendarView, setCalendarView] = useState<CalendarView>("Month");
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const { trackClick } = useTracking({ source: "calendar" });
 
-  const handleEventClick = (event: Event) => {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const monthGrid = useMemo(
+    () => buildMonthGrid(year, month),
+    [year, month]
+  );
+
+  const weekDays = useMemo(
+    () => getWeekDays(selectedDate),
+    [selectedDate]
+  );
+
+  const todayStr = useMemo(() => dateKey(new Date()), []);
+  const selectedStr = dateKey(selectedDate);
+
+  // Index events by date
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const event of events) {
+      const key = event.event_date;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(event);
+    }
+    return map;
+  }, [events]);
+
+  const selectedDayEvents = useMemo(
+    () => eventsByDate.get(selectedStr) || [],
+    [eventsByDate, selectedStr]
+  );
+
+  // Upcoming events for list view (today and beyond, sorted)
+  const upcomingEvents = useMemo(() => {
+    return events
+      .filter((e) => e.event_date >= todayStr)
+      .sort((a, b) => {
+        const dc = a.event_date.localeCompare(b.event_date);
+        if (dc !== 0) return dc;
+        return (a.event_time || "").localeCompare(b.event_time || "");
+      });
+  }, [events, todayStr]);
+
+  // Group upcoming events by date for list view
+  const groupedUpcoming = useMemo(() => {
+    const groups: { date: string; events: CalendarEvent[] }[] = [];
+    for (const event of upcomingEvents) {
+      const last = groups[groups.length - 1];
+      if (last && last.date === event.event_date) {
+        last.events.push(event);
+      } else {
+        groups.push({ date: event.event_date, events: [event] });
+      }
+    }
+    return groups;
+  }, [upcomingEvents]);
+
+  /* ── Data fetching ── */
+
+  const fetchEvents = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/calendar/events");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setEvents(data.events || []);
+    } catch (err) {
+      console.error("Calendar fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) fetchEvents();
+    else setLoading(false);
+  }, [user, fetchEvents]);
+
+  /* ── Navigation ── */
+
+  const navigateMonth = (dir: "prev" | "next") => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() + (dir === "next" ? 1 : -1));
+      return d;
+    });
+  };
+
+  const navigateWeek = (dir: "prev" | "next") => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + (dir === "next" ? 7 : -7));
+    setSelectedDate(d);
+    setCurrentDate(d);
+  };
+
+  const goToToday = () => {
+    const now = new Date();
+    setCurrentDate(now);
+    setSelectedDate(now);
+  };
+
+  const handleDayClick = (date: Date) => {
+    setSelectedDate(date);
+    if (
+      date.getMonth() !== currentDate.getMonth() ||
+      date.getFullYear() !== currentDate.getFullYear()
+    ) {
+      setCurrentDate(new Date(date.getFullYear(), date.getMonth(), 1));
+    }
+  };
+
+  const handleEventClick = (event: CalendarEvent) => {
     trackClick(event.id);
     setSelectedEvent(event);
     setIsModalOpen(true);
   };
 
-  // Featured events: next 7 days from today that match selected categories
-  const featuredEvents = useMemo(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 7);
-    const startStr = start.toISOString().split("T")[0];
-    const endStr = end.toISOString().split("T")[0];
-    return events
-      .filter(
-        (e) =>
-          e.event_date >= startStr &&
-          e.event_date <= endStr &&
-          e.tags?.some((t) => selectedCategories.has(t))
+  /* ── Keyboard navigation ── */
+
+  const handleGridKeyDown = (e: React.KeyboardEvent) => {
+    const step =
+      calendarView === "Month"
+        ? { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 7, ArrowUp: -7 }
+        : { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 1, ArrowUp: -1 };
+
+    const delta = step[e.key as keyof typeof step];
+
+    if (delta !== undefined) {
+      e.preventDefault();
+      const newDate = new Date(selectedDate);
+      newDate.setDate(newDate.getDate() + delta);
+      setSelectedDate(newDate);
+
+      if (
+        newDate.getMonth() !== currentDate.getMonth() ||
+        newDate.getFullYear() !== currentDate.getFullYear()
+      ) {
+        setCurrentDate(
+          new Date(newDate.getFullYear(), newDate.getMonth(), 1)
+        );
+      }
+    }
+
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      const dayEvts = eventsByDate.get(dateKey(selectedDate));
+      if (dayEvts?.[0]) handleEventClick(dayEvts[0]);
+    }
+  };
+
+  /* ── Save / RSVP actions ── */
+
+  const toggleSave = async (event: CalendarEvent) => {
+    const wasSaved = event.is_saved;
+
+    // Optimistic update
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === event.id ? { ...e, is_saved: !wasSaved } : e
       )
-      .slice(0, 3);
-  }, [events, selectedCategories]);
+    );
+
+    try {
+      const res = await fetch(`/api/events/${event.id}/save`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+
+      // If unsaved and no RSVP, remove from calendar entirely
+      if (!data.saved && !event.rsvp_status) {
+        setEvents((prev) => prev.filter((e) => e.id !== event.id));
+      }
+    } catch {
+      // Rollback
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === event.id ? { ...e, is_saved: wasSaved } : e
+        )
+      );
+    }
+  };
+
+  const setRsvp = async (
+    event: CalendarEvent,
+    status: "going" | "interested"
+  ) => {
+    if (!user) return;
+    const prevStatus = event.rsvp_status;
+    const isCancel = prevStatus === status;
+
+    // Optimistic update
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === event.id
+          ? { ...e, rsvp_status: isCancel ? null : status }
+          : e
+      )
+    );
+
+    try {
+      if (isCancel) {
+        const res = await fetch(`/api/events/${event.id}/rsvp`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: user.id }),
+        });
+        if (!res.ok) throw new Error();
+
+        // If also not saved, remove from calendar
+        if (!event.is_saved) {
+          setEvents((prev) => prev.filter((e) => e.id !== event.id));
+        }
+      } else {
+        const res = await fetch(`/api/events/${event.id}/rsvp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: user.id, status }),
+        });
+        if (!res.ok) throw new Error();
+      }
+    } catch {
+      // Rollback
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === event.id ? { ...e, rsvp_status: prevStatus } : e
+        )
+      );
+    }
+  };
+
+  /* ── Derived labels ── */
+
+  const monthLabel = currentDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const weekLabel = useMemo(() => {
+    const start = weekDays[0];
+    const end = weekDays[6];
+    const sameMonth = start.getMonth() === end.getMonth();
+    if (sameMonth) {
+      return `${start.toLocaleDateString("en-US", { month: "long" })} ${start.getDate()} – ${end.getDate()}, ${end.getFullYear()}`;
+    }
+    return `${start.toLocaleDateString("en-US", { month: "short" })} ${start.getDate()} – ${end.toLocaleDateString("en-US", { month: "short" })} ${end.getDate()}, ${end.getFullYear()}`;
+  }, [weekDays]);
+
+  const selectedDateLabel = selectedDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+
+  const navLabel = calendarView === "Week" ? weekLabel : monthLabel;
+
+  /* ── Render helpers ── */
+
+  // Auth loading
+  if (authLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-1 items-center justify-center min-h-[60vh] px-4">
+        <div className="flex flex-col items-center justify-center text-center space-y-4 bg-card/50 rounded-xl border border-border backdrop-blur-sm p-10 max-w-md">
+          <div className="rounded-full bg-primary/10 p-4">
+            <LogIn className="h-8 w-8 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold text-foreground">
+            Sign in to view your calendar
+          </h3>
+          <p className="text-muted-foreground">
+            Your saved and RSVP&apos;d events will appear here once you sign in.
+          </p>
+          <SignInButton variant="default" />
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Agenda card renderer (shared by all views) ── */
+
+  const renderAgendaCard = (event: CalendarEvent) => {
+    const accent = getAccentColors(event.tags);
+    return (
+      <div
+        key={event.id}
+        className={cn(
+          "group relative flex flex-col gap-3 rounded-2xl bg-background border border-border p-4 transition-colors overflow-hidden",
+          accent.hoverBorder
+        )}
+      >
+        {/* Accent bar */}
+        <div
+          className={cn(
+            "absolute top-0 left-0 w-1 h-full rounded-l-2xl",
+            accent.bar
+          )}
+        />
+
+        {/* Clickable content */}
+        <button
+          onClick={() => handleEventClick(event)}
+          className="flex flex-col gap-3 text-left cursor-pointer"
+        >
+          <div className="flex justify-between items-start pl-3">
+            <div className="flex flex-col gap-1 min-w-0">
+              <span
+                className={cn(
+                  "text-xs font-semibold tracking-wider uppercase",
+                  accent.label
+                )}
+              >
+                {event.club?.name || "Event"}
+              </span>
+              <h4 className="text-foreground text-base font-bold leading-tight group-hover:text-primary transition-colors truncate">
+                {event.title}
+              </h4>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 pl-3">
+            {event.event_time && (
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Clock className="h-4 w-4 shrink-0" />
+                <span>{formatTime(event.event_time)}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <MapPin className="h-4 w-4 shrink-0" />
+              <span className="truncate">{event.location}</span>
+            </div>
+          </div>
+        </button>
+
+        {/* Action bar */}
+        <div className="flex items-center gap-2 pl-3 pt-2 border-t border-border/60 flex-wrap">
+          <button
+            onClick={() => toggleSave(event)}
+            className={cn(
+              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+              event.is_saved
+                ? "bg-primary/10 border border-primary/20 text-primary"
+                : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {event.is_saved ? (
+              <BookmarkCheck className="h-3 w-3" />
+            ) : (
+              <Bookmark className="h-3 w-3" />
+            )}
+            {event.is_saved ? "Saved" : "Save"}
+          </button>
+
+          <button
+            onClick={() => setRsvp(event, "going")}
+            className={cn(
+              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+              event.rsvp_status === "going"
+                ? "bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400"
+                : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Going
+          </button>
+
+          <button
+            onClick={() => setRsvp(event, "interested")}
+            className={cn(
+              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+              event.rsvp_status === "interested"
+                ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400"
+                : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Sparkles className="h-3 w-3" />
+            Interested
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  /* ── Day cell renderer (shared by month & week) ── */
+
+  const renderDayCell = (
+    date: Date,
+    isCurrentPeriod: boolean,
+    tall: boolean
+  ) => {
+    const key = dateKey(date);
+    const isToday = key === todayStr;
+    const isSelected = key === selectedStr;
+    const dayEvents = eventsByDate.get(key) || [];
+
+    // Unique category dots for event count indicator
+    const categoryDots = [
+      ...new Set(dayEvents.flatMap((e) => e.tags?.slice(0, 1) || [])),
+    ].slice(0, 4);
+
+    return (
+      <button
+        key={key}
+        onClick={() => handleDayClick(date)}
+        className={cn(
+          "bg-background p-2 text-right text-sm font-medium relative transition-colors cursor-pointer flex flex-col",
+          tall ? "min-h-[180px]" : "min-h-[100px]",
+          !isCurrentPeriod && "text-muted-foreground/40",
+          isCurrentPeriod && "text-foreground hover:bg-secondary/50",
+          isSelected &&
+            "bg-primary/5 dark:bg-primary/5 ring-1 ring-inset ring-primary shadow-[0_0_15px_hsl(var(--primary)/0.12)] z-10",
+          isToday && !isSelected && "bg-secondary/60"
+        )}
+      >
+        {/* Day number + count indicator */}
+        <div className="flex items-center justify-end gap-1.5">
+          {/* Category dots */}
+          {dayEvents.length > 0 && (
+            <div className="flex gap-0.5">
+              {categoryDots.map((tag) => (
+                <span
+                  key={tag}
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    DOT_COLORS[tag] || "bg-primary"
+                  )}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Event count badge */}
+          {dayEvents.length > 0 && (
+            <span className="text-[9px] font-bold text-muted-foreground bg-secondary rounded-full size-4 inline-flex items-center justify-center">
+              {dayEvents.length}
+            </span>
+          )}
+
+          <span
+            className={cn(
+              isToday &&
+                "bg-primary text-primary-foreground rounded-full size-6 inline-flex items-center justify-center text-xs font-bold"
+            )}
+          >
+            {date.getDate()}
+          </span>
+        </div>
+
+        {/* Event strips */}
+        <div className="flex flex-col gap-0.5 mt-auto w-full">
+          {dayEvents.slice(0, tall ? 5 : 3).map((event) => {
+            const strip = getStripColors(event.tags);
+            return (
+              <div
+                key={event.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEventClick(event);
+                }}
+                className={cn(
+                  "border text-[10px] px-1.5 py-0.5 rounded truncate text-left font-medium hover:opacity-80 cursor-pointer",
+                  strip.bg,
+                  strip.border,
+                  strip.text
+                )}
+              >
+                {event.title}
+              </div>
+            );
+          })}
+          {dayEvents.length > (tall ? 5 : 3) && (
+            <span className="text-[10px] text-primary font-bold text-left px-1">
+              +{dayEvents.length - (tall ? 5 : 3)} more
+            </span>
+          )}
+        </div>
+      </button>
+    );
+  };
 
   return (
     <ErrorBoundary fallbackMessage="We couldn't load the calendar right now.">
-      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-background">
-        <main className="flex flex-1 flex-col px-4 md:px-10 lg:px-20 py-8">
-          {/* Page Header & Sync */}
-          <div className="flex flex-wrap justify-between items-end gap-6 mb-8">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <span className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  McGill Edition
-                </span>
-              </div>
-              <h1 className="text-slate-900 dark:text-slate-100 text-4xl font-black leading-tight tracking-tight">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
+        {/* ═══ Left Pane ═══ */}
+        <div className="flex flex-1 flex-col overflow-y-auto lg:border-r border-border">
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-4 p-6 lg:p-8 pb-4">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-foreground text-3xl font-bold tracking-tight">
                 Event Calendar
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 text-lg">
-                Never miss a moment of the McGill experience.
+              <p className="text-muted-foreground text-sm font-medium">
+                Your saved and RSVP&apos;d McGill events.
               </p>
             </div>
-            <div className="flex gap-3">
-              <button className="flex items-center justify-center gap-2 rounded-lg h-12 px-6 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-all">
-                <Share className="h-5 w-5" />
-                <span>Export</span>
-              </button>
-              <button className="flex items-center justify-center gap-2 rounded-lg h-12 px-6 bg-red-600 text-white font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-red-600/25">
-                <RefreshCw className="h-5 w-5" />
-                <span>Sync to My Calendar</span>
+            <div className="flex items-center gap-3">
+              {/* View Toggle */}
+              <div className="flex h-10 items-center rounded-lg bg-secondary p-1 border border-border">
+                {(["Month", "Week", "List"] as const).map((view) => (
+                  <button
+                    key={view}
+                    onClick={() => setCalendarView(view)}
+                    className={cn(
+                      "flex h-full cursor-pointer items-center justify-center rounded-md px-4 text-sm font-medium transition-colors",
+                      calendarView === view
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {view}
+                  </button>
+                ))}
+              </div>
+              {/* Export Button */}
+              <button
+                onClick={() => downloadIcal(events)}
+                disabled={events.length === 0}
+                className="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-secondary hover:bg-secondary/80 border border-border text-foreground text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export .ics</span>
               </button>
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Side Filters */}
-            <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6">
-              <div className="bg-white dark:bg-slate-900/50 p-6 rounded-xl border border-red-600/5 shadow-sm">
-                <h3 className="text-slate-900 dark:text-slate-100 font-bold text-sm mb-4 uppercase tracking-widest">
-                  Categories
-                </h3>
-                <div className="flex flex-col gap-3">
-                  {Object.entries(EVENT_CATEGORIES).map(([tag, category]) => {
-                    const colors = CATEGORY_SIDEBAR_COLORS[tag];
-                    const isSelected = selectedCategories.has(tag);
-                    return (
-                      <label
-                        key={tag}
-                        className="flex items-center gap-3 cursor-pointer group"
-                        onClick={() => toggleCategory(tag)}
-                      >
-                        <div
-                          className={cn(
-                            "w-4 h-4 rounded border-2 ring-offset-2 group-hover:ring-2",
-                            colors?.border,
-                            colors?.ring,
-                            isSelected
-                              ? colors?.bg
-                              : "bg-transparent"
-                          )}
-                        />
-                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-100">
-                          {category.label}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
+          {/* Navigation (Month & Week) */}
+          {calendarView !== "List" && (
+            <div className="flex items-center justify-between px-6 lg:px-8 mb-4">
+              <h2 className="text-foreground text-2xl font-bold">
+                {navLabel}
+                {loading && (
+                  <span className="ml-2 inline-flex h-4 w-4 animate-spin rounded-full border-2 border-primary/30 border-t-primary align-[-2px]" />
+                )}
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    calendarView === "Week"
+                      ? navigateWeek("prev")
+                      : navigateMonth("prev")
+                  }
+                  className="flex items-center justify-center size-8 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={goToToday}
+                  className="flex items-center justify-center px-3 h-8 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground text-sm font-medium transition-colors"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() =>
+                    calendarView === "Week"
+                      ? navigateWeek("next")
+                      : navigateMonth("next")
+                  }
+                  className="flex items-center justify-center size-8 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
-              <div className="bg-white dark:bg-slate-900/50 p-6 rounded-xl border border-red-600/5 shadow-sm">
-                <h3 className="text-slate-900 dark:text-slate-100 font-bold text-sm mb-4 uppercase tracking-widest">
-                  Quick Links
-                </h3>
-                <ul className="flex flex-col gap-4">
-                  <li className="flex items-center gap-3 text-slate-600 dark:text-slate-400 hover:text-red-600 transition-colors cursor-pointer">
-                    <Star className="h-[18px] w-[18px]" />
-                    <span className="text-sm font-medium">My Favorites</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-slate-600 dark:text-slate-400 hover:text-red-600 transition-colors cursor-pointer">
-                    <Compass className="h-[18px] w-[18px]" />
-                    <span className="text-sm font-medium">Campus Map</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-slate-600 dark:text-slate-400 hover:text-red-600 transition-colors cursor-pointer">
-                    <BookOpen className="h-[18px] w-[18px]" />
-                    <span className="text-sm font-medium">Resources</span>
-                  </li>
-                </ul>
-              </div>
-            </aside>
+            </div>
+          )}
 
-            {/* Main Calendar View */}
-            <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-red-600/10 shadow-xl overflow-hidden">
-              {/* Calendar Controls */}
-              <div className="flex items-center justify-between p-6 border-b border-red-600/5">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
-                    {monthName}
-                    {showSpinner && (
-                      <span className="ml-2 inline-flex h-4 w-4 animate-spin rounded-full border-2 border-red-600/30 border-t-red-600 align-[-2px]" />
-                    )}
-                  </h2>
-                  <div className="flex bg-red-50 dark:bg-red-950/30 rounded-lg p-1">
-                    <button
-                      className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded shadow-sm transition-all"
-                      onClick={() => navigateMonth("prev")}
-                      disabled={loading}
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded shadow-sm transition-all"
-                      onClick={() => navigateMonth("next")}
-                      disabled={loading}
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-                  {(["Month", "Week", "Day"] as const).map((view) => (
-                    <button
-                      key={view}
-                      onClick={() => setCalendarView(view)}
-                      className={cn(
-                        "px-4 py-1 text-sm font-medium rounded transition-all",
-                        calendarView === view
-                          ? "bg-white dark:bg-slate-700 text-red-600 font-bold shadow-sm"
-                          : "text-slate-600 dark:text-slate-400"
-                      )}
-                    >
-                      {view}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Grid Header */}
-              <div className="grid grid-cols-7 bg-slate-50 dark:bg-slate-800/50 border-b border-red-600/5">
+          {/* ── Month View ── */}
+          {calendarView === "Month" && (
+            <div
+              ref={gridRef}
+              tabIndex={0}
+              onKeyDown={handleGridKeyDown}
+              className="px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
+            >
+              <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
                 {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(
                   (day) => (
                     <div
                       key={day}
-                      className="py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500"
+                      className="bg-secondary p-3 text-right text-muted-foreground text-xs font-semibold tracking-wider uppercase"
                     >
                       {day}
                     </div>
                   )
                 )}
+
+                {loading && events.length === 0
+                  ? Array.from({ length: monthGrid.length }).map((_, i) => (
+                      <div
+                        key={`skel-${i}`}
+                        className="bg-background min-h-[100px] p-2"
+                      >
+                        <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
+                        <Skeleton className="h-4 w-3/4 rounded ml-auto" />
+                      </div>
+                    ))
+                  : monthGrid.map(({ date, isCurrentMonth }, i) =>
+                      renderDayCell(date, isCurrentMonth, false)
+                    )}
               </div>
-
-              {/* Calendar Grid */}
-              <div className="grid grid-cols-7 flex-1">
-                {showSkeleton
-                  ? Array.from({ length: calendarDays.length }).map(
-                      (_, index) => (
-                        <div
-                          key={`skeleton-${index}`}
-                          className="border-r border-b border-red-600/5 p-2 h-32"
-                        >
-                          <div className="h-full flex flex-col gap-2">
-                            <div className="h-5 w-5 rounded-full bg-muted animate-pulse" />
-                            <div className="h-4 w-3/4 rounded-md bg-muted animate-pulse" />
-                            <div className="h-4 w-2/3 rounded-md bg-muted animate-pulse" />
-                          </div>
-                        </div>
-                      )
-                    )
-                  : calendarDays.map((date, index) => {
-                      if (!date) {
-                        // Empty cells (before month start or trailing)
-                        return (
-                          <div
-                            key={`empty-${index}`}
-                            className="border-r border-b border-red-600/5 p-2 h-32 bg-slate-50 dark:bg-slate-800/10"
-                          />
-                        );
-                      }
-
-                      const dateStr = date.toISOString().split("T")[0];
-                      const dayEvents = getEventsForDate(date);
-                      const isToday = dateStr === todayStr;
-                      const isPast =
-                        date < today && dateStr !== todayStr;
-
-                      return (
-                        <div
-                          key={dateStr}
-                          className={cn(
-                            "border-r border-b border-red-600/5 p-2 h-32 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors flex flex-col gap-1",
-                            isToday &&
-                              "bg-red-600/5 ring-1 ring-inset ring-red-600/20"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "text-sm font-bold",
-                              isToday && "text-red-600",
-                              !isToday && isPast && "text-slate-400",
-                              !isToday && !isPast && "text-slate-400"
-                            )}
-                          >
-                            {date.getDate()}
-                          </span>
-
-                          {dayEvents.slice(0, 3).map((event) => {
-                            const strip = getEventStripClasses(event.tags);
-                            return (
-                              <button
-                                key={event.id}
-                                onClick={() => handleEventClick(event)}
-                                className={cn(
-                                  "w-full text-left border-l-2 p-1 rounded-sm",
-                                  strip.bg,
-                                  strip.border
-                                )}
-                              >
-                                <p
-                                  className={cn(
-                                    "text-[10px] font-bold truncate leading-tight",
-                                    strip.text
-                                  )}
-                                >
-                                  {event.title}
-                                </p>
-                              </button>
-                            );
-                          })}
-                          {dayEvents.length > 3 && (
-                            <button
-                              onClick={() =>
-                                handleEventClick(dayEvents[3])
-                              }
-                              className="w-full text-left px-1 text-[10px] text-red-600 hover:underline font-bold"
-                            >
-                              +{dayEvents.length - 3} more
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-              </div>
-            </div>
-          </div>
-
-          {/* Empty State */}
-          {!loading && events.length === 0 && (
-            <div className="mt-6">
-              <EmptyState
-                icon={CalendarOff}
-                title="No events this month"
-                description="Check back soon or browse all upcoming events."
-                action={{ label: "Browse Events", href: "/" }}
-              />
             </div>
           )}
 
-          {/* Featured This Week */}
-          {featuredEvents.length > 0 && (
-            <div className="mt-12">
-              <h3 className="text-slate-900 dark:text-slate-100 font-black text-xl mb-6">
-                Featured This Week
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredEvents.map((event) => {
-                  const badgeBg = getFeaturedBadgeBg(event.tags);
-                  const eventDate = new Date(event.event_date + "T00:00:00");
-                  const monthShort = eventDate.toLocaleDateString("en-US", {
-                    month: "short",
-                  });
-                  const dayNum = String(eventDate.getDate()).padStart(2, "0");
-
+          {/* ── Week View ── */}
+          {calendarView === "Week" && (
+            <div
+              ref={gridRef}
+              tabIndex={0}
+              onKeyDown={handleGridKeyDown}
+              className="px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
+            >
+              <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
+                {weekDays.map((d) => {
+                  const isToday = dateKey(d) === todayStr;
                   return (
-                    <button
-                      key={event.id}
-                      onClick={() => handleEventClick(event)}
-                      className="group flex gap-4 p-4 bg-white dark:bg-slate-900 rounded-xl border border-red-600/5 hover:border-red-600/20 hover:shadow-lg transition-all cursor-pointer text-left"
+                    <div
+                      key={dateKey(d)}
+                      className={cn(
+                        "bg-secondary p-3 text-center text-xs font-semibold tracking-wider uppercase",
+                        isToday
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                      )}
                     >
-                      <div className="size-16 rounded-lg overflow-hidden shrink-0">
-                        <div
-                          className={cn(
-                            "w-full h-full flex flex-col items-center justify-center text-white",
-                            badgeBg
-                          )}
-                        >
-                          <span className="text-xs font-bold uppercase">
-                            {monthShort}
-                          </span>
-                          <span className="text-xl font-black leading-none">
-                            {dayNum}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col justify-center min-w-0">
-                        <h4 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors truncate">
-                          {event.title}
-                        </h4>
-                        <p className="text-xs text-slate-500 truncate">
-                          {event.location}
-                          {event.event_time
-                            ? ` \u2022 ${event.event_time}`
-                            : ""}
-                        </p>
-                      </div>
-                    </button>
+                      {d.toLocaleDateString("en-US", { weekday: "short" })}
+                    </div>
                   );
                 })}
+
+                {loading && events.length === 0
+                  ? weekDays.map((_, i) => (
+                      <div
+                        key={`wskel-${i}`}
+                        className="bg-background min-h-[180px] p-2"
+                      >
+                        <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
+                        <Skeleton className="h-4 w-full rounded mb-1" />
+                        <Skeleton className="h-4 w-3/4 rounded" />
+                      </div>
+                    ))
+                  : weekDays.map((d) => renderDayCell(d, true, true))}
               </div>
             </div>
           )}
-        </main>
 
-        {/* Footer */}
-        <footer className="bg-white dark:bg-slate-900 border-t border-red-600/10 py-10 px-6 md:px-20 mt-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-3 text-red-600">
-              <Rocket className="h-5 w-5" />
-              <span className="font-black text-slate-900 dark:text-slate-100">
-                Uni-Verse McGill
-              </span>
+          {/* ── List View ── */}
+          {calendarView === "List" && (
+            <div className="px-6 lg:px-8 pb-8 flex-1 min-h-0 overflow-y-auto">
+              {loading ? (
+                <div className="flex flex-col gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-28 w-full rounded-2xl" />
+                  ))}
+                </div>
+              ) : groupedUpcoming.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <CalendarOff className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                  <p className="text-foreground font-semibold text-lg">
+                    No upcoming events
+                  </p>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Save or RSVP to events to see them here.
+                  </p>
+                  <a
+                    href="/"
+                    className="mt-4 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    Discover Events
+                  </a>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-6">
+                  {groupedUpcoming.map((group) => (
+                    <div key={group.date}>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1 flex items-center gap-2">
+                        <CalendarIcon className="h-3.5 w-3.5" />
+                        {formatDateHeading(group.date)}
+                        {group.date === todayStr && (
+                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold normal-case tracking-normal">
+                            Today
+                          </span>
+                        )}
+                      </h3>
+                      <div className="flex flex-col gap-3">
+                        {group.events.map(renderAgendaCard)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex gap-8">
-              <a
-                className="text-sm text-slate-500 hover:text-red-600"
-                href="#"
-              >
-                About
-              </a>
-              <a
-                className="text-sm text-slate-500 hover:text-red-600"
-                href="#"
-              >
-                Contact
-              </a>
-              <a
-                className="text-sm text-slate-500 hover:text-red-600"
-                href="#"
-              >
-                Privacy Policy
-              </a>
+          )}
+        </div>
+
+        {/* ═══ Right Pane — Daily Agenda (Month & Week only) ═══ */}
+        {calendarView !== "List" && (
+          <div className="w-full lg:w-[380px] xl:w-[400px] flex flex-col bg-card lg:bg-secondary/30 overflow-hidden border-t lg:border-t-0 border-border">
+            <div className="p-6 border-b border-border sticky top-0 z-10 bg-card lg:bg-secondary/30 backdrop-blur-sm">
+              <h3 className="text-foreground text-xl font-bold tracking-tight mb-1">
+                Daily Agenda
+              </h3>
+              <p className="text-primary font-medium text-sm">
+                {selectedDateLabel}
+              </p>
             </div>
-            <p className="text-sm text-slate-400">
-              &copy; 2024 Uni-Verse McGill Edition. All rights reserved.
-            </p>
+
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+              {loading ? (
+                <>
+                  <Skeleton className="h-36 w-full rounded-2xl" />
+                  <Skeleton className="h-36 w-full rounded-2xl" />
+                </>
+              ) : selectedDayEvents.length > 0 ? (
+                selectedDayEvents.map(renderAgendaCard)
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center border-2 border-dashed border-border rounded-2xl bg-background/50">
+                  <CalendarOff className="h-8 w-8 text-muted-foreground/40 mb-3" />
+                  <p className="text-foreground text-sm font-medium">
+                    No events on this day
+                  </p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Save or RSVP to events to see them here.
+                  </p>
+                  <a
+                    href="/"
+                    className="mt-4 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    Discover Events
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
-        </footer>
-
-        {/* Event Details Modal */}
-        <EventDetailsModal
-          open={isModalOpen}
-          onOpenChange={(open) => {
-            setIsModalOpen(open);
-            if (!open) setSelectedEvent(null);
-          }}
-          event={selectedEvent}
-          trackingSource="calendar"
-        />
+        )}
       </div>
+
+      {/* Event Details Modal */}
+      <EventDetailsModal
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) setSelectedEvent(null);
+        }}
+        event={selectedEvent as Event | null}
+        trackingSource="calendar"
+      />
     </ErrorBoundary>
   );
 }

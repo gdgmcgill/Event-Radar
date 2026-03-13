@@ -63,7 +63,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 
     if (isFriend) {
       // Notify both users about the new friendship
-      await (supabase as any).from("notifications").insert([
+      await supabase.from("notifications").insert([
         {
           user_id: targetId,
           type: "new_friend",
@@ -79,7 +79,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       ]);
     } else {
       // Notify target about the new follower
-      await (supabase as any).from("notifications").insert({
+      await supabase.from("notifications").insert({
         user_id: targetId,
         type: "new_follower",
         title: "New Follower",

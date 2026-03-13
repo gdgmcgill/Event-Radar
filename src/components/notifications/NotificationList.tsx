@@ -7,8 +7,6 @@ import { Bell } from "lucide-react";
 interface NotificationListProps {
   notifications: Notification[];
   onMarkRead: (id: string) => void;
-  onAcceptFriendRequest?: (id: string) => void;
-  onDeclineFriendRequest?: (id: string) => void;
 }
 
 /** Group notifications by time section and preserve order */
@@ -33,19 +31,17 @@ function groupByTime(
 export function NotificationList({
   notifications,
   onMarkRead,
-  onAcceptFriendRequest,
-  onDeclineFriendRequest,
 }: NotificationListProps) {
   if (notifications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-        <div className="rounded-full bg-slate-100 dark:bg-slate-800 p-4">
-          <Bell className="h-8 w-8 text-slate-400" />
+        <div className="rounded-full bg-muted p-4">
+          <Bell className="h-8 w-8 text-muted-foreground" />
         </div>
-        <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        <p className="text-lg font-semibold text-foreground">
           No notifications yet
         </p>
-        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
+        <p className="text-sm text-muted-foreground max-w-sm">
           When you get notifications about events, reminders, or updates,
           they&apos;ll show up here.
         </p>
@@ -59,7 +55,7 @@ export function NotificationList({
     <div className="flex flex-col gap-8">
       {sections.map((section) => (
         <section key={section.label}>
-          <h3 className="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider mb-4">
+          <h3 className="text-sm font-bold uppercase tracking-wider mb-4 px-2 text-muted-foreground">
             {section.label}
           </h3>
           <div className="flex flex-col gap-3">
@@ -68,8 +64,6 @@ export function NotificationList({
                 key={notification.id}
                 notification={notification}
                 onMarkRead={onMarkRead}
-                onAcceptFriendRequest={onAcceptFriendRequest}
-                onDeclineFriendRequest={onDeclineFriendRequest}
               />
             ))}
           </div>
