@@ -125,7 +125,7 @@ export function EventFilters({ onFilterChange, initialTags }: EventFiltersProps)
                 className={cn(
                   "rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 border",
                   isSelected
-                    ? cn(category.badgeTheme, "scale-105 shadow-md")
+                    ? category.badgeTheme
                     : "bg-secondary/40 text-secondary-foreground border-transparent hover:scale-105 hover:bg-secondary/80"
                 )}
                 style={!isSelected ? {

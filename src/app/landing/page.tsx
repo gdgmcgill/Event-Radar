@@ -53,7 +53,7 @@ const EVENT_CARDS = [
   {
     image: "/landing/event-concert.jpg",
     label: "HOT",
-    labelColor: "bg-[#ED1B2F]",
+    labelColor: "bg-primary",
     title: "Gerts Karaoke Night",
     alt: "Crowded concert event at Gerts bar",
   },
@@ -209,7 +209,7 @@ function LandingHeader() {
             <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <span className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
-            Uni-Verse
+            UNI-VERSE
           </span>
         </div>
         <nav className="hidden md:flex items-center gap-10">
@@ -347,7 +347,7 @@ function HeroSection() {
                 <div className="relative w-full h-full">
                   <Image
                     src="/landing/hero-laptop.jpg"
-                    alt="Uni-Verse web interface showing Milton Jazz Night event details"
+                    alt="UNI-VERSE web interface showing Milton Jazz Night event details"
                     fill
                     sizes="(max-width: 1024px) 480px, 640px"
                     className="object-cover"
@@ -892,7 +892,7 @@ function OrganizerSection() {
                   Built for Organizers
                 </h2>
                 <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mb-6 sm:mb-8 leading-relaxed">
-                  Running a club of 20 or 2,000? Uni-Verse provides pro-level
+                  Running a club of 20 or 2,000? UNI-VERSE provides pro-level
                   tools to manage attendance, membership, and engagement with
                   data-driven insights.
                 </p>
@@ -969,7 +969,7 @@ function LandingFooter() {
               <Sparkles className="w-5 h-5" />
             </div>
             <span className="text-xl font-black tracking-tight uppercase">
-              Uni-Verse
+              UNI-VERSE
             </span>
           </div>
           <p className="text-slate-600 dark:text-slate-400 max-w-sm mb-8">
@@ -1070,7 +1070,7 @@ function LandingFooter() {
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-12 sm:mt-16 pt-6 sm:pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
         <p className="text-slate-400 text-xs">
-          &copy; 2024 Uni-Verse Technologies. Not affiliated with McGill
+          &copy; 2024 UNI-VERSE Technologies. Not affiliated with McGill
           University officially.
         </p>
         <div className="flex gap-6 text-xs text-slate-500 dark:text-slate-400">

@@ -34,19 +34,23 @@ function HeroSlide({
         className="absolute inset-0 bg-cover bg-center transition-transform duration-1000"
         style={{ backgroundImage: `url("${imageUrl}")` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black from-0% via-black/80 via-[15%] via-black/50 via-[50%] to-black/20 to-100%" />
+      {/* Dark mode: heavy gradient for text readability */}
+      <div className="absolute inset-0 hidden dark:block bg-gradient-to-t from-black from-0% via-black/80 via-[15%] via-black/50 via-[50%] to-black/20 to-100%" />
+      {/* Light mode: localized bottom-left gradient so text area is readable, rest of image stays pure */}
+      <div className="absolute inset-0 dark:hidden bg-gradient-to-tr from-white/95 via-white/60 via-[40%] to-transparent" />
+      {/* Shared bottom blend into page background */}
       <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
 
       <div className="absolute bottom-0 left-0 p-6 md:p-10 lg:p-12 w-full lg:w-3/4 pb-28 md:pb-36">
-        <span className="inline-block px-5 py-2 bg-white/10 backdrop-blur-xl text-white text-xs font-black uppercase tracking-[0.2em] rounded-full mb-8 border border-white/20 shadow-xl">
+        <span className="inline-block px-5 py-2 bg-white/10 dark:bg-white/10 backdrop-blur-xl text-white text-xs font-black uppercase tracking-[0.2em] rounded-full mb-8 border border-white/20 shadow-xl [text-shadow:0_1px_3px_rgba(0,0,0,0.3)]">
           {badge}
         </span>
 
-        <h2 className="text-white text-5xl sm:text-6xl lg:text-8xl font-black leading-[0.9] tracking-tighter mb-8 drop-shadow-2xl">
+        <h2 className="text-foreground dark:text-white text-5xl sm:text-6xl lg:text-8xl font-black leading-[0.9] tracking-tighter mb-8 drop-shadow-2xl [text-shadow:0_2px_20px_rgba(255,255,255,0.5)] dark:[text-shadow:none]">
           {title}
         </h2>
 
-        <p className="text-white/90 text-lg lg:text-2xl font-medium max-w-2xl mb-10 leading-relaxed drop-shadow-lg line-clamp-3">
+        <p className="text-foreground/90 dark:text-white/90 text-lg lg:text-2xl font-medium max-w-2xl mb-10 leading-relaxed [text-shadow:0_1px_8px_rgba(255,255,255,0.6)] dark:[text-shadow:none] drop-shadow-lg line-clamp-3">
           {description}
         </p>
 
@@ -60,7 +64,7 @@ function HeroSlide({
           </button>
           <button
             onClick={onSecondary}
-            className="px-6 md:px-8 py-4 md:py-5 bg-white/10 backdrop-blur-md text-white font-bold border border-white/20 rounded-2xl hover:bg-white/20 transition-all flex items-center gap-3 cursor-pointer"
+            className="px-6 md:px-8 py-4 md:py-5 bg-white/20 dark:bg-white/10 backdrop-blur-md text-foreground dark:text-white font-bold border border-white/30 dark:border-white/20 rounded-2xl hover:bg-white/30 dark:hover:bg-white/20 transition-all flex items-center gap-3 cursor-pointer shadow-lg"
           >
             {secondaryLabel === "More Info" ? (
               <Info className="h-5 w-5 md:h-6 md:w-6" />
@@ -140,7 +144,7 @@ export function HeroSection() {
           title="Discover What's Happening on Campus"
           description="Your one-stop hub for McGill events. Find clubs, workshops, parties, career fairs, and everything in between."
           imageUrl={HERO_FALLBACK_IMAGE}
-          badge="Uni-Verse"
+          badge="UNI-VERSE"
           primaryLabel="Explore Events"
           onPrimary={() => {
             document

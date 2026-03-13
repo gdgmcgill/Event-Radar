@@ -63,7 +63,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
   if (clubLoading || !club) {
     return (
       <div className="flex h-screen overflow-hidden">
-        <aside className="w-64 border-r bg-white p-6 space-y-4">
+        <aside className="w-64 border-r border-border bg-card p-6 space-y-4">
           <Skeleton className="h-10 w-40" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />
@@ -92,20 +92,20 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
   const visibleNavItems = navItems.filter((item) => !item.ownerOnly || isOwner);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f8f6f6]">
+    <div className="flex h-screen overflow-hidden bg-secondary">
       {/* Side Navigation */}
-      <aside className="w-64 border-r border-red-600/10 bg-white flex flex-col shrink-0">
+      <aside className="w-64 border-r border-border bg-card flex flex-col shrink-0">
         {/* Brand */}
-        <div className="p-6 flex items-center gap-3 border-b border-red-600/5">
+        <div className="p-6 flex items-center gap-3 border-b border-border">
           <div
-            className="h-10 w-10 rounded-full bg-red-600 flex items-center justify-center text-white cursor-pointer"
+            className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground cursor-pointer"
             onClick={() => router.push("/")}
           >
             <Rocket className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-slate-900 text-lg font-bold leading-none">Uni-Verse</h1>
-            <p className="text-red-600 text-xs font-semibold uppercase tracking-wider">Admin Dashboard</p>
+            <h1 className="text-foreground text-lg font-bold leading-none">UNI-VERSE</h1>
+            <p className="text-primary text-xs font-semibold uppercase tracking-wider">Admin Dashboard</p>
           </div>
         </div>
 
@@ -118,10 +118,10 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left font-medium transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left font-medium transition-colors ${
                   isActive
-                    ? "bg-red-600 text-white"
-                    : "text-slate-700 hover:bg-red-600/10"
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/10"
+                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -132,16 +132,16 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
         </nav>
 
         {/* User Card */}
-        <div className="p-4 border-t border-red-600/5">
-          <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-100">
-            <div className="h-8 w-8 rounded-full bg-slate-300 flex items-center justify-center text-sm font-medium text-slate-600 overflow-hidden shrink-0">
+        <div className="p-4 border-t border-border">
+          <div className="flex items-center gap-3 p-2 rounded-xl bg-secondary">
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground overflow-hidden shrink-0">
               {user?.name
                 ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
                 : user?.email?.[0]?.toUpperCase() ?? "U"}
             </div>
             <div className="flex flex-col min-w-0">
-              <p className="text-sm font-semibold truncate">{user?.name || user?.email || "User"}</p>
-              <p className="text-xs text-slate-500 truncate">
+              <p className="text-sm font-semibold text-foreground truncate">{user?.name || user?.email || "User"}</p>
+              <p className="text-xs text-muted-foreground truncate">
                 {currentEntry?.role === "owner" ? "President" : "Organizer"}
               </p>
             </div>
@@ -152,16 +152,16 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-y-auto">
         {/* Header */}
-        <header className="h-16 border-b border-red-600/5 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10 shrink-0">
+        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-4">
-            <Users2 className="h-6 w-6 text-red-600" />
-            <h2 className="text-xl font-bold tracking-tight">{club.name}</h2>
+            <Users2 className="h-6 w-6 text-primary" />
+            <h2 className="text-xl font-bold tracking-tight text-foreground">{club.name}</h2>
           </div>
           <div className="flex items-center gap-6">
             <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <input
-                className="pl-10 pr-4 py-2 rounded-lg bg-slate-100 border-none text-sm w-64 focus:outline-none focus:ring-2 focus:ring-red-600/30"
+                className="pl-10 pr-4 py-2 rounded-xl bg-secondary border border-border text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground placeholder:text-muted-foreground"
                 placeholder="Search events..."
                 type="text"
                 value={searchQuery}
@@ -170,7 +170,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
             </div>
             <button
               onClick={() => setActiveTab("events")}
-              className="bg-red-600 hover:bg-red-600/90 text-white px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-red-600/20"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-primary/20"
             >
               <Plus className="h-4 w-4" />
               <span>Create Event</span>

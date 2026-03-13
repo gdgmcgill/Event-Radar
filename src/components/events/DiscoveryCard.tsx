@@ -27,7 +27,7 @@ export function DiscoveryCard({ event, onClick, badge, badgeVariant = "default" 
       onClick={handleClick}
       className="block cursor-pointer"
     >
-      <div className="relative aspect-[16/10] rounded-3xl overflow-hidden group">
+      <div className="relative aspect-[16/10] rounded-2xl overflow-hidden group">
         {/* Full Image */}
         {event.image_url ? (
           <Image

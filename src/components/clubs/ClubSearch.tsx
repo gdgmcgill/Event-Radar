@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
-import { Search, X, ArrowUpDown } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ClubSearchProps {
@@ -28,6 +28,8 @@ export function ClubSearch({
       } else {
         params.delete(key);
       }
+      // Reset to page 1 on filter change
+      params.delete("page");
       router.push(`/clubs?${params.toString()}`);
     },
     [router, searchParams]
@@ -47,49 +49,41 @@ export function ClubSearch({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Search and Sort Bar */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <form onSubmit={handleSearch} className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search for clubs, tags, or interests..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full h-12 bg-white border border-slate-200 rounded-xl pl-12 pr-10 text-base focus:ring-2 focus:ring-red-600/20 focus:border-red-600/30 transition-all shadow-sm placeholder:text-slate-400"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
-                updateParams("q", "");
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </form>
-        <div className="flex gap-2">
-          <button className="h-12 px-4 rounded-xl bg-white border border-slate-200 flex items-center gap-2 text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
-            <ArrowUpDown className="h-4 w-4" />
-            Sort
+    <div className="flex flex-col gap-5">
+      {/* Search Bar */}
+      <form onSubmit={handleSearch} className="relative max-w-md">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search clubs, faculties, interests..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full h-10 bg-secondary/60 dark:bg-secondary border border-border rounded-full pl-10 pr-9 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-shadow placeholder:text-muted-foreground"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              updateParams("q", "");
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
           </button>
-        </div>
-      </div>
+        )}
+      </form>
 
-      {/* Filter Tag Pills */}
+      {/* Horizontal Category Pills */}
       {categories.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-6 px-6 lg:mx-0 lg:px-0">
           <button
             onClick={clearCategory}
             className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-bold border cursor-pointer transition-colors",
+              "flex h-9 shrink-0 items-center justify-center px-5 rounded-full text-sm font-semibold transition-all",
               !initialCategory
-                ? "bg-red-600/10 text-red-600 border-red-600/20"
-                : "bg-slate-100 text-slate-600 border-transparent hover:bg-red-600/5"
+                ? "bg-foreground text-background shadow-sm"
+                : "bg-card border border-border text-muted-foreground hover:bg-secondary"
             )}
           >
             All Categories
@@ -99,10 +93,10 @@ export function ClubSearch({
               key={cat}
               onClick={() => toggleCategory(cat)}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-colors",
+                "flex h-9 shrink-0 items-center justify-center px-5 rounded-full text-sm font-medium transition-all",
                 initialCategory === cat
-                  ? "bg-red-600/10 text-red-600 border-red-600/20"
-                  : "bg-slate-100 text-slate-600 border-transparent hover:bg-red-600/5"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "bg-card border border-border text-muted-foreground hover:bg-secondary"
               )}
             >
               {cat}

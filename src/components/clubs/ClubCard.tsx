@@ -42,8 +42,8 @@ export function ClubCard({ club, role, memberCount }: ClubCardProps) {
               <Badge
                 className={
                   role === "owner"
-                    ? "bg-[#561c24] text-white hover:bg-[#561c24]/90"
-                    : "bg-[#c7c7a3] text-foreground hover:bg-[#c7c7a3]/90"
+                    ? "bg-mcgill-burgundy text-white hover:bg-mcgill-burgundy/90"
+                    : "bg-mcgill-sage text-foreground hover:bg-mcgill-sage/90"
                 }
               >
                 {role === "owner" ? "Owner" : "Organizer"}

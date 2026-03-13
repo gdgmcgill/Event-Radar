@@ -1,68 +1,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import {
-  Users,
-  Building2,
-  LayoutGrid,
-  Cpu,
-  Palette,
-  Music,
-  Trophy,
-  Heart,
-  PlusCircle,
-  UserCheck,
-  ChevronLeft,
-  ChevronRight,
-  User,
-} from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { ClubSearch } from "@/components/clubs/ClubSearch";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Clubs | Uni-Verse",
-  description: "Discover student clubs and organizations at McGill University",
+  title: "Clubs | UNI-VERSE",
+  description:
+    "Discover student clubs and organizations at McGill University",
 };
 
-const CLUBS_PER_PAGE = 6;
-
-// Sidebar category definitions with Lucide icons
-const SIDEBAR_CATEGORIES = [
-  { label: "All Clubs", value: "", icon: LayoutGrid },
-  { label: "Engineering", value: "Engineering", icon: Cpu },
-  { label: "Arts & Design", value: "Arts & Design", icon: Palette },
-  { label: "Music", value: "Music", icon: Music },
-  { label: "Sports", value: "Sports", icon: Trophy },
-  { label: "Social Impact", value: "Social Impact", icon: Heart },
-];
-
-// Gradient colors for club cards, cycled through
-const CARD_GRADIENTS = [
-  "from-red-600/20 to-red-600/5",
-  "from-orange-400/20 to-orange-400/5",
-  "from-green-400/20 to-green-400/5",
-  "from-cyan-400/20 to-cyan-400/5",
-  "from-pink-400/20 to-pink-400/5",
-  "from-slate-400/20 to-slate-400/5",
-  "from-purple-400/20 to-purple-400/5",
-  "from-blue-400/20 to-blue-400/5",
-];
-
-// Badge color mapping by category
-const CATEGORY_BADGE_COLORS: Record<string, string> = {
-  Engineering: "bg-blue-100 text-blue-700",
-  "Arts & Design": "bg-purple-100 text-purple-700",
-  Arts: "bg-purple-100 text-purple-700",
-  Music: "bg-green-100 text-green-700",
-  Sports: "bg-emerald-100 text-emerald-700",
-  "Social Impact": "bg-red-100 text-red-700",
-  Academic: "bg-red-100 text-red-700",
-  Gaming: "bg-yellow-100 text-yellow-700",
-};
-
-function getCategoryBadgeColor(category: string): string {
-  return CATEGORY_BADGE_COLORS[category] ?? "bg-slate-100 text-slate-700";
-}
+const CLUBS_PER_PAGE = 9;
 
 interface PageProps {
   searchParams: Promise<{ q?: string; category?: string; page?: string }>;
@@ -73,31 +22,24 @@ export default async function ClubsPage({ searchParams }: PageProps) {
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const supabase = await createClient();
 
-  // Fetch all approved clubs with follower counts
+  // ── Fetch approved clubs ──────────────────────────────────────────────
   let query = supabase
     .from("clubs")
     .select("*", { count: "exact" })
     .eq("status", "approved")
     .order("name", { ascending: true });
 
-  if (q) {
-    query = query.ilike("name", `%${q}%`);
-  }
+  if (q) query = query.ilike("name", `%${q}%`);
+  if (category) query = query.eq("category", category);
 
-  if (category) {
-    query = query.eq("category", category);
-  }
-
-  // Apply pagination
   const from = (currentPage - 1) * CLUBS_PER_PAGE;
   const to = from + CLUBS_PER_PAGE - 1;
   query = query.range(from, to);
 
   const { data: clubs, count: totalCount } = await query;
-
   const totalPages = Math.ceil((totalCount ?? 0) / CLUBS_PER_PAGE);
 
-  // Fetch distinct categories for filter
+  // ── Fetch distinct categories ─────────────────────────────────────────
   const { data: allClubs } = await supabase
     .from("clubs")
     .select("category")
@@ -105,10 +47,12 @@ export default async function ClubsPage({ searchParams }: PageProps) {
     .not("category", "is", null);
 
   const categories = [
-    ...new Set((allClubs ?? []).map((c) => c.category as string).filter(Boolean)),
+    ...new Set(
+      (allClubs ?? []).map((c) => c.category as string).filter(Boolean)
+    ),
   ].sort();
 
-  // Fetch follower counts for all clubs in parallel
+  // ── Fetch follower counts ─────────────────────────────────────────────
   const clubIds = (clubs ?? []).map((c) => c.id);
   const followerCounts: Record<string, number> = {};
 
@@ -123,7 +67,45 @@ export default async function ClubsPage({ searchParams }: PageProps) {
     }
   }
 
-  // Build pagination URL helper
+  // ── Fetch next upcoming event per club ────────────────────────────────
+  const upcomingEvents: Record<
+    string,
+    { title: string; event_date: string; location: string }
+  > = {};
+
+  if (clubIds.length > 0) {
+    const today = new Date().toISOString().split("T")[0];
+    const { data: events } = await supabase
+      .from("events")
+      .select("club_id, title, event_date, location")
+      .in("club_id", clubIds)
+      .eq("status", "approved")
+      .gte("event_date", today)
+      .order("event_date", { ascending: true });
+
+    // Keep only the first (nearest) event per club
+    for (const ev of events ?? []) {
+      if (ev.club_id && !upcomingEvents[ev.club_id]) {
+        upcomingEvents[ev.club_id] = {
+          title: ev.title,
+          event_date: ev.event_date,
+          location: ev.location,
+        };
+      }
+    }
+  }
+
+  // ── Featured club (most followers among visible clubs) ────────────────
+  const featuredClub =
+    clubs && clubs.length > 0
+      ? clubs.reduce((best, club) =>
+          (followerCounts[club.id] ?? 0) > (followerCounts[best.id] ?? 0)
+            ? club
+            : best
+        )
+      : null;
+
+  // ── Pagination helpers ────────────────────────────────────────────────
   function buildPageUrl(pageNum: number): string {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
@@ -133,7 +115,6 @@ export default async function ClubsPage({ searchParams }: PageProps) {
     return `/clubs${qs ? `?${qs}` : ""}`;
   }
 
-  // Generate page numbers for pagination display
   function getPageNumbers(): (number | "ellipsis")[] {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -152,230 +133,271 @@ export default async function ClubsPage({ searchParams }: PageProps) {
     return pages;
   }
 
-  return (
-    <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-40 py-10">
-      <div className="flex flex-col lg:flex-row gap-10">
-        {/* Sidebar Navigation & Filters */}
-        <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-8">
-          <div className="flex flex-col gap-6">
-            {/* Category Nav */}
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">
-                Categories
-              </h3>
-              <nav className="flex flex-col gap-1">
-                {SIDEBAR_CATEGORIES.map((cat) => {
-                  const Icon = cat.icon;
-                  const isActive = (category ?? "") === cat.value;
-                  return (
-                    <Link
-                      key={cat.label}
-                      href={
-                        cat.value
-                          ? `/clubs?category=${encodeURIComponent(cat.value)}`
-                          : "/clubs"
-                      }
-                      className={
-                        isActive
-                          ? "flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-white font-medium"
-                          : "flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-600/10 text-slate-700 transition-colors"
-                      }
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span className="text-sm">{cat.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
+  // ── Format date for event badge ───────────────────────────────────────
+  function formatEventDate(dateStr: string) {
+    const d = new Date(dateStr + "T00:00:00");
+    return {
+      month: d.toLocaleString("en-US", { month: "short" }).toUpperCase(),
+      day: d.getDate().toString(),
+    };
+  }
 
-            {/* Lead a Community CTA */}
-            <div className="p-5 rounded-xl bg-red-600/5 border border-red-600/10 flex flex-col gap-4">
-              <div className="h-10 w-10 rounded-lg bg-red-600 flex items-center justify-center text-white">
-                <PlusCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="font-bold text-sm">Lead a Community</h4>
-                <p className="text-xs text-slate-500 mt-1">
-                  Starting a new club is easy. We&apos;ll provide the tools.
-                </p>
-              </div>
+  return (
+    <div className="flex-1 min-w-0">
+      {/* ── Hero Section (matches homepage HeroSection style) ────── */}
+      {!q && !category && currentPage === 1 && (
+        <section className="relative w-full h-[50vh] min-h-[340px] max-h-[500px] overflow-hidden">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: 'url("/club_hero.jpeg")' }}
+          />
+          {/* Dark mode: heavy gradient for text readability */}
+          <div className="absolute inset-0 hidden dark:block bg-gradient-to-t from-black from-0% via-black/80 via-[15%] via-black/50 via-[50%] to-black/20 to-100%" />
+          {/* Light mode: localized bottom-left gradient so text area is readable, image stays pure elsewhere */}
+          <div className="absolute inset-0 dark:hidden bg-gradient-to-tr from-white/95 via-white/60 via-[40%] to-transparent" />
+          {/* Shared bottom blend into page background */}
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+
+          <div className="absolute bottom-0 left-0 p-6 md:p-10 lg:p-12 w-full lg:w-3/4 pb-28 md:pb-32">
+            <span className="inline-block px-5 py-2 bg-white/10 dark:bg-white/10 backdrop-blur-xl text-white text-xs font-black uppercase tracking-[0.2em] rounded-full mb-6 border border-white/20 shadow-xl [text-shadow:0_1px_3px_rgba(0,0,0,0.3)]">
+              Clubs Directory
+            </span>
+
+            <h2 className="text-foreground dark:text-white text-4xl sm:text-5xl lg:text-7xl font-black leading-[0.9] tracking-tighter mb-6 drop-shadow-2xl [text-shadow:0_2px_20px_rgba(255,255,255,0.5)] dark:[text-shadow:none]">
+              Find Your Community
+            </h2>
+
+            <p className="text-foreground/90 dark:text-white/90 text-lg lg:text-xl font-medium max-w-xl mb-8 leading-relaxed [text-shadow:0_1px_8px_rgba(255,255,255,0.6)] dark:[text-shadow:none] drop-shadow-lg">
+              Discover student clubs and organizations at McGill. Join a community that matches your passions.
+            </p>
+
+            <div className="flex items-center gap-4">
+              <Link
+                href="#clubs-feed"
+                className="px-8 md:px-10 py-4 md:py-5 bg-primary text-white text-base md:text-lg font-bold rounded-2xl hover:brightness-110 transition-all shadow-2xl shadow-primary/40 flex items-center gap-3"
+              >
+                Explore Clubs
+              </Link>
               <Link
                 href="/clubs/create"
-                className="w-full bg-red-600 text-white text-xs font-bold py-2.5 rounded-lg hover:bg-red-600/90 transition-colors text-center"
+                className="px-6 md:px-8 py-4 md:py-5 bg-white/20 dark:bg-white/10 backdrop-blur-md text-foreground dark:text-white font-bold border border-white/30 dark:border-white/20 rounded-2xl hover:bg-white/30 dark:hover:bg-white/20 transition-all flex items-center gap-3 shadow-lg"
               >
-                Register New Club
+                Start a Club
               </Link>
             </div>
           </div>
-        </aside>
+        </section>
+      )}
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col gap-8">
-          {/* Header & My Clubs Button */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-4xl font-black tracking-tight text-slate-900">
-                Clubs Directory
-              </h1>
-              <p className="text-slate-500 text-lg max-w-md">
-                Find your community and make the most of your student life.
-              </p>
-            </div>
-            <Link
-              href="/my-clubs"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-200 shadow-sm text-sm font-bold hover:bg-slate-50 transition-colors"
-            >
-              <UserCheck className="h-4 w-4" />
-              My Clubs
-            </Link>
-          </div>
+      {/* ── Search & Category Filters (below hero) ──────────────── */}
+      <div id="clubs-feed" className="px-6 lg:px-10 pt-6 lg:pt-8">
+        <ClubSearch
+          initialQuery={q ?? ""}
+          initialCategory={category ?? ""}
+          categories={categories}
+        />
+      </div>
 
-          {/* Search, Sort, and Filter Pills */}
-          <ClubSearch
-            initialQuery={q ?? ""}
-            initialCategory={category ?? ""}
-            categories={categories}
-          />
+      <main className="px-6 lg:px-10 py-6 lg:py-8">
 
-          {/* Clubs Grid */}
-          {!clubs || clubs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Building2 className="h-12 w-12 text-slate-300 mb-4" />
-              <h2 className="text-lg font-semibold text-slate-900">
-                No clubs found
-              </h2>
-              <p className="text-sm text-slate-500 mt-1">
-                {q || category
-                  ? "Try adjusting your search or filters."
-                  : "No clubs have been approved yet."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {clubs.map((club, index) => {
-                const gradient =
-                  CARD_GRADIENTS[index % CARD_GRADIENTS.length];
-                const memberCount = followerCounts[club.id] ?? 0;
-
-                return (
-                  <Link key={club.id} href={`/clubs/${club.id}`}>
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden group hover:border-red-600/30 hover:shadow-xl transition-all duration-300 h-full flex flex-col">
-                      {/* Gradient Header with Logo */}
-                      <div
-                        className={`h-32 bg-gradient-to-r ${gradient} relative`}
-                      >
-                        <div className="absolute -bottom-6 left-6 h-14 w-14 rounded-xl bg-white border-2 border-white shadow-md flex items-center justify-center overflow-hidden">
-                          {club.logo_url ? (
-                            <Image
-                              src={club.logo_url}
-                              alt={`${club.name} logo`}
-                              width={56}
-                              height={56}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Building2 className="h-7 w-7 text-slate-400" />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="pt-10 pb-6 px-6 flex flex-col gap-4 flex-1">
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <h3 className="font-black text-lg text-slate-900 group-hover:text-red-600 transition-colors truncate">
-                              {club.name}
-                            </h3>
-                            {club.category && (
-                              <span
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-tight whitespace-nowrap ml-2 ${getCategoryBadgeColor(club.category)}`}
-                              >
-                                {club.category}
-                              </span>
-                            )}
-                          </div>
-                          {club.description && (
-                            <p className="text-sm text-slate-500 line-clamp-2">
-                              {club.description}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between mt-auto">
-                          <div className="flex items-center gap-1.5 text-slate-400">
-                            <User className="h-3.5 w-3.5" />
-                            <span className="text-xs font-medium">
-                              {memberCount}{" "}
-                              {memberCount === 1 ? "member" : "members"}
-                            </span>
-                          </div>
-                          <span className="text-xs font-bold text-red-600 px-3 py-1.5 rounded-lg border border-red-600/20 hover:bg-red-600 hover:text-white transition-all">
-                            Join Club
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-10">
-              {/* Previous */}
-              {currentPage > 1 ? (
-                <Link
-                  href={buildPageUrl(currentPage - 1)}
-                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-red-600/5 transition-colors"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Link>
-              ) : (
-                <span className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 text-slate-300 cursor-not-allowed">
-                  <ChevronLeft className="h-5 w-5" />
-                </span>
-              )}
-
-              {/* Page Numbers */}
-              {getPageNumbers().map((p, i) =>
-                p === "ellipsis" ? (
-                  <span key={`ellipsis-${i}`} className="px-2 text-slate-400">
-                    ...
-                  </span>
-                ) : (
-                  <Link
-                    key={p}
-                    href={buildPageUrl(p)}
-                    className={
-                      p === currentPage
-                        ? "h-10 w-10 rounded-lg flex items-center justify-center bg-red-600 text-white font-bold"
-                        : "h-10 w-10 rounded-lg flex items-center justify-center hover:bg-red-600/5 font-semibold transition-colors"
-                    }
-                  >
-                    {p}
-                  </Link>
-                )
-              )}
-
-              {/* Next */}
-              {currentPage < totalPages ? (
-                <Link
-                  href={buildPageUrl(currentPage + 1)}
-                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-red-600/5 transition-colors"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </Link>
-              ) : (
-                <span className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 text-slate-300 cursor-not-allowed">
-                  <ChevronRight className="h-5 w-5" />
-                </span>
-              )}
-            </div>
+        {/* ── Section Header ────────────────────────────────────────── */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold tracking-tight">
+            {q
+              ? `Results for "${q}"`
+              : category
+                ? `${category} Clubs`
+                : "Trending Clubs"}
+          </h2>
+          {totalCount !== null && totalCount > 0 && (
+            <span className="text-sm text-muted-foreground">
+              {totalCount} club{totalCount !== 1 ? "s" : ""}
+            </span>
           )}
         </div>
-      </div>
+
+        {/* ── Club Cards Grid ───────────────────────────────────────── */}
+        {!clubs || clubs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Building2 className="h-12 w-12 text-muted-foreground/30 mb-4" />
+            <h2 className="text-lg font-semibold">No clubs found</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {q || category
+                ? "Try adjusting your search or filters."
+                : "No clubs have been approved yet."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {clubs.map((club) => {
+              const followers = followerCounts[club.id] ?? 0;
+              const nextEvent = upcomingEvents[club.id];
+
+              return (
+                <Link key={club.id} href={`/clubs/${club.id}`}>
+                  <div className="bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full group">
+                    {/* Card Body — centered layout */}
+                    <div className="p-6 pb-4 flex flex-col items-center text-center flex-1">
+                      {/* Round Club Logo */}
+                      <div className="w-20 h-20 rounded-full border-4 border-card shadow-sm mb-4 overflow-hidden bg-secondary flex items-center justify-center shrink-0">
+                        {club.logo_url ? (
+                          <Image
+                            src={club.logo_url}
+                            alt={`${club.name} logo`}
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Building2 className="h-8 w-8 text-muted-foreground/50" />
+                        )}
+                      </div>
+
+                      {/* Club Name */}
+                      <h3 className="text-lg font-bold leading-tight mb-1 group-hover:text-primary transition-colors">
+                        {club.name}
+                      </h3>
+
+                      {/* Description */}
+                      {club.description && (
+                        <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                          {club.description}
+                        </p>
+                      )}
+
+                      {/* Tag Pills */}
+                      <div className="flex flex-wrap justify-center gap-2 mb-5">
+                        {club.category && (
+                          <span className="px-2.5 py-1 rounded-md bg-secondary text-muted-foreground text-xs font-medium">
+                            {club.category}
+                          </span>
+                        )}
+                        {followers > 0 && (
+                          <span className="px-2.5 py-1 rounded-md bg-secondary text-muted-foreground text-xs font-medium">
+                            {followers} follower{followers !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Follow Club Button */}
+                      <span className="w-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 hover:border-primary transition-colors py-2 rounded-lg font-semibold text-sm text-center block mt-auto">
+                        Follow Club
+                      </span>
+                    </div>
+
+                    {/* Upcoming Event Footer */}
+                    {nextEvent && (
+                      <div className="border-t border-border bg-secondary/30 p-4 mt-auto">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide mb-2 text-muted-foreground">
+                          Upcoming Event
+                        </p>
+                        <div className="flex items-center gap-3 bg-card p-2.5 rounded-lg border border-border shadow-sm">
+                          <div className="bg-primary/10 text-primary rounded-md p-2 flex flex-col items-center justify-center min-w-[40px]">
+                            <span className="text-[10px] font-bold uppercase leading-none">
+                              {formatEventDate(nextEvent.event_date).month}
+                            </span>
+                            <span className="text-sm font-bold leading-none mt-0.5">
+                              {formatEventDate(nextEvent.event_date).day}
+                            </span>
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-semibold truncate">
+                              {nextEvent.title}
+                            </span>
+                            <span className="text-xs text-muted-foreground truncate">
+                              {nextEvent.location}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No event fallback — keep cards consistent height */}
+                    {!nextEvent && (
+                      <div className="border-t border-border bg-secondary/30 p-4 mt-auto">
+                        <div className="flex items-center gap-2 text-muted-foreground/50">
+                          <Calendar className="h-3.5 w-3.5" />
+                          <span className="text-xs">No upcoming events</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Pagination ────────────────────────────────────────────── */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-10">
+            {currentPage > 1 ? (
+              <Link
+                href={buildPageUrl(currentPage - 1)}
+                className="h-10 w-10 rounded-lg flex items-center justify-center border border-border hover:bg-secondary transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Link>
+            ) : (
+              <span className="h-10 w-10 rounded-lg flex items-center justify-center border border-border text-muted-foreground/30 cursor-not-allowed">
+                <ChevronLeft className="h-5 w-5" />
+              </span>
+            )}
+
+            {getPageNumbers().map((p, i) =>
+              p === "ellipsis" ? (
+                <span
+                  key={`ellipsis-${i}`}
+                  className="px-2 text-muted-foreground"
+                >
+                  ...
+                </span>
+              ) : (
+                <Link
+                  key={p}
+                  href={buildPageUrl(p)}
+                  className={
+                    p === currentPage
+                      ? "h-10 w-10 rounded-lg flex items-center justify-center bg-primary text-primary-foreground font-bold"
+                      : "h-10 w-10 rounded-lg flex items-center justify-center hover:bg-secondary font-semibold transition-colors"
+                  }
+                >
+                  {p}
+                </Link>
+              )
+            )}
+
+            {currentPage < totalPages ? (
+              <Link
+                href={buildPageUrl(currentPage + 1)}
+                className="h-10 w-10 rounded-lg flex items-center justify-center border border-border hover:bg-secondary transition-colors"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Link>
+            ) : (
+              <span className="h-10 w-10 rounded-lg flex items-center justify-center border border-border text-muted-foreground/30 cursor-not-allowed">
+                <ChevronRight className="h-5 w-5" />
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* ── Register CTA ──────────────────────────────────────────── */}
+        <div className="mt-16 mb-4 rounded-2xl border border-border bg-card p-8 md:p-10 text-center">
+          <h3 className="text-xl md:text-2xl font-bold tracking-tight mb-2">
+            Don&apos;t see your club?
+          </h3>
+          <p className="text-muted-foreground max-w-md mx-auto mb-6">
+            If your club isn&apos;t listed yet, register it in under a minute and start reaching students across campus.
+          </p>
+          <Link
+            href="/clubs/create"
+            className="inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-2xl font-bold text-sm hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+          >
+            Register Your Club
+          </Link>
+        </div>
+      </main>
     </div>
   );
 }

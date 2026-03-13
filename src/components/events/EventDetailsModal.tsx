@@ -11,10 +11,14 @@ import { MapPin, Calendar, Clock, ExternalLink, Share2, Check, Loader2 } from "l
 import { useTrackEventModal, useTracking } from "@/hooks/useTracking";
 import { exportEventIcal } from "@/lib/exportUtils";
 
+type ModalEvent = Omit<Event, "club"> & {
+  club?: { name: string; [key: string]: unknown };
+};
+
 type EventDetailsModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  event: Event | null;
+  event: ModalEvent | null;
   /** Source context for tracking */
   trackingSource?: InteractionSource;
 };

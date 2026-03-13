@@ -17,7 +17,7 @@ export function RelatedEventCard({ event }: RelatedEventCardProps) {
   return (
     <Link
       href={`/events/${event.id}`}
-      className="flex flex-col gap-1.5 rounded-lg p-3 border transition-colors hover:bg-muted/60"
+      className="flex flex-col gap-1.5 rounded-xl p-3 border transition-colors hover:bg-muted/60"
     >
       <p className="font-medium text-sm leading-tight line-clamp-1">{event.title}</p>
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

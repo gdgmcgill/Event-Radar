@@ -29,8 +29,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `${club.name} | Uni-Verse`,
-    description: club.description ?? `Discover events by ${club.name} on Uni-Verse`,
+    title: `${club.name} | UNI-VERSE`,
+    description: club.description ?? `Discover events by ${club.name} on UNI-VERSE`,
   };
 }
 

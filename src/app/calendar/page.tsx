@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Event, EventTag } from "@/types";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
+import { exportEventsCsv } from "@/lib/exportUtils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -22,6 +25,12 @@ import {
   CheckCircle2,
   Sparkles,
   Calendar as CalendarIcon,
+  AlertCircle,
+  RefreshCcw,
+  ChevronsDown,
+  Loader2,
+  ArrowUpDown,
+  FileSpreadsheet,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════
@@ -169,7 +178,7 @@ function buildMonthGrid(year: number, month: number) {
 
 function getWeekDays(date: Date) {
   const d = new Date(date);
-  d.setDate(d.getDate() - d.getDay()); // Go to Sunday
+  d.setDate(d.getDate() - d.getDay());
   const days: Date[] = [];
   for (let i = 0; i < 7; i++) {
     days.push(new Date(d));
@@ -203,6 +212,26 @@ function formatDateHeading(dateStr: string) {
   });
 }
 
+/** Compute a date range that covers the visible grid for a given month. */
+function getMonthFetchRange(year: number, month: number) {
+  const first = new Date(year, month, 1);
+  const from = new Date(first);
+  from.setDate(from.getDate() - first.getDay()); // back to Sunday
+  const last = new Date(year, month + 1, 0);
+  const to = new Date(last);
+  to.setDate(to.getDate() + (6 - last.getDay())); // forward to Saturday
+  return { from: dateKey(from), to: dateKey(to) };
+}
+
+function getWeekFetchRange(date: Date) {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay());
+  const from = dateKey(d);
+  d.setDate(d.getDate() + 6);
+  const to = dateKey(d);
+  return { from, to };
+}
+
 /* ═══════════════════════════════════════════════════════
    iCal export
    ═══════════════════════════════════════════════════════ */
@@ -217,10 +246,11 @@ function escapeIcal(text: string) {
 
 function generateIcal(events: CalendarEvent[]) {
   const lb = "\r\n";
-  const dtstamp = new Date()
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .split(".")[0] + "Z";
+  const dtstamp =
+    new Date()
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .split(".")[0] + "Z";
 
   const vevents = events.map((event) => {
     const datePart = event.event_date.replace(/-/g, "");
@@ -271,7 +301,34 @@ type CalendarEvent = Omit<Event, "club"> & {
   rsvp_status?: string | null;
 };
 
-type CalendarView = "Month" | "Week" | "List";
+type CalendarView = "Month" | "Week" | "Saved";
+
+type SortOption = "date" | "recent" | "title";
+const SORT_LABELS: Record<SortOption, string> = {
+  date: "Event Date",
+  recent: "Recently Saved",
+  title: "Title A-Z",
+};
+
+/* ═══════════════════════════════════════════════════════
+   useTodayStr — refreshes at midnight so "today" never goes stale
+   ═══════════════════════════════════════════════════════ */
+
+function useTodayStr() {
+  const [today, setToday] = useState(() => dateKey(new Date()));
+
+  useEffect(() => {
+    const check = () => {
+      const now = dateKey(new Date());
+      if (now !== today) setToday(now);
+    };
+    // Check every 30s — lightweight and catches midnight rollover
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, [today]);
+
+  return today;
+}
 
 /* ═══════════════════════════════════════════════════════
    Page
@@ -279,18 +336,38 @@ type CalendarView = "Month" | "Week" | "List";
 
 export default function CalendarPage() {
   const { user, loading: authLoading } = useAuthStore();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Read initial view from URL (?view=List, ?view=Week)
+  const initialView = useMemo(() => {
+    const v = searchParams.get("view");
+    if (v === "Week" || v === "Saved") return v;
+    return "Month" as CalendarView;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [calendarView, setCalendarView] = useState<CalendarView>("Month");
+  const [calendarView, setCalendarView] = useState<CalendarView>(initialView);
+  const [prevView, setPrevView] = useState<CalendarView>(initialView);
+  const [transitioning, setTransitioning] = useState(false);
+  const [busyActions, setBusyActions] = useState<Set<string>>(new Set());
+  // List view sort + export
+  const [listSort, setListSort] = useState<SortOption>("date");
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+  const agendaRef = useRef<HTMLDivElement>(null);
 
   const { trackClick } = useTracking({ source: "calendar" });
+  const todayStr = useTodayStr();
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -300,13 +377,15 @@ export default function CalendarPage() {
     [year, month]
   );
 
-  const weekDays = useMemo(
-    () => getWeekDays(selectedDate),
-    [selectedDate]
-  );
+  const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate]);
 
-  const todayStr = useMemo(() => dateKey(new Date()), []);
   const selectedStr = dateKey(selectedDate);
+
+  // Stable key for the current week — only changes when we cross into a different week
+  const weekRangeKey = useMemo(() => {
+    const { from } = getWeekFetchRange(selectedDate);
+    return from;
+  }, [selectedDate]);
 
   // Index events by date
   const eventsByDate = useMemo(() => {
@@ -324,21 +403,33 @@ export default function CalendarPage() {
     [eventsByDate, selectedStr]
   );
 
-  // Upcoming events for list view (today and beyond, sorted)
-  const upcomingEvents = useMemo(() => {
-    return events
-      .filter((e) => e.event_date >= todayStr)
-      .sort((a, b) => {
-        const dc = a.event_date.localeCompare(b.event_date);
-        if (dc !== 0) return dc;
-        return (a.event_time || "").localeCompare(b.event_time || "");
-      });
-  }, [events, todayStr]);
+  // All events for list view, sorted by user preference
+  const listEvents = useMemo(() => {
+    const sorted = [...events];
+    switch (listSort) {
+      case "date":
+        sorted.sort((a, b) => {
+          const dc = a.event_date.localeCompare(b.event_date);
+          if (dc !== 0) return dc;
+          return (a.event_time || "").localeCompare(b.event_time || "");
+        });
+        break;
+      case "title":
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "recent":
+        // Keep original order (API returns by start_date, most recent saves first for list)
+        sorted.reverse();
+        break;
+    }
+    return sorted;
+  }, [events, listSort]);
 
-  // Group upcoming events by date for list view
-  const groupedUpcoming = useMemo(() => {
+  const groupedList = useMemo(() => {
+    // Only group by date when sorting by date
+    if (listSort !== "date") return null;
     const groups: { date: string; events: CalendarEvent[] }[] = [];
-    for (const event of upcomingEvents) {
+    for (const event of listEvents) {
       const last = groups[groups.length - 1];
       if (last && last.date === event.event_date) {
         last.events.push(event);
@@ -347,28 +438,91 @@ export default function CalendarPage() {
       }
     }
     return groups;
-  }, [upcomingEvents]);
+  }, [listEvents, listSort]);
 
-  /* ── Data fetching ── */
+  /* ── Data fetching with date-range ── */
+
+  // Stable fetch URL — only changes when the actual date range changes
+  const fetchUrl = useMemo(() => {
+    const base = "/api/calendar/events";
+    if (calendarView === "Month") {
+      const { from, to } = getMonthFetchRange(year, month);
+      return `${base}?from=${from}&to=${to}`;
+    }
+    if (calendarView === "Week") {
+      const { from, to } = getWeekFetchRange(new Date(weekRangeKey + "T00:00:00"));
+      return `${base}?from=${from}&to=${to}`;
+    }
+    return base; // List view — no date filter
+  }, [calendarView, year, month, weekRangeKey]);
 
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/calendar/events");
-      if (!res.ok) throw new Error("Failed to fetch");
+      setError(null);
+
+      const res = await fetch(fetchUrl);
+      if (!res.ok) {
+        // Don't hard-error on auth issues — user might be mid-session-refresh
+        if (res.status === 401) {
+          setEvents([]);
+          return;
+        }
+        const body = await res.json().catch(() => ({}));
+        console.error("Calendar API error:", res.status, body);
+        throw new Error(body?.error || "Failed to fetch calendar events");
+      }
       const data = await res.json();
       setEvents(data.events || []);
     } catch (err) {
       console.error("Calendar fetch error:", err);
+      setError("Failed to load your events. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchUrl]);
 
   useEffect(() => {
     if (user) fetchEvents();
     else setLoading(false);
   }, [user, fetchEvents]);
+
+  /* ── View switching with transition ── */
+
+  const switchView = (view: CalendarView) => {
+    if (view === calendarView) return;
+    setPrevView(calendarView);
+    setTransitioning(true);
+    setTimeout(() => {
+      setCalendarView(view);
+      setTransitioning(false);
+      // Sync URL without full navigation
+      const url = new URL(window.location.href);
+      if (view === "Month") {
+        url.searchParams.delete("view");
+      } else {
+        url.searchParams.set("view", view);
+      }
+      router.replace(url.pathname + url.search, { scroll: false });
+    }, 150);
+  };
+
+  /* ── CSV export ── */
+
+  const handleExportCsv = async () => {
+    if (events.length === 0) return;
+    try {
+      setIsExportingCsv(true);
+      await exportEventsCsv(
+        events.map((e) => e.id),
+        "my-events.csv"
+      );
+    } catch (err) {
+      console.error("CSV export error:", err);
+    } finally {
+      setIsExportingCsv(false);
+    }
+  };
 
   /* ── Navigation ── */
 
@@ -400,6 +554,12 @@ export default function CalendarPage() {
       date.getFullYear() !== currentDate.getFullYear()
     ) {
       setCurrentDate(new Date(date.getFullYear(), date.getMonth(), 1));
+    }
+    // On mobile, scroll to agenda
+    if (window.innerWidth < 1024 && agendaRef.current) {
+      setTimeout(() => {
+        agendaRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     }
   };
 
@@ -444,10 +604,22 @@ export default function CalendarPage() {
 
   /* ── Save / RSVP actions ── */
 
-  const toggleSave = async (event: CalendarEvent) => {
-    const wasSaved = event.is_saved;
+  const addBusy = (key: string) =>
+    setBusyActions((prev) => new Set(prev).add(key));
+  const removeBusy = (key: string) =>
+    setBusyActions((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
 
-    // Optimistic update
+  const toggleSave = async (event: CalendarEvent) => {
+    const actionKey = `save-${event.id}`;
+    if (busyActions.has(actionKey)) return;
+
+    const wasSaved = event.is_saved;
+    addBusy(actionKey);
+
     setEvents((prev) =>
       prev.map((e) =>
         e.id === event.id ? { ...e, is_saved: !wasSaved } : e
@@ -461,17 +633,17 @@ export default function CalendarPage() {
       if (!res.ok) throw new Error();
       const data = await res.json();
 
-      // If unsaved and no RSVP, remove from calendar entirely
       if (!data.saved && !event.rsvp_status) {
         setEvents((prev) => prev.filter((e) => e.id !== event.id));
       }
     } catch {
-      // Rollback
       setEvents((prev) =>
         prev.map((e) =>
           e.id === event.id ? { ...e, is_saved: wasSaved } : e
         )
       );
+    } finally {
+      removeBusy(actionKey);
     }
   };
 
@@ -480,10 +652,13 @@ export default function CalendarPage() {
     status: "going" | "interested"
   ) => {
     if (!user) return;
+    const actionKey = `rsvp-${event.id}`;
+    if (busyActions.has(actionKey)) return;
+
     const prevStatus = event.rsvp_status;
     const isCancel = prevStatus === status;
+    addBusy(actionKey);
 
-    // Optimistic update
     setEvents((prev) =>
       prev.map((e) =>
         e.id === event.id
@@ -501,7 +676,6 @@ export default function CalendarPage() {
         });
         if (!res.ok) throw new Error();
 
-        // If also not saved, remove from calendar
         if (!event.is_saved) {
           setEvents((prev) => prev.filter((e) => e.id !== event.id));
         }
@@ -514,12 +688,13 @@ export default function CalendarPage() {
         if (!res.ok) throw new Error();
       }
     } catch {
-      // Rollback
       setEvents((prev) =>
         prev.map((e) =>
           e.id === event.id ? { ...e, rsvp_status: prevStatus } : e
         )
       );
+    } finally {
+      removeBusy(actionKey);
     }
   };
 
@@ -548,9 +723,8 @@ export default function CalendarPage() {
 
   const navLabel = calendarView === "Week" ? weekLabel : monthLabel;
 
-  /* ── Render helpers ── */
+  /* ── Early returns ── */
 
-  // Auth loading
   if (authLoading) {
     return (
       <div className="flex flex-1 items-center justify-center min-h-[60vh]">
@@ -573,7 +747,8 @@ export default function CalendarPage() {
             Sign in to view your calendar
           </h3>
           <p className="text-muted-foreground">
-            Your saved and RSVP&apos;d events will appear here once you sign in.
+            Your saved and RSVP&apos;d events will appear here once you sign
+            in.
           </p>
           <SignInButton variant="default" />
         </div>
@@ -581,10 +756,13 @@ export default function CalendarPage() {
     );
   }
 
-  /* ── Agenda card renderer (shared by all views) ── */
+  /* ── Agenda card renderer ── */
 
   const renderAgendaCard = (event: CalendarEvent) => {
     const accent = getAccentColors(event.tags);
+    const saveBusy = busyActions.has(`save-${event.id}`);
+    const rsvpBusy = busyActions.has(`rsvp-${event.id}`);
+
     return (
       <div
         key={event.id}
@@ -593,7 +771,6 @@ export default function CalendarPage() {
           accent.hoverBorder
         )}
       >
-        {/* Accent bar */}
         <div
           className={cn(
             "absolute top-0 left-0 w-1 h-full rounded-l-2xl",
@@ -601,7 +778,6 @@ export default function CalendarPage() {
           )}
         />
 
-        {/* Clickable content */}
         <button
           onClick={() => handleEventClick(event)}
           className="flex flex-col gap-3 text-left cursor-pointer"
@@ -640,14 +816,17 @@ export default function CalendarPage() {
         <div className="flex items-center gap-2 pl-3 pt-2 border-t border-border/60 flex-wrap">
           <button
             onClick={() => toggleSave(event)}
+            disabled={saveBusy}
             className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait",
               event.is_saved
                 ? "bg-primary/10 border border-primary/20 text-primary"
                 : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
             )}
           >
-            {event.is_saved ? (
+            {saveBusy ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : event.is_saved ? (
               <BookmarkCheck className="h-3 w-3" />
             ) : (
               <Bookmark className="h-3 w-3" />
@@ -657,27 +836,37 @@ export default function CalendarPage() {
 
           <button
             onClick={() => setRsvp(event, "going")}
+            disabled={rsvpBusy}
             className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait",
               event.rsvp_status === "going"
                 ? "bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400"
                 : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
             )}
           >
-            <CheckCircle2 className="h-3 w-3" />
+            {rsvpBusy ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-3 w-3" />
+            )}
             Going
           </button>
 
           <button
             onClick={() => setRsvp(event, "interested")}
+            disabled={rsvpBusy}
             className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait",
               event.rsvp_status === "interested"
                 ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400"
                 : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
             )}
           >
-            <Sparkles className="h-3 w-3" />
+            {rsvpBusy ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Sparkles className="h-3 w-3" />
+            )}
             Interested
           </button>
         </div>
@@ -685,7 +874,7 @@ export default function CalendarPage() {
     );
   };
 
-  /* ── Day cell renderer (shared by month & week) ── */
+  /* ── Day cell renderer ── */
 
   const renderDayCell = (
     date: Date,
@@ -697,7 +886,6 @@ export default function CalendarPage() {
     const isSelected = key === selectedStr;
     const dayEvents = eventsByDate.get(key) || [];
 
-    // Unique category dots for event count indicator
     const categoryDots = [
       ...new Set(dayEvents.flatMap((e) => e.tags?.slice(0, 1) || [])),
     ].slice(0, 4);
@@ -716,9 +904,7 @@ export default function CalendarPage() {
           isToday && !isSelected && "bg-secondary/60"
         )}
       >
-        {/* Day number + count indicator */}
         <div className="flex items-center justify-end gap-1.5">
-          {/* Category dots */}
           {dayEvents.length > 0 && (
             <div className="flex gap-0.5">
               {categoryDots.map((tag) => (
@@ -733,7 +919,6 @@ export default function CalendarPage() {
             </div>
           )}
 
-          {/* Event count badge */}
           {dayEvents.length > 0 && (
             <span className="text-[9px] font-bold text-muted-foreground bg-secondary rounded-full size-4 inline-flex items-center justify-center">
               {dayEvents.length}
@@ -750,7 +935,6 @@ export default function CalendarPage() {
           </span>
         </div>
 
-        {/* Event strips */}
         <div className="flex flex-col gap-0.5 mt-auto w-full">
           {dayEvents.slice(0, tall ? 5 : 3).map((event) => {
             const strip = getStripColors(event.tags);
@@ -782,6 +966,8 @@ export default function CalendarPage() {
     );
   };
 
+  /* ── Main render ── */
+
   return (
     <ErrorBoundary fallbackMessage="We couldn't load the calendar right now.">
       <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
@@ -798,12 +984,11 @@ export default function CalendarPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {/* View Toggle */}
               <div className="flex h-10 items-center rounded-lg bg-secondary p-1 border border-border">
-                {(["Month", "Week", "List"] as const).map((view) => (
+                {(["Month", "Week", "Saved"] as const).map((view) => (
                   <button
                     key={view}
-                    onClick={() => setCalendarView(view)}
+                    onClick={() => switchView(view)}
                     className={cn(
                       "flex h-full cursor-pointer items-center justify-center rounded-md px-4 text-sm font-medium transition-colors",
                       calendarView === view
@@ -815,7 +1000,6 @@ export default function CalendarPage() {
                   </button>
                 ))}
               </div>
-              {/* Export Button */}
               <button
                 onClick={() => downloadIcal(events)}
                 disabled={events.length === 0}
@@ -827,8 +1011,63 @@ export default function CalendarPage() {
             </div>
           </div>
 
+          {/* List view toolbar: sort + CSV export */}
+          {calendarView === "Saved" && !loading && events.length > 0 && (
+            <div className="flex items-center justify-end gap-2 px-6 lg:px-8 mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handleExportCsv}
+                disabled={isExportingCsv}
+              >
+                {isExportingCsv ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-4 w-4" />
+                )}
+                {isExportingCsv ? "Exporting..." : "Export CSV"}
+              </Button>
+
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                  className="gap-2"
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                  {SORT_LABELS[listSort]}
+                </Button>
+                {showSortMenu && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md bg-card border shadow-lg z-20">
+                    {(Object.keys(SORT_LABELS) as SortOption[]).map(
+                      (option) => (
+                        <button
+                          key={option}
+                          onClick={() => {
+                            setListSort(option);
+                            setShowSortMenu(false);
+                          }}
+                          className={cn(
+                            "block w-full text-left px-4 py-2 text-sm hover:bg-secondary/50 transition-colors cursor-pointer",
+                            listSort === option
+                              ? "font-semibold text-primary"
+                              : "text-foreground"
+                          )}
+                        >
+                          {SORT_LABELS[option]}
+                        </button>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Navigation (Month & Week) */}
-          {calendarView !== "List" && (
+          {calendarView !== "Saved" && (
             <div className="flex items-center justify-between px-6 lg:px-8 mb-4">
               <h2 className="text-foreground text-2xl font-bold">
                 {navLabel}
@@ -867,137 +1106,195 @@ export default function CalendarPage() {
             </div>
           )}
 
-          {/* ── Month View ── */}
-          {calendarView === "Month" && (
-            <div
-              ref={gridRef}
-              tabIndex={0}
-              onKeyDown={handleGridKeyDown}
-              className="px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
-            >
-              <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
-                {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(
-                  (day) => (
-                    <div
-                      key={day}
-                      className="bg-secondary p-3 text-right text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                    >
-                      {day}
-                    </div>
-                  )
-                )}
-
-                {loading && events.length === 0
-                  ? Array.from({ length: monthGrid.length }).map((_, i) => (
-                      <div
-                        key={`skel-${i}`}
-                        className="bg-background min-h-[100px] p-2"
-                      >
-                        <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
-                        <Skeleton className="h-4 w-3/4 rounded ml-auto" />
-                      </div>
-                    ))
-                  : monthGrid.map(({ date, isCurrentMonth }, i) =>
-                      renderDayCell(date, isCurrentMonth, false)
-                    )}
+          {/* ── Error state ── */}
+          {error && !loading && (
+            <div className="mx-6 lg:mx-8 mb-4 flex flex-col items-center justify-center py-12 text-center space-y-4 bg-card/50 rounded-xl border border-destructive/30 backdrop-blur-sm p-8">
+              <div className="rounded-full bg-primary/10 p-4">
+                <AlertCircle className="h-8 w-8 text-primary" />
               </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-foreground">
+                  Something went wrong
+                </h3>
+                <p className="text-muted-foreground">{error}</p>
+              </div>
+              <Button
+                onClick={() => fetchEvents()}
+                variant="outline"
+                className="gap-2"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Try Again
+              </Button>
             </div>
           )}
 
-          {/* ── Week View ── */}
-          {calendarView === "Week" && (
-            <div
-              ref={gridRef}
-              tabIndex={0}
-              onKeyDown={handleGridKeyDown}
-              className="px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
-            >
-              <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
-                {weekDays.map((d) => {
-                  const isToday = dateKey(d) === todayStr;
-                  return (
-                    <div
-                      key={dateKey(d)}
-                      className={cn(
-                        "bg-secondary p-3 text-center text-xs font-semibold tracking-wider uppercase",
-                        isToday
-                          ? "text-primary"
-                          : "text-muted-foreground"
+          {/* ── View content with transition ── */}
+          <div
+            className={cn(
+              "transition-opacity duration-150",
+              transitioning ? "opacity-0" : "opacity-100"
+            )}
+          >
+            {/* ── Month View ── */}
+            {calendarView === "Month" && !error && (
+              <div
+                ref={gridRef}
+                tabIndex={0}
+                onKeyDown={handleGridKeyDown}
+                className="px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
+              >
+                <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
+                  {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(
+                    (day) => (
+                      <div
+                        key={day}
+                        className="bg-secondary p-3 text-right text-muted-foreground text-xs font-semibold tracking-wider uppercase"
+                      >
+                        {day}
+                      </div>
+                    )
+                  )}
+
+                  {loading && events.length === 0
+                    ? Array.from({ length: monthGrid.length }).map((_, i) => (
+                        <div
+                          key={`skel-${i}`}
+                          className="bg-background min-h-[100px] p-2"
+                        >
+                          <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
+                          <Skeleton className="h-4 w-3/4 rounded ml-auto" />
+                        </div>
+                      ))
+                    : monthGrid.map(({ date, isCurrentMonth }) =>
+                        renderDayCell(date, isCurrentMonth, false)
                       )}
-                    >
-                      {d.toLocaleDateString("en-US", { weekday: "short" })}
-                    </div>
-                  );
-                })}
-
-                {loading && events.length === 0
-                  ? weekDays.map((_, i) => (
-                      <div
-                        key={`wskel-${i}`}
-                        className="bg-background min-h-[180px] p-2"
-                      >
-                        <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
-                        <Skeleton className="h-4 w-full rounded mb-1" />
-                        <Skeleton className="h-4 w-3/4 rounded" />
-                      </div>
-                    ))
-                  : weekDays.map((d) => renderDayCell(d, true, true))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ── List View ── */}
-          {calendarView === "List" && (
-            <div className="px-6 lg:px-8 pb-8 flex-1 min-h-0 overflow-y-auto">
-              {loading ? (
-                <div className="flex flex-col gap-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <Skeleton key={i} className="h-28 w-full rounded-2xl" />
-                  ))}
-                </div>
-              ) : groupedUpcoming.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <CalendarOff className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                  <p className="text-foreground font-semibold text-lg">
-                    No upcoming events
-                  </p>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Save or RSVP to events to see them here.
-                  </p>
-                  <a
-                    href="/"
-                    className="mt-4 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold rounded-lg transition-colors"
-                  >
-                    Discover Events
-                  </a>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-6">
-                  {groupedUpcoming.map((group) => (
-                    <div key={group.date}>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1 flex items-center gap-2">
-                        <CalendarIcon className="h-3.5 w-3.5" />
-                        {formatDateHeading(group.date)}
-                        {group.date === todayStr && (
-                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold normal-case tracking-normal">
-                            Today
-                          </span>
+            {/* ── Week View ── */}
+            {calendarView === "Week" && !error && (
+              <div
+                ref={gridRef}
+                tabIndex={0}
+                onKeyDown={handleGridKeyDown}
+                className="px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
+              >
+                <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
+                  {weekDays.map((d) => {
+                    const isToday = dateKey(d) === todayStr;
+                    return (
+                      <div
+                        key={dateKey(d)}
+                        className={cn(
+                          "bg-secondary p-3 text-center text-xs font-semibold tracking-wider uppercase",
+                          isToday
+                            ? "text-primary"
+                            : "text-muted-foreground"
                         )}
-                      </h3>
-                      <div className="flex flex-col gap-3">
-                        {group.events.map(renderAgendaCard)}
+                      >
+                        {d.toLocaleDateString("en-US", { weekday: "short" })}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+
+                  {loading && events.length === 0
+                    ? weekDays.map((_, i) => (
+                        <div
+                          key={`wskel-${i}`}
+                          className="bg-background min-h-[180px] p-2"
+                        >
+                          <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
+                          <Skeleton className="h-4 w-full rounded mb-1" />
+                          <Skeleton className="h-4 w-3/4 rounded" />
+                        </div>
+                      ))
+                    : weekDays.map((d) => renderDayCell(d, true, true))}
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* ── List View ── */}
+            {calendarView === "Saved" && !error && (
+              <div className="px-6 lg:px-8 pb-8 flex-1 min-h-0 overflow-y-auto">
+                {loading ? (
+                  <div className="flex flex-col gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton
+                        key={i}
+                        className="h-28 w-full rounded-2xl"
+                      />
+                    ))}
+                  </div>
+                ) : listEvents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <CalendarOff className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                    <p className="text-foreground font-semibold text-lg">
+                      No saved events yet
+                    </p>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      Save or RSVP to events and they&apos;ll appear here.
+                    </p>
+                    <a
+                      href="/"
+                      className="mt-4 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold rounded-lg transition-colors"
+                    >
+                      Discover Events
+                    </a>
+                  </div>
+                ) : groupedList ? (
+                  /* Date-grouped view */
+                  <div className="flex flex-col gap-6">
+                    {groupedList.map((group) => (
+                      <div key={group.date}>
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1 flex items-center gap-2">
+                          <CalendarIcon className="h-3.5 w-3.5" />
+                          {formatDateHeading(group.date)}
+                          {group.date === todayStr && (
+                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold normal-case tracking-normal">
+                              Today
+                            </span>
+                          )}
+                        </h3>
+                        <div className="flex flex-col gap-3">
+                          {group.events.map(renderAgendaCard)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* Flat list (title or recent sort) */
+                  <div className="flex flex-col gap-3">
+                    {listEvents.map(renderAgendaCard)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Mobile scroll hint for agenda */}
+          {calendarView !== "Saved" && !error && !loading && (
+            <div className="lg:hidden flex justify-center py-3 border-t border-border bg-background/80">
+              <button
+                onClick={() =>
+                  agendaRef.current?.scrollIntoView({ behavior: "smooth" })
+                }
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronsDown className="h-3.5 w-3.5" />
+                Scroll for daily agenda
+              </button>
             </div>
           )}
         </div>
 
-        {/* ═══ Right Pane — Daily Agenda (Month & Week only) ═══ */}
-        {calendarView !== "List" && (
-          <div className="w-full lg:w-[380px] xl:w-[400px] flex flex-col bg-card lg:bg-secondary/30 overflow-hidden border-t lg:border-t-0 border-border">
+        {/* ═══ Right Pane — Daily Agenda ═══ */}
+        {calendarView !== "Saved" && (
+          <div
+            ref={agendaRef}
+            className="w-full lg:w-[380px] xl:w-[400px] flex flex-col bg-card lg:bg-secondary/30 overflow-hidden border-t lg:border-t-0 border-border"
+          >
             <div className="p-6 border-b border-border sticky top-0 z-10 bg-card lg:bg-secondary/30 backdrop-blur-sm">
               <h3 className="text-foreground text-xl font-bold tracking-tight mb-1">
                 Daily Agenda
@@ -1037,14 +1334,13 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* Event Details Modal */}
       <EventDetailsModal
         open={isModalOpen}
         onOpenChange={(open) => {
           setIsModalOpen(open);
           if (!open) setSelectedEvent(null);
         }}
-        event={selectedEvent as Event | null}
+        event={selectedEvent}
         trackingSource="calendar"
       />
     </ErrorBoundary>
