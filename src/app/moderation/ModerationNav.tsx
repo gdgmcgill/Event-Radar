@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Users,
   History,
+  Star,
 } from "lucide-react";
 
 const navItems = [
@@ -17,6 +18,7 @@ const navItems = [
   { name: "Reported Content", path: "/moderation/events", icon: AlertTriangle },
   { name: "User Management", path: "/moderation/users", icon: Users },
   { name: "Mod Logs", path: "/moderation/audit-log", icon: History },
+  { name: "Featured", path: "/moderation/featured", icon: Star },
 ];
 
 export function ModerationNav() {
