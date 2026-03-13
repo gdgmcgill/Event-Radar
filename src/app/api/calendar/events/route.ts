@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { transformEventFromDB } from "@/lib/tagMapping";
 
 /**
  * GET /api/calendar/events
  * Returns the authenticated user's saved + RSVP'd events with club info.
+ *
+ * Optional query params for date-range filtering:
+ *   ?from=2026-01-01&to=2026-03-31
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     const {
@@ -16,6 +21,9 @@ export async function GET() {
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const from = request.nextUrl.searchParams.get("from");
+    const to = request.nextUrl.searchParams.get("to");
 
     // Fetch saved event IDs
     const { data: savedRows } = await supabase
@@ -40,18 +48,35 @@ export async function GET() {
       return NextResponse.json({ events: [] });
     }
 
-    const { data: events, error } = await supabase
+    let query = supabase
       .from("events")
-      .select("*, club:clubs(id, name, logo_url)")
+      .select(
+        "*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)"
+      )
       .in("id", allIds)
       .eq("status", "approved")
-      .order("event_date", { ascending: true });
+      .order("start_date", { ascending: true });
+
+    if (from) {
+      query = query.gte("start_date", from);
+    }
+    if (to) {
+      query = query.lte("start_date", to);
+    }
+
+    const { data: events, error } = await query;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const annotated = (events || []).map((e) => ({
+    // Transform DB rows → frontend Event shape (derives event_date, event_time from start_date)
+    const transformed = (events || []).map((e) =>
+      transformEventFromDB(e as any)
+    );
+
+    // Annotate with user's save/RSVP status
+    const annotated = transformed.map((e) => ({
       ...e,
       is_saved: savedIds.has(e.id),
       rsvp_status: rsvpMap.get(e.id) || null,

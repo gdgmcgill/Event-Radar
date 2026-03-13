@@ -1,5 +1,5 @@
 /**
- * TypeScript interfaces for Uni-Verse
+ * TypeScript interfaces for UNI-VERSE
  * These types match the Supabase database schema
  */
 
@@ -142,7 +142,7 @@ export interface Notification {
 }
 
 export interface EventFilter {
-  tags?: EventTag[];
+  tags?: string[];
   dateRange?: {
     start: Date;
     end?: Date;

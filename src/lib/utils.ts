@@ -1,5 +1,5 @@
 /**
- * Utility functions for Uni-Verse
+ * Utility functions for UNI-VERSE
  */
 
 import { type ClassValue, clsx } from "clsx";
