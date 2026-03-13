@@ -14,7 +14,7 @@ import {
 } from "./navItems";
 import { useAuthStore } from "@/store/useAuthStore";
 import { isAdmin } from "@/lib/roles";
-import { PlusCircle, Settings, Bell, ChevronRight } from "lucide-react";
+import { PlusCircle, Bell, ChevronRight } from "lucide-react";
 import { useNotificationCount } from "@/hooks/useNotificationCount";
 
 const EASE = "cubic-bezier(0.4,0,0.2,1)";
@@ -285,36 +285,6 @@ export function SideNavBar() {
                 }}
               >
                 <span>Create Event</span>
-              </div>
-            </Link>
-          )}
-
-          {/* Settings */}
-          {isAuthenticated && (
-            <Link
-              href="/settings"
-              title={collapsed ? "Settings" : undefined}
-              className={cn(
-                "group flex items-center rounded-xl font-medium whitespace-nowrap overflow-hidden",
-                "transition-[padding,background-color,color,box-shadow] duration-200",
-                collapsed ? "justify-center p-3" : "px-4 py-3",
-                pathname === "/settings"
-                  ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
-                  : "text-muted-foreground hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
-              )}
-              style={{ transitionTimingFunction: EASE }}
-            >
-              <Settings className="w-5 h-5 flex-shrink-0" />
-              <div
-                className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
-                style={{
-                  maxWidth: collapsed ? 0 : 160,
-                  opacity: collapsed ? 0 : 1,
-                  marginLeft: collapsed ? 0 : 16,
-                  transitionTimingFunction: EASE,
-                }}
-              >
-                <span>Settings</span>
               </div>
             </Link>
           )}

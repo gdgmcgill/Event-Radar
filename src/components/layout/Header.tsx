@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { Menu, X, PlusCircle, Settings } from "lucide-react";
+import { Menu, X, PlusCircle } from "lucide-react";
 import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
 import {
@@ -246,20 +246,6 @@ export function Header() {
                       </div>
                     </Link>
                   )}
-
-                  <Link
-                    href="/settings"
-                    onClick={closeMobileMenu}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200",
-                      pathname === "/settings"
-                        ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
-                        : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
-                    )}
-                  >
-                    <Settings className="w-5 h-5 flex-shrink-0" />
-                    <span className="text-sm">Settings</span>
-                  </Link>
 
                   <SignOutButton variant="outline" className="w-full rounded-xl" />
                 </div>
