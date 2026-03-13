@@ -57,7 +57,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         const [{ data: profile }, { count: clubCount }] = await Promise.all([
           supabase
             .from("users")
-            .select("roles, interest_tags")
+            .select("roles, interest_tags, faculty, year")
             .eq("id", authUser.id)
             .single(),
           supabase
@@ -73,6 +73,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 ...state.user,
                 roles: (profile.roles as AppUser["roles"]) ?? ["user"],
                 interest_tags: (profile.interest_tags as string[]) ?? [],
+                faculty: (profile.faculty as string) ?? null,
+                year: (profile.year as string) ?? null,
               }
             : state.user,
         }));
