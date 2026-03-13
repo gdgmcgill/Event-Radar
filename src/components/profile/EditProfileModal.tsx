@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import InterestTagSelector from "@/components/profile/InterestTagSelector";
 import { PRONOUNS, YEARS, FACULTIES } from "@/lib/constants";
-import type { EventTag } from "@/types";
 import { Loader2 } from "lucide-react";
 
 type EditProfileModalProps = {
@@ -22,7 +21,7 @@ type EditProfileModalProps = {
     userId: string;
     initialName: string;
     initialAvatarUrl: string;
-    initialTags: EventTag[];
+    initialTags: string[];
     initialPronouns?: string;
     initialYear?: string;
     initialFaculty?: string;
@@ -44,7 +43,7 @@ export default function EditProfileModal({
     const router = useRouter();
     const [name, setName] = useState(initialName);
     const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
-    const [tags, setTags] = useState<EventTag[]>(
+    const [tags, setTags] = useState<string[]>(
         Array.isArray(initialTags) ? initialTags.filter(Boolean) : []
     );
     const [pronouns, setPronouns] = useState(initialPronouns);

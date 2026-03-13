@@ -2,31 +2,35 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { EVENT_CATEGORIES } from "@/lib/constants";
+import { EVENT_CATEGORIES, QUICK_FILTER_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import { Pencil, Save, X, Heart } from "lucide-react";
 import InterestTagSelector from "@/components/profile/InterestTagSelector";
 
 type InterestsCardProps = {
   userId?: string;
-  initialTags: EventTag[];
+  initialTags: string[];
 };
 
-function normalizeInterests(interest_tags: unknown): EventTag[] {
+function normalizeInterests(interest_tags: unknown): string[] {
   if (!interest_tags) return [];
   if (Array.isArray(interest_tags)) {
     return interest_tags.filter(
-      (tag): tag is EventTag => tag && typeof tag === "string"
+      (tag): tag is string => tag && typeof tag === "string"
     );
   }
   return [];
 }
 
+function getTagLabel(tag: string): string {
+  return EVENT_CATEGORIES[tag as EventTag]?.label ?? QUICK_FILTER_CATEGORIES[tag]?.label ?? tag;
+}
+
 export default function InterestsCard({ userId, initialTags }: InterestsCardProps) {
-  const [selectedTags, setSelectedTags] = useState<EventTag[]>(
+  const [selectedTags, setSelectedTags] = useState<string[]>(
     normalizeInterests(initialTags)
   );
-  const [editingTags, setEditingTags] = useState<EventTag[]>(selectedTags);
+  const [editingTags, setEditingTags] = useState<string[]>(selectedTags);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,17 +144,14 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {selectedTags.map((tag) => {
-                const category = EVENT_CATEGORIES[tag];
-                return (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 bg-red-600/10 text-red-600 text-sm font-medium rounded-full"
-                  >
-                    {category?.label ?? tag}
-                  </span>
-                );
-              })}
+              {selectedTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-3 py-1 bg-red-600/10 text-red-600 text-sm font-medium rounded-full"
+                >
+                  {getTagLabel(tag)}
+                </span>
+              ))}
             </div>
           )}
         </div>

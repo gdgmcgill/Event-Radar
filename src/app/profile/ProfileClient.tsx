@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import AvatarCropModal from "@/components/profile/AvatarCropModal";
 import { useAvatarUpload } from "@/hooks/useAvatarUpload";
 import InterestTagSelector from "@/components/profile/InterestTagSelector";
-import { PRONOUNS, YEARS, FACULTIES, EVENT_CATEGORIES } from "@/lib/constants";
+import { PRONOUNS, YEARS, FACULTIES, EVENT_CATEGORIES, QUICK_FILTER_CATEGORIES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -51,7 +51,7 @@ interface ProfileData {
   email: string;
   name: string | null;
   avatar_url: string | null;
-  interest_tags: EventTag[];
+  interest_tags: string[];
   pronouns: string | null;
   year: string | null;
   faculty: string | null;
@@ -101,7 +101,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
   const [pronouns, setPronouns] = useState(profile.pronouns ?? "");
   const [year, setYear] = useState(profile.year ?? "");
   const [faculty, setFaculty] = useState(profile.faculty ?? "");
-  const [tags, setTags] = useState<EventTag[]>(profile.interest_tags);
+  const [tags, setTags] = useState<string[]>(profile.interest_tags);
   const [visibility, setVisibility] = useState(profile.visibility);
 
   // Avatar upload (shared hook)
@@ -314,10 +314,10 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {profile.interest_tags.map((tag) => {
-                    const cat = EVENT_CATEGORIES[tag];
+                    const label = EVENT_CATEGORIES[tag as EventTag]?.label ?? QUICK_FILTER_CATEGORIES[tag]?.label ?? tag;
                     return (
                       <span key={tag} className="px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
-                        {cat?.label ?? tag}
+                        {label}
                       </span>
                     );
                   })}
