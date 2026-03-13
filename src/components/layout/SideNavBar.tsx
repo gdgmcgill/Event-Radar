@@ -263,26 +263,28 @@ export function SideNavBar() {
           {isAuthenticated && (
             <Link
               href="/create-event"
-              title="Create Event"
+              title={collapsed ? "Create Event" : undefined}
               className={cn(
-                "flex items-center justify-center bg-primary text-white rounded-xl",
-                "hover:brightness-110 shadow-lg shadow-primary/20 cursor-pointer",
-                "transition-[padding] duration-200",
-                collapsed ? "p-3" : "py-2.5 px-4"
+                "group flex items-center rounded-xl font-medium whitespace-nowrap overflow-hidden",
+                "transition-[padding,background-color,color,box-shadow] duration-200",
+                collapsed ? "justify-center p-3" : "px-4 py-3",
+                pathname === "/create-event"
+                  ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
+                  : "text-primary hover:bg-primary/5 dark:hover:bg-primary/10"
               )}
               style={{ transitionTimingFunction: EASE }}
             >
-              <PlusCircle className="w-5 h-5 flex-shrink-0" />
+              <PlusCircle className={cn("w-5 h-5 flex-shrink-0", pathname === "/create-event" && "text-white")} />
               <div
                 className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
                 style={{
-                  maxWidth: collapsed ? 0 : 120,
+                  maxWidth: collapsed ? 0 : 160,
                   opacity: collapsed ? 0 : 1,
-                  marginLeft: collapsed ? 0 : 8,
+                  marginLeft: collapsed ? 0 : 16,
                   transitionTimingFunction: EASE,
                 }}
               >
-                <span className="whitespace-nowrap text-sm font-bold">Create Event</span>
+                <span>Create Event</span>
               </div>
             </Link>
           )}
