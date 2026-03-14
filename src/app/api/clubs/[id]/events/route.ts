@@ -44,7 +44,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       .from("events")
       .select("*, club:clubs(id, name, logo_url)")
       .eq("club_id", clubId)
-      .order("start_date", { ascending: false });
+      .order("event_date", { ascending: false });
 
     if (!isOrganizer) {
       query = query.eq("status", "approved");
@@ -71,16 +71,18 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         .in("event_id", eventIds);
 
       // Group counts by event_id and status
-      const rsvpCounts: Record<string, { going: number; interested: number }> = {};
+      const rsvpCounts: Record<string, { going: number; interested: number; cancelled: number }> = {};
       if (rsvps) {
         for (const rsvp of rsvps as RsvpRow[]) {
           if (!rsvpCounts[rsvp.event_id]) {
-            rsvpCounts[rsvp.event_id] = { going: 0, interested: 0 };
+            rsvpCounts[rsvp.event_id] = { going: 0, interested: 0, cancelled: 0 };
           }
           if (rsvp.status === "going") {
             rsvpCounts[rsvp.event_id].going++;
           } else if (rsvp.status === "interested") {
             rsvpCounts[rsvp.event_id].interested++;
+          } else if (rsvp.status === "cancelled") {
+            rsvpCounts[rsvp.event_id].cancelled++;
           }
         }
       }
@@ -88,7 +90,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       // Attach rsvp_counts to each event
       const eventsWithRsvp = eventList.map((event) => ({
         ...event,
-        rsvp_counts: rsvpCounts[event.id] || { going: 0, interested: 0 },
+        rsvp_counts: rsvpCounts[event.id] || { going: 0, interested: 0, cancelled: 0 },
       }));
 
       return NextResponse.json({ events: eventsWithRsvp, isOrganizer: true });

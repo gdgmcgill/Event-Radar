@@ -165,8 +165,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       const { data: allRsvpData } = await supabase
         .from("rsvps")
         .select("event_id, status")
-        .in("event_id", eventIds)
-        .neq("status", "cancelled");
+        .in("event_id", eventIds);
 
       allRsvps = (allRsvpData ?? []) as { event_id: string; status: string }[];
     }
