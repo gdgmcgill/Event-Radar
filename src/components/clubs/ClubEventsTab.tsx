@@ -22,7 +22,8 @@ import {
   Copy,
   Eye,
   Trash2,
-  BarChart3,
+  Users,
+  TrendingDown,
 } from "lucide-react";
 import type { EventTag } from "@/types";
 
@@ -35,7 +36,7 @@ interface EventWithRsvp {
   id: string;
   title: string;
   description: string;
-  start_date: string;
+  event_date: string;
   location: string;
   tags: EventTag[];
   image_url?: string | null;
@@ -44,28 +45,59 @@ interface EventWithRsvp {
   rsvp_counts?: {
     going: number;
     interested: number;
+    cancelled: number;
   };
 }
 
-const getDisplayStatus = (event: EventWithRsvp): "published" | "draft" | "past" => {
-  const eventDate = new Date(event.start_date);
+type DisplayStatus = "published" | "pending" | "rejected" | "past";
+
+const getDisplayStatus = (event: EventWithRsvp): DisplayStatus => {
+  const eventDate = new Date(event.event_date);
   const now = new Date();
   if (eventDate < now) return "past";
   if (event.status === "approved") return "published";
-  return "draft";
+  if (event.status === "rejected") return "rejected";
+  return "pending";
 };
 
-const statusBadgeConfig = {
-  published: "bg-green-100 text-green-700 border border-green-200",
-  draft: "bg-slate-100 text-slate-600 border border-slate-200",
-  past: "bg-red-600/10 text-red-600 border border-red-600/20",
+const statusBadgeConfig: Record<DisplayStatus, string> = {
+  published:
+    "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
+  pending:
+    "bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
+  rejected:
+    "bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+  past: "bg-muted text-muted-foreground border border-border",
 };
 
 export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
   const { events, isLoading, mutate } = useClubEventsManagement(clubId);
   const [createOpen, setCreateOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithRsvp | null>(null);
-  const [duplicatingEvent, setDuplicatingEvent] = useState<EventWithRsvp | null>(null);
+  const [duplicatingEvent, setDuplicatingEvent] =
+    useState<EventWithRsvp | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (eventId: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this event? This action cannot be undone."
+    );
+    if (!confirmed) return;
+
+    setDeletingId(eventId);
+    try {
+      // TODO: Wire up when DELETE /api/events/[id] endpoint is implemented
+      // const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
+      // if (!res.ok) throw new Error("Failed to delete event");
+      // mutate();
+      console.warn(
+        "Delete endpoint not yet implemented for event:",
+        eventId
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -83,10 +115,10 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-lg font-bold">All Events</h4>
+        <h4 className="text-lg font-bold text-foreground">All Events</h4>
         <button
           onClick={() => setCreateOpen(true)}
-          className="bg-red-600 hover:bg-red-600/90 text-white px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-red-600/20"
+          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all duration-200 active:scale-95 shadow-lg shadow-red-600/20 hover:shadow-red-600/30"
         >
           <Plus className="h-4 w-4" />
           <span>Create Event</span>
@@ -95,67 +127,142 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
 
       {/* Events Table */}
       {events.length === 0 ? (
-        <div className="bg-white rounded-xl border border-red-600/5 shadow-sm flex flex-col items-center justify-center py-16 text-center">
-          <CalendarX className="h-10 w-10 text-slate-300 mb-3" />
-          <p className="text-slate-500 font-medium">No events yet</p>
-          <p className="text-sm text-slate-400 mt-1">Create your first event!</p>
+        <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col items-center justify-center py-16 text-center">
+          <CalendarX className="h-10 w-10 text-muted-foreground/40 mb-3" />
+          <p className="text-foreground font-medium">No events yet</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+            Create your first event to start building your audience.
+          </p>
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Event
+          </Button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-red-600/5 overflow-hidden shadow-sm">
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b border-red-600/5">
+            <thead className="bg-muted/50 border-b border-border">
               <tr>
-                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Event Name</th>
-                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-center">Status</th>
-                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Date</th>
-                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-center">RSVPs</th>
-                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-right">Actions</th>
+                <th className="px-6 py-4 font-bold text-muted-foreground uppercase tracking-wider text-xs">
+                  Event Name
+                </th>
+                <th className="px-6 py-4 font-bold text-muted-foreground uppercase tracking-wider text-xs text-center">
+                  Status
+                </th>
+                <th className="px-6 py-4 font-bold text-muted-foreground uppercase tracking-wider text-xs">
+                  Date
+                </th>
+                <th className="px-6 py-4 font-bold text-muted-foreground uppercase tracking-wider text-xs text-center">
+                  RSVPs
+                </th>
+                <th className="px-6 py-4 font-bold text-muted-foreground uppercase tracking-wider text-xs text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-red-600/5">
+            <tbody className="divide-y divide-border">
               {(events as EventWithRsvp[]).map((event) => {
                 const displayStatus = getDisplayStatus(event);
                 const rsvp = event.rsvp_counts;
+                const totalActive = rsvp
+                  ? rsvp.going + rsvp.interested
+                  : 0;
+                const cancelled = rsvp?.cancelled ?? 0;
+                const totalAll = totalActive + cancelled;
+                const churnPct =
+                  totalAll > 0
+                    ? Math.round((cancelled / totalAll) * 100)
+                    : 0;
 
                 return (
-                  <tr key={event.id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={event.id}
+                    className="hover:bg-muted/30 transition-colors duration-150"
+                  >
+                    {/* Event Name */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded bg-red-600/10 flex items-center justify-center text-red-600 shrink-0">
+                        <div className="h-10 w-10 rounded-lg bg-red-600/10 dark:bg-red-600/20 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
                           <Calendar className="h-5 w-5" />
                         </div>
-                        <span className="font-semibold">{event.title}</span>
+                        <span className="font-semibold text-foreground">
+                          {event.title}
+                        </span>
                       </div>
                     </td>
+
+                    {/* Status */}
                     <td className="px-6 py-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusBadgeConfig[displayStatus]}`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusBadgeConfig[displayStatus]}`}
+                      >
                         {displayStatus}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-500">{formatDate(event.start_date)}</td>
-                    <td className="px-6 py-4 text-center text-slate-500">
-                      {rsvp ? rsvp.going + rsvp.interested : 0}
+
+                    {/* Date */}
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {formatDate(event.event_date)}
                     </td>
+
+                    {/* RSVPs Breakdown */}
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                          {/* Going */}
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                            <Users className="h-3 w-3" />
+                            {rsvp?.going ?? 0}
+                          </span>
+                          {/* Interested */}
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            {rsvp?.interested ?? 0}
+                          </span>
+                          {/* Cancelled */}
+                          {cancelled > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
+                              {cancelled}
+                            </span>
+                          )}
+                        </div>
+                        {/* Churn indicator */}
+                        {cancelled > 0 && churnPct > 0 && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                            <TrendingDown className="h-3 w-3" />
+                            {churnPct}% drop-off
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Actions */}
                     <td className="px-6 py-4 text-right space-x-1">
                       {displayStatus === "past" ? (
-                        <button className="p-1.5 hover:text-red-600 transition-colors text-slate-400 rounded hover:bg-red-600/5">
+                        <button className="p-1.5 hover:text-red-600 transition-colors duration-150 text-muted-foreground rounded hover:bg-red-600/5 dark:hover:bg-red-600/10">
                           <Eye className="h-4 w-4" />
                         </button>
                       ) : (
                         <button
-                          className="p-1.5 hover:text-red-600 transition-colors text-slate-400 rounded hover:bg-red-600/5"
+                          className="p-1.5 hover:text-red-600 transition-colors duration-150 text-muted-foreground rounded hover:bg-red-600/5 dark:hover:bg-red-600/10"
                           onClick={() => setEditingEvent(event)}
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                       )}
                       <button
-                        className="p-1.5 hover:text-red-600 transition-colors text-slate-400 rounded hover:bg-red-600/5"
+                        className="p-1.5 hover:text-red-600 transition-colors duration-150 text-muted-foreground rounded hover:bg-red-600/5 dark:hover:bg-red-600/10"
                         onClick={() => setDuplicatingEvent(event)}
                       >
                         <Copy className="h-4 w-4" />
                       </button>
-                      <button className="p-1.5 hover:text-red-600 transition-colors text-slate-400 rounded hover:bg-red-600/5">
+                      <button
+                        className="p-1.5 hover:text-red-600 transition-colors duration-150 text-muted-foreground rounded hover:bg-red-600/5 dark:hover:bg-red-600/10 disabled:opacity-40"
+                        onClick={() => handleDelete(event.id)}
+                        disabled={deletingId === event.id}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </td>
@@ -197,7 +304,7 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
               initialData={{
                 title: editingEvent.title,
                 description: editingEvent.description,
-                start_date: editingEvent.start_date,
+                start_date: editingEvent.event_date,
                 location: editingEvent.location,
                 tags: editingEvent.tags,
                 image_url: editingEvent.image_url,
@@ -223,7 +330,8 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
           <DialogHeader>
             <DialogTitle>Duplicate Event</DialogTitle>
             <DialogDescription>
-              Create a new event based on an existing one. Pick a new date and time.
+              Create a new event based on an existing one. Pick a new date and
+              time.
             </DialogDescription>
           </DialogHeader>
           {duplicatingEvent && (
