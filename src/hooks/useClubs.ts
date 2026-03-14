@@ -73,3 +73,13 @@ export function useFollowStatus(clubId: string | null | undefined) {
     fetcher
   );
 }
+
+/**
+ * Fetch pending invites for a club.
+ */
+export function useClubInvites(clubId: string | undefined) {
+  return useSWR(
+    clubId ? `/api/clubs/${clubId}/invites` : null,
+    fetcher
+  );
+}
