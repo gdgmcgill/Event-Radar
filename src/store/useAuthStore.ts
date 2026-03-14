@@ -57,9 +57,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         const [{ data: profile }, { count: clubCount }] = await Promise.all([
           supabase
             .from("users")
-            .select("roles, interest_tags, faculty, year")
+            .select("roles, interest_tags, faculty, year" as string & keyof never)
             .eq("id", authUser.id)
-            .single(),
+            .single() as unknown as Promise<{ data: Record<string, unknown> | null; error: unknown }>,
           supabase
             .from("club_members")
             .select("*", { count: "exact", head: true })

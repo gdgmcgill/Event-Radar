@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Building2, Users, Calendar, Crown, Shield } from "lucide-react";
@@ -28,7 +28,7 @@ function MyClubsContent() {
   const router = useRouter();
   const { data, isLoading, error } = useMyClubs();
 
-  const clubs: MyClubEntry[] = data?.clubs ?? [];
+  const clubs: MyClubEntry[] = useMemo(() => data?.clubs ?? [], [data?.clubs]);
 
   // Single club: auto-redirect
   useEffect(() => {
@@ -173,18 +173,13 @@ export function ClubsPageTabs({ children }: ClubsPageTabsProps) {
   const user = useAuthStore((s) => s.user);
   const hasClubs = useAuthStore((s) => s.hasClubs);
 
-  const initialTab = searchParams.get("tab") === "my-clubs" ? "my-clubs" : "discover";
-  const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
+  const tabFromUrl = searchParams.get("tab") === "my-clubs" ? "my-clubs" as TabValue : "discover" as TabValue;
+  const [activeTab, setActiveTab] = useState<TabValue>(tabFromUrl);
 
-  // Sync tab from URL changes (e.g. browser back/forward)
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "my-clubs") {
-      setActiveTab("my-clubs");
-    } else {
-      setActiveTab("discover");
-    }
-  }, [searchParams]);
+  // Sync tab from URL changes (e.g. browser back/forward) without calling setState in effect
+  if (activeTab !== tabFromUrl) {
+    setActiveTab(tabFromUrl);
+  }
 
   const handleTabChange = useCallback(
     (tab: TabValue) => {

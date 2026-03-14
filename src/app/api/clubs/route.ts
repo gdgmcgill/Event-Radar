@@ -96,11 +96,11 @@ export async function POST(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  const currentRoles = (profile?.roles as string[]) || ["user"];
+  const currentRoles = (profile?.roles as ("user" | "admin" | "club_organizer")[]) || ["user"];
   if (!currentRoles.includes("club_organizer")) {
     await serviceClient
       .from("users")
-      .update({ roles: [...currentRoles, "club_organizer"] })
+      .update({ roles: [...currentRoles, "club_organizer"] as ("user" | "admin" | "club_organizer")[] })
       .eq("id", user.id);
   }
 
