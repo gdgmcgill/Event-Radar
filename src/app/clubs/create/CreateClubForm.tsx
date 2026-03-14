@@ -77,21 +77,6 @@ export function CreateClubForm() {
     return Object.keys(errs).length === 0;
   };
 
-  const uploadLogo = async (): Promise<string | null> => {
-    if (!logoFile) return null;
-    const formData = new FormData();
-    formData.append("file", logoFile);
-    // For new clubs, we pass a temp identifier; the API should handle it
-    formData.append("clubId", "new");
-    const res = await fetch("/api/clubs/logo", { method: "POST", body: formData });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || "Logo upload failed");
-    }
-    const data = await res.json();
-    return data.url as string;
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -99,13 +84,7 @@ export function CreateClubForm() {
 
     setSubmitting(true);
     try {
-      // Step 1: Upload logo if provided
-      let finalLogoUrl: string | null = null;
-      if (logoFile) {
-        finalLogoUrl = await uploadLogo();
-      }
-
-      // Step 2: Create club
+      // Step 1: Create club first (without logo)
       const cleanHandle = instagramHandle.trim().replace(/^@/, "") || null;
       const res = await fetch("/api/clubs", {
         method: "POST",
@@ -114,7 +93,7 @@ export function CreateClubForm() {
           name: name.trim(),
           description: description.trim(),
           category,
-          logo_url: finalLogoUrl,
+          logo_url: null,
           instagram_handle: cleanHandle,
         }),
       });
@@ -122,6 +101,25 @@ export function CreateClubForm() {
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to create club");
+      }
+
+      const club = await res.json();
+
+      // Step 2: Upload logo now that club exists and user is owner
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append("file", logoFile);
+        formData.append("clubId", club.id);
+        const logoRes = await fetch("/api/clubs/logo", { method: "POST", body: formData });
+        if (logoRes.ok) {
+          const logoData = await logoRes.json();
+          // Update club with logo URL
+          await fetch(`/api/clubs/${club.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ logo_url: logoData.url }),
+          });
+        }
       }
 
       // Step 3: Update auth store
