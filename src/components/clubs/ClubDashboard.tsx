@@ -19,6 +19,11 @@ import {
   Search,
   Plus,
   Users2,
+  Shield,
+  Crown,
+  CheckCircle2,
+  Clock,
+  XCircle,
 } from "lucide-react";
 import type { Club } from "@/types";
 
@@ -94,11 +99,11 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-secondary">
       {/* Side Navigation */}
-      <aside className="w-64 border-r border-border bg-card flex flex-col shrink-0">
+      <aside className="w-64 border-r border-border bg-card/80 backdrop-blur-sm flex flex-col shrink-0">
         {/* Brand */}
         <div className="p-6 flex items-center gap-3 border-b border-border">
           <div
-            className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground cursor-pointer"
+            className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground cursor-pointer shadow-md ring-2 ring-primary/20 transition-transform duration-200 hover:scale-105"
             onClick={() => router.push("/")}
           >
             <Rocket className="h-5 w-5" />
@@ -110,7 +115,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
         </div>
 
         {/* Nav Items */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-1">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -118,13 +123,13 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left font-medium transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left font-medium transition-colors duration-200 ${
                   isActive
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/10"
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/10 border-l-4 border-primary-foreground/30"
                     : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
                 }`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className={`h-5 w-5 ${isActive ? "drop-shadow-sm" : ""}`} />
                 <span>{item.label}</span>
               </button>
             );
@@ -133,17 +138,25 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
 
         {/* User Card */}
         <div className="p-4 border-t border-border">
-          <div className="flex items-center gap-3 p-2 rounded-xl bg-secondary">
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground overflow-hidden shrink-0">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/80">
+            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground overflow-hidden shrink-0 ring-1 ring-border">
               {user?.name
                 ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
                 : user?.email?.[0]?.toUpperCase() ?? "U"}
             </div>
             <div className="flex flex-col min-w-0">
               <p className="text-sm font-semibold text-foreground truncate">{user?.name || user?.email || "User"}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {currentEntry?.role === "owner" ? "President" : "Organizer"}
-              </p>
+              <span className={`inline-flex items-center gap-1 text-xs font-medium w-fit px-2 py-0.5 rounded-full ${
+                currentEntry?.role === "owner"
+                  ? "bg-primary/10 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {currentEntry?.role === "owner" ? (
+                  <><Crown className="h-3 w-3" /> President</>
+                ) : (
+                  <><Shield className="h-3 w-3" /> Organizer</>
+                )}
+              </span>
             </div>
           </div>
         </div>
@@ -155,13 +168,31 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
         <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-4">
             <Users2 className="h-6 w-6 text-primary" />
-            <h2 className="text-xl font-bold tracking-tight text-foreground">{club.name}</h2>
+            <h2 className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              {club.name}
+            </h2>
+            {/* Status Badge */}
+            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${
+              club.status === "approved"
+                ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                : club.status === "rejected"
+                ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+            }`}>
+              {club.status === "approved" ? (
+                <><CheckCircle2 className="h-3.5 w-3.5" /> Approved</>
+              ) : club.status === "rejected" ? (
+                <><XCircle className="h-3.5 w-3.5" /> Rejected</>
+              ) : (
+                <><Clock className="h-3.5 w-3.5" /> Pending</>
+              )}
+            </span>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <input
-                className="pl-10 pr-4 py-2 rounded-xl bg-secondary border border-border text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground placeholder:text-muted-foreground"
+                className="pl-10 pr-4 py-2 rounded-xl bg-secondary border border-border text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow duration-200 text-foreground placeholder:text-muted-foreground"
                 placeholder="Search events..."
                 type="text"
                 value={searchQuery}
@@ -170,7 +201,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
             </div>
             <button
               onClick={() => setActiveTab("events")}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-primary/20"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all duration-200 active:scale-95 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
             >
               <Plus className="h-4 w-4" />
               <span>Create Event</span>
