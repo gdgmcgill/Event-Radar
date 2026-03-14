@@ -334,7 +334,7 @@ export function ClubSettingsTab({ club, onUpdate }: ClubSettingsTabProps) {
           <button
             type="submit"
             disabled={isDisabled}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-600/20 transition-all hover:bg-red-700 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
           >
             {saving ? (
               <>

@@ -154,7 +154,7 @@ export function CreateClubForm() {
         </p>
         <Link
           href="/clubs"
-          className="inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-2xl font-bold text-sm hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+          className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
         >
           Back to Clubs
         </Link>

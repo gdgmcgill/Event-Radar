@@ -84,8 +84,8 @@ export function ClubAnalyticsTab({ clubId }: ClubAnalyticsTabProps) {
     dropOffRate === null
       ? "text-muted-foreground"
       : dropOffRate > 10
-        ? "text-amber-600"
-        : "text-emerald-600";
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-emerald-600 dark:text-emerald-400";
 
   return (
     <div className="space-y-6">
@@ -213,7 +213,7 @@ export function ClubAnalyticsTab({ clubId }: ClubAnalyticsTabProps) {
 
       {/* Events Performance Table */}
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b">
+        <div className="px-6 py-4 border-b border-border">
           <h4 className="text-lg font-bold text-foreground">
             Event Performance
           </h4>
@@ -221,7 +221,7 @@ export function ClubAnalyticsTab({ clubId }: ClubAnalyticsTabProps) {
         {data.events.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b">
+              <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="px-6 py-4 text-left font-bold text-muted-foreground uppercase tracking-wider text-xs">
                     Event
@@ -290,9 +290,9 @@ export function ClubAnalyticsTab({ clubId }: ClubAnalyticsTabProps) {
                       <td
                         className={`px-6 py-4 text-right font-medium ${
                           churnNum > 10
-                            ? "text-amber-600"
+                            ? "text-amber-600 dark:text-amber-400"
                             : churnNum > 0
-                              ? "text-emerald-600"
+                              ? "text-emerald-600 dark:text-emerald-400"
                               : "text-muted-foreground"
                         }`}
                       >

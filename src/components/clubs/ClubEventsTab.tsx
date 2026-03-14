@@ -118,7 +118,7 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
         <h4 className="text-lg font-bold text-foreground">All Events</h4>
         <button
           onClick={() => setCreateOpen(true)}
-          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all duration-200 active:scale-95 shadow-lg shadow-red-600/20 hover:shadow-red-600/30"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all duration-200 active:scale-95 shadow-lg shadow-primary/20 hover:shadow-primary/30"
         >
           <Plus className="h-4 w-4" />
           <span>Create Event</span>
@@ -135,7 +135,7 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
           </p>
           <Button
             onClick={() => setCreateOpen(true)}
-            className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+            className="mt-4"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Event
@@ -143,6 +143,7 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
         </div>
       ) : (
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-muted/50 border-b border-border">
               <tr>
@@ -185,7 +186,7 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
                     {/* Event Name */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-red-600/10 dark:bg-red-600/20 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
                           <Calendar className="h-5 w-5" />
                         </div>
                         <span className="font-semibold text-foreground">
@@ -241,25 +242,25 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
                     {/* Actions */}
                     <td className="px-6 py-4 text-right space-x-1">
                       {displayStatus === "past" ? (
-                        <button className="p-1.5 hover:text-red-600 transition-colors duration-150 text-muted-foreground rounded hover:bg-red-600/5 dark:hover:bg-red-600/10">
+                        <button className="p-1.5 hover:text-primary transition-colors duration-150 text-muted-foreground rounded hover:bg-primary/5 dark:hover:bg-primary/10">
                           <Eye className="h-4 w-4" />
                         </button>
                       ) : (
                         <button
-                          className="p-1.5 hover:text-red-600 transition-colors duration-150 text-muted-foreground rounded hover:bg-red-600/5 dark:hover:bg-red-600/10"
+                          className="p-1.5 hover:text-primary transition-colors duration-150 text-muted-foreground rounded hover:bg-primary/5 dark:hover:bg-primary/10"
                           onClick={() => setEditingEvent(event)}
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                       )}
                       <button
-                        className="p-1.5 hover:text-red-600 transition-colors duration-150 text-muted-foreground rounded hover:bg-red-600/5 dark:hover:bg-red-600/10"
+                        className="p-1.5 hover:text-primary transition-colors duration-150 text-muted-foreground rounded hover:bg-primary/5 dark:hover:bg-primary/10"
                         onClick={() => setDuplicatingEvent(event)}
                       >
                         <Copy className="h-4 w-4" />
                       </button>
                       <button
-                        className="p-1.5 hover:text-red-600 transition-colors duration-150 text-muted-foreground rounded hover:bg-red-600/5 dark:hover:bg-red-600/10 disabled:opacity-40"
+                        className="p-1.5 hover:text-primary transition-colors duration-150 text-muted-foreground rounded hover:bg-primary/5 dark:hover:bg-primary/10 disabled:opacity-40"
                         onClick={() => handleDelete(event.id)}
                         disabled={deletingId === event.id}
                       >
@@ -271,6 +272,7 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

@@ -175,7 +175,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
             <div className="flex items-center gap-4">
               <Link
                 href="#clubs-feed"
-                className="px-8 md:px-10 py-4 md:py-5 bg-primary text-white text-base md:text-lg font-bold rounded-2xl hover:brightness-110 transition-all shadow-lg shadow-primary/20 flex items-center gap-3"
+                className="px-8 md:px-10 py-4 md:py-5 bg-primary text-primary-foreground text-base md:text-lg font-bold rounded-2xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-3"
               >
                 Explore Clubs
               </Link>
@@ -390,7 +390,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
           </p>
           <Link
             href="/clubs/create"
-            className="inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-2xl font-bold text-sm hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
           >
             Register Your Club
           </Link>

@@ -92,7 +92,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
       {/* Header Section */}
-      <Card className="overflow-hidden border-none shadow-lg">
+      <Card className="overflow-hidden border border-border shadow-lg">
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row gap-6 items-start">
             {/* Club Logo */}
@@ -115,7 +115,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
             {/* Club Info */}
             <div className="flex-1 space-y-3">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl sm:text-3xl font-bold text-[#561c24]">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                   {club.name}
                 </h1>
                 {club.category && (
@@ -144,7 +144,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
                     href={`https://instagram.com/${club.instagram_handle.replace("@", "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#ED1B2F] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     <Instagram className="h-4 w-4" />
                     <span>{club.instagram_handle}</span>
@@ -159,7 +159,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
 
       {/* Upcoming Events */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-[#561c24]">
+        <h2 className="text-xl font-semibold text-foreground">
           Upcoming Events
         </h2>
         {upcomingEvents.length > 0 ? (
@@ -180,7 +180,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
       {/* Past Events - only show if there are any */}
       {pastEvents.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-[#561c24]">
+          <h2 className="text-xl font-semibold text-foreground">
             Past Events
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

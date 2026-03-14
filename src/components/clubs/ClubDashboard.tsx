@@ -76,7 +76,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
         </aside>
         <main className="flex-1 p-8 space-y-6">
           <Skeleton className="h-10 w-64" />
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <Skeleton className="h-28 rounded-xl" />
             <Skeleton className="h-28 rounded-xl" />
             <Skeleton className="h-28 rounded-xl" />
@@ -97,9 +97,9 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
   const visibleNavItems = navItems.filter((item) => !item.ownerOnly || isOwner);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-secondary">
+    <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-secondary">
       {/* Side Navigation */}
-      <aside className="w-64 border-r border-border bg-card/80 backdrop-blur-sm flex flex-col shrink-0">
+      <aside className="hidden md:flex w-64 border-r border-border bg-card/80 backdrop-blur-sm flex-col shrink-0">
         {/* Brand */}
         <div className="p-6 flex items-center gap-3 border-b border-border">
           <div
@@ -162,10 +162,32 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
         </div>
       </aside>
 
+      {/* Mobile Navigation */}
+      <nav className="md:hidden flex items-center gap-1 px-4 py-2 border-b border-border bg-card/80 backdrop-blur-sm overflow-x-auto shrink-0">
+        {visibleNavItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-y-auto">
         {/* Header */}
-        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10 shrink-0">
+        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-4">
             <Users2 className="h-6 w-6 text-primary" />
             <h2 className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -210,7 +232,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
         </header>
 
         {/* Content Area */}
-        <div className="p-8">
+        <div className="p-4 md:p-8">
           {activeTab === "overview" && (
             <ClubOverviewTab
               club={club}

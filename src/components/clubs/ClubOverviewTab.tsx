@@ -234,6 +234,7 @@ export function ClubOverviewTab({
         <section className="lg:col-span-2 space-y-4">
           <h4 className="text-lg font-bold text-foreground">Recent Events</h4>
           <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
@@ -295,6 +296,7 @@ export function ClubOverviewTab({
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </section>
 
