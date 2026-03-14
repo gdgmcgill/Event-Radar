@@ -1,8 +1,11 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Building2, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { ClubSearch } from "@/components/clubs/ClubSearch";
+import { ClubsPageTabs } from "@/components/clubs/ClubsPageTabs";
+import { ClubsHeroButton } from "@/components/clubs/ClubsHeroButton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -176,17 +179,14 @@ export default async function ClubsPage({ searchParams }: PageProps) {
               >
                 Explore Clubs
               </Link>
-              <Link
-                href="/clubs/create"
-                className="px-6 md:px-8 py-4 md:py-5 bg-white/20 dark:bg-white/10 backdrop-blur-xl text-white font-bold border border-white/30 dark:border-white/15 rounded-2xl hover:bg-white/30 dark:hover:bg-white/20 transition-all flex items-center gap-3 shadow-lg"
-              >
-                Start a Club
-              </Link>
+              <ClubsHeroButton />
             </div>
           </div>
         </section>
       )}
 
+      <Suspense>
+      <ClubsPageTabs>
       {/* ── Search & Category Filters (below hero) ──────────────── */}
       <div id="clubs-feed" className="px-6 lg:px-10 pt-6 lg:pt-8">
         <ClubSearch
@@ -396,6 +396,8 @@ export default async function ClubsPage({ searchParams }: PageProps) {
           </Link>
         </div>
       </main>
+      </ClubsPageTabs>
+      </Suspense>
     </div>
   );
 }

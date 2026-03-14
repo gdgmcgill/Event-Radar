@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Building2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { MyClubsList } from "@/components/clubs/MyClubsList";
 
 export default async function MyClubsPage() {
   const supabase = await createClient();
@@ -42,11 +41,6 @@ export default async function MyClubsPage() {
     );
   }
 
-  // 2+ clubs: render the client list
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold">My Clubs</h1>
-      <MyClubsList />
-    </div>
-  );
+  // 2+ clubs: redirect to the clubs page with the My Clubs tab active
+  redirect("/clubs?tab=my-clubs");
 }
