@@ -186,6 +186,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
           rsvp_going: eventRsvps.filter((r) => r.status === "going").length,
           rsvp_interested: eventRsvps.filter((r) => r.status === "interested")
             .length,
+          rsvp_cancelled: eventRsvps.filter((r) => r.status === "cancelled")
+            .length,
         };
       }
     );

@@ -86,7 +86,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .select("id")
       .eq("club_id", clubId)
       .eq("invitee_email", normalizedEmail)
-      .is("accepted_at", null)
+      .eq("status", "pending")
       .maybeSingle();
 
     if (existingInvite) {

@@ -99,9 +99,9 @@ export interface ClubInvitation {
   inviter_id: string;
   invitee_email: string;
   token: string;
-  expires_at: string;
-  accepted_at: string | null;
+  status: "pending" | "accepted" | "expired" | "revoked";
   created_at: string;
+  expires_at: string;
 }
 
 export interface ClubFollower {
@@ -276,6 +276,7 @@ export interface EventAnalytics {
   unique_viewers: number;
   rsvp_going: number;
   rsvp_interested: number;
+  rsvp_cancelled: number;
 }
 
 export interface ClubAnalytics {
