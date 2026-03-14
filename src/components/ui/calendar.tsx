@@ -17,16 +17,16 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
-        month_caption: "flex justify-center pt-1 relative items-center h-7",
-        caption_label: "text-sm font-medium",
-        nav: "absolute inset-0 flex items-center justify-between pointer-events-none",
+        month_caption: "grid grid-cols-[1.75rem_1fr_1.75rem] items-center gap-1 pt-1 h-7",
+        caption_label: "col-start-2 justify-self-center text-sm font-medium",
+        nav: "contents",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 pointer-events-auto"
+          "col-start-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
         ),
         button_next: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 pointer-events-auto"
+          "col-start-3 justify-self-end h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
         ),
         month_grid: "w-full border-collapse space-y-1",
         weekdays: "flex",

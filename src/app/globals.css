@@ -76,3 +76,96 @@
     @apply bg-background text-foreground;
   }
 }
+
+.react-datepicker {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  font-family: inherit;
+  overflow: hidden;
+}
+
+.react-datepicker-popper {
+  z-index: 50;
+}
+
+.react-datepicker__header {
+  border-bottom: 1px solid hsl(var(--border));
+  background-color: hsl(var(--popover));
+  padding-top: 0.75rem;
+}
+
+.react-datepicker__current-month {
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.react-datepicker__navigation {
+  top: 0.625rem;
+  height: 1.75rem;
+  width: 1.75rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 9999px;
+  background-color: transparent;
+}
+
+.react-datepicker__navigation:hover {
+  background-color: hsl(var(--accent));
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: hsl(var(--muted-foreground));
+  border-width: 2px 2px 0 0;
+  height: 0.45rem;
+  width: 0.45rem;
+  top: 0.55rem;
+}
+
+.react-datepicker__day-names,
+.react-datepicker__week {
+  display: flex;
+  justify-content: center;
+}
+
+.react-datepicker__day-name,
+.react-datepicker__day {
+  width: 2.25rem;
+  line-height: 2.25rem;
+  margin: 0.125rem;
+}
+
+.react-datepicker__day-name {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
+}
+
+.react-datepicker__day {
+  border-radius: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+.react-datepicker__day:hover {
+  background-color: hsl(var(--accent));
+}
+
+.react-datepicker__day--today {
+  background-color: hsl(var(--accent));
+  font-weight: 600;
+}
+
+.react-datepicker__day--keyboard-selected,
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.react-datepicker__day--disabled,
+.react-datepicker__day--outside-month {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.5;
+}

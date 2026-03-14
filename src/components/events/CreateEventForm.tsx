@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { format } from "date-fns";
+import DatePicker from "react-datepicker";
 import { classifyTags } from "@/lib/classifier";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import { cn } from "@/lib/utils";
@@ -79,6 +78,36 @@ interface CreateEventFormProps {
   mode?: "create" | "edit" | "duplicate";
 }
 
+interface DatePickerTriggerProps {
+  value?: string;
+  onClick?: () => void;
+  placeholder: string;
+  hasError?: boolean;
+}
+
+const DatePickerTrigger = forwardRef<HTMLButtonElement, DatePickerTriggerProps>(
+  ({ value, onClick, placeholder, hasError }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex min-h-[1.5rem] w-full items-center gap-2 rounded-md px-1 py-0 text-left text-sm font-medium leading-none text-slate-800 dark:text-slate-100 hover:text-primary transition-colors outline-none cursor-pointer whitespace-nowrap",
+        !value && "text-slate-400",
+        hasError && "text-destructive"
+      )}
+    >
+      <Calendar className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{value || placeholder}</span>
+    </button>
+  )
+);
+DatePickerTrigger.displayName = "DatePickerTrigger";
+
+function getTodayAtMidnight() {
+  return new Date(new Date().setHours(0, 0, 0, 0));
+}
+
 export function CreateEventForm({
   clubId,
   onSuccess,
@@ -110,8 +139,6 @@ export function CreateEventForm({
     tags: initialData?.tags ?? [],
     imageFile: null,
   });
-  const [startDateOpen, setStartDateOpen] = useState(false);
-  const [endDateOpen, setEndDateOpen] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -497,41 +524,24 @@ export function CreateEventForm({
               {/* ── Start date ── */}
               <div className="p-3 space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Start</p>
-                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100 hover:text-primary transition-colors outline-none",
-                        !formData.startDate && "text-slate-400",
-                        errors.startDate && "text-destructive"
-                      )}
-                    >
-                      <Calendar className="h-3.5 w-3.5 shrink-0" />
-                      {formData.startDate
-                        ? format(new Date(formData.startDate + "T00:00:00"), "MMM d, yyyy")
-                        : "Pick date"}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-auto p-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={formData.startDate ? new Date(formData.startDate + "T00:00:00") : undefined}
-                      onSelect={(day) => {
-                        const val = day ? format(day, "yyyy-MM-dd") : "";
-                        setFormData((prev) => ({
-                          ...prev,
-                          startDate: val,
-                          endDate: prev.endDate && prev.endDate < val ? val : prev.endDate,
-                        }));
-                        if (errors.startDate) setErrors((prev) => ({ ...prev, startDate: undefined }));
-                        setStartDateOpen(false);
-                      }}
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                  selected={formData.startDate ? new Date(formData.startDate + "T00:00:00") : null}
+                  onChange={(day: Date | null) => {
+                    const val = day ? format(day, "yyyy-MM-dd") : "";
+                    setFormData((prev) => ({
+                      ...prev,
+                      startDate: val,
+                      endDate: prev.endDate && prev.endDate < val ? val : prev.endDate,
+                    }));
+                    if (errors.startDate) setErrors((prev) => ({ ...prev, startDate: undefined }));
+                  }}
+                  minDate={getTodayAtMidnight()}
+                  dateFormat="MMM d, yyyy"
+                  popperPlacement="bottom-start"
+                  showPopperArrow={false}
+                  wrapperClassName="block w-full"
+                  customInput={<DatePickerTrigger placeholder="(set date)" hasError={!!errors.startDate} />}
+                />
                 {errors.startDate && <p className="text-xs text-destructive">{errors.startDate}</p>}
               </div>
 
@@ -553,42 +563,20 @@ export function CreateEventForm({
               {/* ── End date ── */}
               <div className="p-3 space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">End</p>
-                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100 hover:text-primary transition-colors outline-none",
-                        !formData.endDate && "text-slate-400",
-                        errors.endDate && "text-destructive"
-                      )}
-                    >
-                      <Calendar className="h-3.5 w-3.5 shrink-0" />
-                      {formData.endDate
-                        ? format(new Date(formData.endDate + "T00:00:00"), "MMM d, yyyy")
-                        : "Pick date"}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-auto p-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={formData.endDate ? new Date(formData.endDate + "T00:00:00") : undefined}
-                      onSelect={(day) => {
-                        const val = day ? format(day, "yyyy-MM-dd") : "";
-                        setFormData((prev) => ({ ...prev, endDate: val }));
-                        if (errors.endDate) setErrors((prev) => ({ ...prev, endDate: undefined }));
-                        setEndDateOpen(false);
-                      }}
-                      disabled={(date) => {
-                        const today = new Date(new Date().setHours(0, 0, 0, 0));
-                        if (date < today) return true;
-                        if (formData.startDate) return date < new Date(formData.startDate + "T00:00:00");
-                        return false;
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                  selected={formData.endDate ? new Date(formData.endDate + "T00:00:00") : null}
+                  onChange={(day: Date | null) => {
+                    const val = day ? format(day, "yyyy-MM-dd") : "";
+                    setFormData((prev) => ({ ...prev, endDate: val }));
+                    if (errors.endDate) setErrors((prev) => ({ ...prev, endDate: undefined }));
+                  }}
+                  minDate={formData.startDate ? new Date(formData.startDate + "T00:00:00") : getTodayAtMidnight()}
+                  dateFormat="MMM d, yyyy"
+                  popperPlacement="bottom-start"
+                  showPopperArrow={false}
+                  wrapperClassName="block w-full"
+                  customInput={<DatePickerTrigger placeholder="(set date)" hasError={!!errors.endDate} />}
+                />
                 {errors.endDate && <p className="text-xs text-destructive">{errors.endDate}</p>}
               </div>
 
