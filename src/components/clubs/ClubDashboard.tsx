@@ -89,7 +89,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
 
   const navItems: { id: DashboardTab; label: string; icon: React.ComponentType<{ className?: string }>; ownerOnly?: boolean }[] = [
     { id: "overview", label: "Events", icon: Calendar },
-    { id: "members", label: "Members", icon: Users, ownerOnly: true },
+    { id: "members", label: "Members", icon: Users },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "settings", label: "Settings", icon: Settings, ownerOnly: true },
   ];
@@ -230,7 +230,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
           {isOwner && activeTab === "settings" && (
             <ClubSettingsTab club={club} onUpdate={handleClubUpdate} />
           )}
-          {isOwner && activeTab === "members" && (
+          {activeTab === "members" && (
             <ClubMembersTab clubId={clubId} clubName={club.name} isOwner={isOwner} />
           )}
         </div>
