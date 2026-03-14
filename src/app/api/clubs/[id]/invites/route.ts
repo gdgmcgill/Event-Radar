@@ -7,6 +7,63 @@ interface RouteParams {
 }
 
 /**
+ * GET /api/clubs/[id]/invites
+ * List pending invitations for a club. Owner-only.
+ */
+export async function GET(
+  _request: NextRequest,
+  { params }: RouteParams
+) {
+  try {
+    const { id: clubId } = await params;
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify caller is owner
+    const { data: callerMembership } = await supabase
+      .from("club_members")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("club_id", clubId)
+      .eq("role", "owner")
+      .maybeSingle();
+
+    if (!callerMembership) {
+      return NextResponse.json(
+        { error: "Only the club owner can view invitations" },
+        { status: 403 }
+      );
+    }
+
+    const { data: invites, error } = await supabase
+      .from("club_invitations")
+      .select("id, invitee_email, status, created_at, expires_at")
+      .eq("club_id", clubId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return NextResponse.json(
+        { error: "Failed to fetch invitations" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(invites);
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to fetch invitations" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * POST /api/clubs/[id]/invites
  * Create an invitation for a McGill email. Owner-only.
  */
