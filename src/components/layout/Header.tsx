@@ -135,7 +135,7 @@ export function Header() {
 
             <Link
               href="/"
-              className="flex items-center gap-3 transition-opacity hover:opacity-90"
+              className="flex items-center gap-3 transition-opacity hover:opacity-90 cursor-pointer"
             >
               <Image
                 src="/uni-verse_logo.png"
@@ -163,7 +163,27 @@ export function Header() {
               <>
                 <NotificationBell />
                 <ThemeToggle />
-                <SignOutButton compact title="Sign out" />
+                {pathname !== "/profile" && (
+                  <Link
+                    href="/profile"
+                    title="My Profile"
+                    className="flex items-center justify-center overflow-hidden rounded-full bg-white shadow-sm ring-2 ring-slate-300 transition-all duration-200 hover:ring-primary/50 dark:bg-slate-950 dark:ring-slate-700"
+                  >
+                    {user?.avatar_url ? (
+                      <Image
+                        src={user.avatar_url}
+                        alt={user.name || "Profile"}
+                        width={36}
+                        height={36}
+                        className="w-9 h-9 rounded-full bg-white object-cover dark:bg-slate-950"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+                        {(user?.name || "U").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </Link>
+                )}
               </>
             ) : (
               <>
@@ -230,10 +250,10 @@ export function Header() {
                           alt={user.name || "User"}
                           width={36}
                           height={36}
-                          className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/10"
+                          className="w-9 h-9 rounded-full bg-white object-cover ring-2 ring-slate-300 dark:bg-slate-950 dark:ring-slate-700"
                         />
                       ) : (
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm ring-2 ring-primary/10">
+                        <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm ring-2 ring-slate-300 dark:ring-slate-700">
                           {(user.name || "U").charAt(0).toUpperCase()}
                         </div>
                       )}

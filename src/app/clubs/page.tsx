@@ -50,18 +50,18 @@ const CARD_GRADIENTS = [
 
 // Badge color mapping by category
 const CATEGORY_BADGE_COLORS: Record<string, string> = {
-  Engineering: "bg-blue-100 text-blue-700",
-  "Arts & Design": "bg-purple-100 text-purple-700",
-  Arts: "bg-purple-100 text-purple-700",
-  Music: "bg-green-100 text-green-700",
-  Sports: "bg-emerald-100 text-emerald-700",
-  "Social Impact": "bg-red-100 text-red-700",
-  Academic: "bg-red-100 text-red-700",
-  Gaming: "bg-yellow-100 text-yellow-700",
+  Engineering: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  "Arts & Design": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  Arts: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  Music: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  Sports: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  "Social Impact": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  Academic: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  Gaming: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
 };
 
 function getCategoryBadgeColor(category: string): string {
-  return CATEGORY_BADGE_COLORS[category] ?? "bg-slate-100 text-slate-700";
+  return CATEGORY_BADGE_COLORS[category] ?? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
 }
 
 interface PageProps {
@@ -160,7 +160,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
           <div className="flex flex-col gap-6">
             {/* Category Nav */}
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
                 Categories
               </h3>
               <nav className="flex flex-col gap-1">
@@ -178,7 +178,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
                       className={
                         isActive
                           ? "flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-white font-medium"
-                          : "flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-600/10 text-slate-700 transition-colors"
+                          : "flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-600/10 text-slate-700 dark:text-slate-300 transition-colors"
                       }
                     >
                       <Icon className="h-5 w-5" />
@@ -195,8 +195,8 @@ export default async function ClubsPage({ searchParams }: PageProps) {
                 <PlusCircle className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-bold text-sm">Lead a Community</h4>
-                <p className="text-xs text-slate-500 mt-1">
+                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">Lead a Community</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Starting a new club is easy. We&apos;ll provide the tools.
                 </p>
               </div>
@@ -215,16 +215,16 @@ export default async function ClubsPage({ searchParams }: PageProps) {
           {/* Header & My Clubs Button */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="flex flex-col gap-2">
-              <h1 className="text-4xl font-black tracking-tight text-slate-900">
+              <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100">
                 Clubs Directory
               </h1>
-              <p className="text-slate-500 text-lg max-w-md">
+              <p className="text-slate-500 dark:text-slate-400 text-lg max-w-md">
                 Find your community and make the most of your student life.
               </p>
             </div>
             <Link
               href="/my-clubs"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-200 shadow-sm text-sm font-bold hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-sm font-bold text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               <UserCheck className="h-4 w-4" />
               My Clubs
@@ -241,11 +241,11 @@ export default async function ClubsPage({ searchParams }: PageProps) {
           {/* Clubs Grid */}
           {!clubs || clubs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Building2 className="h-12 w-12 text-slate-300 mb-4" />
-              <h2 className="text-lg font-semibold text-slate-900">
+              <Building2 className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 No clubs found
               </h2>
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 {q || category
                   ? "Try adjusting your search or filters."
                   : "No clubs have been approved yet."}
@@ -260,12 +260,12 @@ export default async function ClubsPage({ searchParams }: PageProps) {
 
                 return (
                   <Link key={club.id} href={`/clubs/${club.id}`}>
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden group hover:border-red-600/30 hover:shadow-xl transition-all duration-300 h-full flex flex-col">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden group hover:border-red-600/30 hover:shadow-xl transition-all duration-300 h-full flex flex-col">
                       {/* Gradient Header with Logo */}
                       <div
                         className={`h-32 bg-gradient-to-r ${gradient} relative`}
                       >
-                        <div className="absolute -bottom-6 left-6 h-14 w-14 rounded-xl bg-white border-2 border-white shadow-md flex items-center justify-center overflow-hidden">
+                        <div className="absolute -bottom-6 left-6 h-14 w-14 rounded-xl bg-white dark:bg-slate-700 border-2 border-white dark:border-slate-600 shadow-md flex items-center justify-center overflow-hidden">
                           {club.logo_url ? (
                             <Image
                               src={club.logo_url}
@@ -284,7 +284,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
                       <div className="pt-10 pb-6 px-6 flex flex-col gap-4 flex-1">
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <h3 className="font-black text-lg text-slate-900 group-hover:text-red-600 transition-colors truncate">
+                            <h3 className="font-black text-lg text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors truncate">
                               {club.name}
                             </h3>
                             {club.category && (
@@ -296,7 +296,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
                             )}
                           </div>
                           {club.description && (
-                            <p className="text-sm text-slate-500 line-clamp-2">
+                            <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
                               {club.description}
                             </p>
                           )}
@@ -328,12 +328,12 @@ export default async function ClubsPage({ searchParams }: PageProps) {
               {currentPage > 1 ? (
                 <Link
                   href={buildPageUrl(currentPage - 1)}
-                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-red-600/5 transition-colors"
+                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-red-600/5 transition-colors"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Link>
               ) : (
-                <span className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 text-slate-300 cursor-not-allowed">
+                <span className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600 cursor-not-allowed">
                   <ChevronLeft className="h-5 w-5" />
                 </span>
               )}
@@ -363,12 +363,12 @@ export default async function ClubsPage({ searchParams }: PageProps) {
               {currentPage < totalPages ? (
                 <Link
                   href={buildPageUrl(currentPage + 1)}
-                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-red-600/5 transition-colors"
+                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-red-600/5 transition-colors"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Link>
               ) : (
-                <span className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 text-slate-300 cursor-not-allowed">
+                <span className="h-10 w-10 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600 cursor-not-allowed">
                   <ChevronRight className="h-5 w-5" />
                 </span>
               )}

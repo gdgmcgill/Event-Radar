@@ -255,7 +255,7 @@ export default function CalendarPage() {
 
   return (
     <ErrorBoundary fallbackMessage="We couldn't load the calendar right now.">
-      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-background">
+      <>
         <main className="flex flex-1 flex-col px-4 md:px-10 lg:px-20 py-8">
           {/* Page Header & Sync */}
           <div className="flex flex-wrap justify-between items-end gap-6 mb-8">
@@ -606,7 +606,7 @@ export default function CalendarPage() {
           event={selectedEvent}
           trackingSource="calendar"
         />
-      </div>
+      </>
     </ErrorBoundary>
   );
 }

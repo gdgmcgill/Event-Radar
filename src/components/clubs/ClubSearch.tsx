@@ -57,7 +57,7 @@ export function ClubSearch({
             placeholder="Search for clubs, tags, or interests..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full h-12 bg-white border border-slate-200 rounded-xl pl-12 pr-10 text-base focus:ring-2 focus:ring-red-600/20 focus:border-red-600/30 transition-all shadow-sm placeholder:text-slate-400"
+            className="w-full h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-12 pr-10 text-base text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-red-600/20 focus:border-red-600/30 transition-all shadow-sm placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           {query && (
             <button
@@ -66,14 +66,14 @@ export function ClubSearch({
                 setQuery("");
                 updateParams("q", "");
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             >
               <X className="h-4 w-4" />
             </button>
           )}
         </form>
         <div className="flex gap-2">
-          <button className="h-12 px-4 rounded-xl bg-white border border-slate-200 flex items-center gap-2 text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
+          <button className="h-12 px-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
             <ArrowUpDown className="h-4 w-4" />
             Sort
           </button>
@@ -89,7 +89,7 @@ export function ClubSearch({
               "px-3 py-1.5 rounded-full text-xs font-bold border cursor-pointer transition-colors",
               !initialCategory
                 ? "bg-red-600/10 text-red-600 border-red-600/20"
-                : "bg-slate-100 text-slate-600 border-transparent hover:bg-red-600/5"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-transparent hover:bg-red-600/5"
             )}
           >
             All Categories
@@ -102,7 +102,7 @@ export function ClubSearch({
                 "px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-colors",
                 initialCategory === cat
                   ? "bg-red-600/10 text-red-600 border-red-600/20"
-                  : "bg-slate-100 text-slate-600 border-transparent hover:bg-red-600/5"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-transparent hover:bg-red-600/5"
               )}
             >
               {cat}

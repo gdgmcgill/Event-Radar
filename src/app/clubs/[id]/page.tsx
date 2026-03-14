@@ -115,7 +115,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
             {/* Club Info */}
             <div className="flex-1 space-y-3">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl sm:text-3xl font-bold text-[#561c24]">
+                <h1 className="text-2xl sm:text-3xl font-bold text-[#561c24] dark:text-red-400">
                   {club.name}
                 </h1>
                 {club.category && (
@@ -159,7 +159,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
 
       {/* Upcoming Events */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-[#561c24]">
+        <h2 className="text-xl font-semibold text-[#561c24] dark:text-red-400">
           Upcoming Events
         </h2>
         {upcomingEvents.length > 0 ? (
@@ -180,7 +180,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
       {/* Past Events - only show if there are any */}
       {pastEvents.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-[#561c24]">
+          <h2 className="text-xl font-semibold text-[#561c24] dark:text-red-400">
             Past Events
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

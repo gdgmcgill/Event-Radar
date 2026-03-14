@@ -198,9 +198,9 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <>
       {/* Page Header */}
-      <section className="w-full pt-12 pb-8 bg-secondary/20">
+      <section className="w-full pt-12 pb-8">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 text-primary">
@@ -266,6 +266,6 @@ export default function CategoriesPage() {
         event={selectedEvent}
         trackingSource="home"
       />
-    </div>
+    </>
   );
 }

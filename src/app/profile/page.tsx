@@ -112,12 +112,12 @@ export default async function ProfilePage() {
   const subtitle = subtitleParts.join(", ") || null;
 
   return (
-    <div className="min-h-screen bg-[#f8f6f6]">
+    <div className="min-h-screen bg-[#f8f6f6] dark:bg-background">
       <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Sidebar: Profile Info */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           {/* Profile Card */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-red-600/5 flex flex-col items-center text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-red-600/5 dark:border-slate-700 flex flex-col items-center text-center">
             <ProfileHeader
               name={displayData.name}
               email={displayData.email}
@@ -125,14 +125,14 @@ export default async function ProfilePage() {
               userId={displayData.id}
               editable
             />
-            <h1 className="text-2xl font-bold mt-4">{displayData.name ?? displayData.email ?? "User"}</h1>
+            <h1 className="text-2xl font-bold mt-4 dark:text-slate-100">{displayData.name ?? displayData.email ?? "User"}</h1>
             {subtitle && (
               <p className="text-red-600 font-medium">{subtitle}</p>
             )}
             {(displayData as any).pronouns && (
-              <p className="text-sm text-slate-500 mt-0.5">{(displayData as any).pronouns}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{(displayData as any).pronouns}</p>
             )}
-            <div className="flex items-center gap-1 text-slate-500 mt-1">
+            <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 mt-1">
               <MapPin className="h-3.5 w-3.5" />
               <span className="text-sm">Montreal, QC</span>
             </div>
@@ -154,17 +154,17 @@ export default async function ProfilePage() {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white p-4 rounded-xl border border-red-600/5 text-center">
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-red-600/5 dark:border-slate-700 text-center">
               <p className="text-2xl font-bold text-red-600">{eventCount}</p>
-              <p className="text-xs text-slate-500 font-medium">Events</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Events</p>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-red-600/5 text-center">
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-red-600/5 dark:border-slate-700 text-center">
               <p className="text-2xl font-bold text-red-600">{clubCount}</p>
-              <p className="text-xs text-slate-500 font-medium">Clubs</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Clubs</p>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-red-600/5 text-center">
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-red-600/5 dark:border-slate-700 text-center">
               <p className="text-2xl font-bold text-red-600">{friendCount}</p>
-              <p className="text-xs text-slate-500 font-medium">Friends</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Friends</p>
             </div>
           </div>
 
@@ -176,9 +176,9 @@ export default async function ProfilePage() {
 
           {/* Friends Preview */}
           {friends && friends.length > 0 && (
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-red-600/5">
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-red-600/5 dark:border-slate-700">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold flex items-center gap-2">
+                <h3 className="font-bold flex items-center gap-2 dark:text-slate-100">
                   <Users className="h-5 w-5 text-red-600" /> Friends
                 </h3>
                 <Link href="#" className="text-xs text-red-600 font-bold">View All</Link>
@@ -201,7 +201,7 @@ export default async function ProfilePage() {
                   </Link>
                 ))}
                 {friendCount > 3 && (
-                  <div className="aspect-square rounded-lg bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500">
+                  <div className="aspect-square rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">
                     +{friendCount - 3}
                   </div>
                 )}
@@ -215,7 +215,7 @@ export default async function ProfilePage() {
           {/* Upcoming Events Section */}
           <section>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold flex items-center gap-2">
+              <h3 className="text-xl font-bold flex items-center gap-2 dark:text-slate-100">
                 <Calendar className="h-5 w-5 text-red-600" /> Upcoming Events
               </h3>
               <Link href="/my-events" className="text-sm text-red-600 font-bold flex items-center gap-1">
@@ -242,10 +242,10 @@ export default async function ProfilePage() {
                     <Link
                       key={se.id}
                       href={`/events/${event.id}`}
-                      className="bg-white rounded-xl overflow-hidden border border-red-600/5 shadow-sm hover:shadow-md transition-shadow"
+                      className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-red-600/5 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow"
                     >
                       <div
-                        className="h-32 bg-slate-200 bg-cover bg-center"
+                        className="h-32 bg-slate-200 dark:bg-slate-700 bg-cover bg-center"
                         style={event.image_url ? { backgroundImage: `url('${event.image_url}')` } : undefined}
                       />
                       <div className="p-4">
@@ -253,17 +253,17 @@ export default async function ProfilePage() {
                           <Calendar className="h-3 w-3" />
                           {dateLabel} {timeLabel && `\u2022 ${timeLabel}`}
                         </div>
-                        <h4 className="font-bold text-lg mb-1">{event.title}</h4>
+                        <h4 className="font-bold text-lg mb-1 dark:text-slate-100">{event.title}</h4>
                         {event.location && (
-                          <p className="text-slate-500 text-sm mb-4">{event.location}</p>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">{event.location}</p>
                         )}
                         <div className="flex items-center justify-between">
                           <div className="flex -space-x-2">
-                            <div className="h-6 w-6 rounded-full border border-white bg-slate-300" />
-                            <div className="h-6 w-6 rounded-full border border-white bg-slate-400" />
-                            <div className="h-6 w-6 rounded-full border border-white bg-slate-500" />
+                            <div className="h-6 w-6 rounded-full border border-white dark:border-slate-700 bg-slate-300 dark:bg-slate-600" />
+                            <div className="h-6 w-6 rounded-full border border-white dark:border-slate-700 bg-slate-400 dark:bg-slate-500" />
+                            <div className="h-6 w-6 rounded-full border border-white dark:border-slate-700 bg-slate-500 dark:bg-slate-400" />
                           </div>
-                          <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-1 rounded">
+                          <span className="text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded">
                             Confirmed
                           </span>
                         </div>
@@ -273,9 +273,9 @@ export default async function ProfilePage() {
                 })}
               </div>
             ) : (
-              <div className="bg-white rounded-xl p-8 border border-red-600/5 text-center">
-                <Calendar className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-                <p className="text-sm text-slate-500">No upcoming events. Browse events to find something interesting!</p>
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-8 border border-red-600/5 dark:border-slate-700 text-center">
+                <Calendar className="h-10 w-10 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                <p className="text-sm text-slate-500 dark:text-slate-400">No upcoming events. Browse events to find something interesting!</p>
               </div>
             )}
           </section>
@@ -283,7 +283,7 @@ export default async function ProfilePage() {
           {/* Member of (Clubs) Section */}
           {memberships && memberships.length > 0 && (
             <section>
-              <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2 mb-4 dark:text-slate-100">
                 <Building2 className="h-5 w-5 text-red-600" /> Member of
               </h3>
               <div className="flex flex-col gap-3">
@@ -298,7 +298,7 @@ export default async function ProfilePage() {
                     <Link
                       key={m.id}
                       href={`/my-clubs/${club.id}`}
-                      className="bg-white p-4 rounded-xl flex items-center justify-between border border-red-600/5 hover:shadow-sm transition-shadow"
+                      className="bg-white dark:bg-slate-800 p-4 rounded-xl flex items-center justify-between border border-red-600/5 dark:border-slate-700 hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-lg bg-red-600/10 flex items-center justify-center text-red-600">
@@ -310,8 +310,8 @@ export default async function ProfilePage() {
                           )}
                         </div>
                         <div>
-                          <h4 className="font-bold">{club.name}</h4>
-                          <p className="text-xs text-slate-500 capitalize">{m.role}</p>
+                          <h4 className="font-bold dark:text-slate-100">{club.name}</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{m.role}</p>
                         </div>
                       </div>
                       <span className="p-2 text-slate-400 hover:text-red-600 transition-colors">
@@ -327,7 +327,7 @@ export default async function ProfilePage() {
           {/* Following Clubs as additional clubs */}
           {following && following.length > 0 && !memberships?.length && (
             <section>
-              <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2 mb-4 dark:text-slate-100">
                 <Heart className="h-5 w-5 text-red-600" /> Following
               </h3>
               <div className="flex flex-col gap-3">
@@ -343,7 +343,7 @@ export default async function ProfilePage() {
                     <Link
                       key={f.id}
                       href={`/clubs/${club.id}`}
-                      className="bg-white p-4 rounded-xl flex items-center justify-between border border-red-600/5 hover:shadow-sm transition-shadow"
+                      className="bg-white dark:bg-slate-800 p-4 rounded-xl flex items-center justify-between border border-red-600/5 dark:border-slate-700 hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-lg bg-red-600/10 flex items-center justify-center text-red-600">
@@ -355,8 +355,8 @@ export default async function ProfilePage() {
                           )}
                         </div>
                         <div>
-                          <h4 className="font-bold">{club.name}</h4>
-                          {club.category && <p className="text-xs text-slate-500">{club.category}</p>}
+                          <h4 className="font-bold dark:text-slate-100">{club.name}</h4>
+                          {club.category && <p className="text-xs text-slate-500 dark:text-slate-400">{club.category}</p>}
                         </div>
                       </div>
                       <span className="p-2 text-slate-400 hover:text-red-600 transition-colors">
@@ -372,7 +372,7 @@ export default async function ProfilePage() {
           {/* Event History Table */}
           {pastEvents && pastEvents.length > 0 && (
             <section>
-              <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2 mb-4 dark:text-slate-100">
                 <Clock className="h-5 w-5 text-red-600" /> Event History
               </h3>
               <div className="overflow-x-auto">
@@ -385,17 +385,17 @@ export default async function ProfilePage() {
                       <th className="p-4 rounded-tr-lg">Location</th>
                     </tr>
                   </thead>
-                  <tbody className="text-sm bg-white">
+                  <tbody className="text-sm bg-white dark:bg-slate-800">
                     {pastEvents.map((se: any) => {
                       const event = se.events;
                       return (
                         <tr key={se.id} className="border-b border-red-600/5 last:border-0">
-                          <td className="p-4 font-semibold">
+                          <td className="p-4 font-semibold dark:text-slate-100">
                             <Link href={`/events/${event.id}`} className="hover:text-red-600 transition-colors">
                               {event.title}
                             </Link>
                           </td>
-                          <td className="p-4 text-slate-500">
+                          <td className="p-4 text-slate-500 dark:text-slate-400">
                             {new Date(event.event_date).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
@@ -403,11 +403,11 @@ export default async function ProfilePage() {
                             })}
                           </td>
                           <td className="p-4">
-                            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">
+                            <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full text-xs">
                               Attended
                             </span>
                           </td>
-                          <td className="p-4 text-slate-500">{event.location || "-"}</td>
+                          <td className="p-4 text-slate-500 dark:text-slate-400">{event.location || "-"}</td>
                         </tr>
                       );
                     })}

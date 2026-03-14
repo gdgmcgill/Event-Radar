@@ -74,9 +74,9 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-red-600/5">
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-red-600/5 dark:border-slate-700">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold flex items-center gap-2">
+        <h3 className="font-bold flex items-center gap-2 dark:text-slate-100">
           <Heart className="h-5 w-5 text-red-600" /> My Interests
         </h3>
         {!isEditing && selectedTags.length > 0 && (
@@ -100,12 +100,12 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
           />
 
           {error && (
-            <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg border border-red-200">
+            <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800">
               {error}
             </div>
           )}
 
-          <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
             <Button
               onClick={handleSave}
               disabled={isSaving}
@@ -130,7 +130,7 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
         <div>
           {selectedTags.length === 0 ? (
             <div className="py-6 text-center">
-              <p className="text-sm text-slate-500 mb-3">No interests added yet</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">No interests added yet</p>
               <button
                 onClick={handleEdit}
                 className="text-sm text-red-600 font-semibold hover:underline"

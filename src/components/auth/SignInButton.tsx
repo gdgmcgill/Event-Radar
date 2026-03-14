@@ -36,6 +36,8 @@ export function SignInButton({ variant = "default", className, compact = false, 
         callbackUrl.searchParams.set("next", next);
       }
 
+      sessionStorage.setItem("pendingSignIn", "1");
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "azure",
         options: {

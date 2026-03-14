@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { classifyTags } from "@/lib/classifier";
 import { Button } from "@/components/ui/button";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventTag } from "@/types";
 import { cn } from "@/lib/utils";
@@ -26,6 +29,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { uploadEventImage } from "@/lib/upload-utils";
+import { TimePicker } from "@/components/ui/time-picker";
 
 const iconMap: Record<string, LucideIcon> = {
   GraduationCap,
@@ -39,8 +43,10 @@ const iconMap: Record<string, LucideIcon> = {
 interface FormData {
   title: string;
   description: string;
-  date: string;
-  time: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
   location: string;
   tags: EventTag[];
   imageFile: File | null;
@@ -49,8 +55,10 @@ interface FormData {
 interface FormErrors {
   title?: string;
   description?: string;
-  date?: string;
-  time?: string;
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
   location?: string;
   tags?: string;
 }
@@ -94,12 +102,16 @@ export function CreateEventForm({
   const [formData, setFormData] = useState<FormData>({
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
-    date: initialDateParts.date,
-    time: initialDateParts.time,
+    startDate: initialDateParts.date,
+    startTime: initialDateParts.time,
+    endDate: initialDateParts.date,
+    endTime: "",
     location: initialData?.location ?? "",
     tags: initialData?.tags ?? [],
     imageFile: null,
   });
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -132,16 +144,27 @@ export function CreateEventForm({
 
     if (!formData.title.trim()) newErrors.title = "Title is required";
     if (!formData.description.trim()) newErrors.description = "Description is required";
-    if (!formData.date) newErrors.date = "Date is required";
-    if (!formData.time) newErrors.time = "Time is required";
+    if (!formData.startDate) newErrors.startDate = "Start date is required";
+    if (!formData.startTime) newErrors.startTime = "Start time is required";
+    if (!formData.endDate) newErrors.endDate = "End date is required";
+    if (!formData.endTime) newErrors.endTime = "End time is required";
     if (!formData.location.trim()) newErrors.location = "Location is required";
     if (formData.tags.length === 0) newErrors.tags = "Select at least one category";
 
-    // Check date is in the future
-    if (formData.date && formData.time) {
-      const eventDate = new Date(`${formData.date}T${formData.time}`);
-      if (eventDate < new Date()) {
-        newErrors.date = "Event must be in the future";
+    // Check start datetime is in the future
+    if (formData.startDate && formData.startTime) {
+      const startDT = new Date(`${formData.startDate}T${formData.startTime}`);
+      if (startDT < new Date()) {
+        newErrors.startDate = "Event must be in the future";
+      }
+    }
+
+    // Check end datetime is after start datetime
+    if (formData.startDate && formData.startTime && formData.endDate && formData.endTime) {
+      const startDT = new Date(`${formData.startDate}T${formData.startTime}`);
+      const endDT = new Date(`${formData.endDate}T${formData.endTime}`);
+      if (endDT <= startDT) {
+        newErrors.endDate = "End must be after start";
       }
     }
 
@@ -187,8 +210,10 @@ export function CreateEventForm({
     setFormData({
       title: "",
       description: "",
-      date: "",
-      time: "",
+      startDate: "",
+      startTime: "",
+      endDate: "",
+      endTime: "",
       location: "",
       tags: [],
       imageFile: null,
@@ -216,8 +241,9 @@ export function CreateEventForm({
         }
       }
 
-      // Build the start_date as ISO string
-      const startDate = new Date(`${formData.date}T${formData.time}`).toISOString();
+      // Build the start_date and end_date as ISO strings
+      const startDate = new Date(`${formData.startDate}T${formData.startTime}`).toISOString();
+      const endDate = new Date(`${formData.endDate}T${formData.endTime}`).toISOString();
 
       // Determine the image URL to send
       const finalImageUrl = imageUrl ?? (formData.imageFile ? null : imagePreview);
@@ -232,7 +258,7 @@ export function CreateEventForm({
         if (formData.location !== initialData?.location) updates.location = formData.location;
         if (JSON.stringify(formData.tags) !== JSON.stringify(initialData?.tags)) updates.tags = formData.tags;
         updates.start_date = startDate;
-        updates.end_date = startDate;
+        updates.end_date = endDate;
         updates.category = formData.tags[0];
         if (finalImageUrl !== initialData?.image_url) updates.image_url = finalImageUrl;
 
@@ -250,7 +276,7 @@ export function CreateEventForm({
             title: formData.title,
             description: formData.description,
             start_date: startDate,
-            end_date: startDate,
+            end_date: endDate,
             location: formData.location,
             tags: formData.tags,
             image_url: finalImageUrl,
@@ -274,8 +300,10 @@ export function CreateEventForm({
       setFormData({
         title: "",
         description: "",
-        date: "",
-        time: "",
+        startDate: "",
+        startTime: "",
+        endDate: "",
+        endTime: "",
         location: "",
         tags: [],
         imageFile: null,
@@ -291,24 +319,24 @@ export function CreateEventForm({
 
   // Format the preview date/time
   const formatPreviewDateTime = () => {
-    if (!formData.date && !formData.time) return null;
+    if (!formData.startDate && !formData.startTime) return null;
     const parts: string[] = [];
-    if (formData.date) {
+    if (formData.startDate) {
       try {
-        const d = new Date(formData.date + "T00:00:00");
+        const d = new Date(formData.startDate + "T00:00:00");
         parts.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase());
       } catch {
-        parts.push(formData.date);
+        parts.push(formData.startDate);
       }
     }
-    if (formData.time) {
+    if (formData.startTime) {
       try {
-        const [h, m] = formData.time.split(":");
+        const [h, m] = formData.startTime.split(":");
         const d = new Date();
         d.setHours(parseInt(h), parseInt(m));
         parts.push(d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
       } catch {
-        parts.push(formData.time);
+        parts.push(formData.startTime);
       }
     }
     return parts.join(" \u2022 ");
@@ -457,50 +485,128 @@ export function CreateEventForm({
           </div>
 
           {/* Date & Time */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label htmlFor="date" className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                Date
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                <input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => {
-                    setFormData((prev) => ({ ...prev, date: e.target.value }));
-                    if (errors.date) setErrors((prev) => ({ ...prev, date: undefined }));
-                  }}
-                  className={cn(
-                    "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
-                    errors.date && "border-destructive"
-                  )}
-                />
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">Date &amp; Time</h3>
+
+            {/*
+              Single 2×2 grid so columns are shared across both rows —
+              this guarantees the vertical divider stays perfectly aligned.
+            */}
+            <div className="rounded-xl border-2 border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 grid grid-cols-2 divide-x divide-y divide-slate-200 dark:divide-slate-800">
+
+              {/* ── Start date ── */}
+              <div className="p-3 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Start</p>
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100 hover:text-primary transition-colors outline-none",
+                        !formData.startDate && "text-slate-400",
+                        errors.startDate && "text-destructive"
+                      )}
+                    >
+                      <Calendar className="h-3.5 w-3.5 shrink-0" />
+                      {formData.startDate
+                        ? format(new Date(formData.startDate + "T00:00:00"), "MMM d, yyyy")
+                        : "Pick date"}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={formData.startDate ? new Date(formData.startDate + "T00:00:00") : undefined}
+                      onSelect={(day) => {
+                        const val = day ? format(day, "yyyy-MM-dd") : "";
+                        setFormData((prev) => ({
+                          ...prev,
+                          startDate: val,
+                          endDate: prev.endDate && prev.endDate < val ? val : prev.endDate,
+                        }));
+                        if (errors.startDate) setErrors((prev) => ({ ...prev, startDate: undefined }));
+                        setStartDateOpen(false);
+                      }}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                {errors.startDate && <p className="text-xs text-destructive">{errors.startDate}</p>}
               </div>
-              {errors.date && <p className="text-xs text-destructive">{errors.date}</p>}
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="time" className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                Time
-              </label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                <input
-                  id="time"
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) => {
-                    setFormData((prev) => ({ ...prev, time: e.target.value }));
-                    if (errors.time) setErrors((prev) => ({ ...prev, time: undefined }));
+
+              {/* ── Start time ── */}
+              <div className="p-3 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Time</p>
+                <TimePicker
+                  value={formData.startTime}
+                  onChange={(val) => {
+                    setFormData((prev) => ({ ...prev, startTime: val }));
+                    if (errors.startTime) setErrors((prev) => ({ ...prev, startTime: undefined }));
                   }}
-                  className={cn(
-                    "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
-                    errors.time && "border-destructive"
-                  )}
+                  placeholder="Set time"
+                  hasError={!!errors.startTime}
                 />
+                {errors.startTime && <p className="text-xs text-destructive">{errors.startTime}</p>}
               </div>
-              {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
+
+              {/* ── End date ── */}
+              <div className="p-3 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">End</p>
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100 hover:text-primary transition-colors outline-none",
+                        !formData.endDate && "text-slate-400",
+                        errors.endDate && "text-destructive"
+                      )}
+                    >
+                      <Calendar className="h-3.5 w-3.5 shrink-0" />
+                      {formData.endDate
+                        ? format(new Date(formData.endDate + "T00:00:00"), "MMM d, yyyy")
+                        : "Pick date"}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={formData.endDate ? new Date(formData.endDate + "T00:00:00") : undefined}
+                      onSelect={(day) => {
+                        const val = day ? format(day, "yyyy-MM-dd") : "";
+                        setFormData((prev) => ({ ...prev, endDate: val }));
+                        if (errors.endDate) setErrors((prev) => ({ ...prev, endDate: undefined }));
+                        setEndDateOpen(false);
+                      }}
+                      disabled={(date) => {
+                        const today = new Date(new Date().setHours(0, 0, 0, 0));
+                        if (date < today) return true;
+                        if (formData.startDate) return date < new Date(formData.startDate + "T00:00:00");
+                        return false;
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                {errors.endDate && <p className="text-xs text-destructive">{errors.endDate}</p>}
+              </div>
+
+              {/* ── End time ── */}
+              <div className="p-3 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Time</p>
+                <TimePicker
+                  value={formData.endTime}
+                  onChange={(val) => {
+                    setFormData((prev) => ({ ...prev, endTime: val }));
+                    if (errors.endTime) setErrors((prev) => ({ ...prev, endTime: undefined }));
+                  }}
+                  placeholder="Set time"
+                  hasError={!!errors.endTime}
+                />
+                {errors.endTime && <p className="text-xs text-destructive">{errors.endTime}</p>}
+              </div>
+
             </div>
           </div>
 

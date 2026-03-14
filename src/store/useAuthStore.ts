@@ -11,6 +11,7 @@ interface AuthState {
   hasClubs: boolean;
   initialize: () => void;
   signOut: () => Promise<void>;
+  updateAvatar: (avatarUrl: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
@@ -131,6 +132,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         initialFetch();
       }
     }, 3000);
+  },
+
+  updateAvatar: (avatarUrl: string) => {
+    set((state) => ({
+      user: state.user ? { ...state.user, avatar_url: avatarUrl } : null,
+    }));
   },
 
   signOut: async () => {

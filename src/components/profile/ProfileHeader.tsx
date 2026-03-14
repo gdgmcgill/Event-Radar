@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Camera, Loader2, Pencil } from "lucide-react";
 import AvatarCropModal from "@/components/profile/AvatarCropModal";
+import { useAuthStore } from "@/store/useAuthStore";
 
 type ProfileHeaderProps = {
   name?: string | null;
@@ -21,6 +22,7 @@ export default function ProfileHeader({
 }: ProfileHeaderProps) {
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
   const [uploading, setUploading] = useState(false);
+  const updateAvatar = useAuthStore((s) => s.updateAvatar);
   const [error, setError] = useState<string | null>(null);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -29,7 +31,7 @@ export default function ProfileHeader({
   const initials = (name || email || "")
     .split(" ")
     .map((s) => s[0])
-    .slice(0, 2)
+    .slice(0, 1)
     .join("")
     .toUpperCase();
 
@@ -84,6 +86,7 @@ export default function ProfileHeader({
         }
 
         setCurrentAvatarUrl(data.avatar_url);
+        updateAvatar(data.avatar_url);
       } catch {
         setError("Failed to upload avatar. Please try again.");
       } finally {
@@ -111,7 +114,7 @@ export default function ProfileHeader({
       {/* Large circular avatar with primary border */}
       <div
         onClick={handleAvatarClick}
-        className={`relative h-40 w-40 rounded-full border-4 border-red-600 p-1 bg-[#f8f6f6] ${
+        className={`relative h-40 w-40 rounded-full border-4 border-red-600 p-1 bg-[#f8f6f6] dark:bg-slate-800 ${
           editable ? "cursor-pointer group" : ""
         }`}
       >

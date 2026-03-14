@@ -219,7 +219,7 @@ export function SideNavBar() {
         <Link
           href="/"
           className={cn(
-            "flex items-center whitespace-nowrap overflow-hidden rounded-xl mb-8",
+            "flex items-center whitespace-nowrap overflow-hidden rounded-xl mb-8 cursor-pointer",
             "transition-[padding] duration-200",
             collapsed ? "py-3 pl-[14px] pr-3" : "px-4 py-3"
           )}
@@ -373,10 +373,10 @@ export function SideNavBar() {
                     alt={user.name || "User"}
                     width={36}
                     height={36}
-                    className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/10 flex-shrink-0"
+                    className="w-9 h-9 rounded-full bg-white object-cover ring-2 ring-slate-300 flex-shrink-0 dark:bg-slate-950 dark:ring-slate-700"
                   />
                 ) : (
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 ring-2 ring-primary/10">
+                  <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm flex-shrink-0 ring-2 ring-slate-300 dark:ring-slate-700">
                     {(user.name || "U").charAt(0).toUpperCase()}
                   </div>
                 )}
