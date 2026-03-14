@@ -218,6 +218,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
               memberCount={memberCount}
               clubId={clubId}
               onEditClick={isOwner ? () => setActiveTab("settings") : undefined}
+              onNavigate={(tab) => setActiveTab(tab as DashboardTab)}
             />
           )}
           {activeTab === "events" && (
