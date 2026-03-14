@@ -12,11 +12,15 @@ import { useState } from "react";
 interface SignInButtonProps {
   variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
   className?: string;
+  /** Compact mode shows only icon */
+  compact?: boolean;
+  /** Tooltip text */
+  title?: string;
   /** Override where to redirect after login. Defaults to current page. */
   redirectAfterLogin?: string;
 }
 
-export function SignInButton({ variant = "default", className, redirectAfterLogin }: SignInButtonProps) {
+export function SignInButton({ variant = "default", className, compact = false, title, redirectAfterLogin }: SignInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = async () => {
@@ -52,8 +56,23 @@ export function SignInButton({ variant = "default", className, redirectAfterLogi
     }
   };
 
+  if (compact) {
+    return (
+      <Button
+        onClick={handleSignIn}
+        variant="ghost"
+        size="icon"
+        disabled={isLoading}
+        className={className}
+        title={title ?? "Sign in with McGill Email"}
+      >
+        <LogIn className="h-5 w-5" />
+      </Button>
+    );
+  }
+
   return (
-    <Button onClick={handleSignIn} variant={variant} disabled={isLoading} className={className}>
+    <Button onClick={handleSignIn} variant={variant} disabled={isLoading} className={className} title={title}>
       <LogIn className="mr-2 h-4 w-4" />
       {isLoading ? "Redirecting..." : "Sign In with McGill Email"}
     </Button>

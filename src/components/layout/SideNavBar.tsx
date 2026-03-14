@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -14,9 +14,10 @@ import {
 } from "./navItems";
 import { useAuthStore } from "@/store/useAuthStore";
 import { isAdmin } from "@/lib/roles";
-import { PlusCircle, MoreVertical, Bell } from "lucide-react";
+import { PlusCircle, MoreVertical, Bell, Sun, Moon } from "lucide-react";
+import { SignOutButton } from "@/components/auth/SignOutButton";
+import { SignInButton } from "@/components/auth/SignInButton";
 import { useNotificationCount } from "@/hooks/useNotificationCount";
-import ThemeToggle from "./ThemeToggle";
 
 const EASE = "cubic-bezier(0.4,0,0.2,1)";
 
@@ -39,7 +40,7 @@ function NavLink({
       className={cn(
         "group flex items-center rounded-xl font-medium whitespace-nowrap overflow-hidden",
         "transition-[padding,background-color,color,box-shadow] duration-200",
-        collapsed ? "justify-center p-3" : "px-4 py-3",
+        collapsed ? "py-3 pl-[22px] pr-3" : "px-4 py-3",
         isActive
           ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
           : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
@@ -79,7 +80,7 @@ function NotificationNavLink({
       className={cn(
         "group relative flex items-center rounded-xl font-medium whitespace-nowrap overflow-hidden mb-2",
         "transition-[padding,background-color,color,box-shadow] duration-200",
-        collapsed ? "justify-center p-3" : "px-4 py-3",
+        collapsed ? "py-3 pl-[22px] pr-3" : "px-4 py-3",
         isActive
           ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
           : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
@@ -116,6 +117,70 @@ function NotificationNavLink({
   );
 }
 
+function ThemeNavLink({ collapsed }: { collapsed: boolean }) {
+  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    setMounted(true);
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved === "dark" || saved === "light") {
+        setTheme(saved);
+      } else if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
+        setTheme("dark");
+      }
+    } catch {
+      // noop
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    try {
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+      localStorage.setItem("theme", theme);
+    } catch {
+      // noop
+    }
+  }, [theme, mounted]);
+
+  const isDark = mounted && theme === "dark";
+  const Icon = isDark ? Sun : Moon;
+  const label = "Theme"
+
+  return (
+    <button
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      title={collapsed ? label : undefined}
+      className={cn(
+        "w-full flex items-center rounded-xl font-medium whitespace-nowrap overflow-hidden",
+        "transition-[padding,background-color,color] duration-200",
+        collapsed ? "py-3 pl-[22px] pr-3" : "px-4 py-3",
+        "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
+      )}
+      style={{ transitionTimingFunction: EASE }}
+    >
+      <Icon className="w-5 h-5 flex-shrink-0" />
+      <div
+        className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
+        style={{
+          maxWidth: collapsed ? 0 : 160,
+          opacity: collapsed ? 0 : 1,
+          marginLeft: collapsed ? 0 : 16,
+          transitionTimingFunction: EASE,
+        }}
+      >
+        <span>{label}</span>
+      </div>
+    </button>
+  );
+}
+
 export function SideNavBar() {
   const pathname = usePathname();
   const { user, hasClubs } = useAuthStore();
@@ -144,7 +209,7 @@ export function SideNavBar() {
         className={cn(
           "hidden lg:flex flex-col fixed inset-y-0 left-0 z-50 overflow-hidden",
           "transition-[width,padding] duration-200",
-          collapsed ? "w-[72px] py-5 px-1" : "w-72 p-6",
+          collapsed ? "w-[72px] py-5 px-1" : "w-72 py-5 px-6",
           "bg-white/90 dark:bg-card/90 backdrop-blur-2xl",
           "border-r border-slate-200/60 dark:border-border/40"
         )}
@@ -156,7 +221,7 @@ export function SideNavBar() {
           className={cn(
             "flex items-center whitespace-nowrap overflow-hidden rounded-xl mb-8",
             "transition-[padding] duration-200",
-            collapsed ? "justify-center p-0" : "px-4 py-3"
+            collapsed ? "py-3 pl-[14px] pr-3" : "px-4 py-3"
           )}
           style={{ transitionTimingFunction: EASE }}
         >
@@ -261,15 +326,7 @@ export function SideNavBar() {
         {/* ── Bottom Section ── */}
         <div className="mt-auto space-y-3 pt-4">
           {/* Theme Toggle */}
-          <div
-            className={cn(
-              "flex items-center transition-all duration-200",
-              collapsed ? "justify-center" : "px-2"
-            )}
-            style={{ transitionTimingFunction: EASE }}
-          >
-            <ThemeToggle />
-          </div>
+          <ThemeNavLink collapsed={collapsed} />
 
           {/* Create Event */}
           {isAuthenticated && (
@@ -299,17 +356,17 @@ export function SideNavBar() {
             </Link>
           )}
 
-          {/* User Profile */}
-          {isAuthenticated && user && (
+          {/* User Profile + Sign Out */}
+          {isAuthenticated && user ? (
             <div
               className={cn(
                 "flex items-center overflow-hidden rounded-xl",
                 "transition-[padding] duration-200",
-                collapsed ? "justify-center p-3" : "px-4 py-3"
+                collapsed ? "py-3 pl-[14px] pr-3" : "px-4 py-3"
               )}
               style={{ transitionTimingFunction: EASE }}
             >
-              <Link href="/profile" className="flex items-center min-w-0">
+              <Link href="/profile" className="flex items-center min-w-0 flex-1">
                 {user.avatar_url ? (
                   <Image
                     src={user.avatar_url}
@@ -326,7 +383,7 @@ export function SideNavBar() {
                 <div
                   className="min-w-0 overflow-hidden transition-[max-width,opacity,margin] duration-200"
                   style={{
-                    maxWidth: collapsed ? 0 : 140,
+                    maxWidth: collapsed ? 0 : 120,
                     opacity: collapsed ? 0 : 1,
                     marginLeft: collapsed ? 0 : 12,
                     transitionTimingFunction: EASE,
@@ -341,18 +398,32 @@ export function SideNavBar() {
                 </div>
               </Link>
               <div
-                className="overflow-hidden transition-[max-width,opacity,margin] duration-200"
+                className="overflow-hidden transition-[max-width,opacity,margin] duration-200 flex-shrink-0"
                 style={{
-                  maxWidth: collapsed ? 0 : 20,
+                  maxWidth: collapsed ? 0 : 32,
                   opacity: collapsed ? 0 : 1,
-                  marginLeft: collapsed ? 0 : "auto",
+                  marginLeft: collapsed ? 0 : 8,
                   transitionTimingFunction: EASE,
                 }}
               >
-                <MoreVertical className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                <SignOutButton compact title="Sign out" />
               </div>
             </div>
-          )}
+          ) : !isAuthenticated ? (
+            <div
+              className={cn(
+                "flex items-center justify-center overflow-hidden transition-[padding] duration-200",
+                collapsed ? "p-3" : "px-2"
+              )}
+              style={{ transitionTimingFunction: EASE }}
+            >
+              {collapsed ? (
+                <SignInButton variant="ghost" compact title="Sign in" />
+              ) : (
+                <SignInButton variant="default" className="w-full" />
+              )}
+            </div>
+          ) : null}
         </div>
       </aside>
 

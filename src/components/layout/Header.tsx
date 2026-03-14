@@ -163,6 +163,7 @@ export function Header() {
               <>
                 <NotificationBell />
                 <ThemeToggle />
+                <SignOutButton compact title="Sign out" />
               </>
             ) : (
               <>
