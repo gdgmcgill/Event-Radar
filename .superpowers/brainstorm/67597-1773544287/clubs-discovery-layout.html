@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clubs Discovery Page Layout</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0f0f17; color: #e2e2e8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; }
+
+  h1 { font-size: 28px; color: white; margin-bottom: 8px; text-align: center; }
+  .subtitle { color: #9ca3af; font-size: 15px; text-align: center; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto; }
+
+  .options-grid { display: grid; grid-template-columns: 1fr; gap: 40px; max-width: 900px; margin: 0 auto; }
+
+  .option-card {
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #1a1a2e;
+  }
+  .option-card:hover { border-color: rgba(124,58,237,0.5); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(124,58,237,0.15); }
+  .option-card.selected { border-color: #7c3aed; box-shadow: 0 0 0 1px #7c3aed, 0 8px 32px rgba(124,58,237,0.25); }
+
+  .option-label {
+    display: inline-block;
+    background: #7c3aed;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  .mockup-container { padding: 24px; }
+
+  .option-info { padding: 0 24px 24px; }
+  .option-info h3 { color: white; font-size: 18px; margin-bottom: 6px; }
+  .option-info p { color: #9ca3af; font-size: 14px; line-height: 1.5; }
+
+  /* Mini wireframe styles */
+  .wire { background: #12121e; border-radius: 12px; padding: 16px; overflow: hidden; }
+
+  .wire-hero { height: 80px; background: linear-gradient(135deg, #1a1a3e, #0f1628); border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .wire-hero::before { content: ''; position: absolute; inset: 0; background: url('https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&q=60') center/cover; opacity: 0.3; }
+  .wire-hero-text { position: relative; color: white; font-weight: 700; font-size: 14px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+
+  .wire-section { margin-bottom: 12px; }
+  .wire-section-title { font-size: 11px; font-weight: 700; color: #7c3aed; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+  .wire-section-title .see-all { font-size: 10px; color: #6b7280; text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+  .wire-scroll { display: flex; gap: 8px; overflow: hidden; }
+  .wire-card { flex-shrink: 0; width: 100px; height: 72px; background: #1e1e2e; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .wire-card-circle { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+  .wire-card-text { font-size: 8px; color: rgba(255,255,255,0.4); }
+  .wire-card-wide { width: 140px; height: 72px; }
+
+  .wire-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .wire-grid-card { height: 72px; background: #1e1e2e; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+
+  .wire-featured { height: 100px; background: linear-gradient(135deg, #1e1e3e, #2a1e4e); border-radius: 10px; border: 1px solid rgba(124,58,237,0.2); display: flex; align-items: center; padding: 16px; gap: 14px; margin-bottom: 12px; }
+  .wire-featured-logo { width: 56px; height: 56px; border-radius: 14px; background: rgba(255,255,255,0.1); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .wire-featured-info { flex: 1; }
+  .wire-featured-name { font-size: 13px; color: white; font-weight: 600; margin-bottom: 3px; }
+  .wire-featured-desc { font-size: 9px; color: rgba(255,255,255,0.4); line-height: 1.3; }
+  .wire-featured-btn { font-size: 9px; background: #7c3aed; color: white; padding: 3px 10px; border-radius: 6px; margin-top: 6px; display: inline-block; }
+
+  .wire-search { height: 32px; background: #1e1e2e; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px; display: flex; align-items: center; padding: 0 10px; }
+  .wire-search-text { font-size: 10px; color: rgba(255,255,255,0.25); }
+
+  .wire-cats { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .wire-cat { font-size: 9px; padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); }
+  .wire-cat.active { background: rgba(124,58,237,0.2); color: #a78bfa; }
+
+  .wire-carousel { display: flex; gap: 8px; overflow: hidden; margin-bottom: 12px; }
+  .wire-carousel-slide { flex-shrink: 0; width: 100%; height: 90px; background: linear-gradient(135deg, #1e1e3e, #2a1e4e); border-radius: 10px; border: 1px solid rgba(124,58,237,0.15); position: relative; display: flex; align-items: flex-end; padding: 12px; }
+  .wire-carousel-text { font-size: 12px; color: white; font-weight: 600; }
+  .wire-carousel-dots { display: flex; gap: 4px; justify-content: center; margin-bottom: 12px; }
+  .wire-carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+  .wire-carousel-dot.active { background: #7c3aed; }
+
+  .note { max-width: 900px; margin: 32px auto 0; padding: 16px 20px; background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.2); border-radius: 12px; font-size: 14px; color: #c4b5fd; }
+  .note strong { color: white; }
+</style>
+</head>
+<body>
+
+<h1>Clubs Discovery Page: Layout Style</h1>
+<p class="subtitle">Your homepage uses Netflix-style horizontal scroll rows. How should the /clubs page organize its discovery sections?</p>
+
+<div class="options-grid">
+
+  <!-- Option A: Netflix Rows -->
+  <div class="option-card" onclick="select(this, 'A')">
+    <div class="mockup-container">
+      <span class="option-label">A</span>
+      <div class="wire">
+        <div class="wire-hero">
+          <span class="wire-hero-text">Find Your Community</span>
+        </div>
+
+        <div class="wire-search"><span class="wire-search-text">🔍 Search clubs...</span></div>
+
+        <div class="wire-featured">
+          <div class="wire-featured-logo">⭐</div>
+          <div class="wire-featured-info">
+            <div class="wire-featured-name">Featured: GDG McGill</div>
+            <div class="wire-featured-desc">Google Developer Group — Tech talks, workshops, and hackathons for McGill students</div>
+            <span class="wire-featured-btn">View Club</span>
+          </div>
+        </div>
+
+        <div class="wire-section">
+          <div class="wire-section-title">🔥 Trending Clubs <span class="see-all">See all →</span></div>
+          <div class="wire-scroll">
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club A</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club B</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club C</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club D</div></div>
+          </div>
+        </div>
+
+        <div class="wire-section">
+          <div class="wire-section-title">👥 Popular with Friends <span class="see-all">See all →</span></div>
+          <div class="wire-scroll">
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club E</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club F</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club G</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club H</div></div>
+          </div>
+        </div>
+
+        <div class="wire-section">
+          <div class="wire-section-title">💻 Technology <span class="see-all">See all →</span></div>
+          <div class="wire-scroll">
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Tech 1</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Tech 2</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Tech 3</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Tech 4</div></div>
+          </div>
+        </div>
+
+        <div class="wire-section">
+          <div class="wire-section-title">🎵 Arts & Culture <span class="see-all">See all →</span></div>
+          <div class="wire-scroll">
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Arts 1</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Arts 2</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Arts 3</div></div>
+            <div class="wire-card"><div class="wire-card-circle"></div><div class="wire-card-text">Arts 4</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="option-info">
+      <h3>Full Netflix-Style (Mirror Homepage)</h3>
+      <p>Direct port of your homepage pattern. Hero → search → featured club spotlight → horizontal scroll rows: Trending, Popular with Friends (if logged in), then one row per category. Each row has "See all" links. Clubs display as compact cards in each row. Maximum content discovery with minimal scrolling.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Hybrid -->
+  <div class="option-card" onclick="select(this, 'B')">
+    <div class="mockup-container">
+      <span class="option-label">B</span>
+      <div class="wire">
+        <div class="wire-hero">
+          <span class="wire-hero-text">Find Your Community</span>
+        </div>
+
+        <div class="wire-search"><span class="wire-search-text">🔍 Search clubs...</span></div>
+        <div class="wire-cats">
+          <span class="wire-cat active">All</span>
+          <span class="wire-cat">Technology</span>
+          <span class="wire-cat">Arts</span>
+          <span class="wire-cat">Sports</span>
+          <span class="wire-cat">Academic</span>
+          <span class="wire-cat">Social</span>
+        </div>
+
+        <div class="wire-carousel-slide" style="margin-bottom:4px;">
+          <span class="wire-carousel-text">⭐ Featured: GDG McGill</span>
+        </div>
+        <div class="wire-carousel-dots">
+          <span class="wire-carousel-dot active"></span>
+          <span class="wire-carousel-dot"></span>
+          <span class="wire-carousel-dot"></span>
+        </div>
+
+        <div class="wire-section">
+          <div class="wire-section-title">🔥 Trending Clubs <span class="see-all">See all →</span></div>
+          <div class="wire-scroll">
+            <div class="wire-card wire-card-wide"><div class="wire-card-circle"></div><div class="wire-card-text">Club with more info</div></div>
+            <div class="wire-card wire-card-wide"><div class="wire-card-circle"></div><div class="wire-card-text">Club with more info</div></div>
+            <div class="wire-card wire-card-wide"><div class="wire-card-circle"></div><div class="wire-card-text">Club with more info</div></div>
+          </div>
+        </div>
+
+        <div class="wire-section">
+          <div class="wire-section-title">👥 Popular with Friends <span class="see-all">See all →</span></div>
+          <div class="wire-scroll">
+            <div class="wire-card wire-card-wide"><div class="wire-card-circle"></div><div class="wire-card-text">Club with more info</div></div>
+            <div class="wire-card wire-card-wide"><div class="wire-card-circle"></div><div class="wire-card-text">Club with more info</div></div>
+            <div class="wire-card wire-card-wide"><div class="wire-card-circle"></div><div class="wire-card-text">Club with more info</div></div>
+          </div>
+        </div>
+
+        <div class="wire-section">
+          <div class="wire-section-title">Browse All</div>
+          <div class="wire-grid">
+            <div class="wire-grid-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club 1</div></div>
+            <div class="wire-grid-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club 2</div></div>
+            <div class="wire-grid-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club 3</div></div>
+            <div class="wire-grid-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club 4</div></div>
+            <div class="wire-grid-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club 5</div></div>
+            <div class="wire-grid-card"><div class="wire-card-circle"></div><div class="wire-card-text">Club 6</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="option-info">
+      <h3>Hybrid: Discovery Rows + Browse Grid</h3>
+      <p>Featured carousel at top → category filter pills → Trending & Popular with Friends as horizontal rows → then a filterable "Browse All" grid below with pagination. Best of both worlds: curated discovery sections at the top, then a traditional browsable grid when you want to explore everything. Category pills filter the grid section only.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="note">
+  <strong>Current state:</strong> Your /clubs page today only has a hero, search, and a single paginated grid labeled "Trending Clubs." Both options above significantly upgrade this with proper discovery sections matching your homepage's quality.
+</div>
+
+<script>
+  let selectedCard = null;
+  function select(el, choice) {
+    if (selectedCard) selectedCard.classList.remove('selected');
+    el.classList.add('selected');
+    selectedCard = el;
+    const evt = { type: 'click', choice: choice, text: el.querySelector('h3').textContent, timestamp: Math.floor(Date.now()/1000) };
+    fetch('/.events', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(evt) }).catch(()=>{});
+  }
+</script>
+
+</body>
+</html>
