@@ -49,6 +49,12 @@ export default function ClubCompletionNudge({
       tab: "settings",
     },
     {
+      key: "contact_email",
+      complete: !!club.contact_email,
+      label: "Add a contact email",
+      tab: "settings",
+    },
+    {
       key: "coorganizer",
       complete: memberCount > 1 || pendingInviteCount > 0,
       label:
