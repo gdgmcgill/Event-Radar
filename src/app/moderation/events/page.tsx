@@ -3,17 +3,19 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Trash2,
   Search,
   Calendar,
-  MapPin,
   Eye,
-  MousePointerClick,
   Bookmark,
   TrendingUp,
   ArrowUpDown,
+  CheckCircle,
+  XCircle,
+  Inbox,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 interface EventMetrics {
@@ -103,147 +105,191 @@ export default function ModerationEventsPage() {
     }
   };
 
-  const statusColor = (status: string) => {
+  const statusBadge = (status: string) => {
     switch (status) {
       case "approved":
-        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Approved
+          </span>
+        );
       case "pending":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            Pending
+          </span>
+        );
       case "rejected":
-        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+            Rejected
+          </span>
+        );
       default:
-        return "bg-gray-100 text-gray-800";
+        return (
+          <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            {status}
+          </span>
+        );
     }
   };
 
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortBy !== field) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return sortDir === "desc" ? (
+      <ArrowDown className="h-3 w-3" />
+    ) : (
+      <ArrowUp className="h-3 w-3" />
+    );
+  };
+
+  const sortFields: { field: SortField; label: string }[] = [
+    { field: "created_at", label: "Date" },
+    { field: "popularity_score", label: "Popularity" },
+    { field: "view_count", label: "Views" },
+    { field: "click_count", label: "Clicks" },
+    { field: "save_count", label: "Saves" },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">All Events</h2>
-          <p className="text-sm text-muted-foreground">{total} events total</p>
-        </div>
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          Event Queue
+        </h2>
+        <Badge className="bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:bg-zinc-900 dark:hover:bg-zinc-100">
+          {total}
+        </Badge>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* Filter bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 dark:text-zinc-500" />
           <input
             type="text"
             placeholder="Search events..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-md bg-background text-sm"
+            className="w-full pl-10 pr-4 py-2 text-sm rounded-lg border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-100/10"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border rounded-md bg-background text-sm"
+          className="px-3 py-2 text-sm rounded-lg border border-zinc-200 bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:ring-zinc-100/10"
         >
           <option value="all">All Statuses</option>
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
+        <div className="flex items-center gap-1">
+          {sortFields.map(({ field, label }) => (
+            <button
+              key={field}
+              onClick={() => toggleSort(field)}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                sortBy === field
+                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              }`}
+            >
+              {label}
+              <SortIcon field={field} />
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Sort Controls */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-sm text-muted-foreground self-center mr-1">Sort by:</span>
-        {([
-          { field: "created_at" as SortField, label: "Newest" },
-          { field: "popularity_score" as SortField, label: "Popularity" },
-          { field: "view_count" as SortField, label: "Views" },
-          { field: "click_count" as SortField, label: "Clicks" },
-          { field: "save_count" as SortField, label: "Saves" },
-        ]).map(({ field, label }) => (
-          <Button
-            key={field}
-            size="sm"
-            variant={sortBy === field ? "default" : "outline"}
-            onClick={() => toggleSort(field)}
-            className="gap-1 text-xs"
-          >
-            {label}
-            {sortBy === field && (
-              <ArrowUpDown className="h-3 w-3" />
-            )}
-          </Button>
-        ))}
-      </div>
-
-      {/* Events List */}
+      {/* Table */}
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">
-          Loading...
+        <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-48 rounded bg-zinc-200 dark:bg-zinc-800" />
+                  <div className="h-3 w-32 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                </div>
+                <div className="h-3 w-20 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                <div className="h-5 w-16 rounded-full bg-zinc-100 dark:bg-zinc-800/60" />
+                <div className="flex gap-2">
+                  <div className="h-8 w-8 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                  <div className="h-8 w-8 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : events.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          No events found.
+        <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-col items-center justify-center py-16 text-zinc-400 dark:text-zinc-500">
+            <Inbox className="h-10 w-10 mb-3 stroke-[1.5]" />
+            <p className="text-sm font-medium">No events found</p>
+            <p className="text-xs mt-1">Try adjusting your filters or search query.</p>
+          </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {events.map((event) => (
-            <Card key={event.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base truncate">
-                      {event.title}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {event.organizer ?? "Unknown organizer"}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${statusColor(event.status)}`}
-                  >
-                    {event.status}
-                  </span>
+        <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+          {/* Table header */}
+          <div className="hidden sm:grid sm:grid-cols-[1fr_140px_100px_120px_130px] gap-4 px-5 py-3 text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50">
+            <span>Event</span>
+            <span>Date</span>
+            <span>Status</span>
+            <span>Metrics</span>
+            <span className="text-right">Actions</span>
+          </div>
+
+          {/* Table rows */}
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {events.map((event) => (
+              <div
+                key={event.id}
+                className="sm:grid sm:grid-cols-[1fr_140px_100px_120px_130px] gap-4 px-5 py-4 items-center hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
+              >
+                {/* Event title & organizer */}
+                <div className="min-w-0 mb-2 sm:mb-0">
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                    {event.title}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                    {event.organizer ?? "Unknown organizer"}
+                  </p>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {new Date(event.start_date).toLocaleDateString()}
-                  </span>
-                  {event.location && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {event.location}
-                    </span>
-                  )}
+
+                {/* Date */}
+                <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 mb-2 sm:mb-0">
+                  <Calendar className="h-3.5 w-3.5 shrink-0" />
+                  <span>{new Date(event.start_date).toLocaleDateString()}</span>
                 </div>
-                {event.tags && event.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {event.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+
+                {/* Status */}
+                <div className="mb-2 sm:mb-0">
+                  {statusBadge(event.status)}
+                </div>
 
                 {/* Metrics */}
-                <div className="flex flex-wrap gap-3 mb-3 py-2 px-3 rounded-lg bg-secondary/30 text-sm">
-                  <span className="flex items-center gap-1.5 text-muted-foreground" title="Views">
+                <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400 mb-2 sm:mb-0">
+                  <span className="flex items-center gap-1" title="Views">
                     <Eye className="h-3.5 w-3.5" />
-                    <span className="font-medium text-foreground">{event.metrics?.view_count ?? 0}</span>
+                    <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                      {event.metrics?.view_count ?? 0}
+                    </span>
                   </span>
-                  <span className="flex items-center gap-1.5 text-muted-foreground" title="Clicks">
-                    <MousePointerClick className="h-3.5 w-3.5" />
-                    <span className="font-medium text-foreground">{event.metrics?.click_count ?? 0}</span>
-                  </span>
-                  <span className="flex items-center gap-1.5 text-muted-foreground" title="Saves">
+                  <span className="flex items-center gap-1" title="Saves">
                     <Bookmark className="h-3.5 w-3.5" />
-                    <span className="font-medium text-foreground">{event.metrics?.save_count ?? 0}</span>
+                    <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                      {event.metrics?.save_count ?? 0}
+                    </span>
                   </span>
-                  <span className="flex items-center gap-1.5 text-muted-foreground" title="Popularity Score">
+                  <span className="flex items-center gap-1" title="Popularity">
                     <TrendingUp className="h-3.5 w-3.5" />
-                    <span className="font-medium text-foreground">
+                    <span className="font-medium text-zinc-700 dark:text-zinc-300">
                       {event.metrics?.popularity_score != null
                         ? event.metrics.popularity_score.toFixed(1)
                         : "—"}
@@ -251,57 +297,57 @@ export default function ModerationEventsPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  {event.status !== "approved" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleStatusChange(event.id, "approved")}
-                    >
-                      Approve
-                    </Button>
-                  )}
-                  {event.status !== "rejected" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleStatusChange(event.id, "rejected")}
-                    >
-                      Reject
-                    </Button>
-                  )}
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-1.5">
                   {deleteConfirm === event.id ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-destructive">Delete?</span>
-                      <Button
-                        size="sm"
-                        variant="destructive"
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-red-600 dark:text-red-400 mr-1">Delete?</span>
+                      <button
                         onClick={() => handleDelete(event.id)}
+                        className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
                       >
-                        Confirm
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                        Yes
+                      </button>
+                      <button
                         onClick={() => setDeleteConfirm(null)}
+                        className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-medium rounded-md text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors"
                       >
-                        Cancel
-                      </Button>
+                        No
+                      </button>
                     </div>
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setDeleteConfirm(event.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <>
+                      {event.status !== "approved" && (
+                        <button
+                          onClick={() => handleStatusChange(event.id, "approved")}
+                          title="Approve"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </button>
+                      )}
+                      {event.status !== "rejected" && (
+                        <button
+                          onClick={() => handleStatusChange(event.id, "rejected")}
+                          title="Reject"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setDeleteConfirm(event.id)}
+                        title="Delete"
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-zinc-400 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

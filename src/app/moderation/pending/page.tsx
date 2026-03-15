@@ -2,13 +2,21 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, XCircle, Calendar, MapPin, Pencil, Star } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  Calendar,
+  MapPin,
+  Pencil,
+  Star,
+  CircleCheck,
+  Tag,
+  User,
+} from "lucide-react";
 import { FeatureEventModal } from "@/components/moderation/FeatureEventModal";
 
 interface PendingEvent {
@@ -126,103 +134,174 @@ export default function ModerationPendingEventsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-semibold">Pending Events</h2>
-        <div className="text-center py-12 text-muted-foreground">Loading...</div>
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Pending Review
+          </h2>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 animate-pulse"
+            >
+              <div className="space-y-3">
+                <div className="h-5 w-3/4 rounded bg-zinc-200 dark:bg-zinc-800" />
+                <div className="h-3 w-1/2 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                <div className="h-12 w-full rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                <div className="flex gap-2">
+                  <div className="h-5 w-14 rounded-full bg-zinc-100 dark:bg-zinc-800/60" />
+                  <div className="h-5 w-14 rounded-full bg-zinc-100 dark:bg-zinc-800/60" />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <div className="h-8 w-20 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                  <div className="h-8 w-20 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Pending Events</h2>
-        <Badge variant="secondary">{events.length} pending</Badge>
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          Pending Review
+        </h2>
+        <Badge className="bg-amber-500 text-white hover:bg-amber-500">
+          {events.length}
+        </Badge>
       </div>
 
       {events.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No pending events at this time.</p>
+        <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-col items-center justify-center py-16 text-zinc-400 dark:text-zinc-500">
+            <CircleCheck className="h-10 w-10 mb-3 stroke-[1.5] text-emerald-400" />
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
+              No pending events — you&apos;re all caught up!
+            </p>
+            <p className="text-xs mt-1">
+              New submissions will appear here for review.
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           {events.map((event) => (
-            <Card key={event.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{event.title}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {event.organizer ?? "Unknown organizer"}
-                    </p>
+            <div
+              key={event.id}
+              className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden transition-shadow hover:shadow-md dark:hover:shadow-zinc-900/50"
+            >
+              <div className="p-5">
+                {/* Card header */}
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {event.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      <User className="h-3 w-3" />
+                      <span>{event.organizer ?? "Unknown organizer"}</span>
+                    </div>
                   </div>
-                  <Badge variant="outline">Pending</Badge>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 shrink-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    Pending
+                  </span>
                 </div>
-              </CardHeader>
-              <CardContent>
+
+                {/* Description preview */}
                 {event.description && (
-                  <p className="text-sm mb-3 line-clamp-3">{event.description}</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 mb-3">
+                    {event.description}
+                  </p>
                 )}
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4">
-                  <span className="flex items-center gap-1">
+
+                {/* Meta info */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                  <span className="flex items-center gap-1.5">
                     <Calendar className="h-3.5 w-3.5" />
-                    {new Date(event.start_date).toLocaleDateString()}
+                    {new Date(event.start_date).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                    {event.end_date && (
+                      <>
+                        {" — "}
+                        {new Date(event.end_date).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </>
+                    )}
                   </span>
                   {event.location && (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5" />
                       {event.location}
                     </span>
                   )}
                 </div>
+
+                {/* Tags */}
                 {event.tags && event.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-4">
+                  <div className="flex items-center gap-1.5 flex-wrap mb-4">
+                    <Tag className="h-3 w-3 text-zinc-400 dark:text-zinc-500" />
                     {event.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
+                      <span
+                        key={tag}
+                        className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                      >
                         {tag}
-                      </Badge>
+                      </span>
                     ))}
                   </div>
                 )}
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                  <button
                     onClick={() => handleAction(event.id, "approved")}
                     disabled={actionLoading === event.id}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
                   >
-                    <CheckCircle className="mr-2 h-4 w-4" />
+                    <CheckCircle className="h-3.5 w-3.5" />
                     Approve
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
+                  </button>
+                  <button
                     onClick={() => handleAction(event.id, "rejected")}
                     disabled={actionLoading === event.id}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
                   >
-                    <XCircle className="mr-2 h-4 w-4" />
+                    <XCircle className="h-3.5 w-3.5" />
                     Reject
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  </button>
+                  <button
                     onClick={() => openEdit(event)}
                     disabled={actionLoading === event.id}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
                   >
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="h-3.5 w-3.5" />
                     Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  </button>
+                  <button
                     onClick={() => setFeaturingEvent(event)}
                     disabled={actionLoading === event.id || event.status !== "approved"}
                     title={event.status !== "approved" ? "Approve the event first" : "Feature this event"}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <Star className="mr-2 h-4 w-4" />
+                    <Star className="h-3.5 w-3.5" />
                     Feature
-                  </Button>
+                  </button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -238,70 +317,101 @@ export default function ModerationPendingEventsPage() {
       )}
 
       <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <DialogHeader>
-            <DialogTitle>Edit Event</DialogTitle>
+            <DialogTitle className="text-zinc-900 dark:text-zinc-100">
+              Edit Event
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Title</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Title
+              </label>
               <Input
                 value={editForm.title ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Description</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Description
+              </label>
               <Textarea
                 value={editForm.description ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
                 rows={4}
+                className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 resize-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Start Date</label>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Start Date
+                </label>
                 <Input
                   type="datetime-local"
                   value={editForm.start_date ? new Date(editForm.start_date).toISOString().slice(0, 16) : ""}
                   onChange={(e) => setEditForm((f) => ({ ...f, start_date: new Date(e.target.value).toISOString() }))}
+                  className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium">End Date</label>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  End Date
+                </label>
                 <Input
                   type="datetime-local"
                   value={editForm.end_date ? new Date(editForm.end_date).toISOString().slice(0, 16) : ""}
                   onChange={(e) => setEditForm((f) => ({ ...f, end_date: new Date(e.target.value).toISOString() }))}
+                  className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
                 />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">Location</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Location
+              </label>
               <Input
                 value={editForm.location ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+                className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Tags (comma-separated)</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Tags (comma-separated)
+              </label>
               <Input
                 value={(editForm.tags ?? []).join(", ")}
                 onChange={(e) => setEditForm((f) => ({ ...f, tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) }))}
+                className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
               />
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setEditingEvent(null)}>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <button
+              onClick={() => setEditingEvent(null)}
+              className="inline-flex items-center justify-center h-9 px-4 text-sm font-medium rounded-md border border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+            >
               Cancel
-            </Button>
-            <Button variant="secondary" onClick={saveEdit} disabled={actionLoading === editingEvent?.id}>
+            </button>
+            <button
+              onClick={saveEdit}
+              disabled={actionLoading === editingEvent?.id}
+              className="inline-flex items-center justify-center h-9 px-4 text-sm font-medium rounded-md bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 disabled:opacity-50 transition-colors"
+            >
               Save
-            </Button>
-            <Button onClick={saveAndApprove} disabled={actionLoading === editingEvent?.id}>
-              <CheckCircle className="mr-2 h-4 w-4" />
+            </button>
+            <button
+              onClick={saveAndApprove}
+              disabled={actionLoading === editingEvent?.id}
+              className="inline-flex items-center gap-1.5 justify-center h-9 px-4 text-sm font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+            >
+              <CheckCircle className="h-3.5 w-3.5" />
               Save &amp; Approve
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
