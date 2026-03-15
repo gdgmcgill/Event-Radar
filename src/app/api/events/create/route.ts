@@ -83,24 +83,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine event status based on user roles
+    // Determine event status based on context
+    // - Admins: always auto-approved
+    // - Club events from approved clubs: auto-approved (club member must be verified)
+    // - Non-club events: always pending, requires admin approval
     let status: "pending" | "approved" = "pending";
 
     if (roles.includes("admin")) {
       status = "approved";
-    } else if (roles.includes("club_organizer") && body.club_id) {
-      // Check if user is an organizer for this specific club
-      const { data: membership } = await supabase
-        .from("club_members")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("club_id", body.club_id)
+    } else if (body.club_id) {
+      // Check the club is approved AND user is a member/organizer of it
+      const { data: club } = await supabase
+        .from("clubs")
+        .select("id, status")
+        .eq("id", body.club_id)
         .single();
 
-      if (membership) {
-        status = "approved";
+      if (club && club.status === "approved") {
+        const { data: membership } = await supabase
+          .from("club_members")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("club_id", body.club_id)
+          .single();
+
+        if (membership) {
+          status = "approved";
+        }
       }
     }
+    // Non-club events (no club_id) stay "pending" regardless of user role
 
     const { data, error } = await supabase
       .from("events")
