@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { classifyTags } from "@/lib/classifier";
 import { Button } from "@/components/ui/button";
 import { EVENT_TAGS, EVENT_CATEGORIES } from "@/lib/constants";
@@ -23,6 +23,7 @@ import {
   Lightbulb,
   ChevronRight,
   ImageIcon,
+  Check,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { uploadEventImage } from "@/lib/upload-utils";
@@ -36,11 +37,28 @@ const iconMap: Record<string, LucideIcon> = {
   Heart,
 };
 
+// Generate 15-minute interval time options
+const TIME_OPTIONS = (() => {
+  const options: { value: string; label: string }[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const value = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      const d = new Date();
+      d.setHours(h, m);
+      const label = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      options.push({ value, label });
+    }
+  }
+  return options;
+})();
+
 interface FormData {
   title: string;
   description: string;
   date: string;
+  endDate: string;
   time: string;
+  endTime: string;
   location: string;
   tags: EventTag[];
   imageFile: File | null;
@@ -50,7 +68,9 @@ interface FormErrors {
   title?: string;
   description?: string;
   date?: string;
+  endDate?: string;
   time?: string;
+  endTime?: string;
   location?: string;
   tags?: string;
 }
@@ -95,7 +115,9 @@ export function CreateEventForm({
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
     date: initialDateParts.date,
+    endDate: "",
     time: initialDateParts.time,
+    endTime: "",
     location: initialData?.location ?? "",
     tags: initialData?.tags ?? [],
     imageFile: null,
@@ -119,7 +141,6 @@ export function CreateEventForm({
 
     const timer = setTimeout(() => {
       const suggestions = classifyTags(textToClassify) as EventTag[];
-      // Filter out tags that are already selected
       const newSuggestions = suggestions.filter((tag) => !formData.tags.includes(tag));
       setSuggestedTags(newSuggestions);
     }, 500);
@@ -132,16 +153,25 @@ export function CreateEventForm({
 
     if (!formData.title.trim()) newErrors.title = "Title is required";
     if (!formData.description.trim()) newErrors.description = "Description is required";
-    if (!formData.date) newErrors.date = "Date is required";
-    if (!formData.time) newErrors.time = "Time is required";
+    if (!formData.date) newErrors.date = "Start date is required";
+    if (!formData.time) newErrors.time = "Start time is required";
     if (!formData.location.trim()) newErrors.location = "Location is required";
     if (formData.tags.length === 0) newErrors.tags = "Select at least one category";
 
-    // Check date is in the future
+    // Check start date is in the future
     if (formData.date && formData.time) {
       const eventDate = new Date(`${formData.date}T${formData.time}`);
       if (eventDate < new Date()) {
         newErrors.date = "Event must be in the future";
+      }
+    }
+
+    // Check end date/time is after start date/time
+    if (formData.endDate && formData.date) {
+      const startStr = `${formData.date}T${formData.time || "00:00"}`;
+      const endStr = `${formData.endDate}T${formData.endTime || "23:59"}`;
+      if (new Date(endStr) <= new Date(startStr)) {
+        newErrors.endDate = "End must be after start";
       }
     }
 
@@ -188,7 +218,9 @@ export function CreateEventForm({
       title: "",
       description: "",
       date: "",
+      endDate: "",
       time: "",
+      endTime: "",
       location: "",
       tags: [],
       imageFile: null,
@@ -211,7 +243,6 @@ export function CreateEventForm({
       if (formData.imageFile) {
         imageUrl = await uploadEventImage(formData.imageFile);
         if (!imageUrl) {
-          // Image upload failed but continue without image
           console.warn("Image upload failed, submitting without image");
         }
       }
@@ -219,19 +250,25 @@ export function CreateEventForm({
       // Build the start_date as ISO string
       const startDate = new Date(`${formData.date}T${formData.time}`).toISOString();
 
+      // Build end_date if provided
+      let endDate: string | null = null;
+      if (formData.endDate) {
+        endDate = new Date(`${formData.endDate}T${formData.endTime || "23:59"}`).toISOString();
+      }
+
       // Determine the image URL to send
       const finalImageUrl = imageUrl ?? (formData.imageFile ? null : imagePreview);
 
       let res: Response;
 
       if (mode === "edit" && eventId) {
-        // PATCH only changed fields
         const updates: Record<string, unknown> = {};
         if (formData.title !== initialData?.title) updates.title = formData.title;
         if (formData.description !== initialData?.description) updates.description = formData.description;
         if (formData.location !== initialData?.location) updates.location = formData.location;
         if (JSON.stringify(formData.tags) !== JSON.stringify(initialData?.tags)) updates.tags = formData.tags;
         updates.start_date = startDate;
+        if (endDate) updates.end_date = endDate;
         updates.category = formData.tags[0];
         if (finalImageUrl !== initialData?.image_url) updates.image_url = finalImageUrl;
 
@@ -241,7 +278,6 @@ export function CreateEventForm({
           body: JSON.stringify(updates),
         });
       } else {
-        // POST for create and duplicate modes
         res = await fetch("/api/events/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -249,6 +285,7 @@ export function CreateEventForm({
             title: formData.title,
             description: formData.description,
             start_date: startDate,
+            end_date: endDate,
             location: formData.location,
             tags: formData.tags,
             image_url: finalImageUrl,
@@ -268,12 +305,13 @@ export function CreateEventForm({
         mode === "edit" ? "Event updated!" : (data.message || "Event submitted!")
       );
       setSuccess(true);
-      // Reset form
       setFormData({
         title: "",
         description: "",
         date: "",
+        endDate: "",
         time: "",
+        endTime: "",
         location: "",
         tags: [],
         imageFile: null,
@@ -311,6 +349,14 @@ export function CreateEventForm({
     }
     return parts.join(" \u2022 ");
   };
+
+  const isNonClubEvent = !clubId;
+  const submitLabel = mode === "edit"
+    ? "Save Changes"
+    : isNonClubEvent
+      ? "Submit for Review"
+      : "Publish Event";
+  const submittingLabel = mode === "edit" ? "Saving..." : isNonClubEvent ? "Submitting..." : "Publishing...";
 
   if (success) {
     const isEdit = mode === "edit";
@@ -354,9 +400,31 @@ export function CreateEventForm({
             </div>
           )}
 
-          {/* Category Selection */}
-          <section className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Category</h3>
+          {/* Non-club approval notice */}
+          {isNonClubEvent && mode === "create" && (
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300 text-sm flex items-start gap-3">
+              <Lightbulb className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Admin approval required</p>
+                <p className="text-amber-700 dark:text-amber-400 text-xs mt-0.5">
+                  Non-club events are reviewed by admins before going live. You&apos;ll be notified once approved.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Category Selection — compact pills */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                Category <span className="text-destructive">*</span>
+              </h3>
+              {formData.tags.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {formData.tags.length} selected
+                </span>
+              )}
+            </div>
 
             {suggestedTags.length > 0 && (
               <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl space-y-2">
@@ -384,7 +452,7 @@ export function CreateEventForm({
               </div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="flex flex-wrap gap-2">
               {EVENT_TAGS.map((tag) => {
                 const cat = EVENT_CATEGORIES[tag];
                 const Icon = iconMap[cat.icon] || Heart;
@@ -395,14 +463,15 @@ export function CreateEventForm({
                     type="button"
                     onClick={() => toggleTag(tag)}
                     className={cn(
-                      "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-200",
+                      "flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all duration-200 text-xs font-semibold",
                       isSelected
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-primary/50"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/30"
+                        : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-primary/50 hover:text-primary"
                     )}
                   >
-                    <Icon className="h-7 w-7 mb-2" />
-                    <span className="text-xs font-bold uppercase tracking-wider">{cat.label}</span>
+                    <Icon className="h-3.5 w-3.5" />
+                    {cat.label}
+                    {isSelected && <Check className="h-3 w-3" />}
                   </button>
                 );
               })}
@@ -413,7 +482,7 @@ export function CreateEventForm({
           {/* Event Title */}
           <div className="space-y-2">
             <label htmlFor="title" className="text-sm font-bold text-slate-700 dark:text-slate-300">
-              Event Title
+              Event Title <span className="text-destructive">*</span>
             </label>
             <input
               id="title"
@@ -435,7 +504,7 @@ export function CreateEventForm({
           {/* Description */}
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-bold text-slate-700 dark:text-slate-300">
-              Description
+              Description <span className="text-destructive">*</span>
             </label>
             <textarea
               id="description"
@@ -454,58 +523,119 @@ export function CreateEventForm({
             {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
           </div>
 
-          {/* Date & Time */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label htmlFor="date" className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                Date
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                <input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => {
-                    setFormData((prev) => ({ ...prev, date: e.target.value }));
-                    if (errors.date) setErrors((prev) => ({ ...prev, date: undefined }));
-                  }}
-                  className={cn(
-                    "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
-                    errors.date && "border-destructive"
-                  )}
-                />
+          {/* Start Date & Time */}
+          <div>
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              Start <span className="text-destructive">*</span>
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <input
+                    id="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, date: e.target.value }));
+                      if (errors.date) setErrors((prev) => ({ ...prev, date: undefined }));
+                    }}
+                    className={cn(
+                      "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
+                      errors.date && "border-destructive"
+                    )}
+                  />
+                </div>
+                {errors.date && <p className="text-xs text-destructive">{errors.date}</p>}
               </div>
-              {errors.date && <p className="text-xs text-destructive">{errors.date}</p>}
+              <div className="space-y-1">
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <select
+                    id="time"
+                    value={formData.time}
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, time: e.target.value }));
+                      if (errors.time) setErrors((prev) => ({ ...prev, time: undefined }));
+                    }}
+                    className={cn(
+                      "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm appearance-none",
+                      errors.time && "border-destructive",
+                      !formData.time && "text-slate-400"
+                    )}
+                  >
+                    <option value="" disabled>Select time</option>
+                    {TIME_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
+              </div>
             </div>
-            <div className="space-y-2">
-              <label htmlFor="time" className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                Time
-              </label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                <input
-                  id="time"
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) => {
-                    setFormData((prev) => ({ ...prev, time: e.target.value }));
-                    if (errors.time) setErrors((prev) => ({ ...prev, time: undefined }));
-                  }}
-                  className={cn(
-                    "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
-                    errors.time && "border-destructive"
-                  )}
-                />
+          </div>
+
+          {/* End Date & Time (optional) */}
+          <div>
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              End <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <input
+                    id="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    min={formData.date || undefined}
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, endDate: e.target.value }));
+                      if (errors.endDate) setErrors((prev) => ({ ...prev, endDate: undefined }));
+                    }}
+                    className={cn(
+                      "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
+                      errors.endDate && "border-destructive"
+                    )}
+                  />
+                </div>
+                {errors.endDate && <p className="text-xs text-destructive">{errors.endDate}</p>}
               </div>
-              {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
+              <div className="space-y-1">
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <select
+                    id="endTime"
+                    value={formData.endTime}
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, endTime: e.target.value }));
+                      if (errors.endTime) setErrors((prev) => ({ ...prev, endTime: undefined }));
+                    }}
+                    className={cn(
+                      "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm appearance-none",
+                      errors.endTime && "border-destructive",
+                      !formData.endTime && "text-slate-400"
+                    )}
+                  >
+                    <option value="" disabled>Select time</option>
+                    {TIME_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {errors.endTime && <p className="text-xs text-destructive">{errors.endTime}</p>}
+              </div>
             </div>
           </div>
 
           {/* Location */}
           <div className="space-y-2">
             <label htmlFor="location" className="text-sm font-bold text-slate-700 dark:text-slate-300">
-              Location
+              Location <span className="text-destructive">*</span>
             </label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -582,12 +712,10 @@ export function CreateEventForm({
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {mode === "edit" ? "Saving..." : "Publishing..."}
+                  {submittingLabel}
                 </>
-              ) : mode === "edit" ? (
-                "Save Changes"
               ) : (
-                "Publish Event"
+                submitLabel
               )}
             </button>
           </div>

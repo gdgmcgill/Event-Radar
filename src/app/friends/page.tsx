@@ -18,6 +18,8 @@ import {
 import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import { FriendsActivitySection } from "@/components/events/FriendsActivitySection";
+import { FriendsOrganizingSection } from "@/components/events/FriendsOrganizingSection";
 
 const RotatingEarth = dynamic(
   () => import("@/components/ui/wireframe-dotted-globe"),
@@ -227,6 +229,12 @@ export default function FriendsPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Popular with Friends ────────────────────────────────────── */}
+      <div className="pt-8 space-y-8">
+        <FriendsActivitySection />
+        <FriendsOrganizingSection />
+      </div>
 
       {/* ── Search & Tab Filters (matches /clubs search bar position) ── */}
       <div id="friends-feed" className="px-6 lg:px-10 pt-6 lg:pt-8">
