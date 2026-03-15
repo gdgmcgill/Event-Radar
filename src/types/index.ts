@@ -60,6 +60,10 @@ export interface Club {
   category?: string | null;
   instagram_handle: string | null;
   logo_url: string | null;
+  website_url: string | null;
+  discord_url: string | null;
+  twitter_url: string | null;
+  linkedin_url: string | null;
   status: "pending" | "approved" | "rejected";
   created_by: string | null;
   created_at: string;
@@ -317,4 +321,18 @@ export interface FeaturedEvent {
   created_by: string;
   created_at: string;
   event: Event;
+}
+
+// ── Featured Clubs Types ──────────────────────────────────────────────
+
+export interface FeaturedClub {
+  id: string;
+  club_id: string;
+  sponsor_name: string | null;
+  priority: number;
+  starts_at: string;
+  ends_at: string;
+  created_by: string;
+  created_at: string;
+  club: Club;
 }
