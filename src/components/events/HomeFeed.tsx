@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo } from "react";
+import useSWR from "swr";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { cn, formatDate, formatTime } from "@/lib/utils";
 import { EVENT_CATEGORIES, EVENT_TAGS } from "@/lib/constants";
 import type { Event, EventTag } from "@/types";
 import { ScrollRow } from "@/components/events/ScrollRow";
+import { useAuthStore } from "@/store/useAuthStore";
 import {
   Heart,
   MapPin,
@@ -342,12 +344,13 @@ function CompactCard({ event, onEventClick }: CompactCardProps) {
 
 interface PersonalizedCardProps {
   event: Event;
+  explanation?: string;
   onEventClick?: (eventId: string) => void;
   onSaveEvent?: (eventId: string) => void;
   isSaved?: boolean;
 }
 
-function PersonalizedCard({ event, onEventClick, onSaveEvent, isSaved }: PersonalizedCardProps) {
+function PersonalizedCard({ event, explanation, onEventClick, onSaveEvent, isSaved }: PersonalizedCardProps) {
   const primaryTag = event.tags[0];
   const category = primaryTag ? EVENT_CATEGORIES[primaryTag] : null;
   const Icon = category ? TAG_ICON_MAP[category.icon] || Heart : Heart;
@@ -365,7 +368,12 @@ function PersonalizedCard({ event, onEventClick, onSaveEvent, isSaved }: Persona
       <div className="text-[#ED1B2F] mb-4">
         <Icon className="h-10 w-10" />
       </div>
-      <h4 className="font-bold text-xl mb-2 line-clamp-2">{event.title}</h4>
+      <h4 className="font-bold text-xl mb-1 line-clamp-2">{event.title}</h4>
+      {explanation && (
+        <p className="text-xs text-muted-foreground mb-2 line-clamp-2 italic">
+          {explanation}
+        </p>
+      )}
       <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
         {event.description}
       </p>
@@ -418,6 +426,21 @@ function SectionHeader({ title, icon, onViewAll }: SectionHeaderProps) {
 
 // ── Main HomeFeed Component ──────────────────────────────────────────────────
 
+// ── Recommendation API shape ──────────────────────────────────────────────────
+
+interface RecommendationItem {
+  event_id: string;
+  score: number;
+  explanation: string;
+  breakdown: Record<string, number>;
+  event: Event & { clubs?: { id: string; name: string; logo_url: string | null } };
+}
+
+interface RecommendationsResponse {
+  recommendations: RecommendationItem[];
+  source: "personalized" | "popular_fallback" | "anonymous";
+}
+
 export function HomeFeed({
   events,
   featuredEvents,
@@ -425,7 +448,14 @@ export function HomeFeed({
   onSaveEvent,
   savedEventIds = [],
 }: HomeFeedProps) {
+  const user = useAuthStore((s) => s.user);
   const savedSet = useMemo(() => new Set(savedEventIds), [savedEventIds]);
+
+  // Fetch personalized recommendations from the API
+  const { data: recData } = useSWR<RecommendationsResponse>(
+    user ? "/api/recommendations?limit=10" : null,
+    (url: string) => fetch(url).then((r) => r.json())
+  );
 
   // Pick hero event: first featured or first event overall
   const heroEvent = featuredEvents?.[0] ?? events[0];
@@ -459,17 +489,6 @@ export function HomeFeed({
       }
     }
     return map;
-  }, [events]);
-
-  // Personalized row: events with less common tags (simple heuristic)
-  const personalizedEvents = useMemo(() => {
-    // Pick events that have career, wellness, or cultural tags (often under-represented)
-    const preferred = events.filter((e) =>
-      e.tags.some((t) => t === "career" || t === "wellness" || t === "cultural")
-    );
-    if (preferred.length >= 3) return preferred.slice(0, 6);
-    // Fallback
-    return events.slice(Math.max(0, events.length - 6));
   }, [events]);
 
   if (!events.length && !featuredEvents?.length) {
@@ -556,13 +575,13 @@ export function HomeFeed({
           );
         })}
 
-        {/* Personalized For You */}
-        {personalizedEvents.length > 0 && (
+        {/* Personalized For You / Popular on Campus */}
+        {recData && recData.recommendations.length > 0 && (
           <section className="bg-[#ED1B2F]/5 dark:bg-[#ED1B2F]/5 p-6 md:p-8 rounded-[2rem] border border-[#ED1B2F]/10">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 mb-8">
               <div>
                 <h3 className="text-2xl md:text-3xl font-black tracking-tight mb-2">
-                  Personalized for You
+                  {recData.source === "personalized" ? "Personalized for You" : "Popular on Campus"}
                 </h3>
                 <p className="text-muted-foreground max-w-lg text-sm md:text-base">
                   Events matched to your interests and activity on campus.
@@ -570,13 +589,14 @@ export function HomeFeed({
               </div>
             </div>
             <ScrollRow>
-              {personalizedEvents.map((event) => (
+              {recData.recommendations.map((rec) => (
                 <PersonalizedCard
-                  key={event.id}
-                  event={event}
+                  key={rec.event_id}
+                  event={rec.event}
+                  explanation={rec.explanation}
                   onEventClick={onEventClick}
                   onSaveEvent={onSaveEvent}
-                  isSaved={savedSet.has(event.id)}
+                  isSaved={savedSet.has(rec.event_id)}
                 />
               ))}
             </ScrollRow>
