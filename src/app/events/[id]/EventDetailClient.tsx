@@ -25,8 +25,11 @@ import { FriendsGoing } from "@/components/events/FriendsGoing";
 import { InviteFriendsModal } from "@/components/events/InviteFriendsModal";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useEventReviews } from "@/hooks/useAnalytics";
-import type { Event, ReviewAggregate } from "@/types";
-import { Loader2, UserPlus } from "lucide-react";
+import type { Event, ReviewAggregate, RejectionCategory } from "@/types";
+import { REJECTION_CATEGORIES } from "@/types";
+import { AppealForm } from "@/components/AppealForm";
+import { ReviewThread } from "@/components/moderation/ReviewThread";
+import { Loader2, UserPlus, AlertTriangle } from "lucide-react";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +49,11 @@ export default function EventDetailClient() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [latestRejection, setLatestRejection] = useState<{
+    category: string;
+    message: string;
+    created_at: string;
+  } | null>(null);
   const { data: reviewData, mutate: mutateReviews } = useEventReviews(
     id ?? ""
   );
@@ -71,6 +79,22 @@ export default function EventDetailClient() {
         if (!res.ok) throw new Error("Failed to fetch event");
         const data = await res.json();
         setEvent(data.event);
+        if (data.event.status === "rejected" && user?.id === data.event.created_by) {
+          try {
+            const reviewRes = await fetch(`/api/moderation/reviews/event/${id}`);
+            if (reviewRes.ok) {
+              const reviewData = await reviewRes.json();
+              const rejections = (reviewData.reviews ?? []).filter(
+                (r: { action: string }) => r.action === "rejection"
+              );
+              if (rejections.length > 0) {
+                setLatestRejection(rejections[rejections.length - 1]);
+              }
+            }
+          } catch {
+            // Non-critical, don't block the page
+          }
+        }
       } catch {
         setError("Failed to load event. Please try again later.");
       } finally {
@@ -78,7 +102,7 @@ export default function EventDetailClient() {
       }
     };
     fetchEvent();
-  }, [id]);
+  }, [id, user]);
 
   // Check saved state
   useEffect(() => {
@@ -197,6 +221,26 @@ export default function EventDetailClient() {
 
   return (
     <>
+      {event && event.status === "rejected" && user?.id === event.created_by && (
+        <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20 p-4 space-y-3 mb-6">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <h3 className="font-semibold text-red-700 dark:text-red-400">
+              This event was not approved
+            </h3>
+          </div>
+          {latestRejection && (
+            <div className="text-sm text-zinc-600 dark:text-zinc-400">
+              <span className="inline-flex items-center rounded-md bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-400 mr-2">
+                {REJECTION_CATEGORIES[latestRejection.category as RejectionCategory]}
+              </span>
+              {latestRejection.message}
+            </div>
+          )}
+          <ReviewThread targetType="event" targetId={event.id} currentUserId={user?.id} />
+          <AppealForm itemType="event" itemId={event.id} onSuccess={() => window.location.reload()} />
+        </div>
+      )}
       <EventDetailView
         event={event}
         similarEvents={relatedEvents}
