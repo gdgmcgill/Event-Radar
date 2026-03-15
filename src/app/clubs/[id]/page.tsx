@@ -3,16 +3,12 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Instagram,
-  Globe,
-  Users,
   CalendarX,
-  ExternalLink,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { ClubShareButton } from "@/components/clubs/ClubShareButton";
+import { ClubHeroSocialLinks } from "@/components/clubs/ClubHeroSocialLinks";
 import { ClubInitials } from "@/components/clubs/ClubInitials";
 import { FollowButton } from "@/components/clubs/FollowButton";
 import { EventCard } from "@/components/events/EventCard";
@@ -103,8 +99,6 @@ export default async function ClubDetailPage({ params }: PageProps) {
     isFollowing = !!followRow;
   }
 
-  const hasSocialLinks = club.instagram_handle || club.twitter_url || club.discord_url || club.linkedin_url || club.website_url;
-
   return (
     <div className="w-full min-h-screen bg-background">
       {/* ─── Hero Banner ─── */}
@@ -129,22 +123,31 @@ export default async function ClubDetailPage({ params }: PageProps) {
         {/* Bottom blend into background */}
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
 
-        {/* Top bar */}
+        {/* Top bar — back button only */}
         <div className="absolute top-0 w-full px-6 py-6 z-20">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="max-w-5xl mx-auto">
             <Link
               href="/clubs"
-              className="group flex items-center gap-2 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-full transition-all duration-300"
+              className="group inline-flex items-center gap-2 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-full transition-all duration-300"
             >
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
               <span className="text-sm font-semibold">Back to Clubs</span>
             </Link>
-            <ClubShareButton
-              clubName={club.name}
-              clubDescription={club.description}
-              clubId={id}
-            />
           </div>
+        </div>
+
+        {/* Bottom-right — social links + share */}
+        <div className="absolute bottom-6 right-6 z-20 max-w-5xl">
+          <ClubHeroSocialLinks
+            clubName={club.name}
+            clubDescription={club.description}
+            clubId={id}
+            instagramHandle={club.instagram_handle}
+            twitterUrl={club.twitter_url}
+            discordUrl={club.discord_url}
+            linkedinUrl={club.linkedin_url}
+            websiteUrl={club.website_url}
+          />
         </div>
       </div>
 
@@ -201,71 +204,12 @@ export default async function ClubDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 sm:ml-auto">
+          <div className="sm:ml-auto">
             <FollowButton
               clubId={id}
               initialFollowing={isFollowing}
               initialCount={followerCount}
             />
-            {hasSocialLinks && (
-              <div className="flex items-center gap-1.5">
-                {club.instagram_handle && (
-                  <Link
-                    href={`https://instagram.com/${(club.instagram_handle as string).replace("@", "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-9 h-9 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary transition-colors"
-                    title="Instagram"
-                  >
-                    <Instagram className="h-4 w-4" />
-                  </Link>
-                )}
-                {club.twitter_url && (
-                  <Link
-                    href={club.twitter_url as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-9 h-9 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary transition-colors"
-                    title="X / Twitter"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Link>
-                )}
-                {club.discord_url && (
-                  <Link
-                    href={club.discord_url as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-9 h-9 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary transition-colors"
-                    title="Discord"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Link>
-                )}
-                {club.linkedin_url && (
-                  <Link
-                    href={club.linkedin_url as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-9 h-9 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary transition-colors"
-                    title="LinkedIn"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Link>
-                )}
-                {club.website_url && (
-                  <Link
-                    href={club.website_url as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-9 h-9 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary transition-colors"
-                    title="Website"
-                  >
-                    <Globe className="h-4 w-4" />
-                  </Link>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>

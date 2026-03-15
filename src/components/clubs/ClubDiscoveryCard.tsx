@@ -131,18 +131,14 @@ export function ClubDiscoveryCard({ club, initialFollowing = false }: ClubDiscov
               <Users className="h-3 w-3" />
               {followerCount}
             </span>
-            {(club.total_event_count ?? 0) > 0 && (
-              <span className="flex items-center gap-1 text-xs">
-                <LayoutGrid className="h-3 w-3" />
-                {club.total_event_count}
-              </span>
-            )}
-            {club.upcoming_event_count > 0 && (
-              <span className="flex items-center gap-1 text-xs text-primary font-medium">
-                <Calendar className="h-3 w-3" />
-                {club.upcoming_event_count} upcoming
-              </span>
-            )}
+            <span className="flex items-center gap-1 text-xs">
+              <LayoutGrid className="h-3 w-3" />
+              {club.total_event_count ?? 0}
+            </span>
+            <span className={`flex items-center gap-1 text-xs ${club.upcoming_event_count > 0 ? "text-primary font-medium" : ""}`}>
+              <Calendar className="h-3 w-3" />
+              {club.upcoming_event_count} upcoming
+            </span>
           </div>
         </div>
       </div>
