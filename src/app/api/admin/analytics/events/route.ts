@@ -29,7 +29,7 @@ export async function GET() {
 
   // Daily event creation (last 30 days)
   const dailyCreation = buildDailyCounts(
-    (recentEvents.data ?? []).map((e) => e.created_at),
+    (recentEvents.data ?? []).map((e) => e.created_at).filter((d): d is string => d !== null),
     thirtyDaysAgo,
     now
   );

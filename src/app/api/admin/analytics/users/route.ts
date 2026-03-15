@@ -54,7 +54,7 @@ export async function GET() {
 }
 
 interface UserRow {
-  created_at: string;
+  created_at: string | null;
 }
 
 function buildDailySignups(users: UserRow[], from: Date, to: Date) {
@@ -71,6 +71,7 @@ function buildDailySignups(users: UserRow[], from: Date, to: Date) {
   }
 
   for (const user of users) {
+    if (!user.created_at) continue;
     const date = user.created_at.split("T")[0];
     if (date in counts) {
       counts[date]++;
