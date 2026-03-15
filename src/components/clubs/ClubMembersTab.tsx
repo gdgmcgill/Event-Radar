@@ -275,7 +275,7 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
         ) : (
           <div className="divide-y divide-border">
             {filteredMembers.map((member) => {
-              const displayName = member.users.name || member.users.email;
+              const displayName = member.users?.name || member.users?.email || "Unknown";
               const colorClass = getAvatarColor(displayName);
               return (
                 <div
@@ -287,16 +287,16 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
                     <div
                       className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold shrink-0 ${colorClass}`}
                     >
-                      {getInitials(member.users.name, member.users.email)}
+                      {getInitials(member.users?.name, member.users?.email)}
                     </div>
                     {/* Name & Email */}
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">
-                        {member.users.name || member.users.email}
+                        {member.users?.name || member.users?.email}
                       </p>
-                      {member.users.name && (
+                      {member.users?.name && (
                         <p className="text-xs text-muted-foreground truncate">
-                          {member.users.email}
+                          {member.users?.email}
                         </p>
                       )}
                     </div>
