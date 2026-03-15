@@ -36,7 +36,8 @@ interface EventWithRsvp {
   id: string;
   title: string;
   description: string;
-  event_date: string;
+  start_date: string;
+  end_date?: string | null;
   location: string;
   tags: EventTag[];
   image_url?: string | null;
@@ -52,7 +53,7 @@ interface EventWithRsvp {
 type DisplayStatus = "published" | "pending" | "rejected" | "past";
 
 const getDisplayStatus = (event: EventWithRsvp): DisplayStatus => {
-  const eventDate = new Date(event.event_date);
+  const eventDate = new Date(event.start_date);
   const now = new Date();
   if (eventDate < now) return "past";
   if (event.status === "approved") return "published";
@@ -205,7 +206,7 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
 
                     {/* Date */}
                     <td className="px-6 py-4 text-muted-foreground">
-                      {formatDate(event.event_date)}
+                      {formatDate(event.start_date)}
                     </td>
 
                     {/* RSVPs Breakdown */}
@@ -297,7 +298,8 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
               initialData={{
                 title: editingEvent.title,
                 description: editingEvent.description,
-                start_date: editingEvent.event_date,
+                start_date: editingEvent.start_date,
+                end_date: editingEvent.end_date,
                 location: editingEvent.location,
                 tags: editingEvent.tags,
                 image_url: editingEvent.image_url,
