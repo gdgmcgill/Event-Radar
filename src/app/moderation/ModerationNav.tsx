@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   CalendarClock,
   Building2,
+  MessageSquare,
   UserCheck,
   Users,
   Star,
@@ -21,6 +22,7 @@ const contentItems = [
   { name: "Pending Review", path: "/moderation/pending", icon: ClipboardCheck },
   { name: "Event Queue", path: "/moderation/events", icon: CalendarClock },
   { name: "Club Approvals", path: "/moderation/clubs", icon: Building2 },
+  { name: "Appeals", path: "/moderation/appeals", icon: MessageSquare },
   { name: "Featured Events", path: "/moderation/featured", icon: Star },
 ];
 
