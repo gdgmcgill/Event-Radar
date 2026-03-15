@@ -9,7 +9,7 @@ export type AuditAction =
   | "bulk_approved"
   | "bulk_rejected";
 
-export type AuditTargetType = "event" | "user" | "club" | "featured_event";
+export type AuditTargetType = "event" | "user" | "club" | "featured_event" | "organizer_request";
 
 export async function logAdminAction(params: {
   adminUserId: string;
