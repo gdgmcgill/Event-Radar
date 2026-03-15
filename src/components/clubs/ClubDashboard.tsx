@@ -151,7 +151,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
           <ClubAnalyticsTab clubId={clubId} />
         )}
         {isOwner && activeTab === "settings" && (
-          <ClubSettingsTab club={club} onUpdate={handleClubUpdate} />
+          <ClubSettingsTab club={club} onUpdate={handleClubUpdate} members={membersData?.members ?? []} />
         )}
         {activeTab === "members" && (
           <ClubMembersTab clubId={clubId} clubName={club.name} isOwner={isOwner} />
