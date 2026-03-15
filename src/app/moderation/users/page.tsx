@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, Search, UserPlus, UserMinus } from "lucide-react";
+import { Search, UserPlus, UserMinus, Shield, Users } from "lucide-react";
 import type { UserRole } from "@/types";
 
 interface AdminUser {
@@ -68,79 +67,153 @@ export default function ModerationUsersPage() {
     );
   });
 
+  function getInitial(name: string | null): string {
+    if (!name) return "?";
+    return name.charAt(0).toUpperCase();
+  }
+
+  function formatJoinDate(dateStr: string | null): string {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Users</h2>
-        <p className="text-sm text-muted-foreground">
-          {users.length} registered users
-        </p>
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-100">
+          <Users className="h-5 w-5 text-white dark:text-zinc-900" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+            User Management
+          </h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Manage roles and permissions
+          </p>
+        </div>
+        {!loading && (
+          <Badge className="ml-auto bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-0 text-sm font-medium">
+            {users.length} users
+          </Badge>
+        )}
       </div>
 
+      {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
         <input
           type="text"
           placeholder="Search by name or email..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border rounded-md bg-background text-sm"
+          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-zinc-100/10 transition-shadow"
         />
       </div>
 
-      {loading ? (
-        <div className="text-center py-12 text-muted-foreground">
-          Loading...
+      {/* Table */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+        {/* Table Header */}
+        <div className="hidden sm:grid grid-cols-[1fr_1fr_140px_100px_160px] gap-4 px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+          <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium">User</span>
+          <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium">Email</span>
+          <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium">Roles</span>
+          <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium">Joined</span>
+          <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium text-right">Actions</span>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          No users found.
-        </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">User List</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {filtered.map((user) => (
+
+        {loading ? (
+          <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1fr_140px_100px_160px] gap-4 px-6 py-4 items-center">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
+                  <div className="h-4 w-24 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
+                </div>
+                <div className="h-4 w-36 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
+                <div className="h-5 w-16 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
+                <div className="h-4 w-20 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
+                <div className="h-8 w-32 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse ml-auto" />
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-16 text-center">
+            <Users className="h-10 w-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              {searchQuery ? "No users match your search" : "No users found"}
+            </p>
+            {searchQuery && (
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                Try a different search term
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            {filtered.map((user) => {
+              const isOrganizer = user.roles.includes("club_organizer");
+              const isAdmin = user.roles.includes("admin");
+
+              return (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between px-6 py-4"
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_140px_100px_160px] gap-2 sm:gap-4 px-6 py-4 items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">
+                  {/* User */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+                      {getInitial(user.name)}
+                    </div>
+                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
                       {user.name || "No name"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.email}
-                    </p>
-                    {user.created_at && (
-                      <p className="text-xs text-muted-foreground">
-                        Joined{" "}
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </p>
-                    )}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {user.roles.includes("admin") && (
-                      <Badge className="bg-primary/10 text-primary border-0">
+
+                  {/* Email */}
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
+                    {user.email}
+                  </span>
+
+                  {/* Roles */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {isAdmin && (
+                      <Badge className="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-0 text-xs font-medium">
                         <Shield className="mr-1 h-3 w-3" />
                         Admin
                       </Badge>
                     )}
-                    {user.roles.includes("club_organizer") && (
-                      <Badge className="bg-blue-500/10 text-blue-600 border-0">
+                    {isOrganizer && (
+                      <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-0 text-xs font-medium">
                         Organizer
                       </Badge>
                     )}
+                    {!isAdmin && !isOrganizer && (
+                      <Badge className="bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0 text-xs font-medium">
+                        User
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Joined */}
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {formatJoinDate(user.created_at)}
+                  </span>
+
+                  {/* Actions */}
+                  <div className="flex justify-end">
                     <Button
                       size="sm"
-                      variant={user.roles.includes("club_organizer") ? "destructive" : "outline"}
-                      onClick={() => toggleOrganizer(user.id, user.roles.includes("club_organizer"))}
+                      variant={isOrganizer ? "destructive" : "outline"}
+                      onClick={() => toggleOrganizer(user.id, isOrganizer)}
                       disabled={toggling === user.id}
+                      className="text-xs"
                     >
-                      {user.roles.includes("club_organizer") ? (
+                      {isOrganizer ? (
                         <>
                           <UserMinus className="mr-1.5 h-3.5 w-3.5" />
                           Remove Organizer
@@ -154,11 +227,11 @@ export default function ModerationUsersPage() {
                     </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
