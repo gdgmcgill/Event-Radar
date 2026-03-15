@@ -40,39 +40,39 @@ export default async function ModerationLayout({
     .slice(0, 2);
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen bg-background">
       {/* Fixed sidebar */}
       <ModerationNav />
 
       {/* Main content area offset by sidebar width */}
       <div className="flex flex-1 flex-col pl-60">
         {/* Header bar */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-zinc-200 bg-white/80 px-6 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card/80 px-6 backdrop-blur-2xl">
           <div />
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
             <a
               href="/notifications"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
               title="Notifications"
             >
               <Bell className="h-4 w-4" />
             </a>
             <a
               href="/profile?tab=settings"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
               title="Settings"
             >
               <Settings className="h-4 w-4" />
             </a>
 
-            <div className="mx-1.5 h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
+            <div className="mx-1.5 h-6 w-px bg-border" />
 
             {/* Admin profile chip */}
             <a
               href="/profile"
-              className="flex items-center gap-2.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 pl-1 pr-3 py-1 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
+              className="flex items-center gap-2.5 rounded-full border border-border bg-card pl-1 pr-3 py-1 hover:border-primary/20 transition-colors"
             >
               {avatarUrl ? (
                 <Image
@@ -83,15 +83,15 @@ export default async function ModerationLayout({
                   className="h-7 w-7 rounded-full object-cover"
                 />
               ) : (
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 dark:bg-zinc-600 text-[10px] font-bold text-white">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
                   {initials}
                 </div>
               )}
               <div className="hidden sm:flex items-center gap-1.5">
-                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-none">
+                <span className="text-sm font-medium text-foreground leading-none">
                   {displayName}
                 </span>
-                <span className="flex items-center gap-0.5 bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                <span className="flex items-center gap-0.5 bg-primary/10 text-primary text-[10px] font-semibold px-1.5 py-0.5 rounded">
                   <Shield className="h-2.5 w-2.5" />
                   Admin
                 </span>

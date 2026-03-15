@@ -6,12 +6,8 @@ import {
   Info,
   User,
   LayoutDashboard,
-  FileQuestion,
-  List,
   Users,
   Building2,
-  ClipboardList,
-  BarChart3,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -44,13 +40,7 @@ export const organizerNavItems: NavItem[] = [
   { name: "My Clubs", path: "/my-clubs", icon: Building2 },
 ];
 
-/** Extra items for admins — now under /moderation/* */
+/** Extra items for admins — only Dashboard; sub-pages use /moderation's own nav */
 export const adminNavItems: NavItem[] = [
   { name: "Dashboard", path: "/moderation", icon: LayoutDashboard },
-  { name: "Pending", path: "/moderation/pending", icon: FileQuestion },
-  { name: "All Events", path: "/moderation/events", icon: List },
-  { name: "Users", path: "/moderation/users", icon: Users },
-  { name: "Organizer Requests", path: "/moderation/organizer-requests", icon: ClipboardList },
-  { name: "Clubs", path: "/moderation/clubs", icon: Building2 },
-  { name: "Stats", path: "/moderation/stats", icon: BarChart3 },
 ];

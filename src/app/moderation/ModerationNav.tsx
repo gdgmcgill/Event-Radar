@@ -43,9 +43,11 @@ function NavSection({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-        {label}
-      </span>
+      <div className="border-t border-border mt-1 pt-4 pb-1 px-4">
+        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+          {label}
+        </span>
+      </div>
       {items.map((item) => {
         const Icon = item.icon;
         const isActive =
@@ -58,13 +60,13 @@ function NavSection({
             key={item.path}
             href={item.path}
             className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+              "flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-[background-color,color,box-shadow] duration-200",
               isActive
-                ? "bg-zinc-800 text-white border-l-2 border-red-500"
-                : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                ? "bg-primary text-white font-semibold shadow-md shadow-primary/10"
+                : "text-muted-foreground hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary"
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" />
+            <Icon className="h-5 w-5 shrink-0" />
             <span>{item.name}</span>
           </Link>
         );
@@ -77,33 +79,45 @@ export function ModerationNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-zinc-900 text-zinc-400">
-      {/* Brand — click to go home */}
-      <Link href="/" className="flex items-center gap-2.5 px-5 py-5 hover:bg-zinc-800/50 transition-colors" title="Back to Uni-Verse">
-        <Image src="/uni-verse_logo.png" alt="Uni-Verse" width={28} height={28} className="h-7 w-7 rounded-lg" />
+    <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-card/90 backdrop-blur-2xl border-r border-border p-4">
+      {/* Brand */}
+      <Link
+        href="/"
+        className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4 hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors"
+        title="Back to Uni-Verse"
+      >
+        <Image
+          src="/uni-verse_logo.png"
+          alt="Uni-Verse"
+          width={36}
+          height={36}
+          className="h-9 w-9 rounded-lg object-contain"
+        />
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-zinc-100 leading-tight">Uni-Verse</span>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500">Moderation</span>
+          <h1 className="text-lg font-black uppercase tracking-widest text-foreground leading-none">
+            UNI-VERSE
+          </h1>
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mt-1">
+            Moderation
+          </p>
         </div>
       </Link>
 
-      <div className="h-px bg-zinc-800" />
-
       {/* Nav groups */}
-      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-4">
+      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
         <NavSection label="Content" items={contentItems} pathname={pathname} />
         <NavSection label="Users" items={userItems} pathname={pathname} />
         <NavSection label="System" items={systemItems} pathname={pathname} />
       </nav>
 
       {/* Status footer */}
-      <div className="px-4 py-4 border-t border-zinc-800">
+      <div className="px-4 py-4 border-t border-border mt-2">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
           </span>
-          <span className="text-xs text-zinc-500">System Status: Online</span>
+          <span className="text-xs text-muted-foreground">System Status: Online</span>
         </div>
       </div>
     </aside>
