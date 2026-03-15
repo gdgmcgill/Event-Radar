@@ -115,7 +115,7 @@ function NotificationNavLink({
   );
 }
 
-export function SideNavBar() {
+export function SideNavBar({ forceCollapsed = false }: { forceCollapsed?: boolean } = {}) {
   const pathname = usePathname();
   const { user, hasClubs } = useAuthStore();
   const isAuthenticated = !!user;
