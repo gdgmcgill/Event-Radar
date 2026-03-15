@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { transformEventFromDB } from "@/lib/tagMapping";
 
 export async function GET() {
   try {
@@ -32,9 +33,9 @@ export async function GET() {
 
     // Fetch upcoming approved events from those clubs
     const today = new Date().toISOString().split("T")[0];
-    const { data: events, error } = await supabase
+    const { data: eventsData, error } = await supabase
       .from("events")
-      .select("*, clubs:club_id (id, name, logo_url)")
+      .select("*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)")
       .in("club_id", clubIds)
       .eq("status", "approved")
       .gte("start_date", today)
@@ -46,14 +47,11 @@ export async function GET() {
       return NextResponse.json({ events: [] });
     }
 
-    // Flatten the club join
-    const mapped = (events ?? []).map((e) => ({
-      ...e,
-      club: e.clubs ?? null,
-      clubs: undefined,
-    }));
+    const events = (eventsData || []).map((event) =>
+      transformEventFromDB(event as unknown as Parameters<typeof transformEventFromDB>[0])
+    );
 
-    return NextResponse.json({ events: mapped });
+    return NextResponse.json({ events });
   } catch (error) {
     console.error("Error in GET /api/events/following:", error);
     return NextResponse.json({ events: [] });
