@@ -82,6 +82,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       "discord_url",
       "twitter_url",
       "linkedin_url",
+      "contact_email",
     ] as const;
 
     const updates: Record<string, string | null> = {};
@@ -105,6 +106,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             { status: 400 }
           );
         }
+      }
+    }
+
+    // Validate contact_email format
+    if (updates.contact_email !== undefined && updates.contact_email !== null) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(updates.contact_email)) {
+        return NextResponse.json({ error: "Invalid email format for contact_email" }, { status: 400 });
       }
     }
 
@@ -137,3 +146,4 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 }
+
