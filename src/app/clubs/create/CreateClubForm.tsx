@@ -219,14 +219,12 @@ export function CreateClubForm() {
             <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-secondary flex items-center justify-center border border-border">
               {logoUrl ? (
                 <Image src={logoUrl} alt="Logo preview" width={80} height={80} className="h-20 w-20 rounded-xl object-cover" />
+              ) : name.trim() ? (
+                <span className="text-xl font-bold text-muted-foreground/60">
+                  {name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("")}
+                </span>
               ) : (
-                {name.trim() ? (
-                  <span className="text-xl font-bold text-muted-foreground/60">
-                    {name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("")}
-                  </span>
-                ) : (
-                  <Building2 className="h-9 w-9 text-muted-foreground/40" />
-                )}
+                <Building2 className="h-9 w-9 text-muted-foreground/40" />
               )}
             </div>
             <div>
