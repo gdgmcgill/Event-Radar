@@ -17,11 +17,11 @@ export const metadata: Metadata = {
 const CLUBS_PER_PAGE = 9;
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; category?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; page?: string; tab?: string }>;
 }
 
 export default async function ClubsPage({ searchParams }: PageProps) {
-  const { q, category, page: pageParam } = await searchParams;
+  const { q, category, page: pageParam, tab } = await searchParams;
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const supabase = await createClient();
 
@@ -186,7 +186,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
       )}
 
       <Suspense>
-      <ClubsPageTabs>
+      <ClubsPageTabs showMyClubs={tab === "my-clubs"}>
       {/* ── Search & Category Filters (below hero) ──────────────── */}
       <div id="clubs-feed" className="px-6 lg:px-10 pt-6 lg:pt-8">
         <ClubSearch

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Building2, Users, Calendar, Crown, Shield } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -9,8 +9,6 @@ import { useMyClubs } from "@/hooks/useClubs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Club } from "@/types";
-
-type TabValue = "discover" | "my-clubs";
 
 interface MyClubEntry {
   id: string;
@@ -165,79 +163,31 @@ function MyClubsContent() {
 
 interface ClubsPageTabsProps {
   children: React.ReactNode;
+  /** When true, show My Clubs view (from server searchParams.tab=my-clubs). */
+  showMyClubs?: boolean;
 }
 
-export function ClubsPageTabs({ children }: ClubsPageTabsProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export function ClubsPageTabs({ children, showMyClubs = false }: ClubsPageTabsProps) {
   const user = useAuthStore((s) => s.user);
   const hasClubs = useAuthStore((s) => s.hasClubs);
-
-  const tabFromUrl = searchParams.get("tab") === "my-clubs" ? "my-clubs" as TabValue : "discover" as TabValue;
-  const [activeTab, setActiveTab] = useState<TabValue>(tabFromUrl);
-
-  // Sync tab from URL changes (e.g. browser back/forward) without calling setState in effect
-  if (activeTab !== tabFromUrl) {
-    setActiveTab(tabFromUrl);
-  }
-
-  const handleTabChange = useCallback(
-    (tab: TabValue) => {
-      setActiveTab(tab);
-      if (tab === "my-clubs") {
-        router.push("/clubs?tab=my-clubs", { scroll: false });
-      } else {
-        router.push("/clubs", { scroll: false });
-      }
-    },
-    [router]
-  );
 
   // If not authenticated or no clubs, just render the discover content
   if (!user || !hasClubs) {
     return <>{children}</>;
   }
 
-  return (
-    <>
-      {/* Tab Bar */}
-      <div className="px-6 lg:px-10 pt-4">
-        <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl w-fit">
-          <button
-            onClick={() => handleTabChange("discover")}
-            className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-              activeTab === "discover"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Discover
-          </button>
-          <button
-            onClick={() => handleTabChange("my-clubs")}
-            className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-              activeTab === "my-clubs"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            My Clubs
-          </button>
+  // URL ?tab=my-clubs (e.g. from hero "My Clubs" button) shows My Clubs view
+  if (showMyClubs) {
+    return (
+      <main className="px-6 lg:px-10 py-6 lg:py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold tracking-tight">My Clubs</h2>
         </div>
-      </div>
+        <MyClubsContent />
+      </main>
+    );
+  }
 
-      {/* Tab Content */}
-      {activeTab === "discover" ? (
-        children
-      ) : (
-        <main className="px-6 lg:px-10 py-6 lg:py-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold tracking-tight">My Clubs</h2>
-          </div>
-          <MyClubsContent />
-        </main>
-      )}
-    </>
-  );
+  return <>{children}</>;
 }
 
