@@ -1,0 +1,123 @@
+<h2>Club Dashboard Navigation Model</h2>
+<p class="subtitle">How should the club dashboard relate to the main app navigation?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Integrated with AppShell</h3>
+      <p>Keep the main app's side nav and header. Add a secondary tab bar (Overview / Events / Members / Analytics / Settings) inside the content area. The dashboard feels like a "page within the app."</p>
+      <div class="mockup" style="margin-top: 12px;">
+        <div class="mockup-body" style="display: flex; gap: 0; padding: 0; min-height: 220px;">
+          <div class="mock-sidebar" style="width: 200px; min-height: 220px; border-radius: 0; font-size: 12px;">
+            <div style="padding: 12px; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.1);">UNI-VERSE</div>
+            <div style="padding: 8px 12px; opacity: 0.7;">Home</div>
+            <div style="padding: 8px 12px; opacity: 0.7;">Events</div>
+            <div style="padding: 8px 12px; opacity: 0.7;">Clubs</div>
+            <div style="padding: 8px 12px; background: rgba(255,255,255,0.1); font-weight: 500;">My Club</div>
+            <div style="padding: 8px 12px; opacity: 0.7;">Profile</div>
+          </div>
+          <div style="flex: 1; background: #1a1a2e; padding: 16px;">
+            <div style="display: flex; gap: 16px; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 12px; font-size: 13px;">
+              <span style="color: #818cf8; border-bottom: 2px solid #818cf8; padding-bottom: 8px;">Overview</span>
+              <span style="opacity: 0.5;">Events</span>
+              <span style="opacity: 0.5;">Members</span>
+              <span style="opacity: 0.5;">Analytics</span>
+              <span style="opacity: 0.5;">Settings</span>
+            </div>
+            <div class="placeholder" style="height: 120px; font-size: 12px;">Dashboard Content Area</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Dedicated Dashboard Layout</h3>
+      <p>Replace AppShell entirely — no main nav or footer. Dashboard has its own minimal top bar with "Back to app" link and club-specific tabs. Like a separate admin panel.</p>
+      <div class="mockup" style="margin-top: 12px;">
+        <div class="mockup-body" style="padding: 0; min-height: 220px; background: #1a1a2e;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #0f0f23; border-bottom: 1px solid #333; font-size: 13px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="opacity: 0.6; cursor: pointer;">&larr; Back to app</span>
+              <span style="font-weight: 600;">McGill CS Club</span>
+              <span style="background: #22c55e20; color: #22c55e; padding: 2px 8px; border-radius: 99px; font-size: 11px;">Approved</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <span class="mock-button" style="font-size: 11px; padding: 4px 12px;">+ Create Event</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #222; font-size: 13px;">
+            <span style="color: #818cf8; border-bottom: 2px solid #818cf8; padding-bottom: 10px;">Overview</span>
+            <span style="opacity: 0.5;">Events</span>
+            <span style="opacity: 0.5;">Members</span>
+            <span style="opacity: 0.5;">Analytics</span>
+            <span style="opacity: 0.5;">Settings</span>
+          </div>
+          <div style="padding: 16px;">
+            <div class="placeholder" style="height: 100px; font-size: 12px;">Full-width Dashboard Content</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid — Collapsed Sidebar</h3>
+      <p>Keep the main AppShell sidebar but collapse it to icon-only mode. Club dashboard gets full content width with its own tab navigation. Hover the sidebar to expand it.</p>
+      <div class="mockup" style="margin-top: 12px;">
+        <div class="mockup-body" style="display: flex; gap: 0; padding: 0; min-height: 220px;">
+          <div class="mock-sidebar" style="width: 48px; min-height: 220px; border-radius: 0; font-size: 16px; display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 16px;">
+            <span>🏠</span>
+            <span>📅</span>
+            <span>👥</span>
+            <span style="background: rgba(255,255,255,0.15); padding: 4px; border-radius: 6px;">🏢</span>
+            <span>👤</span>
+          </div>
+          <div style="flex: 1; background: #1a1a2e;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #333; font-size: 13px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 600;">McGill CS Club</span>
+                <span style="background: #22c55e20; color: #22c55e; padding: 2px 8px; border-radius: 99px; font-size: 11px;">Approved</span>
+              </div>
+              <span class="mock-button" style="font-size: 11px; padding: 4px 12px;">+ Create Event</span>
+            </div>
+            <div style="display: flex; gap: 16px; padding: 0 16px; border-bottom: 1px solid #222; font-size: 13px;">
+              <span style="color: #818cf8; border-bottom: 2px solid #818cf8; padding: 12px 0;">Overview</span>
+              <span style="opacity: 0.5; padding: 12px 0;">Events</span>
+              <span style="opacity: 0.5; padding: 12px 0;">Members</span>
+              <span style="opacity: 0.5; padding: 12px 0;">Analytics</span>
+              <span style="opacity: 0.5; padding: 12px 0;">Settings</span>
+            </div>
+            <div style="padding: 16px;">
+              <div class="placeholder" style="height: 100px; font-size: 12px;">Near Full-width Dashboard Content</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons" style="margin-top: 24px;">
+  <div class="pros">
+    <h4>Recommendation: Option B</h4>
+    <ul>
+      <li>Club organizers spend long sessions in the dashboard — they need maximum screen real estate</li>
+      <li>Separate context signals "you're managing your club now" — reduces cognitive load</li>
+      <li>"Back to app" link keeps them oriented without eating space</li>
+      <li>No double nav problem — clean, purpose-built layout</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>Why not A or C?</h4>
+    <ul>
+      <li>A: Main sidebar wastes 200px on every page — organizers don't need Home/Events/Profile while managing their club</li>
+      <li>C: Collapsed sidebar still takes space and adds hover complexity on mobile</li>
+    </ul>
+  </div>
+</div>

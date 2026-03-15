@@ -1,0 +1,241 @@
+<h2>Club Dashboard — Design (Corrected Colors)</h2>
+<p class="subtitle">Using Uni-Verse design system: McGill Red primary, zinc darks, clean neutrals</p>
+
+<!-- OVERALL LAYOUT -->
+<div class="section">
+  <h3>Desktop Layout</h3>
+  <div class="mockup">
+    <div class="mockup-header">Dark Mode — Collapsed Sidebar + Dashboard</div>
+    <div class="mockup-body" style="display: flex; gap: 0; padding: 0; min-height: 520px; overflow: hidden; background: #09090B;">
+      <!-- Collapsed Sidebar -->
+      <div style="width: 56px; min-height: 520px; background: #18181B; border-right: 1px solid #27272A; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 4px; flex-shrink: 0;">
+        <div style="width: 32px; height: 32px; background: #ED1B2F; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: white;">U</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">🏠</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">📅</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">👥</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(237,27,47,0.12); display: flex; align-items: center; justify-content: center; font-size: 16px;">🏢</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">🔔</div>
+        <div style="flex: 1;"></div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">⚙️</div>
+        <div style="width: 28px; height: 28px; background: #ED1B2F; border-radius: 50%; margin-top: 8px;"></div>
+      </div>
+
+      <!-- Main Dashboard -->
+      <div style="flex: 1; background: #09090B; overflow: hidden;">
+        <!-- Hero Banner -->
+        <div style="height: 160px; background: linear-gradient(135deg, #1a1a1a, #2a2a2a, #333); position: relative; overflow: hidden;">
+          <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 50%, #09090B);"></div>
+          <div style="position: absolute; top: 12px; right: 16px; display: flex; gap: 8px;">
+            <span style="background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); color: white; padding: 4px 12px; border-radius: 99px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1);">📷 Edit Banner</span>
+          </div>
+          <!-- Gradient placeholder text -->
+          <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: rgba(255,255,255,0.15); letter-spacing: 2px;">BANNER IMAGE</div>
+        </div>
+
+        <!-- Profile Overlap Section -->
+        <div style="padding: 0 24px; margin-top: -40px; position: relative; z-index: 1;">
+          <div style="display: flex; align-items: flex-end; gap: 16px;">
+            <!-- Logo -->
+            <div style="width: 80px; height: 80px; background: #18181B; border: 3px solid #09090B; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #ED1B2F; flex-shrink: 0;">CS</div>
+            <!-- Club Info -->
+            <div style="flex: 1; padding-bottom: 4px;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 18px; font-weight: 700; color: #FAFAFA;">McGill CS Club</span>
+                <span style="background: rgba(34,197,94,0.12); color: #22c55e; padding: 2px 8px; border-radius: 99px; font-size: 11px; border: 1px solid rgba(34,197,94,0.2);">Approved</span>
+                <span style="background: #27272A; color: #A1A1AA; padding: 2px 8px; border-radius: 99px; font-size: 11px;">Technology</span>
+              </div>
+              <div style="display: flex; gap: 16px; margin-top: 4px; font-size: 12px; color: #71717A;">
+                <span><strong style="color: #FAFAFA;">1,247</strong> followers</span>
+                <span><strong style="color: #FAFAFA;">12</strong> members</span>
+                <span><strong style="color: #FAFAFA;">34</strong> events</span>
+              </div>
+            </div>
+            <!-- Actions -->
+            <div style="display: flex; gap: 8px; padding-bottom: 4px;">
+              <span style="background: #27272A; color: #FAFAFA; padding: 6px 12px; border-radius: 8px; font-size: 12px; border: 1px solid #3F3F46; cursor: pointer;">View Public Page ↗</span>
+              <span style="background: #ED1B2F; color: white; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">+ Create Event</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Bar -->
+        <div style="display: flex; gap: 0; padding: 0 24px; margin-top: 16px; border-bottom: 1px solid #27272A; font-size: 13px;">
+          <span style="color: #FAFAFA; border-bottom: 2px solid #ED1B2F; padding: 10px 16px; font-weight: 500;">Overview</span>
+          <span style="color: #71717A; padding: 10px 16px;">Events</span>
+          <span style="color: #71717A; padding: 10px 16px;">Members</span>
+          <span style="color: #71717A; padding: 10px 16px;">Analytics</span>
+          <span style="color: #71717A; padding: 10px 16px;">Settings</span>
+        </div>
+
+        <!-- Overview Content -->
+        <div style="padding: 20px 24px;">
+          <!-- Stats Row -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+            <div style="background: #18181B; border-radius: 12px; padding: 16px; border: 1px solid #27272A;">
+              <div style="font-size: 11px; color: #71717A; text-transform: uppercase; letter-spacing: 0.5px;">Total Followers</div>
+              <div style="font-size: 24px; font-weight: 700; color: #FAFAFA; margin-top: 4px;">1,247</div>
+              <div style="font-size: 11px; color: #22c55e; margin-top: 2px;">↑ 12% this month</div>
+            </div>
+            <div style="background: #18181B; border-radius: 12px; padding: 16px; border: 1px solid #27272A;">
+              <div style="font-size: 11px; color: #71717A; text-transform: uppercase; letter-spacing: 0.5px;">Avg RSVPs</div>
+              <div style="font-size: 24px; font-weight: 700; color: #FAFAFA; margin-top: 4px;">89</div>
+              <div style="font-size: 11px; color: #22c55e; margin-top: 2px;">↑ 5% vs last event</div>
+            </div>
+            <div style="background: #18181B; border-radius: 12px; padding: 16px; border: 1px solid #27272A;">
+              <div style="font-size: 11px; color: #71717A; text-transform: uppercase; letter-spacing: 0.5px;">Engagement Rate</div>
+              <div style="font-size: 24px; font-weight: 700; color: #FAFAFA; margin-top: 4px;">34%</div>
+              <div style="font-size: 11px; color: #ef4444; margin-top: 2px;">↓ 2% this month</div>
+            </div>
+            <div style="background: #18181B; border-radius: 12px; padding: 16px; border: 1px solid #27272A;">
+              <div style="font-size: 11px; color: #71717A; text-transform: uppercase; letter-spacing: 0.5px;">Events This Month</div>
+              <div style="font-size: 24px; font-weight: 700; color: #FAFAFA; margin-top: 4px;">3</div>
+              <div style="font-size: 11px; color: #71717A; margin-top: 2px;">8 total this semester</div>
+            </div>
+          </div>
+
+          <!-- Two Column: Next Event + Recent -->
+          <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 16px;">
+            <!-- Next Event Card -->
+            <div style="background: #18181B; border-radius: 12px; padding: 20px; border: 1px solid #27272A;">
+              <div style="font-size: 13px; font-weight: 600; color: #FAFAFA; margin-bottom: 12px;">Next Event</div>
+              <div style="background: #27272A; border-radius: 10px; padding: 16px; border: 1px solid #3F3F46;">
+                <div style="font-size: 15px; font-weight: 600; color: #FAFAFA;">Hackathon 2026</div>
+                <div style="font-size: 12px; color: #71717A; margin-top: 4px;">March 22, 2026 · 10:00 AM</div>
+                <div style="display: flex; gap: 12px; margin-top: 12px; font-size: 11px;">
+                  <span style="color: #71717A;">👥 <strong style="color: #FAFAFA;">47</strong> going</span>
+                  <span style="color: #71717A;">⭐ <strong style="color: #FAFAFA;">23</strong> interested</span>
+                </div>
+                <div style="margin-top: 12px; font-size: 12px; color: #ED1B2F; font-weight: 500;">7 days away →</div>
+              </div>
+            </div>
+
+            <!-- Recent Events Table -->
+            <div style="background: #18181B; border-radius: 12px; padding: 20px; border: 1px solid #27272A;">
+              <div style="font-size: 13px; font-weight: 600; color: #FAFAFA; margin-bottom: 12px;">Recent Events</div>
+              <div style="font-size: 12px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 8px 0; border-bottom: 1px solid #27272A; color: #71717A; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px;">
+                  <span>Event</span><span>Date</span><span>RSVPs</span><span>Views</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); color: #A1A1AA;">
+                  <span style="color: #FAFAFA;">Workshop: Intro to ML</span><span>Mar 8</span><span>62</span><span>340</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); color: #A1A1AA;">
+                  <span style="color: #FAFAFA;">Career Night 2026</span><span>Feb 28</span><span>134</span><span>892</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 0; color: #A1A1AA;">
+                  <span style="color: #FAFAFA;">Game Dev Social</span><span>Feb 14</span><span>45</span><span>210</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHT MODE -->
+<div class="section" style="margin-top: 32px;">
+  <h3>Light Mode</h3>
+  <div class="mockup">
+    <div class="mockup-header">Light Mode — Same layout, light tokens</div>
+    <div class="mockup-body" style="display: flex; gap: 0; padding: 0; min-height: 340px; overflow: hidden; background: #FFFFFF;">
+      <!-- Collapsed Sidebar Light -->
+      <div style="width: 56px; min-height: 340px; background: #FAFAFA; border-right: 1px solid #E5E5E5; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 4px; flex-shrink: 0;">
+        <div style="width: 32px; height: 32px; background: #ED1B2F; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: white;">U</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.4; font-size: 16px;">🏠</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.4; font-size: 16px;">📅</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(237,27,47,0.08); display: flex; align-items: center; justify-content: center; font-size: 16px;">🏢</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.4; font-size: 16px;">🔔</div>
+      </div>
+
+      <!-- Main Content Light -->
+      <div style="flex: 1; background: #FFFFFF; overflow: hidden;">
+        <!-- Hero Banner Light -->
+        <div style="height: 120px; background: linear-gradient(135deg, #f5f5f5, #e5e5e5, #d4d4d4); position: relative;">
+          <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: rgba(0,0,0,0.15); letter-spacing: 2px;">BANNER IMAGE</div>
+        </div>
+
+        <!-- Profile -->
+        <div style="padding: 0 24px; margin-top: -32px; position: relative; z-index: 1;">
+          <div style="display: flex; align-items: flex-end; gap: 16px;">
+            <div style="width: 64px; height: 64px; background: #F5F5F5; border: 3px solid #FFFFFF; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #ED1B2F; flex-shrink: 0;">CS</div>
+            <div style="flex: 1; padding-bottom: 4px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px; font-weight: 700; color: #171717;">McGill CS Club</span>
+                <span style="background: rgba(34,197,94,0.08); color: #16a34a; padding: 2px 8px; border-radius: 99px; font-size: 11px; border: 1px solid rgba(34,197,94,0.15);">Approved</span>
+              </div>
+              <div style="font-size: 12px; color: #737373; margin-top: 2px;">
+                <strong style="color: #171717;">1,247</strong> followers · <strong style="color: #171717;">12</strong> members · <strong style="color: #171717;">34</strong> events
+              </div>
+            </div>
+            <span style="background: #ED1B2F; color: white; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;">+ Create Event</span>
+          </div>
+        </div>
+
+        <!-- Tabs Light -->
+        <div style="display: flex; gap: 0; padding: 0 24px; margin-top: 14px; border-bottom: 1px solid #E5E5E5; font-size: 13px;">
+          <span style="color: #171717; border-bottom: 2px solid #ED1B2F; padding: 10px 16px; font-weight: 500;">Overview</span>
+          <span style="color: #737373; padding: 10px 16px;">Events</span>
+          <span style="color: #737373; padding: 10px 16px;">Members</span>
+          <span style="color: #737373; padding: 10px 16px;">Analytics</span>
+          <span style="color: #737373; padding: 10px 16px;">Settings</span>
+        </div>
+
+        <!-- Stats Light -->
+        <div style="padding: 16px 24px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+          <div style="background: #FFFFFF; border-radius: 12px; padding: 14px; border: 1px solid #E5E5E5;">
+            <div style="font-size: 11px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Followers</div>
+            <div style="font-size: 22px; font-weight: 700; color: #171717; margin-top: 4px;">1,247</div>
+            <div style="font-size: 11px; color: #16a34a; margin-top: 2px;">↑ 12%</div>
+          </div>
+          <div style="background: #FFFFFF; border-radius: 12px; padding: 14px; border: 1px solid #E5E5E5;">
+            <div style="font-size: 11px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Avg RSVPs</div>
+            <div style="font-size: 22px; font-weight: 700; color: #171717; margin-top: 4px;">89</div>
+            <div style="font-size: 11px; color: #16a34a; margin-top: 2px;">↑ 5%</div>
+          </div>
+          <div style="background: #FFFFFF; border-radius: 12px; padding: 14px; border: 1px solid #E5E5E5;">
+            <div style="font-size: 11px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Engagement</div>
+            <div style="font-size: 22px; font-weight: 700; color: #171717; margin-top: 4px;">34%</div>
+            <div style="font-size: 11px; color: #ef4444; margin-top: 2px;">↓ 2%</div>
+          </div>
+          <div style="background: #FFFFFF; border-radius: 12px; padding: 14px; border: 1px solid #E5E5E5;">
+            <div style="font-size: 11px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Events/Mo</div>
+            <div style="font-size: 22px; font-weight: 700; color: #171717; margin-top: 4px;">3</div>
+            <div style="font-size: 11px; color: #737373; margin-top: 2px;">8 total</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COLOR REFERENCE -->
+<div class="section" style="margin-top: 32px;">
+  <h3>Color Tokens Used</h3>
+  <p class="subtitle">Exact values from globals.css — no custom colors introduced</p>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px;">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Dark Mode Tokens</div>
+      <div style="font-size: 12px; line-height: 2; color: rgba(255,255,255,0.7);">
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #09090B; border: 1px solid #333; border-radius: 4px; display: inline-block;"></span> <code>--background: #09090B</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #18181B; border: 1px solid #333; border-radius: 4px; display: inline-block;"></span> <code>--card: #18181B</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #27272A; border: 1px solid #333; border-radius: 4px; display: inline-block;"></span> <code>--border/secondary: #27272A</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #ED1B2F; border-radius: 4px; display: inline-block;"></span> <code>--primary: #ED1B2F (McGill Red)</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #FAFAFA; border-radius: 4px; display: inline-block;"></span> <code>--foreground: #FAFAFA</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #71717A; border-radius: 4px; display: inline-block;"></span> <code>--muted-foreground: #71717A</code></div>
+      </div>
+    </div>
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px;">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Light Mode Tokens</div>
+      <div style="font-size: 12px; line-height: 2; color: rgba(255,255,255,0.7);">
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #FFFFFF; border: 1px solid #ccc; border-radius: 4px; display: inline-block;"></span> <code>--background: #FFFFFF</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #F5F5F5; border: 1px solid #ccc; border-radius: 4px; display: inline-block;"></span> <code>--secondary: #F5F5F5</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #E5E5E5; border: 1px solid #ccc; border-radius: 4px; display: inline-block;"></span> <code>--border: #E5E5E5</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #ED1B2F; border-radius: 4px; display: inline-block;"></span> <code>--primary: #ED1B2F (McGill Red)</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #171717; border-radius: 4px; display: inline-block;"></span> <code>--foreground: #171717</code></div>
+        <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; background: #737373; border-radius: 4px; display: inline-block;"></span> <code>--muted-foreground: #737373</code></div>
+      </div>
+    </div>
+  </div>
+</div>

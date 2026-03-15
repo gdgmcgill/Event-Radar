@@ -1,0 +1,238 @@
+<h2>Club Dashboard — Full Design Proposal</h2>
+<p class="subtitle">Hybrid layout with collapsed sidebar, full hero, 5 tabs</p>
+
+<!-- OVERALL LAYOUT -->
+<div class="section">
+  <h3>Overall Layout</h3>
+  <div class="mockup">
+    <div class="mockup-header">Desktop — Collapsed Sidebar + Dashboard</div>
+    <div class="mockup-body" style="display: flex; gap: 0; padding: 0; min-height: 500px; overflow: hidden;">
+      <!-- Collapsed Sidebar -->
+      <div style="width: 56px; min-height: 500px; background: #0f0f23; border-right: 1px solid #1e1e3a; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 4px; flex-shrink: 0;">
+        <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #818cf8, #6366f1); border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: white;">U</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">🏠</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">📅</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">👥</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(129,140,248,0.15); display: flex; align-items: center; justify-content: center; font-size: 16px;">🏢</div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">🔔</div>
+        <div style="flex: 1;"></div>
+        <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 16px;">⚙️</div>
+        <div style="width: 28px; height: 28px; background: #6366f1; border-radius: 50%; margin-top: 8px;"></div>
+      </div>
+
+      <!-- Main Dashboard -->
+      <div style="flex: 1; background: #0d0d1a; overflow: hidden;">
+        <!-- Hero Banner -->
+        <div style="height: 160px; background: linear-gradient(135deg, #1e1b4b, #312e81, #4338ca); position: relative;">
+          <div style="position: absolute; top: 12px; right: 16px; display: flex; gap: 8px;">
+            <span style="background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); color: white; padding: 4px 12px; border-radius: 99px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1);">📷 Edit Banner</span>
+          </div>
+        </div>
+
+        <!-- Profile Overlap Section -->
+        <div style="padding: 0 24px; margin-top: -40px; position: relative; z-index: 1;">
+          <div style="display: flex; align-items: flex-end; gap: 16px;">
+            <!-- Logo -->
+            <div style="width: 80px; height: 80px; background: #1e1e3a; border: 3px solid #0d0d1a; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #818cf8; flex-shrink: 0;">CS</div>
+            <!-- Club Info -->
+            <div style="flex: 1; padding-bottom: 4px;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 18px; font-weight: 700; color: white;">McGill CS Club</span>
+                <span style="background: #22c55e20; color: #22c55e; padding: 2px 8px; border-radius: 99px; font-size: 11px;">Approved</span>
+                <span style="background: #818cf820; color: #818cf8; padding: 2px 8px; border-radius: 99px; font-size: 11px;">Technology</span>
+              </div>
+              <div style="display: flex; gap: 16px; margin-top: 4px; font-size: 12px; color: rgba(255,255,255,0.5);">
+                <span><strong style="color: white;">1,247</strong> followers</span>
+                <span><strong style="color: white;">12</strong> members</span>
+                <span><strong style="color: white;">34</strong> events</span>
+              </div>
+            </div>
+            <!-- Actions -->
+            <div style="display: flex; gap: 8px; padding-bottom: 4px;">
+              <span style="background: rgba(129,140,248,0.1); color: #818cf8; padding: 6px 12px; border-radius: 8px; font-size: 12px; border: 1px solid rgba(129,140,248,0.2); cursor: pointer;">View Public Page ↗</span>
+              <span style="background: #818cf8; color: white; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">+ Create Event</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Bar -->
+        <div style="display: flex; gap: 0; padding: 0 24px; margin-top: 16px; border-bottom: 1px solid #1e1e3a; font-size: 13px;">
+          <span style="color: #818cf8; border-bottom: 2px solid #818cf8; padding: 10px 16px; font-weight: 500;">Overview</span>
+          <span style="opacity: 0.5; padding: 10px 16px;">Events</span>
+          <span style="opacity: 0.5; padding: 10px 16px;">Members</span>
+          <span style="opacity: 0.5; padding: 10px 16px;">Analytics</span>
+          <span style="opacity: 0.5; padding: 10px 16px;">Settings</span>
+        </div>
+
+        <!-- Overview Content -->
+        <div style="padding: 20px 24px;">
+          <!-- Stats Row -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+            <div style="background: #1e1e3a; border-radius: 12px; padding: 16px; border: 1px solid #2a2a4a;">
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px;">Total Followers</div>
+              <div style="font-size: 24px; font-weight: 700; color: white; margin-top: 4px;">1,247</div>
+              <div style="font-size: 11px; color: #22c55e; margin-top: 2px;">↑ 12% this month</div>
+            </div>
+            <div style="background: #1e1e3a; border-radius: 12px; padding: 16px; border: 1px solid #2a2a4a;">
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px;">Avg RSVPs</div>
+              <div style="font-size: 24px; font-weight: 700; color: white; margin-top: 4px;">89</div>
+              <div style="font-size: 11px; color: #22c55e; margin-top: 2px;">↑ 5% vs last event</div>
+            </div>
+            <div style="background: #1e1e3a; border-radius: 12px; padding: 16px; border: 1px solid #2a2a4a;">
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px;">Engagement Rate</div>
+              <div style="font-size: 24px; font-weight: 700; color: white; margin-top: 4px;">34%</div>
+              <div style="font-size: 11px; color: #ef4444; margin-top: 2px;">↓ 2% this month</div>
+            </div>
+            <div style="background: #1e1e3a; border-radius: 12px; padding: 16px; border: 1px solid #2a2a4a;">
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px;">Events This Month</div>
+              <div style="font-size: 24px; font-weight: 700; color: white; margin-top: 4px;">3</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 2px;">8 total this semester</div>
+            </div>
+          </div>
+
+          <!-- Two Column: Next Event + Recent -->
+          <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 16px;">
+            <!-- Next Event Card -->
+            <div style="background: #1e1e3a; border-radius: 12px; padding: 20px; border: 1px solid #2a2a4a;">
+              <div style="font-size: 13px; font-weight: 600; color: white; margin-bottom: 12px;">🎯 Next Event</div>
+              <div style="background: linear-gradient(135deg, #312e81, #4338ca); border-radius: 10px; padding: 16px;">
+                <div style="font-size: 15px; font-weight: 600; color: white;">Hackathon 2026</div>
+                <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px;">March 22, 2026 • 10:00 AM</div>
+                <div style="display: flex; gap: 12px; margin-top: 12px; font-size: 11px;">
+                  <span style="color: rgba(255,255,255,0.7);">👥 <strong style="color: white;">47</strong> going</span>
+                  <span style="color: rgba(255,255,255,0.7);">⭐ <strong style="color: white;">23</strong> interested</span>
+                </div>
+                <div style="margin-top: 12px; font-size: 12px; color: #818cf8; font-weight: 500;">7 days away →</div>
+              </div>
+            </div>
+
+            <!-- Recent Events Table -->
+            <div style="background: #1e1e3a; border-radius: 12px; padding: 20px; border: 1px solid #2a2a4a;">
+              <div style="font-size: 13px; font-weight: 600; color: white; margin-bottom: 12px;">📋 Recent Events</div>
+              <div style="font-size: 12px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 8px 0; border-bottom: 1px solid #2a2a4a; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px;">
+                  <span>Event</span><span>Date</span><span>RSVPs</span><span>Views</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.8);">
+                  <span>Workshop: Intro to ML</span><span style="opacity:0.6;">Mar 8</span><span>62</span><span>340</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.8);">
+                  <span>Career Night 2026</span><span style="opacity:0.6;">Feb 28</span><span>134</span><span>892</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 0; color: rgba(255,255,255,0.8);">
+                  <span>Game Dev Social</span><span style="opacity:0.6;">Feb 14</span><span>45</span><span>210</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE LAYOUT -->
+<div class="section" style="margin-top: 32px;">
+  <h3>Mobile Layout</h3>
+  <div class="mockup">
+    <div class="mockup-header">Mobile — No sidebar, stacked layout</div>
+    <div class="mockup-body" style="max-width: 375px; margin: 0 auto; padding: 0; background: #0d0d1a; min-height: 480px;">
+      <!-- Mobile Hero (shorter) -->
+      <div style="height: 100px; background: linear-gradient(135deg, #1e1b4b, #312e81, #4338ca); position: relative;">
+        <span style="position: absolute; top: 8px; left: 12px; background: rgba(0,0,0,0.4); color: white; padding: 4px 10px; border-radius: 99px; font-size: 10px; backdrop-filter: blur(8px);">← Back</span>
+      </div>
+      <!-- Profile -->
+      <div style="padding: 0 16px; margin-top: -28px; position: relative;">
+        <div style="display: flex; align-items: flex-end; gap: 12px;">
+          <div style="width: 56px; height: 56px; background: #1e1e3a; border: 2px solid #0d0d1a; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #818cf8; flex-shrink: 0;">CS</div>
+          <div style="padding-bottom: 2px;">
+            <div style="font-size: 16px; font-weight: 700; color: white;">McGill CS Club</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.5);">1,247 followers · 12 members · 34 events</div>
+          </div>
+        </div>
+      </div>
+      <!-- Mobile Tabs (scrollable) -->
+      <div style="display: flex; gap: 0; padding: 0 16px; margin-top: 14px; border-bottom: 1px solid #1e1e3a; font-size: 12px; overflow-x: auto;">
+        <span style="color: #818cf8; border-bottom: 2px solid #818cf8; padding: 8px 12px; white-space: nowrap; font-weight: 500;">Overview</span>
+        <span style="opacity: 0.5; padding: 8px 12px; white-space: nowrap;">Events</span>
+        <span style="opacity: 0.5; padding: 8px 12px; white-space: nowrap;">Members</span>
+        <span style="opacity: 0.5; padding: 8px 12px; white-space: nowrap;">Analytics</span>
+        <span style="opacity: 0.5; padding: 8px 12px; white-space: nowrap;">Settings</span>
+      </div>
+      <!-- Mobile Stats (2x2 grid) -->
+      <div style="padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <div style="background: #1e1e3a; border-radius: 10px; padding: 12px; border: 1px solid #2a2a4a;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.5);">FOLLOWERS</div>
+          <div style="font-size: 20px; font-weight: 700; color: white;">1,247</div>
+          <div style="font-size: 10px; color: #22c55e;">↑ 12%</div>
+        </div>
+        <div style="background: #1e1e3a; border-radius: 10px; padding: 12px; border: 1px solid #2a2a4a;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.5);">AVG RSVPs</div>
+          <div style="font-size: 20px; font-weight: 700; color: white;">89</div>
+          <div style="font-size: 10px; color: #22c55e;">↑ 5%</div>
+        </div>
+        <div style="background: #1e1e3a; border-radius: 10px; padding: 12px; border: 1px solid #2a2a4a;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.5);">ENGAGEMENT</div>
+          <div style="font-size: 20px; font-weight: 700; color: white;">34%</div>
+          <div style="font-size: 10px; color: #ef4444;">↓ 2%</div>
+        </div>
+        <div style="background: #1e1e3a; border-radius: 10px; padding: 12px; border: 1px solid #2a2a4a;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.5);">EVENTS/MO</div>
+          <div style="font-size: 20px; font-weight: 700; color: white;">3</div>
+          <div style="font-size: 10px; color: rgba(255,255,255,0.3);">8 total</div>
+        </div>
+      </div>
+      <!-- FAB -->
+      <div style="position: absolute; bottom: 16px; right: 16px; width: 48px; height: 48px; background: #818cf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; box-shadow: 0 4px 12px rgba(129,140,248,0.4);">+</div>
+    </div>
+  </div>
+</div>
+
+<!-- KEY DESIGN DECISIONS -->
+<div class="section" style="margin-top: 32px;">
+  <h3>Key Design Decisions</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.2); border-radius: 12px; padding: 16px;">
+      <div style="font-size: 13px; font-weight: 600; color: #818cf8; margin-bottom: 8px;">🧭 Navigation</div>
+      <ul style="font-size: 12px; color: rgba(255,255,255,0.7); margin: 0; padding-left: 16px; line-height: 1.8;">
+        <li>Collapsed icon sidebar (expands on hover)</li>
+        <li>Hero + tabs replace the old sidebar nav</li>
+        <li>"View Public Page" link for preview</li>
+        <li>Mobile: no sidebar, scrollable tabs</li>
+        <li>FAB for "Create Event" on mobile</li>
+      </ul>
+    </div>
+    <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; padding: 16px;">
+      <div style="font-size: 13px; font-weight: 600; color: #22c55e; margin-bottom: 8px;">📊 Overview Tab</div>
+      <ul style="font-size: 12px; color: rgba(255,255,255,0.7); margin: 0; padding-left: 16px; line-height: 1.8;">
+        <li>Full hero (banner + overlapping logo + stats)</li>
+        <li>"Edit Banner" overlay on hover</li>
+        <li>4 stat cards with trend indicators</li>
+        <li>Next Event spotlight card</li>
+        <li>Recent events table</li>
+        <li>Completion nudge (if incomplete)</li>
+      </ul>
+    </div>
+    <div style="background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); border-radius: 12px; padding: 16px;">
+      <div style="font-size: 13px; font-weight: 600; color: #fbbf24; margin-bottom: 8px;">📈 Analytics Tab</div>
+      <ul style="font-size: 12px; color: rgba(255,255,255,0.7); margin: 0; padding-left: 16px; line-height: 1.8;">
+        <li>Follower growth line chart (30 days)</li>
+        <li>Engagement rate trend</li>
+        <li>Best-performing event type insights</li>
+        <li>Per-event breakdown table</li>
+        <li>Popular tags distribution</li>
+        <li>Peak activity times</li>
+      </ul>
+    </div>
+    <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 16px;">
+      <div style="font-size: 13px; font-weight: 600; color: #ef4444; margin-bottom: 8px;">⚙️ Settings Tab</div>
+      <ul style="font-size: 12px; color: rgba(255,255,255,0.7); margin: 0; padding-left: 16px; line-height: 1.8;">
+        <li>Logo + banner upload</li>
+        <li>Name, description, category</li>
+        <li>Contact email (required)</li>
+        <li>5 social links (IG, X, Discord, LinkedIn, Web)</li>
+        <li>Danger zone: transfer/delete</li>
+      </ul>
+    </div>
+  </div>
+</div>
