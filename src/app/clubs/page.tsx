@@ -78,25 +78,25 @@ export default async function ClubsPage({ searchParams }: PageProps) {
   // ── Fetch next upcoming event per club ────────────────────────────────
   const upcomingEvents: Record<
     string,
-    { title: string; event_date: string; location: string }
+    { title: string; start_date: string; location: string | null }
   > = {};
 
   if (clubIds.length > 0) {
     const today = new Date().toISOString().split("T")[0];
     const { data: events } = await supabase
       .from("events")
-      .select("club_id, title, event_date, location")
+      .select("club_id, title, start_date, location")
       .in("club_id", clubIds)
       .eq("status", "approved")
-      .gte("event_date", today)
-      .order("event_date", { ascending: true });
+      .gte("start_date", today)
+      .order("start_date", { ascending: true });
 
     // Keep only the first (nearest) event per club
     for (const ev of events ?? []) {
       if (ev.club_id && !upcomingEvents[ev.club_id]) {
         upcomingEvents[ev.club_id] = {
           title: ev.title,
-          event_date: ev.event_date,
+          start_date: ev.start_date,
           location: ev.location,
         };
       }
@@ -278,10 +278,10 @@ export default async function ClubsPage({ searchParams }: PageProps) {
                         <div className="flex items-center gap-3 bg-card p-2.5 rounded-lg border border-border shadow-sm">
                           <div className="bg-primary/10 text-primary rounded-md p-2 flex flex-col items-center justify-center min-w-[40px]">
                             <span className="text-[10px] font-bold uppercase leading-none">
-                              {formatEventDate(nextEvent.event_date).month}
+                              {formatEventDate(nextEvent.start_date).month}
                             </span>
                             <span className="text-sm font-bold leading-none mt-0.5">
-                              {formatEventDate(nextEvent.event_date).day}
+                              {formatEventDate(nextEvent.start_date).day}
                             </span>
                           </div>
                           <div className="flex flex-col min-w-0">
