@@ -65,7 +65,8 @@ export interface Club {
   discord_url: string | null;
   twitter_url: string | null;
   linkedin_url: string | null;
-  status: "pending" | "approved" | "rejected";
+  contact_email: string | null;
+  status: "pending" | "approved" | "rejected" | "deleted";
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -290,6 +291,10 @@ export interface ClubAnalytics {
   total_attendees: number;
   popular_tags: { tag: string; count: number }[];
   events: EventAnalytics[];
+  engagement_trend: { date: string; rate: number }[];
+  peak_hours: { hour: number; count: number }[];
+  peak_days: { day: string; count: number }[];
+  best_event_type: { tag: string; avg_rsvps: number; comparison: number } | null;
 }
 
 // ── Review Types ─────────────────────────────────────────────────────────
