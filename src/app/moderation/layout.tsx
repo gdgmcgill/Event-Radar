@@ -46,12 +46,12 @@ export default async function ModerationLayout({
 
           {/* Right actions */}
           <div className="flex items-center gap-3">
-            <button className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+            <a href="/notifications" className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300" title="Notifications">
               <Bell className="h-4 w-4" />
-            </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300">
+            </a>
+            <a href="/profile?tab=settings" className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300" title="Settings">
               <Settings className="h-4 w-4" />
-            </button>
+            </a>
 
             <div className="mx-2 h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
 

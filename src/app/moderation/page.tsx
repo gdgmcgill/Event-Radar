@@ -8,6 +8,8 @@ import {
   History,
   ArrowRight,
   MapPin,
+  Shield,
+  TrendingUp,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
@@ -27,6 +29,7 @@ interface PendingClub {
   category: string | null;
   created_at: string;
   created_by: string | null;
+  creator_name?: string | null;
 }
 
 export default async function ModerationDashboardPage() {
@@ -72,8 +75,29 @@ export default async function ModerationDashboardPage() {
   const approvedCount = approved.count ?? 0;
   const pendingClubCount = pendingClubsCount.count ?? 0;
   const pendingEvents = recentEvents.data ?? [];
-  const pendingClubs = (recentClubs.data ?? []) as PendingClub[];
+  const rawClubs = (recentClubs.data ?? []) as PendingClub[];
   const auditEntries = auditLogRes.data ?? [];
+
+  // Resolve creator UUIDs to names
+  const creatorIds = rawClubs
+    .map((c) => c.created_by)
+    .filter((id): id is string => !!id);
+  let creatorMap: Record<string, string> = {};
+  if (creatorIds.length > 0) {
+    const { data: creators } = await supabase
+      .from("users")
+      .select("id, name, email")
+      .in("id", creatorIds);
+    if (creators) {
+      creatorMap = Object.fromEntries(
+        creators.map((u) => [u.id, u.name || u.email?.split("@")[0] || "Unknown"])
+      );
+    }
+  }
+  const pendingClubs = rawClubs.map((club) => ({
+    ...club,
+    creator_name: club.created_by ? creatorMap[club.created_by] ?? "Unknown" : "Unknown",
+  }));
 
   function formatTimeAgo(dateStr: string): string {
     const now = new Date();
@@ -98,61 +122,76 @@ export default async function ModerationDashboardPage() {
 
   function getActionColor(action: string): string {
     if (action === "approved" || action === "bulk_approved")
-      return "bg-green-500";
+      return "bg-emerald-500";
     if (action === "rejected" || action === "bulk_rejected" || action === "deleted")
       return "bg-red-500";
-    if (action === "created")
-      return "bg-blue-500";
-    if (action === "updated")
-      return "bg-amber-500";
+    if (action === "created") return "bg-blue-500";
+    if (action === "updated") return "bg-amber-500";
     return "bg-zinc-400";
   }
 
+  const totalActions = pendingCount + pendingClubCount;
+
   const stats = [
     {
-      label: "Pending Events",
-      value: pendingCount,
-      icon: Clock,
-      accent: "border-l-amber-500",
-      iconBg: "bg-amber-100 dark:bg-amber-900/30",
-      iconColor: "text-amber-600 dark:text-amber-400",
-    },
-    {
-      label: "Pending Clubs",
-      value: pendingClubCount,
-      icon: Building2,
-      accent: "border-l-amber-500",
-      iconBg: "bg-amber-100 dark:bg-amber-900/30",
-      iconColor: "text-amber-600 dark:text-amber-400",
+      label: "Items Need Review",
+      value: totalActions,
+      icon: Shield,
+      accent: totalActions > 0 ? "border-l-red-500" : "border-l-emerald-500",
+      iconBg: totalActions > 0 ? "bg-red-50 dark:bg-red-950/30" : "bg-emerald-50 dark:bg-emerald-950/30",
+      iconColor: totalActions > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400",
+      sublabel: totalActions > 0 ? `${pendingCount} events, ${pendingClubCount} clubs` : "All caught up!",
     },
     {
       label: "Registered Users",
       value: usersCount,
       icon: Users,
       accent: "border-l-blue-500",
-      iconBg: "bg-blue-100 dark:bg-blue-900/30",
+      iconBg: "bg-blue-50 dark:bg-blue-950/30",
       iconColor: "text-blue-600 dark:text-blue-400",
+      sublabel: "Total platform users",
     },
     {
       label: "Approved Events",
       value: approvedCount,
       icon: CalendarCheck,
-      accent: "border-l-green-500",
-      iconBg: "bg-green-100 dark:bg-green-900/30",
-      iconColor: "text-green-600 dark:text-green-400",
+      accent: "border-l-emerald-500",
+      iconBg: "bg-emerald-50 dark:bg-emerald-950/30",
+      iconColor: "text-emerald-600 dark:text-emerald-400",
+      sublabel: "Live on platform",
+    },
+    {
+      label: "Pending Events",
+      value: pendingCount,
+      icon: Clock,
+      accent: "border-l-amber-500",
+      iconBg: "bg-amber-50 dark:bg-amber-950/30",
+      iconColor: "text-amber-600 dark:text-amber-400",
+      sublabel: "Awaiting review",
     },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-zinc-900 dark:text-zinc-100 text-3xl font-bold tracking-tight">
-          Moderation Dashboard
-        </h1>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
-          Overview of pending content and recent moderation activity.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-zinc-900 dark:text-zinc-100 text-2xl font-bold tracking-tight">
+            Dashboard
+          </h1>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-0.5">
+            Platform overview and pending reviews
+          </p>
+        </div>
+        {totalActions > 0 && (
+          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 text-sm font-medium px-3 py-1.5 rounded-lg">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+            </span>
+            {totalActions} item{totalActions !== 1 ? "s" : ""} need review
+          </div>
+        )}
       </div>
 
       {/* Stats Row */}
@@ -160,30 +199,37 @@ export default async function ModerationDashboardPage() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className={`bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 border-l-4 ${stat.accent}`}
+            className={`bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 border-l-4 ${stat.accent} hover:shadow-md transition-shadow`}
           >
             <div className="flex items-center justify-between mb-3">
               <div className={`p-2 rounded-lg ${stat.iconBg}`}>
-                <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                <stat.icon className={`h-4 w-4 ${stat.iconColor}`} />
               </div>
+              <TrendingUp className="h-3.5 w-3.5 text-zinc-300 dark:text-zinc-600" />
             </div>
-            <p className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               {stat.value}
             </p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mt-0.5">
               {stat.label}
+            </p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+              {stat.sublabel}
             </p>
           </div>
         ))}
       </div>
 
       {/* Tables Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Pending Events Table */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-zinc-900 dark:text-zinc-100 font-semibold">
+          <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-md bg-amber-50 dark:bg-amber-950/30">
+                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h2 className="text-zinc-900 dark:text-zinc-100 font-semibold text-sm">
                 Pending Events
               </h2>
               <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold px-2 py-0.5 rounded-full">
@@ -192,85 +238,65 @@ export default async function ModerationDashboardPage() {
             </div>
             <Link
               href="/moderation/events?status=pending"
-              className="text-sm text-red-600 dark:text-red-400 font-medium hover:underline flex items-center gap-1"
+              className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 font-medium flex items-center gap-1 transition-colors"
             >
-              View All <ArrowRight className="h-3.5 w-3.5" />
+              View All <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  <th className="px-6 py-3 font-medium">Event</th>
-                  <th className="px-6 py-3 font-medium">Organizer</th>
-                  <th className="px-6 py-3 font-medium hidden md:table-cell">Location</th>
-                  <th className="px-6 py-3 font-medium hidden sm:table-cell">Submitted</th>
-                  <th className="px-6 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {pendingEvents.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
-                      <p className="text-zinc-400 dark:text-zinc-500 text-sm">
-                        No pending events &mdash; you&apos;re all caught up!
+            {pendingEvents.length === 0 ? (
+              <div className="px-5 py-10 text-center">
+                <CheckCircle className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
+                <p className="text-zinc-400 dark:text-zinc-500 text-sm">
+                  No pending events
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {pendingEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="px-5 py-3.5 flex items-center gap-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                        {event.title}
                       </p>
-                    </td>
-                  </tr>
-                ) : (
-                  pendingEvents.map((event) => (
-                    <tr
-                      key={event.id}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-                    >
-                      <td className="px-6 py-3">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
-                          {event.title}
-                        </p>
-                      </td>
-                      <td className="px-6 py-3 text-zinc-600 dark:text-zinc-300">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 mt-0.5">
                         {event.organizer ?? "Unknown"}
-                      </td>
-                      <td className="px-6 py-3 hidden md:table-cell">
-                        <span className="text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {event.location ?? "TBD"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3 hidden sm:table-cell text-zinc-500 dark:text-zinc-400">
-                        {event.created_at ? formatDate(event.created_at) : "Unknown"}
-                      </td>
-                      <td className="px-6 py-3 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Link
-                            href="/moderation/events"
-                            className="p-1.5 rounded-lg text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                            title="Approve"
-                          >
-                            <CheckCircle className="h-4.5 w-4.5" />
-                          </Link>
-                          <Link
-                            href="/moderation/events"
-                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                            title="Reject"
-                          >
-                            <XCircle className="h-4.5 w-4.5" />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                        {event.location && (
+                          <>
+                            <span className="text-zinc-300 dark:text-zinc-600">·</span>
+                            <MapPin className="h-3 w-3" />
+                            {event.location}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0 hidden sm:block">
+                      {event.created_at ? formatDate(event.created_at) : ""}
+                    </span>
+                    <Link
+                      href={`/moderation/pending`}
+                      className="shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 border border-amber-200 dark:border-amber-800 rounded-md px-2.5 py-1 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                    >
+                      Review
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Pending Clubs Table */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-zinc-900 dark:text-zinc-100 font-semibold">
+          <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-md bg-amber-50 dark:bg-amber-950/30">
+                <Building2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h2 className="text-zinc-900 dark:text-zinc-100 font-semibold text-sm">
                 Pending Clubs
               </h2>
               <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold px-2 py-0.5 rounded-full">
@@ -279,107 +305,84 @@ export default async function ModerationDashboardPage() {
             </div>
             <Link
               href="/moderation/clubs?status=pending"
-              className="text-sm text-red-600 dark:text-red-400 font-medium hover:underline flex items-center gap-1"
+              className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 font-medium flex items-center gap-1 transition-colors"
             >
-              View All <ArrowRight className="h-3.5 w-3.5" />
+              View All <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  <th className="px-6 py-3 font-medium">Club Name</th>
-                  <th className="px-6 py-3 font-medium">Creator</th>
-                  <th className="px-6 py-3 font-medium hidden sm:table-cell">Category</th>
-                  <th className="px-6 py-3 font-medium hidden md:table-cell">Submitted</th>
-                  <th className="px-6 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {pendingClubs.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
-                      <p className="text-zinc-400 dark:text-zinc-500 text-sm">
-                        No pending clubs &mdash; you&apos;re all caught up!
+            {pendingClubs.length === 0 ? (
+              <div className="px-5 py-10 text-center">
+                <CheckCircle className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
+                <p className="text-zinc-400 dark:text-zinc-500 text-sm">
+                  No pending clubs
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {pendingClubs.map((club) => (
+                  <div
+                    key={club.id}
+                    className="px-5 py-3.5 flex items-center gap-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors"
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-600 dark:text-zinc-300 shrink-0">
+                      {club.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                        {club.name}
                       </p>
-                    </td>
-                  </tr>
-                ) : (
-                  pendingClubs.map((club) => (
-                    <tr
-                      key={club.id}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-                    >
-                      <td className="px-6 py-3">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
-                          {club.name}
-                        </p>
-                      </td>
-                      <td className="px-6 py-3 text-zinc-600 dark:text-zinc-300">
-                        {club.created_by ?? "Unknown"}
-                      </td>
-                      <td className="px-6 py-3 hidden sm:table-cell">
-                        {club.category ? (
-                          <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs font-medium px-2 py-0.5 rounded">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        by {club.creator_name}
+                        {club.category && (
+                          <>
+                            <span className="text-zinc-300 dark:text-zinc-600 mx-1">·</span>
                             {club.category}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-400 dark:text-zinc-500 text-xs">
-                            Uncategorized
-                          </span>
+                          </>
                         )}
-                      </td>
-                      <td className="px-6 py-3 hidden md:table-cell text-zinc-500 dark:text-zinc-400">
-                        {formatDate(club.created_at)}
-                      </td>
-                      <td className="px-6 py-3 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Link
-                            href="/moderation/clubs"
-                            className="p-1.5 rounded-lg text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                            title="Approve"
-                          >
-                            <CheckCircle className="h-4.5 w-4.5" />
-                          </Link>
-                          <Link
-                            href="/moderation/clubs"
-                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                            title="Reject"
-                          >
-                            <XCircle className="h-4.5 w-4.5" />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      </p>
+                    </div>
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0 hidden sm:block">
+                      {formatDate(club.created_at)}
+                    </span>
+                    <Link
+                      href={`/moderation/clubs`}
+                      className="shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 border border-amber-200 dark:border-amber-800 rounded-md px-2.5 py-1 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                    >
+                      Review
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Recent Activity Feed */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <History className="h-5 w-5 text-zinc-400" />
-            <h2 className="text-zinc-900 dark:text-zinc-100 font-semibold">
+        <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800">
+              <History className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+            </div>
+            <h2 className="text-zinc-900 dark:text-zinc-100 font-semibold text-sm">
               Recent Activity
             </h2>
           </div>
           <Link
             href="/moderation/audit-log"
-            className="text-sm text-red-600 dark:text-red-400 font-medium hover:underline flex items-center gap-1"
+            className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 font-medium flex items-center gap-1 transition-colors"
           >
-            View Full Log <ArrowRight className="h-3.5 w-3.5" />
+            View Full Log <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {auditEntries.length === 0 ? (
-            <div className="px-6 py-12 text-center">
+            <div className="px-5 py-10 text-center">
+              <History className="h-8 w-8 text-zinc-300 dark:text-zinc-600 mx-auto mb-2" />
               <p className="text-zinc-400 dark:text-zinc-500 text-sm">
-                No recent activity.
+                No recent activity yet
               </p>
             </div>
           ) : (
@@ -396,20 +399,23 @@ export default async function ModerationDashboardPage() {
               return (
                 <div
                   key={entry.id}
-                  className="px-6 py-3.5 flex items-center gap-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                  className="px-5 py-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors"
                 >
                   <div
-                    className={`h-2.5 w-2.5 rounded-full shrink-0 ${getActionColor(entry.action)}`}
+                    className={`h-2 w-2 rounded-full shrink-0 ${getActionColor(entry.action)}`}
                   />
                   <div className="flex-1 min-w-0 text-sm">
                     <span className="font-medium text-zinc-900 dark:text-zinc-100 capitalize">
                       {adminName}
                     </span>{" "}
                     <span className="text-zinc-500 dark:text-zinc-400">
-                      {entry.action} {entry.target_type}
+                      {entry.action}
+                    </span>{" "}
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      {entry.target_type}
                     </span>{" "}
                     <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                      &ldquo;{targetName}&rdquo;
+                      {targetName}
                     </span>
                   </div>
                   <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
