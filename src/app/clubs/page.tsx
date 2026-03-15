@@ -6,6 +6,10 @@ import { Building2, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { ClubSearch } from "@/components/clubs/ClubSearch";
 import { ClubsPageTabs } from "@/components/clubs/ClubsPageTabs";
 import { ClubsHeroButton } from "@/components/clubs/ClubsHeroButton";
+import { ClubsHeroSection } from "@/components/clubs/ClubsHeroSection";
+import { TrendingClubsSection } from "@/components/clubs/TrendingClubsSection";
+import { PopularWithFriendsClubsSection } from "@/components/clubs/PopularWithFriendsClubsSection";
+import { ClubCategoryRowsSection } from "@/components/clubs/ClubCategoryRowsSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -147,42 +151,9 @@ export default async function ClubsPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex-1 min-w-0">
-      {/* ── Hero Section (matches homepage HeroSection style) ────── */}
+      {/* ── Hero Section ────── */}
       {!q && !category && currentPage === 1 && (
-        <section className="relative w-full h-[60vh] min-h-[400px] max-h-[600px] overflow-hidden">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: 'url("/club_hero.jpeg")' }}
-          />
-          {/* Gradient overlay for text readability (both modes) */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black from-0% via-black/80 via-[15%] via-black/50 via-[50%] to-black/20 to-100%" />
-          {/* Bottom blend into page background */}
-          <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background from-10% via-background/40 via-50% to-transparent" />
-
-          <div className="absolute bottom-0 left-0 p-6 md:p-10 lg:p-12 w-full lg:w-3/4 pb-28 md:pb-32">
-            <span className="inline-block px-5 py-2 bg-white/20 dark:bg-white/10 backdrop-blur-xl text-white text-xs font-black uppercase tracking-[0.2em] rounded-full mb-6 border border-white/30 dark:border-white/15 shadow-xl [text-shadow:0_1px_3px_rgba(0,0,0,0.3)]">
-              Clubs Directory
-            </span>
-
-            <h2 className="text-white text-4xl sm:text-5xl lg:text-7xl font-black leading-[0.9] tracking-tighter mb-6 drop-shadow-2xl">
-              Find Your Community
-            </h2>
-
-            <p className="text-white/90 text-lg lg:text-xl font-medium max-w-xl mb-8 leading-relaxed drop-shadow-lg">
-              Discover student clubs and organizations at McGill. Join a community that matches your passions.
-            </p>
-
-            <div className="flex items-center gap-4">
-              <Link
-                href="#clubs-feed"
-                className="px-8 md:px-10 py-4 md:py-5 bg-primary text-primary-foreground text-base md:text-lg font-bold rounded-2xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-3"
-              >
-                Explore Clubs
-              </Link>
-              <ClubsHeroButton />
-            </div>
-          </div>
-        </section>
+        <ClubsHeroSection />
       )}
 
       <Suspense>
@@ -196,6 +167,16 @@ export default async function ClubsPage({ searchParams }: PageProps) {
         />
       </div>
 
+      {/* Discovery sections — only on unfiltered default view */}
+      {!q && !category && currentPage === 1 && (
+        <div className="space-y-10 py-6">
+          <TrendingClubsSection />
+          <PopularWithFriendsClubsSection />
+          <ClubCategoryRowsSection />
+        </div>
+      )}
+
+      {(q || category || currentPage > 1) && (
       <main className="px-6 lg:px-10 py-6 lg:py-8">
 
         {/* ── Section Header ────────────────────────────────────────── */}
@@ -396,6 +377,27 @@ export default async function ClubsPage({ searchParams }: PageProps) {
           </Link>
         </div>
       </main>
+      )}
+
+      {/* ── Register CTA for discovery view ─────────────────────────── */}
+      {!q && !category && currentPage === 1 && (
+        <div className="px-6 lg:px-10 py-6">
+          <div className="mt-8 mb-4 rounded-2xl border border-border bg-card p-8 md:p-10 text-center">
+            <h3 className="text-xl md:text-2xl font-bold tracking-tight mb-2">
+              Don&apos;t see your club?
+            </h3>
+            <p className="text-muted-foreground max-w-md mx-auto mb-6">
+              If your club isn&apos;t listed yet, register it in under a minute and start reaching students across campus.
+            </p>
+            <Link
+              href="/clubs/create"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+            >
+              Register Your Club
+            </Link>
+          </div>
+        </div>
+      )}
       </ClubsPageTabs>
       </Suspense>
     </div>
