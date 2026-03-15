@@ -526,11 +526,11 @@ function HomePageContent() {
             {/* Happening Now */}
             <HappeningNowSection onEventClick={handleEventClick} />
 
-            {/* Just Added */}
-            <JustAddedSection onEventClick={handleEventClick} />
-
             {/* Trending Now (Popular) */}
             <PopularEventsSection onEventClick={handleEventClick} />
+
+            {/* Just Added */}
+            <JustAddedSection onEventClick={handleEventClick} />
 
             {/* Recommended For You */}
             {user && <RecommendedEventsSection onEventClick={handleEventClick} />}
