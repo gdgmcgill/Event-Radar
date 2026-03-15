@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { verifyAdmin } from "@/lib/admin";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAdminAction } from "@/lib/audit";
+import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
 
 export async function PATCH(
   request: NextRequest,
@@ -15,13 +16,28 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { status } = body;
+  const { status, category, message: rejectionMessage } = body;
 
   if (!["approved", "rejected"].includes(status)) {
     return NextResponse.json(
       { error: "Status must be 'approved' or 'rejected'" },
       { status: 400 }
     );
+  }
+
+  if (status === "rejected") {
+    if (!category || !rejectionMessage?.trim()) {
+      return NextResponse.json(
+        { error: "Rejection requires category and message" },
+        { status: 400 }
+      );
+    }
+    if (!(category in REJECTION_CATEGORIES)) {
+      return NextResponse.json(
+        { error: "Invalid rejection category" },
+        { status: 400 }
+      );
+    }
   }
 
   const serviceClient = createServiceClient();
@@ -53,6 +69,27 @@ export async function PATCH(
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  // Insert moderation review row
+  if (status === "rejected") {
+    await serviceClient.from("moderation_reviews").insert({
+      target_type: "club",
+      target_id: id,
+      action: "rejection",
+      category: category as RejectionCategory,
+      message: rejectionMessage.trim(),
+      author_id: user.id,
+    });
+  } else if (status === "approved" && (club.appeal_count ?? 0) > 0) {
+    await serviceClient.from("moderation_reviews").insert({
+      target_type: "club",
+      target_id: id,
+      action: "approval",
+      category: null,
+      message: "Club approved.",
+      author_id: user.id,
+    });
   }
 
   // Log audit action
@@ -110,11 +147,13 @@ export async function PATCH(
 
   if (status === "rejected" && club.created_by) {
     try {
+      const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
       await serviceClient.from("notifications").insert({
         user_id: club.created_by,
         type: "club_rejected",
         title: "Club Not Approved",
-        message: `Your club "${club.name}" was not approved.`,
+        message: `Your club "${club.name}" was not approved. Reason: ${categoryLabel} — ${rejectionMessage.trim()}`,
+        club_id: id,
       });
     } catch (notifErr) {
       console.error("[Admin] Failed to send club notification:", notifErr);
