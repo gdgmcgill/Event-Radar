@@ -40,8 +40,10 @@ export default function OrganizerRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("pending");
+  const [confirmAction, setConfirmAction] = useState<{ id: string; status: "approved" | "rejected" } | null>(null);
 
   const fetchRequests = useCallback(async () => {
+    setConfirmAction(null);
     setLoading(true);
     const params = new URLSearchParams({ status: statusFilter });
     const res = await fetch(`/api/admin/organizer-requests?${params}`);
@@ -58,6 +60,7 @@ export default function OrganizerRequestsPage() {
 
   const handleAction = async (requestId: string, status: "approved" | "rejected") => {
     setActionLoading(requestId);
+    setConfirmAction(null);
     try {
       const res = await fetch(`/api/admin/organizer-requests/${requestId}`, {
         method: "PATCH",
@@ -227,26 +230,53 @@ export default function OrganizerRequestsPage() {
                   <td className="px-6 py-4 text-right">
                     {request.status === "pending" && (
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => handleAction(request.id, "approved")}
-                          disabled={actionLoading === request.id}
-                          className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 disabled:opacity-50 transition-colors"
-                          title="Approve"
-                        >
-                          {actionLoading === request.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleAction(request.id, "rejected")}
-                          disabled={actionLoading === request.id}
-                          className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50 transition-colors"
-                          title="Reject"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
+                        {confirmAction?.id === request.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-zinc-600 dark:text-zinc-400 mr-1">
+                              {confirmAction.status === "approved" ? "Approve?" : "Reject?"}
+                            </span>
+                            <button
+                              onClick={() => handleAction(request.id, confirmAction.status)}
+                              disabled={actionLoading === request.id}
+                              className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                            >
+                              {actionLoading === request.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                "Yes"
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setConfirmAction(null)}
+                              className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-medium rounded-md text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setConfirmAction({ id: request.id, status: "approved" })}
+                              disabled={actionLoading === request.id}
+                              className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 disabled:opacity-50 transition-colors"
+                              title="Approve"
+                            >
+                              {actionLoading === request.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setConfirmAction({ id: request.id, status: "rejected" })}
+                              disabled={actionLoading === request.id}
+                              className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50 transition-colors"
+                              title="Reject"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </td>

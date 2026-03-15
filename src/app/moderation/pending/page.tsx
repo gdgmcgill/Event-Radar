@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -16,6 +17,7 @@ import {
   CheckCircle2,
   Tag,
   User,
+  Loader2,
 } from "lucide-react";
 import { FeatureEventModal } from "@/components/moderation/FeatureEventModal";
 
@@ -30,6 +32,7 @@ interface PendingEvent {
   tags: string[] | null;
   status: string;
   created_at: string | null;
+  image_url: string | null;
 }
 
 export default function ModerationPendingEventsPage() {
@@ -39,12 +42,14 @@ export default function ModerationPendingEventsPage() {
   const [editingEvent, setEditingEvent] = useState<PendingEvent | null>(null);
   const [editForm, setEditForm] = useState<Partial<PendingEvent>>({});
   const [featuringEvent, setFeaturingEvent] = useState<PendingEvent | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ id: string; status: "approved" | "rejected" } | null>(null);
 
   const fetchPending = useCallback(async () => {
+    setConfirmAction(null);
     const supabase = createClient();
     const { data } = await supabase
       .from("events")
-      .select("id, title, description, start_date, end_date, location, organizer, tags, status, created_at")
+      .select("id, title, description, start_date, end_date, location, organizer, tags, status, created_at, image_url")
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
@@ -57,6 +62,7 @@ export default function ModerationPendingEventsPage() {
   }, [fetchPending]);
 
   const handleAction = async (eventId: string, status: "approved" | "rejected") => {
+    setConfirmAction(null);
     setActionLoading(eventId);
     try {
       const res = await fetch(`/api/admin/events/${eventId}/status`, {
@@ -139,23 +145,26 @@ export default function ModerationPendingEventsPage() {
             Pending Review
           </h2>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 animate-pulse"
+              className="flex rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden animate-pulse"
             >
-              <div className="space-y-3">
-                <div className="h-5 w-3/4 rounded bg-zinc-200 dark:bg-zinc-800" />
-                <div className="h-3 w-1/2 rounded bg-zinc-100 dark:bg-zinc-800/60" />
-                <div className="h-12 w-full rounded bg-zinc-100 dark:bg-zinc-800/60" />
-                <div className="flex gap-2">
-                  <div className="h-5 w-14 rounded-full bg-zinc-100 dark:bg-zinc-800/60" />
-                  <div className="h-5 w-14 rounded-full bg-zinc-100 dark:bg-zinc-800/60" />
+              <div className="w-48 shrink-0 bg-zinc-200 dark:bg-zinc-800" />
+              <div className="flex-1 p-4 space-y-2">
+                <div className="flex justify-between">
+                  <div className="h-4 w-1/3 rounded bg-zinc-200 dark:bg-zinc-800" />
+                  <div className="h-3 w-1/4 rounded bg-zinc-100 dark:bg-zinc-800/60" />
                 </div>
-                <div className="flex gap-2 pt-2">
-                  <div className="h-8 w-20 rounded bg-zinc-100 dark:bg-zinc-800/60" />
-                  <div className="h-8 w-20 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                <div className="h-3 w-2/3 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                <div className="flex gap-2 pt-1">
+                  <div className="h-5 w-12 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                  <div className="h-5 w-12 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                  <div className="ml-auto flex gap-1.5">
+                    <div className="h-7 w-16 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                    <div className="h-7 w-16 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -190,98 +199,136 @@ export default function ModerationPendingEventsPage() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-4">
           {events.map((event) => (
             <div
               key={event.id}
-              className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden transition-shadow hover:shadow-md dark:hover:shadow-zinc-900/50"
+              className="flex rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden transition-shadow hover:shadow-lg dark:hover:shadow-zinc-900/50"
             >
-              <div className="p-5">
-                {/* Card header */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                      {event.title}
-                    </h3>
-                    <div className="flex items-center gap-1.5 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                      <User className="h-3 w-3" />
-                      <span>{event.organizer ?? "Unknown organizer"}</span>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 shrink-0">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              {/* Image */}
+              <div className="relative w-48 shrink-0">
+                <Image
+                  src={event.image_url || "/placeholder-event.png"}
+                  alt={event.title}
+                  fill
+                  className="object-cover"
+                />
+                {/* Gradient fade into content */}
+                <div className="absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white dark:from-zinc-900 to-transparent" />
+                {/* Date badge */}
+                <div className="absolute bottom-2.5 left-2.5 flex flex-col items-center bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-0.5 shadow-sm">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-primary">
+                    {new Date(event.start_date).toLocaleDateString("en-US", { month: "short" })}
+                  </span>
+                  <span className="text-base font-extrabold leading-none text-zinc-900 dark:text-zinc-100">
+                    {new Date(event.start_date).getDate()}
+                  </span>
+                </div>
+                {/* Pending badge */}
+                <div className="absolute top-2.5 right-2.5">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
                     Pending
                   </span>
                 </div>
+              </div>
 
-                {/* Description preview */}
+              {/* Content */}
+              <div className="flex-1 flex flex-col p-4 min-w-0">
+                {/* Top row: title + organizer + meta */}
+                <div className="flex items-start justify-between gap-4 mb-1.5">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {event.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      <User className="h-3 w-3 shrink-0" />
+                      <span>{event.organizer ?? "Unknown organizer"}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400 shrink-0">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {new Date(event.start_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      {event.end_date && ` — ${new Date(event.end_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
+                    </span>
+                    {event.location && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5" />
+                        {event.location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description — single line */}
                 {event.description && (
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 mb-3">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 mb-2">
                     {event.description}
                   </p>
                 )}
 
-                {/* Meta info */}
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {new Date(event.start_date).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                    {event.end_date && (
-                      <>
-                        {" — "}
-                        {new Date(event.end_date).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </>
-                    )}
-                  </span>
-                  {event.location && (
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {event.location}
-                    </span>
+                {/* Tags + Actions on one row */}
+                <div className="flex items-center gap-3 mt-auto pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                  {/* Tags */}
+                  {event.tags && event.tags.length > 0 && (
+                    <div className="flex items-center gap-1 mr-auto">
+                      {event.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   )}
-                </div>
 
-                {/* Tags */}
-                {event.tags && event.tags.length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap mb-4">
-                    <Tag className="h-3 w-3 text-zinc-400 dark:text-zinc-500" />
-                    {event.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                      >
-                        {tag}
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                  {confirmAction?.id === event.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-zinc-600 dark:text-zinc-400">
+                        {confirmAction.status === "approved" ? "Approve?" : "Reject?"}
                       </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                  <button
-                    onClick={() => handleAction(event.id, "approved")}
-                    disabled={actionLoading === event.id}
-                    className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
-                  >
-                    <CheckCircle className="h-3.5 w-3.5" />
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleAction(event.id, "rejected")}
-                    disabled={actionLoading === event.id}
-                    className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
-                  >
-                    <XCircle className="h-3.5 w-3.5" />
-                    Reject
-                  </button>
+                      <button
+                        onClick={() => handleAction(event.id, confirmAction.status)}
+                        disabled={actionLoading === event.id}
+                        className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                      >
+                        {actionLoading === event.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          "Yes"
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setConfirmAction(null)}
+                        className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium rounded-md text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setConfirmAction({ id: event.id, status: "approved" })}
+                        disabled={actionLoading === event.id}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                      >
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => setConfirmAction({ id: event.id, status: "rejected" })}
+                        disabled={actionLoading === event.id}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        Reject
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => openEdit(event)}
                     disabled={actionLoading === event.id}
@@ -299,6 +346,7 @@ export default function ModerationPendingEventsPage() {
                     <Star className="h-3.5 w-3.5" />
                     Feature
                   </button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
+  ClipboardCheck,
   CalendarClock,
   Building2,
   UserCheck,
@@ -17,6 +18,7 @@ import {
 
 const contentItems = [
   { name: "Dashboard", path: "/moderation", icon: LayoutDashboard },
+  { name: "Pending Review", path: "/moderation/pending", icon: ClipboardCheck },
   { name: "Event Queue", path: "/moderation/events", icon: CalendarClock },
   { name: "Club Approvals", path: "/moderation/clubs", icon: Building2 },
   { name: "Featured Events", path: "/moderation/featured", icon: Star },
