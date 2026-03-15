@@ -153,7 +153,7 @@ export async function PATCH(
     // Fetch the event to check ownership / club
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, club_id")
+      .select("id, club_id, created_by, status")
       .eq("id", id)
       .single();
 
@@ -176,8 +176,15 @@ export async function PATCH(
     // Permission check: admin can edit any event
     let canEdit = roles.includes("admin");
 
-    // Club organizer can edit their own club's events
-    if (!canEdit && roles.includes("club_organizer") && event.club_id) {
+    // Original creator can edit their own pending events
+    if (!canEdit && event.created_by === user.id) {
+      if (event.status === "pending") {
+        canEdit = true;
+      }
+    }
+
+    // Club member can edit their club's events
+    if (!canEdit && event.club_id) {
       const { data: membership } = await supabase
         .from("club_members")
         .select("id")
