@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useClub, useMyClubs, useClubMembers } from "@/hooks/useClubs";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -10,6 +10,8 @@ import { ClubSettingsTab } from "@/components/clubs/ClubSettingsTab";
 import { ClubMembersTab } from "@/components/clubs/ClubMembersTab";
 import { ClubEventsTab } from "@/components/clubs/ClubEventsTab";
 import { ClubAnalyticsTab } from "@/components/clubs/ClubAnalyticsTab";
+import { AppealForm } from "@/components/AppealForm";
+import { ReviewThread } from "@/components/moderation/ReviewThread";
 import {
   Calendar,
   Users,
@@ -24,8 +26,10 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import type { Club } from "@/types";
+import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
 
 interface ClubDashboardProps {
   clubId: string;
@@ -47,6 +51,10 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
   const { data: membersData } = useClubMembers(clubId);
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [searchQuery, setSearchQuery] = useState("");
+  const [latestRejection, setLatestRejection] = useState<{
+    category: string;
+    message: string;
+  } | null>(null);
   const user = useAuthStore((s) => s.user);
 
   const club: Club | undefined = clubData?.club;
@@ -57,6 +65,24 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
   const myClubs: MyClubEntry[] = myClubsData?.clubs ?? [];
   const currentEntry = myClubs.find((e) => e.club.id === clubId);
   const isOwner = currentEntry?.role === "owner";
+
+  useEffect(() => {
+    if (club?.status === "rejected" && user?.id === club.created_by) {
+      fetch(`/api/moderation/reviews/club/${clubId}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data?.reviews) {
+            const rejections = data.reviews.filter(
+              (r: { action: string }) => r.action === "rejection"
+            );
+            if (rejections.length > 0) {
+              setLatestRejection(rejections[rejections.length - 1]);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [club?.status, club?.created_by, user?.id, clubId]);
 
   const handleClubUpdate = useCallback(
     (updatedClub: Club) => {
@@ -230,6 +256,28 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
             </button>
           </div>
         </header>
+
+        {/* Rejection Banner */}
+        {club && club.status === "rejected" && user?.id === club.created_by && (
+          <div className="mx-4 md:mx-8 mt-4 rounded-xl border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <h3 className="font-semibold text-red-700 dark:text-red-400">
+                This club was not approved
+              </h3>
+            </div>
+            {latestRejection && (
+              <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                <span className="inline-flex items-center rounded-md bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-400 mr-2">
+                  {REJECTION_CATEGORIES[latestRejection.category as RejectionCategory]}
+                </span>
+                {latestRejection.message}
+              </div>
+            )}
+            <ReviewThread targetType="club" targetId={clubId} currentUserId={user?.id} />
+            <AppealForm itemType="club" itemId={clubId} onSuccess={() => window.location.reload()} />
+          </div>
+        )}
 
         {/* Content Area */}
         <div className="p-4 md:p-8">
