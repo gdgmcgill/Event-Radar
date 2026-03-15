@@ -26,7 +26,7 @@ The `/clubs` page has a single paginated grid with no discovery sections, unlike
 | `twitter_url` | `text` | yes | `null` |
 | `linkedin_url` | `text` | yes | `null` |
 
-All social fields are stored as full URLs for consistency (including Twitter/X — store `https://x.com/handle`, not just the handle). The PATCH endpoint validates these are valid URLs.
+New social fields are stored as full URLs for consistency (including Twitter/X — store `https://x.com/handle`, not just the handle). The PATCH endpoint validates these are valid URLs. The existing `instagram_handle` field stays as-is (handle, not URL) to avoid a breaking migration — the display layer already constructs the Instagram URL from the handle.
 
 ### New `featured_clubs` table
 
@@ -67,7 +67,9 @@ Minimal card for horizontal scroll rows:
 
 `src/components/clubs/ClubsHeroSection.tsx`
 
-Carousel of admin-featured clubs reusing `HeroSlide` + `DotIndicators` + Embla autoplay pattern from `src/components/events/HeroSection.tsx`.
+Carousel of admin-featured clubs using the same Embla autoplay pattern as `src/components/events/HeroSection.tsx`.
+
+**Prerequisite:** Extract `HeroSlide` and `DotIndicators` from `src/components/events/HeroSection.tsx` into shared components at `src/components/ui/HeroSlide.tsx` and `src/components/ui/DotIndicators.tsx`, then import them in both the events and clubs hero sections. These are currently unexported local functions.
 
 - Fetches from `/api/clubs/featured` — queries `featured_clubs` table (same pattern as `/api/events/featured` with `featured_events`)
 - Only shows clubs where `starts_at <= now < ends_at` and the joined club has `status = "approved"`
@@ -97,7 +99,7 @@ Carousel of admin-featured clubs reusing `HeroSlide` + `DotIndicators` + Embla a
 
 `src/components/clubs/ClubCategoryRowsSection.tsx`
 
-- Fetches its own data from `/api/clubs/trending` (reuses the same endpoint, which returns all approved clubs with follower/event counts)
+- Fetches its own data from `/api/clubs/trending?limit=100` (high limit to get all approved clubs for grouping by category)
 - Groups clubs by `category` field; clubs with `null` category are excluded from category rows
 - One `ScrollRow` per category that has clubs
 - Category name as section title
@@ -196,7 +198,10 @@ The existing grid cards at `/clubs/page.tsx` lines 241-251 already render `logo_
 
 | File | Action |
 |------|--------|
-| `src/types/index.ts` | Modify — add 4 social link fields to Club, add FeaturedClub interface |
+| `src/types/index.ts` | Modify — add 4 social link fields to Club, add `FeaturedClub` interface (`{ id, club_id, sponsor_name, priority, starts_at, ends_at, created_by, created_at, club: Club }`) |
+| `src/components/ui/HeroSlide.tsx` | Create — extract from events HeroSection |
+| `src/components/ui/DotIndicators.tsx` | Create — extract from events HeroSection |
+| `src/components/events/HeroSection.tsx` | Modify — import shared HeroSlide/DotIndicators instead of local definitions |
 | `src/components/clubs/ClubDiscoveryCard.tsx` | Create |
 | `src/components/clubs/ClubsHeroSection.tsx` | Create |
 | `src/components/clubs/TrendingClubsSection.tsx` | Create |
