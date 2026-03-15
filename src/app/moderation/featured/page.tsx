@@ -41,7 +41,7 @@ export default function FeaturedManagementPage() {
   const [addEventTitle, setAddEventTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<
-    { id: string; title: string }[]
+    { id: string; title: string; event_date?: string }[]
   >([]);
   const [searching, setSearching] = useState(false);
 
@@ -90,15 +90,21 @@ export default function FeaturedManagementPage() {
     setSearching(true);
     try {
       const res = await fetch(
-        `/api/admin/events?status=approved&search=${encodeURIComponent(query)}&limit=10`
+        `/api/admin/events?status=approved&search=${encodeURIComponent(query)}&limit=20`
       );
       if (res.ok) {
         const json = await res.json();
+        const now = new Date().toISOString();
+        // Only show future events — can't feature past events
         setSearchResults(
-          (json.events ?? []).map((e: any) => ({
-            id: e.id,
-            title: e.title,
-          }))
+          (json.events ?? [])
+            .filter((e: any) => !e.event_date || e.event_date >= now.slice(0, 10))
+            .slice(0, 10)
+            .map((e: any) => ({
+              id: e.id,
+              title: e.title,
+              event_date: e.event_date,
+            }))
         );
       }
     } finally {
@@ -366,10 +372,16 @@ export default function FeaturedManagementPage() {
               {searchResults.map((event) => (
                 <button
                   key={event.id}
-                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer transition-colors"
+                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer transition-colors flex items-center justify-between gap-2"
                   onClick={() => selectEventForAdd(event.id, event.title)}
                 >
-                  {event.title}
+                  <span className="truncate">{event.title}</span>
+                  {event.event_date && (
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(event.event_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    </span>
+                  )}
                 </button>
               ))}
               {searchQuery.length >= 2 &&
