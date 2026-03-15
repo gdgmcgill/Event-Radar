@@ -3,19 +3,23 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Search, X } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
 
 interface ClubSearchProps {
   initialQuery: string;
   initialCategory: string;
   categories: string[];
+  isFollowing?: boolean;
 }
 
 export function ClubSearch({
   initialQuery,
   initialCategory,
   categories,
+  isFollowing = false,
 }: ClubSearchProps) {
+  const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(initialQuery);
@@ -41,11 +45,38 @@ export function ClubSearch({
   };
 
   const toggleCategory = (cat: string) => {
-    updateParams("category", initialCategory === cat ? "" : cat);
+    // Clear following filter when selecting a category
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("filter");
+    params.delete("page");
+    if (initialCategory === cat) {
+      params.delete("category");
+    } else {
+      params.set("category", cat);
+    }
+    router.push(`/clubs?${params.toString()}`);
   };
 
   const clearCategory = () => {
-    updateParams("category", "");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("category");
+    params.delete("filter");
+    params.delete("page");
+    router.push(`/clubs?${params.toString()}`);
+  };
+
+  const toggleFollowing = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (isFollowing) {
+      params.delete("filter");
+    } else {
+      params.set("filter", "following");
+      params.delete("q");
+      params.delete("category");
+      params.delete("page");
+    }
+    const qs = params.toString();
+    router.push(`/clubs${qs ? `?${qs}` : ""}`, { scroll: false });
   };
 
   return (
@@ -81,7 +112,7 @@ export function ClubSearch({
             onClick={clearCategory}
             className={cn(
               "flex h-9 shrink-0 items-center justify-center px-5 rounded-full text-sm font-semibold transition-all",
-              !initialCategory
+              !initialCategory && !isFollowing
                 ? "bg-foreground text-background shadow-sm"
                 : "bg-card border border-border text-muted-foreground hover:bg-secondary"
             )}
@@ -94,7 +125,7 @@ export function ClubSearch({
               onClick={() => toggleCategory(cat)}
               className={cn(
                 "flex h-9 shrink-0 items-center justify-center px-5 rounded-full text-sm font-medium transition-all",
-                initialCategory === cat
+                !isFollowing && initialCategory === cat
                   ? "bg-foreground text-background shadow-sm"
                   : "bg-card border border-border text-muted-foreground hover:bg-secondary"
               )}
@@ -102,6 +133,22 @@ export function ClubSearch({
               {cat}
             </button>
           ))}
+          {user && (
+            <>
+              <div className="w-px h-6 bg-border shrink-0 self-center" />
+              <button
+                onClick={toggleFollowing}
+                className={cn(
+                  "flex h-9 shrink-0 items-center justify-center px-5 rounded-full text-sm font-semibold transition-all",
+                  isFollowing
+                    ? "bg-foreground text-background shadow-sm"
+                    : "bg-card border border-border text-muted-foreground hover:bg-secondary"
+                )}
+              >
+                Following
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

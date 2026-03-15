@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { type Event, type EventPopularityScore } from "@/types";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import { ScrollRow } from "@/components/events/ScrollRow";
-import { AlertCircle, RefreshCcw } from "lucide-react";
+import { AlertCircle, Flame, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PopularEventsSectionProps {
@@ -46,7 +46,10 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
     return (
       <section>
         <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-          <h3 className="text-2xl font-extrabold text-foreground tracking-tight">Trending Now</h3>
+          <h3 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
+            <Flame className="h-6 w-6 text-orange-500" />
+            Trending Events
+          </h3>
         </div>
         <div className="flex px-6 md:px-10 lg:px-12 gap-3">
           {[1, 2, 3].map((i) => (
@@ -77,7 +80,10 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
   return (
     <section>
       <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-        <h3 className="text-2xl font-extrabold text-foreground tracking-tight">Trending Now</h3>
+        <h3 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
+            <Flame className="h-6 w-6 text-orange-500" />
+            Trending Events
+          </h3>
       </div>
       <ScrollRow className="px-6 md:px-10 lg:px-12">
           {events.map((event, index) => {

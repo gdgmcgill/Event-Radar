@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles } from "lucide-react";
 import { ClubDiscoveryCard } from "@/components/clubs/ClubDiscoveryCard";
 import { ScrollRow } from "@/components/events/ScrollRow";
 
@@ -9,6 +8,7 @@ type NewClub = {
   id: string;
   name: string;
   logo_url: string | null;
+  banner_url: string | null;
   follower_count: number;
   upcoming_event_count: number;
   total_event_count?: number;
@@ -36,9 +36,8 @@ export function NewClubsSection() {
   return (
     <section>
       <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-        <h3 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-amber-500" />
-          New on Uni-Verse
+        <h3 className="text-2xl font-extrabold text-foreground tracking-tight">
+          New on UNI-VERSE
         </h3>
       </div>
       <ScrollRow className="px-6 md:px-10 lg:px-12">

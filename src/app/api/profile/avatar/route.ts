@@ -5,8 +5,8 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { NextRequest } from "next/server";
-import type { Database } from "@/lib/supabase/types";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
 
     // Upload to Supabase Storage (upsert to overwrite previous avatar)
     const arrayBuffer = await file.arrayBuffer();
-     
-    const { error: uploadError } = await (supabase as any).storage
+
+    const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(filePath, arrayBuffer, {
         contentType: file.type,
@@ -74,23 +74,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Get public URL
-     
-    const { data: urlData } = (supabase as any).storage
+    const { data: urlData } = supabase.storage
       .from("avatars")
       .getPublicUrl(filePath);
 
     // Add cache-busting timestamp to prevent stale avatars
     const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
-    // Update user profile with the new avatar URL
-    const updatePayload: Database["public"]["Tables"]["users"]["Update"] = {
-      avatar_url: avatarUrl,
-      updated_at: new Date().toISOString(),
-    };
-     
-    const { error: dbError } = await (supabase as any)
+    // Update user profile with the new avatar URL using service client
+    // The server client's DB update can fail silently with cookie-based auth
+    const serviceClient = createServiceClient();
+    const { error: dbError } = await serviceClient
       .from("users")
-      .update(updatePayload)
+      .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
       .eq("id", user.id);
 
     if (dbError) {

@@ -162,6 +162,7 @@ export type Database = {
       }
       clubs: {
         Row: {
+          banner_url: string | null
           category: string | null
           created_at: string
           created_by: string | null
@@ -178,6 +179,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          banner_url?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
@@ -194,6 +196,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          banner_url?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null

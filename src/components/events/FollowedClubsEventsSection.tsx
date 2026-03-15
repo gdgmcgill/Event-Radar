@@ -1,21 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { type Event } from "@/types";
+import type { Event } from "@/types";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import { ScrollRow } from "@/components/events/ScrollRow";
+import { useAuthStore } from "@/store/useAuthStore";
 
-interface JustAddedSectionProps {
+interface FollowedClubsEventsSectionProps {
   onEventClick?: (event: Event) => void;
 }
 
-export function JustAddedSection({ onEventClick }: JustAddedSectionProps) {
+export function FollowedClubsEventsSection({ onEventClick }: FollowedClubsEventsSectionProps) {
+  const user = useAuthStore((s) => s.user);
   const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
-    const fetchNew = async () => {
+    if (!user) return;
+
+    const fetchEvents = async () => {
       try {
-        const res = await fetch("/api/events/new");
+        const res = await fetch("/api/events/following");
         if (!res.ok) return;
         const data = await res.json();
         setEvents(data.events ?? []);
@@ -23,16 +27,16 @@ export function JustAddedSection({ onEventClick }: JustAddedSectionProps) {
         // Non-critical
       }
     };
-    fetchNew();
-  }, []);
+    fetchEvents();
+  }, [user]);
 
-  if (events.length === 0) return null;
+  if (!user || events.length === 0) return null;
 
   return (
     <section>
       <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
         <h3 className="text-2xl font-extrabold text-foreground tracking-tight">
-          New on UNI-VERSE
+          From Clubs You Follow
         </h3>
       </div>
       <ScrollRow className="px-6 md:px-10 lg:px-12">

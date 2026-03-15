@@ -150,6 +150,7 @@ import { FriendsActivitySection } from "@/components/events/FriendsActivitySecti
 import { UpcomingThisWeekSection } from "@/components/events/UpcomingThisWeekSection";
 import { CategoryRowsSection } from "@/components/events/CategoryRowsSection";
 import { JustAddedSection } from "@/components/events/JustAddedSection";
+import { FollowedClubsEventsSection } from "@/components/events/FollowedClubsEventsSection";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import { EventSearch } from "@/components/events/EventSearch";
 import { AlertCircle, X, SlidersHorizontal } from "lucide-react";
@@ -529,8 +530,11 @@ function HomePageContent() {
             {/* Trending Now (Popular) */}
             <PopularEventsSection onEventClick={handleEventClick} />
 
-            {/* Just Added */}
+            {/* New on UNI-VERSE */}
             <JustAddedSection onEventClick={handleEventClick} />
+
+            {/* From Clubs You Follow */}
+            {user && <FollowedClubsEventsSection onEventClick={handleEventClick} />}
 
             {/* Recommended For You */}
             {user && <RecommendedEventsSection onEventClick={handleEventClick} />}

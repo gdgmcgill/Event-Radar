@@ -51,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           {children}
         </main>
-        {!isHomepage && !isEventDetail && <Footer />}
+        {!isEventDetail && <Footer />}
       </div>
     </div>
   );

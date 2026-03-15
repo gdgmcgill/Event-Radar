@@ -13,6 +13,7 @@ import { PopularWithFriendsClubsSection } from "@/components/clubs/PopularWithFr
 import { ClubCategoryRowsSection } from "@/components/clubs/ClubCategoryRowsSection";
 import { NewClubsSection } from "@/components/clubs/NewClubsSection";
 import { FollowButton } from "@/components/clubs/FollowButton";
+import { FollowingClubsSection } from "@/components/clubs/FollowingClubsSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -24,11 +25,12 @@ export const metadata: Metadata = {
 const CLUBS_PER_PAGE = 9;
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; category?: string; page?: string; tab?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; page?: string; tab?: string; filter?: string }>;
 }
 
 export default async function ClubsPage({ searchParams }: PageProps) {
-  const { q, category, page: pageParam, tab } = await searchParams;
+  const { q, category, page: pageParam, tab, filter } = await searchParams;
+  const isFollowing = filter === "following";
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const supabase = await createClient();
 
@@ -167,11 +169,19 @@ export default async function ClubsPage({ searchParams }: PageProps) {
           initialQuery={q ?? ""}
           initialCategory={category ?? ""}
           categories={categories}
+          isFollowing={isFollowing}
         />
       </div>
 
+      {/* Following view */}
+      {isFollowing && (
+        <main className="px-6 lg:px-10 py-6 lg:py-8">
+          <FollowingClubsSection />
+        </main>
+      )}
+
       {/* Discovery sections — only on unfiltered default view */}
-      {!q && !category && currentPage === 1 && (
+      {!isFollowing && !q && !category && currentPage === 1 && (
         <div className="space-y-10 py-6">
           <TrendingClubsSection />
           <NewClubsSection />
@@ -180,7 +190,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
         </div>
       )}
 
-      {(q || category || currentPage > 1) && (
+      {!isFollowing && (q || category || currentPage > 1) && (
       <main className="px-6 lg:px-10 py-6 lg:py-8">
 
         {/* ── Section Header ────────────────────────────────────────── */}
@@ -388,7 +398,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
       )}
 
       {/* ── Register CTA for discovery view ─────────────────────────── */}
-      {!q && !category && currentPage === 1 && (
+      {!isFollowing && !q && !category && currentPage === 1 && (
         <div className="px-6 lg:px-10 py-6">
           <div className="mt-8 mb-4 rounded-2xl border border-border bg-card p-8 md:p-10 text-center">
             <h3 className="text-xl md:text-2xl font-bold tracking-tight mb-2">

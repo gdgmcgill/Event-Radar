@@ -339,11 +339,15 @@ export default function CalendarPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Read initial view from URL (?view=List, ?view=Week)
+  // Read initial view from URL first, then localStorage, then default to Saved
   const initialView = useMemo(() => {
     const v = searchParams.get("view");
-    if (v === "Week" || v === "Saved") return v;
-    return "Month" as CalendarView;
+    if (v === "Week" || v === "Saved" || v === "Month") return v;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("universe_calendar_view");
+      if (stored === "Month" || stored === "Week" || stored === "Saved") return stored;
+    }
+    return "Saved" as CalendarView;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -496,9 +500,11 @@ export default function CalendarPage() {
     setTimeout(() => {
       setCalendarView(view);
       setTransitioning(false);
+      // Persist view preference
+      try { localStorage.setItem("universe_calendar_view", view); } catch {}
       // Sync URL without full navigation
       const url = new URL(window.location.href);
-      if (view === "Month") {
+      if (view === "Saved") {
         url.searchParams.delete("view");
       } else {
         url.searchParams.set("view", view);
@@ -985,7 +991,7 @@ export default function CalendarPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="flex h-10 items-center rounded-lg bg-secondary p-1 border border-border">
-                {(["Month", "Week", "Saved"] as const).map((view) => (
+                {(["Saved", "Month", "Week"] as const).map((view) => (
                   <button
                     key={view}
                     onClick={() => switchView(view)}

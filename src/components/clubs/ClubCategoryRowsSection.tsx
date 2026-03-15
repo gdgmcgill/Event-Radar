@@ -8,6 +8,7 @@ type ClubWithCounts = {
   id: string;
   name: string;
   logo_url: string | null;
+  banner_url: string | null;
   category: string | null;
   follower_count: number;
   upcoming_event_count: number;
