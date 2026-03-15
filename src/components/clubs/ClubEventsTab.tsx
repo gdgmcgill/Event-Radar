@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useClubEventsManagement } from "@/hooks/useClubs";
-import { CreateEventModal } from "@/components/events/CreateEventModal";
 import { CreateEventForm } from "@/components/events/CreateEventForm";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,7 +72,7 @@ const statusBadgeConfig: Record<DisplayStatus, string> = {
 
 export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
   const { events, isLoading, mutate } = useClubEventsManagement(clubId);
-  const [createOpen, setCreateOpen] = useState(false);
+
   const [editingEvent, setEditingEvent] = useState<EventWithRsvp | null>(null);
   const [duplicatingEvent, setDuplicatingEvent] =
     useState<EventWithRsvp | null>(null);
@@ -116,13 +116,13 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-lg font-bold text-foreground">All Events</h4>
-        <button
-          onClick={() => setCreateOpen(true)}
+        <Link
+          href={`/create-event?clubId=${clubId}`}
           className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all duration-200 active:scale-95 shadow-lg shadow-primary/20 hover:shadow-primary/30"
         >
           <Plus className="h-4 w-4" />
           <span>Create Event</span>
-        </button>
+        </Link>
       </div>
 
       {/* Events Table */}
@@ -133,12 +133,11 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
           <p className="text-sm text-muted-foreground mt-1 max-w-xs">
             Create your first event to start building your audience.
           </p>
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="mt-4"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Event
+          <Button asChild className="mt-4">
+            <Link href={`/create-event?clubId=${clubId}`}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Event
+            </Link>
           </Button>
         </div>
       ) : (
@@ -275,14 +274,6 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
           </div>
         </div>
       )}
-
-      {/* Create Event Modal */}
-      <CreateEventModal
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        clubId={clubId}
-        onSuccess={() => mutate()}
-      />
 
       {/* Edit Event Modal */}
       <Dialog
