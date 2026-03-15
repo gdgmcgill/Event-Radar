@@ -332,33 +332,6 @@ export interface FeaturedEvent {
   event: Event;
 }
 
-// ── Moderation / Rejection Types ─────────────────────────────────────
-
-export const REJECTION_CATEGORIES = {
-  inappropriate_content: "Inappropriate Content",
-  missing_information: "Missing Information",
-  duplicate: "Duplicate",
-  policy_violation: "Policy Violation",
-  spam: "Spam",
-  other: "Other",
-} as const;
-
-export type RejectionCategory = keyof typeof REJECTION_CATEGORIES;
-
-export type ModerationAction = "rejection" | "appeal" | "approval";
-
-export interface ModerationReview {
-  id: string;
-  target_type: "event" | "club";
-  target_id: string;
-  action: ModerationAction;
-  category: string | null;
-  message: string;
-  author_id: string;
-  created_at: string;
-  author_name?: string;
-}
-
 // ── Featured Clubs Types ──────────────────────────────────────────────
 
 export interface FeaturedClub {
