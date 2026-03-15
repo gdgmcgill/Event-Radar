@@ -232,7 +232,6 @@ export function CreateEventForm({
         if (formData.location !== initialData?.location) updates.location = formData.location;
         if (JSON.stringify(formData.tags) !== JSON.stringify(initialData?.tags)) updates.tags = formData.tags;
         updates.start_date = startDate;
-        updates.end_date = startDate;
         updates.category = formData.tags[0];
         if (finalImageUrl !== initialData?.image_url) updates.image_url = finalImageUrl;
 
@@ -250,7 +249,6 @@ export function CreateEventForm({
             title: formData.title,
             description: formData.description,
             start_date: startDate,
-            end_date: startDate,
             location: formData.location,
             tags: formData.tags,
             image_url: finalImageUrl,
