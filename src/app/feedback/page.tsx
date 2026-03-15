@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CONTACT_EMAILS } from "@/lib/contact";
 import { MessageSquare, Bug, Lightbulb, CheckCircle } from "lucide-react";
 
 type FeedbackType = "bug" | "feature" | "general";
@@ -34,6 +35,7 @@ const FEEDBACK_TYPES: {
 ];
 
 export default function FeedbackPage() {
+  const supportEmail = CONTACT_EMAILS.support;
   const [type, setType] = useState<FeedbackType>("general");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -73,7 +75,7 @@ export default function FeedbackPage() {
       : `[${type}] Beta Feedback`;
     const body = message;
     window.open(
-      `mailto:support@uni-verse.app?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(body)}`
+      `mailto:${supportEmail}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(body)}`
     );
     setSubmitted(true);
   }
@@ -216,10 +218,10 @@ export default function FeedbackPage() {
                 <p className="text-xs text-muted-foreground">
                   Or email us directly at{" "}
                   <a
-                    href="mailto:support@uni-verse.app"
+                    href={`mailto:${supportEmail}`}
                     className="text-primary hover:underline"
                   >
-                    support@uni-verse.app
+                    {supportEmail}
                   </a>
                 </p>
                 <Button type="submit" disabled={!message.trim() || submitting}>

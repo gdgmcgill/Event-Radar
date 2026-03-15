@@ -22,9 +22,10 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { CONTACT_EMAILS } from "@/lib/contact";
 import { cn } from "@/lib/utils";
-
-const CONTACT_EMAIL = "universe.mcgill@gmail.com";
+const SUPPORT_EMAIL = CONTACT_EMAILS.support;
+const INQUIRIES_EMAIL = CONTACT_EMAILS.inquiries;
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -227,10 +228,10 @@ const SECTIONS: Section[] = [
           <p>
             Email us at{" "}
             <a
-              href={`mailto:${CONTACT_EMAIL}`}
+              href={`mailto:${INQUIRIES_EMAIL}`}
               className="text-primary hover:underline"
             >
-              {CONTACT_EMAIL}
+              {INQUIRIES_EMAIL}
             </a>{" "}
             with your McGill club name, your role in the club, and a brief
             description. We&apos;ll review the request and grant organizer
@@ -364,10 +365,10 @@ const SECTIONS: Section[] = [
           <p>
             Email us at{" "}
             <a
-              href={`mailto:${CONTACT_EMAIL}`}
+              href={`mailto:${SUPPORT_EMAIL}`}
               className="text-primary hover:underline"
             >
-              {CONTACT_EMAIL}
+              {SUPPORT_EMAIL}
             </a>
             . We aim to respond within 5 business days.
           </p>
@@ -556,7 +557,7 @@ export default function HelpPage() {
             Everything you need to know about UNI-VERSE. Can&apos;t find your
             answer?{" "}
             <a
-              href={`mailto:${CONTACT_EMAIL}`}
+              href={`mailto:${SUPPORT_EMAIL}`}
               className="text-primary hover:underline"
             >
               Email us
@@ -592,7 +593,7 @@ export default function HelpPage() {
             <p className="text-sm">
               Try a different keyword or{" "}
               <a
-                href={`mailto:${CONTACT_EMAIL}`}
+              href={`mailto:${SUPPORT_EMAIL}`}
                 className="text-primary hover:underline"
               >
                 contact us
@@ -623,7 +624,7 @@ export default function HelpPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
-              href={`mailto:${CONTACT_EMAIL}`}
+              href={`mailto:${SUPPORT_EMAIL}`}
               className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <Mail className="h-4 w-4" />

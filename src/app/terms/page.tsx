@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CONTACT_EMAILS } from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -8,6 +9,8 @@ export const metadata: Metadata = {
 };
 
 export default function TermsOfServicePage() {
+  const supportEmail = CONTACT_EMAILS.support;
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <section className="relative w-full pt-20 pb-16 md:pt-28 md:pb-20 overflow-hidden bg-secondary/30">
@@ -195,10 +198,10 @@ export default function TermsOfServicePage() {
               discretion. You may delete your account at any time by contacting
               us at{" "}
               <a
-                href="mailto:support@uni-verse.app"
+                href={`mailto:${supportEmail}`}
                 className="text-primary hover:underline"
               >
-                support@uni-verse.app
+                {supportEmail}
               </a>
               .
             </p>
@@ -223,10 +226,10 @@ export default function TermsOfServicePage() {
             <p className="text-muted-foreground leading-relaxed">
               For questions about these Terms, contact us at{" "}
               <a
-                href="mailto:support@uni-verse.app"
+                href={`mailto:${supportEmail}`}
                 className="text-primary hover:underline"
               >
-                support@uni-verse.app
+                {supportEmail}
               </a>
               .
             </p>

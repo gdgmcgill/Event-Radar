@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useFollowedClubIds } from "@/hooks/useClubs";
 
 interface FollowButtonProps {
   clubId: string;
@@ -21,6 +22,14 @@ export function FollowButton({
   const [followerCount, setFollowerCount] = useState(initialCount);
   const [isLoading, setIsLoading] = useState(false);
   const user = useAuthStore((s) => s.user);
+  const { followedIds, isLoading: followsLoading } = useFollowedClubIds();
+
+  // Hydrate follow state from SWR data (covers page refresh)
+  useEffect(() => {
+    if (!followsLoading) {
+      setIsFollowing(followedIds.has(clubId));
+    }
+  }, [followedIds, followsLoading, clubId]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();

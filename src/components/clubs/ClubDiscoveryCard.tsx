@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Calendar, Users, LayoutGrid, Heart } from "lucide-react";
 import { ClubInitials } from "@/components/clubs/ClubInitials";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useFollowedClubIds } from "@/hooks/useClubs";
 
 interface ClubDiscoveryCardProps {
   club: {
@@ -25,6 +26,14 @@ export function ClubDiscoveryCard({ club, initialFollowing = false }: ClubDiscov
   const [followerCount, setFollowerCount] = useState(club.follower_count);
   const [isLoading, setIsLoading] = useState(false);
   const user = useAuthStore((s) => s.user);
+  const { followedIds, isLoading: followsLoading } = useFollowedClubIds();
+
+  // Hydrate follow state from SWR data (covers page refresh)
+  useEffect(() => {
+    if (!followsLoading) {
+      setIsFollowing(followedIds.has(club.id));
+    }
+  }, [followedIds, followsLoading, club.id]);
 
   const handleFollowToggle = async (e: React.MouseEvent) => {
     e.preventDefault();

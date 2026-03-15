@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CONTACT_EMAILS } from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -7,6 +8,8 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPolicyPage() {
+  const supportEmail = CONTACT_EMAILS.support;
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <section className="relative w-full pt-20 pb-16 md:pt-28 md:pb-20 overflow-hidden bg-secondary/30">
@@ -149,10 +152,10 @@ export default function PrivacyPolicyPage() {
             <p className="text-muted-foreground leading-relaxed mt-3">
               To exercise any of these rights, contact us at{" "}
               <a
-                href="mailto:support@uni-verse.app"
+                href={`mailto:${supportEmail}`}
                 className="text-primary hover:underline"
               >
-                support@uni-verse.app
+                {supportEmail}
               </a>
               .
             </p>
@@ -190,10 +193,10 @@ export default function PrivacyPolicyPage() {
               If you have questions about this Privacy Policy, please contact us
               at{" "}
               <a
-                href="mailto:support@uni-verse.app"
+                href={`mailto:${supportEmail}`}
                 className="text-primary hover:underline"
               >
-                support@uni-verse.app
+                {supportEmail}
               </a>
               .
             </p>

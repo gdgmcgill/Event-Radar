@@ -11,6 +11,7 @@ import { PRONOUNS, YEARS, FACULTIES, EVENT_CATEGORIES, QUICK_FILTER_CATEGORIES }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { CONTACT_EMAILS } from "@/lib/contact";
 import type { EventTag } from "@/types";
 import {
   User,
@@ -140,6 +141,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const accountDeletionEmail = CONTACT_EMAILS.support;
 
   const handleSave = async () => {
     setSaving(true);
@@ -688,7 +690,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                       <div><h3 className="text-sm font-semibold text-foreground">Danger Zone</h3><p className="text-xs text-muted-foreground">Permanent actions that cannot be undone</p></div>
                     </div>
                     <Button variant="outline" size="sm" className="text-destructive border-destructive/20 hover:bg-destructive/5"
-                      onClick={() => window.open("mailto:universe.mcgill@gmail.com?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20UNI-VERSE%20account.%20My%20email%20is%20" + encodeURIComponent(profile.email))}>
+                      onClick={() => window.open(`mailto:${accountDeletionEmail}?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20UNI-VERSE%20account.%20My%20email%20is%20` + encodeURIComponent(profile.email))}>
                       Request Account Deletion
                     </Button>
                   </div>

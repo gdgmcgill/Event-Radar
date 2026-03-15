@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -72,6 +73,29 @@ export function useFollowStatus(clubId: string | null | undefined) {
     clubId ? `/api/clubs/${clubId}/follow` : null,
     fetcher
   );
+}
+
+/**
+ * Fetch the set of club IDs the current user follows.
+ * SWR deduplicates across all components using the same key,
+ * so this only makes one request regardless of how many cards render.
+ */
+export function useFollowedClubIds() {
+  const user = useAuthStore((s) => s.user);
+  const { data, error, isLoading, mutate } = useSWR(
+    user ? "/api/user/following" : null,
+    fetcher
+  );
+
+  const followedIds: Set<string> = new Set();
+  if (data?.following) {
+    for (const f of data.following) {
+      const clubId = f.clubs?.id ?? f.club_id;
+      if (clubId) followedIds.add(clubId);
+    }
+  }
+
+  return { followedIds, error, isLoading, mutate };
 }
 
 /**

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CONTACT_EMAILS } from "@/lib/contact";
 
 const LINKS = [
   { label: "About", href: "/about" },
@@ -9,6 +10,8 @@ const LINKS = [
 ] as const;
 
 export function Footer() {
+  const footerEmail = CONTACT_EMAILS.hello;
+
   return (
     <footer className="relative">
       {/* Top separator */}
@@ -47,10 +50,10 @@ export function Footer() {
 
           {/* Contact */}
           <a
-            href="mailto:universe.mcgill@gmail.com"
+            href={`mailto:${footerEmail}`}
             className="text-sm text-muted-foreground hover:text-primary transition-colors duration-200"
           >
-            universe.mcgill@gmail.com
+            {footerEmail}
           </a>
 
           {/* Attribution */}
