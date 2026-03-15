@@ -17,17 +17,35 @@ The `/clubs` page has a single paginated grid with no discovery sections, unlike
 
 ## Database Migration
 
-Add columns to `clubs` table:
+### New columns on `clubs` table
 
 | Column | Type | Nullable | Default |
 |--------|------|----------|---------|
 | `website_url` | `text` | yes | `null` |
 | `discord_url` | `text` | yes | `null` |
-| `twitter_handle` | `text` | yes | `null` |
+| `twitter_url` | `text` | yes | `null` |
 | `linkedin_url` | `text` | yes | `null` |
 
-Update `Club` interface in `src/types/index.ts` with these four fields.
-Update `PATCH /api/clubs/[id]` to allow these fields.
+All social fields are stored as full URLs for consistency (including Twitter/X — store `https://x.com/handle`, not just the handle). The PATCH endpoint validates these are valid URLs.
+
+### New `featured_clubs` table
+
+Mirrors the existing `featured_events` table pattern. Admin-controlled — clubs are featured by admin action (e.g. a club requests/pays to be featured), not by popularity.
+
+| Column | Type | Nullable | Default |
+|--------|------|----------|---------|
+| `id` | `uuid` | no | `gen_random_uuid()` |
+| `club_id` | `uuid` | no | FK → `clubs.id` |
+| `sponsor_name` | `text` | yes | `null` |
+| `priority` | `integer` | no | `0` |
+| `starts_at` | `timestamptz` | no | — |
+| `ends_at` | `timestamptz` | no | — |
+| `created_by` | `uuid` | no | FK → `auth.users.id` |
+| `created_at` | `timestamptz` | no | `now()` |
+
+Update `Club` interface in `src/types/index.ts` with the 4 social link fields.
+Add `FeaturedClub` interface (mirrors `FeaturedEvent`).
+Update `PATCH /api/clubs/[id]` to allow the new social link fields.
 Regenerate Supabase types (`lib/supabase/types.ts`) after migration to keep TypeScript in sync.
 
 ## New Components
@@ -49,11 +67,13 @@ Minimal card for horizontal scroll rows:
 
 `src/components/clubs/ClubsHeroSection.tsx`
 
-Carousel of featured clubs reusing `HeroSlide` + `DotIndicators` + Embla autoplay pattern from `src/components/events/HeroSection.tsx`.
+Carousel of admin-featured clubs reusing `HeroSlide` + `DotIndicators` + Embla autoplay pattern from `src/components/events/HeroSection.tsx`.
 
-- Fetches top clubs via `/api/clubs/trending?limit=4`
-- Each slide: club banner/logo as background, club name, description, "View Club" + "Explore Clubs" buttons
+- Fetches from `/api/clubs/featured` — queries `featured_clubs` table (same pattern as `/api/events/featured` with `featured_events`)
+- Only shows clubs where `starts_at <= now < ends_at` and the joined club has `status = "approved"`
+- Each slide: club banner/logo as background, club name, description, sponsor badge if `sponsor_name` set, "View Club" + "Explore Clubs" buttons
 - Fallback (no featured clubs): static banner with "Find Your Community" text, same as current clubs hero
+- Uses `useFeaturedClubs` hook (mirrors `useFeaturedEvents`)
 
 ### TrendingClubsSection
 
@@ -77,12 +97,12 @@ Carousel of featured clubs reusing `HeroSlide` + `DotIndicators` + Embla autopla
 
 `src/components/clubs/ClubCategoryRowsSection.tsx`
 
-- Receives clubs array as prop from parent (same pattern as `CategoryRowsSection` which receives events as prop)
+- Fetches its own data from `/api/clubs/trending` (reuses the same endpoint, which returns all approved clubs with follower/event counts)
 - Groups clubs by `category` field; clubs with `null` category are excluded from category rows
 - One `ScrollRow` per category that has clubs
 - Category name as section title
 - No infinite loading — shows fixed set per category
-- Same pattern as `CategoryRowsSection.tsx` for events
+- This is a client component that fetches independently, consistent with the pattern where `/clubs/page.tsx` stays server-rendered and each discovery section manages its own data
 
 ## New API Routes
 
@@ -108,7 +128,16 @@ Query:
 4. Include follower counts and upcoming event counts
 5. Sort by number of friends following (desc), limit 15
 
-**Note:** No separate `/api/clubs/featured` route. The `ClubsHeroSection` reuses `/api/clubs/trending?limit=4` to get the top clubs for the carousel. This avoids a redundant endpoint since both sort by follower count.
+### GET /api/clubs/featured
+
+Returns currently active featured clubs from the `featured_clubs` table. Mirrors `/api/events/featured` exactly.
+
+Query:
+1. Fetch from `featured_clubs` with joined `clubs` data (`select("*, club:clubs(*)")`)
+2. Filter: `starts_at <= now` and `ends_at > now`
+3. Order by `priority` desc, then `starts_at` asc
+4. Filter out entries where joined club is missing or not approved
+5. Return `{ featured: [...] }`
 
 ## Modified Pages
 
@@ -136,11 +165,11 @@ Structure:
 2. **Main content** (`-mt-24 relative z-10`)
    - Info section: full bio, stats (followers, members count, total events hosted), `FollowButton`, social links (Instagram, Twitter, Discord, LinkedIn, Website — icon buttons, only if populated)
    - Upcoming Events: `EventCard` grid (`grid-cols-1 sm:2 lg:3`), empty state if none
-   - Past Events: same grid, only if past events exist, sorted newest-first
+   - Past Events: same grid, only if past events exist, sorted newest-first, capped at 6 with a "View all past events" link if more exist
 
 ### PATCH /api/clubs/[id]
 
-Add `website_url`, `discord_url`, `twitter_handle`, `linkedin_url` to allowed update fields.
+Add `website_url`, `discord_url`, `twitter_url`, `linkedin_url` to allowed update fields.
 
 ## Bug Fixes
 
@@ -167,7 +196,7 @@ The existing grid cards at `/clubs/page.tsx` lines 241-251 already render `logo_
 
 | File | Action |
 |------|--------|
-| `src/types/index.ts` | Modify — add 4 social link fields to Club |
+| `src/types/index.ts` | Modify — add 4 social link fields to Club, add FeaturedClub interface |
 | `src/components/clubs/ClubDiscoveryCard.tsx` | Create |
 | `src/components/clubs/ClubsHeroSection.tsx` | Create |
 | `src/components/clubs/TrendingClubsSection.tsx` | Create |
@@ -175,8 +204,10 @@ The existing grid cards at `/clubs/page.tsx` lines 241-251 already render `logo_
 | `src/components/clubs/ClubCategoryRowsSection.tsx` | Create |
 | `src/app/api/clubs/trending/route.ts` | Create |
 | `src/app/api/clubs/friends/route.ts` | Create |
+| `src/app/api/clubs/featured/route.ts` | Create |
+| `src/hooks/useFeaturedClubs.ts` | Create |
 | `src/app/clubs/page.tsx` | Modify — discovery sections + filtered grid fallback |
 | `src/app/clubs/[id]/page.tsx` | Modify — full hero redesign |
 | `src/app/api/clubs/[id]/route.ts` | Modify — allow new social link fields in PATCH |
 | `src/lib/supabase/types.ts` | Regenerate — reflect new columns |
-| Supabase migration | Create — add 4 columns to clubs table |
+| Supabase migration | Create — add 4 columns to clubs table + create featured_clubs table |
