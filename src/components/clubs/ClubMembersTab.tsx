@@ -14,9 +14,11 @@ import {
   AlertCircle,
   Crown,
   Shield,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -100,6 +102,18 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Role change state
+  const [roleLoading, setRoleLoading] = useState<string | null>(null);
+
+  // Bulk invite state
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkEmails, setBulkEmails] = useState("");
+  const [bulkResults, setBulkResults] = useState<{ email: string; success: boolean; error?: string }[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+
   const handleRemove = async () => {
     if (!removingMember) return;
     setRemoveLoading(true);
@@ -155,6 +169,71 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
     } catch { /* fallback */ }
   };
 
+  async function handleRoleChange(memberId: string, newRole: string) {
+    setRoleLoading(memberId);
+    try {
+      const res = await fetch(`/api/clubs/${clubId}/members/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, role: newRole }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json();
+        alert(error || "Failed to change role");
+        return;
+      }
+      await mutate();
+    } finally {
+      setRoleLoading(null);
+    }
+  }
+
+  async function handleBulkInvite() {
+    const emails = bulkEmails
+      .split("\n")
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => e.length > 0);
+
+    if (emails.length === 0) return;
+    if (emails.length > 20) {
+      alert("Maximum 20 emails at a time");
+      return;
+    }
+
+    setBulkLoading(true);
+    const results: typeof bulkResults = [];
+
+    for (const email of emails) {
+      try {
+        const res = await fetch(`/api/clubs/${clubId}/invites`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        if (res.ok) {
+          results.push({ email, success: true });
+        } else {
+          const { error } = await res.json();
+          results.push({ email, success: false, error: error || "Failed" });
+        }
+      } catch {
+        results.push({ email, success: false, error: "Network error" });
+      }
+    }
+
+    setBulkResults(results);
+    setBulkLoading(false);
+  }
+
+  // Filtered member list
+  const filteredMembers = members.filter((m) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    const name = m.users?.name?.toLowerCase() || "";
+    const email = m.users?.email?.toLowerCase() || "";
+    return name.includes(q) || email.includes(q);
+  });
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -175,14 +254,27 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
             Members ({members.length})
           </h4>
         </div>
-        {members.length === 0 ? (
+        <div className="px-6 pt-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search members..."
+                className="pl-9"
+              />
+            </div>
+          </div>
+        </div>
+        {filteredMembers.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground">
             <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">No members yet</p>
+            <p className="font-medium">{searchQuery ? "No members match your search" : "No members yet"}</p>
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {members.map((member) => {
+            {filteredMembers.map((member) => {
               const displayName = member.users.name || member.users.email;
               const colorClass = getAvatarColor(displayName);
               return (
@@ -226,6 +318,17 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
                     <span className="hidden text-xs text-muted-foreground sm:inline">
                       Joined {format(parseISO(member.created_at), "MMM d, yyyy")}
                     </span>
+                    {/* Role Change Button (owner-only, not for owner members) */}
+                    {isOwner && member.role !== "owner" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={roleLoading === member.id}
+                        onClick={() => handleRoleChange(member.id, "organizer")}
+                      >
+                        {roleLoading === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Organizer"}
+                      </Button>
+                    )}
                     {/* Remove Button (owner-only, not for self) */}
                     {isOwner && member.role !== "owner" && (
                       <button
@@ -310,36 +413,74 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
       {isOwner && (
         <div className="rounded-xl border border-border bg-card shadow-sm p-6 space-y-4">
           <h4 className="text-lg font-bold text-foreground">Invite Organizer</h4>
-          <div className="flex gap-2">
-            <Input
-              placeholder="organizer@mcgill.ca"
-              value={inviteEmail}
-              onChange={(e) => { setInviteEmail(e.target.value); setInviteError(null); }}
-              disabled={inviteLoading}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleInvite(); } }}
-              className="border-border focus:ring-primary focus:border-primary"
-            />
-            <button
-              onClick={handleInvite}
-              disabled={inviteLoading}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-primary/20 disabled:opacity-50 shrink-0"
+
+          {/* Mode toggle */}
+          <div className="flex items-center gap-2 mb-3">
+            <Button
+              variant={bulkMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => { setBulkMode(!bulkMode); setBulkResults([]); }}
             >
-              {inviteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /> Send</>}
-            </button>
+              {bulkMode ? "Single Invite" : "Bulk Invite"}
+            </Button>
           </div>
-          {inviteError && <p className="text-sm text-destructive">{inviteError}</p>}
-          {inviteLink && (
-            <div className="rounded-lg border border-border bg-muted/50 p-3">
-              <p className="mb-2 text-sm font-medium text-foreground">Invite link generated:</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded bg-card px-2 py-1 text-xs border border-border text-foreground">
-                  {inviteLink}
-                </code>
-                <Button variant="outline" size="sm" onClick={copyToClipboard}>
-                  {copied ? <><Check className="mr-1 h-3 w-3" /> Copied</> : <><Copy className="mr-1 h-3 w-3" /> Copy</>}
-                </Button>
-              </div>
+
+          {bulkMode ? (
+            <div className="space-y-2">
+              <Textarea
+                value={bulkEmails}
+                onChange={(e) => setBulkEmails(e.target.value)}
+                placeholder="Paste emails, one per line (max 20)"
+                rows={5}
+              />
+              <Button onClick={handleBulkInvite} disabled={bulkLoading || !bulkEmails.trim()}>
+                {bulkLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Send {bulkEmails.split("\n").filter((e) => e.trim()).length} Invites
+              </Button>
+              {bulkResults.length > 0 && (
+                <div className="space-y-1 text-xs">
+                  {bulkResults.map((r, i) => (
+                    <div key={i} className={r.success ? "text-emerald-500" : "text-destructive"}>
+                      {r.email}: {r.success ? "Sent" : r.error}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="organizer@mcgill.ca"
+                  value={inviteEmail}
+                  onChange={(e) => { setInviteEmail(e.target.value); setInviteError(null); }}
+                  disabled={inviteLoading}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleInvite(); } }}
+                  className="border-border focus:ring-primary focus:border-primary"
+                />
+                <button
+                  onClick={handleInvite}
+                  disabled={inviteLoading}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-primary/20 disabled:opacity-50 shrink-0"
+                >
+                  {inviteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /> Send</>}
+                </button>
+              </div>
+              {inviteError && <p className="text-sm text-destructive">{inviteError}</p>}
+              {inviteLink && (
+                <div className="rounded-lg border border-border bg-muted/50 p-3">
+                  <p className="mb-2 text-sm font-medium text-foreground">Invite link generated:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 truncate rounded bg-card px-2 py-1 text-xs border border-border text-foreground">
+                      {inviteLink}
+                    </code>
+                    <Button variant="outline" size="sm" onClick={copyToClipboard}>
+                      {copied ? <><Check className="mr-1 h-3 w-3" /> Copied</> : <><Copy className="mr-1 h-3 w-3" /> Copy</>}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
