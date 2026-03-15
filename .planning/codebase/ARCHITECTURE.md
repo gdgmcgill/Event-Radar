@@ -4,13 +4,13 @@
 
 ## Pattern Overview
 
-**Overall:** Next.js App Router monolith with Supabase BaaS + external Python recommendation microservice
+**Overall:** Next.js App Router monolith with Supabase BaaS + Postgres-native recommendation scoring engine
 
 **Key Characteristics:**
 - Client-heavy SPA pattern: most pages are `"use client"` components that fetch data via internal API routes
 - API routes serve as a thin server-side layer between the React frontend and Supabase
 - Zustand global store for auth state; React hooks for data fetching
-- External Two-Tower recommendation service (Python/FastAPI) called from API routes
+- Recommendations computed entirely in Postgres via `compute_user_scores()` (pg_cron every 6h) — no external service
 - Instagram scraper pipeline (Apify) feeds events through a classifier into the database
 
 ## Layers
@@ -41,7 +41,7 @@
 - Purpose: Server-side data access, auth verification, external service orchestration
 - Location: `src/app/api/`
 - Contains: Next.js Route Handlers exporting `GET`, `POST`, `PATCH`, `DELETE` functions
-- Depends on: Supabase server client (`src/lib/supabase/server.ts`), service client (`src/lib/supabase/service.ts`), external recommendation API
+- Depends on: Supabase server client (`src/lib/supabase/server.ts`), service client (`src/lib/supabase/service.ts`)
 - Used by: Client hooks and components (via `fetch`)
 
 **Library/Utility Layer:**
@@ -79,13 +79,13 @@
 **Personalized Recommendations:**
 
 1. `RecommendedEventsSection` calls `GET /api/recommendations`
-2. API route authenticates user, fetches `interest_tags` from `users` table
-3. Fetches `saved_events` and `recommendation_explicit_feedback` for the user
-4. Builds feedback payload (saved events as implicit positive, explicit thumbs feedback)
-5. POSTs to external Python recommendation service at `RECOMMENDATION_API_URL/recommend`
+2. API route authenticates user, reads pre-computed scores from Supabase (produced by `compute_user_scores()`)
+3. Scores are computed using a 5-signal formula: tag affinity (0.35), interaction (0.25), popularity (0.20), recency (0.15), social (0.05)
+4. Tag hierarchy enables partial affinity matching; session boost applied for within-session reactivity
+5. MMR diversity re-ranking applied before returning results
 6. Generates human-readable explanation for each recommendation
-7. Returns recommendations with explanations to client
-8. Falls back to empty results (triggers `PopularEventsSection`) if service is unavailable
+7. Returns ranked recommendations with explanations to client
+8. Falls back to popularity-ranked results if no personalized scores exist yet for the user
 
 **User Interaction Tracking:**
 

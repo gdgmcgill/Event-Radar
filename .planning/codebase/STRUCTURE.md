@@ -67,7 +67,6 @@ Event-Radar/
 │   ├── store/                  # Zustand state stores
 │   ├── types/                  # TypeScript type definitions
 │   └── __tests__/              # Test files (API route tests)
-├── AI/                         # Python recommendation service (Two-Tower model)
 ├── backend/                    # Legacy Python similarity backend
 ├── internal/                   # Internal team dashboard (Vite app)
 ├── supabase/                   # Supabase config, migrations, edge functions
@@ -99,7 +98,7 @@ Event-Radar/
 **`src/app/api/`:**
 - Purpose: Server-side API route handlers
 - Contains: Route handlers organized by resource (events, clubs, users, admin, etc.)
-- Key files: `events/route.ts` (main event listing), `recommendations/route.ts` (rec engine proxy), `interactions/route.ts` (tracking)
+- Key files: `events/route.ts` (main event listing), `recommendations/route.ts` (Postgres-native scoring engine), `interactions/route.ts` (tracking)
 
 **`src/app/api/admin/`:**
 - Purpose: Admin-only management endpoints
@@ -152,11 +151,6 @@ Event-Radar/
 **`src/types/`:**
 - Purpose: Shared TypeScript type definitions
 - Contains: `index.ts` with all interfaces (Event, Club, User, SavedEvent, Notification, EventFilter, etc.)
-
-**`AI/`:**
-- Purpose: Python Two-Tower recommendation service
-- Contains: FastAPI app, ML models, training scripts, config
-- Key files: `run.py` (entry point), `config.py`, `api/`, `services/`, `models/`
 
 **`backend/`:**
 - Purpose: Legacy Python similarity computation backend
@@ -279,12 +273,6 @@ Event-Radar/
 - API tests: `src/__tests__/api/{resource}/`
 
 ## Special Directories
-
-**`AI/`:**
-- Purpose: Standalone Python recommendation service (Two-Tower model)
-- Generated: No (manually maintained)
-- Committed: Yes
-- Note: Has its own `requirements.txt`, `run.py` entry point, separate from the Next.js app
 
 **`backend/`:**
 - Purpose: Legacy Python similarity backend

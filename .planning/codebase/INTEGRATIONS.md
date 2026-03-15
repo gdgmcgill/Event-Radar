@@ -5,14 +5,15 @@
 ## APIs & External Services
 
 **Recommendation Engine:**
-- Two-Tower Recommendation Service - AI-powered event recommendations
-  - Client: Plain `fetch()` calls in `src/app/api/recommendations/route.ts`
-  - Endpoint: `${RECOMMENDATION_API_URL}/recommend` (POST)
-  - Auth: None (internal service)
-  - Env var: `RECOMMENDATION_API_URL` (defaults to `http://localhost:8000`)
-  - Payload: User profile (major, year, interests), feedback signals, exclusion list
-  - Response: Ranked list of event IDs with scores
-  - Fallback: Returns empty recommendations with `source: "popular_fallback"` when service is unreachable
+- Postgres-native scoring engine — runs entirely inside Supabase, no external service
+  - Implementation: `compute_user_scores()` Postgres function, scheduled via pg_cron every 6 hours
+  - Scoring formula: 5-signal weighted blend — tag affinity (0.35), interaction (0.25), popularity (0.20), recency (0.15), social (0.05)
+  - Tag hierarchy enables partial affinity matching across related tags
+  - Session boost applied within-session for reactivity
+  - Implicit interest evolution via `inferred_tags` derived from interaction history
+  - MMR diversity re-ranking to avoid homogeneous result sets
+  - API endpoint: `src/app/api/recommendations/route.ts` reads pre-computed scores from Supabase
+  - No external env var required — fully self-contained in the database
 
 **Unsplash:**
 - Image hosting only (no API integration)
@@ -183,7 +184,6 @@
 - `CRON_SECRET` - Bearer token for cron job endpoints
 
 **Optional env vars:**
-- `RECOMMENDATION_API_URL` - Recommendation service URL (default: `http://localhost:8000`)
 - `ADMIN_EMAILS` - Comma-separated admin email addresses for auto-role assignment
 - `WEBHOOK_SECRET` - HMAC secret for events webhook (Edge Function only)
 

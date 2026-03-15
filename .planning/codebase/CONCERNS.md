@@ -121,10 +121,10 @@
 - Limit: Breaks with multiple serverless function instances (each has its own store).
 - Scaling path: Move to Redis/Upstash-based rate limiting as noted in `src/middlewareRateLimit.ts` comments.
 
-**Recommendation service dependency:**
-- Current capacity: Single external service at `RECOMMENDATION_API_URL` (defaults to `localhost:8000`).
-- Limit: If the recommendation service is down, GET returns empty results with `source: "popular_fallback"` but POST returns 503.
-- Scaling path: The fallback behavior is already partially implemented. Consider caching recent recommendation results.
+**Recommendation scoring latency:**
+- Current capacity: Pre-computed scores are read directly from Supabase; no external service dependency.
+- Limit: Scores are refreshed by `compute_user_scores()` on a 6-hour pg_cron schedule, so recommendations may be up to 6 hours stale. Session boost partially compensates within a session.
+- Scaling path: Reduce cron interval or trigger incremental score updates on significant user interactions.
 
 ## Dependencies at Risk
 

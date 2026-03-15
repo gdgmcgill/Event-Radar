@@ -65,10 +65,14 @@ All three are typed with `Database` from `lib/supabase/types.ts`.
 
 ### Recommendations & Experiments
 
-- Content-based recommendation engine at `/api/recommendations` with tag matching and popularity fallback
-- `RECOMMENDATION_THRESHOLD` (3 saved events) determines when personalized recs activate vs popularity fallback
-- A/B testing system for recommendation algorithms (`/api/admin/experiments`)
-- Interaction tracking (`/api/interactions`) feeds popularity scores
+- Postgres-native scoring engine using `compute_user_scores()` Postgres function, scheduled via pg_cron every 6 hours
+- 5-signal scoring formula: tag affinity (0.35), interaction (0.25), popularity (0.20), recency (0.15), social (0.05)
+- Tag hierarchy enables partial affinity matching across related tags
+- Session boost for within-session reactivity; implicit interest evolution via `inferred_tags`
+- MMR diversity re-ranking applied before returning results
+- New users without pre-computed scores fall back to popularity-ranked feed
+- A/B testing framework for recommendation algorithms (`/api/admin/experiments`)
+- Interaction tracking (`/api/interactions`) feeds interaction signal and popularity scores
 
 ### Supabase Edge Functions
 

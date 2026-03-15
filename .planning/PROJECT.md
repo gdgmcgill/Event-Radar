@@ -13,12 +13,12 @@ Club organizers can effortlessly manage their clubs and post events, while stude
 ### Validated
 
 - User can sign in via Google OAuth with McGill email enforcement — existing
-- User sees personalized event recommendations via Two-Tower model — existing
+- User sees personalized event recommendations via Postgres-native scoring engine — existing
 - User can save/unsave events — existing
 - User can browse and filter events by tags, search, and date — existing
 - Admin can approve/reject pending events and clubs — existing
 - User receives notifications for event reminders and admin actions — existing
-- New users with <3 saved events see popularity-ranked fallback feed — existing
+- New users without personalized scores yet see popularity-ranked fallback feed — existing
 - Instagram scraper pipeline classifies and ingests events — existing
 - User can select interest tags during onboarding — existing
 - Club organizers have a dedicated, functional club management experience (create, edit, post events, invite members, view analytics) — v2.0

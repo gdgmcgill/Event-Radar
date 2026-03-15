@@ -120,7 +120,6 @@
   - `SUPABASE_SERVICE_ROLE_KEY` - Service role key (server-only, secret)
   - `CRON_SECRET` - Cron job authentication token
 - Optional vars:
-  - `RECOMMENDATION_API_URL` - Two-Tower recommendation service URL (defaults to `http://localhost:8000`)
   - `ADMIN_EMAILS` - Comma-separated list of admin email addresses
 
 ## Platform Requirements
