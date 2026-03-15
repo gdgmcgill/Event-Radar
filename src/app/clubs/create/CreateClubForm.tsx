@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Building2, Upload, Loader2, CheckCircle2, Instagram, AlertCircle, Globe } from "lucide-react";
+import { Building2, Upload, Loader2, CheckCircle2, Instagram, AlertCircle, Globe, ImageIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -40,6 +40,8 @@ export function CreateClubForm() {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -61,6 +63,26 @@ export function CreateClubForm() {
     setErrors((prev) => {
       const next = { ...prev };
       delete next.logo;
+      return next;
+    });
+  };
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErrors((prev) => ({ ...prev, banner: "Please select an image file." }));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, banner: "Banner must be smaller than 5 MB." }));
+      return;
+    }
+    setBannerFile(file);
+    setBannerUrl(URL.createObjectURL(file));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.banner;
       return next;
     });
   };
@@ -113,21 +135,37 @@ export function CreateClubForm() {
 
       const club = await res.json();
 
-      // Step 2: Upload logo now that club exists and user is owner
+      // Step 2: Upload logo and banner now that club exists and user is owner
+      const patchUpdates: Record<string, string> = {};
+
       if (logoFile) {
-        const formData = new FormData();
-        formData.append("file", logoFile);
-        formData.append("clubId", club.id);
-        const logoRes = await fetch("/api/clubs/logo", { method: "POST", body: formData });
+        const fd = new FormData();
+        fd.append("file", logoFile);
+        fd.append("clubId", club.id);
+        const logoRes = await fetch("/api/clubs/logo", { method: "POST", body: fd });
         if (logoRes.ok) {
           const logoData = await logoRes.json();
-          // Update club with logo URL
-          await fetch(`/api/clubs/${club.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ logo_url: logoData.url }),
-          });
+          patchUpdates.logo_url = logoData.url;
         }
+      }
+
+      if (bannerFile) {
+        const fd = new FormData();
+        fd.append("file", bannerFile);
+        fd.append("clubId", club.id);
+        const bannerRes = await fetch("/api/clubs/banner", { method: "POST", body: fd });
+        if (bannerRes.ok) {
+          const bannerData = await bannerRes.json();
+          patchUpdates.banner_url = bannerData.url;
+        }
+      }
+
+      if (Object.keys(patchUpdates).length > 0) {
+        await fetch(`/api/clubs/${club.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patchUpdates),
+        });
       }
 
       // Step 3: Update auth store
@@ -197,6 +235,34 @@ export function CreateClubForm() {
             </div>
           </div>
           {errors.logo && <p className="mt-1.5 text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{errors.logo}</p>}
+        </div>
+
+        {/* Banner */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-foreground">
+            Club Banner <span className="text-muted-foreground font-normal">(optional — displayed on your club page hero)</span>
+          </label>
+          <div className="relative">
+            <div className="w-full aspect-[3/1] rounded-xl bg-secondary border border-border overflow-hidden flex items-center justify-center">
+              {bannerUrl ? (
+                <Image src={bannerUrl} alt="Banner preview" fill className="object-cover" />
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
+                  <ImageIcon className="h-8 w-8" />
+                  <span className="text-xs">Recommended: 1200 x 400px</span>
+                </div>
+              )}
+            </div>
+            <label className="absolute bottom-3 right-3 cursor-pointer">
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-sm font-semibold text-white hover:bg-black/80 transition-colors">
+                <Upload className="h-4 w-4" />
+                {bannerFile ? "Change" : "Upload Banner"}
+              </span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleBannerChange} />
+            </label>
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">PNG, JPG, WebP up to 5 MB</p>
+          {errors.banner && <p className="mt-1.5 text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{errors.banner}</p>}
         </div>
 
         {/* Club Name */}

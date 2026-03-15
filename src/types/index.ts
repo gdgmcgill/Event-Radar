@@ -60,6 +60,7 @@ export interface Club {
   category?: string | null;
   instagram_handle: string | null;
   logo_url: string | null;
+  banner_url: string | null;
   website_url: string | null;
   discord_url: string | null;
   twitter_url: string | null;

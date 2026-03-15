@@ -77,6 +77,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       "category",
       "instagram_handle",
       "logo_url",
+      "banner_url",
       "website_url",
       "discord_url",
       "twitter_url",

@@ -110,10 +110,10 @@ export default async function ClubDetailPage({ params }: PageProps) {
       <div className="relative w-full h-[40vh] min-h-[320px] max-h-[420px]">
         {/* Background: image or rich gradient */}
         <div className="absolute inset-0">
-          {club.logo_url ? (
+          {club.banner_url ? (
             <Image
-              src={club.logo_url}
-              alt={club.name}
+              src={club.banner_url}
+              alt={`${club.name} banner`}
               fill
               className="object-cover"
               priority
