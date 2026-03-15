@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         .from("events")
         .select("*, clubs(*)")
         .eq("status", "approved")
-        .order("created_at", { ascending: false })
+        .order("event_date", { ascending: true })
         .limit(topK);
 
       const recommendations = (popularEvents ?? []).map((event) => ({
@@ -66,17 +66,21 @@ export async function GET(request: NextRequest) {
     // --- 2. Fetch user profile (interest_tags + inferred_tags) ---
     const { data: userProfileData } = await supabase
       .from("users")
-      .select("interest_tags, full_name")
+      .select("interest_tags, inferred_tags, full_name")
       .eq("id", user.id)
       .single();
 
     type UserProfileRow = {
       interest_tags: string[] | null;
+      inferred_tags: string[] | null;
       full_name: string | null;
     };
     const userProfile = userProfileData as UserProfileRow | null;
-    const userInterestTags = userProfile?.interest_tags ?? [];
-    const expandedTags = expandTagsWithHierarchy(userInterestTags);
+    const allUserTags = [
+      ...(userProfile?.interest_tags ?? []),
+      ...(userProfile?.inferred_tags ?? []),
+    ];
+    const expandedTags = expandTagsWithHierarchy(allUserTags);
 
     // --- 3. Query user_event_scores for precomputed scores ---
     const { data: scoreRows } = await (supabase
@@ -109,7 +113,7 @@ export async function GET(request: NextRequest) {
         .from("events")
         .select("*, clubs(*)")
         .eq("status", "approved")
-        .order("created_at", { ascending: false })
+        .order("event_date", { ascending: true })
         .limit(topK);
 
       const recommendations = (popularEvents ?? []).map((event) => ({
@@ -136,7 +140,7 @@ export async function GET(request: NextRequest) {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     const { data: recentInteractions } = await supabase
       .from("user_interactions")
-      .select("metadata")
+      .select("event_id, events(tags)")
       .eq("user_id", user.id)
       .gte("created_at", twoHoursAgo)
       .order("created_at", { ascending: false })
@@ -145,9 +149,9 @@ export async function GET(request: NextRequest) {
     // Collect tags from recent interactions
     const sessionTags: string[] = [];
     for (const interaction of recentInteractions ?? []) {
-      const meta = interaction.metadata as Record<string, unknown> | null;
-      if (meta && Array.isArray(meta.tags)) {
-        sessionTags.push(...(meta.tags as string[]));
+      const event = (interaction as any).events;
+      if (event && Array.isArray(event.tags)) {
+        sessionTags.push(...event.tags);
       }
     }
 
@@ -295,7 +299,7 @@ export async function GET(request: NextRequest) {
           avg_pairwise_distance: diversityMetadata.avg_pairwise_distance,
           lambda: diversityMetadata.lambda,
         },
-        experiment_variant_id: experimentVariantId ?? undefined,
+        experiment_variant_id: experimentVariantId,
         total_events: recommendations.length,
       },
       { headers: { "Cache-Control": "private, no-store" } }
