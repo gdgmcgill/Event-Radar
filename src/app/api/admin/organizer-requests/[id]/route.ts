@@ -1,30 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { verifyAdmin } from "@/lib/admin";
 import { createServiceClient } from "@/lib/supabase/service";
+import { logAdminAction } from "@/lib/audit";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Check admin role
-  const { data: profile } = await supabase
-    .from("users")
-    .select("roles")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.roles?.includes("admin")) {
+  const { user, isAdmin } = await verifyAdmin();
+  if (!isAdmin || !user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -39,7 +24,6 @@ export async function PATCH(
     );
   }
 
-  // Fetch the request to get user_id and club_id
   const serviceClient = createServiceClient();
 
   const { data: orgRequest, error: fetchError } = await serviceClient
@@ -62,7 +46,6 @@ export async function PATCH(
     );
   }
 
-  // Update the request status
   const { error: updateError } = await serviceClient
     .from("organizer_requests")
     .update({
@@ -76,9 +59,21 @@ export async function PATCH(
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  // If approved, grant the club_organizer role and add to club_members
+  // Log audit action
+  try {
+    await logAdminAction({
+      adminUserId: user.id,
+      adminEmail: user.email,
+      action: status as "approved" | "rejected",
+      targetType: "organizer_request",
+      targetId: id,
+      metadata: { user_id: orgRequest.user_id, club_id: orgRequest.club_id },
+    });
+  } catch (auditErr) {
+    console.error("[Admin] Failed to log audit action:", auditErr);
+  }
+
   if (status === "approved") {
-    // Add 'club_organizer' to user's roles if not already present
     const { data: targetUser } = await serviceClient
       .from("users")
       .select("roles")
@@ -96,7 +91,6 @@ export async function PATCH(
         .eq("id", orgRequest.user_id);
     }
 
-    // Insert into club_members (ignore if already exists)
     await serviceClient.from("club_members").upsert(
       {
         user_id: orgRequest.user_id,
@@ -107,7 +101,6 @@ export async function PATCH(
     );
   }
 
-  // Send notification to the requester
   try {
     const { data: club } = await serviceClient
       .from("clubs")

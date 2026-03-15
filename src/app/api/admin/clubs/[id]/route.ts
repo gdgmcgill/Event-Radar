@@ -1,29 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { verifyAdmin } from "@/lib/admin";
 import { createServiceClient } from "@/lib/supabase/service";
+import { logAdminAction } from "@/lib/audit";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("roles")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.roles?.includes("admin")) {
+  const { user, isAdmin } = await verifyAdmin();
+  if (!isAdmin || !user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -67,6 +53,20 @@ export async function PATCH(
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  // Log audit action
+  try {
+    await logAdminAction({
+      adminUserId: user.id,
+      adminEmail: user.email,
+      action: status as "approved" | "rejected",
+      targetType: "club",
+      targetId: id,
+      metadata: { club_name: club.name },
+    });
+  } catch (auditErr) {
+    console.error("[Admin] Failed to log audit action:", auditErr);
   }
 
   if (status === "approved" && club.created_by) {
