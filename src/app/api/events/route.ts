@@ -198,7 +198,8 @@ export async function GET(request: NextRequest) {
     let eventsQuery = supabase
       .from('events')
       .select('*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)', { count: 'exact' })
-      .order('start_date', { ascending: true });
+      .order('start_date', { ascending: true })
+      .eq('status', 'approved');
 
     // Filter by IDs (e.g. for recommendation list)
     if (idsParam) {
