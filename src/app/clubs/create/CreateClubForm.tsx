@@ -344,32 +344,31 @@ export function CreateClubForm() {
           {errors.category && <p className="mt-1.5 text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{errors.category}</p>}
         </div>
 
-        {/* Instagram Handle */}
-        <div>
-          <label htmlFor="club-instagram" className="mb-2 block text-sm font-medium text-foreground">
-            Instagram Handle <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              <Instagram className="h-4 w-4" />
-            </div>
-            <Input
-              id="club-instagram"
-              value={instagramHandle}
-              onChange={(e) => setInstagramHandle(e.target.value)}
-              placeholder="yourclub"
-              disabled={submitting}
-              className="pl-9 border-border focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Students can find your club on Instagram</p>
-        </div>
-
         {/* Social Links Section */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-medium text-foreground">Social Links</h3>
             <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+          </div>
+
+          {/* Instagram */}
+          <div>
+            <label htmlFor="club-instagram" className="mb-1.5 block text-sm text-muted-foreground">
+              Instagram
+            </label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <Instagram className="h-4 w-4" />
+              </div>
+              <Input
+                id="club-instagram"
+                value={instagramHandle}
+                onChange={(e) => setInstagramHandle(e.target.value)}
+                placeholder="yourclub"
+                disabled={submitting}
+                className="pl-9 border-border focus:ring-primary focus:border-primary"
+              />
+            </div>
           </div>
 
           {/* Website */}
