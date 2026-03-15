@@ -773,23 +773,32 @@ export default function CalendarPage() {
       <div
         key={event.id}
         className={cn(
-          "group relative flex flex-col gap-3 rounded-2xl bg-background border border-border p-4 transition-colors overflow-hidden",
+          "group relative flex flex-row rounded-2xl bg-background border border-border transition-all overflow-hidden hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20",
           accent.hoverBorder
         )}
       >
-        <div
-          className={cn(
-            "absolute top-0 left-0 w-1 h-full rounded-l-2xl",
-            accent.bar
-          )}
-        />
-
+        {/* Image section */}
         <button
           onClick={() => handleEventClick(event)}
-          className="flex flex-col gap-3 text-left cursor-pointer"
+          className="relative shrink-0 w-28 sm:w-36 cursor-pointer overflow-hidden"
         >
-          <div className="flex justify-between items-start pl-3">
-            <div className="flex flex-col gap-1 min-w-0">
+          <img
+            src={event.image_url || "/placeholder-event.png"}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/20" />
+          {/* Category strip overlaid on image */}
+          <div className={cn("absolute top-0 left-0 w-1 h-full", accent.bar)} />
+        </button>
+
+        {/* Content section */}
+        <div className="flex flex-col flex-1 min-w-0 p-4 gap-3">
+          <button
+            onClick={() => handleEventClick(event)}
+            className="flex flex-col gap-2 text-left cursor-pointer"
+          >
+            <div className="flex flex-col gap-1">
               <span
                 className={cn(
                   "text-xs font-semibold tracking-wider uppercase",
@@ -798,75 +807,74 @@ export default function CalendarPage() {
               >
                 {event.club?.name || "Event"}
               </span>
-              <h4 className="text-foreground text-base font-bold leading-tight group-hover:text-primary transition-colors truncate">
+              <h4 className="text-foreground text-base font-bold leading-tight group-hover:text-primary transition-colors line-clamp-2">
                 {event.title}
               </h4>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-2 pl-3">
-            {event.event_time && (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Clock className="h-4 w-4 shrink-0" />
-                <span>{formatTime(event.event_time)}</span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              {event.event_time && (
+                <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  <span>{formatTime(event.event_time)}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{event.location}</span>
               </div>
-            )}
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <MapPin className="h-4 w-4 shrink-0" />
-              <span className="truncate">{event.location}</span>
             </div>
-          </div>
-        </button>
-
-        {/* Action bar */}
-        <div className="flex items-center gap-2 pl-3 pt-2 border-t border-border/60 flex-wrap">
-          <button
-            onClick={() => toggleSave(event)}
-            disabled={saveBusy}
-            className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait",
-              event.is_saved
-                ? "bg-primary/10 border border-primary/20 text-primary"
-                : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {saveBusy ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : event.is_saved ? (
-              <BookmarkCheck className="h-3 w-3" />
-            ) : (
-              <Bookmark className="h-3 w-3" />
-            )}
-            {event.is_saved ? "Saved" : "Save"}
           </button>
 
-          <button
-            onClick={() => setRsvp(event, "going")}
-            disabled={rsvpBusy}
-            className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait",
-              event.rsvp_status === "going"
-                ? "bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400"
-                : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {rsvpBusy ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-3 w-3" />
-            )}
-            Going
-          </button>
+          {/* Action bar */}
+          <div className="flex items-center gap-2 pt-2 border-t border-border/40 flex-wrap mt-auto">
+            <button
+              onClick={() => toggleSave(event)}
+              disabled={saveBusy}
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait",
+                event.is_saved
+                  ? "bg-primary/10 border border-primary/20 text-primary"
+                  : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {saveBusy ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : event.is_saved ? (
+                <BookmarkCheck className="h-3 w-3" />
+              ) : (
+                <Bookmark className="h-3 w-3" />
+              )}
+              {event.is_saved ? "Saved" : "Save"}
+            </button>
 
-          <button
-            onClick={() => setRsvp(event, "interested")}
-            disabled={rsvpBusy}
-            className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait",
-              event.rsvp_status === "interested"
-                ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-                : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
-            )}
+            <button
+              onClick={() => setRsvp(event, "going")}
+              disabled={rsvpBusy}
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait",
+                event.rsvp_status === "going"
+                  ? "bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400"
+                  : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {rsvpBusy ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3 w-3" />
+              )}
+              Going
+            </button>
+
+            <button
+              onClick={() => setRsvp(event, "interested")}
+              disabled={rsvpBusy}
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait",
+                event.rsvp_status === "interested"
+                  ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400"
+                  : "bg-secondary border border-border text-muted-foreground hover:text-foreground"
+              )}
           >
             {rsvpBusy ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -875,6 +883,7 @@ export default function CalendarPage() {
             )}
             Interested
           </button>
+          </div>
         </div>
       </div>
     );
@@ -1225,12 +1234,24 @@ export default function CalendarPage() {
             {calendarView === "Saved" && !error && (
               <div className="px-6 lg:px-8 pb-8 flex-1 min-h-0 overflow-y-auto">
                 {loading ? (
-                  <div className="flex flex-col gap-4">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <Skeleton
-                        key={i}
-                        className="h-28 w-full rounded-2xl"
-                      />
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="flex rounded-2xl border border-border overflow-hidden">
+                        <Skeleton className="w-28 sm:w-36 shrink-0" />
+                        <div className="flex flex-col gap-3 p-4 flex-1">
+                          <Skeleton className="h-3 w-20 rounded" />
+                          <Skeleton className="h-5 w-3/4 rounded" />
+                          <div className="flex gap-4">
+                            <Skeleton className="h-4 w-24 rounded" />
+                            <Skeleton className="h-4 w-28 rounded" />
+                          </div>
+                          <div className="flex gap-2 mt-auto pt-2">
+                            <Skeleton className="h-6 w-16 rounded-md" />
+                            <Skeleton className="h-6 w-16 rounded-md" />
+                            <Skeleton className="h-6 w-20 rounded-md" />
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 ) : listEvents.length === 0 ? (
@@ -1263,7 +1284,7 @@ export default function CalendarPage() {
                             </span>
                           )}
                         </h3>
-                        <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                           {group.events.map(renderAgendaCard)}
                         </div>
                       </div>
@@ -1271,7 +1292,7 @@ export default function CalendarPage() {
                   </div>
                 ) : (
                   /* Flat list (title or recent sort) */
-                  <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                     {listEvents.map(renderAgendaCard)}
                   </div>
                 )}
