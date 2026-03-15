@@ -4,12 +4,9 @@ import { useState, useEffect } from "react";
 import { type Event } from "@/types";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import { ScrollRow } from "@/components/events/ScrollRow";
-import { AlertCircle, RefreshCcw, BookmarkPlus, Sparkles } from "lucide-react";
+import { AlertCircle, RefreshCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/store/useAuthStore";
-import { useSavedEvents } from "@/hooks/useSavedEvents";
-import { RECOMMENDATION_THRESHOLD } from "@/lib/constants";
 
 interface RecommendedEventsSectionProps {
   onEventClick?: (event: Event) => void;
@@ -30,9 +27,6 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<"personalized" | "popular_fallback">("personalized");
-
-  const user = useAuthStore((s) => s.user);
-  const { savedEventIds, isLoading } = useSavedEvents(!!user);
 
   const fetchRecommendedEvents = async () => {
     try {
@@ -122,15 +116,6 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
           </Button>
         </div>
       </div>
-      {source === "popular_fallback" && !isLoading && (() => {
-        const remaining = Math.max(0, RECOMMENDATION_THRESHOLD - savedEventIds.size);
-        return remaining > 0 ? (
-          <p className="text-sm text-muted-foreground px-6 md:px-10 lg:px-12 mb-4 flex items-center gap-1.5">
-            <BookmarkPlus className="h-4 w-4 text-primary" />
-            Save {remaining} more event{remaining !== 1 ? "s" : ""} to unlock personalized recommendations
-          </p>
-        ) : null;
-      })()}
       <ScrollRow className="px-6 md:px-10 lg:px-12">
           {events.map((event) => (
             <div key={event.id} className="min-w-[260px] sm:min-w-[280px] md:min-w-[320px] w-[calc(85vw-2rem)] sm:w-[300px] md:w-[340px] lg:w-[320px] flex-shrink-0">

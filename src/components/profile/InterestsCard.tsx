@@ -167,39 +167,41 @@ export default function InterestsCard({ userId, initialTags, inferredTags = [] }
               </button>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {selectedTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-3 py-1 bg-red-600/10 text-red-600 text-sm font-medium rounded-full"
-                >
-                  {getTagLabel(tag)}
-                </span>
-              ))}
-            </div>
-            {localInferredTags.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs text-slate-500 font-medium mb-2">Learned from your activity</p>
-                <div className="flex flex-wrap gap-2">
-                  {localInferredTags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1 px-3 py-1 border border-dashed border-red-400 text-red-600 text-sm font-medium rounded-full"
-                    >
-                      {getTagLabel(tag)}
-                      <button
-                        onClick={() => handleRemoveInferred(tag)}
-                        disabled={removingTag === tag}
-                        className="ml-0.5 hover:text-red-800 disabled:opacity-50 transition-colors"
-                        aria-label={`Remove ${getTagLabel(tag)}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+            <>
+              <div className="flex flex-wrap gap-2">
+                {selectedTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1 bg-red-600/10 text-red-600 text-sm font-medium rounded-full"
+                  >
+                    {getTagLabel(tag)}
+                  </span>
+                ))}
               </div>
-            )}
+              {localInferredTags.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs text-slate-500 font-medium mb-2">Learned from your activity</p>
+                  <div className="flex flex-wrap gap-2">
+                    {localInferredTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-3 py-1 border border-dashed border-red-400 text-red-600 text-sm font-medium rounded-full"
+                      >
+                        {getTagLabel(tag)}
+                        <button
+                          onClick={() => handleRemoveInferred(tag)}
+                          disabled={removingTag === tag}
+                          className="ml-0.5 hover:text-red-800 disabled:opacity-50 transition-colors"
+                          aria-label={`Remove ${getTagLabel(tag)}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

@@ -369,12 +369,6 @@ export const TAG_CHILDREN: Record<string, string[]> = Object.entries(TAG_HIERARC
  */
 export const EXTRA_INTEREST_TAGS: string[] = Object.keys(QUICK_FILTER_CATEGORIES);
 
-/**
- * Minimum number of saved events required before showing personalized recommendations.
- * Below this threshold, users see the popularity-ranked fallback feed.
- */
-export const RECOMMENDATION_THRESHOLD = 3;
-
 export const PRONOUNS = [
   "he/him",
   "she/her",
