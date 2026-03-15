@@ -10,6 +10,7 @@ import {
   MapPin,
   Shield,
   TrendingUp,
+  MessageSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
@@ -35,7 +36,7 @@ interface PendingClub {
 export default async function ModerationDashboardPage() {
   const supabase = await createClient();
 
-  const [pending, users, approved, pendingClubsCount, recentEvents, recentClubs, auditLogRes] =
+  const [pending, users, approved, pendingClubsCount, recentEvents, recentClubs, auditLogRes, appealEvents, appealClubs] =
     await Promise.all([
       supabase
         .from("events")
@@ -68,12 +69,24 @@ export default async function ModerationDashboardPage() {
         .select("id, admin_email, action, target_type, metadata, created_at")
         .order("created_at", { ascending: false })
         .limit(10) as Promise<{ data: AuditEntry[] | null }>,
+      supabase
+        .from("events")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .gt("appeal_count", 0),
+      supabase
+        .from("clubs")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .gt("appeal_count", 0),
     ]);
 
   const pendingCount = pending.count ?? 0;
   const usersCount = users.count ?? 0;
   const approvedCount = approved.count ?? 0;
   const pendingClubCount = pendingClubsCount.count ?? 0;
+  const appealEventCount = appealEvents.count ?? 0;
+  const appealClubCount = appealClubs.count ?? 0;
   const pendingEvents = recentEvents.data ?? [];
   const rawClubs = (recentClubs.data ?? []) as PendingClub[];
   const auditEntries = auditLogRes.data ?? [];
@@ -169,6 +182,17 @@ export default async function ModerationDashboardPage() {
       iconColor: "text-amber-600 dark:text-amber-400",
       sublabel: "Awaiting review",
     },
+    {
+      label: "Pending Appeals",
+      value: appealEventCount + appealClubCount,
+      icon: MessageSquare,
+      accent: appealEventCount + appealClubCount > 0 ? "border-l-orange-500" : "border-l-zinc-300",
+      iconBg: appealEventCount + appealClubCount > 0 ? "bg-orange-50 dark:bg-orange-950/30" : "bg-zinc-50 dark:bg-zinc-800",
+      iconColor: appealEventCount + appealClubCount > 0 ? "text-orange-600 dark:text-orange-400" : "text-zinc-400",
+      sublabel: appealEventCount + appealClubCount > 0
+        ? `${appealEventCount} events, ${appealClubCount} clubs`
+        : "No pending appeals",
+    },
   ];
 
   return (
@@ -195,7 +219,7 @@ export default async function ModerationDashboardPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {stats.map((stat) => (
           <div
             key={stat.label}
