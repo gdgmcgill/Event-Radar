@@ -5,23 +5,23 @@ import {
   Calendar,
   Users,
   CheckCircle,
-  TrendingUp,
-  TrendingDown,
   BarChart3,
-  Download,
   Eye,
   Bookmark,
-  MousePointerClick,
   Trophy,
-  Award,
-  Code,
-  Landmark,
-  Palette,
-  Search,
-  Settings,
-  DollarSign,
-  LayoutDashboard,
+  Activity,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface Stats {
   totalEvents: number;
@@ -58,28 +58,15 @@ interface EventAnalytics {
   totalApproved: number;
 }
 
-const TAG_COLORS: Record<string, string> = {
-  academic: "#3b82f6",
-  social: "#ec4899",
-  sports: "#22c55e",
-  career: "#a855f7",
-  cultural: "#f59e0b",
-  wellness: "#14b8a6",
-};
-
-const SIDEBAR_ITEMS = [
-  { label: "Platform Insights", icon: LayoutDashboard, active: true },
-  { label: "Engagement", icon: Users, active: false },
-  { label: "Growth Strategy", icon: TrendingUp, active: false },
-  { label: "Budgeting", icon: DollarSign, active: false },
-];
-
 export default function ModerationStatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(null);
-  const [eventAnalytics, setEventAnalytics] = useState<EventAnalytics | null>(null);
+  const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(
+    null
+  );
+  const [eventAnalytics, setEventAnalytics] = useState<EventAnalytics | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
-  const [attendanceView, setAttendanceView] = useState<"Weekly" | "Monthly" | "Yearly">("Weekly");
 
   useEffect(() => {
     async function fetchData() {
@@ -99,36 +86,65 @@ export default function ModerationStatsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-1 flex-col lg:flex-row min-h-[80vh]">
-        <Sidebar />
-        <main className="flex-1 p-6 lg:p-10 flex flex-col gap-8">
-          <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Platform Analytics</h2>
-            <p className="text-slate-500 mt-1">Real-time data visualization of campus engagement at McGill.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm animate-pulse">
-                <div className="h-4 bg-slate-100 rounded w-2/3 mb-4" />
-                <div className="h-8 bg-slate-100 rounded w-1/2" />
-              </div>
-            ))}
-          </div>
-        </main>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Analytics
+          </h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            Platform performance and engagement metrics.
+          </p>
+        </div>
+        {/* Stat card skeletons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 animate-pulse"
+            >
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-2/3 mb-4" />
+              <div className="h-8 bg-zinc-200 dark:bg-zinc-700 rounded w-1/2" />
+            </div>
+          ))}
+        </div>
+        {/* Chart skeletons */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 animate-pulse"
+            >
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-1/3 mb-6" />
+              <div className="h-64 bg-zinc-100 dark:bg-zinc-800 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 animate-pulse"
+            >
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-1/3 mb-6" />
+              <div className="h-48 bg-zinc-100 dark:bg-zinc-800 rounded" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div className="flex flex-1 flex-col lg:flex-row min-h-[80vh]">
-        <Sidebar />
-        <main className="flex-1 p-6 lg:p-10 flex flex-col gap-8">
-          <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Platform Analytics</h2>
-            <p className="text-slate-500 mt-1">Failed to load statistics.</p>
-          </div>
-        </main>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Analytics
+          </h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            Failed to load statistics.
+          </p>
+        </div>
       </div>
     );
   }
@@ -138,415 +154,428 @@ export default function ModerationStatsPage() {
       ? Math.round((stats.approvedEvents / stats.totalEvents) * 100)
       : 0;
 
-  // Compute category percentages from real data
-  const totalCategoryCount = eventAnalytics?.categoryDistribution.reduce((sum, c) => sum + c.count, 0) ?? 0;
-  const categoryPercentages = (eventAnalytics?.categoryDistribution ?? [])
-    .map((c) => ({
-      tag: c.tag.charAt(0).toUpperCase() + c.tag.slice(1),
-      percent: totalCategoryCount > 0 ? Math.round((c.count / totalCategoryCount) * 100) : 0,
-    }))
-    .sort((a, b) => b.percent - a.percent)
-    .slice(0, 4);
-
-  // Build bar chart data from daily signups (aggregate by month)
+  // Aggregate daily signups by month for bar chart
   const monthlySignups = aggregateByMonth(userAnalytics?.dailySignups ?? []);
 
-  // Build line chart data from daily event creation
-  const dailyCreation = eventAnalytics?.dailyCreation ?? [];
+  // Daily event creation for line chart
+  const dailyCreation = (eventAnalytics?.dailyCreation ?? []).map((d) => ({
+    date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    count: d.count,
+  }));
+
+  // Category distribution sorted descending
+  const totalCategoryCount =
+    eventAnalytics?.categoryDistribution.reduce(
+      (sum, c) => sum + c.count,
+      0
+    ) ?? 0;
+  const categoryData = (eventAnalytics?.categoryDistribution ?? [])
+    .map((c) => ({
+      tag: c.tag.charAt(0).toUpperCase() + c.tag.slice(1),
+      count: c.count,
+      percent:
+        totalCategoryCount > 0
+          ? Math.round((c.count / totalCategoryCount) * 100)
+          : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Top performers
+  const topPerformers = eventAnalytics?.topPerformers ?? [];
+
+  // Status breakdown
+  const rejectedCount =
+    stats.totalEvents - stats.approvedEvents - stats.pendingEvents;
 
   const statCards = [
     {
-      label: "Total Active Users",
-      value: (userAnalytics?.activeUsersLast7Days ?? stats.totalUsers).toLocaleString(),
+      label: "Active Users",
+      value: (
+        userAnalytics?.activeUsersLast7Days ?? stats.activeUsers
+      ).toLocaleString(),
       icon: Users,
-      change: 12,
-      up: true,
+      accent: "border-l-blue-500",
+      iconBg: "bg-blue-50 dark:bg-blue-900/20",
+      iconColor: "text-blue-600 dark:text-blue-400",
     },
     {
       label: "Verified Clubs",
       value: stats.approvedEvents.toString(),
       icon: CheckCircle,
-      change: 5,
-      up: true,
+      accent: "border-l-emerald-500",
+      iconBg: "bg-emerald-50 dark:bg-emerald-900/20",
+      iconColor: "text-emerald-600 dark:text-emerald-400",
     },
     {
-      label: "Events This Month",
+      label: "Total Events",
       value: stats.totalEvents.toString(),
       icon: Calendar,
-      change: 8,
-      up: true,
+      accent: "border-l-violet-500",
+      iconBg: "bg-violet-50 dark:bg-violet-900/20",
+      iconColor: "text-violet-600 dark:text-violet-400",
     },
     {
       label: "Approval Rate",
       value: `${approvalRate}%`,
       icon: BarChart3,
-      change: 2,
-      up: approvalRate >= 50,
+      accent: "border-l-amber-500",
+      iconBg: "bg-amber-50 dark:bg-amber-900/20",
+      iconColor: "text-amber-600 dark:text-amber-400",
     },
   ];
 
   return (
-    <div className="flex flex-1 flex-col lg:flex-row min-h-[80vh]">
-      {/* Sidebar */}
-      <Sidebar />
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          Analytics
+        </h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          Platform performance and engagement metrics.
+        </p>
+      </div>
 
-      {/* Main Content */}
-      <main className="flex-1 p-6 lg:p-10 flex flex-col gap-8">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Platform Analytics</h2>
-            <p className="text-slate-500 mt-1">Real-time data visualization of campus engagement at McGill.</p>
-          </div>
-          <div className="flex gap-3 w-full md:w-auto">
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-sm hover:bg-slate-200 transition-colors">
-              <Calendar className="h-4 w-4" />
-              Last 30 Days
-            </button>
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg px-4 py-2 bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-all shadow-lg shadow-red-600/20">
-              <Download className="h-4 w-4" />
-              Export Report
-            </button>
-          </div>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={stat.label}
+              className={`bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 border-l-4 ${stat.accent}`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  {stat.label}
+                </p>
+                <span
+                  className={`${stat.iconBg} p-2 rounded-lg`}
+                >
+                  <Icon className={`h-4 w-4 ${stat.iconColor}`} />
+                </span>
+              </div>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                {stat.value}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Charts Row 1: User Growth + Event Creation Trends */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* User Growth */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+            User Growth
+          </h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
+            Monthly new registrations
+          </p>
+          {monthlySignups.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={monthlySignups}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
+                  className="text-zinc-200 dark:text-zinc-700"
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 12 }}
+                  stroke="currentColor"
+                  className="text-zinc-400 dark:text-zinc-500"
+                />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  stroke="currentColor"
+                  className="text-zinc-400 dark:text-zinc-500"
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid var(--color-zinc-200)",
+                    fontSize: "12px",
+                  }}
+                  labelStyle={{ fontWeight: 600 }}
+                />
+                <Bar
+                  dataKey="count"
+                  name="Signups"
+                  fill="hsl(var(--primary))"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-sm text-zinc-400 dark:text-zinc-500">
+              No signup data available
+            </div>
+          )}
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {statCards.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div key={stat.label} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-                <div className="flex justify-between items-start mb-4">
-                  <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">{stat.label}</p>
-                  <span className="text-red-600 bg-red-50 p-2 rounded-lg">
-                    <Icon className="h-5 w-5" />
-                  </span>
+        {/* Event Creation Trends */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+            Event Creation Trends
+          </h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
+            Daily events created over the last 30 days
+          </p>
+          {dailyCreation.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={dailyCreation}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
+                  className="text-zinc-200 dark:text-zinc-700"
+                />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10 }}
+                  stroke="currentColor"
+                  className="text-zinc-400 dark:text-zinc-500"
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  stroke="currentColor"
+                  className="text-zinc-400 dark:text-zinc-500"
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid var(--color-zinc-200)",
+                    fontSize: "12px",
+                  }}
+                  labelStyle={{ fontWeight: 600 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  name="Events"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-sm text-zinc-400 dark:text-zinc-500">
+              No trend data available
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Charts Row 2: Category Distribution + Top Performing Events */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Category Distribution */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-6">
+            Category Distribution
+          </h3>
+          {categoryData.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {categoryData.map((cat) => (
+                <div key={cat.tag} className="space-y-1.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                      {cat.tag}
+                    </span>
+                    <span className="text-zinc-500 dark:text-zinc-400 text-xs">
+                      {cat.count} events ({cat.percent}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${cat.percent}%`,
+                        backgroundColor: "hsl(var(--primary))",
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="flex items-end gap-2">
-                  <p className="text-2xl font-bold text-slate-900 leading-none">{stat.value}</p>
-                  <p className={`text-sm font-bold flex items-center mb-0.5 ${stat.up ? "text-emerald-500" : "text-rose-500"}`}>
-                    {stat.up ? <TrendingUp className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
-                    {stat.change}%
+              ))}
+            </div>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-sm text-zinc-400 dark:text-zinc-500">
+              No category data available
+            </div>
+          )}
+        </div>
+
+        {/* Top Performing Events */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+          <div className="p-6 border-b border-zinc-100 dark:border-zinc-800">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Top Performing Events
+            </h3>
+          </div>
+          {topPerformers.length > 0 ? (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                  <th className="text-left px-6 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    #
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Event
+                  </th>
+                  <th className="text-right px-6 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Views
+                  </th>
+                  <th className="text-right px-6 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Saves
+                  </th>
+                  <th className="text-right px-6 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Score
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {topPerformers.slice(0, 5).map((event, index) => (
+                  <tr
+                    key={event.event_id}
+                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                  >
+                    <td className="px-6 py-3">
+                      <span className="flex items-center justify-center h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                        {index + 1}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3">
+                      <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
+                        {event.title}
+                      </p>
+                    </td>
+                    <td className="px-6 py-3 text-right text-zinc-600 dark:text-zinc-400">
+                      <span className="inline-flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        {event.view_count}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-right text-zinc-600 dark:text-zinc-400">
+                      <span className="inline-flex items-center gap-1">
+                        <Bookmark className="h-3 w-3" />
+                        {event.save_count}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">
+                        <Trophy className="h-3 w-3" />
+                        {event.popularity_score.toFixed(1)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-zinc-400 dark:text-zinc-500">
+              <Activity className="h-8 w-8 mb-2" />
+              <p className="text-sm">No event data available</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Event Status Breakdown */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-6">
+          Event Status Breakdown
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            {
+              label: "Approved",
+              value: stats.approvedEvents,
+              icon: CheckCircle,
+              accent: "border-l-emerald-500",
+              color: "text-emerald-600 dark:text-emerald-400",
+              bg: "bg-emerald-50 dark:bg-emerald-900/20",
+            },
+            {
+              label: "Pending",
+              value: stats.pendingEvents,
+              icon: Calendar,
+              accent: "border-l-amber-500",
+              color: "text-amber-600 dark:text-amber-400",
+              bg: "bg-amber-50 dark:bg-amber-900/20",
+            },
+            {
+              label: "Rejected",
+              value: rejectedCount,
+              icon: BarChart3,
+              accent: "border-l-red-500",
+              color: "text-red-600 dark:text-red-400",
+              bg: "bg-red-50 dark:bg-red-900/20",
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            const pct =
+              stats.totalEvents > 0
+                ? Math.round((item.value / stats.totalEvents) * 100)
+                : 0;
+            return (
+              <div
+                key={item.label}
+                className={`border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 border-l-4 ${item.accent}`}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <span className={`${item.bg} p-2 rounded-lg`}>
+                    <Icon className={`h-4 w-4 ${item.color}`} />
+                  </span>
+                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                    {item.label}
                   </p>
                 </div>
+                <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                  {item.value}
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  {pct}% of total
+                </p>
               </div>
             );
           })}
         </div>
-
-        {/* Visualization Row 1: User Growth + Category Performance */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* User Growth Chart */}
-          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="font-bold text-lg text-slate-900">User Growth</h3>
-                <p className="text-slate-500 text-xs">New registrations over last 6 months</p>
-              </div>
-              <div className="flex gap-2">
-                <span className="flex items-center gap-1 text-xs text-slate-500">
-                  <span className="size-2 rounded-full bg-red-600" /> Signups
-                </span>
-                <span className="flex items-center gap-1 text-xs text-slate-500">
-                  <span className="size-2 rounded-full bg-slate-300" /> Cumulative
-                </span>
-              </div>
-            </div>
-            <div className="h-64 flex items-end justify-between gap-4 px-2">
-              {monthlySignups.length > 0 ? (
-                monthlySignups.map((m) => {
-                  const maxCount = Math.max(...monthlySignups.map((x) => x.count), 1);
-                  const heightPct = Math.max((m.count / maxCount) * 95, 5);
-                  return (
-                    <div key={m.label} className="flex-1 flex flex-col justify-end gap-1">
-                      <div
-                        className="bg-red-100 w-full rounded-t-sm relative group"
-                        style={{ height: `${heightPct}%` }}
-                      >
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                          {m.count}
-                        </div>
-                        <div className="bg-red-600 w-full rounded-t-sm" style={{ height: "70%" }} />
-                      </div>
-                      <span className="text-[10px] text-slate-400 text-center mt-2">{m.label}</span>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-sm text-slate-400">
-                  No signup data available
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Category Performance */}
-          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-            <h3 className="font-bold text-lg text-slate-900 mb-6">Top Performing Categories</h3>
-            <div className="flex flex-col gap-6">
-              {categoryPercentages.length > 0 ? (
-                categoryPercentages.map((cat) => (
-                  <div key={cat.tag} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-700 font-medium">{cat.tag}</span>
-                      <span className="text-red-600 font-bold">{cat.percent}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div
-                        className="bg-red-600 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${cat.percent}%` }}
-                      />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-400">No category data available</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Leaderboards Row */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Most Active / Top Performing Events */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-slate-900">Top Performing Events</h3>
-              <span className="text-red-600 text-sm font-bold cursor-pointer hover:underline">View All</span>
-            </div>
-            <div className="divide-y divide-slate-50">
-              {eventAnalytics?.topPerformers && eventAnalytics.topPerformers.length > 0 ? (
-                eventAnalytics.topPerformers.slice(0, 3).map((event, index) => {
-                  const icons = [Code, Landmark, Palette];
-                  const Icon = icons[index % icons.length];
-                  return (
-                    <div
-                      key={event.event_id}
-                      className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="text-slate-400 font-bold w-4">{index + 1}</span>
-                        <div className="size-10 rounded bg-slate-100 flex items-center justify-center overflow-hidden">
-                          <Icon className="h-5 w-5 text-red-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900 truncate max-w-[180px]">{event.title}</p>
-                          <p className="text-xs text-slate-500 flex items-center gap-2">
-                            <Eye className="h-3 w-3" /> {event.view_count} views
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-slate-900">{event.save_count} Saves</p>
-                        <span className="text-[10px] uppercase text-emerald-500 font-bold">
-                          Score: {event.popularity_score.toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="p-6 text-center text-sm text-slate-400">No event data available</div>
-              )}
-            </div>
-          </div>
-
-          {/* Top Organizers / Event Status Summary */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-slate-900">Event Status Overview</h3>
-              <span className="text-red-600 text-sm font-bold cursor-pointer hover:underline">Details</span>
-            </div>
-            <div className="divide-y divide-slate-50">
-              {[
-                {
-                  label: "Approved Events",
-                  value: stats.approvedEvents,
-                  color: "text-emerald-500",
-                  icon: CheckCircle,
-                  badge: "bg-emerald-50",
-                },
-                {
-                  label: "Pending Review",
-                  value: stats.pendingEvents,
-                  color: "text-amber-500",
-                  icon: Calendar,
-                  badge: "bg-amber-50",
-                },
-                {
-                  label: "Rejected Events",
-                  value: stats.totalEvents - stats.approvedEvents - stats.pendingEvents,
-                  color: "text-rose-500",
-                  icon: BarChart3,
-                  badge: "bg-rose-50",
-                },
-              ].map((item) => {
-                const Icon = item.icon;
-                const pct = stats.totalEvents > 0 ? Math.round((item.value / stats.totalEvents) * 100) : 0;
-                return (
-                  <div
-                    key={item.label}
-                    className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`size-10 rounded-full ${item.badge} flex items-center justify-center`}>
-                        <Icon className={`h-5 w-5 ${item.color}`} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{item.label}</p>
-                        <p className="text-xs text-slate-500">{pct}% of total</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-slate-900">{item.value}</p>
-                        <p className="text-xs text-slate-500">events</p>
-                      </div>
-                      <Award className={`h-5 w-5 ${item.color}`} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Event Attendance Trends (line chart via SVG) */}
-        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-            <div>
-              <h3 className="font-bold text-lg text-slate-900">Event Creation Trends</h3>
-              <p className="text-slate-500 text-xs">Events created over the last 30 days</p>
-            </div>
-            <div className="flex bg-slate-100 p-1 rounded-lg">
-              {(["Weekly", "Monthly", "Yearly"] as const).map((view) => (
-                <button
-                  key={view}
-                  onClick={() => setAttendanceView(view)}
-                  className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
-                    attendanceView === view
-                      ? "bg-white shadow-sm text-slate-900"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  {view}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* SVG Line Chart */}
-          <div className="relative h-64 w-full">
-            {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="w-full border-t border-slate-100 h-0" />
-              ))}
-            </div>
-            {dailyCreation.length > 0 ? (
-              <>
-                <svg
-                  className="absolute inset-0 h-full w-full overflow-visible"
-                  viewBox="0 0 900 256"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d={buildSVGPath(dailyCreation.map((d) => d.count), 900, 256)}
-                    fill="none"
-                    stroke="#dc2626"
-                    strokeLinecap="round"
-                    strokeWidth="3"
-                  />
-                </svg>
-                <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-[10px] text-slate-400 font-medium px-2">
-                  {getAxisLabels(dailyCreation).map((label, i) => (
-                    <span key={i}>{label}</span>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400">
-                No trend data available
-              </div>
-            )}
-          </div>
-          <div className="mt-12 flex flex-wrap gap-6 border-t border-slate-50 pt-6">
-            <div className="flex items-center gap-2">
-              <div className="size-3 rounded-full bg-red-600" />
-              <div className="flex flex-col">
-                <p className="text-xs text-slate-500">Total Events</p>
-                <p className="text-sm font-bold text-slate-900">{stats.totalEvents}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="size-3 rounded-full bg-slate-500" />
-              <div className="flex flex-col">
-                <p className="text-xs text-slate-500">Approved</p>
-                <p className="text-sm font-bold text-slate-900">{stats.approvedEvents}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
-              <div className="flex flex-col">
-                <p className="text-xs text-slate-500">Approval Rate</p>
-                <p className="text-sm font-bold text-emerald-500">{approvalRate}%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
 
-/* ── Sidebar Component ── */
-function Sidebar() {
-  return (
-    <aside className="w-full lg:w-64 border-r border-red-600/5 bg-white p-4 flex flex-col gap-6">
-      <div className="flex items-center gap-3 p-2">
-        <div className="bg-red-50 rounded-lg p-2">
-          <Landmark className="w-8 h-8 text-red-600" />
-        </div>
-        <div>
-          <h1 className="text-slate-900 text-sm font-bold">McGill Central</h1>
-          <p className="text-slate-500 text-xs">Admin Panel</p>
-        </div>
-      </div>
-      <nav className="flex flex-col gap-1">
-        {SIDEBAR_ITEMS.map((item) => {
-          const Icon = item.icon;
-          return (
-            <span
-              key={item.label}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${
-                item.active
-                  ? "bg-red-50 text-red-600 font-semibold"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="text-sm">{item.label}</span>
-            </span>
-          );
-        })}
-        <hr className="my-4 border-slate-100" />
-        <span className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer transition-all">
-          <Settings className="h-5 w-5" />
-          <span className="text-sm">System Settings</span>
-        </span>
-      </nav>
-    </aside>
-  );
-}
-
-/* ── Utility: aggregate daily signups by month ── */
-function aggregateByMonth(data: { date: string; count: number }[]): { label: string; count: number }[] {
+/* -- Utility: aggregate daily signups by month -- */
+function aggregateByMonth(
+  data: { date: string; count: number }[]
+): { label: string; count: number }[] {
   if (data.length === 0) return [];
   const months: Record<string, number> = {};
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   for (const d of data) {
     const date = new Date(d.date + "T00:00:00");
-    const key = `${date.getFullYear()}-${date.getMonth()}`;
-    const label = monthNames[date.getMonth()];
+    const key = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}`;
     if (!months[key]) months[key] = 0;
     months[key] += d.count;
   }
@@ -555,37 +584,6 @@ function aggregateByMonth(data: { date: string; count: number }[]): { label: str
     .slice(-6)
     .map(([key, count]) => {
       const monthIndex = parseInt(key.split("-")[1]);
-      return { label: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][monthIndex], count };
+      return { label: monthNames[monthIndex], count };
     });
-}
-
-/* ── Utility: build SVG path from data points ── */
-function buildSVGPath(values: number[], width: number, height: number): string {
-  if (values.length === 0) return "";
-  const max = Math.max(...values, 1);
-  const padding = 20;
-  const usableHeight = height - padding * 2;
-  const step = width / Math.max(values.length - 1, 1);
-
-  return values
-    .map((v, i) => {
-      const x = i * step;
-      const y = padding + usableHeight - (v / max) * usableHeight;
-      return `${i === 0 ? "M" : "L"}${x},${y}`;
-    })
-    .join(" ");
-}
-
-/* ── Utility: get evenly spaced axis labels ── */
-function getAxisLabels(data: { date: string }[]): string[] {
-  if (data.length === 0) return [];
-  const count = Math.min(7, data.length);
-  const step = Math.max(1, Math.floor((data.length - 1) / (count - 1)));
-  const labels: string[] = [];
-  for (let i = 0; i < data.length; i += step) {
-    const d = new Date(data[i].date + "T00:00:00");
-    labels.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric" }));
-    if (labels.length >= count) break;
-  }
-  return labels;
 }
