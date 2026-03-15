@@ -52,6 +52,7 @@ interface ProfileData {
   name: string | null;
   avatar_url: string | null;
   interest_tags: string[];
+  inferred_tags: string[];
   pronouns: string | null;
   year: string | null;
   faculty: string | null;
@@ -307,21 +308,38 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
             </div>
 
             {/* Interests */}
-            {profile.interest_tags.length > 0 && (
+            {(profile.interest_tags.length > 0 || profile.inferred_tags.length > 0) && (
               <div className="bg-card rounded-xl p-6 shadow-sm border border-primary/5">
                 <h3 className="font-bold flex items-center gap-2 mb-4">
                   <Heart className="h-5 w-5 text-primary" /> My Interests
                 </h3>
-                <div className="flex flex-wrap gap-2">
-                  {profile.interest_tags.map((tag) => {
-                    const label = EVENT_CATEGORIES[tag as EventTag]?.label ?? QUICK_FILTER_CATEGORIES[tag]?.label ?? tag;
-                    return (
-                      <span key={tag} className="px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
-                        {label}
-                      </span>
-                    );
-                  })}
-                </div>
+                {profile.interest_tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {profile.interest_tags.map((tag) => {
+                      const label = EVENT_CATEGORIES[tag as EventTag]?.label ?? QUICK_FILTER_CATEGORIES[tag]?.label ?? tag;
+                      return (
+                        <span key={tag} className="px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                {profile.inferred_tags.length > 0 && (
+                  <div className={profile.interest_tags.length > 0 ? "mt-4" : ""}>
+                    <p className="text-xs text-muted-foreground font-medium mb-2">Learned from your activity</p>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.inferred_tags.map((tag) => {
+                        const label = EVENT_CATEGORIES[tag as EventTag]?.label ?? QUICK_FILTER_CATEGORIES[tag]?.label ?? tag;
+                        return (
+                          <span key={tag} className="px-3 py-1 border border-dashed border-primary/50 text-primary text-sm font-medium rounded-full">
+                            {label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

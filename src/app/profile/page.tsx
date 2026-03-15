@@ -68,6 +68,7 @@ export default async function ProfilePage() {
     name: profile?.name ?? (user.user_metadata?.name as string) ?? (user.user_metadata?.full_name as string) ?? null,
     avatar_url: profile?.avatar_url ?? (user.user_metadata?.avatar_url as string) ?? null,
     interest_tags: ((profile?.interest_tags ?? []) as string[]),
+    inferred_tags: ((profile?.inferred_tags ?? []) as string[]),
     pronouns: ((profile as Record<string, unknown>)?.pronouns as string) ?? null,
     year: ((profile as Record<string, unknown>)?.year as string) ?? null,
     faculty: ((profile as Record<string, unknown>)?.faculty as string) ?? null,

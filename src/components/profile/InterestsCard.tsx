@@ -10,6 +10,7 @@ import InterestTagSelector from "@/components/profile/InterestTagSelector";
 type InterestsCardProps = {
   userId?: string;
   initialTags: string[];
+  inferredTags?: string[];
 };
 
 function normalizeInterests(interest_tags: unknown): string[] {
@@ -26,7 +27,7 @@ function getTagLabel(tag: string): string {
   return EVENT_CATEGORIES[tag as EventTag]?.label ?? QUICK_FILTER_CATEGORIES[tag]?.label ?? tag;
 }
 
-export default function InterestsCard({ userId, initialTags }: InterestsCardProps) {
+export default function InterestsCard({ userId, initialTags, inferredTags = [] }: InterestsCardProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>(
     normalizeInterests(initialTags)
   );
@@ -34,6 +35,8 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localInferredTags, setLocalInferredTags] = useState<string[]>(normalizeInterests(inferredTags));
+  const [removingTag, setRemovingTag] = useState<string | null>(null);
 
   const handleEdit = () => {
     setEditingTags(selectedTags);
@@ -74,6 +77,27 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRemoveInferred = async (tag: string) => {
+    setRemovingTag(tag);
+    try {
+      const response = await fetch("/api/profile/inferred-tags", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tag }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to remove tag");
+      }
+      setLocalInferredTags((prev) => prev.filter((t) => t !== tag));
+    } catch {
+      // silently ignore — tag stays in UI
+    } finally {
+      setRemovingTag(null);
     }
   };
 
@@ -153,6 +177,29 @@ export default function InterestsCard({ userId, initialTags }: InterestsCardProp
                 </span>
               ))}
             </div>
+            {localInferredTags.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-slate-500 font-medium mb-2">Learned from your activity</p>
+                <div className="flex flex-wrap gap-2">
+                  {localInferredTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-3 py-1 border border-dashed border-red-400 text-red-600 text-sm font-medium rounded-full"
+                    >
+                      {getTagLabel(tag)}
+                      <button
+                        onClick={() => handleRemoveInferred(tag)}
+                        disabled={removingTag === tag}
+                        className="ml-0.5 hover:text-red-800 disabled:opacity-50 transition-colors"
+                        aria-label={`Remove ${getTagLabel(tag)}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           )}
         </div>
       )}
