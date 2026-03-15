@@ -147,3 +147,67 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * DELETE /api/clubs/[id]
+ * Owner-only endpoint - soft-deletes a club by setting status to "deleted".
+ * Requires body: { confirmName: string }
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: clubId } = await params;
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Verify owner
+  const { data: membership } = await supabase
+    .from("club_members")
+    .select("role")
+    .eq("club_id", clubId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!membership || membership.role !== "owner") {
+    return NextResponse.json({ error: "Only the club owner can delete the club" }, { status: 403 });
+  }
+
+  // Verify confirmation name
+  const body = await request.json();
+  const { data: club } = await supabase
+    .from("clubs")
+    .select("name")
+    .eq("id", clubId)
+    .single();
+
+  if (!club || body.confirmName !== club.name) {
+    return NextResponse.json({ error: "Club name confirmation does not match" }, { status: 400 });
+  }
+
+  // Soft delete - set status to deleted
+  const { error } = await supabase
+    .from("clubs")
+    .update({ status: "deleted" })
+    .eq("id", clubId);
+
+  if (error) {
+    return NextResponse.json({ error: "Failed to delete club" }, { status: 500 });
+  }
+
+  // Audit log using service client
+  const { createServiceClient } = await import("@/lib/supabase/service");
+  const serviceClient = createServiceClient();
+  await serviceClient.from("admin_audit_log").insert({
+    admin_id: user.id,
+    action: "club_deleted",
+    target_type: "club",
+    target_id: clubId,
+    details: { club_name: club.name },
+  });
+
+  return NextResponse.json({ success: true });
+}
