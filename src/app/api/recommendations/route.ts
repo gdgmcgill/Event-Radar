@@ -1,242 +1,177 @@
 /**
- * POST /api/recommendations
- * Get personalized event recommendations for the current user
- * Calls the Two-Tower Recommendation Service
+ * GET /api/recommendations
+ * Personalized event recommendations using precomputed Postgres scores.
+ *
+ * - Authenticated users: query user_event_scores, apply session boost + MMR
+ * - Anonymous users: return popularity-ordered events
+ * - Fallback: if no precomputed scores, return popularity-ordered events
  */
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { rerankWithMMR, type RecommendationItem as DiversityRecommendationItem } from "@/lib/diversity";
+import {
+  rerankWithMMR,
+  type RecommendationItem as DiversityRecommendationItem,
+} from "@/lib/diversity";
 import { pickVariant } from "@/lib/experiments";
-
-// Recommendation service URL (configurable via environment variable)
-const RECOMMENDATION_API_URL =
-  process.env.RECOMMENDATION_API_URL || "http://localhost:8000";
-
-interface UserPayload {
-  major: string;
-  year_of_study: string;
-  clubs_or_interests: string[];
-  attended_events?: string[];
-}
-
-interface FeedbackItem {
-  event_id: string;
-  feedback_type: "positive" | "negative";
-  tags: string[];
-}
-
-interface RecommendRequest {
-  user: UserPayload;
-  top_k?: number;
-  exclude_event_ids?: string[];
-  feedback?: FeedbackItem[];
-}
-
-interface RecommendationItem {
-  event_id: string;
-  score: number;
-  title: string;
-  description: string;
-  tags: string[];
-  hosting_club: string | null;
-  category: string | null;
-}
-
-interface RecommendationItemWithExplanation extends RecommendationItem {
-  explanation?: string;
-}
-
-interface RecommendResponse {
-  recommendations: RecommendationItem[];
-  total_events: number;
-}
-
-function formatTagLabel(tag: string): string {
-  return tag.charAt(0).toUpperCase() + tag.slice(1);
-}
-
-function generateExplanation(
-  rec: RecommendationItem,
-  userInterests: string[],
-  positiveFeedbackTags: Set<string>,
-  source: "personalized" | "popular_fallback"
-): string {
-  if (source === "popular_fallback") {
-    return "Trending on campus this week";
-  }
-
-  // Check overlap between event tags and user's explicit interest tags
-  const interestOverlap = rec.tags.filter((t) =>
-    userInterests.some((ui) => ui.toLowerCase() === t.toLowerCase())
-  );
-  if (interestOverlap.length > 0) {
-    const labels = interestOverlap.slice(0, 2).map(formatTagLabel);
-    return `Because you're interested in ${labels.join(" and ")}`;
-  }
-
-  // Check overlap with tags from positively-rated or saved events
-  const feedbackOverlap = rec.tags.filter((t) => positiveFeedbackTags.has(t.toLowerCase()));
-  if (feedbackOverlap.length > 0) {
-    const labels = feedbackOverlap.slice(0, 2).map(formatTagLabel);
-    return `Similar to events you've liked in ${labels.join(" and ")}`;
-  }
-
-  // High-score fallback
-  if (rec.score >= 0.8) {
-    return "Highly recommended based on your profile";
-  }
-
-  return "Recommended for you";
-}
+import {
+  expandTagsWithHierarchy,
+  computeSessionBoost,
+  generateExplanation,
+  type ScoreBreakdown,
+} from "@/lib/recommendations";
 
 /**
- * POST handler - Get recommendations with user payload
- */
-export async function POST(request: NextRequest) {
-  try {
-    const body: RecommendRequest = await request.json();
-
-    // Validate request
-    if (!body.user) {
-      return NextResponse.json(
-        { error: "Missing user payload" },
-        { status: 400 }
-      );
-    }
-
-    // Forward the full body (including optional feedback) to the AI service
-    let response: Response;
-    try {
-      response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-    } catch (fetchError) {
-      console.warn("Recommendation service unreachable:", fetchError);
-      return NextResponse.json(
-        { error: "Recommendation service unavailable", fallback: true },
-        { status: 503 }
-      );
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Recommendation service error:", errorText);
-      return NextResponse.json(
-        { error: "Recommendation service error" },
-        { status: response.status }
-      );
-    }
-
-    const data: RecommendResponse = await response.json();
-    return NextResponse.json(data, {
-      headers: { "Cache-Control": "private, no-store" },
-    });
-  } catch (error) {
-    console.error("Error fetching recommendations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch recommendations" },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * GET handler - Get recommendations for the authenticated user
- * Automatically fetches user profile from Supabase
+ * GET handler - recommendations for the current user (or anonymous fallback)
  */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const searchParams = request.nextUrl.searchParams;
+    const topK = parseInt(searchParams.get("top_k") || "10", 10);
 
-    // Get current user
+    // --- 1. Authenticate user (anonymous is OK) ---
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
+    // Anonymous users get popularity fallback
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const { data: popularEvents } = await supabase
+        .from("events")
+        .select("*, clubs(*)")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(topK);
+
+      const recommendations = (popularEvents ?? []).map((event) => ({
+        event_id: event.id,
+        score: 0,
+        explanation: "Trending on campus",
+        breakdown: { tag: 0, interaction: 0, popularity: 1, recency: 0, social: 0 },
+        event,
+      }));
+
+      return NextResponse.json(
+        {
+          recommendations,
+          source: "anonymous" as const,
+          total_events: recommendations.length,
+        },
+        { headers: { "Cache-Control": "private, no-store" } }
+      );
     }
 
-    // Fetch user profile with interest tags
+    // --- 2. Fetch user profile (interest_tags + inferred_tags) ---
     const { data: userProfileData } = await supabase
       .from("users")
       .select("interest_tags, full_name")
       .eq("id", user.id)
       .single();
 
-    type UserProfileRow = { interest_tags: string[] | null; full_name: string | null };
+    type UserProfileRow = {
+      interest_tags: string[] | null;
+      full_name: string | null;
+    };
     const userProfile = userProfileData as UserProfileRow | null;
+    const userInterestTags = userProfile?.interest_tags ?? [];
+    const expandedTags = expandTagsWithHierarchy(userInterestTags);
 
-    // Fetch saved events and explicit feedback in parallel
-    const [savedEventsResult, rawFeedbackResult] = await Promise.all([
-      supabase
-        .from("saved_events")
-        .select("event_id")
-        .eq("user_id", user.id),
-      supabase
-        .from("recommendation_explicit_feedback")
-        .select("event_id, feedback_type")
-        .eq("user_id", user.id),
-    ]);
+    // --- 3. Query user_event_scores for precomputed scores ---
+    const { data: scoreRows } = await (supabase
+      .from("user_event_scores" as any)
+      .select("event_id, score, breakdown, events(*, clubs(*))")
+      .eq("user_id", user.id)
+      .order("score", { ascending: false })
+      .limit(topK * 3) as any);
 
-    const savedList = (savedEventsResult.data ?? []) as { event_id: string }[];
-    const excludeEventIds = savedList.map((se) => se.event_id);
-
-    const feedbackRows = (rawFeedbackResult.data ?? []) as {
+    type ScoreRow = {
       event_id: string;
-      feedback_type: string;
-    }[];
+      score: number;
+      breakdown: ScoreBreakdown;
+      events: Record<string, unknown>;
+    };
+    const typedScoreRows = (scoreRows ?? []) as ScoreRow[];
 
-    // Collect all event IDs that need tag lookups (saved + explicitly rated)
-    const allSignalEventIds = [
-      ...excludeEventIds,
-      ...feedbackRows.map((r) => r.event_id),
-    ];
-    const uniqueSignalIds = [...new Set(allSignalEventIds)];
+    // Filter to only approved events
+    const approvedScoreRows = typedScoreRows.filter(
+      (r) => r.events && (r.events as any).status === "approved"
+    );
 
-    let feedbackPayload: FeedbackItem[] = [];
-    if (uniqueSignalIds.length > 0) {
-      const { data: signalEvents } = await supabase
+    // --- 4. Fall back to popularity if no scores ---
+    const hasScores = approvedScoreRows.length > 0;
+    let source: "personalized" | "popular_fallback" | "anonymous";
+
+    if (!hasScores) {
+      source = "popular_fallback";
+      const { data: popularEvents } = await supabase
         .from("events")
-        .select("id, tags")
-        .in("id", uniqueSignalIds);
+        .select("*, clubs(*)")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(topK);
 
-      type SignalEvent = { id: string; tags: string[] | null };
-      const signalList = (signalEvents ?? []) as SignalEvent[];
-      const tagsById: Record<string, string[]> = {};
-      for (const ev of signalList) {
-        tagsById[ev.id] = ev.tags ?? [];
-      }
+      const recommendations = (popularEvents ?? []).map((event) => ({
+        event_id: event.id,
+        score: 0,
+        explanation: "Trending on campus",
+        breakdown: { tag: 0, interaction: 0, popularity: 1, recency: 0, social: 0 },
+        event,
+      }));
 
-      // Explicit thumbs feedback (strongest signal)
-      const explicitFeedback = feedbackRows
-        .filter((r) => r.feedback_type === "positive" || r.feedback_type === "negative")
-        .map((r) => ({
-          event_id: r.event_id,
-          feedback_type: r.feedback_type as "positive" | "negative",
-          tags: tagsById[r.event_id] ?? [],
-        }));
-
-      // Saved events as implicit positive signals (user chose to save them)
-      const explicitIds = new Set(feedbackRows.map((r) => r.event_id));
-      const implicitPositive = excludeEventIds
-        .filter((id) => !explicitIds.has(id))
-        .map((id) => ({
-          event_id: id,
-          feedback_type: "positive" as const,
-          tags: tagsById[id] ?? [],
-        }));
-
-      feedbackPayload = [...explicitFeedback, ...implicitPositive];
+      return NextResponse.json(
+        {
+          recommendations,
+          source,
+          total_events: recommendations.length,
+        },
+        { headers: { "Cache-Control": "private, no-store" } }
+      );
     }
 
-    // Check for active recommendation experiments
+    source = "personalized";
+
+    // --- 5. Apply session boost from recent interactions (last 2 hours) ---
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const { data: recentInteractions } = await supabase
+      .from("user_interactions")
+      .select("metadata")
+      .eq("user_id", user.id)
+      .gte("created_at", twoHoursAgo)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    // Collect tags from recent interactions
+    const sessionTags: string[] = [];
+    for (const interaction of recentInteractions ?? []) {
+      const meta = interaction.metadata as Record<string, unknown> | null;
+      if (meta && Array.isArray(meta.tags)) {
+        sessionTags.push(...(meta.tags as string[]));
+      }
+    }
+
+    // Build scored items with session boost applied
+    const scoredItems = approvedScoreRows.map((row) => {
+      const event = row.events as any;
+      const eventTags: string[] = event.tags ?? [];
+      const boost = computeSessionBoost(sessionTags, eventTags);
+      const boostedScore = Math.min(row.score + boost, 1.0);
+
+      return {
+        event_id: row.event_id,
+        score: boostedScore,
+        tags: eventTags,
+        title: event.title ?? "",
+        description: event.description ?? "",
+        hosting_club: event.clubs?.name ?? null,
+        category: eventTags[0] ?? null,
+        breakdown: row.breakdown,
+        event,
+      };
+    });
+
+    // --- 6. A/B experiment framework (preserved) ---
     let experimentVariantId: string | null = null;
     let experimentLambda: number | null = null;
 
@@ -253,7 +188,13 @@ export async function GET(request: NextRequest) {
         .select("*")
         .eq("experiment_id", experiment.id);
 
-      type VRow = { id: string; experiment_id: string; name: string; config: Record<string, unknown>; weight: number };
+      type VRow = {
+        id: string;
+        experiment_id: string;
+        name: string;
+        config: Record<string, unknown>;
+        weight: number;
+      };
       const variants = (variantRows ?? []) as VRow[];
 
       if (variants.length >= 2) {
@@ -266,9 +207,15 @@ export async function GET(request: NextRequest) {
 
         let assignedVariant: VRow;
         if (existingAssignment) {
-          assignedVariant = variants.find((v) => v.id === existingAssignment.variant_id) ?? variants[0];
+          assignedVariant =
+            variants.find((v) => v.id === existingAssignment.variant_id) ??
+            variants[0];
         } else {
-          assignedVariant = pickVariant(user.id, experiment.id, variants) as VRow;
+          assignedVariant = pickVariant(
+            user.id,
+            experiment.id,
+            variants
+          ) as VRow;
           await supabase.from("experiment_assignments").insert({
             experiment_id: experiment.id,
             variant_id: assignedVariant.id,
@@ -283,105 +230,73 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Build user payload from profile
-    const userPayload: UserPayload = {
-      major: "General Studies", // Default if not in profile
-      year_of_study: "Student",
-      clubs_or_interests: userProfile?.interest_tags ?? [],
-      attended_events: [], // Could fetch from attendance history
-    };
-
-    // Get top_k from query params
-    const searchParams = request.nextUrl.searchParams;
-    const topK = parseInt(searchParams.get("top_k") || "10", 10);
-
-    // Call the recommendation service, including feedback for vector adjustment
-    let response: Response;
-    try {
-      response = await fetch(`${RECOMMENDATION_API_URL}/recommend`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user: userPayload,
-          top_k: topK,
-          exclude_event_ids: excludeEventIds,
-          feedback: feedbackPayload.length > 0 ? feedbackPayload : undefined,
-        }),
-      });
-    } catch (fetchError) {
-      console.warn("Recommendation service unreachable, returning fallback:", fetchError);
-      return NextResponse.json({
-        recommendations: [],
-        total_events: 0,
-        source: "popular_fallback",
-        fallback: true,
-      }, {
-        headers: { "Cache-Control": "private, no-store" },
-      });
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Recommendation service error:", errorText);
-
-      // Fallback: return empty recommendations if service is unavailable
-      return NextResponse.json({
-        recommendations: [],
-        total_events: 0,
-        source: "popular_fallback",
-        fallback: true,
-      }, {
-        headers: { "Cache-Control": "private, no-store" },
-      });
-    }
-
-    const data: RecommendResponse = await response.json();
-
-    // Apply MMR diversity re-ranking
-    // Use experiment lambda if assigned, otherwise use query param or default
+    // --- 6b. MMR diversity re-ranking ---
     const diversityParam = searchParams.get("diversity");
     const baseLambda = diversityParam ? parseFloat(diversityParam) : 0.7;
-    const lambda = experimentLambda ?? (isNaN(baseLambda) ? 0.7 : Math.max(0, Math.min(1, baseLambda)));
+    const lambda =
+      experimentLambda ??
+      (isNaN(baseLambda) ? 0.7 : Math.max(0, Math.min(1, baseLambda)));
 
-    const { items: diversifiedRecs, metadata: diversityMetadata } = rerankWithMMR(
-      data.recommendations as unknown as DiversityRecommendationItem[],
-      lambda
+    const mmrInput: DiversityRecommendationItem[] = scoredItems.map((item) => ({
+      event_id: item.event_id,
+      score: item.score,
+      tags: item.tags,
+      title: item.title,
+      description: item.description,
+      hosting_club: item.hosting_club,
+      category: item.category,
+    }));
+
+    const { items: diversifiedRecs, metadata: diversityMetadata } =
+      rerankWithMMR(mmrInput, lambda);
+
+    // Build a lookup for breakdown and event data by event_id
+    const itemLookup = new Map(
+      scoredItems.map((item) => [item.event_id, item])
     );
 
-    // Determine source: if no personal signals exist, this is a popular fallback
-    const hasPersonalSignals =
-      feedbackPayload.length > 0 ||
-      (userProfile?.interest_tags ?? []).length > 0;
-    const source: "personalized" | "popular_fallback" = hasPersonalSignals
-      ? "personalized"
-      : "popular_fallback";
+    // --- 7. Generate explanations from breakdown ---
+    const expandedTagStrings = expandedTags.map((t) => t.tag);
 
-    // Build set of tags the user has shown positive affinity toward
-    const positiveFeedbackTags = new Set<string>();
-    for (const fb of feedbackPayload) {
-      if (fb.feedback_type === "positive") {
-        for (const tag of fb.tags) {
-          positiveFeedbackTags.add(tag.toLowerCase());
-        }
-      }
-    }
+    const recommendations = diversifiedRecs.slice(0, topK).map((rec) => {
+      const original = itemLookup.get(rec.event_id)!;
+      const breakdown: ScoreBreakdown = original.breakdown ?? {
+        tag: 0,
+        interaction: 0,
+        popularity: 0,
+        recency: 0,
+        social: 0,
+      };
 
-    const userInterests = userProfile?.interest_tags ?? [];
-    const recommendationsWithExplanations: RecommendationItemWithExplanation[] =
-      diversifiedRecs.map((rec) => ({
-        ...rec,
-        explanation: generateExplanation(rec as unknown as RecommendationItem, userInterests, positiveFeedbackTags, source),
-      }));
+      // Find matching tags between user's expanded tags and event tags
+      const matchingTags = rec.tags.filter((t) =>
+        expandedTagStrings.some(
+          (ut) => ut.toLowerCase() === t.toLowerCase()
+        )
+      );
 
+      const explanation = generateExplanation(breakdown, matchingTags);
+
+      return {
+        event_id: rec.event_id,
+        score: rec.score,
+        explanation,
+        breakdown,
+        event: original.event,
+      };
+    });
+
+    // --- 8. Return response ---
     return NextResponse.json(
       {
-        ...data,
+        recommendations,
         source,
-        recommendations: recommendationsWithExplanations,
-        diversity_metadata: diversityMetadata,
-        experiment_variant_id: experimentVariantId,
+        diversity_metadata: {
+          avg_pairwise_distance: diversityMetadata.avg_pairwise_distance,
+          lambda: diversityMetadata.lambda,
+        },
+        experiment_variant_id: experimentVariantId ?? undefined,
+        total_events: recommendations.length,
       },
       { headers: { "Cache-Control": "private, no-store" } }
     );
