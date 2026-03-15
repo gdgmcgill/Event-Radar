@@ -191,11 +191,122 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       }
     );
 
+    // ── Engagement Trend, Peak Hours/Days, Best Event Type ─────────────────
+    const clubEvents = eventList as { id: string; tags: string[] | null }[];
+
+    let engagementTrend: { date: string; rate: number }[] = [];
+    let peakHours: { hour: number; count: number }[] = [];
+    let peakDays: { day: string; count: number }[] = [];
+    let bestEventType: { tag: string; avg_rsvps: number; comparison: number } | null = null;
+
+    if (eventIds.length > 0) {
+      // Fetch interactions for club events in last 30 days
+      const { data: interactions } = await supabase
+        .from("user_interactions")
+        .select("created_at")
+        .in("event_id", eventIds)
+        .gte("created_at", thirtyDaysAgo.toISOString());
+
+      if (interactions && interactions.length > 0) {
+        // Engagement trend: group by day
+        const days = eachDayOfInterval({ start: thirtyDaysAgo, end: new Date() });
+        const interactionsByDay = new Map<string, number>();
+        for (const interaction of interactions) {
+          const day = format(parseISO(interaction.created_at), "yyyy-MM-dd");
+          interactionsByDay.set(day, (interactionsByDay.get(day) || 0) + 1);
+        }
+
+        const currentFollowerCount = followerGrowth.length > 0
+          ? followerGrowth[followerGrowth.length - 1].count
+          : 1;
+
+        engagementTrend = days.map((day) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const count = interactionsByDay.get(dateStr) || 0;
+          return {
+            date: dateStr,
+            rate: currentFollowerCount > 0 ? Math.round((count / currentFollowerCount) * 10000) / 100 : 0,
+          };
+        });
+
+        // Peak hours
+        const hourCounts = new Array(24).fill(0);
+        for (const interaction of interactions) {
+          const hour = parseISO(interaction.created_at).getHours();
+          hourCounts[hour]++;
+        }
+        peakHours = hourCounts.map((count, hour) => ({ hour, count }));
+
+        // Peak days
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const dayCounts = new Array(7).fill(0);
+        for (const interaction of interactions) {
+          const day = parseISO(interaction.created_at).getDay();
+          dayCounts[day]++;
+        }
+        peakDays = dayCounts.map((count, i) => ({ day: dayNames[i], count }));
+      }
+
+      // Best event type: avg RSVPs per tag (single batch query, no N+1)
+      const { data: allGoingRsvps } = await supabase
+        .from("rsvps")
+        .select("event_id")
+        .in("event_id", eventIds)
+        .eq("status", "going");
+
+      const rsvpsByEvent = new Map<string, number>();
+      if (allGoingRsvps) {
+        for (const rsvp of allGoingRsvps) {
+          rsvpsByEvent.set(rsvp.event_id, (rsvpsByEvent.get(rsvp.event_id) || 0) + 1);
+        }
+      }
+
+      const tagRsvps = new Map<string, { total: number; count: number }>();
+      for (const event of clubEvents) {
+        if (!event.tags || event.tags.length === 0) continue;
+        const rsvpCount = rsvpsByEvent.get(event.id) || 0;
+        for (const tag of event.tags) {
+          const existing = tagRsvps.get(tag) || { total: 0, count: 0 };
+          existing.total += rsvpCount;
+          existing.count += 1;
+          tagRsvps.set(tag, existing);
+        }
+      }
+
+      if (tagRsvps.size > 0) {
+        let bestTag = "";
+        let bestAvg = 0;
+        let overallTotal = 0;
+        let totalEventCount = 0;
+
+        for (const [tag, data] of tagRsvps) {
+          const avg = data.total / data.count;
+          overallTotal += data.total;
+          totalEventCount += data.count;
+          if (avg > bestAvg) {
+            bestAvg = avg;
+            bestTag = tag;
+          }
+        }
+
+        const overallAvg = totalEventCount > 0 ? overallTotal / totalEventCount : 1;
+        bestEventType = {
+          tag: bestTag,
+          avg_rsvps: Math.round(bestAvg * 10) / 10,
+          comparison: overallAvg > 0 ? Math.round((bestAvg / overallAvg) * 10) / 10 : 1,
+        };
+      }
+    }
+
     return NextResponse.json({
       follower_growth: followerGrowth,
       total_attendees: totalAttendees,
       popular_tags: popularTags,
       events: eventsAnalytics,
+      engagement_trend: engagementTrend,
+      peak_hours: peakHours,
+      peak_days: peakDays,
+      best_event_type: bestEventType,
     });
   } catch {
     return NextResponse.json(
