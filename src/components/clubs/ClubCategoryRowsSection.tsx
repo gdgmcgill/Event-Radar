@@ -3,6 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { ClubDiscoveryCard } from "@/components/clubs/ClubDiscoveryCard";
 import { ScrollRow } from "@/components/events/ScrollRow";
+import {
+  SectionHeader,
+  CARD_WRAPPER_CLASS,
+  SECTION_PADDING,
+} from "@/components/ui/SectionRow";
 
 type ClubWithCounts = {
   id: string;
@@ -48,17 +53,10 @@ export function ClubCategoryRowsSection() {
     <>
       {Array.from(clubsByCategory.entries()).map(([category, categoryClubs]) => (
         <section key={category}>
-          <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-            <h3 className="text-2xl font-extrabold text-foreground tracking-tight">
-              {category}
-              <span className="text-sm font-medium text-muted-foreground ml-3">
-                {categoryClubs.length} club{categoryClubs.length !== 1 ? "s" : ""}
-              </span>
-            </h3>
-          </div>
-          <ScrollRow className="px-6 md:px-10 lg:px-12">
+          <SectionHeader title={category} count={categoryClubs.length} countLabel="club" />
+          <ScrollRow className={SECTION_PADDING}>
             {categoryClubs.map((club) => (
-              <div key={club.id} className="min-w-[260px] sm:min-w-[280px] md:min-w-[320px] w-[calc(85vw-2rem)] sm:w-[300px] md:w-[340px] lg:w-[320px] flex-shrink-0">
+              <div key={club.id} className={CARD_WRAPPER_CLASS}>
                 <ClubDiscoveryCard club={club} />
               </div>
             ))}

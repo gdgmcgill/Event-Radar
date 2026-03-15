@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import { ClubDiscoveryCard } from "@/components/clubs/ClubDiscoveryCard";
 import { ScrollRow } from "@/components/events/ScrollRow";
+import {
+  SectionHeader,
+  CARD_WRAPPER_CLASS,
+  SECTION_PADDING,
+} from "@/components/ui/SectionRow";
 
 type NewClub = {
   id: string;
@@ -35,14 +40,10 @@ export function NewClubsSection() {
 
   return (
     <section>
-      <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-        <h3 className="text-2xl font-extrabold text-foreground tracking-tight">
-          New on UNI-VERSE
-        </h3>
-      </div>
-      <ScrollRow className="px-6 md:px-10 lg:px-12">
+      <SectionHeader title="New on UNI-VERSE" count={clubs.length} countLabel="club" />
+      <ScrollRow className={SECTION_PADDING}>
         {clubs.map((club) => (
-          <div key={club.id} className="min-w-[260px] sm:min-w-[280px] md:min-w-[320px] w-[calc(85vw-2rem)] sm:w-[300px] md:w-[340px] lg:w-[320px] flex-shrink-0">
+          <div key={club.id} className={CARD_WRAPPER_CLASS}>
             <ClubDiscoveryCard club={club} />
           </div>
         ))}

@@ -14,6 +14,12 @@ import {
   Heart,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import {
+  SectionHeader,
+  CARD_WRAPPER_CLASS,
+  SECTION_PADDING,
+} from "@/components/ui/SectionRow";
+
 const TAG_ICONS: Record<string, LucideIcon> = {
   GraduationCap,
   Users,
@@ -56,7 +62,6 @@ export function CategoryRowsSection({ events, onEventClick, onCategoryClick }: C
     ),
   ];
 
-  // Only render rows for categories that have events
   const activeCategories = categoryOrder.filter(
     (tag) => (eventsByTag.get(tag)?.length ?? 0) > 0
   );
@@ -72,31 +77,31 @@ export function CategoryRowsSection({ events, onEventClick, onCategoryClick }: C
 
         return (
           <section key={tag}>
-            <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-              <h3 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
+            <SectionHeader
+              title={category.label}
+              icon={
                 <span
                   className="flex items-center justify-center h-8 w-8 rounded-lg"
                   style={{ backgroundColor: `${category.baseColor}20`, color: category.baseColor }}
                 >
                   <Icon className="h-4 w-4" />
                 </span>
-                {category.label}
-                <span className="text-sm font-medium text-muted-foreground">
-                  {tagEvents.length} event{tagEvents.length !== 1 ? "s" : ""}
-                </span>
-              </h3>
-              {onCategoryClick && (
-                <button
-                  onClick={() => onCategoryClick(tag)}
-                  className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors cursor-pointer"
-                >
-                  See All
-                </button>
-              )}
-            </div>
-            <ScrollRow className="px-6 md:px-10 lg:px-12">
+              }
+              count={tagEvents.length}
+              action={
+                onCategoryClick ? (
+                  <button
+                    onClick={() => onCategoryClick(tag)}
+                    className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                  >
+                    See All
+                  </button>
+                ) : undefined
+              }
+            />
+            <ScrollRow className={SECTION_PADDING}>
               {tagEvents.map((event) => (
-                <div key={event.id} className="min-w-[260px] sm:min-w-[280px] md:min-w-[320px] w-[calc(85vw-2rem)] sm:w-[300px] md:w-[340px] lg:w-[320px] flex-shrink-0">
+                <div key={event.id} className={CARD_WRAPPER_CLASS}>
                   <DiscoveryCard
                     event={event}
                     onClick={onEventClick ? () => onEventClick(event) : undefined}

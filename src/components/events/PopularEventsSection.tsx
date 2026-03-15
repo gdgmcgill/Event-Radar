@@ -4,8 +4,14 @@ import { useState, useEffect } from "react";
 import { type Event, type EventPopularityScore } from "@/types";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import { ScrollRow } from "@/components/events/ScrollRow";
-import { AlertCircle, Flame, RefreshCcw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Flame } from "lucide-react";
+import {
+  SectionHeader,
+  SectionSkeleton,
+  SectionError,
+  CARD_WRAPPER_CLASS,
+  SECTION_PADDING,
+} from "@/components/ui/SectionRow";
 
 interface PopularEventsSectionProps {
   onEventClick?: (event: Event) => void;
@@ -42,67 +48,42 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const header = (
+    <SectionHeader
+      title="Trending Events"
+      icon={<Flame className="h-6 w-6 text-orange-500" />}
+      count={events.length}
+    />
+  );
+
   if (loading && events.length === 0) {
-    return (
-      <section>
-        <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-          <h3 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
-            <Flame className="h-6 w-6 text-orange-500" />
-            Trending Events
-          </h3>
-        </div>
-        <div className="flex px-6 md:px-10 lg:px-12 gap-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="min-w-[260px] sm:min-w-[280px] md:min-w-[320px] w-[calc(85vw-2rem)] sm:w-[300px] md:w-[340px] lg:w-[320px] aspect-[16/10] rounded-3xl bg-muted animate-pulse" />
-          ))}
-        </div>
-      </section>
-    );
+    return <SectionSkeleton header={header} />;
   }
 
   if (error) {
-    return (
-      <section className="px-6 md:px-10 lg:px-12">
-        <div className="flex flex-col items-center justify-center py-10 text-center space-y-4 bg-card rounded-2xl border border-destructive/20 p-6">
-          <AlertCircle className="h-6 w-6 text-destructive" />
-          <p className="text-muted-foreground">{error}</p>
-          <Button onClick={fetchPopularEvents} variant="outline" size="sm" className="gap-2 cursor-pointer">
-            <RefreshCcw className="h-3 w-3" />
-            Try Again
-          </Button>
-        </div>
-      </section>
-    );
+    return <SectionError message={error} onRetry={fetchPopularEvents} />;
   }
 
   if (events.length === 0) return null;
 
   return (
     <section>
-      <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-        <h3 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
-            <Flame className="h-6 w-6 text-orange-500" />
-            Trending Events
-            <span className="text-sm font-medium text-muted-foreground">
-              {events.length} event{events.length !== 1 ? "s" : ""}
-            </span>
-          </h3>
-      </div>
-      <ScrollRow className="px-6 md:px-10 lg:px-12">
-          {events.map((event, index) => {
-            const badge = `#${index + 1}`;
-            const badgeVariant = index >= 3 ? ("glass" as const) : ("default" as const);
-            return (
-              <div key={event.id} className="min-w-[260px] sm:min-w-[280px] md:min-w-[320px] w-[calc(85vw-2rem)] sm:w-[300px] md:w-[340px] lg:w-[320px] flex-shrink-0">
-                <DiscoveryCard
-                  event={event}
-                  badge={badge}
-                  badgeVariant={badgeVariant}
-                  onClick={onEventClick ? () => onEventClick(event) : undefined}
-                />
-              </div>
-            );
-          })}
+      {header}
+      <ScrollRow className={SECTION_PADDING}>
+        {events.map((event, index) => {
+          const badge = `#${index + 1}`;
+          const badgeVariant = index >= 3 ? ("glass" as const) : ("default" as const);
+          return (
+            <div key={event.id} className={CARD_WRAPPER_CLASS}>
+              <DiscoveryCard
+                event={event}
+                badge={badge}
+                badgeVariant={badgeVariant}
+                onClick={onEventClick ? () => onEventClick(event) : undefined}
+              />
+            </div>
+          );
+        })}
       </ScrollRow>
     </section>
   );

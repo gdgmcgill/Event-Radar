@@ -6,6 +6,11 @@ import Image from "next/image";
 import { Megaphone } from "lucide-react";
 import { formatDate, formatTime } from "@/lib/utils";
 import { ScrollRow } from "@/components/events/ScrollRow";
+import {
+  SectionHeader,
+  CARD_WRAPPER_CLASS,
+  SECTION_PADDING,
+} from "@/components/ui/SectionRow";
 
 type Organizer = { id: string; name: string; avatar_url: string | null };
 
@@ -40,21 +45,19 @@ export function FriendsOrganizingSection() {
 
   return (
     <section>
-      <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-        <h3 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
-          <Megaphone className="h-6 w-6 text-primary" />
-          Organized by Friends
-        </h3>
-      </div>
-      <ScrollRow className="px-6 md:px-10 lg:px-12">
+      <SectionHeader
+        title="Organized by Friends"
+        icon={<Megaphone className="h-6 w-6 text-primary" />}
+        count={events.length}
+      />
+      <ScrollRow className={SECTION_PADDING}>
         {events.map((event) => (
           <Link
             key={event.id}
             href={`/events/${event.id}`}
-            className="min-w-[260px] sm:min-w-[280px] md:min-w-[320px] w-[calc(85vw-2rem)] sm:w-[300px] md:w-[340px] lg:w-[320px] flex-shrink-0 block cursor-pointer"
+            className={`${CARD_WRAPPER_CLASS} block cursor-pointer`}
           >
             <div className="relative aspect-[16/10] rounded-3xl overflow-hidden group">
-              {/* Image */}
               {event.image_url ? (
                 <Image
                   src={event.image_url}
@@ -66,12 +69,9 @@ export function FriendsOrganizingSection() {
                 <div className="w-full h-full bg-muted" />
               )}
 
-              {/* Gradient */}
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
 
-              {/* Content */}
               <div className="absolute bottom-0 left-0 p-5 w-full">
-                {/* Organizer */}
                 {event.organizer && (
                   <div className="flex items-center gap-2 mb-3">
                     {event.organizer.avatar_url ? (

@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import { type Event } from "@/types";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import { ScrollRow } from "@/components/events/ScrollRow";
+import {
+  SectionHeader,
+  CARD_WRAPPER_CLASS,
+  SECTION_PADDING,
+} from "@/components/ui/SectionRow";
 
 interface JustAddedSectionProps {
   onEventClick?: (event: Event) => void;
@@ -30,14 +35,10 @@ export function JustAddedSection({ onEventClick }: JustAddedSectionProps) {
 
   return (
     <section>
-      <div className="flex items-center justify-between px-6 md:px-10 lg:px-12 mb-5">
-        <h3 className="text-2xl font-extrabold text-foreground tracking-tight">
-          New on UNI-VERSE
-        </h3>
-      </div>
-      <ScrollRow className="px-6 md:px-10 lg:px-12">
+      <SectionHeader title="New on UNI-VERSE" count={events.length} />
+      <ScrollRow className={SECTION_PADDING}>
         {events.map((event) => (
-          <div key={event.id} className="min-w-[260px] sm:min-w-[280px] md:min-w-[320px] w-[calc(85vw-2rem)] sm:w-[300px] md:w-[340px] lg:w-[320px] flex-shrink-0">
+          <div key={event.id} className={CARD_WRAPPER_CLASS}>
             <DiscoveryCard
               event={event}
               onClick={onEventClick ? () => onEventClick(event) : undefined}
