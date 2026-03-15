@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   CheckCircle,
   XCircle,
@@ -9,6 +9,10 @@ import {
 } from "lucide-react";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { EventTag } from "@/types";
+import type { RejectionCategory } from "@/types";
+import { RejectionModal } from "@/components/moderation/RejectionModal";
+import { AppealBadge } from "@/components/moderation/AppealBadge";
+import { ReviewThread } from "@/components/moderation/ReviewThread";
 
 interface ClubWithCreator {
   id: string;
@@ -18,6 +22,7 @@ interface ClubWithCreator {
   instagram_handle: string | null;
   logo_url: string | null;
   status: string;
+  appeal_count: number;
   created_at: string;
   creator: {
     id: string;
@@ -31,6 +36,7 @@ const FILTERS = [
   { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
   { label: "Rejected", value: "rejected" },
+  { label: "Appeals", value: "appeals" },
 ] as const;
 
 export default function ClubModerationPage() {
@@ -39,15 +45,22 @@ export default function ClubModerationPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("pending");
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "approved" | "rejected" } | null>(null);
+  const [rejectingClub, setRejectingClub] = useState<ClubWithCreator | null>(null);
+  const [expandedThread, setExpandedThread] = useState<string | null>(null);
 
   const fetchClubs = useCallback(async () => {
     setConfirmAction(null);
     setLoading(true);
-    const params = new URLSearchParams({ status: statusFilter });
+    const apiStatus = statusFilter === "appeals" ? "pending" : statusFilter;
+    const params = new URLSearchParams({ status: apiStatus });
     const res = await fetch(`/api/admin/clubs?${params}`);
     if (res.ok) {
       const data = await res.json();
-      setClubs(data.clubs ?? []);
+      let fetched: ClubWithCreator[] = data.clubs ?? [];
+      if (statusFilter === "appeals") {
+        fetched = fetched.filter((c) => c.appeal_count > 0);
+      }
+      setClubs(fetched);
     }
     setLoading(false);
   }, [statusFilter]);
@@ -68,6 +81,23 @@ export default function ClubModerationPage() {
 
       if (res.ok) {
         setClubs((prev) => prev.filter((c) => c.id !== clubId));
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (category: RejectionCategory, message: string) => {
+    if (!rejectingClub) return;
+    setActionLoading(rejectingClub.id);
+    try {
+      const res = await fetch(`/api/admin/clubs/${rejectingClub.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected", category, message }),
+      });
+      if (res.ok) {
+        setClubs((prev) => prev.filter((c) => c.id !== rejectingClub.id));
       }
     } finally {
       setActionLoading(null);
@@ -184,8 +214,8 @@ export default function ClubModerationPage() {
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {clubs.map((club) => (
+                <React.Fragment key={club.id}>
                 <tr
-                  key={club.id}
                   className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                 >
                   <td className="px-6 py-4">
@@ -220,7 +250,14 @@ export default function ClubModerationPage() {
                   <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">
                     {new Date(club.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4">{statusBadge(club.status)}</td>
+                  <td className="px-6 py-4">
+                    {statusBadge(club.status)}
+                    {club.appeal_count > 0 && (
+                      <button onClick={() => setExpandedThread(expandedThread === club.id ? null : club.id)} className="ml-1">
+                        <AppealBadge appealCount={club.appeal_count} />
+                      </button>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     {club.status === "pending" && (
                       <div className="flex items-center justify-end gap-1">
@@ -258,7 +295,7 @@ export default function ClubModerationPage() {
                               <CheckCircle className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => setConfirmAction({ id: club.id, status: "rejected" })}
+                              onClick={() => setRejectingClub(club)}
                               disabled={actionLoading === club.id}
                               className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50 transition-colors"
                               title="Reject"
@@ -271,11 +308,29 @@ export default function ClubModerationPage() {
                     )}
                   </td>
                 </tr>
+                {expandedThread === club.id && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800">
+                      <ReviewThread targetType="club" targetId={club.id} />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {rejectingClub && (
+        <RejectionModal
+          open={!!rejectingClub}
+          onOpenChange={(open) => !open && setRejectingClub(null)}
+          itemName={rejectingClub.name}
+          itemType="club"
+          onSubmit={handleReject}
+        />
+      )}
     </div>
   );
 }
