@@ -13,7 +13,7 @@ import {
   MapPin,
   Pencil,
   Star,
-  CircleCheck,
+  CheckCircle2,
   Tag,
   User,
 } from "lucide-react";
@@ -180,7 +180,7 @@ export default function ModerationPendingEventsPage() {
       {events.length === 0 ? (
         <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex flex-col items-center justify-center py-16 text-zinc-400 dark:text-zinc-500">
-            <CircleCheck className="h-10 w-10 mb-3 stroke-[1.5] text-emerald-400" />
+            <CheckCircle2 className="h-10 w-10 mb-3 stroke-[1.5] text-emerald-400" />
             <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
               No pending events — you&apos;re all caught up!
             </p>
