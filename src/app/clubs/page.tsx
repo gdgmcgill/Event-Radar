@@ -11,6 +11,7 @@ import { ClubsHeroSection } from "@/components/clubs/ClubsHeroSection";
 import { TrendingClubsSection } from "@/components/clubs/TrendingClubsSection";
 import { PopularWithFriendsClubsSection } from "@/components/clubs/PopularWithFriendsClubsSection";
 import { ClubCategoryRowsSection } from "@/components/clubs/ClubCategoryRowsSection";
+import { NewClubsSection } from "@/components/clubs/NewClubsSection";
 import { FollowButton } from "@/components/clubs/FollowButton";
 import type { Metadata } from "next";
 
@@ -173,6 +174,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
       {!q && !category && currentPage === 1 && (
         <div className="space-y-10 py-6">
           <TrendingClubsSection />
+          <NewClubsSection />
           <PopularWithFriendsClubsSection />
           <ClubCategoryRowsSection />
         </div>

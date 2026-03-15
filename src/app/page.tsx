@@ -149,6 +149,7 @@ import { RecommendedEventsSection } from "@/components/events/RecommendedEventsS
 import { FriendsActivitySection } from "@/components/events/FriendsActivitySection";
 import { UpcomingThisWeekSection } from "@/components/events/UpcomingThisWeekSection";
 import { CategoryRowsSection } from "@/components/events/CategoryRowsSection";
+import { JustAddedSection } from "@/components/events/JustAddedSection";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import { EventSearch } from "@/components/events/EventSearch";
 import { AlertCircle, X, SlidersHorizontal } from "lucide-react";
@@ -524,6 +525,9 @@ function HomePageContent() {
           <div id="discovery-feed" className="pb-32 relative z-20 space-y-14 pt-6">
             {/* Happening Now */}
             <HappeningNowSection onEventClick={handleEventClick} />
+
+            {/* Just Added */}
+            <JustAddedSection onEventClick={handleEventClick} />
 
             {/* Trending Now (Popular) */}
             <PopularEventsSection onEventClick={handleEventClick} />
