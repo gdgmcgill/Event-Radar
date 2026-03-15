@@ -178,12 +178,12 @@ BEGIN
     _max_friends := 1;
 
     FOR _event IN
-      SELECT e.id, e.tags, e.event_date,
+      SELECT e.id, e.tags, e.start_date,
              COALESCE(eps.popularity_score, 0) AS pop_score
       FROM events e
       LEFT JOIN event_popularity_scores eps ON eps.event_id = e.id
       WHERE e.status = 'approved'
-        AND e.event_date >= CURRENT_DATE
+        AND e.start_date >= CURRENT_DATE
     LOOP
       -- Tag affinity (0.35) with hierarchy
       IF _total_user_tags > 0 THEN
@@ -233,11 +233,11 @@ BEGIN
               + (_social_score * 0.05);
 
       _breakdown := jsonb_build_object(
-        'tag', ROUND(_tag_score * 0.35, 4),
-        'interaction', ROUND(_interaction_score * 0.25, 4),
-        'popularity', ROUND(_popularity_score * 0.20, 4),
-        'recency', ROUND(_recency_score * 0.15, 4),
-        'social', ROUND(_social_score * 0.05, 4)
+        'tag', ROUND((_tag_score * 0.35)::numeric, 4),
+        'interaction', ROUND((_interaction_score * 0.25)::numeric, 4),
+        'popularity', ROUND((_popularity_score * 0.20)::numeric, 4),
+        'recency', ROUND((_recency_score * 0.15)::numeric, 4),
+        'social', ROUND((_social_score * 0.05)::numeric, 4)
       );
 
       INSERT INTO user_event_scores (user_id, event_id, score, breakdown, scored_at)
