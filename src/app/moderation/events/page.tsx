@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RejectionModal } from "@/components/moderation/RejectionModal";
+import { AppealBadge } from "@/components/moderation/AppealBadge";
+import { ReviewThread } from "@/components/moderation/ReviewThread";
+import type { RejectionCategory } from "@/types";
 import {
   Trash2,
   Search,
@@ -40,6 +44,7 @@ interface AdminEvent {
   status: string;
   created_at: string | null;
   metrics: EventMetrics | null;
+  appeal_count: number;
 }
 
 type SortField = "created_at" | "popularity_score" | "view_count" | "click_count" | "save_count";
@@ -53,12 +58,14 @@ export default function ModerationEventsPage() {
   const [sortBy, setSortBy] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [rejectingEvent, setRejectingEvent] = useState<AdminEvent | null>(null);
+  const [expandedThread, setExpandedThread] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchEvents() {
       setLoading(true);
       const params = new URLSearchParams();
-      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (statusFilter !== "all" && statusFilter !== "appeals") params.set("status", statusFilter);
       if (searchQuery) params.set("search", searchQuery);
       params.set("sort", sortBy);
       params.set("direction", sortDir);
@@ -101,6 +108,20 @@ export default function ModerationEventsPage() {
     if (res.ok) {
       setEvents((prev) =>
         prev.map((e) => (e.id === id ? { ...e, status: newStatus } : e))
+      );
+    }
+  };
+
+  const handleReject = async (category: RejectionCategory, message: string) => {
+    if (!rejectingEvent) return;
+    const res = await fetch(`/api/admin/events/${rejectingEvent.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "rejected", category, message }),
+    });
+    if (res.ok) {
+      setEvents((prev) =>
+        prev.map((e) => (e.id === rejectingEvent.id ? { ...e, status: "rejected" } : e))
       );
     }
   };
@@ -154,6 +175,10 @@ export default function ModerationEventsPage() {
     { field: "save_count", label: "Saves" },
   ];
 
+  const displayedEvents = statusFilter === "appeals"
+    ? events.filter((e) => e.appeal_count > 0 && e.status === "pending")
+    : events;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -187,6 +212,7 @@ export default function ModerationEventsPage() {
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
+          <option value="appeals">Appeals Only</option>
         </select>
         <div className="flex items-center gap-1">
           {sortFields.map(({ field, label }) => (
@@ -226,7 +252,7 @@ export default function ModerationEventsPage() {
             ))}
           </div>
         </div>
-      ) : events.length === 0 ? (
+      ) : displayedEvents.length === 0 ? (
         <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex flex-col items-center justify-center py-16 text-zinc-400 dark:text-zinc-500">
             <Inbox className="h-10 w-10 mb-3 stroke-[1.5]" />
@@ -247,9 +273,9 @@ export default function ModerationEventsPage() {
 
           {/* Table rows */}
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {events.map((event) => (
+            {displayedEvents.map((event) => (
+              <div key={event.id}>
               <div
-                key={event.id}
                 className="sm:grid sm:grid-cols-[1fr_140px_100px_120px_130px] gap-4 px-5 py-4 items-center hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
               >
                 {/* Event title & organizer */}
@@ -269,8 +295,13 @@ export default function ModerationEventsPage() {
                 </div>
 
                 {/* Status */}
-                <div className="mb-2 sm:mb-0">
+                <div className="mb-2 sm:mb-0 flex items-center">
                   {statusBadge(event.status)}
+                  {event.appeal_count > 0 && (
+                    <button onClick={() => setExpandedThread(expandedThread === event.id ? null : event.id)} className="ml-1">
+                      <AppealBadge appealCount={event.appeal_count} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Metrics */}
@@ -328,7 +359,7 @@ export default function ModerationEventsPage() {
                       )}
                       {event.status !== "rejected" && (
                         <button
-                          onClick={() => handleStatusChange(event.id, "rejected")}
+                          onClick={() => setRejectingEvent(event)}
                           title="Reject"
                           className="inline-flex items-center justify-center h-8 w-8 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
                         >
@@ -346,9 +377,25 @@ export default function ModerationEventsPage() {
                   )}
                 </div>
               </div>
+              {expandedThread === event.id && (
+                <div className="col-span-full px-5 py-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <ReviewThread targetType="event" targetId={event.id} />
+                </div>
+              )}
+              </div>
             ))}
           </div>
         </div>
+      )}
+
+      {rejectingEvent && (
+        <RejectionModal
+          open={!!rejectingEvent}
+          onOpenChange={(open) => !open && setRejectingEvent(null)}
+          itemName={rejectingEvent.title}
+          itemType="event"
+          onSubmit={handleReject}
+        />
       )}
     </div>
   );
