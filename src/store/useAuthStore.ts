@@ -52,34 +52,44 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
       set({ user: basicUser, loading: false });
 
-      // Fetch roles, interest_tags, and club membership in parallel
+      // Fetch roles, interest_tags, and club membership
       try {
-        const [{ data: profile }, { count: clubCount }] = await Promise.all([
-          supabase
-            .from("users")
-            .select("roles, interest_tags, faculty, year" as string & keyof never)
-            .eq("id", authUser.id)
-            .single() as unknown as Promise<{ data: Record<string, unknown> | null; error: unknown }>,
-          supabase
-            .from("club_members")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", authUser.id),
-        ]);
+        const profileResult = await supabase
+          .from("users")
+          .select("roles, interest_tags, faculty, year")
+          .eq("id", authUser.id)
+          .single();
+
+        const clubResult = await supabase
+          .from("club_members")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", authUser.id);
+
+        const profile = profileResult.data as Record<string, unknown> | null;
+        const roles = (profile?.roles as AppUser["roles"]) ?? ["user"];
+        const isOrganizerFromProfile = Array.isArray(roles) && roles.includes("club_organizer");
+
+        // Only trust club count when the query succeeded; otherwise fall back to club_organizer role
+        // so organizers still see "My Clubs" when the count query fails (e.g. RLS/network).
+        const clubCountOk = clubResult.error == null;
+        const hasClubs = clubCountOk
+          ? (clubResult.count ?? 0) > 0
+          : isOrganizerFromProfile;
 
         set((state) => ({
-          hasClubs: (clubCount ?? 0) > 0,
+          hasClubs,
           user: state.user && profile
             ? {
                 ...state.user,
-                roles: (profile.roles as AppUser["roles"]) ?? ["user"],
+                roles,
                 interest_tags: (profile.interest_tags as string[]) ?? [],
                 faculty: (profile.faculty as string) ?? null,
                 year: (profile.year as string) ?? null,
               }
             : state.user,
         }));
-      } catch {
-        // Profile fetch failure is non-fatal; user remains with defaults
+      } catch (err) {
+        console.error("[AuthStore] Profile/club fetch failed:", err);
       }
     };
 
@@ -105,25 +115,45 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // Use onAuthStateChange as the single source of truth.
     // INITIAL_SESSION fires immediately if a session exists, replacing initialFetch.
     let initialSessionHandled = false;
+    let authRequestId = 0;
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    const scheduleUserFetch = (authUser: {
+      id: string;
+      email?: string;
+      user_metadata?: Record<string, unknown>;
+      created_at: string;
+      updated_at?: string;
+    }) => {
+      const requestId = ++authRequestId;
+      // Avoid running PostgREST queries inside the auth callback call stack.
+      // With @supabase/ssr this can hang indefinitely on some SIGNED_IN flows.
+      setTimeout(() => {
+        // Ignore stale jobs that were superseded by newer auth events.
+        if (requestId !== authRequestId) return;
+        void fetchAndSetUser(authUser);
+      }, 0);
+    };
+
+    supabase.auth.onAuthStateChange((event, session) => {
       if (event === "INITIAL_SESSION" || (event === "SIGNED_IN" && !initialSessionHandled)) {
         initialSessionHandled = true;
         if (!session?.user) {
+          authRequestId++;
           set({ user: null, loading: false });
           return;
         }
-        await fetchAndSetUser(session.user);
+        scheduleUserFetch(session.user);
         return;
       }
 
       if (event === "SIGNED_OUT" || !session?.user) {
+        authRequestId++;
         set({ user: null, loading: false, hasClubs: false });
         return;
       }
 
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        await fetchAndSetUser(session.user);
+        scheduleUserFetch(session.user);
       }
     });
 
