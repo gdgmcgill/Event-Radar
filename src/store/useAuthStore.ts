@@ -44,6 +44,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           null,
         avatar_url: (authUser.user_metadata?.avatar_url as string) ?? null,
         interest_tags: [],
+        inferred_tags: [],
         saved_events_count: 0,
         roles: ["user"],
         created_at: authUser.created_at,
@@ -56,7 +57,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       try {
         const profileResult = await supabase
           .from("users")
-          .select("roles, interest_tags, faculty, year")
+          .select("roles, interest_tags, inferred_tags, faculty, year")
           .eq("id", authUser.id)
           .single();
 
@@ -83,6 +84,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 ...state.user,
                 roles,
                 interest_tags: (profile.interest_tags as string[]) ?? [],
+                inferred_tags: (profile.inferred_tags as string[]) ?? [],
                 faculty: (profile.faculty as string) ?? null,
                 year: (profile.year as string) ?? null,
               }
