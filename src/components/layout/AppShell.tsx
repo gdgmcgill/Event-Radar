@@ -18,6 +18,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isClubs = pathname === "/clubs";
   const isAbout = pathname === "/about";
   const isFriends = pathname === "/friends";
+  const isClubDashboard = pathname.startsWith("/my-clubs/") && pathname !== "/my-clubs";
 
   if (isLanding || isModeration) {
     return (
@@ -33,7 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <SideNavBar />
+      <SideNavBar forceCollapsed={isClubDashboard} />
       <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
         {/* Header is mobile-only — sidebar handles desktop nav */}
         <div className="lg:hidden">
@@ -47,11 +48,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
         <main
           id="main-content"
-          className={isHomepage || isEventDetail || isClubs || isAbout || isFriends ? "flex-1" : "flex-1 p-6"}
+          className={isHomepage || isEventDetail || isClubs || isAbout || isFriends || isClubDashboard ? "flex-1" : "flex-1 p-6"}
         >
           {children}
         </main>
-        {!isEventDetail && <Footer />}
+        {!isEventDetail && !isClubDashboard && <Footer />}
       </div>
     </div>
   );
