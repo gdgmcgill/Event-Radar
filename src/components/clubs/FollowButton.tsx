@@ -22,7 +22,9 @@ export function FollowButton({
   const [isLoading, setIsLoading] = useState(false);
   const user = useAuthStore((s) => s.user);
 
-  const handleToggle = async () => {
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!user) {
       // Redirect to sign-in with return URL
       window.location.href = `/?signin=required&next=/clubs/${clubId}`;

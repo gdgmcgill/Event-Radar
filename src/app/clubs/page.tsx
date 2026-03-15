@@ -10,6 +10,7 @@ import { ClubsHeroSection } from "@/components/clubs/ClubsHeroSection";
 import { TrendingClubsSection } from "@/components/clubs/TrendingClubsSection";
 import { PopularWithFriendsClubsSection } from "@/components/clubs/PopularWithFriendsClubsSection";
 import { ClubCategoryRowsSection } from "@/components/clubs/ClubCategoryRowsSection";
+import { FollowButton } from "@/components/clubs/FollowButton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -259,9 +260,13 @@ export default async function ClubsPage({ searchParams }: PageProps) {
                       </div>
 
                       {/* Follow Club Button */}
-                      <span className="w-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 hover:border-primary transition-colors py-2 rounded-lg font-semibold text-sm text-center block mt-auto">
-                        Follow Club
-                      </span>
+                      <div className="mt-auto" onClick={(e) => e.stopPropagation()}>
+                        <FollowButton
+                          clubId={club.id}
+                          initialFollowing={false}
+                          initialCount={followers}
+                        />
+                      </div>
                     </div>
 
                     {/* Upcoming Event Footer */}
