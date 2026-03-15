@@ -77,16 +77,16 @@ export function ModerationNav() {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-zinc-900 text-zinc-400">
-      {/* Brand */}
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-        </span>
-        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-300">
-          Moderation
-        </span>
-      </div>
+      {/* Brand — click to go home */}
+      <Link href="/" className="flex items-center gap-2.5 px-5 py-5 hover:bg-zinc-800/50 transition-colors" title="Back to Uni-Verse">
+        <div className="h-7 w-7 rounded-lg bg-red-600 flex items-center justify-center">
+          <span className="text-white text-xs font-black">U</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-sm font-bold text-zinc-100 leading-tight">Uni-Verse</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500">Moderation</span>
+        </div>
+      </Link>
 
       <div className="h-px bg-zinc-800" />
 
