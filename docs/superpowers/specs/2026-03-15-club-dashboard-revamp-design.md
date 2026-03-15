@@ -18,15 +18,15 @@ Revamp the entire `/my-clubs/[id]` page with a hybrid layout, full hero reuse, e
 
 ### Navigation Model: Hybrid Collapsed Sidebar
 
-- **Desktop**: Main AppShell sidebar collapses to 56px icon-only rail. Dashboard content gets near-full width. Sidebar expands on hover to show labels.
+- **Desktop**: Main AppShell `SideNavBar` collapses to icon-only rail (72px, matching existing collapsed width). The icon rail shows **AppShell nav items** (Home, Events, Clubs, etc.) — not the dashboard tabs. Dashboard tabs (Overview, Events, Members, Analytics, Settings) render as a **horizontal tab bar** below the hero section. Sidebar expands on hover to show labels (existing behavior).
 - **Mobile**: No sidebar. Scrollable horizontal tab bar below a compact hero. FAB button for "Create Event."
-- **AppShell changes**: Add `/my-clubs` to the routes that suppress the footer. Detect `/my-clubs/[id]` to trigger collapsed sidebar mode.
+- **AppShell changes**: Add `/my-clubs/[id]` (dashboard routes only, not `/my-clubs` listing) to footer-suppressed routes. Pass `collapsed` prop to `SideNavBar` when on dashboard routes.
 
 ### Page Structure (Desktop)
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ [Icon Rail 56px] │ [Main Dashboard Content]      │
+│ [Icon Rail 72px] │ [Main Dashboard Content]      │
 │                  │                               │
 │  U (logo)        │ ┌─────────────────────────┐   │
 │  🏠              │ │  HERO BANNER (160px)     │   │
@@ -93,8 +93,8 @@ Uses the same gradient as `/clubs/[id]`:
 
 ### 1. Overview Tab
 
-**Hero Section** (reuses `/clubs/[id]` hero pattern):
-- Banner: 160px height (desktop), 100px (mobile). Shows uploaded banner or gradient fallback.
+**Hero Section** (reuses `/clubs/[id]` visual pattern — same gradient, overlay, and logo overlap — but with reduced height for dashboard context):
+- Banner: 160px height (desktop), 100px (mobile). Shows uploaded banner or gradient fallback. (Public page uses 40vh/320-420px; dashboard is intentionally more compact.)
 - "Edit Banner" button overlay (top-right, glass-morphism pill)
 - Overlapping club logo: 80px (desktop), 56px (mobile), rounded-2xl, 3px border matching background
 - Club name + status badge (approved/pending/rejected) + category badge
@@ -108,7 +108,7 @@ Uses the same gradient as `/clubs/[id]`:
 - Metrics:
   - **Total Followers** — count + % change this month
   - **Avg RSVPs** — average per event + % change vs previous event
-  - **Engagement Rate** — (interactions / followers) as % + monthly trend
+  - **Engagement Rate** — (total interactions on club events in last 30 days / follower count) as % + monthly trend
   - **Events This Month** — count + semester total
 
 **Next Event Spotlight**:
@@ -139,7 +139,7 @@ Existing functionality with current UI. No changes needed beyond ensuring it wor
 
 **Invite Section**:
 - Single invite: email input + role selector + send button
-- Bulk invite: textarea for pasting multiple emails (one per line), shared role selector
+- Bulk invite: textarea for pasting multiple emails (one per line, max 20), shared role selector. Client iterates over emails calling `POST /api/clubs/[id]/invites` per email. Partial failures shown inline (e.g., "3 of 5 sent, 2 failed: already members").
 - Pending invites list with cancel/resend actions
 
 **Member Activity** (new):
@@ -203,8 +203,8 @@ Existing functionality with current UI. No changes needed beyond ensuring it wor
 
 **Danger Zone**:
 - Red-bordered section at bottom
-- Transfer Ownership: select another club member → confirmation dialog
-- Delete Club: requires typing club name to confirm → soft-delete or hard-delete with cascade
+- **Transfer Ownership**: Select another club member from dropdown → confirmation dialog → immediate transfer (no acceptance required). Atomically: sets new owner's role to `"owner"`, sets old owner's role to `"organizer"`. Audited in `admin_audit_log`. Endpoint: `POST /api/clubs/[id]/transfer` with `{ newOwnerId: string }`.
+- **Delete Club**: Requires typing club name to confirm → soft-delete (sets `status` to `"deleted"`). Events, followers, and members are preserved but club is hidden from all public queries. Endpoint: `DELETE /api/clubs/[id]` (owner-only). Audited in `admin_audit_log`.
 
 ## Data Model Changes
 
@@ -212,21 +212,25 @@ Existing functionality with current UI. No changes needed beyond ensuring it wor
 
 ```sql
 ALTER TABLE clubs ADD COLUMN contact_email TEXT;
--- Make required for new clubs; backfill nudge for existing
+-- Column is nullable at DB level to support existing clubs without backfill.
+-- Application-level enforcement: required for new clubs (POST validation),
+-- nudged for existing clubs via ClubCompletionNudge.
 ```
 
-- Required at club creation
-- Validated as email format on both client and API
-- Displayed on public club page (optional — could be behind a "Contact" button)
-- Added to `Club` TypeScript interface in `src/types/index.ts`
+- Required at club creation (enforced in `POST /api/clubs` validation, not DB constraint)
+- Existing clubs: nullable, surfaced in `ClubCompletionNudge` checklist to encourage backfill
+- Validated as email format on both client and API (`PATCH /api/clubs/[id]`)
+- Add `contact_email` to `allowedFields` in PATCH route with email format validation
+- Displayed on public club page behind a "Contact" button
+- Add to `Club` TypeScript interface: `contact_email: string | null;`
 
 ### New Analytics Queries
 
-**Engagement Rate**: `(total interactions on club events) / (follower count * event count)` over time windows
+**Engagement Rate**: `(total interactions on club events in last 30 days) / (follower count)` as percentage, computed per-day for trend chart. Uses `user_interactions` table filtered by the club's event IDs.
 
-**Peak Activity**: Aggregate `user_interactions.created_at` by hour-of-day and day-of-week for the club's events
+**Peak Activity**: Aggregate `user_interactions.created_at` by hour-of-day and day-of-week for the club's events. 30-day window. First fetches all club event IDs in one query, then filters interactions with `IN` clause (no N+1).
 
-**Best Event Type**: Compare average RSVPs per tag across the club's events
+**Best Event Type**: Compare average RSVPs per tag across the club's events using the `rsvps` table (note: CLAUDE.md says `event_rsvps` but codebase queries `rsvps`).
 
 ## Component Architecture
 
@@ -249,13 +253,13 @@ ALTER TABLE clubs ADD COLUMN contact_email TEXT;
 | `ClubOverviewTab` | Add engagement rate stat, use new hero above tabs |
 | `ClubAnalyticsTab` | Add engagement trend, peak times, best event type insight |
 | `ClubMembersTab` | Add role changing, remove member, bulk invite, activity stats, search |
+| `ClubCompletionNudge` | Add contact_email to checklist items |
 
 ### Preserved Components (no changes)
 
 | Component | Reason |
 |-----------|--------|
 | `ClubEventsTab` | Already functional, works in new layout |
-| `ClubCompletionNudge` | Reused as-is in Overview; add contact_email to checklist |
 | `ClubHeroSocialLinks` | Reused for public page; dashboard hero uses edit mode instead |
 | `FollowButton` | Public page only, not shown in dashboard |
 
@@ -271,6 +275,28 @@ Add fields to accepted body:
 
 Already exists — just needs to be wired into settings UI.
 
+### `PATCH /api/clubs/[id]/members`
+
+New endpoint for role changes. Owner-only.
+- Body: `{ memberId: string, role: "organizer" }`
+- Cannot change own role. Cannot set role to "owner" (use transfer endpoint instead).
+- Returns updated member record.
+
+### `POST /api/clubs/[id]/transfer`
+
+New endpoint for ownership transfer. Owner-only.
+- Body: `{ newOwnerId: string }`
+- Validates target is an existing club member.
+- Atomically: sets target's role to `"owner"`, sets current owner's role to `"organizer"`.
+- Logs to `admin_audit_log`.
+
+### `DELETE /api/clubs/[id]`
+
+New endpoint for club soft-deletion. Owner-only.
+- Sets `status` to `"deleted"`. Does not cascade-delete data.
+- Requires body: `{ confirmName: string }` matching the club name.
+- Logs to `admin_audit_log`.
+
 ### `GET /api/clubs/[id]/analytics`
 
 Extend response with:
@@ -283,7 +309,7 @@ Extend response with:
 
 | Breakpoint | Layout |
 |------------|--------|
-| `≥1024px` (lg) | Collapsed sidebar (56px) + full dashboard |
+| `≥1024px` (lg) | Collapsed sidebar (72px, matching existing SideNavBar collapsed width) + full dashboard |
 | `768-1023px` (md) | No sidebar, full-width dashboard, horizontal tabs |
 | `<768px` (sm) | No sidebar, compact hero, scrollable tabs, 2x2 stat grid, FAB |
 
@@ -294,6 +320,7 @@ Extend response with:
 - **No analytics data**: Show empty charts with "Host events to see analytics" message
 - **Settings save failure**: Inline error message with retry, form stays populated
 - **Pending club**: Banner shows "Pending Approval" overlay; limited actions available
+- **Loading states**: All new analytics widgets (engagement trend, peak activity, best event type) get skeleton placeholders matching existing analytics tab pattern
 
 ## Success Criteria
 
