@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -79,9 +80,7 @@ export function ModerationNav() {
     <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-zinc-900 text-zinc-400">
       {/* Brand — click to go home */}
       <Link href="/" className="flex items-center gap-2.5 px-5 py-5 hover:bg-zinc-800/50 transition-colors" title="Back to Uni-Verse">
-        <div className="h-7 w-7 rounded-lg bg-red-600 flex items-center justify-center">
-          <span className="text-white text-xs font-black">U</span>
-        </div>
+        <Image src="/uni-verse_logo.png" alt="Uni-Verse" width={28} height={28} className="h-7 w-7 rounded-lg" />
         <div className="flex flex-col">
           <span className="text-sm font-bold text-zinc-100 leading-tight">Uni-Verse</span>
           <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500">Moderation</span>

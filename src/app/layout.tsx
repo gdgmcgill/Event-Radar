@@ -56,6 +56,10 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  icons: {
+    icon: "/uni-verse_logo.png",
+    apple: "/uni-verse_logo.png",
+  },
 };
 
 export default function RootLayout({
