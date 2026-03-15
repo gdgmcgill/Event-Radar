@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Building2, Upload, Loader2, CheckCircle2, Instagram, AlertCircle } from "lucide-react";
+import { Building2, Upload, Loader2, CheckCircle2, Instagram, AlertCircle, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -34,6 +34,10 @@ export function CreateClubForm() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [instagramHandle, setInstagramHandle] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [discordUrl, setDiscordUrl] = useState("");
+  const [twitterUrl, setTwitterUrl] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -95,6 +99,10 @@ export function CreateClubForm() {
           category,
           logo_url: null,
           instagram_handle: cleanHandle,
+          website_url: websiteUrl.trim() || null,
+          discord_url: discordUrl.trim() || null,
+          twitter_url: twitterUrl.trim() || null,
+          linkedin_url: linkedinUrl.trim() || null,
         }),
       });
 
@@ -283,6 +291,79 @@ export function CreateClubForm() {
             />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">Students can find your club on Instagram</p>
+        </div>
+
+        {/* Social Links Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-foreground">Social Links</h3>
+            <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+          </div>
+
+          {/* Website */}
+          <div>
+            <label htmlFor="club-website" className="mb-1.5 block text-sm text-muted-foreground">
+              Website
+            </label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <Globe className="h-4 w-4" />
+              </div>
+              <Input
+                id="club-website"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                placeholder="https://yourclub.com"
+                disabled={submitting}
+                className="pl-9 border-border focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+
+          {/* Discord */}
+          <div>
+            <label htmlFor="club-discord" className="mb-1.5 block text-sm text-muted-foreground">
+              Discord
+            </label>
+            <Input
+              id="club-discord"
+              value={discordUrl}
+              onChange={(e) => setDiscordUrl(e.target.value)}
+              placeholder="https://discord.gg/yourserver"
+              disabled={submitting}
+              className="border-border focus:ring-primary focus:border-primary"
+            />
+          </div>
+
+          {/* Twitter / X */}
+          <div>
+            <label htmlFor="club-twitter" className="mb-1.5 block text-sm text-muted-foreground">
+              X / Twitter
+            </label>
+            <Input
+              id="club-twitter"
+              value={twitterUrl}
+              onChange={(e) => setTwitterUrl(e.target.value)}
+              placeholder="https://x.com/yourclub"
+              disabled={submitting}
+              className="border-border focus:ring-primary focus:border-primary"
+            />
+          </div>
+
+          {/* LinkedIn */}
+          <div>
+            <label htmlFor="club-linkedin" className="mb-1.5 block text-sm text-muted-foreground">
+              LinkedIn
+            </label>
+            <Input
+              id="club-linkedin"
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              placeholder="https://linkedin.com/company/yourclub"
+              disabled={submitting}
+              className="border-border focus:ring-primary focus:border-primary"
+            />
+          </div>
         </div>
 
         {/* Form Error */}

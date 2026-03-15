@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, description, category, logo_url, instagram_handle } = body;
+  const { name, description, category, logo_url, instagram_handle, website_url, discord_url, twitter_url, linkedin_url } = body;
 
   // Name, description, and category are all required per spec
   if (!name || !description || !category) {
@@ -74,6 +74,10 @@ export async function POST(request: NextRequest) {
       category: category.trim(),
       logo_url: logo_url || null,
       instagram_handle: instagram_handle?.trim() || null,
+      website_url: website_url?.trim() || null,
+      discord_url: discord_url?.trim() || null,
+      twitter_url: twitter_url?.trim() || null,
+      linkedin_url: linkedin_url?.trim() || null,
       status: "pending",
       created_by: user.id,
     })

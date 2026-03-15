@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Share2,
   Instagram,
   Globe,
   Users,
@@ -13,6 +12,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ClubShareButton } from "@/components/clubs/ClubShareButton";
 import { FollowButton } from "@/components/clubs/FollowButton";
 import { EventCard } from "@/components/events/EventCard";
 import type { Event } from "@/types";
@@ -138,12 +138,11 @@ export default async function ClubDetailPage({ params }: PageProps) {
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
               <span className="text-sm font-semibold">Back to Clubs</span>
             </Link>
-            <button
-              aria-label="Share"
-              className="flex items-center justify-center w-9 h-9 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 text-white rounded-full transition-all duration-300 cursor-pointer"
-            >
-              <Share2 className="h-4 w-4" />
-            </button>
+            <ClubShareButton
+              clubName={club.name}
+              clubDescription={club.description}
+              clubId={id}
+            />
           </div>
         </div>
       </div>
