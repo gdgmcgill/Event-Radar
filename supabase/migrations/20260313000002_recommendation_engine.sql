@@ -172,15 +172,10 @@ BEGIN
     INTO _max_interaction
     FROM tag_interaction_counts WHERE user_id = _user.id;
 
-    SELECT COALESCE(MAX(cnt), 1) INTO _max_friends
-    FROM (
-      SELECT er.event_id, COUNT(*) AS cnt
-      FROM event_rsvps er
-      JOIN user_follows uf ON uf.following_id = er.user_id
-      WHERE uf.follower_id = _user.id
-        AND er.status IN ('going', 'interested')
-      GROUP BY er.event_id
-    ) sub;
+    -- Social signal normalization
+    -- NOTE: event_rsvps table does not exist yet. When it is created,
+    -- uncomment the query below and remove the hardcoded fallback.
+    _max_friends := 1;
 
     FOR _event IN
       SELECT e.id, e.tags, e.event_date,
@@ -226,14 +221,9 @@ BEGIN
       _recency_score := EXP(-0.12 * _days_until);
 
       -- Social signal (0.05)
-      SELECT COUNT(*) INTO _friend_count
-      FROM event_rsvps er
-      JOIN user_follows uf ON uf.following_id = er.user_id
-      WHERE uf.follower_id = _user.id
-        AND er.event_id = _event.id
-        AND er.status IN ('going', 'interested');
-
-      _social_score := LEAST(_friend_count::float / _max_friends, 1.0);
+      -- NOTE: event_rsvps table does not exist yet. Set to 0 until created.
+      _friend_count := 0;
+      _social_score := 0;
 
       -- Combined score
       _score := (_tag_score * 0.35)
