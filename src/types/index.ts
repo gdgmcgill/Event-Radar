@@ -74,6 +74,7 @@ export interface User {
   saved_events_count: number;
   roles: UserRole[];
   interest_tags: string[];
+  inferred_tags: string[];
   pronouns?: string | null;
   year?: string | null;
   faculty?: string | null;

@@ -132,6 +132,7 @@ export interface Database {
           avatar_url: string | null;
           roles: ("user" | "admin" | "club_organizer")[];
           interest_tags: string[];
+          inferred_tags: string[];
           saved_events_count: number;
           created_at: string;
           updated_at: string;
@@ -144,6 +145,7 @@ export interface Database {
           avatar_url?: string | null;
           roles?: ("user" | "admin" | "club_organizer")[];
           interest_tags?: string[];
+          inferred_tags?: string[];
           saved_events_count?: number;
           created_at?: string;
           updated_at?: string;
@@ -156,6 +158,7 @@ export interface Database {
           avatar_url?: string | null;
           roles?: ("user" | "admin" | "club_organizer")[];
           interest_tags?: string[];
+          inferred_tags?: string[];
           saved_events_count?: number;
           created_at?: string;
           updated_at?: string;
