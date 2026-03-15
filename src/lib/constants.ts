@@ -335,6 +335,35 @@ export const VALID_INTEREST_TAGS: string[] = [
 ];
 
 /**
+ * Maps granular quick-filter tags to their parent EventTag.
+ * Used by the recommendation scoring engine for partial affinity matching.
+ * A user interested in "hackathon" gets partial affinity (0.5x) for "tech" events.
+ */
+export const TAG_HIERARCHY: Record<string, string> = {
+  hackathon: EventTag.TECH,
+  competition: EventTag.CAREER,
+  guest_speaker: EventTag.ACADEMIC,
+  free_food: EventTag.FOOD,
+  workshop: EventTag.TECH,
+  party: EventTag.SOCIAL,
+  fitness: EventTag.SPORTS,
+  info_session: EventTag.CAREER,
+};
+
+/**
+ * Reverse mapping: parent EventTag → child granular tags.
+ * Auto-computed from TAG_HIERARCHY.
+ */
+export const TAG_CHILDREN: Record<string, string[]> = Object.entries(TAG_HIERARCHY).reduce(
+  (acc, [child, parent]) => {
+    if (!acc[parent]) acc[parent] = [];
+    acc[parent].push(child);
+    return acc;
+  },
+  {} as Record<string, string[]>
+);
+
+/**
  * Quick-filter tags that are not already covered by EventTag.
  * Used to render the "More Interests" section in InterestTagSelector.
  */
