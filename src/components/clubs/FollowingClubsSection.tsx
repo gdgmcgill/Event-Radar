@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Building2 } from "lucide-react";
+import { Building2, Heart } from "lucide-react";
 import { ClubDiscoveryCard } from "@/components/clubs/ClubDiscoveryCard";
 import { useAuthStore } from "@/store/useAuthStore";
+import { SectionHeader } from "@/components/ui/SectionRow";
 
 type FollowedClub = {
   id: string;
@@ -72,10 +73,19 @@ export function FollowingClubsSection() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {clubs.map((club) => (
-        <ClubDiscoveryCard key={club.id} club={club} />
-      ))}
+    <div>
+      <SectionHeader
+        title="Clubs You Follow"
+        icon={<Heart className="h-6 w-6 text-primary" />}
+        count={clubs.length}
+        countLabel="club"
+        noPadding
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {clubs.map((club) => (
+          <ClubDiscoveryCard key={club.id} club={club} />
+        ))}
+      </div>
     </div>
   );
 }

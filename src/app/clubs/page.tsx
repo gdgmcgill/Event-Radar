@@ -14,6 +14,7 @@ import { ClubCategoryRowsSection } from "@/components/clubs/ClubCategoryRowsSect
 import { NewClubsSection } from "@/components/clubs/NewClubsSection";
 import { FollowButton } from "@/components/clubs/FollowButton";
 import { FollowingClubsSection } from "@/components/clubs/FollowingClubsSection";
+import { SectionHeader } from "@/components/ui/SectionRow";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -194,20 +195,18 @@ export default async function ClubsPage({ searchParams }: PageProps) {
       <main className="px-6 lg:px-10 py-6 lg:py-8">
 
         {/* ── Section Header ────────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold tracking-tight">
-            {q
+        <SectionHeader
+          title={
+            q
               ? `Results for "${q}"`
               : category
                 ? `${category} Clubs`
-                : "Trending Clubs"}
-          </h2>
-          {totalCount !== null && totalCount > 0 && (
-            <span className="text-sm text-muted-foreground">
-              {totalCount} club{totalCount !== 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
+                : "Trending Clubs"
+          }
+          count={totalCount ?? undefined}
+          countLabel="club"
+          noPadding
+        />
 
         {/* ── Club Cards Grid ───────────────────────────────────────── */}
         {!clubs || clubs.length === 0 ? (

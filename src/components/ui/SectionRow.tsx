@@ -27,6 +27,8 @@ interface SectionHeaderProps {
   liveIndicator?: boolean;
   /** Right-side action (e.g. "See All" button, refresh button) */
   action?: ReactNode;
+  /** Skip horizontal padding (use when parent already provides it) */
+  noPadding?: boolean;
 }
 
 export function SectionHeader({
@@ -36,9 +38,10 @@ export function SectionHeader({
   icon,
   liveIndicator,
   action,
+  noPadding,
 }: SectionHeaderProps) {
   return (
-    <div className={`flex items-center justify-between ${SECTION_PADDING} mb-5`}>
+    <div className={`flex items-center justify-between ${noPadding ? "" : SECTION_PADDING} mb-5`}>
       <h3 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
         {icon}
         {title}
