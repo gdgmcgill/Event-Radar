@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Building2, Calendar, Users } from "lucide-react";
+import { Building2, Calendar, Users, LayoutGrid } from "lucide-react";
 
 interface ClubDiscoveryCardProps {
   club: {
@@ -11,6 +11,7 @@ interface ClubDiscoveryCardProps {
     logo_url: string | null;
     follower_count: number;
     upcoming_event_count: number;
+    total_event_count?: number;
   };
 }
 
@@ -21,6 +22,7 @@ export function ClubDiscoveryCard({ club }: ClubDiscoveryCardProps) {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-secondary/30 to-primary/10" />
 
         <div className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-2">
+          {/* Club Logo */}
           <div className="w-14 h-14 rounded-full border-2 border-border/50 shadow-sm overflow-hidden bg-secondary flex items-center justify-center shrink-0">
             {club.logo_url ? (
               <Image
@@ -35,19 +37,27 @@ export function ClubDiscoveryCard({ club }: ClubDiscoveryCardProps) {
             )}
           </div>
 
+          {/* Club Name */}
           <h4 className="text-foreground font-bold text-sm leading-tight text-center line-clamp-1 group-hover:text-primary transition-colors">
             {club.name}
           </h4>
 
+          {/* Stats Row */}
           <div className="flex items-center gap-3 text-muted-foreground">
             <span className="flex items-center gap-1 text-xs">
               <Users className="h-3 w-3" />
               {club.follower_count}
             </span>
-            {club.upcoming_event_count > 0 && (
+            {(club.total_event_count ?? 0) > 0 && (
               <span className="flex items-center gap-1 text-xs">
+                <LayoutGrid className="h-3 w-3" />
+                {club.total_event_count}
+              </span>
+            )}
+            {club.upcoming_event_count > 0 && (
+              <span className="flex items-center gap-1 text-xs text-primary font-medium">
                 <Calendar className="h-3 w-3" />
-                {club.upcoming_event_count}
+                {club.upcoming_event_count} upcoming
               </span>
             )}
           </div>

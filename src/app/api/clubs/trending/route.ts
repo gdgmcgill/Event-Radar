@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     const today = new Date().toISOString().split("T")[0];
 
-    const [followersResult, eventsResult] = await Promise.all([
+    const [followersResult, upcomingEventsResult, allEventsResult] = await Promise.all([
       supabase
         .from("club_followers")
         .select("club_id")
@@ -35,6 +35,11 @@ export async function GET(request: NextRequest) {
         .in("club_id", clubIds)
         .eq("status", "approved")
         .gte("start_date", today),
+      supabase
+        .from("events")
+        .select("club_id")
+        .in("club_id", clubIds)
+        .eq("status", "approved"),
     ]);
 
     const followerCounts: Record<string, number> = {};
@@ -43,9 +48,16 @@ export async function GET(request: NextRequest) {
     }
 
     const upcomingCounts: Record<string, number> = {};
-    for (const e of eventsResult.data ?? []) {
+    for (const e of upcomingEventsResult.data ?? []) {
       if (e.club_id) {
         upcomingCounts[e.club_id] = (upcomingCounts[e.club_id] ?? 0) + 1;
+      }
+    }
+
+    const totalEventCounts: Record<string, number> = {};
+    for (const e of allEventsResult.data ?? []) {
+      if (e.club_id) {
+        totalEventCounts[e.club_id] = (totalEventCounts[e.club_id] ?? 0) + 1;
       }
     }
 
@@ -54,6 +66,7 @@ export async function GET(request: NextRequest) {
         ...club,
         follower_count: followerCounts[club.id] ?? 0,
         upcoming_event_count: upcomingCounts[club.id] ?? 0,
+        total_event_count: totalEventCounts[club.id] ?? 0,
       }))
       .sort((a, b) => b.follower_count - a.follower_count)
       .slice(0, limit);
