@@ -20,6 +20,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { FeatureEventModal } from "@/components/moderation/FeatureEventModal";
+import { RejectionModal } from "@/components/moderation/RejectionModal";
+import { AppealBadge } from "@/components/moderation/AppealBadge";
+import { ReviewThread } from "@/components/moderation/ReviewThread";
+import type { RejectionCategory } from "@/types";
 
 interface PendingEvent {
   id: string;
@@ -33,6 +37,7 @@ interface PendingEvent {
   status: string;
   created_at: string | null;
   image_url: string | null;
+  appeal_count: number;
 }
 
 export default function ModerationPendingEventsPage() {
@@ -43,13 +48,15 @@ export default function ModerationPendingEventsPage() {
   const [editForm, setEditForm] = useState<Partial<PendingEvent>>({});
   const [featuringEvent, setFeaturingEvent] = useState<PendingEvent | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "approved" | "rejected" } | null>(null);
+  const [rejectingEvent, setRejectingEvent] = useState<PendingEvent | null>(null);
+  const [expandedThread, setExpandedThread] = useState<string | null>(null);
 
   const fetchPending = useCallback(async () => {
     setConfirmAction(null);
     const supabase = createClient();
     const { data } = await supabase
       .from("events")
-      .select("id, title, description, start_date, end_date, location, organizer, tags, status, created_at, image_url")
+      .select("id, title, description, start_date, end_date, location, organizer, tags, status, created_at, image_url, appeal_count")
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
@@ -73,6 +80,23 @@ export default function ModerationPendingEventsPage() {
 
       if (res.ok) {
         setEvents((prev) => prev.filter((e) => e.id !== eventId));
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (category: RejectionCategory, message: string) => {
+    if (!rejectingEvent) return;
+    setActionLoading(rejectingEvent.id);
+    try {
+      const res = await fetch(`/api/admin/events/${rejectingEvent.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected", category, message }),
+      });
+      if (res.ok) {
+        setEvents((prev) => prev.filter((e) => e.id !== rejectingEvent.id));
       }
     } finally {
       setActionLoading(null);
@@ -203,8 +227,9 @@ export default function ModerationPendingEventsPage() {
           {events.map((event) => (
             <div
               key={event.id}
-              className="flex rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden transition-shadow hover:shadow-lg dark:hover:shadow-zinc-900/50"
+              className="flex flex-col rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden transition-shadow hover:shadow-lg dark:hover:shadow-zinc-900/50"
             >
+              <div className="flex">
               {/* Image */}
               <div className="relative w-48 shrink-0">
                 <Image
@@ -231,6 +256,14 @@ export default function ModerationPendingEventsPage() {
                     Pending
                   </span>
                 </div>
+                {/* Appeal badge */}
+                {event.appeal_count > 0 && (
+                  <div className="absolute top-2.5 left-2.5">
+                    <button onClick={() => setExpandedThread(expandedThread === event.id ? null : event.id)}>
+                      <AppealBadge appealCount={event.appeal_count} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Content */}
@@ -320,7 +353,7 @@ export default function ModerationPendingEventsPage() {
                         Approve
                       </button>
                       <button
-                        onClick={() => setConfirmAction({ id: event.id, status: "rejected" })}
+                        onClick={() => setRejectingEvent(event)}
                         disabled={actionLoading === event.id}
                         className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
                       >
@@ -349,6 +382,12 @@ export default function ModerationPendingEventsPage() {
                   </div>
                 </div>
               </div>
+              </div>
+              {expandedThread === event.id && (
+                <div className="border-t border-zinc-100 dark:border-zinc-800 p-4">
+                  <ReviewThread targetType="event" targetId={event.id} />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -361,6 +400,16 @@ export default function ModerationPendingEventsPage() {
           eventId={featuringEvent.id}
           eventTitle={featuringEvent.title}
           onSubmit={() => setFeaturingEvent(null)}
+        />
+      )}
+
+      {rejectingEvent && (
+        <RejectionModal
+          open={!!rejectingEvent}
+          onOpenChange={(open) => !open && setRejectingEvent(null)}
+          itemName={rejectingEvent.title}
+          itemType="event"
+          onSubmit={handleReject}
         />
       )}
 
