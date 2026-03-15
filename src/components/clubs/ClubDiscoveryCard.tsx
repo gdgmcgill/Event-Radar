@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Building2, Calendar, Users, LayoutGrid } from "lucide-react";
+import { Calendar, Users, LayoutGrid } from "lucide-react";
+import { ClubInitials } from "@/components/clubs/ClubInitials";
 
 interface ClubDiscoveryCardProps {
   club: {
@@ -33,7 +34,7 @@ export function ClubDiscoveryCard({ club }: ClubDiscoveryCardProps) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <Building2 className="h-6 w-6 text-muted-foreground/50" />
+              <ClubInitials name={club.name} className="w-full h-full rounded-full text-lg" />
             )}
           </div>
 

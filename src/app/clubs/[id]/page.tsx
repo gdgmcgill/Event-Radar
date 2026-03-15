@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ClubShareButton } from "@/components/clubs/ClubShareButton";
+import { ClubInitials } from "@/components/clubs/ClubInitials";
 import { FollowButton } from "@/components/clubs/FollowButton";
 import { EventCard } from "@/components/events/EventCard";
 import type { Event } from "@/types";
@@ -161,7 +162,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <Users className="h-10 w-10 text-muted-foreground/30" />
+              <ClubInitials name={club.name} className="w-full h-full rounded-2xl text-3xl" />
             )}
           </div>
           <div className="flex-1 min-w-0 pb-1">

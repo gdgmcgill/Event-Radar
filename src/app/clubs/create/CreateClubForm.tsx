@@ -220,7 +220,13 @@ export function CreateClubForm() {
               {logoUrl ? (
                 <Image src={logoUrl} alt="Logo preview" width={80} height={80} className="h-20 w-20 rounded-xl object-cover" />
               ) : (
-                <Building2 className="h-9 w-9 text-muted-foreground/40" />
+                {name.trim() ? (
+                  <span className="text-xl font-bold text-muted-foreground/60">
+                    {name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("")}
+                  </span>
+                ) : (
+                  <Building2 className="h-9 w-9 text-muted-foreground/40" />
+                )}
               )}
             </div>
             <div>

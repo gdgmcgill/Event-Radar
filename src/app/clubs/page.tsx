@@ -6,6 +6,7 @@ import { Building2, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { ClubSearch } from "@/components/clubs/ClubSearch";
 import { ClubsPageTabs } from "@/components/clubs/ClubsPageTabs";
 import { ClubsHeroButton } from "@/components/clubs/ClubsHeroButton";
+import { ClubInitials } from "@/components/clubs/ClubInitials";
 import { ClubsHeroSection } from "@/components/clubs/ClubsHeroSection";
 import { TrendingClubsSection } from "@/components/clubs/TrendingClubsSection";
 import { PopularWithFriendsClubsSection } from "@/components/clubs/PopularWithFriendsClubsSection";
@@ -229,7 +230,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <Building2 className="h-8 w-8 text-muted-foreground/50" />
+                          <ClubInitials name={club.name} className="w-full h-full rounded-full text-xl" />
                         )}
                       </div>
 
