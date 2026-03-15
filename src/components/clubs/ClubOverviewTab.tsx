@@ -73,6 +73,32 @@ export function ClubOverviewTab({
         followerGrowth[0].count
       : 0;
 
+  // Engagement trend from analytics
+  const engagementTrend = analyticsData?.engagement_trend ?? [];
+  const engagementDelta =
+    engagementTrend.length >= 2
+      ? engagementTrend[engagementTrend.length - 1].rate -
+        engagementTrend[0].rate
+      : null;
+
+  // Follower trend for StatCard
+  const followerTrend =
+    newFollowersThisMonth !== 0
+      ? {
+          value: `${Math.abs(newFollowersThisMonth)} this month`,
+          positive: newFollowersThisMonth > 0,
+        }
+      : null;
+
+  // Engagement trend for StatCard
+  const engagementStatTrend =
+    engagementDelta !== null && engagementDelta !== 0
+      ? {
+          value: `${Math.abs(Math.round(engagementDelta * 10) / 10)}% vs last period`,
+          positive: engagementDelta > 0,
+        }
+      : null;
+
   // Next upcoming event
   const now = new Date();
   const upcomingEvents = typedEvents
@@ -137,6 +163,7 @@ export function ClubOverviewTab({
           icon={Heart}
           value={followerCount}
           label="Total Followers"
+          trend={followerTrend}
         />
         <StatCard
           icon={Calendar}
@@ -147,6 +174,7 @@ export function ClubOverviewTab({
           icon={BarChart3}
           value={avgRsvps}
           label="Avg RSVPs / Event"
+          trend={engagementStatTrend}
         />
         <StatCard
           icon={TrendingUp}
@@ -376,18 +404,22 @@ interface StatCardProps {
   icon: React.ComponentType<{ className?: string }>;
   value: string | number;
   label: string;
+  trend?: { value: string; positive: boolean } | null;
 }
 
-function StatCard({ icon: Icon, value, label }: StatCardProps) {
+function StatCard({ icon: Icon, value, label, trend }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-      <div className="flex items-center gap-3">
-        <Icon className="h-8 w-8 text-primary/40" />
-        <div>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
-          <p className="text-xs text-muted-foreground font-medium">{label}</p>
-        </div>
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-center gap-2 text-muted-foreground mb-2">
+        <Icon className="h-4 w-4" />
+        <span className="text-xs uppercase tracking-wide">{label}</span>
       </div>
+      <div className="text-2xl font-bold text-foreground">{value}</div>
+      {trend && (
+        <div className={`text-xs mt-1 ${trend.positive ? "text-emerald-500" : "text-red-500"}`}>
+          {trend.positive ? "↑" : "↓"} {trend.value}
+        </div>
+      )}
     </div>
   );
 }
