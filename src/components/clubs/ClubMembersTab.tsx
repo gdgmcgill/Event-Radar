@@ -74,7 +74,7 @@ function getAvatarColor(name: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-function getInitials(name: string | null, email: string): string {
+function getInitials(name?: string | null, email?: string | null): string {
   if (name) {
     return name
       .split(" ")
@@ -83,7 +83,8 @@ function getInitials(name: string | null, email: string): string {
       .toUpperCase()
       .slice(0, 2);
   }
-  return email[0].toUpperCase();
+  if (email) return email[0].toUpperCase();
+  return "?";
 }
 
 export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProps) {
