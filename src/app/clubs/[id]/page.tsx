@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowLeft,
   Share2,
   Instagram,
@@ -174,6 +175,27 @@ export default async function ClubDetailPage({ params }: PageProps) {
 
       {/* Main Content (overlaps hero) */}
       <main className="w-full max-w-7xl mx-auto px-6 pb-24 -mt-24 relative z-10">
+        {/* Rejection Banner (visible only to club creator) */}
+        {club.status === "rejected" && currentUser?.id === club.created_by && (
+          <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20 p-4 flex items-center gap-3 mb-6">
+            <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                This club was not approved.
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Visit your club dashboard to see the rejection reason and submit an appeal.
+              </p>
+            </div>
+            <Link
+              href={`/my-clubs/${club.id}`}
+              className="text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400"
+            >
+              View Details
+            </Link>
+          </div>
+        )}
+
         {/* Info Card */}
         <div className="bg-card rounded-2xl border border-border shadow-lg p-6 sm:p-8 mb-10">
           {club.description && (
