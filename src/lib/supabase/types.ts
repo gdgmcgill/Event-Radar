@@ -1,726 +1,1158 @@
-/**
- * Supabase database types
- * TODO: Generate these types using Supabase CLI:
- * npx supabase gen types typescript --project-id jnlbrvejjjgtjhlajfss > src/lib/supabase/types.ts
- */
-
 export type Json =
   | string
   | number
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   public: {
     Tables: {
-      events: {
+      admin_audit_log: {
         Row: {
-          id: string;
-          title: string;
-          description: string;
-          start_date: string;
-          end_date: string;
-          event_date: string;
-          event_time: string;
-          location: string;
-          organizer: string | null;
-          club_id: string | null;
-          tags: string[];
-          image_url: string | null;
-          category: string | null;
-          source_url: string | null;
-          created_by: string | null;
-          created_at: string;
-          updated_at: string;
-          status: "pending" | "approved" | "rejected";
-          approved_by: string | null;
-          approved_at: string | null;
-        };
+          action: string
+          admin_user_id: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          target_id: string
+          target_type: string
+        }
         Insert: {
-          id?: string;
-          title: string;
-          description: string;
-          start_date?: string;
-          end_date?: string;
-          event_date?: string;
-          event_time?: string;
-          location: string;
-          organizer?: string | null;
-          club_id?: string | null;
-          tags?: string[];
-          image_url?: string | null;
-          category?: string | null;
-          source_url?: string | null;
-          created_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-          status?: "pending" | "approved" | "rejected";
-          approved_by?: string | null;
-          approved_at?: string | null;
-        };
+          action: string
+          admin_user_id: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          target_id: string
+          target_type: string
+        }
         Update: {
-          id?: string;
-          title?: string;
-          description?: string;
-          start_date?: string;
-          end_date?: string;
-          event_date?: string;
-          event_time?: string;
-          location?: string;
-          organizer?: string | null;
-          club_id?: string | null;
-          tags?: string[];
-          image_url?: string | null;
-          category?: string | null;
-          source_url?: string | null;
-          created_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-          status?: "pending" | "approved" | "rejected";
-          approved_by?: string | null;
-          approved_at?: string | null;
-        };
-        Relationships: [];
-      };
-      clubs: {
-        Row: {
-          id: string;
-          name: string;
-          description: string | null;
-          category: string | null;
-          instagram_handle: string | null;
-          logo_url: string | null;
-          status: "pending" | "approved" | "rejected";
-          created_by: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          description?: string | null;
-          category?: string | null;
-          instagram_handle?: string | null;
-          logo_url?: string | null;
-          status?: "pending" | "approved" | "rejected";
-          created_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          description?: string | null;
-          category?: string | null;
-          instagram_handle?: string | null;
-          logo_url?: string | null;
-          status?: "pending" | "approved" | "rejected";
-          created_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      users: {
-        Row: {
-          id: string;
-          email: string;
-          name: string | null;
-          full_name: string | null;
-          avatar_url: string | null;
-          roles: ("user" | "admin" | "club_organizer")[];
-          interest_tags: string[];
-          inferred_tags: string[];
-          saved_events_count: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          email: string;
-          name?: string | null;
-          full_name?: string | null;
-          avatar_url?: string | null;
-          roles?: ("user" | "admin" | "club_organizer")[];
-          interest_tags?: string[];
-          inferred_tags?: string[];
-          saved_events_count?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          email?: string;
-          name?: string | null;
-          full_name?: string | null;
-          avatar_url?: string | null;
-          roles?: ("user" | "admin" | "club_organizer")[];
-          interest_tags?: string[];
-          inferred_tags?: string[];
-          saved_events_count?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      saved_events: {
-        Row: {
-          id: string;
-          user_id: string;
-          event_id: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          event_id: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          event_id?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      rsvps: {
-        Row: {
-          id: string;
-          user_id: string;
-          event_id: string;
-          status: "going" | "interested" | "cancelled";
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          event_id: string;
-          status: "going" | "interested" | "cancelled";
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          event_id?: string;
-          status?: "going" | "interested" | "cancelled";
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      notifications: {
-        Row: {
-          id: string;
-          user_id: string;
-          type: string;
-          title: string;
-          message: string;
-          event_id: string | null;
-          read: boolean;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          type: string;
-          title: string;
-          message: string;
-          event_id?: string | null;
-          read?: boolean;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          type?: string;
-          title?: string;
-          message?: string;
-          event_id?: string | null;
-          read?: boolean;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "notifications_event_id_fkey";
-            columns: ["event_id"];
-            isOneToOne: false;
-            referencedRelation: "events";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      organizer_requests: {
-        Row: {
-          id: string;
-          user_id: string;
-          club_id: string;
-          message: string | null;
-          status: "pending" | "approved" | "rejected";
-          reviewed_by: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          club_id: string;
-          message?: string | null;
-          status?: "pending" | "approved" | "rejected";
-          reviewed_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          club_id?: string;
-          message?: string | null;
-          status?: "pending" | "approved" | "rejected";
-          reviewed_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      club_members: {
-        Row: {
-          id: string;
-          user_id: string;
-          club_id: string;
-          role: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          club_id: string;
-          role: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          club_id?: string;
-          role?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      user_interactions: {
-        Row: {
-          id: string;
-          user_id: string | null;
-          event_id: string;
-          interaction_type:
-            | "view"
-            | "click"
-            | "save"
-            | "unsave"
-            | "share"
-            | "calendar_add";
-          session_id: string | null;
-          source:
-            | "home"
-            | "search"
-            | "recommendation"
-            | "calendar"
-            | "direct"
-            | "modal"
-            | "my-events"
-            | null;
-          metadata: Record<string, unknown>;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id?: string | null;
-          event_id: string;
-          interaction_type:
-            | "view"
-            | "click"
-            | "save"
-            | "unsave"
-            | "share"
-            | "calendar_add";
-          session_id?: string | null;
-          source?:
-            | "home"
-            | "search"
-            | "recommendation"
-            | "calendar"
-            | "direct"
-            | "modal"
-            | "my-events"
-            | null;
-          metadata?: Record<string, unknown>;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string | null;
-          event_id?: string;
-          interaction_type?:
-            | "view"
-            | "click"
-            | "save"
-            | "unsave"
-            | "share"
-            | "calendar_add";
-          session_id?: string | null;
-          source?:
-            | "home"
-            | "search"
-            | "recommendation"
-            | "calendar"
-            | "direct"
-            | "modal"
-            | "my-events"
-            | null;
-          metadata?: Record<string, unknown>;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      event_popularity_scores: {
-        Row: {
-          event_id: string;
-          popularity_score: number;
-          trending_score: number;
-          view_count: number;
-          click_count: number;
-          save_count: number;
-          calendar_add_count: number;
-          unique_viewers: number;
-          last_calculated_at: string;
-        };
-        Insert: {
-          event_id: string;
-          popularity_score?: number;
-          trending_score?: number;
-          view_count?: number;
-          click_count?: number;
-          save_count?: number;
-          calendar_add_count?: number;
-          unique_viewers?: number;
-          last_calculated_at?: string;
-        };
-        Update: {
-          event_id?: string;
-          popularity_score?: number;
-          trending_score?: number;
-          view_count?: number;
-          click_count?: number;
-          save_count?: number;
-          calendar_add_count?: number;
-          unique_viewers?: number;
-          last_calculated_at?: string;
-        };
-        Relationships: [];
-      };
-      user_engagement_summary: {
-        Row: {
-          user_id: string;
-          total_views: number;
-          total_clicks: number;
-          total_saves: number;
-          total_shares: number;
-          total_calendar_adds: number;
-          favorite_tags: string[];
-          favorite_clubs: string[];
-          last_active_at: string | null;
-          created_at: string | null;
-          updated_at: string | null;
-        };
-        Insert: {
-          user_id: string;
-          total_views?: number;
-          total_clicks?: number;
-          total_saves?: number;
-          total_shares?: number;
-          total_calendar_adds?: number;
-          favorite_tags?: string[];
-          favorite_clubs?: string[];
-          last_active_at?: string | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-        };
-        Update: {
-          user_id?: string;
-          total_views?: number;
-          total_clicks?: number;
-          total_saves?: number;
-          total_shares?: number;
-          total_calendar_adds?: number;
-          favorite_tags?: string[];
-          favorite_clubs?: string[];
-          last_active_at?: string | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-        };
-        Relationships: [];
-      };
-      recommendation_feedback: {
-        Row: {
-          id: string;
-          user_id: string;
-          event_id: string;
-          recommendation_rank: number;
-          action: string;
-          session_id: string | null;
-          experiment_variant_id: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          event_id: string;
-          recommendation_rank: number;
-          action: string;
-          session_id?: string | null;
-          experiment_variant_id: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          event_id?: string;
-          recommendation_rank?: number;
-          action?: string;
-          session_id?: string | null;
-          experiment_variant_id?: string | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      recommendation_explicit_feedback: {
-        Row: {
-          id: string;
-          user_id: string;
-          event_id: string;
-          feedback_type: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          event_id: string;
-          feedback_type: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          event_id?: string;
-          feedback_type?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      club_invitations: {
-        Row: {
-          id: string;
-          club_id: string;
-          inviter_id: string;
-          invitee_email: string;
-          token: string;
-          status: string;
-          expires_at: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          club_id: string;
-          inviter_id: string;
-          invitee_email: string;
-          token?: string;
-          status?: string;
-          expires_at?: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          club_id?: string;
-          inviter_id?: string;
-          invitee_email?: string;
-          token?: string;
-          status?: string;
-          expires_at?: string;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "club_invitations_club_id_fkey";
-            columns: ["club_id"];
-            isOneToOne: false;
-            referencedRelation: "clubs";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "club_invitations_inviter_id_fkey";
-            columns: ["inviter_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
+          action?: string
+          admin_user_id?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       club_followers: {
         Row: {
-          id: string;
-          user_id: string;
-          club_id: string;
-          created_at: string;
-        };
+          club_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
         Insert: {
-          id?: string;
-          user_id: string;
-          club_id: string;
-          created_at?: string;
-        };
+          club_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
         Update: {
-          id?: string;
-          user_id?: string;
-          club_id?: string;
-          created_at?: string;
-        };
+          club_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "club_followers_club_id_fkey";
-            columns: ["club_id"];
-            isOneToOne: false;
-            referencedRelation: "clubs";
-            referencedColumns: ["id"];
+            foreignKeyName: "club_followers_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-      experiments: {
+        ]
+      }
+      club_invitations: {
         Row: {
-          id: string;
-          name: string;
-          description: string;
-          status: "draft" | "running" | "paused" | "completed";
-          target_metric: "ctr" | "save_rate" | "dismiss_rate";
-          start_date: string | null;
-          end_date: string | null;
-          created_by: string | null;
-          created_at: string;
-          updated_at: string;
-        };
+          club_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          invitee_email: string
+          inviter_id: string
+          status: string
+          token: string
+        }
         Insert: {
-          id?: string;
-          name: string;
-          description?: string;
-          status?: "draft" | "running" | "paused" | "completed";
-          target_metric?: "ctr" | "save_rate" | "dismiss_rate";
-          start_date?: string | null;
-          end_date?: string | null;
-          created_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
+          club_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invitee_email: string
+          inviter_id: string
+          status?: string
+          token?: string
+        }
         Update: {
-          id?: string;
-          name?: string;
-          description?: string;
-          status?: "draft" | "running" | "paused" | "completed";
-          target_metric?: "ctr" | "save_rate" | "dismiss_rate";
-          start_date?: string | null;
-          end_date?: string | null;
-          created_by?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      experiment_variants: {
+          club_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invitee_email?: string
+          inviter_id?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_invitations_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_invitations_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_members: {
         Row: {
-          id: string;
-          experiment_id: string;
-          name: string;
-          config: Record<string, unknown>;
-          weight: number;
-        };
+          club_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
         Insert: {
-          id?: string;
-          experiment_id: string;
-          name: string;
-          config?: Record<string, unknown>;
-          weight?: number;
-        };
+          club_id: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
         Update: {
-          id?: string;
-          experiment_id?: string;
-          name?: string;
-          config?: Record<string, unknown>;
-          weight?: number;
-        };
-        Relationships: [];
-      };
-      experiment_assignments: {
+          club_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_members_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clubs: {
         Row: {
-          id: string;
-          experiment_id: string;
-          variant_id: string;
-          user_id: string;
-          assigned_at: string;
-        };
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          discord_url: string | null
+          id: string
+          instagram_handle: string | null
+          linkedin_url: string | null
+          logo_url: string | null
+          name: string
+          status: string
+          twitter_url: string | null
+          updated_at: string
+          website_url: string | null
+        }
         Insert: {
-          id?: string;
-          experiment_id: string;
-          variant_id: string;
-          user_id: string;
-          assigned_at?: string;
-        };
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discord_url?: string | null
+          id?: string
+          instagram_handle?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          name: string
+          status?: string
+          twitter_url?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
         Update: {
-          id?: string;
-          experiment_id?: string;
-          variant_id?: string;
-          user_id?: string;
-          assigned_at?: string;
-        };
-        Relationships: [];
-      };
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discord_url?: string | null
+          id?: string
+          instagram_handle?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          name?: string
+          status?: string
+          twitter_url?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       email_reminder_log: {
         Row: {
-          id: string;
-          user_id: string;
-          event_id: string;
-          reminder_type: "reminder_24h" | "reminder_1h";
-          sent_at: string;
-        };
+          event_id: string | null
+          id: string
+          reminder_type: string
+          sent_at: string
+          user_id: string | null
+        }
         Insert: {
-          id?: string;
-          user_id: string;
-          event_id: string;
-          reminder_type: "reminder_24h" | "reminder_1h";
-          sent_at?: string;
-        };
+          event_id?: string | null
+          id?: string
+          reminder_type: string
+          sent_at?: string
+          user_id?: string | null
+        }
         Update: {
-          id?: string;
-          user_id?: string;
-          event_id?: string;
-          reminder_type?: "reminder_24h" | "reminder_1h";
-          sent_at?: string;
-        };
-        Relationships: [];
-      };
-    };
+          event_id?: string | null
+          id?: string
+          reminder_type?: string
+          sent_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_reminder_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_invites: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          invitee_id: string
+          inviter_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          invitee_id: string
+          inviter_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          invitee_id?: string
+          inviter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_invites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_invites_invitee_id_fkey"
+            columns: ["invitee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_invites_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_popularity_scores: {
+        Row: {
+          calendar_add_count: number | null
+          click_count: number | null
+          event_id: string
+          last_calculated_at: string | null
+          popularity_score: number | null
+          save_count: number | null
+          share_count: number | null
+          trending_score: number | null
+          unique_viewers: number | null
+          view_count: number | null
+        }
+        Insert: {
+          calendar_add_count?: number | null
+          click_count?: number | null
+          event_id: string
+          last_calculated_at?: string | null
+          popularity_score?: number | null
+          save_count?: number | null
+          share_count?: number | null
+          trending_score?: number | null
+          unique_viewers?: number | null
+          view_count?: number | null
+        }
+        Update: {
+          calendar_add_count?: number | null
+          click_count?: number | null
+          event_id?: string
+          last_calculated_at?: string | null
+          popularity_score?: number | null
+          save_count?: number | null
+          share_count?: number | null
+          trending_score?: number | null
+          unique_viewers?: number | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_popularity_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          category: string | null
+          club_id: string | null
+          content_hash: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date: string
+          id: string
+          image_url: string | null
+          location: string | null
+          organizer: string | null
+          rsvp_count: number | null
+          source: string
+          source_url: string | null
+          start_date: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          club_id?: string | null
+          content_hash?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          rsvp_count?: number | null
+          source?: string
+          source_url?: string | null
+          start_date: string
+          status?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          club_id?: string | null
+          content_hash?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          rsvp_count?: number | null
+          source?: string
+          source_url?: string | null
+          start_date?: string
+          status?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events_tests: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          location: string | null
+          organizer: string | null
+          rsvp_count: string | null
+          start_date: string | null
+          status: string | null
+          tags: Json | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id: string
+          image_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          rsvp_count?: string | null
+          start_date?: string | null
+          status?: string | null
+          tags?: Json | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          rsvp_count?: string | null
+          start_date?: string | null
+          status?: string | null
+          tags?: Json | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      featured_clubs: {
+        Row: {
+          club_id: string
+          created_at: string
+          created_by: string
+          ends_at: string
+          id: string
+          priority: number
+          sponsor_name: string | null
+          starts_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          created_by: string
+          ends_at: string
+          id?: string
+          priority?: number
+          sponsor_name?: string | null
+          starts_at: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          id?: string
+          priority?: number
+          sponsor_name?: string | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "featured_clubs_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      featured_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          ends_at: string
+          event_id: string
+          id: string
+          priority: number
+          sponsor_name: string | null
+          starts_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ends_at: string
+          event_id: string
+          id?: string
+          priority?: number
+          sponsor_name?: string | null
+          starts_at: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          event_id?: string
+          id?: string
+          priority?: number
+          sponsor_name?: string | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "featured_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "featured_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          event_id: string | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizer_requests: {
+        Row: {
+          club_id: string
+          created_at: string
+          id: string
+          message: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizer_requests_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizer_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizer_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recommendation_explicit_feedback: {
+        Row: {
+          created_at: string
+          event_id: string
+          feedback_type: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          feedback_type: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          feedback_type?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      recommendation_feedback: {
+        Row: {
+          action: string
+          created_at: string
+          event_id: string
+          id: string
+          recommendation_rank: number
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          event_id: string
+          id?: string
+          recommendation_rank: number
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          recommendation_rank?: number
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      rsvps: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_events: {
+        Row: {
+          created_at: string | null
+          event_id: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tag_interaction_counts: {
+        Row: {
+          click_count: number
+          last_interaction: string | null
+          save_count: number
+          tag: string
+          user_id: string
+          view_count: number
+        }
+        Insert: {
+          click_count?: number
+          last_interaction?: string | null
+          save_count?: number
+          tag: string
+          user_id: string
+          view_count?: number
+        }
+        Update: {
+          click_count?: number
+          last_interaction?: string | null
+          save_count?: number
+          tag?: string
+          user_id?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
+      user_event_scores: {
+        Row: {
+          breakdown: Json
+          event_id: string
+          score: number
+          scored_at: string
+          user_id: string
+        }
+        Insert: {
+          breakdown?: Json
+          event_id: string
+          score: number
+          scored_at?: string
+          user_id: string
+        }
+        Update: {
+          breakdown?: Json
+          event_id?: string
+          score?: number
+          scored_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_event_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_follows: {
+        Row: {
+          created_at: string | null
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_interactions: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          interaction_type: string
+          metadata: Json | null
+          session_id: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          interaction_type: string
+          metadata?: Json | null
+          session_id?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          interaction_type?: string
+          metadata?: Json | null
+          session_id?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_interactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          faculty: string | null
+          id: string
+          inferred_tags: string[]
+          interest_tags: string[] | null
+          name: string | null
+          onboarding_completed: boolean | null
+          pinned_contracts: string[] | null
+          pronouns: string | null
+          roles: Database["public"]["Enums"]["user_role"][]
+          saved_events_count: number
+          total_habits_completed: number | null
+          updated_at: string | null
+          visibility: string | null
+          year: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          faculty?: string | null
+          id?: string
+          inferred_tags?: string[]
+          interest_tags?: string[] | null
+          name?: string | null
+          onboarding_completed?: boolean | null
+          pinned_contracts?: string[] | null
+          pronouns?: string | null
+          roles?: Database["public"]["Enums"]["user_role"][]
+          saved_events_count?: number
+          total_habits_completed?: number | null
+          updated_at?: string | null
+          visibility?: string | null
+          year?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          faculty?: string | null
+          id?: string
+          inferred_tags?: string[]
+          interest_tags?: string[] | null
+          name?: string | null
+          onboarding_completed?: boolean | null
+          pinned_contracts?: string[] | null
+          pronouns?: string | null
+          roles?: Database["public"]["Enums"]["user_role"][]
+          saved_events_count?: number
+          total_habits_completed?: number | null
+          updated_at?: string | null
+          visibility?: string | null
+          year?: string | null
+        }
+        Relationships: []
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
-      compute_user_scores: {
-        Args: Record<PropertyKey, never>;
-        Returns: undefined;
-      };
-    };
+      compute_user_scores: { Args: never; Returns: undefined }
+      get_event_ids_by_time_filter: {
+        Args: { day_type?: string; time_of_day?: string }
+        Returns: {
+          event_id: string
+        }[]
+      }
+      get_friends: {
+        Args: { target_user_id: string }
+        Returns: {
+          avatar_url: string
+          id: string
+          name: string
+        }[]
+      }
+      get_friends_going_to_event: {
+        Args: { current_user_id: string; target_event_id: string }
+        Returns: {
+          avatar_url: string
+          id: string
+          name: string
+        }[]
+      }
+      is_admin: { Args: never; Returns: boolean }
+      is_club_owner: { Args: { p_club_id: string }; Returns: boolean }
+      search_events_fuzzy: {
+        Args: { result_limit?: number; search_term: string }
+        Returns: {
+          event_id: string
+          rank: number
+        }[]
+      }
+      send_event_reminders: { Args: never; Returns: Json }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      update_event_popularity: {
+        Args: { p_event_id: string }
+        Returns: undefined
+      }
+    }
     Enums: {
-      [_ in never]: never;
-    };
-  };
+      admin_action: "approved" | "rejected" | "created" | "updated" | "deleted"
+      audit_target: "event" | "user" | "club"
+      user_role: "user" | "club_organizer" | "admin"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      admin_action: ["approved", "rejected", "created", "updated", "deleted"],
+      audit_target: ["event", "user", "club"],
+      user_role: ["user", "club_organizer", "admin"],
+    },
+  },
+} as const
