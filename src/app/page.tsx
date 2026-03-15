@@ -5,6 +5,142 @@ import { useSearchParams, useRouter } from "next/navigation";
 import type { Event, EventTag } from "@/types";
 import { EVENT_TAGS, EVENT_CATEGORIES, QUICK_FILTERS } from "@/lib/constants";
 import { useAuthStore } from "@/store/useAuthStore";
+
+// ── Inferred Tags Toast ───────────────────────────────────────────────────────
+
+interface InferredTagToast {
+  tag: string;
+  label: string;
+  id: number;
+}
+
+function useInferredTagsToast(inferredTags: string[] | null | undefined) {
+  const [toasts, setToasts] = useState<InferredTagToast[]>([]);
+  const toastIdRef = useRef(0);
+  const timerRefs = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    if (!inferredTags || inferredTags.length === 0) return;
+
+    const STORAGE_KEY = "universe_seen_inferred_tags";
+    let seen: string[] = [];
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      seen = raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      seen = [];
+    }
+
+    const newTags = inferredTags.filter((t) => !seen.includes(t));
+    if (newTags.length === 0) return;
+
+    // Mark all current inferred_tags as seen
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(inferredTags));
+    } catch {
+      // ignore storage errors
+    }
+
+    // Show one toast per new tag
+    newTags.forEach((tag) => {
+      const label =
+        EVENT_CATEGORIES[tag as EventTag]?.label ??
+        QUICK_FILTERS.find((qf) => qf.tag === tag)?.label ??
+        tag;
+
+      const id = ++toastIdRef.current;
+      setToasts((prev) => [...prev, { tag, label, id }]);
+
+      // Auto-dismiss after 8 seconds
+      const timer = setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+        timerRefs.current.delete(id);
+      }, 8000);
+      timerRefs.current.set(id, timer);
+    });
+
+    return () => {
+      // cleanup on unmount
+      timerRefs.current.forEach((timer) => clearTimeout(timer));
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(inferredTags)]);
+
+  const dismiss = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+    const timer = timerRefs.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timerRefs.current.delete(id);
+    }
+  }, []);
+
+  const undo = useCallback(
+    async (toast: InferredTagToast) => {
+      dismiss(toast.id);
+      try {
+        await fetch("/api/profile/inferred-tags", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tag: toast.tag }),
+        });
+      } catch {
+        // silently fail — best effort
+      }
+    },
+    [dismiss]
+  );
+
+  return { toasts, dismiss, undo };
+}
+
+interface InferredTagsToastLayerProps {
+  inferredTags: string[] | null | undefined;
+}
+
+function InferredTagsToastLayer({ inferredTags }: InferredTagsToastLayerProps) {
+  const { toasts, dismiss, undo } = useInferredTagsToast(inferredTags);
+
+  if (toasts.length === 0) return null;
+
+  return (
+    <div
+      aria-live="polite"
+      aria-label="Interest tag notifications"
+      className="fixed bottom-6 right-4 z-[9999] flex flex-col gap-2 items-end pointer-events-none"
+    >
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          role="status"
+          className="pointer-events-auto flex items-center gap-3 bg-background border border-border shadow-lg rounded-xl px-4 py-3 text-sm max-w-xs w-full animate-in slide-in-from-bottom-2 fade-in duration-300"
+        >
+          <span className="flex-1 text-foreground">
+            We noticed you like{" "}
+            <strong className="text-[#ED1B2F]">{toast.label}</strong> — added to
+            your interests
+          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => undo(toast)}
+              className="text-xs font-semibold text-[#ED1B2F] hover:text-[#ED1B2F]/80 transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-[#ED1B2F]/10"
+              aria-label={`Undo adding ${toast.label} to interests`}
+            >
+              Undo
+            </button>
+            <button
+              onClick={() => dismiss(toast.id)}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-0.5 rounded hover:bg-secondary"
+              aria-label="Dismiss notification"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 import { useEvents } from "@/hooks/useEvents";
 import { HeroSection } from "@/components/events/HeroSection";
 import { HappeningNowSection } from "@/components/events/HappeningNowSection";
@@ -190,6 +326,7 @@ function HomePageContent() {
 
   return (
     <ErrorBoundary fallbackMessage="We couldn't load events right now.">
+      <InferredTagsToastLayer inferredTags={user?.inferred_tags} />
       <div className="flex flex-col min-h-screen bg-background">
         {/* Auth Error Banner */}
         {authError && (
