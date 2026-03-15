@@ -83,6 +83,9 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
         <h3 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
             <Flame className="h-6 w-6 text-orange-500" />
             Trending Events
+            <span className="text-sm font-medium text-muted-foreground">
+              {events.length} event{events.length !== 1 ? "s" : ""}
+            </span>
           </h3>
       </div>
       <ScrollRow className="px-6 md:px-10 lg:px-12">

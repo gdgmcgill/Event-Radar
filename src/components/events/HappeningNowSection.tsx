@@ -84,6 +84,9 @@ export function HappeningNowSection({ onEventClick }: HappeningNowSectionProps) 
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/75" />
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
           </span>
+          <span className="text-sm font-medium text-muted-foreground">
+            {events.length} event{events.length !== 1 ? "s" : ""}
+          </span>
         </h3>
       </div>
       <ScrollRow className="px-6 md:px-10 lg:px-12">
