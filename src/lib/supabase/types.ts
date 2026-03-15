@@ -162,6 +162,7 @@ export type Database = {
       }
       clubs: {
         Row: {
+          appeal_count: number
           banner_url: string | null
           category: string | null
           created_at: string
@@ -179,6 +180,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          appeal_count?: number
           banner_url?: string | null
           category?: string | null
           created_at?: string
@@ -196,6 +198,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          appeal_count?: number
           banner_url?: string | null
           category?: string | null
           created_at?: string
@@ -341,6 +344,7 @@ export type Database = {
       }
       events: {
         Row: {
+          appeal_count: number
           category: string | null
           club_id: string | null
           content_hash: string | null
@@ -362,6 +366,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          appeal_count?: number
           category?: string | null
           club_id?: string | null
           content_hash?: string | null
@@ -383,6 +388,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          appeal_count?: number
           category?: string | null
           club_id?: string | null
           content_hash?: string | null
@@ -553,8 +559,42 @@ export type Database = {
           },
         ]
       }
+      moderation_reviews: {
+        Row: {
+          id: string
+          target_type: string
+          target_id: string
+          action: string
+          category: string | null
+          message: string
+          author_id: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          target_type: string
+          target_id: string
+          action: string
+          category?: string | null
+          message: string
+          author_id: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          target_type?: string
+          target_id?: string
+          action?: string
+          category?: string | null
+          message?: string
+          author_id?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
+          club_id: string | null
           created_at: string | null
           event_id: string | null
           id: string
@@ -565,6 +605,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id?: string | null
           created_at?: string | null
           event_id?: string | null
           id?: string
@@ -575,6 +616,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string | null
           created_at?: string | null
           event_id?: string | null
           id?: string
