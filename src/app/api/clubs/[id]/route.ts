@@ -77,6 +77,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       "category",
       "instagram_handle",
       "logo_url",
+      "website_url",
+      "discord_url",
+      "twitter_url",
+      "linkedin_url",
     ] as const;
 
     const updates: Record<string, string | null> = {};
@@ -85,6 +89,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         const value = body[field];
         updates[field] =
           typeof value === "string" ? value.trim() || null : value;
+      }
+    }
+
+    // Validate URL fields
+    const urlFields = ["website_url", "discord_url", "twitter_url", "linkedin_url"] as const;
+    for (const field of urlFields) {
+      if (updates[field] && typeof updates[field] === "string") {
+        try {
+          new URL(updates[field] as string);
+        } catch {
+          return NextResponse.json(
+            { error: `Invalid URL for ${field}` },
+            { status: 400 }
+          );
+        }
       }
     }
 
