@@ -43,9 +43,9 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (event.status !== "rejected") {
+  if (!["rejected", "suspended"].includes(event.status)) {
     return NextResponse.json(
-      { error: "Only rejected events can be appealed" },
+      { error: "Only rejected or suspended events can be appealed" },
       { status: 409 }
     );
   }

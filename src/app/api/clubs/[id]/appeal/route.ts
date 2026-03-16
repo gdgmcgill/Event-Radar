@@ -43,9 +43,9 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (club.status !== "rejected") {
+  if (!["rejected", "suspended"].includes(club.status)) {
     return NextResponse.json(
-      { error: "Only rejected clubs can be appealed" },
+      { error: "Only rejected or suspended clubs can be appealed" },
       { status: 409 }
     );
   }
