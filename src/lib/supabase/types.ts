@@ -731,6 +731,39 @@ export type Database = {
           },
         ]
       }
+      feedback: {
+        Row: {
+          id: string
+          user_id: string | null
+          user_email: string | null
+          type: string
+          subject: string | null
+          message: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          user_email?: string | null
+          type?: string
+          subject?: string | null
+          message: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          user_email?: string | null
+          type?: string
+          subject?: string | null
+          message?: string
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       feedback_request_log: {
         Row: {
           event_id: string

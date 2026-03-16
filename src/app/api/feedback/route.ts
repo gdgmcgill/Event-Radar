@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { error } = await (supabase as any).from("feedback").insert({
+    const { error } = await supabase.from("feedback").insert({
       type: type || "general",
       subject: subject?.trim() || null,
       message: message.trim(),
