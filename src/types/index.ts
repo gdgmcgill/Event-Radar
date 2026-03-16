@@ -387,3 +387,19 @@ export interface ModerationReview {
   created_at: string;
   author_name?: string;
 }
+
+// ── Event Report Types ──────────────────────────────────────────────
+
+export type ReportStatus = "pending" | "reviewed" | "dismissed";
+
+export interface EventReport {
+  id: string;
+  event_id: string;
+  reporter_id: string;
+  category: RejectionCategory;
+  message: string | null;
+  status: ReportStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
