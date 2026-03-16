@@ -18,7 +18,7 @@ export async function PATCH(
   const body = await request.json();
   const { status, category, message } = body;
 
-  if (!["approved", "rejected"].includes(status)) {
+  if (!["approved", "rejected", "suspended"].includes(status)) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
@@ -35,10 +35,18 @@ export async function PATCH(
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  // Status guard: prevent duplicate actions
-  if (event.status === status) {
+  // Transition guard: only allow valid status transitions
+  const allowedTransitions: Record<string, string[]> = {
+    pending: ["approved", "rejected"],
+    approved: ["suspended"],
+    suspended: ["approved", "rejected"],
+    rejected: [], // appeals handle rejected → pending
+  };
+
+  const allowed = allowedTransitions[event.status] || [];
+  if (!allowed.includes(status)) {
     return NextResponse.json(
-      { error: `Event is already ${status}` },
+      { error: `Cannot transition from '${event.status}' to '${status}'` },
       { status: 409 }
     );
   }
@@ -54,6 +62,22 @@ export async function PATCH(
     if (!(category in REJECTION_CATEGORIES)) {
       return NextResponse.json(
         { error: "Invalid rejection category" },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Validate suspension fields (same requirements as rejection)
+  if (status === "suspended") {
+    if (!category || !message?.trim()) {
+      return NextResponse.json(
+        { error: "Suspension requires category and message" },
+        { status: 400 }
+      );
+    }
+    if (!(category in REJECTION_CATEGORIES)) {
+      return NextResponse.json(
+        { error: "Invalid suspension category" },
         { status: 400 }
       );
     }
@@ -82,6 +106,24 @@ export async function PATCH(
       message: message.trim(),
       author_id: user.id,
     });
+  } else if (status === "suspended") {
+    await serviceClient.from("moderation_reviews").insert({
+      target_type: "event",
+      target_id: id,
+      action: "suspension",
+      category: category as RejectionCategory,
+      message: message.trim(),
+      author_id: user.id,
+    });
+  } else if (status === "approved" && event.status === "suspended") {
+    await serviceClient.from("moderation_reviews").insert({
+      target_type: "event",
+      target_id: id,
+      action: "unsuspension",
+      category: null,
+      message: "Event unsuspended and approved.",
+      author_id: user.id,
+    });
   } else if (status === "approved" && (event.appeal_count ?? 0) > 0) {
     await serviceClient.from("moderation_reviews").insert({
       target_type: "event",
@@ -95,10 +137,14 @@ export async function PATCH(
 
   // Log audit action
   try {
+    const auditAction =
+      status === "approved" && event.status === "suspended"
+        ? "unsuspended"
+        : (status as "approved" | "rejected" | "suspended");
     await logAdminAction({
       adminUserId: user.id,
       adminEmail: user.email,
-      action: status as "approved" | "rejected",
+      action: auditAction,
       targetType: "event",
       targetId: id,
       metadata: { event_title: event.title },
@@ -123,6 +169,17 @@ export async function PATCH(
           },
           { onConflict: "user_id,event_id,type" }
         );
+      } else if (status === "suspended") {
+        const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
+        await serviceClient.from("notifications").insert({
+          user_id: event.created_by,
+          type: "event_suspended",
+          title: "Event Suspended",
+          message: `Your event "${event.title}" has been suspended. Reason: ${categoryLabel} — ${message.trim()}`,
+          event_id: id,
+          read: false,
+          created_at: new Date().toISOString(),
+        });
       } else {
         const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
         await serviceClient.from("notifications").insert({

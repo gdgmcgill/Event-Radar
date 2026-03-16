@@ -53,7 +53,7 @@ export interface Event {
   created_by: string | null;
   created_at: string;
   updated_at: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "suspended";
   deleted_at: string | null;
   appeal_count?: number;
   pending_edits?: {
@@ -79,7 +79,7 @@ export interface Club {
   twitter_url: string | null;
   linkedin_url: string | null;
   contact_email: string | null;
-  status: "pending" | "approved" | "rejected" | "deleted";
+  status: "pending" | "approved" | "rejected" | "suspended" | "deleted";
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -100,6 +100,10 @@ export interface User {
   faculty?: string | null;
   visibility?: "public" | "private";
   onboarding_completed?: boolean;
+  banned_at?: string | null;
+  ban_expires_at?: string | null;
+  ban_reason?: string | null;
+  banned_by?: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -379,7 +383,7 @@ export const REJECTION_CATEGORIES = {
 
 export type RejectionCategory = keyof typeof REJECTION_CATEGORIES;
 
-export type ModerationAction = "rejection" | "appeal" | "approval";
+export type ModerationAction = "rejection" | "appeal" | "approval" | "suspension" | "unsuspension";
 
 export interface ModerationReview {
   id: string;

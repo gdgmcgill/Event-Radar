@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { checkBanStatus } from "@/lib/ban";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const banResponse = await checkBanStatus();
+  if (banResponse) return banResponse;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -43,9 +47,9 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (club.status !== "rejected") {
+  if (!["rejected", "suspended"].includes(club.status)) {
     return NextResponse.json(
-      { error: "Only rejected clubs can be appealed" },
+      { error: "Only rejected or suspended clubs can be appealed" },
       { status: 409 }
     );
   }

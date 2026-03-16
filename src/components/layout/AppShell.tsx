@@ -20,7 +20,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isFriends = pathname === "/friends";
   const isClubDashboard = pathname.startsWith("/my-clubs/") && pathname !== "/my-clubs";
 
-  if (isLanding || isModeration) {
+  const isBanned = pathname === "/banned";
+
+  if (isLanding || isModeration || isBanned) {
     return (
       <div className="flex min-h-screen">
         <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
