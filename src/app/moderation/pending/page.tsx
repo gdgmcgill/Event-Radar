@@ -58,6 +58,7 @@ export default function ModerationPendingEventsPage() {
       .from("events")
       .select("id, title, description, start_date, end_date, location, organizer, tags, status, created_at, image_url, appeal_count")
       .eq("status", "pending")
+      .gte("start_date", new Date().toISOString())
       .order("created_at", { ascending: false });
 
     setEvents(data ?? []);
