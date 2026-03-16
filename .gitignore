@@ -64,3 +64,9 @@ AI/models/*.pt
 
 # planning artifacts
 # .planning/
+
+# git worktrees
+.worktrees/
+
+# superpowers brainstorm artifacts
+.superpowers/
