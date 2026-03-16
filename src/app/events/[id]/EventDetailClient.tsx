@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { EventDetailView } from "@/components/events/EventDetailView";
+import { CreateEventForm } from "@/components/events/CreateEventForm";
 import { RsvpButton } from "@/components/events/RsvpButton";
 import { ReviewPrompt } from "@/components/events/ReviewPrompt";
 import { EventReviewsSection } from "@/components/events/EventReviewsSection";
@@ -49,6 +50,8 @@ export default function EventDetailClient() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const isCreator = !!(user && event && user.id === event.created_by);
   const [latestRejection, setLatestRejection] = useState<{
     category: string;
     message: string;
@@ -251,6 +254,8 @@ export default function EventDetailClient() {
         reviews={reviewAggregate}
         backHref={backHref}
         backLabel={backLabel}
+        isCreator={isCreator}
+        onEdit={() => setEditModalOpen(true)}
       >
         {/* RSVP, Friends Going, Invite — rendered inside left column */}
         <div className="space-y-4">
@@ -312,6 +317,42 @@ export default function EventDetailClient() {
           <div className="flex justify-center pt-2">
             <SignInButton className="w-full sm:w-auto" />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Event</DialogTitle>
+            <DialogDescription>
+              {event.status === "approved" && !event.club_id
+                ? "Changes to title and image will require admin approval. Other changes apply immediately."
+                : "Update the details of your event."}
+            </DialogDescription>
+          </DialogHeader>
+          <CreateEventForm
+            clubId={event.club_id ?? undefined}
+            eventId={event.id}
+            mode="edit"
+            initialData={{
+              title: event.title,
+              description: event.description ?? "",
+              start_date: event.start_date,
+              end_date: event.end_date,
+              location: event.location ?? "",
+              tags: event.tags,
+              image_url: event.image_url,
+              category: event.category,
+              is_free: event.is_free,
+              price: event.price,
+              rsvp_link: event.rsvp_link,
+              pending_edits: event.pending_edits,
+            }}
+            onSuccess={() => {
+              setEditModalOpen(false);
+              window.location.reload();
+            }}
+          />
         </DialogContent>
       </Dialog>
     </>

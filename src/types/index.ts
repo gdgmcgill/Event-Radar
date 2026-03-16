@@ -56,6 +56,11 @@ export interface Event {
   status: "pending" | "approved" | "rejected";
   deleted_at: string | null;
   appeal_count?: number;
+  pending_edits?: {
+    title?: string;
+    image_url?: string;
+    submitted_at: string;
+  } | null;
   // Relations (populated by joins, not stored)
   club?: Club;
   saved_by_users?: string[];

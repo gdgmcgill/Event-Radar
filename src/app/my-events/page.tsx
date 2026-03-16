@@ -46,6 +46,14 @@ interface MyEvent {
   status: "pending" | "approved" | "rejected";
   club_id?: string | null;
   club?: { id: string; name: string; logo_url?: string | null } | null;
+  pending_edits?: {
+    title?: string;
+    image_url?: string;
+    submitted_at: string;
+  } | null;
+  is_free?: boolean;
+  price?: string | null;
+  rsvp_link?: string | null;
 }
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
@@ -293,33 +301,40 @@ export default function MyEventsPage() {
 
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
-                        {event.status === "pending" && (
-                          <button
-                            onClick={() => setEditingEvent(event)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-primary hover:bg-primary/10 transition-colors duration-150"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </button>
-                        )}
-                        {event.status === "approved" && (
-                          <Link
-                            href={`/events/${event.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-primary hover:bg-primary/10 transition-colors duration-150"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            View
-                          </Link>
-                        )}
-                        {event.status === "rejected" && (
-                          <Link
-                            href={`/events/${event.id}/appeal`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors duration-150"
-                          >
-                            <MessageSquareWarning className="h-3.5 w-3.5" />
-                            Appeal
-                          </Link>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {event.pending_edits && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                              Edits pending review
+                            </span>
+                          )}
+                          {(event.status === "pending" || event.status === "approved") && (
+                            <button
+                              onClick={() => setEditingEvent(event)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-primary hover:bg-primary/10 transition-colors duration-150"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </button>
+                          )}
+                          {event.status === "approved" && (
+                            <Link
+                              href={`/events/${event.id}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-primary hover:bg-primary/10 transition-colors duration-150"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              View
+                            </Link>
+                          )}
+                          {event.status === "rejected" && (
+                            <Link
+                              href={`/events/${event.id}/appeal`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors duration-150"
+                            >
+                              <MessageSquareWarning className="h-3.5 w-3.5" />
+                              Appeal
+                            </Link>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -357,7 +372,9 @@ export default function MyEventsPage() {
           <DialogHeader>
             <DialogTitle>Edit Event</DialogTitle>
             <DialogDescription>
-              Update the details of your pending event.
+              {editingEvent?.status === "approved"
+                ? "Changes to title and image will require admin approval. Other changes apply immediately."
+                : "Update the details of your pending event."}
             </DialogDescription>
           </DialogHeader>
           {editingEvent && (
@@ -374,6 +391,10 @@ export default function MyEventsPage() {
                 tags: editingEvent.tags,
                 image_url: editingEvent.image_url,
                 category: editingEvent.category,
+                pending_edits: editingEvent.pending_edits,
+                is_free: editingEvent.is_free,
+                price: editingEvent.price,
+                rsvp_link: editingEvent.rsvp_link,
               }}
               onSuccess={() => {
                 setEditingEvent(null);

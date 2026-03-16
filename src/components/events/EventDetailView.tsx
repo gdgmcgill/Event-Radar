@@ -24,6 +24,8 @@ import {
   ArrowRight,
   Flag,
   CheckCircle,
+  Pencil,
+  Clock,
 } from "lucide-react";
 import { ReportEventDialog } from "@/components/events/ReportEventDialog";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -39,6 +41,8 @@ interface EventDetailViewProps {
   children?: React.ReactNode;
   backHref?: string;
   backLabel?: string;
+  isCreator?: boolean;
+  onEdit?: () => void;
 }
 
 export function EventDetailView({
@@ -52,6 +56,8 @@ export function EventDetailView({
   children,
   backHref = "/",
   backLabel = "Back to Events",
+  isCreator = false,
+  onEdit,
 }: EventDetailViewProps) {
   const [saved, setSaved] = useState(isSaved);
   const [liked, setLiked] = useState(false);
@@ -135,6 +141,15 @@ export function EventDetailView({
               >
                 <Share2 className="h-4 w-4" />
               </button>
+              {isCreator && onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="flex items-center gap-2 bg-black/40 hover:bg-black/60 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-md border border-white/20 text-white px-5 py-2.5 rounded-full transition-all duration-300 cursor-pointer"
+                >
+                  <Pencil className="h-4 w-4" />
+                  <span className="text-sm font-semibold tracking-wide">Edit</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -162,6 +177,19 @@ export function EventDetailView({
                 </p>
               )}
             </div>
+
+            {/* Pending edits notice */}
+            {isCreator && event.pending_edits && (
+              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 text-blue-800 dark:text-blue-300 text-sm flex items-start gap-3">
+                <Clock className="h-5 w-5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">You have edits awaiting approval</p>
+                  <p className="text-blue-700 dark:text-blue-400 text-xs mt-0.5">
+                    Your changes to {Object.keys(event.pending_edits).filter(k => k !== "submitted_at").join(" and ")} will be reviewed by an admin.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Hosted by */}
             {event.club && (

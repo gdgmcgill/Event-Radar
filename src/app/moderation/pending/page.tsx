@@ -38,6 +38,7 @@ interface PendingEvent {
   created_at: string | null;
   image_url: string | null;
   appeal_count: number;
+  pending_edits?: { title?: string; image_url?: string; submitted_at: string } | null;
 }
 
 export default function ModerationPendingEventsPage() {
@@ -56,8 +57,9 @@ export default function ModerationPendingEventsPage() {
     const supabase = createClient();
     const { data } = await supabase
       .from("events")
-      .select("id, title, description, start_date, end_date, location, organizer, tags, status, created_at, image_url, appeal_count")
-      .eq("status", "pending")
+      .select("id, title, description, start_date, end_date, location, organizer, tags, status, created_at, image_url, appeal_count, pending_edits")
+      .is("deleted_at", null)
+      .or('status.eq.pending,pending_edits.not.is.null')
       .gte("start_date", new Date().toISOString())
       .order("created_at", { ascending: false });
 
@@ -162,6 +164,40 @@ export default function ModerationPendingEventsPage() {
     }
   };
 
+  const handleApproveEdits = async (eventId: string) => {
+    setActionLoading(eventId);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/edits`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve" }),
+      });
+      if (res.ok) {
+        fetchPending();
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectEdits = async (eventId: string) => {
+    const reason = window.prompt("Reason for rejecting these edits:");
+    if (reason === null) return;
+    setActionLoading(eventId);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/edits`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", reason }),
+      });
+      if (res.ok) {
+        fetchPending();
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -250,12 +286,19 @@ export default function ModerationPendingEventsPage() {
                     {new Date(event.start_date).getDate()}
                   </span>
                 </div>
-                {/* Pending badge */}
+                {/* Status badge */}
                 <div className="absolute top-2.5 right-2.5">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
-                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                    Pending
-                  </span>
+                  {event.pending_edits && event.status === "approved" ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                      Edit Review
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                      Pending
+                    </span>
+                  )}
                 </div>
                 {/* Appeal badge */}
                 {event.appeal_count > 0 && (
@@ -269,6 +312,25 @@ export default function ModerationPendingEventsPage() {
 
               {/* Content */}
               <div className="flex-1 flex flex-col p-4 min-w-0">
+                {event.pending_edits && event.status === "approved" && (
+                  <div className="mb-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 text-sm">
+                    <span className="font-bold text-blue-700 dark:text-blue-400 text-xs uppercase tracking-wider">Edit Review</span>
+                    <div className="mt-2 space-y-1">
+                      {(event.pending_edits as { title?: string; image_url?: string }).title && (
+                        <div>
+                          <span className="text-muted-foreground">Title: </span>
+                          <span className="line-through text-muted-foreground">{event.title}</span>{" "}
+                          <span className="font-semibold text-foreground">{(event.pending_edits as { title?: string }).title}</span>
+                        </div>
+                      )}
+                      {(event.pending_edits as { title?: string; image_url?: string }).image_url && (
+                        <div>
+                          <span className="text-muted-foreground">Image changed</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {/* Top row: title + organizer + meta */}
                 <div className="flex items-start justify-between gap-4 mb-1.5">
                   <div className="min-w-0">
@@ -320,7 +382,30 @@ export default function ModerationPendingEventsPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1.5 shrink-0">
-                  {confirmAction?.id === event.id ? (
+                  {event.pending_edits && event.status === "approved" ? (
+                    <>
+                      <button
+                        onClick={() => handleApproveEdits(event.id)}
+                        disabled={actionLoading === event.id}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                      >
+                        {actionLoading === event.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        )}
+                        Approve Edits
+                      </button>
+                      <button
+                        onClick={() => handleRejectEdits(event.id)}
+                        disabled={actionLoading === event.id}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        Reject Edits
+                      </button>
+                    </>
+                  ) : confirmAction?.id === event.id ? (
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-zinc-600 dark:text-zinc-400">
                         {confirmAction.status === "approved" ? "Approve?" : "Reject?"}

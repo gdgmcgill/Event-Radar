@@ -31,6 +31,11 @@ export async function PUT(
     }
   }
 
+  // If admin directly edits title or image_url, clear any pending user edits
+  if ("title" in updateData || "image_url" in updateData) {
+    updateData.pending_edits = null;
+  }
+
   const { data, error } = await supabase
     .from("events")
     .update(updateData)

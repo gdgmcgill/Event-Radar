@@ -105,6 +105,24 @@ export async function GET(
     // Transform event to frontend format (cast needed: clubs relation may not exist in DB types)
     const event = transformEventFromDB(data as Parameters<typeof transformEventFromDB>[0]);
 
+    // Strip pending_edits from public responses — only show to creator or admins
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser || data.created_by !== currentUser.id) {
+      let isAdmin = false;
+      if (currentUser) {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("roles")
+          .eq("id", currentUser.id)
+          .single();
+        isAdmin = (profile?.roles ?? []).includes("admin");
+      }
+      if (!isAdmin) {
+        const { pending_edits: _, ...eventWithoutPending } = event as Record<string, unknown>;
+        return NextResponse.json({ event: eventWithoutPending });
+      }
+    }
+
     return NextResponse.json({ event });
   } catch (error) {
     console.error("Error fetching event:", error);
@@ -124,7 +142,12 @@ const EDITABLE_FIELDS = [
   "tags",
   "image_url",
   "category",
+  "is_free",
+  "price",
+  "rsvp_link",
 ] as const;
+
+const MODERATED_FIELDS = ["title", "image_url"] as const;
 
 export async function PATCH(
   request: NextRequest,
@@ -172,16 +195,23 @@ export async function PATCH(
     const roles: string[] = profile?.roles ?? [];
 
     // Permission check: admin can edit any event
-    let canEdit = roles.includes("admin");
+    const isAdmin = roles.includes("admin");
+    let canEdit = isAdmin;
 
-    // Original creator can edit their own pending events
+    // Original creator can edit their own pending or approved events
     if (!canEdit && event.created_by === user.id) {
-      if (event.status === "pending") {
+      if (event.status === "pending" || event.status === "approved") {
         canEdit = true;
+      } else if (event.status === "rejected") {
+        return NextResponse.json(
+          { error: "Rejected events cannot be edited. Please use the appeal process." },
+          { status: 403 }
+        );
       }
     }
 
     // Club member can edit their club's events
+    let isClubMember = false;
     if (!canEdit && event.club_id) {
       const { data: membership } = await supabase
         .from("club_members")
@@ -192,7 +222,16 @@ export async function PATCH(
 
       if (membership) {
         canEdit = true;
+        isClubMember = true;
       }
+    } else if (canEdit && event.club_id) {
+      const { data: membership } = await supabase
+        .from("club_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("club_id", event.club_id)
+        .single();
+      isClubMember = !!membership;
     }
 
     if (!canEdit) {
@@ -204,27 +243,47 @@ export async function PATCH(
 
     // Build update payload from allowed fields only
     const body = await request.json();
-    const updates: Record<string, unknown> = {};
+    const directUpdates: Record<string, unknown> = {};
+    const pendingEdits: Record<string, string> = {};
+
     for (const field of EDITABLE_FIELDS) {
-      if (field in body) {
-        updates[field] = body[field];
+      if (!(field in body)) continue;
+
+      const needsModeration =
+        !isAdmin &&
+        !isClubMember &&
+        event.status === "approved" &&
+        (MODERATED_FIELDS as readonly string[]).includes(field);
+
+      if (needsModeration) {
+        pendingEdits[field] = body[field];
+      } else {
+        directUpdates[field] = body[field];
       }
     }
 
-    if (Object.keys(updates).length === 0) {
+    // If admin directly edits title or image_url, clear pending_edits
+    if (isAdmin) {
+      const adminEditedModeratedField = MODERATED_FIELDS.some(
+        (f) => f in body
+      );
+      if (adminEditedModeratedField) {
+        directUpdates.pending_edits = null;
+      }
+    }
+
+    if (Object.keys(directUpdates).length === 0 && Object.keys(pendingEdits).length === 0) {
       return NextResponse.json(
         { error: "No valid fields to update" },
         { status: 400 }
       );
     }
 
-    // Validate date fields when present in the update payload.
-    // PATCH is a partial update so we validate only the fields being changed.
-    if ("start_date" in updates) {
-      // Reuse validateEventDates; it accepts end_date as optional.
+    // Validate date fields when present in the direct update payload
+    if ("start_date" in directUpdates) {
       const dateError = validateEventDates(
-        updates.start_date,
-        "end_date" in updates ? updates.end_date : undefined
+        directUpdates.start_date,
+        "end_date" in directUpdates ? directUpdates.end_date : undefined
       );
       if (dateError) {
         return NextResponse.json(
@@ -232,13 +291,11 @@ export async function PATCH(
           { status: 400 }
         );
       }
-    } else if ("end_date" in updates) {
-      // Only end_date is being changed — validate its format alone.
-      if (!isValidISODate(updates.end_date)) {
+    } else if ("end_date" in directUpdates) {
+      if (!isValidISODate(directUpdates.end_date)) {
         return NextResponse.json(
           {
-            error:
-              "end_date must be a valid ISO 8601 date (e.g. \"2026-03-15\" or \"2026-03-15T11:00:00Z\")",
+            error: 'end_date must be a valid ISO 8601 date (e.g. "2026-03-15" or "2026-03-15T11:00:00Z")',
             field: "end_date",
           },
           { status: 400 }
@@ -246,9 +303,15 @@ export async function PATCH(
       }
     }
 
+    // Write pending edits if any
+    if (Object.keys(pendingEdits).length > 0) {
+      pendingEdits.submitted_at = new Date().toISOString();
+      directUpdates.pending_edits = pendingEdits;
+    }
+
     const { data, error } = await supabase
       .from("events")
-      .update(updates)
+      .update(directUpdates)
       .eq("id", id)
       .select()
       .single();
@@ -258,7 +321,14 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ event: data });
+    const hasPendingEdits = Object.keys(pendingEdits).length > 0;
+    return NextResponse.json({
+      event: data,
+      message: hasPendingEdits
+        ? "Some changes require admin approval before going live"
+        : "Event updated successfully",
+      pending_fields: hasPendingEdits ? Object.keys(pendingEdits).filter(k => k !== "submitted_at") : [],
+    });
   } catch (error) {
     console.error("Error in edit event:", error);
     return NextResponse.json(

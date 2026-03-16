@@ -9,7 +9,9 @@ export type AuditAction =
   | "bulk_approved"
   | "bulk_rejected"
   | "report_reviewed"
-  | "report_dismissed";
+  | "report_dismissed"
+  | "approved_edits"
+  | "rejected_edits";
 
 export type AuditTargetType = "event" | "user" | "club" | "featured_event" | "organizer_request" | "event_report";
 

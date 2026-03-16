@@ -24,6 +24,8 @@ import {
   ChevronRight,
   ImageIcon,
   Check,
+  DollarSign,
+  Link,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { uploadEventImage } from "@/lib/upload-utils";
@@ -62,6 +64,9 @@ interface FormData {
   location: string;
   tags: EventTag[];
   imageFile: File | null;
+  isFree: boolean;
+  price: string;
+  rsvpLink: string;
 }
 
 interface FormErrors {
@@ -73,6 +78,8 @@ interface FormErrors {
   endTime?: string;
   location?: string;
   tags?: string;
+  price?: string;
+  rsvpLink?: string;
 }
 
 interface CreateEventFormProps {
@@ -87,6 +94,14 @@ interface CreateEventFormProps {
     tags: EventTag[];
     image_url?: string | null;
     category?: string | null;
+    pending_edits?: {
+      title?: string;
+      image_url?: string;
+      submitted_at: string;
+    } | null;
+    is_free?: boolean;
+    price?: string | null;
+    rsvp_link?: string | null;
   };
   eventId?: string;
   mode?: "create" | "edit" | "duplicate";
@@ -118,7 +133,7 @@ export function CreateEventForm({
   const initialDateParts = getInitialDateParts();
 
   const [formData, setFormData] = useState<FormData>({
-    title: initialData?.title ?? "",
+    title: initialData?.pending_edits?.title ?? initialData?.title ?? "",
     description: initialData?.description ?? "",
     date: initialDateParts.date,
     endDate: initialDateParts.endDate,
@@ -127,6 +142,9 @@ export function CreateEventForm({
     location: initialData?.location ?? "",
     tags: initialData?.tags ?? [],
     imageFile: null,
+    isFree: initialData?.is_free ?? true,
+    price: initialData?.price ?? "",
+    rsvpLink: initialData?.rsvp_link ?? "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -134,7 +152,7 @@ export function CreateEventForm({
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(
-    initialData?.image_url ?? null
+    initialData?.pending_edits?.image_url ?? initialData?.image_url ?? null
   );
   const [suggestedTags, setSuggestedTags] = useState<EventTag[]>([]);
 
@@ -178,6 +196,22 @@ export function CreateEventForm({
       const endStr = `${formData.endDate}T${formData.endTime || "23:59"}`;
       if (new Date(endStr) <= new Date(startStr)) {
         newErrors.endDate = "End must be after start";
+      }
+    }
+
+    // Validate price when paid
+    if (!formData.isFree && !formData.price.trim()) {
+      newErrors.price = "Price is required for paid events";
+    } else if (!formData.isFree && formData.price.trim().length > 20) {
+      newErrors.price = "Price must be 20 characters or less";
+    }
+
+    // Validate RSVP link format
+    if (formData.rsvpLink.trim()) {
+      try {
+        new URL(formData.rsvpLink.trim());
+      } catch {
+        newErrors.rsvpLink = "Must be a valid URL (e.g. https://...)";
       }
     }
 
@@ -230,6 +264,9 @@ export function CreateEventForm({
       location: "",
       tags: [],
       imageFile: null,
+      isFree: true,
+      price: "",
+      rsvpLink: "",
     });
     removeImage();
     setErrors({});
@@ -279,6 +316,9 @@ export function CreateEventForm({
         if (endDate) updates.end_date = endDate;
         updates.category = formData.tags[0];
         if (finalImageUrl !== initialData?.image_url) updates.image_url = finalImageUrl;
+        updates.is_free = formData.isFree;
+        updates.price = formData.isFree ? null : formData.price.trim() || null;
+        updates.rsvp_link = formData.rsvpLink.trim() || null;
 
         res = await fetch(`/api/events/${eventId}`, {
           method: "PATCH",
@@ -299,6 +339,9 @@ export function CreateEventForm({
             image_url: finalImageUrl,
             category: formData.tags[0],
             club_id: clubId,
+            is_free: formData.isFree,
+            price: formData.isFree ? null : formData.price.trim() || null,
+            rsvp_link: formData.rsvpLink.trim() || null,
           }),
         });
       }
@@ -310,7 +353,7 @@ export function CreateEventForm({
       }
 
       setSuccessMessage(
-        mode === "edit" ? "Event updated!" : (data.message || "Event submitted!")
+        data.message || (mode === "edit" ? "Event updated!" : "Event submitted!")
       );
       setSuccess(true);
       setFormData({
@@ -323,6 +366,9 @@ export function CreateEventForm({
         location: "",
         tags: [],
         imageFile: null,
+        isFree: true,
+        price: "",
+        rsvpLink: "",
       });
       removeImage();
       onSuccess?.();
@@ -375,14 +421,16 @@ export function CreateEventForm({
           <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
         </div>
         <h3 className="text-2xl font-bold text-foreground">
-          {isEdit ? "Event Updated!" : isApproved ? "Event Published!" : "Event Submitted!"}
+          {successMessage.toLowerCase().includes("approval")
+            ? "Changes Submitted"
+            : isEdit
+              ? "Event Updated!"
+              : isApproved
+                ? "Event Published!"
+                : "Event Submitted!"}
         </h3>
         <p className="text-muted-foreground max-w-md">
-          {isEdit
-            ? "Your changes have been saved."
-            : isApproved
-              ? "Your event has been approved and is now live on the platform."
-              : "Your event has been submitted for review. An admin will approve it shortly."}
+          {successMessage}
         </p>
         {!isEdit && (
           <Button onClick={() => setSuccess(false)} className="mt-4 cursor-pointer">
@@ -507,6 +555,11 @@ export function CreateEventForm({
               )}
             />
             {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
+            {mode === "edit" && initialData?.pending_edits?.title && (
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                Your previous title change is awaiting review
+              </p>
+            )}
           </div>
 
           {/* Description */}
@@ -701,6 +754,100 @@ export function CreateEventForm({
                 />
               </label>
             )}
+            {mode === "edit" && initialData?.pending_edits?.image_url && (
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                Your previous image change is awaiting review
+              </p>
+            )}
+          </div>
+
+          {/* Pricing */}
+          <div className="space-y-4">
+            <label className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+              Pricing
+            </label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData((prev) => ({ ...prev, isFree: true, price: "" }));
+                  if (errors.price) setErrors((prev) => ({ ...prev, price: undefined }));
+                }}
+                className={cn(
+                  "px-5 py-2.5 rounded-lg border-2 font-semibold text-sm transition-all",
+                  formData.isFree
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-primary/50"
+                )}
+              >
+                Free
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData((prev) => ({ ...prev, isFree: false }));
+                }}
+                className={cn(
+                  "px-5 py-2.5 rounded-lg border-2 font-semibold text-sm transition-all",
+                  !formData.isFree
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:border-primary/50"
+                )}
+              >
+                Paid
+              </button>
+            </div>
+            {!formData.isFree && (
+              <div className="space-y-1">
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={formData.price}
+                    maxLength={20}
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, price: e.target.value }));
+                      if (errors.price) setErrors((prev) => ({ ...prev, price: undefined }));
+                    }}
+                    placeholder='e.g. $5, $10-20'
+                    className={cn(
+                      "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
+                      errors.price && "border-destructive"
+                    )}
+                  />
+                </div>
+                {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
+              </div>
+            )}
+          </div>
+
+          {/* RSVP / Registration Link */}
+          <div className="space-y-2">
+            <label htmlFor="rsvpLink" className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+              Registration Link <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+            </label>
+            <div className="relative">
+              <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                id="rsvpLink"
+                type="url"
+                value={formData.rsvpLink}
+                maxLength={500}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, rsvpLink: e.target.value }));
+                  if (errors.rsvpLink) setErrors((prev) => ({ ...prev, rsvpLink: undefined }));
+                }}
+                placeholder="https://forms.google.com/..."
+                className={cn(
+                  "w-full pl-10 pr-4 py-3 rounded-lg border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:border-primary focus:ring-0 outline-none transition-all text-sm",
+                  errors.rsvpLink && "border-destructive"
+                )}
+              />
+            </div>
+            {errors.rsvpLink && <p className="text-xs text-destructive">{errors.rsvpLink}</p>}
+            <p className="text-xs text-muted-foreground">
+              External link where attendees can register (Google Forms, Eventbrite, etc.)
+            </p>
           </div>
 
           {/* Action Buttons */}
