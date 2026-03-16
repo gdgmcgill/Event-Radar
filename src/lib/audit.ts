@@ -11,7 +11,11 @@ export type AuditAction =
   | "report_reviewed"
   | "report_dismissed"
   | "approved_edits"
-  | "rejected_edits";
+  | "rejected_edits"
+  | "suspended"
+  | "unsuspended"
+  | "banned"
+  | "unbanned";
 
 export type AuditTargetType = "event" | "user" | "club" | "featured_event" | "organizer_request" | "event_report";
 
