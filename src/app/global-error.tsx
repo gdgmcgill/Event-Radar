@@ -9,9 +9,32 @@ export default function GlobalError({
   return (
     <html>
       <body>
-        <div style={{ padding: "4rem", textAlign: "center", fontFamily: "system-ui" }}>
+        <div
+          style={{
+            padding: "4rem",
+            textAlign: "center",
+            fontFamily: "system-ui",
+            backgroundColor: "var(--bg, #fff)",
+            color: "var(--fg, #111)",
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+                :root { --bg: #fff; --fg: #111; --muted: #666; }
+                @media (prefers-color-scheme: dark) {
+                  :root { --bg: #09090b; --fg: #fafafa; --muted: #a1a1aa; }
+                }
+              `,
+            }}
+          />
           <h1 style={{ fontSize: "2rem", marginBottom: "1rem" }}>Something went wrong</h1>
-          <p style={{ color: "#666", marginBottom: "2rem" }}>
+          <p style={{ color: "var(--muted, #666)", marginBottom: "2rem" }}>
             An unexpected error occurred. Please try again.
           </p>
           <button
