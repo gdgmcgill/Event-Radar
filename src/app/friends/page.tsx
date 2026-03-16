@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
+import { HERO_FRIENDS_IMAGE } from "@/lib/constants";
 import dynamic from "next/dynamic";
 import { FriendsActivitySection } from "@/components/events/FriendsActivitySection";
 import { FriendsOrganizingSection } from "@/components/events/FriendsOrganizingSection";
@@ -188,11 +189,14 @@ export default function FriendsPage() {
     <div className="flex-1 min-w-0">
       {/* ── Hero Section (matches /clubs hero) ─────────────────────── */}
       <section className="relative w-full h-[60vh] min-h-[400px] max-h-[600px] overflow-hidden">
-        {/* Background — dark base with subtle primary accent */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-950 to-black" />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-primary/5" />
-        {/* Grid texture */}
-        <div className="absolute inset-0 bg-grid-white/[0.03]" />
+        {/* Background image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url("${HERO_FRIENDS_IMAGE}")` }}
+        />
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black from-0% via-black/70 via-[40%] to-black/30 to-100%" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-primary/5" />
 
         {/* Globe — anchored to the right of the hero, vertically centered */}
         <div className="absolute right-4 lg:right-[5%] top-1/2 -translate-y-1/2 hidden md:block pointer-events-auto z-0">

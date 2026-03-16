@@ -415,8 +415,9 @@ export const API_ENDPOINTS = {
   ADMIN_FEATURED_DETAIL: (id: string) => `/api/admin/featured/${id}`,
 };
 
-export const HERO_FALLBACK_IMAGE =
-  "https://images.unsplash.com/photo-1576495199011-eb94736d05d6?q=80&w=2872&auto=format&fit=crop";
+export const HERO_FALLBACK_IMAGE = "/mcgill.jpg";
+
+export const HERO_FRIENDS_IMAGE = "/hero-campus.jpg";
 
 export const FEATURED_DURATION_PRESETS = [
   { label: "3 days", days: 3 },

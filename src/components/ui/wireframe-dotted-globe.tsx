@@ -31,7 +31,7 @@ export default function RotatingEarth({
 
     // Use explicit hex colors since canvas can't parse hsl(var(--x))
     const strokeColor = isDark ? "#ffffff" : "#171717"
-    const dotColor = isDark ? "#ED1B2F" : "#ED1B2F"
+    const dotColor = "#ffffff"
 
     const containerWidth = Math.min(width, window.innerWidth - 40)
     const containerHeight = Math.min(height, window.innerHeight - 100)
