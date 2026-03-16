@@ -1,3 +1,5 @@
+import { EventTag } from "@/types";
+
 /**
  * Event Classifier for Instagram Post Data
  *
@@ -544,14 +546,30 @@ function cleanAccountName(account: string): string {
 }
 
 /**
- * Classify which tags apply to the event based on caption content.
- * Returns array of tag strings matching the 6 canonical EventTag values.
+ * Map from EventTag enum values to keyword arrays for type-safe tag classification.
+ * Reuses the same keywords as TAG_KEYWORDS but keyed by EventTag.
  */
-export function classifyTags(caption: string): string[] {
-  const captionLower = caption.toLowerCase();
-  const matchedTags: string[] = [];
+const TAG_KEYWORD_MAP: Record<EventTag, string[]> = {
+  [EventTag.ACADEMIC]: TAG_KEYWORDS.academic,
+  [EventTag.SOCIAL]: TAG_KEYWORDS.social,
+  [EventTag.SPORTS]: TAG_KEYWORDS.sports,
+  [EventTag.CAREER]: TAG_KEYWORDS.career,
+  [EventTag.CULTURAL]: TAG_KEYWORDS.cultural,
+  [EventTag.WELLNESS]: TAG_KEYWORDS.wellness,
+  [EventTag.MUSIC]: [],
+  [EventTag.TECH]: [],
+};
 
-  for (const [tag, keywords] of Object.entries(TAG_KEYWORDS)) {
+/**
+ * Classify which tags apply to the event based on caption content.
+ * Returns array of EventTag values matching the canonical tag set.
+ */
+export function classifyTags(caption: string): EventTag[] {
+  const captionLower = caption.toLowerCase();
+  const matchedTags: EventTag[] = [];
+
+  for (const [tag, keywords] of Object.entries(TAG_KEYWORD_MAP) as [EventTag, string[]][]) {
+    if (keywords.length === 0) continue;
     const hasMatch = keywords.some(kw => captionLower.includes(kw));
     if (hasMatch) {
       matchedTags.push(tag);
@@ -560,7 +578,7 @@ export function classifyTags(caption: string): string[] {
 
   // Default to "social" if no tags matched
   if (matchedTags.length === 0) {
-    matchedTags.push("social");
+    matchedTags.push(EventTag.SOCIAL);
   }
 
   return matchedTags;

@@ -22,6 +22,17 @@ function CreateEventPageContent() {
             Dashboard
           </a>
           <ChevronRight className="h-3 w-3 text-slate-400" />
+          {clubId && (
+            <>
+              <a
+                className="text-slate-500 hover:text-primary transition-colors"
+                href={`/clubs/${clubId}`}
+              >
+                Club Dashboard
+              </a>
+              <ChevronRight className="h-3 w-3 text-slate-400" />
+            </>
+          )}
           <span className="text-primary font-semibold">Create Event</span>
         </nav>
 

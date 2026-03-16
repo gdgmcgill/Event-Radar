@@ -146,7 +146,7 @@ export function CreateEventForm({
     }
 
     const timer = setTimeout(() => {
-      const suggestions = classifyTags(textToClassify) as EventTag[];
+      const suggestions = classifyTags(textToClassify);
       const newSuggestions = suggestions.filter((tag) => !formData.tags.includes(tag));
       setSuggestedTags(newSuggestions);
     }, 500);

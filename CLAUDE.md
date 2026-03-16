@@ -97,7 +97,7 @@ Main tables in Supabase:
 - `club_members` — user↔club membership with role
 - `club_followers` — user↔club follow relationship
 - `user_follows` — user↔user social graph
-- `event_rsvps` — going/interested/cancelled
+- `rsvps` — going/interested/cancelled
 - `user_interactions` — view/click/save/share tracking for analytics
 - `admin_audit_log` — moderation action history
 - `notifications` — in-app notification system

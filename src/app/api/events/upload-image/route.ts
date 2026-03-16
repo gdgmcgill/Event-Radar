@@ -28,6 +28,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "File too large. Maximum size is 5MB" }, { status: 400 });
         }
 
+        const ALLOWED_MIME_TYPES = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+        ];
+
+        if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+            return NextResponse.json(
+                { error: `Invalid file type "${file.type}". Allowed: JPEG, PNG, WebP, GIF.` },
+                { status: 400 }
+            );
+        }
+
         const fileExt = file.name.split(".").pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
