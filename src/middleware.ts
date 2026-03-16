@@ -88,6 +88,53 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
+  // Ban enforcement: redirect banned users to /banned
+  const BAN_EXEMPT_PATHS = ["/banned", "/auth/signout", "/auth/callback"];
+  if (user && !BAN_EXEMPT_PATHS.some((p) => path === p || path.startsWith(p + "/"))) {
+    let isBanned = false;
+    let usedCache = false;
+
+    // Check cookie cache first
+    const banCookie = request.cookies.get("x-ban-status")?.value;
+    if (banCookie) {
+      try {
+        const cached = JSON.parse(banCookie) as { banned: boolean; checkedAt: number };
+        if (Date.now() - cached.checkedAt < 60_000) {
+          isBanned = cached.banned;
+          usedCache = true;
+        }
+      } catch {
+        // Invalid cookie, fall through to DB check
+      }
+    }
+
+    if (!usedCache) {
+      const { data: banProfile } = await supabase
+        .from("users")
+        .select("banned_at, ban_expires_at")
+        .eq("id", user.id)
+        .single();
+
+      if (banProfile?.banned_at) {
+        isBanned = !banProfile.ban_expires_at || new Date(banProfile.ban_expires_at) > new Date();
+      }
+
+      // Cache result on response
+      supabaseResponse.cookies.set("x-ban-status", JSON.stringify({ banned: isBanned, checkedAt: Date.now() }), {
+        path: "/",
+        maxAge: 60,
+        httpOnly: true,
+        sameSite: "lax",
+      });
+    }
+
+    if (isBanned) {
+      const bannedUrl = request.nextUrl.clone();
+      bannedUrl.pathname = "/banned";
+      return NextResponse.redirect(bannedUrl);
+    }
+  }
+
   // Route protection: redirect unauthenticated users from protected pages
   const PROTECTED_ROUTES = ["/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"];
   if (!user && PROTECTED_ROUTES.some((route) => path === route || path.startsWith(route + "/"))) {
