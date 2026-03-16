@@ -13,6 +13,7 @@ import {
   Send,
   CalendarDays,
   Megaphone,
+  MessageSquare,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Notification } from "@/types";
@@ -101,6 +102,12 @@ const typeConfig: Record<
   },
   organizer_rejected: {
     icon: XCircle,
+    color: "text-primary",
+    bgColor: "bg-primary/10",
+    readBgColor: "bg-muted",
+  },
+  feedback_request: {
+    icon: MessageSquare,
     color: "text-primary",
     bgColor: "bg-primary/10",
     readBgColor: "bg-muted",
