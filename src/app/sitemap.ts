@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://uni-verse.vercel.app";
+  const baseUrl = "https://universeapp.ca";
 
   const staticPages: MetadataRoute.Sitemap = [
     {
