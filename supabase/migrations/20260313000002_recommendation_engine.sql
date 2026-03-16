@@ -217,7 +217,7 @@ BEGIN
       _popularity_score := _event.pop_score / _max_popularity;
 
       -- Recency (0.15)
-      _days_until := GREATEST(EXTRACT(EPOCH FROM (_event.event_date - CURRENT_DATE)) / 86400, 0);
+      _days_until := GREATEST(EXTRACT(EPOCH FROM (_event.start_date - CURRENT_DATE)) / 86400, 0);
       _recency_score := EXP(-0.12 * _days_until);
 
       -- Social signal (0.05)
