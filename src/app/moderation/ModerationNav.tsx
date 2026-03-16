@@ -12,6 +12,7 @@ import {
   MessageSquare,
   UserCheck,
   Users,
+  Contact2,
   Star,
   ScrollText,
   BarChart3,
@@ -31,6 +32,7 @@ const contentItems = [
 const userItems = [
   { name: "Organizer Requests", path: "/moderation/organizer-requests", icon: UserCheck },
   { name: "User Management", path: "/moderation/users", icon: Users },
+  { name: "Organizers", path: "/moderation/organizers", icon: Contact2 },
 ];
 
 const systemItems = [
