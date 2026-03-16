@@ -556,12 +556,37 @@ const TAG_KEYWORD_MAP: Record<EventTag, string[]> = {
   [EventTag.CAREER]: TAG_KEYWORDS.career,
   [EventTag.CULTURAL]: TAG_KEYWORDS.cultural,
   [EventTag.WELLNESS]: TAG_KEYWORDS.wellness,
-  [EventTag.MUSIC]: [],
-  [EventTag.TECH]: [],
-  [EventTag.FOOD]: [],
-  [EventTag.VOLUNTEER]: [],
-  [EventTag.ARTS]: [],
-  [EventTag.NETWORKING]: [],
+  [EventTag.MUSIC]: [
+    "music", "concert", "band", "dj", "live music", "jazz", "hip hop",
+    "rap", "r&b", "edm", "classical music", "orchestra", "choir",
+    "open mic", "acoustic", "playlist", "spotify", "soundcloud",
+  ],
+  [EventTag.TECH]: [
+    "tech", "technology", "software", "hardware", "ai", "machine learning",
+    "data science", "blockchain", "startup", "demo day", "devops", "cloud",
+    "cybersecurity", "robotics", "iot", "web development", "app",
+  ],
+  [EventTag.FOOD]: [
+    "food", "cooking", "bake", "baking", "recipe", "chef", "cuisine",
+    "tasting", "dinner", "lunch", "breakfast", "brunch", "potluck",
+    "bbq", "grill", "pizza", "sushi", "vegan", "vegetarian", "buffet",
+  ],
+  [EventTag.VOLUNTEER]: [
+    "volunteer", "volunteering", "community service", "charity", "donate",
+    "donation", "fundraiser", "fundraising", "nonprofit", "ngo", "giveback",
+    "outreach", "humanitarian", "habitat", "cleanup", "food bank",
+  ],
+  [EventTag.ARTS]: [
+    "art", "arts", "painting", "drawing", "sculpture", "photography",
+    "gallery", "exhibition", "craft", "ceramics", "pottery", "design",
+    "illustration", "mural", "creative", "studio", "printmaking",
+  ],
+  [EventTag.NETWORKING]: [
+    "networking", "network", "connect", "connections", "meetup",
+    "meet and greet", "mixer", "professional development", "mentorship",
+    "mentor", "linkedin", "business cards", "speed networking",
+    "industry", "alumni",
+  ],
 };
 
 /**
