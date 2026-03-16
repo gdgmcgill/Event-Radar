@@ -350,6 +350,7 @@ export type Database = {
           content_hash: string | null
           created_at: string | null
           created_by: string | null
+          deleted_at: string | null
           description: string | null
           end_date: string
           id: string
@@ -372,6 +373,7 @@ export type Database = {
           content_hash?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           end_date: string
           id?: string
@@ -394,6 +396,7 @@ export type Database = {
           content_hash?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           end_date?: string
           id?: string
