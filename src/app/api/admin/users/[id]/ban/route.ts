@@ -96,36 +96,60 @@ export async function POST(
   }
 
   // If suspend_content, batch-update user's approved events and clubs to "suspended"
+  // and create moderation_reviews records for each
   if (suspend_content) {
-    const [eventsResult, clubsResult] = await Promise.all([
-      serviceClient
-        .from("events")
-        .update({
-          status: "suspended",
-          updated_at: now.toISOString(),
-        })
-        .eq("created_by", id)
-        .eq("status", "approved"),
-      serviceClient
-        .from("clubs")
-        .update({
-          status: "suspended",
-          updated_at: now.toISOString(),
-        })
-        .eq("created_by", id)
-        .eq("status", "approved"),
-    ]);
+    // Fetch affected items first for moderation_reviews
+    const { data: approvedEvents } = await serviceClient
+      .from("events")
+      .select("id, title")
+      .eq("created_by", id)
+      .eq("status", "approved");
 
-    if (eventsResult.error) {
-      console.error(
-        "[Admin] Failed to suspend user events:",
-        eventsResult.error
+    const { data: approvedClubs } = await serviceClient
+      .from("clubs")
+      .select("id, name")
+      .eq("created_by", id)
+      .eq("status", "approved");
+
+    // Suspend events
+    if (approvedEvents && approvedEvents.length > 0) {
+      await serviceClient
+        .from("events")
+        .update({ status: "suspended", updated_at: now.toISOString() })
+        .eq("created_by", id)
+        .eq("status", "approved");
+
+      // Create moderation_reviews for each suspended event
+      await serviceClient.from("moderation_reviews").insert(
+        approvedEvents.map((event) => ({
+          target_type: "event",
+          target_id: event.id,
+          action: "suspension",
+          category: null,
+          message: `Suspended due to user ban. Reason: ${reason.trim()}`,
+          author_id: user.id,
+        }))
       );
     }
-    if (clubsResult.error) {
-      console.error(
-        "[Admin] Failed to suspend user clubs:",
-        clubsResult.error
+
+    // Suspend clubs
+    if (approvedClubs && approvedClubs.length > 0) {
+      await serviceClient
+        .from("clubs")
+        .update({ status: "suspended", updated_at: now.toISOString() })
+        .eq("created_by", id)
+        .eq("status", "approved");
+
+      // Create moderation_reviews for each suspended club
+      await serviceClient.from("moderation_reviews").insert(
+        approvedClubs.map((club) => ({
+          target_type: "club",
+          target_id: club.id,
+          action: "suspension",
+          category: null,
+          message: `Suspended due to user ban. Reason: ${reason.trim()}`,
+          author_id: user.id,
+        }))
       );
     }
   }
