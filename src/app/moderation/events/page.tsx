@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RejectionModal } from "@/components/moderation/RejectionModal";
+import { SuspensionModal } from "@/components/moderation/SuspensionModal";
 import { AppealBadge } from "@/components/moderation/AppealBadge";
 import { ReviewThread } from "@/components/moderation/ReviewThread";
 import type { RejectionCategory } from "@/types";
@@ -20,6 +20,8 @@ import {
   Inbox,
   ArrowUp,
   ArrowDown,
+  AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 
 interface EventMetrics {
@@ -59,26 +61,29 @@ export default function ModerationEventsPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [rejectingEvent, setRejectingEvent] = useState<AdminEvent | null>(null);
+  const [suspendingEvent, setSuspendingEvent] = useState<AdminEvent | null>(null);
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchEvents() {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (statusFilter !== "all" && statusFilter !== "appeals") params.set("status", statusFilter);
-      if (searchQuery) params.set("search", searchQuery);
-      params.set("sort", sortBy);
-      params.set("direction", sortDir);
+  const fetchEvents = async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (statusFilter !== "all" && statusFilter !== "appeals") params.set("status", statusFilter);
+    if (searchQuery) params.set("search", searchQuery);
+    params.set("sort", sortBy);
+    params.set("direction", sortDir);
 
-      const res = await fetch(`/api/admin/events?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data.events ?? []);
-        setTotal(data.total ?? 0);
-      }
-      setLoading(false);
+    const res = await fetch(`/api/admin/events?${params}`);
+    if (res.ok) {
+      const data = await res.json();
+      setEvents(data.events ?? []);
+      setTotal(data.total ?? 0);
     }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, searchQuery, sortBy, sortDir]);
 
   const toggleSort = (field: SortField) => {
@@ -126,6 +131,33 @@ export default function ModerationEventsPage() {
     }
   };
 
+  const handleSuspend = async (category: RejectionCategory, message: string) => {
+    if (!suspendingEvent) return;
+    const res = await fetch(`/api/admin/events/${suspendingEvent.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "suspended", category, message }),
+    });
+    if (res.ok) {
+      setEvents((prev) =>
+        prev.map((e) => (e.id === suspendingEvent.id ? { ...e, status: "suspended" } : e))
+      );
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    const res = await fetch(`/api/admin/events/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "approved" }),
+    });
+    if (res.ok) {
+      setEvents((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, status: "approved" } : e))
+      );
+    }
+  };
+
   const statusBadge = (status: string) => {
     switch (status) {
       case "approved":
@@ -147,6 +179,13 @@ export default function ModerationEventsPage() {
           <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
             <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
             Rejected
+          </span>
+        );
+      case "suspended":
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            Suspended
           </span>
         );
       default:
@@ -212,6 +251,7 @@ export default function ModerationEventsPage() {
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
+          <option value="suspended">Suspended</option>
           <option value="appeals">Appeals Only</option>
         </select>
         <div className="flex items-center gap-1">
@@ -348,7 +388,16 @@ export default function ModerationEventsPage() {
                     </div>
                   ) : (
                     <>
-                      {event.status !== "approved" && (
+                      {event.status === "suspended" && (
+                        <button
+                          onClick={() => handleRestore(event.id)}
+                          title="Restore"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </button>
+                      )}
+                      {event.status !== "approved" && event.status !== "suspended" && (
                         <button
                           onClick={() => handleStatusChange(event.id, "approved")}
                           title="Approve"
@@ -357,7 +406,16 @@ export default function ModerationEventsPage() {
                           <CheckCircle className="h-4 w-4" />
                         </button>
                       )}
-                      {event.status !== "rejected" && (
+                      {event.status === "approved" && (
+                        <button
+                          onClick={() => setSuspendingEvent(event)}
+                          title="Suspend"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                        >
+                          <AlertTriangle className="h-4 w-4" />
+                        </button>
+                      )}
+                      {event.status !== "rejected" && event.status !== "suspended" && (
                         <button
                           onClick={() => setRejectingEvent(event)}
                           title="Reject"
@@ -395,6 +453,16 @@ export default function ModerationEventsPage() {
           itemName={rejectingEvent.title}
           itemType="event"
           onSubmit={handleReject}
+        />
+      )}
+
+      {suspendingEvent && (
+        <SuspensionModal
+          open={!!suspendingEvent}
+          onOpenChange={(open) => !open && setSuspendingEvent(null)}
+          itemName={suspendingEvent.title}
+          itemType="event"
+          onSubmit={handleSuspend}
         />
       )}
     </div>

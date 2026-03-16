@@ -6,11 +6,15 @@ import {
   XCircle,
   Building2,
   Loader2,
+  AlertTriangle,
+  RotateCcw,
+  Mail,
 } from "lucide-react";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { EventTag } from "@/types";
 import type { RejectionCategory } from "@/types";
 import { RejectionModal } from "@/components/moderation/RejectionModal";
+import { SuspensionModal } from "@/components/moderation/SuspensionModal";
 import { AppealBadge } from "@/components/moderation/AppealBadge";
 import { ReviewThread } from "@/components/moderation/ReviewThread";
 
@@ -29,6 +33,10 @@ interface ClubWithCreator {
     email: string;
     name: string | null;
   } | null;
+  users: {
+    name: string | null;
+    email: string;
+  } | null;
 }
 
 const FILTERS = [
@@ -36,6 +44,7 @@ const FILTERS = [
   { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
   { label: "Rejected", value: "rejected" },
+  { label: "Suspended", value: "suspended" },
   { label: "Appeals", value: "appeals" },
 ] as const;
 
@@ -46,6 +55,7 @@ export default function ClubModerationPage() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "approved" | "rejected" } | null>(null);
   const [rejectingClub, setRejectingClub] = useState<ClubWithCreator | null>(null);
+  const [suspendingClub, setSuspendingClub] = useState<ClubWithCreator | null>(null);
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
 
   const fetchClubs = useCallback(async () => {
@@ -104,7 +114,52 @@ export default function ClubModerationPage() {
     }
   };
 
+  const handleSuspend = async (category: RejectionCategory, message: string) => {
+    if (!suspendingClub) return;
+    setActionLoading(suspendingClub.id);
+    try {
+      const res = await fetch(`/api/admin/clubs/${suspendingClub.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "suspended", category, message }),
+      });
+      if (res.ok) {
+        setClubs((prev) =>
+          prev.map((c) => (c.id === suspendingClub.id ? { ...c, status: "suspended" } : c))
+        );
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestore = async (clubId: string) => {
+    setActionLoading(clubId);
+    try {
+      const res = await fetch(`/api/admin/clubs/${clubId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      });
+      if (res.ok) {
+        setClubs((prev) =>
+          prev.map((c) => (c.id === clubId ? { ...c, status: "approved" } : c))
+        );
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const pendingCount = clubs.filter((c) => c.status === "pending").length;
+
+  const getCreatorEmail = (club: ClubWithCreator): string | null => {
+    return club.users?.email ?? club.creator?.email ?? null;
+  };
+
+  const getCreatorName = (club: ClubWithCreator): string => {
+    return club.users?.name ?? club.creator?.name ?? club.creator?.email ?? "Unknown";
+  };
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -124,6 +179,12 @@ export default function ClubModerationPage() {
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
             Rejected
+          </span>
+        );
+      case "suspended":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            Suspended
           </span>
         );
       default:
@@ -235,8 +296,19 @@ export default function ClubModerationPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-zinc-600 dark:text-zinc-300">
-                    {club.creator?.name || club.creator?.email || "Unknown"}
+                  <td className="px-6 py-4">
+                    <div className="text-zinc-600 dark:text-zinc-300">
+                      {getCreatorName(club)}
+                    </div>
+                    {getCreatorEmail(club) && (
+                      <a
+                        href={`mailto:${getCreatorEmail(club)}`}
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline mt-0.5"
+                      >
+                        <Mail className="h-3 w-3" />
+                        {getCreatorEmail(club)}
+                      </a>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     {club.category && EVENT_CATEGORIES[club.category as EventTag] ? (
@@ -259,53 +331,79 @@ export default function ClubModerationPage() {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {club.status === "pending" && (
-                      <div className="flex items-center justify-end gap-1">
-                        {confirmAction?.id === club.id ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-zinc-600 dark:text-zinc-400 mr-1">
-                              {confirmAction.status === "approved" ? "Approve?" : "Reject?"}
-                            </span>
-                            <button
-                              onClick={() => handleAction(club.id, confirmAction.status)}
-                              disabled={actionLoading === club.id}
-                              className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
-                            >
-                              {actionLoading === club.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                "Yes"
-                              )}
-                            </button>
-                            <button
-                              onClick={() => setConfirmAction(null)}
-                              className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-medium rounded-md text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors"
-                            >
-                              No
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => setConfirmAction({ id: club.id, status: "approved" })}
-                              disabled={actionLoading === club.id}
-                              className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 disabled:opacity-50 transition-colors"
-                              title="Approve"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => setRejectingClub(club)}
-                              disabled={actionLoading === club.id}
-                              className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50 transition-colors"
-                              title="Reject"
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
+                    <div className="flex items-center justify-end gap-1">
+                      {club.status === "suspended" ? (
+                        <button
+                          onClick={() => handleRestore(club.id)}
+                          disabled={actionLoading === club.id}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                          title="Restore"
+                        >
+                          {actionLoading === club.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          )}
+                          Restore
+                        </button>
+                      ) : club.status === "approved" ? (
+                        <button
+                          onClick={() => setSuspendingClub(club)}
+                          disabled={actionLoading === club.id}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-medium rounded-md bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 transition-colors"
+                          title="Suspend"
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          Suspend
+                        </button>
+                      ) : club.status === "pending" ? (
+                        <>
+                          {confirmAction?.id === club.id ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-zinc-600 dark:text-zinc-400 mr-1">
+                                {confirmAction.status === "approved" ? "Approve?" : "Reject?"}
+                              </span>
+                              <button
+                                onClick={() => handleAction(club.id, confirmAction.status)}
+                                disabled={actionLoading === club.id}
+                                className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-medium rounded-md bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                              >
+                                {actionLoading === club.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  "Yes"
+                                )}
+                              </button>
+                              <button
+                                onClick={() => setConfirmAction(null)}
+                                className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-medium rounded-md text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setConfirmAction({ id: club.id, status: "approved" })}
+                                disabled={actionLoading === club.id}
+                                className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 disabled:opacity-50 transition-colors"
+                                title="Approve"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => setRejectingClub(club)}
+                                disabled={actionLoading === club.id}
+                                className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50 transition-colors"
+                                title="Reject"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
                 {expandedThread === club.id && (
@@ -329,6 +427,16 @@ export default function ClubModerationPage() {
           itemName={rejectingClub.name}
           itemType="club"
           onSubmit={handleReject}
+        />
+      )}
+
+      {suspendingClub && (
+        <SuspensionModal
+          open={!!suspendingClub}
+          onOpenChange={(open) => !open && setSuspendingClub(null)}
+          itemName={suspendingClub.name}
+          itemType="club"
+          onSubmit={handleSuspend}
         />
       )}
     </div>

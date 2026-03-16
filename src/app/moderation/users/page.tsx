@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, UserMinus, Shield, Users } from "lucide-react";
+import { BanUserModal } from "@/components/moderation/BanUserModal";
+import { Search, UserPlus, UserMinus, Shield, Users, Ban, ShieldCheck } from "lucide-react";
 import type { UserRole } from "@/types";
 
 interface AdminUser {
@@ -14,6 +15,9 @@ interface AdminUser {
   interest_tags: string[] | null;
   roles: UserRole[];
   created_at: string | null;
+  banned_at: string | null;
+  ban_expires_at: string | null;
+  ban_reason: string | null;
 }
 
 export default function ModerationUsersPage() {
@@ -21,16 +25,19 @@ export default function ModerationUsersPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [toggling, setToggling] = useState<string | null>(null);
+  const [banningUser, setBanningUser] = useState<AdminUser | null>(null);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    const res = await fetch("/api/admin/users");
+    if (res.ok) {
+      const data = await res.json();
+      setUsers(data.users ?? []);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    async function fetchUsers() {
-      const res = await fetch("/api/admin/users");
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data.users ?? []);
-      }
-      setLoading(false);
-    }
     fetchUsers();
   }, []);
 
@@ -58,6 +65,28 @@ export default function ModerationUsersPage() {
     setToggling(null);
   };
 
+  const handleBan = async (data: { reason: string; duration_days?: number; suspend_content: boolean }) => {
+    if (!banningUser) return;
+    const res = await fetch(`/api/admin/users/${banningUser.id}/ban`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      await fetchUsers();
+    }
+  };
+
+  const handleUnban = async (userId: string, userName: string) => {
+    if (!window.confirm(`Are you sure you want to unban ${userName || "this user"}?`)) return;
+    const res = await fetch(`/api/admin/users/${userId}/ban`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      await fetchUsers();
+    }
+  };
+
   const filtered = users.filter((u) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -73,12 +102,42 @@ export default function ModerationUsersPage() {
   }
 
   function formatJoinDate(dateStr: string | null): string {
-    if (!dateStr) return "—";
+    if (!dateStr) return "\u2014";
     return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
     });
+  }
+
+  function isBanned(user: AdminUser): boolean {
+    if (!user.banned_at) return false;
+    if (!user.ban_expires_at) return true; // permanent
+    return new Date(user.ban_expires_at) > new Date();
+  }
+
+  function banStatusBadge(user: AdminUser) {
+    if (!isBanned(user)) return null;
+
+    if (!user.ban_expires_at) {
+      return (
+        <Badge className="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-0 text-xs font-medium">
+          <Ban className="mr-1 h-3 w-3" />
+          Banned (Permanent)
+        </Badge>
+      );
+    }
+
+    const expiresAt = new Date(user.ban_expires_at);
+    const now = new Date();
+    const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    return (
+      <Badge className="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-0 text-xs font-medium">
+        <Ban className="mr-1 h-3 w-3" />
+        Banned ({daysLeft}d left)
+      </Badge>
+    );
   }
 
   return (
@@ -118,10 +177,10 @@ export default function ModerationUsersPage() {
       {/* Table */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
         {/* Table Header */}
-        <div className="hidden sm:grid grid-cols-[1fr_1fr_140px_100px_160px] gap-4 px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+        <div className="hidden sm:grid grid-cols-[1fr_1fr_180px_100px_200px] gap-4 px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
           <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium">User</span>
           <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium">Email</span>
-          <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium">Roles</span>
+          <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium">Roles / Status</span>
           <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium">Joined</span>
           <span className="text-xs uppercase tracking-wider text-zinc-500 font-medium text-right">Actions</span>
         </div>
@@ -129,7 +188,7 @@ export default function ModerationUsersPage() {
         {loading ? (
           <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1fr_140px_100px_160px] gap-4 px-6 py-4 items-center">
+              <div key={i} className="grid grid-cols-[1fr_1fr_180px_100px_200px] gap-4 px-6 py-4 items-center">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
                   <div className="h-4 w-24 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
@@ -158,11 +217,12 @@ export default function ModerationUsersPage() {
             {filtered.map((user) => {
               const isOrganizer = user.roles.includes("club_organizer");
               const isAdmin = user.roles.includes("admin");
+              const banned = isBanned(user);
 
               return (
                 <div
                   key={user.id}
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_140px_100px_160px] gap-2 sm:gap-4 px-6 py-4 items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_180px_100px_200px] gap-2 sm:gap-4 px-6 py-4 items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                 >
                   {/* User */}
                   <div className="flex items-center gap-3 min-w-0">
@@ -179,7 +239,7 @@ export default function ModerationUsersPage() {
                     {user.email}
                   </span>
 
-                  {/* Roles */}
+                  {/* Roles / Ban Status */}
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {isAdmin && (
                       <Badge className="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-0 text-xs font-medium">
@@ -192,11 +252,12 @@ export default function ModerationUsersPage() {
                         Organizer
                       </Badge>
                     )}
-                    {!isAdmin && !isOrganizer && (
+                    {!isAdmin && !isOrganizer && !banned && (
                       <Badge className="bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0 text-xs font-medium">
                         User
                       </Badge>
                     )}
+                    {banStatusBadge(user)}
                   </div>
 
                   {/* Joined */}
@@ -205,7 +266,7 @@ export default function ModerationUsersPage() {
                   </span>
 
                   {/* Actions */}
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-1.5">
                     <Button
                       size="sm"
                       variant={isOrganizer ? "destructive" : "outline"}
@@ -225,6 +286,29 @@ export default function ModerationUsersPage() {
                         </>
                       )}
                     </Button>
+                    {banned ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleUnban(user.id, user.name || user.email)}
+                        className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                      >
+                        <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+                        Unban
+                      </Button>
+                    ) : (
+                      !isAdmin && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setBanningUser(user)}
+                          className="text-xs border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+                        >
+                          <Ban className="mr-1.5 h-3.5 w-3.5" />
+                          Ban
+                        </Button>
+                      )
+                    )}
                   </div>
                 </div>
               );
@@ -232,6 +316,15 @@ export default function ModerationUsersPage() {
           </div>
         )}
       </div>
+
+      {banningUser && (
+        <BanUserModal
+          open={!!banningUser}
+          onOpenChange={(open) => !open && setBanningUser(null)}
+          userName={banningUser.name || banningUser.email}
+          onSubmit={handleBan}
+        />
+      )}
     </div>
   );
 }
