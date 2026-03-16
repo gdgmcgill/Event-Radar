@@ -168,7 +168,7 @@ export interface FeedbackRequestLog {
   id: string;
   user_id: string;
   event_id: string;
-  request_type: string;
+  request_type: "post_event" | "post_event_reminder";
   sent_at: string;
 }
 
