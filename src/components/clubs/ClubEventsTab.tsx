@@ -87,14 +87,14 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
 
     setDeletingId(eventId);
     try {
-      // TODO: Wire up when DELETE /api/events/[id] endpoint is implemented
-      // const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
-      // if (!res.ok) throw new Error("Failed to delete event");
-      // mutate();
-      console.warn(
-        "Delete endpoint not yet implemented for event:",
-        eventId
-      );
+      const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete event");
+      }
+      mutate();
+    } catch (err) {
+      console.error("Delete failed:", err);
     } finally {
       setDeletingId(null);
     }

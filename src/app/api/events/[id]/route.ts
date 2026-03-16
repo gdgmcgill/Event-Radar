@@ -267,3 +267,74 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  try {
+    const { id } = await params;
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Fetch event
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, created_by, club_id")
+      .eq("id", id)
+      .is("deleted_at", null)
+      .single();
+
+    if (eventError || !event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    // Permission: creator OR admin OR club member
+    let canDelete = event.created_by === user.id;
+
+    if (!canDelete) {
+      const { data: profile } = await supabase
+        .from("users")
+        .select("roles")
+        .eq("id", user.id)
+        .single();
+      canDelete = (profile?.roles ?? []).includes("admin");
+    }
+
+    if (!canDelete && event.club_id) {
+      const { data: membership } = await supabase
+        .from("club_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("club_id", event.club_id)
+        .single();
+      canDelete = !!membership;
+    }
+
+    if (!canDelete) {
+      return NextResponse.json({ error: "You do not have permission to delete this event" }, { status: 403 });
+    }
+
+    const { error } = await supabase
+      .from("events")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting event:", error);
+    return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });
+  }
+}

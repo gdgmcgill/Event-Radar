@@ -72,7 +72,11 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const { error } = await supabase.from("events").delete().eq("id", id);
+  const { error } = await supabase
+    .from("events")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
