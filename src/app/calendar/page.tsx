@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Event, EventTag } from "@/types";
@@ -1251,12 +1252,12 @@ export default function CalendarPage() {
                     <p className="text-muted-foreground text-sm mt-1">
                       Save or RSVP to events and they&apos;ll appear here.
                     </p>
-                    <a
+                    <Link
                       href="/"
                       className="mt-4 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold rounded-lg transition-colors"
                     >
                       Discover Events
-                    </a>
+                    </Link>
                   </div>
                 ) : groupedList ? (
                   /* Date-grouped view */
@@ -1336,12 +1337,12 @@ export default function CalendarPage() {
                   <p className="text-muted-foreground text-xs mt-1">
                     Save or RSVP to events to see them here.
                   </p>
-                  <a
+                  <Link
                     href="/"
                     className="mt-4 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold rounded-lg transition-colors"
                   >
                     Discover Events
-                  </a>
+                  </Link>
                 </div>
               )}
             </div>

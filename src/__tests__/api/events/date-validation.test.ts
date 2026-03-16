@@ -24,10 +24,10 @@ let mockAuthError: { message: string } | null = null;
 
 function createMockChain(resolvedValue: { data: unknown; error: unknown }) {
   const chain: Record<string, unknown> = {};
-  const methods = ["select", "insert", "update", "eq", "single", "maybeSingle"];
+  const methods = ["select", "insert", "update", "eq", "neq", "is", "in", "single", "maybeSingle"];
   for (const m of methods) chain[m] = jest.fn().mockReturnValue(chain);
   chain.single = jest.fn().mockResolvedValue(resolvedValue);
-  chain.maybeSingle = jest.fn().mockResolvedValue(resolvedValue);
+  chain.maybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
   chain.select = jest.fn().mockReturnValue({
     ...chain,
     single: jest.fn().mockResolvedValue(resolvedValue),

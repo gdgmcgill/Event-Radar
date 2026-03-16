@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/api/", "/moderation/", "/admin-login"],
     },
-    sitemap: "https://uni-verse.vercel.app/sitemap.xml",
+    sitemap: "https://universeapp.ca/sitemap.xml",
   };
 }

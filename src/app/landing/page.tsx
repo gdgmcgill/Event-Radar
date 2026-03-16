@@ -110,7 +110,7 @@ function useReveal(threshold = 0.15) {
       "(prefers-reduced-motion: reduce)"
     ).matches;
     if (prefersReducedMotion) {
-      setVisible(true);
+      setVisible(true); // eslint-disable-line react-hooks/set-state-in-effect -- one-time init
       return;
     }
 

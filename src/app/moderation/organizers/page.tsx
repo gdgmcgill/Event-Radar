@@ -64,7 +64,7 @@ export default function ModerationOrganizersPage() {
   }, [debouncedSearch, statusFilter]);
 
   useEffect(() => {
-    fetchOrganizers();
+    fetchOrganizers(); // eslint-disable-line react-hooks/set-state-in-effect -- fetch on mount/filter change
   }, [fetchOrganizers]);
 
   function getInitial(name: string | null): string {

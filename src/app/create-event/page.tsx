@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { CreateEventForm } from "@/components/events/CreateEventForm";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { LogIn, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function CreateEventPageContent() {
@@ -18,18 +19,18 @@ function CreateEventPageContent() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-10 py-8">
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-2 mb-6 text-sm">
-          <a className="text-slate-500 hover:text-primary transition-colors" href="/">
+          <Link className="text-slate-500 hover:text-primary transition-colors" href="/">
             Dashboard
-          </a>
+          </Link>
           <ChevronRight className="h-3 w-3 text-slate-400" />
           {clubId && (
             <>
-              <a
+              <Link
                 className="text-slate-500 hover:text-primary transition-colors"
                 href={`/clubs/${clubId}`}
               >
                 Club Dashboard
-              </a>
+              </Link>
               <ChevronRight className="h-3 w-3 text-slate-400" />
             </>
           )}

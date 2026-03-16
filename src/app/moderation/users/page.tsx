@@ -38,7 +38,7 @@ export default function ModerationUsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(); // eslint-disable-line react-hooks/set-state-in-effect -- fetch on mount
   }, []);
 
   const toggleOrganizer = async (userId: string, currentlyOrganizer: boolean) => {

@@ -58,8 +58,18 @@ export async function POST(request: NextRequest) {
     if (price && typeof price === "string" && price.length > 20) {
       return NextResponse.json({ error: "Price must be 20 characters or less" }, { status: 400 });
     }
-    if (rsvp_link && typeof rsvp_link === "string" && rsvp_link.length > 500) {
-      return NextResponse.json({ error: "Registration link is too long" }, { status: 400 });
+    if (rsvp_link && typeof rsvp_link === "string") {
+      if (rsvp_link.length > 500) {
+        return NextResponse.json({ error: "Registration link is too long" }, { status: 400 });
+      }
+      try {
+        const url = new URL(rsvp_link);
+        if (!["http:", "https:"].includes(url.protocol)) {
+          return NextResponse.json({ error: "Registration link must use http or https" }, { status: 400 });
+        }
+      } catch {
+        return NextResponse.json({ error: "Registration link must be a valid URL" }, { status: 400 });
+      }
     }
 
     // Validate date fields (strict ISO 8601 + future constraint)

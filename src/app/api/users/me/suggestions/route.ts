@@ -222,7 +222,7 @@ export async function GET() {
 
     const { data: profiles } = await service
       .from("users")
-      .select("id, name, avatar_url, faculty, year, visibility")
+      .select("id, name, avatar_url, faculty, year")
       .in("id", suggestionIds)
       .eq("visibility", "public");
 

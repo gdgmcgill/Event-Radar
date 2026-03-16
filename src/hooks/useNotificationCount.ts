@@ -25,7 +25,7 @@ export function useNotificationCount() {
   }, []);
 
   useEffect(() => {
-    fetchCount();
+    fetchCount(); // eslint-disable-line react-hooks/set-state-in-effect -- fetch on mount
     const interval = setInterval(fetchCount, 60000);
 
     // Listen for cross-component sync events

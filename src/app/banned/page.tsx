@@ -20,6 +20,7 @@ export default async function BannedPage() {
 
   const isPermanent = !profile.ban_expires_at;
   const expiryDate = profile.ban_expires_at ? new Date(profile.ban_expires_at) : null;
+  // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is fine
   const daysRemaining = expiryDate ? Math.ceil((expiryDate.getTime() - Date.now()) / 86400000) : null;
 
   return (
