@@ -10,6 +10,7 @@
  */
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkBanStatus } from "@/lib/ban";
 import type { NextRequest } from "next/server";
 
 interface RouteContext {
@@ -184,6 +185,9 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
+    const banResponse = await checkBanStatus();
+    if (banResponse) return banResponse;
+
     const { id: eventId } = await params;
     const supabase = await createClient();
 

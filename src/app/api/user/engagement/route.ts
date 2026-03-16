@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkBanStatus } from "@/lib/ban";
 
 /**
  * @swagger
@@ -120,6 +121,9 @@ export async function GET() {
  */
 export async function POST() {
   try {
+    const banResponse = await checkBanStatus();
+    if (banResponse) return banResponse;
+
     const supabase = await createClient();
 
     // Get current user

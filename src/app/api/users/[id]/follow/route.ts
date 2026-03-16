@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { checkBanStatus } from "@/lib/ban";
 import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
@@ -10,6 +11,9 @@ interface RouteParams {
  */
 export async function POST(_request: NextRequest, { params }: RouteParams) {
   try {
+    const banResponse = await checkBanStatus();
+    if (banResponse) return banResponse;
+
     const { id: targetId } = await params;
     const supabase = await createClient();
 

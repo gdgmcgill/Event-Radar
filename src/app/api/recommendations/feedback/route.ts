@@ -9,6 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkBanStatus } from "@/lib/ban";
 import type { NextRequest } from "next/server";
 import type { RecommendationFeedbackAction } from "@/types";
 import type { Database } from "@/lib/supabase/types";
@@ -85,6 +86,9 @@ export async function GET(request: NextRequest) {
 /** POST: thumbs (event_id + feedback) or analytics (event_id + recommendation_rank + action) */
 export async function POST(request: NextRequest) {
   try {
+    const banResponse = await checkBanStatus();
+    if (banResponse) return banResponse;
+
     const supabase = await createClient();
     const {
       data: { user: authUser },
