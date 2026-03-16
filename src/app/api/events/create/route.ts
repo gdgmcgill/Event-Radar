@@ -4,9 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { validateEventDates } from "@/lib/dateValidation";
 import { sanitizeText } from "@/lib/sanitize";
 import { computeEventContentHash } from "@/lib/contentHash";
+import { checkBanStatus } from "@/lib/ban";
 
 export async function POST(request: NextRequest) {
   try {
+    const banResponse = await checkBanStatus();
+    if (banResponse) return banResponse;
+
     const supabase = await createClient();
 
     // Verify authenticated user

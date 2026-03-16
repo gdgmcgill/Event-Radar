@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sanitizeText } from "@/lib/sanitize";
+import { checkBanStatus } from "@/lib/ban";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -38,6 +39,9 @@ export async function GET() {
  * Authenticated endpoint - creates a new club (pending approval).
  */
 export async function POST(request: NextRequest) {
+  const banResponse = await checkBanStatus();
+  if (banResponse) return banResponse;
+
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 

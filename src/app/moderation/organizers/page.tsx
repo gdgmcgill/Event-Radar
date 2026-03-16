@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BanUserModal } from "@/components/moderation/BanUserModal";
 import {
   Search,
   Contact2,
@@ -39,6 +40,8 @@ export default function ModerationOrganizersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [banModalOpen, setBanModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Organizer | null>(null);
 
   // Debounce search input
   useEffect(() => {
@@ -108,6 +111,41 @@ export default function ModerationOrganizersPage() {
     { key: "active", label: "Active" },
     { key: "banned", label: "Banned" },
   ];
+
+  async function handleBanSubmit(data: {
+    reason: string;
+    duration_days?: number;
+    suspend_content: boolean;
+  }) {
+    if (!selectedUser) return;
+    const res = await fetch(`/api/admin/users/${selectedUser.id}/ban`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to ban user");
+    }
+    await fetchOrganizers();
+  }
+
+  async function handleUnban(org: Organizer) {
+    const confirmed = window.confirm(
+      `Are you sure you want to unban ${org.name || org.email}?`
+    );
+    if (!confirmed) return;
+
+    const res = await fetch(`/api/admin/users/${org.id}/ban`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Failed to unban user");
+      return;
+    }
+    await fetchOrganizers();
+  }
 
   return (
     <div className="space-y-6">
@@ -274,9 +312,7 @@ export default function ModerationOrganizersPage() {
                       size="sm"
                       variant="outline"
                       className="text-xs"
-                      onClick={() => {
-                        /* Will be wired in Task 17 */
-                      }}
+                      onClick={() => handleUnban(org)}
                     >
                       <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
                       Unban
@@ -287,7 +323,8 @@ export default function ModerationOrganizersPage() {
                       variant="destructive"
                       className="text-xs"
                       onClick={() => {
-                        /* Will be wired in Task 17 */
+                        setSelectedUser(org);
+                        setBanModalOpen(true);
                       }}
                     >
                       <ShieldBan className="mr-1.5 h-3.5 w-3.5" />
@@ -300,6 +337,14 @@ export default function ModerationOrganizersPage() {
           })}
         </div>
       )}
+
+      {/* Ban Modal */}
+      <BanUserModal
+        open={banModalOpen}
+        onOpenChange={setBanModalOpen}
+        userName={selectedUser?.name || selectedUser?.email || "Unknown"}
+        onSubmit={handleBanSubmit}
+      />
     </div>
   );
 }
