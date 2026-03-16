@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { sanitizeText } from "@/lib/sanitize";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -45,12 +46,32 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, description, category, logo_url, instagram_handle, website_url, discord_url, twitter_url, linkedin_url } = body;
+  const { contact_email, logo_url, instagram_handle, website_url, discord_url, twitter_url, linkedin_url } = body;
 
-  // Name, description, and category are all required per spec
+  // Sanitize text inputs to prevent XSS
+  const name = sanitizeText(body.name ?? "");
+  const description = sanitizeText(body.description ?? "");
+  const category = sanitizeText(body.category ?? "");
+
+  // Name, description, category, and contact email are all required
   if (!name || !description || !category) {
     return NextResponse.json(
       { error: "Name, description, and category are required" },
+      { status: 400 }
+    );
+  }
+
+  if (!contact_email || typeof contact_email !== "string") {
+    return NextResponse.json(
+      { error: "Contact email is required" },
+      { status: 400 }
+    );
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(contact_email.trim())) {
+    return NextResponse.json(
+      { error: "Please provide a valid email address" },
       { status: 400 }
     );
   }
@@ -65,6 +86,21 @@ export async function POST(request: NextRequest) {
   // Use service client to bypass RLS for role mutation
   const serviceClient = createServiceClient();
 
+  // Check for duplicate club name (case-insensitive, non-rejected clubs only)
+  const { data: existingClub } = await serviceClient
+    .from("clubs")
+    .select("id, name")
+    .ilike("name", name.trim())
+    .neq("status", "rejected")
+    .maybeSingle();
+
+  if (existingClub) {
+    return NextResponse.json(
+      { error: `A club named "${existingClub.name}" already exists` },
+      { status: 409 }
+    );
+  }
+
   // 1. Create the club
   const { data: club, error: clubError } = await serviceClient
     .from("clubs")
@@ -72,6 +108,7 @@ export async function POST(request: NextRequest) {
       name: name.trim(),
       description: description.trim(),
       category: category.trim(),
+      contact_email: contact_email.trim(),
       logo_url: logo_url || null,
       instagram_handle: instagram_handle?.trim() || null,
       website_url: website_url?.trim() || null,

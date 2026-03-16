@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { start_date, end_date, tags, image_url, category } = body;
+    const { start_date, end_date, tags, image_url, category, is_free, price, rsvp_link } = body;
 
     // Sanitize text inputs to prevent XSS
     const title = sanitizeText(body.title ?? "");
@@ -83,6 +83,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check for time-overlap: same creator or same club already has an event at this exact start time
+    const overlapQuery = supabase
+      .from("events")
+      .select("id, title")
+      .eq("start_date", start_date)
+      .neq("status", "rejected")
+      .is("deleted_at", null);
+
+    if (body.club_id) {
+      // Club event: check if this club already has an event at the same time
+      overlapQuery.eq("club_id", body.club_id);
+    } else {
+      // Personal event: check if this user already has an event at the same time
+      overlapQuery.eq("created_by", user.id).is("club_id", null);
+    }
+
+    const { data: overlapping } = await overlapQuery.maybeSingle();
+
+    if (overlapping) {
+      return NextResponse.json(
+        {
+          error: body.club_id
+            ? `This club already has an event at this time: "${overlapping.title}"`
+            : `You already have an event at this time: "${overlapping.title}"`,
+        },
+        { status: 409 }
+      );
+    }
+
     // Determine event status based on context
     // - Admins: always auto-approved
     // - Club events from approved clubs: auto-approved (club member must be verified)
@@ -130,6 +159,9 @@ export async function POST(request: NextRequest) {
         status,
         created_by: user.id,
         content_hash: contentHash,
+        is_free: is_free ?? true,
+        price: is_free === false ? (price || null) : null,
+        rsvp_link: rsvp_link || null,
       })
       .select()
       .single();
