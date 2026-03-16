@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { EventBadge } from "@/components/events/EventBadge";
-import { formatDate, formatTime, cn } from "@/lib/utils";
+import { formatDate, formatTimeFromISO, cn } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { exportEventIcal } from "@/lib/exportUtils";
 import type { Event, EventTag, InteractionSource } from "@/types";
@@ -51,7 +51,7 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
     trackShare(event.id);
     try {
       if (navigator.share) {
-        await navigator.share({ title: event.title, text: event.description, url });
+        await navigator.share({ title: event.title, text: event.description ?? undefined, url });
       } else {
         await navigator.clipboard.writeText(url);
         setCopied(true);
@@ -69,7 +69,7 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
 
   if (!event) return null;
 
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location || "")}`;
   const primaryTag = event.tags[0] as EventTag | undefined;
   const categoryInfo = primaryTag ? EVENT_CATEGORIES[primaryTag] : null;
 
@@ -191,10 +191,10 @@ export function EventDetailsModal({ open, onOpenChange, event, trackingSource }:
               </div>
               <div className="flex flex-col">
                 <span className="text-foreground font-bold text-sm">
-                  {formatDate(event.event_date)}
+                  {formatDate(event.start_date)}
                 </span>
                 <span className="text-muted-foreground text-xs mt-0.5">
-                  {formatTime(event.event_time)}
+                  {formatTimeFromISO(event.start_date)}
                 </span>
                 <button
                   onClick={() => {

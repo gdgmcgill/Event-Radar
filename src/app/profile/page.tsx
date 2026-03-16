@@ -37,9 +37,9 @@ export default async function ProfilePage() {
       .order("created_at", { ascending: false }),
     (supabase as any)
       .from("saved_events")
-      .select("id, events!inner(event_date)", { count: "exact", head: true })
+      .select("id, events!inner(start_date)", { count: "exact", head: true })
       .eq("user_id", user.id)
-      .lt("events.event_date", new Date().toISOString().split("T")[0]),
+      .lt("events.start_date", new Date().toISOString()),
     (supabase as any)
       .from("events")
       .select("id", { count: "exact", head: true })
@@ -47,17 +47,17 @@ export default async function ProfilePage() {
       .eq("status", "approved"),
     (supabase as any)
       .from("saved_events")
-      .select("id, events!inner(id, title, event_date, event_time, location, image_url)")
+      .select("id, events!inner(id, title, start_date, location, image_url)")
       .eq("user_id", user.id)
-      .lt("events.event_date", new Date().toISOString().split("T")[0])
+      .lt("events.start_date", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(10),
     (supabase as any).rpc("get_friends", { target_user_id: user.id }).limit(20),
     (supabase as any)
       .from("saved_events")
-      .select("id, events!inner(id, title, event_date, event_time, location, image_url)")
+      .select("id, events!inner(id, title, start_date, location, image_url)")
       .eq("user_id", user.id)
-      .gte("events.event_date", new Date().toISOString().split("T")[0])
+      .gte("events.start_date", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(4),
   ]);

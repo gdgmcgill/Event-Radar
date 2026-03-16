@@ -84,11 +84,11 @@ export default async function ClubDetailPage({ params }: PageProps) {
   const today = new Date().toISOString().split("T")[0];
   const upcomingEvents = rawEvents
     .filter((e) => e.start_date >= today)
-    .sort((a, b) => a.start_date.localeCompare(b.start_date)) as unknown as Event[];
+    .sort((a, b) => a.start_date.localeCompare(b.start_date)) as Event[];
   const pastEvents = rawEvents
     .filter((e) => e.start_date < today)
-    .sort((a, b) => b.start_date.localeCompare(a.start_date)) as unknown as Event[];
-  const allEvents = rawEvents as unknown as Event[];
+    .sort((a, b) => b.start_date.localeCompare(a.start_date)) as Event[];
+  const allEvents = rawEvents as Event[];
 
   // Check if current user follows this club
   let isFollowing = false;

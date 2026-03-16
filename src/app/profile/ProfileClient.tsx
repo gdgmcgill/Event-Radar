@@ -393,8 +393,9 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {data.upcomingEvents.map((se: any) => {
                     const event = se.events;
-                    const dateLabel = new Date(event.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                    const timeLabel = event.event_time ? (() => { const [h, m] = event.event_time.split(":"); const hr = parseInt(h, 10); return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`; })() : "";
+                    const dateLabel = new Date(event.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    const sd = new Date(event.start_date);
+                    const timeLabel = sd.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
                     return (
                       <Link key={se.id} href={`/events/${event.id}`} className="bg-card rounded-xl overflow-hidden border border-primary/5 shadow-sm hover:shadow-md transition-shadow">
                         <div className="h-32 bg-muted bg-cover bg-center" style={event.image_url ? { backgroundImage: `url('${event.image_url}')` } : undefined} />
@@ -497,7 +498,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                         return (
                           <tr key={se.id} className="border-b border-primary/5 last:border-0">
                             <td className="p-4 font-semibold text-foreground"><Link href={`/events/${event.id}`} className="hover:text-primary transition-colors">{event.title}</Link></td>
-                            <td className="p-4 text-muted-foreground">{new Date(event.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                            <td className="p-4 text-muted-foreground">{new Date(event.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                             <td className="p-4"><span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full text-xs">Attended</span></td>
                             <td className="p-4 text-muted-foreground">{event.location || "-"}</td>
                           </tr>

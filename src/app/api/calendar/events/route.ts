@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Transform DB rows → frontend Event shape (derives event_date, event_time from start_date)
+    // Transform DB rows → frontend Event shape (passes through start_date/end_date directly)
     const transformed = (events || []).map((e) =>
       transformEventFromDB(e as any)
     );

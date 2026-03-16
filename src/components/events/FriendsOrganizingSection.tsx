@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Megaphone } from "lucide-react";
-import { formatDate, formatTime } from "@/lib/utils";
+import { formatDate, formatTimeFromISO } from "@/lib/utils";
 import { ScrollRow } from "@/components/events/ScrollRow";
 import {
   SectionHeader,
@@ -17,8 +17,7 @@ type Organizer = { id: string; name: string; avatar_url: string | null };
 type FriendOrganizedEvent = {
   id: string;
   title: string;
-  event_date: string;
-  event_time: string | null;
+  start_date: string;
   location: string | null;
   image_url: string | null;
   organizer: Organizer | null;
@@ -97,8 +96,7 @@ export function FriendsOrganizingSection() {
                   {event.title}
                 </h4>
                 <p className="text-white font-medium text-xs opacity-90">
-                  {formatDate(event.event_date)}
-                  {event.event_time && `, ${formatTime(event.event_time)}`}
+                  {formatDate(event.start_date)}, {formatTimeFromISO(event.start_date)}
                 </p>
               </div>
             </div>

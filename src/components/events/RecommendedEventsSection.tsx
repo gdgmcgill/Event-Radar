@@ -52,7 +52,14 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
       }
 
       setSource(fetchedSource);
-      setEvents(fetchedEvents);
+      // Deduplicate by event id to avoid React key warnings
+      const seen = new Set<string>();
+      const unique = fetchedEvents.filter((e) => {
+        if (seen.has(e.id)) return false;
+        seen.add(e.id);
+        return true;
+      });
+      setEvents(unique);
     } catch (err) {
       console.error("Error fetching recommended events:", err);
       onEmpty?.();

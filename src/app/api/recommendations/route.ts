@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         .from("events")
         .select("*, clubs(*)")
         .eq("status", "approved")
-        .order("event_date", { ascending: true })
+        .order("start_date", { ascending: true })
         .limit(topK);
 
       const recommendations = (popularEvents ?? []).map((event) => ({
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
         .from("events")
         .select("*, clubs(*)")
         .eq("status", "approved")
-        .order("event_date", { ascending: true })
+        .order("start_date", { ascending: true })
         .limit(topK);
 
       const recommendations = (popularEvents ?? []).map((event) => ({

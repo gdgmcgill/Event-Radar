@@ -44,7 +44,7 @@ export async function POST(request: Request, context: RouteContext) {
     // Check 1: Event exists and has ended
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, event_date, club_id")
+      .select("id, start_date, club_id")
       .eq("id", eventId)
       .single();
 
@@ -52,7 +52,7 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (new Date(event.event_date) >= new Date()) {
+    if (new Date(event.start_date) >= new Date()) {
       return NextResponse.json(
         { error: "Reviews can only be submitted after the event has ended" },
         { status: 400 }
@@ -138,7 +138,7 @@ export async function GET(request: Request, context: RouteContext) {
     // Get event info (for club_id to check organizer status)
     const { data: event } = await supabase
       .from("events")
-      .select("id, event_date, club_id")
+      .select("id, start_date, club_id")
       .eq("id", eventId)
       .single();
 
@@ -195,7 +195,7 @@ export async function GET(request: Request, context: RouteContext) {
     // Can user review? Must have RSVP'd going, event ended, no existing review
     let canReview = false;
     if (!userReview && event) {
-      const eventEnded = new Date(event.event_date) < new Date();
+      const eventEnded = new Date(event.start_date) < new Date();
       if (eventEnded) {
         const { data: rsvp } = await supabase
           .from("rsvps")

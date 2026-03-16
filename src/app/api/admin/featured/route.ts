@@ -13,7 +13,7 @@ export async function GET() {
   try {
     const { data, error } = await (supabase as any)
       .from("featured_events")
-      .select("*, event:events(id, title, image_url, event_date, event_time, status)")
+      .select("*, event:events(id, title, image_url, start_date, status)")
       .order("ends_at", { ascending: false });
 
     if (error) {

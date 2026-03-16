@@ -86,9 +86,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     // ── Club Events ────────────────────────────────────────────────────────
     const { data: events } = await supabase
       .from("events")
-      .select("id, title, event_date, tags")
+      .select("id, title, start_date, tags")
       .eq("club_id", clubId)
-      .order("event_date", { ascending: false });
+      .order("start_date", { ascending: false });
 
     const eventList = events ?? [];
     const eventIds = eventList.map((e: { id: string }) => e.id);
@@ -171,13 +171,13 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     }
 
     const eventsAnalytics: EventAnalytics[] = eventList.map(
-      (event: { id: string; title: string; event_date: string }) => {
+      (event: { id: string; title: string; start_date: string }) => {
         const pop = popularityMap.get(event.id);
         const eventRsvps = allRsvps.filter((r) => r.event_id === event.id);
         return {
           event_id: event.id,
           title: event.title,
-          event_date: event.event_date,
+          start_date: event.start_date,
           views: pop?.view_count ?? 0,
           clicks: pop?.click_count ?? 0,
           saves: savedMap.get(event.id) ?? 0,

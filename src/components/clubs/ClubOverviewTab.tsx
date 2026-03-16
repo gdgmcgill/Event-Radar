@@ -28,7 +28,7 @@ interface EventWithRsvp {
   id: string;
   title: string;
   description: string;
-  event_date: string;
+  start_date: string;
   location: string;
   status: "pending" | "approved" | "rejected";
   rsvp_counts?: {
@@ -102,10 +102,10 @@ export function ClubOverviewTab({
   // Next upcoming event
   const now = new Date();
   const upcomingEvents = typedEvents
-    .filter((e) => new Date(e.event_date) >= now && e.status === "approved")
+    .filter((e) => new Date(e.start_date) >= now && e.status === "approved")
     .sort(
       (a, b) =>
-        new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     );
   const nextEvent = upcomingEvents[0] ?? null;
 
@@ -119,7 +119,7 @@ export function ClubOverviewTab({
   const recentEvents = [...typedEvents]
     .sort(
       (a, b) =>
-        new Date(b.event_date).getTime() - new Date(a.event_date).getTime()
+        new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
     )
     .slice(0, 5);
 
@@ -200,13 +200,13 @@ export function ClubOverviewTab({
                     {nextEvent.title}
                   </h5>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    {formatDate(nextEvent.event_date)}
+                    {formatDate(nextEvent.start_date)}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
                     <span>
-                      in {daysUntil(nextEvent.event_date)}{" "}
-                      {daysUntil(nextEvent.event_date) === 1 ? "day" : "days"}
+                      in {daysUntil(nextEvent.start_date)}{" "}
+                      {daysUntil(nextEvent.start_date) === 1 ? "day" : "days"}
                     </span>
                   </div>
                 </div>
@@ -307,7 +307,7 @@ export function ClubOverviewTab({
                         </div>
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {formatDate(event.event_date)}
+                        {formatDate(event.start_date)}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">

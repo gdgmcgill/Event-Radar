@@ -21,8 +21,6 @@ type EventRow = {
   start_date?: string;
   end_date?: string | null;
   organizer?: string | null;
-  event_date?: string;
-  event_time?: string;
   club_id?: string;
   club?: Record<string, unknown> | null;
 };
@@ -104,9 +102,9 @@ type EventRow = {
  *                        type: string
  *                      description:
  *                        type: string
- *                      event_date:
+ *                      start_date:
  *                        type: string
- *                      event_time:
+ *                      end_date:
  *                        type: string
  *                      location:
  *                        type: string
@@ -125,10 +123,6 @@ type EventRow = {
  *                      status:
  *                        type: string
  *                        example: approved
- *                      approved_by:
- *                        type: string
- *                      approved_at:
- *                        type: string
  *                      club:
  *                        type: object
  *                        properties:
@@ -283,7 +277,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform events to match frontend expectations
-    let rows = (eventsData || []) as unknown as EventRow[];
+    let rows = (eventsData || []) as EventRow[];
 
     // Re-sort by fuzzy rank order when fuzzy search was used
     if (fuzzyRankedIds) {

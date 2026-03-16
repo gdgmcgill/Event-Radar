@@ -9,7 +9,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatTimeFromISO } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
 import { exportEventsCsv } from "@/lib/exportUtils";
 import {
@@ -194,14 +194,6 @@ function dateKey(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
-function formatTime(time: string) {
-  if (!time) return "";
-  const [h, m] = time.split(":");
-  const hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? "PM" : "AM";
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${m} ${ampm}`;
-}
 
 function formatDateHeading(dateStr: string) {
   const d = new Date(dateStr + "T00:00:00");
@@ -253,10 +245,9 @@ function generateIcal(events: CalendarEvent[]) {
       .split(".")[0] + "Z";
 
   const vevents = events.map((event) => {
-    const datePart = event.event_date.replace(/-/g, "");
-    const timePart = event.event_time
-      ? event.event_time.replace(":", "") + "00"
-      : "000000";
+    const sd = new Date(event.start_date);
+    const datePart = sd.toISOString().split("T")[0].replace(/-/g, "");
+    const timePart = sd.toTimeString().slice(0, 5).replace(":", "") + "00";
 
     return [
       "BEGIN:VEVENT",
@@ -395,7 +386,7 @@ export default function CalendarPage() {
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const event of events) {
-      const key = event.event_date;
+      const key = new Date(event.start_date).toISOString().split("T")[0];
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(event);
     }
@@ -413,9 +404,7 @@ export default function CalendarPage() {
     switch (listSort) {
       case "date":
         sorted.sort((a, b) => {
-          const dc = a.event_date.localeCompare(b.event_date);
-          if (dc !== 0) return dc;
-          return (a.event_time || "").localeCompare(b.event_time || "");
+          return a.start_date.localeCompare(b.start_date);
         });
         break;
       case "title":
@@ -434,11 +423,12 @@ export default function CalendarPage() {
     if (listSort !== "date") return null;
     const groups: { date: string; events: CalendarEvent[] }[] = [];
     for (const event of listEvents) {
+      const eventDateStr = new Date(event.start_date).toISOString().split("T")[0];
       const last = groups[groups.length - 1];
-      if (last && last.date === event.event_date) {
+      if (last && last.date === eventDateStr) {
         last.events.push(event);
       } else {
-        groups.push({ date: event.event_date, events: [event] });
+        groups.push({ date: eventDateStr, events: [event] });
       }
     }
     return groups;
@@ -813,12 +803,10 @@ export default function CalendarPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              {event.event_time && (
-                <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                  <Clock className="h-3.5 w-3.5 shrink-0" />
-                  <span>{formatTime(event.event_time)}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span>{formatTimeFromISO(event.start_date)}</span>
+              </div>
               <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{event.location}</span>

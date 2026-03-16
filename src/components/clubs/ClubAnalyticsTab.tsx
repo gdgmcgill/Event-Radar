@@ -344,7 +344,7 @@ export function ClubAnalyticsTab({ clubId }: ClubAnalyticsTabProps) {
                         {event.title}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {event.event_date}
+                        {event.start_date}
                       </td>
                       <td className="px-6 py-4 text-right text-foreground">
                         {event.views}

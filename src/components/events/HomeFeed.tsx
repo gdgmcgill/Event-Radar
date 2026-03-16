@@ -6,7 +6,7 @@ import useSWR from "swr";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn, formatDate, formatTime } from "@/lib/utils";
+import { cn, formatDate, formatTimeFromISO } from "@/lib/utils";
 import { EVENT_CATEGORIES, EVENT_TAGS } from "@/lib/constants";
 import type { Event, EventTag } from "@/types";
 import { ScrollRow } from "@/components/events/ScrollRow";
@@ -189,7 +189,7 @@ function SponsoredCard({ event, onEventClick }: SponsoredCardProps) {
         {event.title}
       </h4>
       <p className="text-muted-foreground text-sm font-medium line-clamp-1">
-        {event.club?.name || event.location} &middot; {formatDate(event.event_date)}
+        {event.club?.name || event.location} &middot; {formatDate(event.start_date)}
       </p>
     </div>
   );
@@ -239,7 +239,7 @@ function TrendingCard({ event, onEventClick, onSaveEvent, isSaved }: TrendingCar
 
         {/* Date badge */}
         <div className="absolute bottom-3 right-3 px-3 py-1 bg-[#ED1B2F] text-white text-xs font-bold rounded-full">
-          {formatDate(event.event_date).split(",")[0]?.split(" ").slice(0, 2).join(" ") || formatDate(event.event_date)}
+          {formatDate(event.start_date).split(",")[0]?.split(" ").slice(0, 2).join(" ") || formatDate(event.start_date)}
         </div>
 
         {/* Save button */}
@@ -331,7 +331,7 @@ function CompactCard({ event, onEventClick }: CompactCardProps) {
         </p>
         <div className="flex justify-between items-center">
           <span className="text-[10px] font-bold text-[#ED1B2F] uppercase">
-            {formatDate(event.event_date).split(",")[0]} &middot; {formatTime(event.event_time)}
+            {formatDate(event.start_date).split(",")[0]} &middot; {formatTimeFromISO(event.start_date)}
           </span>
           <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-[#ED1B2F] transition-colors" />
         </div>
@@ -379,7 +379,7 @@ function PersonalizedCard({ event, explanation, onEventClick, onSaveEvent, isSav
       </p>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
         <Clock className="h-3.5 w-3.5" />
-        <span>{formatDate(event.event_date)} at {formatTime(event.event_time)}</span>
+        <span>{formatDate(event.start_date)} at {formatTimeFromISO(event.start_date)}</span>
       </div>
       <Button
         variant="secondary"

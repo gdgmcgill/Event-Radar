@@ -70,9 +70,9 @@ export default async function UserProfilePage({
       : { data: null },
     (supabase as any)
       .from("saved_events")
-      .select("id, events!inner(event_date)", { count: "exact", head: true })
+      .select("id, events!inner(start_date)", { count: "exact", head: true })
       .eq("user_id", targetId)
-      .lt("events.event_date", new Date().toISOString().split("T")[0]),
+      .lt("events.start_date", new Date().toISOString()),
     (supabase as any)
       .from("events")
       .select("id", { count: "exact", head: true })

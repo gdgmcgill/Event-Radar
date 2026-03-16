@@ -54,7 +54,7 @@ export async function GET() {
           .select("*", { count: "exact", head: true })
           .eq("club_id", clubId)
           .eq("status", "approved")
-          .gte("event_date", now),
+          .gte("start_date", now),
       ]),
     ]);
 

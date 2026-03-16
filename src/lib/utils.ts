@@ -46,13 +46,30 @@ export function formatTime(timeString: string): string {
 }
 
 /**
+ * Extract and format time from an ISO datetime string
+ * @param isoString - ISO datetime string (e.g., "2024-01-15T14:30:00Z")
+ * @returns Formatted time string (e.g., "2:30 PM")
+ */
+export function formatTimeFromISO(isoString: string): string {
+  try {
+    const date = parseISO(isoString);
+    return format(date, "h:mm a");
+  } catch {
+    return isoString;
+  }
+}
+
+/**
  * Format a full datetime for display
  * @param dateString - ISO date string
- * @param timeString - Time string in HH:mm format
+ * @param timeString - Time string in HH:mm format (legacy) or omitted
  * @returns Combined formatted string (e.g., "January 15, 2024 at 2:30 PM")
  */
-export function formatDateTime(dateString: string, timeString: string): string {
-  return `${formatDate(dateString)} at ${formatTime(timeString)}`;
+export function formatDateTime(dateString: string, timeString?: string): string {
+  if (timeString) {
+    return `${formatDate(dateString)} at ${formatTime(timeString)}`;
+  }
+  return `${formatDate(dateString)} at ${formatTimeFromISO(dateString)}`;
 }
 
 /**

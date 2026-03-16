@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate, formatTimeFromISO } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { Event } from "@/types";
 
@@ -22,7 +22,7 @@ export function RelatedEventCard({ event }: RelatedEventCardProps) {
       <p className="font-medium text-sm leading-tight line-clamp-1">{event.title}</p>
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Calendar className="h-3 w-3 shrink-0" />
-        <span className="truncate">{formatDateTime(event.event_date, event.event_time)}</span>
+        <span className="truncate">{formatDate(event.start_date)} at {formatTimeFromISO(event.start_date)}</span>
       </div>
       {displayTags.length > 0 && (
         <div className="flex flex-wrap gap-1">

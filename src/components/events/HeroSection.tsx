@@ -67,7 +67,7 @@ export function HeroSection() {
       <section className="relative w-full h-[85vh] min-h-[500px] overflow-hidden group">
         <HeroSlide
           title={f.event.title}
-          description={f.event.description}
+          description={f.event.description || ""}
           imageUrl={f.event.image_url || HERO_FALLBACK_IMAGE}
           badge={f.sponsor_name ? `Sponsored by ${f.sponsor_name}` : "Sponsored"}
           primaryLabel="Register Now"
@@ -88,7 +88,7 @@ export function HeroSection() {
             <HeroSlide
               key={f.id}
               title={f.event.title}
-              description={f.event.description}
+              description={f.event.description || ""}
               imageUrl={f.event.image_url || HERO_FALLBACK_IMAGE}
               badge={
                 f.sponsor_name

@@ -200,7 +200,7 @@ export const EventSearch = forwardRef<HTMLInputElement, EventSearchProps>(
               <div className="flex items-center gap-3 text-xs text-muted-foreground pl-1 mt-0.5">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="h-3 w-3" />
-                  {formatDate(event.event_date)}
+                  {formatDate(event.start_date)}
                 </span>
                 <span className="flex items-center gap-1.5 truncate">
                   <MapPin className="h-3 w-3" />

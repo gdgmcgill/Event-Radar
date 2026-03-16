@@ -18,8 +18,7 @@ interface FeaturedRow {
     id: string;
     title: string;
     image_url: string | null;
-    event_date: string;
-    event_time: string;
+    start_date: string;
     status: string;
   } | null;
 }
@@ -41,7 +40,7 @@ export default function FeaturedManagementPage() {
   const [addEventTitle, setAddEventTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<
-    { id: string; title: string; event_date?: string }[]
+    { id: string; title: string; start_date?: string }[]
   >([]);
   const [searching, setSearching] = useState(false);
 
@@ -98,12 +97,12 @@ export default function FeaturedManagementPage() {
         // Only show future events — can't feature past events
         setSearchResults(
           (json.events ?? [])
-            .filter((e: any) => !e.event_date || e.event_date >= now.slice(0, 10))
+            .filter((e: any) => !e.start_date || e.start_date >= now.slice(0, 10))
             .slice(0, 10)
             .map((e: any) => ({
               id: e.id,
               title: e.title,
-              event_date: e.event_date,
+              start_date: e.start_date,
             }))
         );
       }
@@ -262,10 +261,10 @@ export default function FeaturedManagementPage() {
                         <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[200px]">
                           {row.event?.title ?? "Unknown event"}
                         </p>
-                        {row.event?.event_date && (
+                        {row.event?.start_date && (
                           <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 mt-0.5">
                             <Calendar className="h-3 w-3" />
-                            {new Date(row.event.event_date).toLocaleDateString()}
+                            {new Date(row.event.start_date).toLocaleDateString()}
                           </p>
                         )}
                       </div>
@@ -376,10 +375,10 @@ export default function FeaturedManagementPage() {
                   onClick={() => selectEventForAdd(event.id, event.title)}
                 >
                   <span className="truncate">{event.title}</span>
-                  {event.event_date && (
+                  {event.start_date && (
                     <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0 flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {new Date(event.event_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      {new Date(event.start_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                     </span>
                   )}
                 </button>

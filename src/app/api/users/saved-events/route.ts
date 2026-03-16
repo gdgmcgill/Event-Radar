@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
     if (sort === "date") {
       events.sort(
         (a, b) =>
-          new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
+          new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
       );
     } else if (sort === "title") {
       events.sort((a, b) => a.title.localeCompare(b.title));

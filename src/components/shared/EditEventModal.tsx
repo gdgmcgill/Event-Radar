@@ -84,10 +84,12 @@ export function EditEventModal({
   // Sync form state when event changes
   const resetForm = (ev: Event) => {
     setTitle(ev.title);
-    setDescription(ev.description);
-    setDate(ev.event_date);
-    setTime(ev.event_time);
-    setLocation(ev.location);
+    setDescription(ev.description || "");
+    // Extract date and time from ISO start_date
+    const startDate = new Date(ev.start_date);
+    setDate(startDate.toISOString().split("T")[0]);
+    setTime(startDate.toTimeString().slice(0, 5));
+    setLocation(ev.location || "");
     setTags([...ev.tags]);
     setImageFile(null);
     setImagePreview(ev.image_url || null);

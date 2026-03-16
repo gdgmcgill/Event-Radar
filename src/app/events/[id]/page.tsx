@@ -25,10 +25,11 @@ export async function generateMetadata({
     return { title: "Event Not Found" };
   }
 
-  const description =
-    event.description.length > 160
+  const description = event.description
+    ? event.description.length > 160
       ? event.description.slice(0, 157) + "..."
-      : event.description;
+      : event.description
+    : undefined;
 
   return {
     title: event.title,

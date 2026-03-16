@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { type Event } from "@/types";
-import { formatDate, formatTime } from "@/lib/utils";
+import { formatDate, formatTimeFromISO } from "@/lib/utils";
 
 interface DiscoveryCardProps {
   event: Event;
@@ -99,7 +99,7 @@ export function DiscoveryCard({ event, onClick, badge, badgeVariant = "default" 
 
           {/* Date + Time */}
           <p className="text-white font-medium text-xs opacity-90">
-            {formatDate(event.event_date)}, {formatTime(event.event_time)}
+            {formatDate(event.start_date)}, {formatTimeFromISO(event.start_date)}
           </p>
         </div>
       </div>

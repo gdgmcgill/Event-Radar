@@ -32,11 +32,11 @@ export async function GET() {
     // Get upcoming approved events created by friends
     const { data: events, error: eventsError } = await supabase
       .from("events")
-      .select("id, title, event_date, event_time, location, image_url, created_by, users!events_created_by_fkey(id, name, avatar_url)")
+      .select("id, title, start_date, location, image_url, created_by, users!events_created_by_fkey(id, name, avatar_url)")
       .in("created_by", friendIds)
       .eq("status", "approved")
-      .gte("event_date", today)
-      .order("event_date", { ascending: true })
+      .gte("start_date", today)
+      .order("start_date", { ascending: true })
       .limit(10);
 
     if (eventsError || !events) {
@@ -46,8 +46,7 @@ export async function GET() {
     const results = events.map((e: any) => ({
       id: e.id,
       title: e.title,
-      event_date: e.event_date,
-      event_time: e.event_time,
+      start_date: e.start_date,
       location: e.location,
       image_url: e.image_url,
       organizer: e.users

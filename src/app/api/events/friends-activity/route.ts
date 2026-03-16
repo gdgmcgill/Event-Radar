@@ -32,9 +32,9 @@ export async function GET() {
 
     const { data: savedByFriends, error: savedError } = await (supabase as any)
       .from("saved_events")
-      .select("event_id, user_id, users!inner(id, name, avatar_url), events!inner(id, title, event_date, event_time, location, image_url)")
+      .select("event_id, user_id, users!inner(id, name, avatar_url), events!inner(id, title, start_date, location, image_url)")
       .in("user_id", friendIds)
-      .gte("events.event_date", today);
+      .gte("events.start_date", today);
 
     if (savedError || !savedByFriends) {
       return NextResponse.json({ events: [] });

@@ -21,7 +21,7 @@ export function UpcomingThisWeekSection({ events, onEventClick }: UpcomingThisWe
   const now = new Date();
   const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const thisWeekEvents = events.filter((e) => {
-    const eventDate = new Date(e.event_date);
+    const eventDate = new Date(e.start_date);
     return eventDate >= now && eventDate <= weekFromNow;
   });
 

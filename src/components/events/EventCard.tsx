@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatTime } from "@/lib/utils";
+import { formatTimeFromISO } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { type Event, type InteractionSource, type EventPopularityScore } from "@/types";
 import { Calendar, Clock, MapPin, Heart, X, ThumbsUp, ThumbsDown, TrendingUp, Flame, Loader2 } from "lucide-react";
@@ -267,8 +267,8 @@ export function EventCard({
           
           {/* Glass Date Badge Floating over Image */}
           <div className="absolute bottom-3 left-3 flex flex-col bg-card/90 dark:bg-black/60 backdrop-blur-md border border-border rounded-lg px-3 py-1.5 shadow-xl">
-            <span className="text-xs font-semibold uppercase tracking-wider text-primary">{new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' })}</span>
-            <span className="text-xl font-bold leading-none text-card-foreground">{new Date(event.event_date).getDate()}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">{new Date(event.start_date).toLocaleDateString('en-US', { month: 'short' })}</span>
+            <span className="text-xl font-bold leading-none text-card-foreground">{new Date(event.start_date).getDate()}</span>
           </div>
 
           {/* Not interested (recommendation cards only) */}
@@ -305,7 +305,7 @@ export function EventCard({
           <div className="mt-auto pt-4 space-y-2 text-xs text-muted-foreground font-medium">
             <div className="flex items-center gap-2">
               <Clock className="h-3.5 w-3.5" />
-              <span>{formatTime(event.event_time)}</span>
+              <span>{formatTimeFromISO(event.start_date)}</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-3.5 w-3.5" />

@@ -5,7 +5,7 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { EventBadge } from "@/components/events/EventBadge";
-import { formatDate, formatTime, cn } from "@/lib/utils";
+import { formatDate, formatTimeFromISO, cn } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { exportEventIcal } from "@/lib/exportUtils";
 import type { Event, EventTag, ReviewAggregate } from "@/types";
@@ -57,14 +57,14 @@ export function EventDetailView({
       ? `${window.location.origin}/events/${event.id}`
       : `/events/${event.id}`;
 
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location || "")}`;
 
   const handleNativeShare = useCallback(async () => {
     try {
       if (navigator.share) {
         await navigator.share({
           title: event.title,
-          text: event.description,
+          text: event.description ?? undefined,
           url: eventUrl,
         });
         onShare?.("native");
@@ -281,10 +281,10 @@ export function EventDetailView({
                   </div>
                   <div className="flex flex-col">
                     <span className="text-foreground font-bold text-lg">
-                      {formatDate(event.event_date)}
+                      {formatDate(event.start_date)}
                     </span>
                     <span className="text-muted-foreground text-sm mt-0.5">
-                      {formatTime(event.event_time)}
+                      {formatTimeFromISO(event.start_date)}
                     </span>
                     <button
                       onClick={() => exportEventIcal(event.id, event.title)}

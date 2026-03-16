@@ -31,7 +31,7 @@ export async function GET() {
     }
 
     const events = (eventsData || []).map(event =>
-      transformEventFromDB(event as unknown as Parameters<typeof transformEventFromDB>[0])
+      transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
     );
 
     return NextResponse.json({

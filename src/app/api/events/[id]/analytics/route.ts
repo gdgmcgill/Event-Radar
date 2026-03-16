@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     // Fetch event to get club_id
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, title, event_date, club_id")
+      .select("id, title, start_date, club_id")
       .eq("id", eventId)
       .maybeSingle();
 
@@ -96,7 +96,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       event_id: event.id,
       title: event.title,
-      event_date: event.event_date,
+      start_date: event.start_date,
       views: popularity?.view_count ?? 0,
       clicks: popularity?.click_count ?? 0,
       saves: saveCount,

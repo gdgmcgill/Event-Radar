@@ -34,22 +34,26 @@ export enum EventTag {
 export interface Event {
   id: string;
   title: string;
-  description: string;
-  event_date: string; // ISO date string
-  event_time: string; // HH:mm format
-  location: string;
-  club_id: string;
+  description: string | null;
+  start_date: string;
+  end_date: string;
+  location: string | null;
+  organizer: string | null;
+  club_id: string | null;
   tags: EventTag[];
   image_url: string | null;
-  source_url?: string | null;
-  created_by?: string | null;
+  category: string | null;
+  source: string;
+  source_url: string | null;
+  content_hash: string | null;
+  rsvp_count: number | null;
+  created_by: string | null;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
   status: "pending" | "approved" | "rejected";
-  approved_by: string | null;
-  approved_at: string | null;
+  deleted_at: string | null;
   appeal_count?: number;
-  // Relations
+  // Relations (populated by joins, not stored)
   club?: Club;
   saved_by_users?: string[];
 }
@@ -279,7 +283,7 @@ export interface ExperimentResults {
 export interface EventAnalytics {
   event_id: string;
   title: string;
-  event_date: string;
+  start_date: string;
   views: number;
   clicks: number;
   saves: number;

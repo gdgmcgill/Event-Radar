@@ -46,9 +46,9 @@ interface RouteParams {
  *                      type: string
  *                    description:
  *                      type: string
- *                    event_date:
+ *                    start_date:
  *                      type: string
- *                    event_time:
+ *                    end_date:
  *                      type: string
  *                    location:
  *                      type: string
@@ -61,10 +61,6 @@ interface RouteParams {
  *                    image_url:
  *                      type: string
  *                    status:
- *                      type: string
- *                    approved_by:
- *                      type: string
- *                    approved_at:
  *                      type: string
  *        description: Event fetched successfully
  *      404:
@@ -106,7 +102,7 @@ export async function GET(
     }
 
     // Transform event to frontend format (cast needed: clubs relation may not exist in DB types)
-    const event = transformEventFromDB(data as unknown as Parameters<typeof transformEventFromDB>[0]);
+    const event = transformEventFromDB(data as Parameters<typeof transformEventFromDB>[0]);
 
     return NextResponse.json({ event });
   } catch (error) {

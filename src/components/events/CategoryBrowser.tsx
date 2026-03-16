@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { EVENT_CATEGORIES, EVENT_TAGS } from "@/lib/constants";
 import type { Event, EventTag } from "@/types";
-import { formatDate, formatTime, cn } from "@/lib/utils";
+import { formatDate, formatTimeFromISO, cn } from "@/lib/utils";
 import {
   GraduationCap,
   Users,
@@ -211,11 +211,11 @@ function CategoryEventCard({ event, onEventClick }: CategoryEventCardProps) {
         <div className="space-y-1.5 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <Calendar className="h-3.5 w-3.5 text-primary/60 flex-shrink-0" />
-            <span>{formatDate(event.event_date)}</span>
+            <span>{formatDate(event.start_date)}</span>
           </div>
           <div className="flex items-center gap-2">
             <Clock className="h-3.5 w-3.5 text-primary/60 flex-shrink-0" />
-            <span>{formatTime(event.event_time)}</span>
+            <span>{formatTimeFromISO(event.start_date)}</span>
           </div>
           <div className="flex items-center gap-2">
             <MapPin className="h-3.5 w-3.5 text-primary/60 flex-shrink-0" />
