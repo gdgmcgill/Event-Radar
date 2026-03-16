@@ -22,7 +22,11 @@ import {
   ExternalLink,
   Flame,
   ArrowRight,
+  Flag,
+  CheckCircle,
 } from "lucide-react";
+import { ReportEventDialog } from "@/components/events/ReportEventDialog";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface EventDetailViewProps {
   event: Event;
@@ -51,6 +55,9 @@ export function EventDetailView({
 }: EventDetailViewProps) {
   const [saved, setSaved] = useState(isSaved);
   const [liked, setLiked] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [hasReported, setHasReported] = useState(false);
+  const { user } = useAuthStore();
 
   const eventUrl =
     typeof window !== "undefined"
@@ -402,7 +409,9 @@ export function EventDetailView({
                     <span className="text-muted-foreground text-sm font-medium mb-1">
                       Registration
                     </span>
-                    <span className="text-3xl font-black text-foreground">Free</span>
+                    <span className="text-3xl font-black text-foreground truncate max-w-[180px]" title={event.is_free ? "Free" : event.price || "Paid"}>
+                      {event.is_free ? "Free" : event.price || "Paid"}
+                    </span>
                   </div>
                   <span className="px-3 py-1 rounded-full bg-black/[0.05] text-muted-foreground text-xs font-bold uppercase tracking-wider dark:bg-white/10">
                     McGill ID Req.
@@ -410,13 +419,52 @@ export function EventDetailView({
                 </div>
 
                 {/* Register Now CTA */}
-                <button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-4 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(237,29,49,0.25)] hover:shadow-[0_0_35px_rgba(237,29,49,0.4)] flex items-center justify-center gap-2 cursor-pointer">
-                  Register Now
-                  <ArrowRight className="h-5 w-5" />
-                </button>
-                <p className="text-center text-muted-foreground text-xs mt-4">
-                  Limited spots available.
-                </p>
+                {event.rsvp_link ? (
+                  <a
+                    href={event.rsvp_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-4 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(237,29,49,0.25)] hover:shadow-[0_0_35px_rgba(237,29,49,0.4)] flex items-center justify-center gap-2"
+                  >
+                    Register Now
+                    <ExternalLink className="h-5 w-5" />
+                  </a>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full bg-muted text-muted-foreground font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed"
+                  >
+                    No Registration Link
+                  </button>
+                )}
+                {event.rsvp_link && (
+                  <p className="text-center text-muted-foreground text-xs mt-4">
+                    Opens external registration page.
+                  </p>
+                )}
+
+                {/* Report link */}
+                {user && (
+                  <div className="mt-6 flex justify-center">
+                    <button
+                      onClick={() => hasReported ? undefined : setReportDialogOpen(true)}
+                      disabled={hasReported}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-500 transition-colors disabled:cursor-default disabled:hover:text-muted-foreground"
+                    >
+                      {hasReported ? (
+                        <>
+                          <CheckCircle className="h-3 w-3" />
+                          <span>Reported</span>
+                        </>
+                      ) : (
+                        <>
+                          <Flag className="h-3 w-3" />
+                          <span>Report</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -447,6 +495,13 @@ export function EventDetailView({
           </ScrollRow>
         </section>
       )}
+
+      <ReportEventDialog
+        eventId={event.id}
+        open={reportDialogOpen}
+        onOpenChange={setReportDialogOpen}
+        onReported={() => setHasReported(true)}
+      />
     </div>
   );
 }
