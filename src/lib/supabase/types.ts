@@ -165,6 +165,7 @@ export type Database = {
           appeal_count: number
           banner_url: string | null
           category: string | null
+          contact_email: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -183,6 +184,7 @@ export type Database = {
           appeal_count?: number
           banner_url?: string | null
           category?: string | null
+          contact_email?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -201,6 +203,7 @@ export type Database = {
           appeal_count?: number
           banner_url?: string | null
           category?: string | null
+          contact_email?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -342,6 +345,50 @@ export type Database = {
           },
         ]
       }
+      event_reports: {
+        Row: {
+          category: string
+          created_at: string
+          event_id: string
+          id: string
+          message: string | null
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          event_id: string
+          id?: string
+          message?: string | null
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          message?: string | null
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reports_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           appeal_count: number
@@ -355,9 +402,13 @@ export type Database = {
           end_date: string
           id: string
           image_url: string | null
+          is_free: boolean
           location: string | null
           organizer: string | null
+          pending_edits: Json | null
+          price: string | null
           rsvp_count: number | null
+          rsvp_link: string | null
           source: string
           source_url: string | null
           start_date: string
@@ -378,9 +429,13 @@ export type Database = {
           end_date: string
           id?: string
           image_url?: string | null
+          is_free?: boolean
           location?: string | null
           organizer?: string | null
+          pending_edits?: Json | null
+          price?: string | null
           rsvp_count?: number | null
+          rsvp_link?: string | null
           source?: string
           source_url?: string | null
           start_date: string
@@ -401,9 +456,13 @@ export type Database = {
           end_date?: string
           id?: string
           image_url?: string | null
+          is_free?: boolean
           location?: string | null
           organizer?: string | null
+          pending_edits?: Json | null
+          price?: string | null
           rsvp_count?: number | null
+          rsvp_link?: string | null
           source?: string
           source_url?: string | null
           start_date?: string
@@ -564,34 +623,34 @@ export type Database = {
       }
       moderation_reviews: {
         Row: {
-          id: string
-          target_type: string
-          target_id: string
           action: string
-          category: string | null
-          message: string
           author_id: string
+          category: string | null
           created_at: string | null
+          id: string
+          message: string
+          target_id: string
+          target_type: string
         }
         Insert: {
-          id?: string
-          target_type: string
-          target_id: string
           action: string
-          category?: string | null
-          message: string
           author_id: string
+          category?: string | null
           created_at?: string | null
+          id?: string
+          message: string
+          target_id: string
+          target_type: string
         }
         Update: {
-          id?: string
-          target_type?: string
-          target_id?: string
           action?: string
-          category?: string | null
-          message?: string
           author_id?: string
+          category?: string | null
           created_at?: string | null
+          id?: string
+          message?: string
+          target_id?: string
+          target_type?: string
         }
         Relationships: []
       }
@@ -630,6 +689,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_event_id_fkey"
             columns: ["event_id"]
@@ -965,6 +1031,7 @@ export type Database = {
       users: {
         Row: {
           avatar_url: string | null
+          banner_url: string | null
           created_at: string | null
           email: string
           faculty: string | null
@@ -984,6 +1051,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          banner_url?: string | null
           created_at?: string | null
           email: string
           faculty?: string | null
@@ -1003,6 +1071,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          banner_url?: string | null
           created_at?: string | null
           email?: string
           faculty?: string | null
