@@ -82,6 +82,7 @@ interface CreateEventFormProps {
     title: string;
     description: string;
     start_date?: string;
+    end_date?: string | null;
     location: string;
     tags: EventTag[];
     image_url?: string | null;
@@ -100,13 +101,18 @@ export function CreateEventForm({
 }: CreateEventFormProps) {
   // Parse initial date/time for edit mode
   const getInitialDateParts = () => {
-    if (initialData?.start_date && mode === "edit") {
+    const parts = { date: "", time: "", endDate: "", endTime: "" };
+    if (mode === "edit" && initialData?.start_date) {
       const dt = new Date(initialData.start_date);
-      const date = dt.toISOString().split("T")[0];
-      const time = dt.toTimeString().slice(0, 5);
-      return { date, time };
+      parts.date = dt.toISOString().split("T")[0];
+      parts.time = dt.toTimeString().slice(0, 5);
     }
-    return { date: "", time: "" };
+    if (mode === "edit" && initialData?.end_date) {
+      const dt = new Date(initialData.end_date);
+      parts.endDate = dt.toISOString().split("T")[0];
+      parts.endTime = dt.toTimeString().slice(0, 5);
+    }
+    return parts;
   };
 
   const initialDateParts = getInitialDateParts();
@@ -115,9 +121,9 @@ export function CreateEventForm({
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
     date: initialDateParts.date,
-    endDate: "",
+    endDate: initialDateParts.endDate,
     time: initialDateParts.time,
-    endTime: "",
+    endTime: initialDateParts.endTime,
     location: initialData?.location ?? "",
     tags: initialData?.tags ?? [],
     imageFile: null,
@@ -243,7 +249,9 @@ export function CreateEventForm({
       if (formData.imageFile) {
         imageUrl = await uploadEventImage(formData.imageFile);
         if (!imageUrl) {
-          console.warn("Image upload failed, submitting without image");
+          setSubmitError("Image upload failed. Please try again or remove the image.");
+          setSubmitting(false);
+          return;
         }
       }
 
