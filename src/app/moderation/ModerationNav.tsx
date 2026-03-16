@@ -15,6 +15,7 @@ import {
   Star,
   ScrollText,
   BarChart3,
+  Flag,
 } from "lucide-react";
 
 const contentItems = [
@@ -23,6 +24,7 @@ const contentItems = [
   { name: "Event Queue", path: "/moderation/events", icon: CalendarClock },
   { name: "Club Approvals", path: "/moderation/clubs", icon: Building2 },
   { name: "Appeals", path: "/moderation/appeals", icon: MessageSquare },
+  { name: "Reports", path: "/moderation/reports", icon: Flag },
   { name: "Featured Events", path: "/moderation/featured", icon: Star },
 ];
 
