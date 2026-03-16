@@ -5,4 +5,4 @@ Disallow: /moderation/
 Disallow: /admin-login
 Disallow: /auth/
 
-Sitemap: https://uni-verse.app/sitemap.xml
+Sitemap: https://universeapp.ca/sitemap.xml
