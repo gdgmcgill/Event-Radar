@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Building2, Upload, Loader2, CheckCircle2, Instagram, AlertCircle, Globe, ImageIcon } from "lucide-react";
+import { Building2, Upload, Loader2, CheckCircle2, Instagram, AlertCircle, Globe, ImageIcon, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -33,6 +33,7 @@ export function CreateClubForm() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [instagramHandle, setInstagramHandle] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [discordUrl, setDiscordUrl] = useState("");
@@ -99,6 +100,10 @@ export function CreateClubForm() {
 
     if (!category) errs.category = "Please select a category.";
 
+    const trimmedEmail = contactEmail.trim();
+    if (!trimmedEmail) errs.contactEmail = "Contact email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) errs.contactEmail = "Please enter a valid email address.";
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -119,6 +124,7 @@ export function CreateClubForm() {
           name: name.trim(),
           description: description.trim(),
           category,
+          contact_email: contactEmail.trim(),
           logo_url: null,
           instagram_handle: cleanHandle,
           website_url: websiteUrl.trim() || null,
@@ -340,6 +346,31 @@ export function CreateClubForm() {
             ))}
           </select>
           {errors.category && <p className="mt-1.5 text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{errors.category}</p>}
+        </div>
+
+        {/* Contact Email */}
+        <div>
+          <label htmlFor="club-contact-email" className="mb-2 block text-sm font-medium text-foreground">
+            Contact Email <span className="text-destructive">*</span>
+          </label>
+          <p className="text-xs text-muted-foreground mb-2">
+            Admin communications about your club and events will be sent to this address.
+          </p>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <Mail className="h-4 w-4" />
+            </div>
+            <Input
+              id="club-contact-email"
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder="club@example.com"
+              disabled={submitting}
+              className="pl-9 border-border focus:ring-primary focus:border-primary"
+            />
+          </div>
+          {errors.contactEmail && <p className="mt-1.5 text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{errors.contactEmail}</p>}
         </div>
 
         {/* Social Links Section */}

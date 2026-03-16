@@ -212,7 +212,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         const days = eachDayOfInterval({ start: thirtyDaysAgo, end: new Date() });
         const interactionsByDay = new Map<string, number>();
         for (const interaction of interactions) {
-          const day = format(parseISO(interaction.created_at), "yyyy-MM-dd");
+          const day = format(parseISO(interaction.created_at ?? new Date().toISOString()), "yyyy-MM-dd");
           interactionsByDay.set(day, (interactionsByDay.get(day) || 0) + 1);
         }
 
@@ -232,7 +232,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         // Peak hours
         const hourCounts = new Array(24).fill(0);
         for (const interaction of interactions) {
-          const hour = parseISO(interaction.created_at).getHours();
+          const hour = parseISO(interaction.created_at ?? new Date().toISOString()).getHours();
           hourCounts[hour]++;
         }
         peakHours = hourCounts.map((count, hour) => ({ hour, count }));
@@ -241,7 +241,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const dayCounts = new Array(7).fill(0);
         for (const interaction of interactions) {
-          const day = parseISO(interaction.created_at).getDay();
+          const day = parseISO(interaction.created_at ?? new Date().toISOString()).getDay();
           dayCounts[day]++;
         }
         peakDays = dayCounts.map((count, i) => ({ day: dayNames[i], count }));

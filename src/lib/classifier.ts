@@ -558,6 +558,10 @@ const TAG_KEYWORD_MAP: Record<EventTag, string[]> = {
   [EventTag.WELLNESS]: TAG_KEYWORDS.wellness,
   [EventTag.MUSIC]: [],
   [EventTag.TECH]: [],
+  [EventTag.FOOD]: [],
+  [EventTag.VOLUNTEER]: [],
+  [EventTag.ARTS]: [],
+  [EventTag.NETWORKING]: [],
 };
 
 /**

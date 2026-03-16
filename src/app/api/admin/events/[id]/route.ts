@@ -40,10 +40,14 @@ export async function PUT(
     .from("events")
     .update(updateData)
     .eq("id", id)
+    .is("deleted_at", null)
     .select()
     .single();
 
   if (error) {
+    if (error.code === "PGRST116") {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

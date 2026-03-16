@@ -74,7 +74,7 @@ export async function GET() {
 
     // Fetch user's engagement summary
     const { data: engagement, error: engagementError } = await supabase
-      .from("user_engagement_summary")
+      .from("user_engagement_summary" as never)
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle();
@@ -160,7 +160,7 @@ export async function POST() {
 
     // Fetch the updated engagement
     const { data: engagement, error: engagementError } = await supabase
-      .from("user_engagement_summary")
+      .from("user_engagement_summary" as never)
       .select("*")
       .eq("user_id", user.id)
       .single();

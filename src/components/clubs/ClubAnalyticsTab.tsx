@@ -184,7 +184,7 @@ export function ClubAnalyticsTab({ clubId }: ClubAnalyticsTabProps) {
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
               <Tooltip
                 contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
-                formatter={(value: number) => [`${value}%`, "Engagement"]}
+                formatter={((value: number) => [`${value}%`, "Engagement"]) as never}
               />
               <Line type="monotone" dataKey="rate" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
             </LineChart>

@@ -202,11 +202,11 @@ export async function DELETE(
   const { createServiceClient } = await import("@/lib/supabase/service");
   const serviceClient = createServiceClient();
   await serviceClient.from("admin_audit_log").insert({
-    admin_id: user.id,
+    admin_user_id: user.id,
     action: "club_deleted",
     target_type: "club",
     target_id: clubId,
-    details: { club_name: club.name },
+    metadata: { club_name: club.name },
   });
 
   return NextResponse.json({ success: true });

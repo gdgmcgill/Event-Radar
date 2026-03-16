@@ -62,7 +62,7 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
       setEvents(unique);
     } catch (err) {
       console.error("Error fetching recommended events:", err);
-      onEmpty?.();
+      setError("Failed to load recommendations");
     } finally {
       setLoading(false);
     }
@@ -116,8 +116,8 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
     <section>
       {header}
       <ScrollRow className={SECTION_PADDING}>
-        {events.map((event) => (
-          <div key={event.id} className={CARD_WRAPPER_CLASS}>
+        {events.map((event, idx) => (
+          <div key={event.id ?? `rec-${idx}`} className={CARD_WRAPPER_CLASS}>
             <DiscoveryCard event={event} onClick={onEventClick ? () => onEventClick(event) : undefined} />
           </div>
         ))}

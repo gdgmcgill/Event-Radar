@@ -315,7 +315,7 @@ function PersonCard({ person }: { person: UserResult }) {
     .join("")
     .toUpperCase();
 
-  const isOnline = Math.random() > 0.4; // Placeholder for real online status
+  const isOnline = false; // Placeholder for real online status
 
   return (
     <div className="bg-white dark:bg-slate-900/50 border border-red-600/5 rounded-2xl p-5 flex flex-col items-center text-center group hover:shadow-lg transition-all">

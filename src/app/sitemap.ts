@@ -12,16 +12,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
+      url: `${baseUrl}/clubs`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/landing`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
       url: `${baseUrl}/about`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.5,
     },
     {
-      url: `${baseUrl}/calendar`,
+      url: `${baseUrl}/privacy`,
       lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.8,
+      changeFrequency: "monthly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.3,
     },
   ];
 
@@ -37,7 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const eventPages: MetadataRoute.Sitemap = (events ?? []).map((event) => ({
       url: `${baseUrl}/events/${event.id}`,
-      lastModified: new Date(event.updated_at),
+      lastModified: new Date(event.updated_at ?? Date.now()),
       changeFrequency: "weekly" as const,
       priority: 0.7,
     }));

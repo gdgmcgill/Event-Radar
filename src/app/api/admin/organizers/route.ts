@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   // Search filter
   if (search.trim()) {
-    const sanitized = search.replace(/[,()]/g, "").trim();
+    const sanitized = search.replace(/[^a-zA-Z0-9 @._\-]/g, "").trim();
     if (sanitized) {
       query = query.or(
         `name.ilike.%${sanitized}%,email.ilike.%${sanitized}%`
@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
   const eventCountByUser = new Map<string, number>();
   if (eventCounts) {
     for (const e of eventCounts) {
+      if (!e.created_by) continue;
       eventCountByUser.set(
         e.created_by,
         (eventCountByUser.get(e.created_by) ?? 0) + 1

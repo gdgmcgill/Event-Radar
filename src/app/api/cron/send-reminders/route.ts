@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
         );
 
         for (const row of saved24h) {
+          if (!row.user_id || !row.event_id) continue;
           const event = events24h.find((e) => e.id === row.event_id);
           if (!event) continue;
 
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
         );
 
         for (const row of saved1h) {
+          if (!row.user_id || !row.event_id) continue;
           const event = events1h.find((e) => e.id === row.event_id);
           if (!event) continue;
 

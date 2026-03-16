@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { VALID_INTEREST_TAGS } from "@/lib/constants";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
@@ -34,7 +35,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, avatar_url, interest_tags, pronouns, year, faculty, visibility, onboarding_completed } = body;
+    const { name, avatar_url, banner_url, interest_tags, pronouns, year, faculty, visibility, onboarding_completed } = body;
 
     const updatePayload: Database["public"]["Tables"]["users"]["Update"] = {
       updated_at: new Date().toISOString(),
@@ -72,6 +73,29 @@ export async function PATCH(
         }
       } else {
         updatePayload.avatar_url = null;
+      }
+    }
+
+    // Validate banner_url
+    if (banner_url !== undefined) {
+      if (banner_url !== null && typeof banner_url !== "string") {
+        return NextResponse.json(
+          { error: "Banner URL must be a string or null" },
+          { status: 400 }
+        );
+      }
+      if (banner_url && banner_url.trim() !== '') {
+        try {
+          new URL(banner_url);
+          (updatePayload as Record<string, unknown>).banner_url = banner_url.trim();
+        } catch (_) {
+          return NextResponse.json(
+            { error: "Invalid Banner URL format" },
+            { status: 400 }
+          );
+        }
+      } else {
+        (updatePayload as Record<string, unknown>).banner_url = null;
       }
     }
 
@@ -157,10 +181,11 @@ export async function PATCH(
       );
     }
 
-    const { data, error } = await (supabase as any)
+    const serviceClient = createServiceClient();
+    const { data, error } = await serviceClient
       .from("users")
       .update(updatePayload)
-      .eq("id", user.id)
+      .eq("id", id)
       .select()
       .single();
 

@@ -54,6 +54,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate price and rsvp_link lengths
+    if (price && typeof price === "string" && price.length > 20) {
+      return NextResponse.json({ error: "Price must be 20 characters or less" }, { status: 400 });
+    }
+    if (rsvp_link && typeof rsvp_link === "string" && rsvp_link.length > 500) {
+      return NextResponse.json({ error: "Registration link is too long" }, { status: 400 });
+    }
+
     // Validate date fields (strict ISO 8601 + future constraint)
     const dateError = validateEventDates(start_date, end_date);
     if (dateError) {
@@ -109,8 +117,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: body.club_id
-            ? `This club already has an event at this time: "${overlapping.title}"`
-            : `You already have an event at this time: "${overlapping.title}"`,
+            ? "This club already has an event at this time"
+            : "You already have an event at this time",
         },
         { status: 409 }
       );

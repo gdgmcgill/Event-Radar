@@ -1,9 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
 
 /**
  * GET /api/users/me/suggestions — Suggest people based on shared clubs,
  * overlapping interest tags, same faculty/year, or shared event RSVPs.
+ *
+ * Uses service client to bypass RLS — the suggestion algorithm needs to
+ * read other users' profiles, club memberships, and RSVPs.
  */
 export async function GET() {
   try {
@@ -16,15 +20,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Use service client for data queries (bypasses RLS)
+    const service = createServiceClient();
+
     // Get current user's profile
-    const { data: profile } = await (supabase as any)
+    const { data: profile } = await service
       .from("users")
       .select("interest_tags, faculty, year")
       .eq("id", user.id)
       .single();
 
     // Get who the user already follows
-    const { data: following } = await (supabase as any)
+    const { data: following } = await service
       .from("user_follows")
       .select("following_id")
       .eq("follower_id", user.id);
@@ -35,7 +42,7 @@ export async function GET() {
     followingIds.add(user.id); // exclude self
 
     // Get current user's clubs
-    const { data: myClubMembers } = await (supabase as any)
+    const { data: myClubMembers } = await service
       .from("club_members")
       .select("club_id")
       .eq("user_id", user.id);
@@ -43,7 +50,7 @@ export async function GET() {
     const myClubIds = (myClubMembers ?? []).map((m: any) => m.club_id);
 
     // Get current user's club follows
-    const { data: myClubFollows } = await (supabase as any)
+    const { data: myClubFollows } = await service
       .from("club_followers")
       .select("club_id")
       .eq("user_id", user.id);
@@ -56,8 +63,8 @@ export async function GET() {
     ];
 
     // Get current user's RSVPs
-    const { data: myRsvps } = await (supabase as any)
-      .from("event_rsvps")
+    const { data: myRsvps } = await service
+      .from("rsvps")
       .select("event_id")
       .eq("user_id", user.id)
       .in("status", ["going", "interested"]);
@@ -79,7 +86,7 @@ export async function GET() {
 
     // 1. People in the same clubs
     if (allClubIds.length > 0) {
-      const { data: clubMates } = await (supabase as any)
+      const { data: clubMates } = await service
         .from("club_members")
         .select("user_id, club_id, clubs(name)")
         .in("club_id", allClubIds)
@@ -103,7 +110,7 @@ export async function GET() {
       }
 
       // Also check club followers
-      const { data: clubFollowerMates } = await (supabase as any)
+      const { data: clubFollowerMates } = await service
         .from("club_followers")
         .select("user_id, club_id, clubs(name)")
         .in("club_id", allClubIds)
@@ -127,8 +134,8 @@ export async function GET() {
 
     // 2. People attending the same events
     if (myEventIds.length > 0) {
-      const { data: eventMates } = await (supabase as any)
-        .from("event_rsvps")
+      const { data: eventMates } = await service
+        .from("rsvps")
         .select("user_id, event_id, events(title)")
         .in("event_id", myEventIds)
         .in("status", ["going", "interested"])
@@ -153,11 +160,12 @@ export async function GET() {
     // 3. People with overlapping interest tags
     const myTags: string[] = profile?.interest_tags ?? [];
     if (myTags.length > 0) {
-      const { data: tagMatches } = await (supabase as any)
+      const { data: tagMatches } = await service
         .from("users")
         .select("id, interest_tags")
         .overlaps("interest_tags", myTags)
         .neq("id", user.id)
+        .eq("visibility", "public")
         .limit(50);
 
       for (const tm of tagMatches ?? []) {
@@ -181,11 +189,12 @@ export async function GET() {
 
     // 4. Same faculty/year fallback
     if (profile?.faculty) {
-      const { data: facultyMates } = await (supabase as any)
+      const { data: facultyMates } = await service
         .from("users")
         .select("id")
         .eq("faculty", profile.faculty)
         .neq("id", user.id)
+        .eq("visibility", "public")
         .limit(30);
 
       for (const fm of facultyMates ?? []) {
@@ -211,10 +220,11 @@ export async function GET() {
       return NextResponse.json({ suggestions: [] });
     }
 
-    const { data: profiles } = await (supabase as any)
+    const { data: profiles } = await service
       .from("users")
-      .select("id, name, avatar_url, faculty, year")
-      .in("id", suggestionIds);
+      .select("id, name, avatar_url, faculty, year, visibility")
+      .in("id", suggestionIds)
+      .eq("visibility", "public");
 
     // Enrich suggestions with profile data
     const suggestions: Suggestion[] = [];
@@ -223,7 +233,7 @@ export async function GET() {
       if (!s) continue;
       suggestions.push({
         ...s,
-        name: p.name,
+        name: p.name ?? "Unknown",
         avatar_url: p.avatar_url,
         faculty: p.faculty,
         year: p.year,

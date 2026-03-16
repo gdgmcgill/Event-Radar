@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /moderation/
+Disallow: /admin-login
+Disallow: /auth/
+
+Sitemap: https://uni-verse.app/sitemap.xml

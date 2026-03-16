@@ -8,7 +8,8 @@ import type { EventTag } from "@/types";
 type EditProfileButtonProps = {
     userId: string;
     initialName: string;
-    initialAvatarUrl: string;
+    initialAvatarUrl?: string;
+    initialBannerUrl?: string;
     initialTags: EventTag[];
     initialPronouns?: string;
     initialYear?: string;

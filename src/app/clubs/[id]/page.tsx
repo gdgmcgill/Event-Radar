@@ -175,7 +175,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
       </div>
 
       {/* Main Content (overlaps hero) */}
-      <main className="w-full max-w-7xl mx-auto px-6 pb-24 -mt-24 relative z-10">
+      <main className="w-full max-w-7xl mx-auto px-6 pb-24 -mt-6 relative z-10">
         {/* Rejection Banner (visible only to club creator) */}
         {club.status === "rejected" && currentUser?.id === club.created_by && (
           <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20 p-4 flex items-center gap-3 mb-6">
@@ -198,7 +198,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
         )}
 
         {/* Info Card */}
-        <div className="bg-card rounded-2xl border border-border shadow-lg p-6 sm:p-8 mb-10">
+        <div className="bg-white/60 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/10 shadow-lg p-6 sm:p-8 mb-10">
           {club.description && (
             <p className="text-muted-foreground leading-relaxed mb-6">
               {club.description}

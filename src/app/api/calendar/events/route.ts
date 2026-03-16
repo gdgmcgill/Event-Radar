@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .in("status", ["going", "interested"]);
 
-    const savedIds = new Set((savedRows || []).map((r) => r.event_id));
+    const savedIds = new Set((savedRows || []).map((r) => r.event_id).filter((id): id is string => id !== null));
     const rsvpMap = new Map(
       (rsvpRows || []).map((r) => [r.event_id, r.status])
     );

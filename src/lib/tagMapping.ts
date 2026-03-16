@@ -68,6 +68,9 @@ interface DBEvent {
   source_url?: string | null;
   content_hash?: string | null;
   rsvp_count?: number | null;
+  is_free?: boolean;
+  price?: string | null;
+  rsvp_link?: string | null;
   created_at: string;
   updated_at: string | null;
   status?: string;
@@ -156,6 +159,9 @@ export function transformEventFromDB(dbEvent: DBEvent): Event {
     source_url: dbEvent.source_url ?? null,
     content_hash: dbEvent.content_hash ?? null,
     rsvp_count: dbEvent.rsvp_count ?? null,
+    is_free: dbEvent.is_free ?? true,
+    price: dbEvent.price ?? null,
+    rsvp_link: dbEvent.rsvp_link ?? null,
     created_by: dbEvent.created_by || null,
     created_at: dbEvent.created_at,
     updated_at: dbEvent.updated_at,

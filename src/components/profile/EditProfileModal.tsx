@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
     Dialog,
@@ -13,14 +13,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import InterestTagSelector from "@/components/profile/InterestTagSelector";
 import { PRONOUNS, YEARS, FACULTIES } from "@/lib/constants";
-import { Loader2 } from "lucide-react";
+import { Loader2, ImagePlus, X } from "lucide-react";
 
 type EditProfileModalProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     userId: string;
     initialName: string;
-    initialAvatarUrl: string;
+    initialAvatarUrl?: string;
+    initialBannerUrl?: string;
     initialTags: string[];
     initialPronouns?: string;
     initialYear?: string;
@@ -33,7 +34,7 @@ export default function EditProfileModal({
     onOpenChange,
     userId,
     initialName,
-    initialAvatarUrl,
+    initialBannerUrl,
     initialTags,
     initialPronouns = "",
     initialYear = "",
@@ -42,7 +43,6 @@ export default function EditProfileModal({
 }: EditProfileModalProps) {
     const router = useRouter();
     const [name, setName] = useState(initialName);
-    const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
     const [tags, setTags] = useState<string[]>(
         Array.isArray(initialTags) ? initialTags.filter(Boolean) : []
     );
@@ -54,6 +54,63 @@ export default function EditProfileModal({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+
+    // Banner upload state
+    const [bannerUrl, setBannerUrl] = useState<string | null>(initialBannerUrl ?? null);
+    const [bannerUploading, setBannerUploading] = useState(false);
+    const [bannerError, setBannerError] = useState<string | null>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+
+    const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const allowed = ["image/jpeg", "image/png", "image/webp"];
+        if (!allowed.includes(file.type)) {
+            setBannerError("Only JPEG, PNG, or WebP images are allowed.");
+            return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            setBannerError("File too large. Maximum size is 8MB.");
+            return;
+        }
+
+        setBannerUploading(true);
+        setBannerError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const res = await fetch("/api/profile/banner", { method: "POST", body: formData });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Upload failed");
+            setBannerUrl(data.banner_url);
+        } catch (err) {
+            setBannerError(err instanceof Error ? err.message : "Upload failed");
+        } finally {
+            setBannerUploading(false);
+            if (bannerInputRef.current) bannerInputRef.current.value = "";
+        }
+    };
+
+    const handleRemoveBanner = async () => {
+        setBannerUploading(true);
+        setBannerError(null);
+        try {
+            const res = await fetch(`/api/users/${userId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ banner_url: null }),
+            });
+            if (!res.ok) throw new Error("Failed to remove banner");
+            setBannerUrl(null);
+            router.refresh();
+        } catch (err) {
+            setBannerError(err instanceof Error ? err.message : "Failed to remove banner");
+        } finally {
+            setBannerUploading(false);
+        }
+    };
 
     const isValid = name.trim().length >= 2 && tags.length >= 3;
 
@@ -72,7 +129,6 @@ export default function EditProfileModal({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: name.trim(),
-                    avatar_url: avatarUrl.trim() || null,
                     interest_tags: tags,
                     pronouns: pronouns || null,
                     year: year || null,
@@ -109,6 +165,56 @@ export default function EditProfileModal({
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
+                    {/* Banner Upload */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium leading-none">
+                            Profile Banner
+                        </label>
+                        <div
+                            onClick={() => !bannerUploading && bannerInputRef.current?.click()}
+                            className="relative w-full h-32 rounded-xl overflow-hidden cursor-pointer group border border-dashed border-border hover:border-primary/50 transition-colors"
+                        >
+                            {bannerUrl ? (
+                                <>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={bannerUrl} alt="Banner" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <ImagePlus className="h-6 w-6 text-white" />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); handleRemoveBanner(); }}
+                                        className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors opacity-0 group-hover:opacity-100"
+                                        aria-label="Remove banner"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="w-full h-full bg-muted/50 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                                    <ImagePlus className="h-8 w-8" />
+                                    <span className="text-xs font-medium">Click to upload a banner</span>
+                                </div>
+                            )}
+                            {bannerUploading && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                                </div>
+                            )}
+                        </div>
+                        <input
+                            ref={bannerInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={handleBannerUpload}
+                            className="hidden"
+                        />
+                        {bannerError && (
+                            <p className="text-xs text-destructive">{bannerError}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">Recommended: 1500x500px. Max 8MB. JPEG, PNG, or WebP.</p>
+                    </div>
+
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <label htmlFor="name" className="text-sm font-medium leading-none">
@@ -124,18 +230,6 @@ export default function EditProfileModal({
                             {name.trim().length < 2 && (
                                 <p className="text-sm text-red-500">Name must be at least 2 characters.</p>
                             )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <label htmlFor="avatarUrl" className="text-sm font-medium leading-none">
-                                Avatar URL (Optional)
-                            </label>
-                            <Input
-                                id="avatarUrl"
-                                value={avatarUrl}
-                                onChange={(e) => setAvatarUrl(e.target.value)}
-                                placeholder="https://example.com/avatar.jpg"
-                            />
                         </div>
 
                         <div className="space-y-2">

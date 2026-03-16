@@ -4,6 +4,9 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 export async function POST(request: NextRequest) {
   // Verify cron secret
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+  }
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,11 +25,11 @@ export async function POST(request: NextRequest) {
 
     const { data: eligibleEvents } = await supabase
       .from("events")
-      .select("id, title, start_date")
+      .select("id, title, end_date")
       .eq("status", "approved")
       .is("deleted_at", null)
-      .gte("start_date", windowStart)
-      .lte("start_date", windowEnd);
+      .gte("end_date", windowStart)
+      .lte("end_date", windowEnd);
 
     if (eligibleEvents && eligibleEvents.length > 0) {
       eventsProcessed = eligibleEvents.length;

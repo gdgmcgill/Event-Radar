@@ -51,6 +51,8 @@ export default function ModerationPendingEventsPage() {
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "approved" | "rejected" } | null>(null);
   const [rejectingEvent, setRejectingEvent] = useState<PendingEvent | null>(null);
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
+  const [editRejectEventId, setEditRejectEventId] = useState<string | null>(null);
+  const [editRejectReason, setEditRejectReason] = useState("");
 
   const fetchPending = useCallback(async () => {
     setConfirmAction(null);
@@ -63,7 +65,7 @@ export default function ModerationPendingEventsPage() {
       .gte("start_date", new Date().toISOString())
       .order("created_at", { ascending: false });
 
-    setEvents(data ?? []);
+    setEvents((data ?? []) as PendingEvent[]);
     setLoading(false);
   }, []);
 
@@ -180,21 +182,22 @@ export default function ModerationPendingEventsPage() {
     }
   };
 
-  const handleRejectEdits = async (eventId: string) => {
-    const reason = window.prompt("Reason for rejecting these edits:");
-    if (reason === null) return;
-    setActionLoading(eventId);
+  const handleRejectEdits = async () => {
+    if (!editRejectEventId || !editRejectReason.trim()) return;
+    setActionLoading(editRejectEventId);
     try {
-      const res = await fetch(`/api/admin/events/${eventId}/edits`, {
+      const res = await fetch(`/api/admin/events/${editRejectEventId}/edits`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reject", reason }),
+        body: JSON.stringify({ action: "reject", reason: editRejectReason.trim() }),
       });
       if (res.ok) {
         fetchPending();
       }
     } finally {
       setActionLoading(null);
+      setEditRejectEventId(null);
+      setEditRejectReason("");
     }
   };
 
@@ -397,7 +400,7 @@ export default function ModerationPendingEventsPage() {
                         Approve Edits
                       </button>
                       <button
-                        onClick={() => handleRejectEdits(event.id)}
+                        onClick={() => setEditRejectEventId(event.id)}
                         disabled={actionLoading === event.id}
                         className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
                       >
@@ -498,6 +501,43 @@ export default function ModerationPendingEventsPage() {
           onSubmit={handleReject}
         />
       )}
+
+      <Dialog open={!!editRejectEventId} onOpenChange={(open) => { if (!open) { setEditRejectEventId(null); setEditRejectReason(""); } }}>
+        <DialogContent className="max-w-md border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-900 dark:text-zinc-100">
+              Reject Edits
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Reason for rejection
+            </label>
+            <Textarea
+              value={editRejectReason}
+              onChange={(e) => setEditRejectReason(e.target.value)}
+              placeholder="Explain why these edits are being rejected..."
+              rows={3}
+              className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 resize-none"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <button
+              onClick={() => { setEditRejectEventId(null); setEditRejectReason(""); }}
+              className="inline-flex items-center justify-center h-9 px-4 text-sm font-medium rounded-md border border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleRejectEdits}
+              disabled={!editRejectReason.trim() || !!actionLoading}
+              className="inline-flex items-center justify-center h-9 px-4 text-sm font-medium rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+            >
+              Reject Edits
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
         <DialogContent className="max-w-lg border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">

@@ -118,7 +118,7 @@ export async function GET(
         isAdmin = (profile?.roles ?? []).includes("admin");
       }
       if (!isAdmin) {
-        const { pending_edits: _, ...eventWithoutPending } = event as Record<string, unknown>;
+        const { pending_edits: _, ...eventWithoutPending } = event as unknown as Record<string, unknown>;
         return NextResponse.json({ event: eventWithoutPending });
       }
     }
@@ -173,7 +173,7 @@ export async function PATCH(
     // Fetch the event to check ownership / club
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, club_id, created_by, status")
+      .select("id, club_id, created_by, status, pending_edits")
       .eq("id", id)
       .is("deleted_at", null)
       .single();
@@ -251,7 +251,7 @@ export async function PATCH(
 
       const needsModeration =
         !isAdmin &&
-        !isClubMember &&
+        !(isClubMember && event.created_by === user.id) &&
         event.status === "approved" &&
         (MODERATED_FIELDS as readonly string[]).includes(field);
 
@@ -303,10 +303,14 @@ export async function PATCH(
       }
     }
 
-    // Write pending edits if any
+    // Write pending edits if any — merge with existing pending edits
     if (Object.keys(pendingEdits).length > 0) {
-      pendingEdits.submitted_at = new Date().toISOString();
-      directUpdates.pending_edits = pendingEdits;
+      const existingPending = (event.pending_edits as Record<string, unknown>) ?? {};
+      directUpdates.pending_edits = {
+        ...existingPending,
+        ...pendingEdits,
+        submitted_at: new Date().toISOString(),
+      };
     }
 
     const { data, error } = await supabase

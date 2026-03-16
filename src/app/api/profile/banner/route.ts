@@ -1,6 +1,6 @@
 /**
- * POST /api/profile/avatar
- * Upload a new avatar image for the authenticated user
+ * POST /api/profile/banner
+ * Upload a new banner image for the authenticated user
  */
 
 import { NextResponse } from "next/server";
@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { NextRequest } from "next/server";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB (banners are larger)
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,45 +21,37 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
 
     if (!file) {
-      return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Invalid file type. Allowed: JPEG, PNG, WebP, GIF" },
+        { error: "Invalid file type. Allowed: JPEG, PNG, WebP" },
         { status: 400 }
       );
     }
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 5MB" },
+        { error: "File too large. Maximum size is 8MB" },
         { status: 400 }
       );
     }
 
-    // Determine file extension from MIME type
     const ext = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
-    const filePath = `${user.id}/avatar.${ext}`;
+    const filePath = `${user.id}/banner.${ext}`;
 
-    // Upload to Supabase Storage (upsert to overwrite previous avatar)
     const arrayBuffer = await file.arrayBuffer();
 
     const { error: uploadError } = await supabase.storage
-      .from("avatars")
+      .from("banners")
       .upload(filePath, arrayBuffer, {
         contentType: file.type,
         upsert: true,
@@ -68,25 +60,21 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       console.error("Storage upload error:", uploadError);
       return NextResponse.json(
-        { error: "Failed to upload avatar" },
+        { error: "Failed to upload banner" },
         { status: 500 }
       );
     }
 
-    // Get public URL
     const { data: urlData } = supabase.storage
-      .from("avatars")
+      .from("banners")
       .getPublicUrl(filePath);
 
-    // Add cache-busting timestamp to prevent stale avatars
-    const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+    const bannerUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
-    // Update user profile with the new avatar URL using service client
-    // The server client's DB update can fail silently with cookie-based auth
     const serviceClient = createServiceClient();
     const { data: dbData, error: dbError } = await serviceClient
       .from("users")
-      .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+      .update({ banner_url: bannerUrl, updated_at: new Date().toISOString() })
       .eq("id", user.id)
       .select("id")
       .single();
@@ -94,17 +82,17 @@ export async function POST(request: NextRequest) {
     if (dbError || !dbData) {
       console.error("Database update error:", dbError ?? "No rows updated");
       return NextResponse.json(
-        { error: "Failed to save avatar URL" },
+        { error: "Failed to save banner URL" },
         { status: 500 }
       );
     }
 
     return NextResponse.json(
-      { success: true, avatar_url: avatarUrl },
+      { success: true, banner_url: bannerUrl },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error uploading avatar:", error);
+    console.error("Error uploading banner:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

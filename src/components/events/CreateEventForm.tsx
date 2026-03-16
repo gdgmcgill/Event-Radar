@@ -308,14 +308,16 @@ export function CreateEventForm({
 
       if (mode === "edit" && eventId) {
         const updates: Record<string, unknown> = {};
-        if (formData.title !== initialData?.title) updates.title = formData.title;
+        const effectiveTitle = initialData?.pending_edits?.title ?? initialData?.title ?? "";
+        if (formData.title !== effectiveTitle) updates.title = formData.title;
         if (formData.description !== initialData?.description) updates.description = formData.description;
         if (formData.location !== initialData?.location) updates.location = formData.location;
         if (JSON.stringify(formData.tags) !== JSON.stringify(initialData?.tags)) updates.tags = formData.tags;
         updates.start_date = startDate;
         if (endDate) updates.end_date = endDate;
         updates.category = formData.tags[0];
-        if (finalImageUrl !== initialData?.image_url) updates.image_url = finalImageUrl;
+        const effectiveImageUrl = initialData?.pending_edits?.image_url ?? initialData?.image_url ?? null;
+        if (finalImageUrl !== effectiveImageUrl) updates.image_url = finalImageUrl;
         updates.is_free = formData.isFree;
         updates.price = formData.isFree ? null : formData.price.trim() || null;
         updates.rsvp_link = formData.rsvpLink.trim() || null;

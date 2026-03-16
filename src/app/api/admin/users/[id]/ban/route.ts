@@ -52,15 +52,25 @@ export async function POST(
 
   const serviceClient = createServiceClient();
 
+  // Prevent self-ban
+  if (id === user.id) {
+    return NextResponse.json({ error: "Cannot ban your own account" }, { status: 400 });
+  }
+
   // Check target user exists
   const { data: targetUser, error: fetchError } = await serviceClient
     .from("users")
-    .select("id, name, banned_at")
+    .select("id, name, banned_at, roles")
     .eq("id", id)
     .single();
 
   if (fetchError || !targetUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Prevent banning admins
+  if ((targetUser.roles as string[])?.includes("admin")) {
+    return NextResponse.json({ error: "Cannot ban an admin account" }, { status: 403 });
   }
 
   // Check not already banned
@@ -97,30 +107,46 @@ export async function POST(
 
   // If suspend_content, batch-update user's approved events and clubs to "suspended"
   // and create moderation_reviews records for each
+  const warnings: string[] = [];
   if (suspend_content) {
     // Fetch affected items first for moderation_reviews
-    const { data: approvedEvents } = await serviceClient
+    const { data: approvedEvents, error: evtFetchErr } = await serviceClient
       .from("events")
       .select("id, title")
       .eq("created_by", id)
       .eq("status", "approved");
 
-    const { data: approvedClubs } = await serviceClient
+    if (evtFetchErr) {
+      console.error("Failed to fetch user events for suspension:", evtFetchErr);
+      warnings.push("Failed to fetch events for suspension");
+    }
+
+    const { data: approvedClubs, error: clubFetchErr } = await serviceClient
       .from("clubs")
       .select("id, name")
       .eq("created_by", id)
       .eq("status", "approved");
 
+    if (clubFetchErr) {
+      console.error("Failed to fetch user clubs for suspension:", clubFetchErr);
+      warnings.push("Failed to fetch clubs for suspension");
+    }
+
     // Suspend events
     if (approvedEvents && approvedEvents.length > 0) {
-      await serviceClient
+      const { error: evtUpdateErr } = await serviceClient
         .from("events")
         .update({ status: "suspended", updated_at: now.toISOString() })
         .eq("created_by", id)
         .eq("status", "approved");
 
+      if (evtUpdateErr) {
+        console.error("Failed to suspend user events:", evtUpdateErr);
+        warnings.push("Some events may not have been suspended");
+      }
+
       // Create moderation_reviews for each suspended event
-      await serviceClient.from("moderation_reviews").insert(
+      const { error: evtReviewErr } = await serviceClient.from("moderation_reviews").insert(
         approvedEvents.map((event) => ({
           target_type: "event",
           target_id: event.id,
@@ -130,18 +156,28 @@ export async function POST(
           author_id: user.id,
         }))
       );
+
+      if (evtReviewErr) {
+        console.error("Failed to create event moderation reviews:", evtReviewErr);
+        warnings.push("Some event moderation reviews may not have been created");
+      }
     }
 
     // Suspend clubs
     if (approvedClubs && approvedClubs.length > 0) {
-      await serviceClient
+      const { error: clubUpdateErr } = await serviceClient
         .from("clubs")
         .update({ status: "suspended", updated_at: now.toISOString() })
         .eq("created_by", id)
         .eq("status", "approved");
 
+      if (clubUpdateErr) {
+        console.error("Failed to suspend user clubs:", clubUpdateErr);
+        warnings.push("Some clubs may not have been suspended");
+      }
+
       // Create moderation_reviews for each suspended club
-      await serviceClient.from("moderation_reviews").insert(
+      const { error: clubReviewErr } = await serviceClient.from("moderation_reviews").insert(
         approvedClubs.map((club) => ({
           target_type: "club",
           target_id: club.id,
@@ -151,6 +187,11 @@ export async function POST(
           author_id: user.id,
         }))
       );
+
+      if (clubReviewErr) {
+        console.error("Failed to create club moderation reviews:", clubReviewErr);
+        warnings.push("Some club moderation reviews may not have been created");
+      }
     }
   }
 
@@ -192,7 +233,10 @@ export async function POST(
     console.error("[Admin] Failed to log audit action:", auditErr);
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({
+    success: true,
+    ...(warnings.length > 0 && { warnings }),
+  });
 }
 
 /**

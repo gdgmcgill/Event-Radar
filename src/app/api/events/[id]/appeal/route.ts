@@ -69,17 +69,23 @@ export async function POST(
     return NextResponse.json({ error: reviewError.message }, { status: 500 });
   }
 
-  const { error: updateError } = await serviceClient
+  const { data: updateData, error: updateError } = await serviceClient
     .from("events")
     .update({
       status: "pending",
       appeal_count: (event.appeal_count ?? 0) + 1,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", event.status)
+    .select("id");
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  if (!updateData || updateData.length === 0) {
+    return NextResponse.json({ error: "Appeal already processed" }, { status: 409 });
   }
 
   try {

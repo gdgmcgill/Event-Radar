@@ -62,13 +62,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const { error: updateError } = await supabase
+    const { data: updateData, error: updateError } = await supabase
       .from("events")
       .update(liveUpdates)
-      .eq("id", id);
+      .eq("id", id)
+      .not("pending_edits", "is", null)
+      .select("id");
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    if (!updateData || updateData.length === 0) {
+      return NextResponse.json(
+        { error: "Pending edits were modified concurrently. Please refresh and try again." },
+        { status: 409 }
+      );
     }
 
     if (event.created_by) {
@@ -96,13 +105,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   // Reject
-  const { error: updateError } = await supabase
+  const { data: rejectData, error: updateError } = await supabase
     .from("events")
     .update({ pending_edits: null })
-    .eq("id", id);
+    .eq("id", id)
+    .not("pending_edits", "is", null)
+    .select("id");
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  if (!rejectData || rejectData.length === 0) {
+    return NextResponse.json(
+      { error: "Pending edits were modified concurrently. Please refresh and try again." },
+      { status: 409 }
+    );
   }
 
   if (event.created_by) {

@@ -62,6 +62,9 @@ export default function ReportsPage() {
       });
       if (res.ok) {
         await fetchReports();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Failed to update report. Please try again.");
       }
     } finally {
       setActionLoading(null);

@@ -23,7 +23,7 @@ export async function PATCH(
 
   const supabase = createServiceClient();
 
-  const { data: report, error: fetchError } = await (supabase as any)
+  const { data: report, error: fetchError } = await supabase
     .from("event_reports")
     .select("id, event_id, status")
     .eq("id", id)
@@ -40,7 +40,7 @@ export async function PATCH(
     );
   }
 
-  const { error: updateError } = await (supabase as any)
+  const { error: updateError } = await supabase
     .from("event_reports")
     .update({
       status,

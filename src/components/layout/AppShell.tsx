@@ -19,6 +19,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAbout = pathname === "/about";
   const isFriends = pathname === "/friends";
   const isClubDashboard = pathname.startsWith("/my-clubs/") && pathname !== "/my-clubs";
+  const isProfile = pathname === "/profile";
+  const isUserProfile = pathname.startsWith("/users/");
 
   const isBanned = pathname === "/banned";
 
@@ -50,7 +52,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
         <main
           id="main-content"
-          className={isHomepage || isEventDetail || isClubs || isAbout || isFriends || isClubDashboard ? "flex-1" : "flex-1 p-6"}
+          className={isHomepage || isEventDetail || isClubs || isAbout || isFriends || isClubDashboard || isProfile || isUserProfile ? "flex-1" : "flex-1 p-6"}
         >
           {children}
         </main>

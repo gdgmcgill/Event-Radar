@@ -74,11 +74,11 @@ export async function POST(
 
   // Audit log
   await serviceClient.from("admin_audit_log").insert({
-    admin_id: user.id,
+    admin_user_id: user.id,
     action: "club_ownership_transferred",
     target_type: "club",
     target_id: clubId,
-    details: { new_owner_id: newOwnerId, previous_owner_id: user.id },
+    metadata: { new_owner_id: newOwnerId, previous_owner_id: user.id },
   });
 
   return NextResponse.json({ success: true });

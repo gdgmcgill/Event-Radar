@@ -43,6 +43,9 @@ interface EventWithRsvp {
   image_url?: string | null;
   category?: string | null;
   status: "pending" | "approved" | "rejected";
+  is_free?: boolean;
+  price?: string | null;
+  rsvp_link?: string | null;
   rsvp_counts?: {
     going: number;
     interested: number;
@@ -304,6 +307,9 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
                 tags: editingEvent.tags,
                 image_url: editingEvent.image_url,
                 category: editingEvent.category,
+                is_free: editingEvent.is_free,
+                price: editingEvent.price,
+                rsvp_link: editingEvent.rsvp_link,
               }}
               onSuccess={() => {
                 setEditingEvent(null);
