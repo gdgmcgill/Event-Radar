@@ -1031,6 +1031,10 @@ export type Database = {
       users: {
         Row: {
           avatar_url: string | null
+          ban_expires_at: string | null
+          ban_reason: string | null
+          banned_at: string | null
+          banned_by: string | null
           banner_url: string | null
           created_at: string | null
           email: string
@@ -1051,6 +1055,10 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          ban_expires_at?: string | null
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           banner_url?: string | null
           created_at?: string | null
           email: string
@@ -1071,6 +1079,10 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          ban_expires_at?: string | null
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           banner_url?: string | null
           created_at?: string | null
           email?: string
