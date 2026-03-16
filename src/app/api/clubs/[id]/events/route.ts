@@ -44,6 +44,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       .from("events")
       .select("*, club:clubs(id, name, logo_url)")
       .eq("club_id", clubId)
+      .is("deleted_at", null)
       .order("start_date", { ascending: false });
 
     if (!isOrganizer) {

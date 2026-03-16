@@ -77,7 +77,8 @@ export default async function UserProfilePage({
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("created_by", targetId)
-      .eq("status", "approved"),
+      .eq("status", "approved")
+      .is("deleted_at", null),
     (supabase as any).rpc("get_friends", { target_user_id: targetId }).limit(20),
     (supabase as any)
       .from("club_members")

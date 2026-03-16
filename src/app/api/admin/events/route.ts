@@ -33,11 +33,18 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
   const offset = parseInt(searchParams.get("offset") || "0", 10);
 
+  // Support viewing deleted events for audit
+  const includeDeleted = searchParams.get("includeDeleted") === "true";
+
   const sortByMetric = METRICS_SORT_FIELDS.has(sortBy);
 
   let query = supabase
     .from("events")
     .select("*", { count: "exact" });
+
+  if (!includeDeleted) {
+    query = query.is("deleted_at", null);
+  }
 
   if (!sortByMetric) {
     query = query.order(sortBy as "created_at", { ascending: sortDir === "asc" });
@@ -130,6 +137,7 @@ export async function POST(request: NextRequest) {
     .from("events")
     .select("id")
     .eq("content_hash", contentHash)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (existing) {

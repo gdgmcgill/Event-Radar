@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
       )
       .in("id", allIds)
       .eq("status", "approved")
+      .is("deleted_at", null)
       .order("start_date", { ascending: true });
 
     if (from) {

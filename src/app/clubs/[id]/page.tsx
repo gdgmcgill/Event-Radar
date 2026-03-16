@@ -62,6 +62,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
       .select("*")
       .eq("club_id", id)
       .eq("status", "approved")
+      .is("deleted_at", null)
       .order("start_date", { ascending: true }),
     supabase.auth.getUser(),
   ]);

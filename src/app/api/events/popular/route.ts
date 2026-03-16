@@ -101,6 +101,7 @@ export async function GET(request: NextRequest) {
         popularity:event_popularity_scores(*)
       `)
       .eq("status", "approved")
+      .is("deleted_at", null)
       .gte("start_date", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
       .order("start_date", { ascending: true });
 

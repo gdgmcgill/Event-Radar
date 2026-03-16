@@ -193,7 +193,8 @@ export async function GET(request: NextRequest) {
       .from('events')
       .select('*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)', { count: 'exact' })
       .order('start_date', { ascending: true })
-      .eq('status', 'approved');
+      .eq('status', 'approved')
+      .is('deleted_at', null);
 
     // Filter by IDs (e.g. for recommendation list)
     if (idsParam) {

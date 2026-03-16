@@ -38,6 +38,7 @@ export async function GET() {
       .select("*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)")
       .in("club_id", clubIds)
       .eq("status", "approved")
+      .is("deleted_at", null)
       .gte("start_date", today)
       .order("start_date", { ascending: true })
       .limit(15);

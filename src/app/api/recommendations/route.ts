@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
         .from("events")
         .select("*, clubs(*)")
         .eq("status", "approved")
+        .is("deleted_at", null)
         .order("start_date", { ascending: true })
         .limit(topK);
 
@@ -113,6 +114,7 @@ export async function GET(request: NextRequest) {
         .from("events")
         .select("*, clubs(*)")
         .eq("status", "approved")
+        .is("deleted_at", null)
         .order("start_date", { ascending: true })
         .limit(topK);
 

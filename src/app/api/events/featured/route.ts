@@ -17,9 +17,9 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Filter out entries where the joined event is missing or not approved
+    // Filter out entries where the joined event is missing, not approved, or soft-deleted
     const featured = (data ?? []).filter(
-      (row: any) => row.event && row.event.status === "approved"
+      (row: any) => row.event && row.event.status === "approved" && row.event.deleted_at === null
     );
 
     return NextResponse.json({ featured });

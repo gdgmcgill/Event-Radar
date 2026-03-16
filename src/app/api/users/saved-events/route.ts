@@ -93,7 +93,8 @@ export async function GET(request: NextRequest) {
       .from("events")
       .select("*")
       .in("id", eventIds)
-      .eq("status", "approved");
+      .eq("status", "approved")
+      .is("deleted_at", null);
 
     if (eventsError) {
       console.error("Fetch event details error:", eventsError);

@@ -20,6 +20,7 @@ export async function GET() {
       .from("events")
       .select("*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)")
       .eq("status", "approved")
+      .is("deleted_at", null)
       .gte("start_date", nowISO)
       .lte("start_date", soonISO)
       .order("start_date", { ascending: true })

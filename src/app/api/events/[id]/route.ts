@@ -81,6 +81,7 @@ export async function GET(
       .from("events")
       .select("*")
       .eq("id", id)
+      .is("deleted_at", null)
       .single();
 
     if (error) {
@@ -151,6 +152,7 @@ export async function PATCH(
       .from("events")
       .select("id, club_id, created_by, status")
       .eq("id", id)
+      .is("deleted_at", null)
       .single();
 
     if (eventError || !event) {

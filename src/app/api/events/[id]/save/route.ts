@@ -68,6 +68,7 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
       .from("events")
       .select("id")
       .eq("id", eventId)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (eventError) {

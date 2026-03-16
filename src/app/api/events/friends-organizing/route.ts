@@ -35,6 +35,7 @@ export async function GET() {
       .select("id, title, start_date, location, image_url, created_by, users!events_created_by_fkey(id, name, avatar_url)")
       .in("created_by", friendIds)
       .eq("status", "approved")
+      .is("deleted_at", null)
       .gte("start_date", today)
       .order("start_date", { ascending: true })
       .limit(10);

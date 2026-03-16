@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       .from("events")
       .select("id")
       .eq("id", body.event_id)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (eventError) {

@@ -93,6 +93,7 @@ export default async function ClubsPage({ searchParams }: PageProps) {
       .select("club_id, title, start_date, location")
       .in("club_id", clubIds)
       .eq("status", "approved")
+      .is("deleted_at", null)
       .gte("start_date", today)
       .order("start_date", { ascending: true });
 

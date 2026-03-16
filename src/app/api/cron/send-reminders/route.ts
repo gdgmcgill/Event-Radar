@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     const { data: events24h } = await supabase
       .from("events")
       .select("id, title, start_date")
+      .is("deleted_at", null)
       .gte("start_date", h24Start)
       .lte("start_date", h24End);
 
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
     const { data: events1h } = await supabase
       .from("events")
       .select("id, title, start_date")
+      .is("deleted_at", null)
       .gte("start_date", h1Start)
       .lte("start_date", h1End);
 
