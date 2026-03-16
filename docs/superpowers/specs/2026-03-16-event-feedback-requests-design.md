@@ -27,14 +27,16 @@ Deduplication log preventing duplicate feedback notifications per user per event
 | Column | Type | Constraints |
 |--------|------|-------------|
 | `id` | uuid | PK, default `gen_random_uuid()` |
-| `user_id` | uuid | FK → `auth.users`, NOT NULL |
-| `event_id` | uuid | FK → `events`, NOT NULL |
-| `request_type` | text | NOT NULL, default `'post_event'` |
+| `user_id` | uuid | FK → `auth.users` ON DELETE CASCADE, NOT NULL |
+| `event_id` | uuid | FK → `events` ON DELETE CASCADE, NOT NULL |
+| `request_type` | text | NOT NULL, default `'post_event'`, CHECK IN (`'post_event'`, `'post_event_reminder'`) |
 | `sent_at` | timestamptz | NOT NULL, default `now()` |
 
 **Unique constraint:** `(user_id, event_id, request_type)`
 
-**RLS:** Disabled (accessed only via service client in cron route).
+**RLS:** Enabled. Policies mirror `email_reminder_log`:
+- Users can SELECT their own rows (`user_id = auth.uid()`)
+- Service role has full access (used by cron route)
 
 **Indexes:**
 - Primary key on `id`
@@ -61,7 +63,7 @@ Deduplication log preventing duplicate feedback notifications per user per event
 1. **Find eligible events:**
    - `status = 'approved'`
    - `deleted_at IS NULL`
-   - `end_date` (falling back to `start_date` if `end_date` is null) is between 1 and 25 hours ago
+   - `start_date` is between 1 and 25 hours ago (using `start_date` for consistency with existing reviews route eligibility check)
    - The 1-hour floor avoids notifying during events still wrapping up
    - The 25-hour ceiling with hourly cron runs provides overlap for reliability
 
@@ -73,18 +75,21 @@ Deduplication log preventing duplicate feedback notifications per user per event
    - Query `feedback_request_log` for entries matching `(user_id, event_id, request_type = 'post_event')`
    - Filter out already-notified users
 
-4. **Batch insert notifications:**
-   - `type`: `"feedback_request"`
-   - `title`: `"How was {event.title}?"`
-   - `message`: `"Share your experience — your feedback helps organizers improve future events."`
-   - `event_id`: set (enables deep-link to event page)
-   - `user_id`: the attendee
-   - `read`: `false`
+4. **Insert notifications and log entries per-user** (mirrors `send-reminders` pattern):
+   - For each eligible user, insert one notification and one `feedback_request_log` row
+   - Per-row error isolation: if one user's insert fails, continue with remaining users
+   - Duplicate guard: catch Postgres `23505` unique violation as fallback dedup
+   - Notification fields:
+     - `type`: `"feedback_request"`
+     - `title`: `"How was {event.title}?"`
+     - `message`: `"Share your experience — your feedback helps organizers improve future events."`
+     - `event_id`: set (enables deep-link to event page)
+     - `user_id`: the attendee
+     - `read`: `false`
+   - Log entry fields:
+     - `user_id`, `event_id`, `request_type = 'post_event'`
 
-5. **Batch insert `feedback_request_log` entries:**
-   - One row per notified user with `request_type = 'post_event'`
-
-6. **Return response:**
+5. **Return response:**
    ```json
    {
      "success": true,
@@ -94,7 +99,7 @@ Deduplication log preventing duplicate feedback notifications per user per event
    }
    ```
 
-**Error handling:** If a single event's batch fails, log the error and continue processing remaining events. Return partial success with error details.
+**Error handling:** Per-user error isolation within each event. If a user's notification fails, log the error and continue with remaining users. Return counts of sent vs skipped vs errored.
 
 **Scheduling:** Called every hour by external scheduler (Vercel cron). Idempotent due to dedup log.
 
@@ -105,7 +110,8 @@ Deduplication log preventing duplicate feedback notifications per user per event
 The notification list component needs to handle the `"feedback_request"` type:
 
 - **Icon:** `MessageSquare` from Lucide (or similar feedback-related icon)
-- **Click behavior:** Navigate to the event detail page (using `event_id` from notification)
+- **Click behavior:** Navigate to the event detail page (using `event_id` from notification) — existing `event_id` link logic handles this
+- **Implementation:** Add `feedback_request` entry to the `typeConfig` record in `NotificationItem.tsx` (icon, colors, label)
 - **No other UI changes** — the event detail page already shows the review form for eligible users
 
 ### No New Pages or Components
@@ -160,5 +166,5 @@ Regenerate after migration to include `feedback_request_log` table types.
 ## Testing Strategy
 
 - **Unit test for cron route:** Mock service client, verify correct event window query, RSVP filtering, dedup logic, and notification insertion
-- **Edge cases:** Events with no "going" RSVPs, events with all attendees already notified, events without `end_date` (fallback to `start_date`), soft-deleted events excluded
+- **Edge cases:** Events with no "going" RSVPs, events with all attendees already notified, soft-deleted events excluded, duplicate `23505` violation handling
 - **Integration:** Verify notification appears in feed and links to event page with review form visible
