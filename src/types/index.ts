@@ -47,6 +47,9 @@ export interface Event {
   source_url: string | null;
   content_hash: string | null;
   rsvp_count: number | null;
+  is_free: boolean;
+  price: string | null;
+  rsvp_link: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string | null;
@@ -159,6 +162,14 @@ export interface Notification {
   club_id?: string | null;
   read: boolean;
   created_at: string;
+}
+
+export interface FeedbackRequestLog {
+  id: string;
+  user_id: string;
+  event_id: string;
+  request_type: string;
+  sent_at: string;
 }
 
 export interface EventFilter {
