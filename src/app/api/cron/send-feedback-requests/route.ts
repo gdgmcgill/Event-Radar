@@ -69,16 +69,21 @@ export async function POST(request: NextRequest) {
             title: `How was ${event.title}?`,
             message:
               "Share your experience — your feedback helps organizers improve future events.",
+            read: false,
           });
 
           // null = fresh insert; 23505 = notification already existed (orphaned prior send)
           if (!notifErr || notifErr.code === "23505") {
-            await supabase.from("feedback_request_log").insert({
+            const { error: logErr } = await supabase.from("feedback_request_log").insert({
               user_id: row.user_id,
               event_id: event.id,
               request_type: "post_event",
             });
-            feedbackRequestsSent++;
+
+            // Only count as sent if log entry succeeded (or was already there)
+            if (!logErr || logErr.code === "23505") {
+              feedbackRequestsSent++;
+            }
           }
         }
       }
