@@ -20,45 +20,53 @@ interface RecommendedEventsSectionProps {
   onEmpty?: () => void;
 }
 
-interface RecommendationWithExplanation extends Event {
+interface RecommendationItem {
+  event_id: string;
+  score: number;
   explanation?: string;
+  event: Event;
 }
 
 interface RecommendationsResponse {
-  recommendations: RecommendationWithExplanation[];
-  source?: "personalized" | "popular_fallback";
+  recommendations: RecommendationItem[];
+  source?: "personalized" | "popular_fallback" | "anonymous";
 }
 
 export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedEventsSectionProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [source, setSource] = useState<"personalized" | "popular_fallback">("personalized");
-
   const fetchRecommendedEvents = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const res = await fetch("/api/recommendations");
-      if (!res.ok) throw new Error("Failed to fetch recommendations");
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error(`[Recommendations] ${res.status} ${res.statusText}`, text.slice(0, 500));
+        throw new Error("Failed to fetch recommendations");
+      }
       const data: RecommendationsResponse = await res.json();
       const fetchedSource = data.source ?? "personalized";
       const fetchedEvents = Array.isArray(data.recommendations) ? data.recommendations : [];
 
-      if (fetchedEvents.length === 0) {
+      // Only show this section for personalized recommendations;
+      // fallback/anonymous results are redundant with Trending Events
+      if (fetchedSource !== "personalized" || fetchedEvents.length === 0) {
         onEmpty?.();
         return;
       }
 
-      setSource(fetchedSource);
-      // Deduplicate by event id to avoid React key warnings
+      // Extract nested event objects and deduplicate
       const seen = new Set<string>();
-      const unique = fetchedEvents.filter((e) => {
-        if (seen.has(e.id)) return false;
-        seen.add(e.id);
-        return true;
-      });
+      const unique = fetchedEvents
+        .map((rec) => rec.event)
+        .filter((e): e is Event => {
+          if (!e?.id || seen.has(e.id)) return false;
+          seen.add(e.id);
+          return true;
+        });
       setEvents(unique);
     } catch (err) {
       console.error("Error fetching recommended events:", err);
@@ -73,13 +81,10 @@ export function RecommendedEventsSection({ onEventClick, onEmpty }: RecommendedE
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isPersonalized = source === "personalized";
-  const title = isPersonalized ? "Recommended For You" : "Popular on Campus";
-
   const header = (
     <SectionHeader
-      title={title}
-      icon={isPersonalized ? <Sparkles className="h-5 w-5 text-primary" /> : undefined}
+      title="Recommended For You"
+      icon={<Sparkles className="h-5 w-5 text-primary" />}
       count={events.length}
       action={
         events.length > 0 ? (

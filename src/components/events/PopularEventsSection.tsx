@@ -30,7 +30,11 @@ export function PopularEventsSection({ onEventClick, onEventsLoaded }: PopularEv
       setLoading(true);
       setError(null);
       const res = await fetch("/api/events/popular?sort=popularity&limit=10");
-      if (!res.ok) throw new Error("Failed to fetch popular events");
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error(`[PopularEvents] ${res.status} ${res.statusText}`, text.slice(0, 500));
+        throw new Error("Failed to fetch popular events");
+      }
       const data = await res.json();
       const evt = Array.isArray(data.events) ? (data.events as EventWithPopularity[]) : [];
       setEvents(evt);

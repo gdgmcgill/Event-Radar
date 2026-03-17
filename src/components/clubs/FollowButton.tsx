@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export function FollowButton({
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
   const [followerCount, setFollowerCount] = useState(initialCount);
   const [isLoading, setIsLoading] = useState(false);
+  const busyRef = useRef(false);
   const user = useAuthStore((s) => s.user);
   const { followedIds, isLoading: followsLoading } = useFollowedClubIds();
 
@@ -35,11 +36,13 @@ export function FollowButton({
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
-      // Redirect to sign-in with return URL
       window.location.href = `/?signin=required&next=/clubs/${clubId}`;
       return;
     }
 
+    // Guard against rapid clicks — ref is synchronous, unlike state
+    if (busyRef.current) return;
+    busyRef.current = true;
     setIsLoading(true);
 
     // Optimistic update
@@ -58,6 +61,7 @@ export function FollowButton({
       setIsFollowing(wasFollowing);
       setFollowerCount(prevCount);
     } finally {
+      busyRef.current = false;
       setIsLoading(false);
     }
   };

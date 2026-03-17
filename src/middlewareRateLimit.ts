@@ -24,7 +24,7 @@ const store = g[STORE_KEY]!;
 const WINDOW_MS = 60_000; // 1 minute
 
 const LIMITS: Record<string, number> = {
-  GET: 100,
+  GET: 300,
   POST: 30,
 };
 

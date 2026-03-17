@@ -25,7 +25,11 @@ export function HappeningNowSection({ onEventClick }: HappeningNowSectionProps) 
     try {
       setError(null);
       const res = await fetch("/api/events/happening-now");
-      if (!res.ok) throw new Error("Failed to fetch happening now events");
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error(`[HappeningNow] ${res.status} ${res.statusText}`, text.slice(0, 500));
+        throw new Error("Failed to fetch happening now events");
+      }
       const data = await res.json();
       setEvents(Array.isArray(data.events) ? data.events : []);
     } catch (err) {
