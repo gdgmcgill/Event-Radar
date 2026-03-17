@@ -43,6 +43,7 @@
     "swr": "^2.3.7",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
+    "vercel": "^50.32.5",
     "yaml": "^2.8.2",
     "zustand": "^5.0.9"
   },
