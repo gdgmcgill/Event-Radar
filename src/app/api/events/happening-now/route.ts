@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
 import { transformEventFromDB } from "@/lib/tagMapping";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const supabase = createServiceClient();
+    const supabase = await createClient();
 
     // Calculate time window: Now to exactly 2 hours from now
     const now = new Date();
