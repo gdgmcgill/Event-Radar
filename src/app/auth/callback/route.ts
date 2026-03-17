@@ -29,6 +29,9 @@ function isAdminEmail(email: string): boolean {
 }
 
 export async function GET(request: NextRequest) {
+  let stage = "init";
+  try {
+  stage = "parse_request";
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next") ?? "/";
@@ -51,6 +54,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Accumulate ALL cookies across multiple setAll calls
+  stage = "create_supabase_client";
   const allCookies = new Map<string, { name: string; value: string; options: Record<string, unknown> }>();
 
   const supabase = createServerClient<Database>(
@@ -77,17 +81,20 @@ export async function GET(request: NextRequest) {
   );
 
   // Exchange the authorization code for a session
+  stage = "exchange_code_for_session";
+  console.log("[Callback] Exchanging code for session, origin:", requestUrl.origin);
   const { error: exchangeError } =
     await supabase.auth.exchangeCodeForSession(code);
 
   if (exchangeError) {
-    console.error("[Callback] Code exchange FAILED:", exchangeError.message);
+    console.error("[Callback] Code exchange FAILED:", exchangeError.message, exchangeError);
     return NextResponse.redirect(
-      new URL(`/?error=auth_failed`, requestUrl.origin)
+      new URL(`/?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin)
     );
   }
 
   // Get the authenticated user
+  stage = "get_user";
   const {
     data: { user },
     error: userError,
@@ -104,6 +111,7 @@ export async function GET(request: NextRequest) {
 
   // Enforce McGill domain
   if (!isMcGillEmail(email)) {
+    stage = "enforce_mcgill_email";
     console.error("[Callback] Not a McGill email:", email);
     await supabase.auth.signOut();
 
@@ -145,55 +153,74 @@ export async function GET(request: NextRequest) {
     updated_at: new Date().toISOString(),
   };
 
-  const serviceClient = createServiceClient();
-  const { error: upsertError } = await serviceClient.from("users").upsert(
-    upsertPayload,
-    {
-      onConflict: "id",
-      ignoreDuplicates: false,
-    }
-  );
-
-  if (upsertError) {
-    console.error("[Callback] Profile upsert error:", upsertError.message);
-  }
-
   // Check if user needs onboarding (no interest_tags set)
   // Also fetch current roles for admin auto-assignment
+  stage = "profile_sync";
   let needsOnboarding = false;
-  try {
-    const { data: profile } = await serviceClient
-      .from("users")
-      .select("onboarding_completed, roles")
-      .eq("id", user.id)
-      .single();
+  // Profile sync should never block login. If service key/config is missing,
+  // keep the user signed in and skip non-critical profile enrichment.
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const serviceClient = createServiceClient();
+      const { error: upsertError } = await serviceClient.from("users").upsert(
+        upsertPayload,
+        {
+          onConflict: "id",
+          ignoreDuplicates: false,
+        }
+      );
 
-    needsOnboarding = !profile?.onboarding_completed;
+      if (upsertError) {
+        console.error("[Callback] Profile upsert error:", upsertError.message);
+      }
 
-    // Auto-assign admin role if email is in the hardcoded list
-    const currentRoles = (profile?.roles ?? ["user"]) as Database["public"]["Enums"]["user_role"][];
-    if (isAdminEmail(email) && !currentRoles.includes("admin")) {
-      const newRoles: Database["public"]["Enums"]["user_role"][] = [...currentRoles, "admin"];
-      await serviceClient
+      const { data: profile } = await serviceClient
         .from("users")
-        .update({ roles: newRoles })
-        .eq("id", user.id);
+        .select("onboarding_completed, roles")
+        .eq("id", user.id)
+        .single();
+
+      needsOnboarding = !profile?.onboarding_completed;
+
+      // Auto-assign admin role if email is in the hardcoded list
+      const currentRoles = (profile?.roles ?? ["user"]) as Database["public"]["Enums"]["user_role"][];
+      if (isAdminEmail(email) && !currentRoles.includes("admin")) {
+        const newRoles: Database["public"]["Enums"]["user_role"][] = [...currentRoles, "admin"];
+        await serviceClient
+          .from("users")
+          .update({ roles: newRoles })
+          .eq("id", user.id);
+      }
+    } catch (err) {
+      console.error("[Callback] Profile sync/onboarding check failed:", err);
     }
-  } catch (err) {
-    console.error("[Callback] Failed to check onboarding status:", err);
+  } else {
+    console.error("[Callback] SUPABASE_SERVICE_ROLE_KEY is missing; skipping profile sync");
   }
 
   // Build the final redirect response and attach ALL accumulated cookies
+  stage = "build_redirect_response";
   const redirectUrl = needsOnboarding
     ? new URL("/onboarding", requestUrl.origin)
     : new URL(next, requestUrl.origin);
+
+  console.log("[Callback] Redirecting to:", redirectUrl.toString());
+  console.log("[Callback] Accumulated cookies:", allCookies.size, [...allCookies.keys()]);
+
   const response = NextResponse.redirect(redirectUrl);
 
   for (const [, { name: cookieName, value, options }] of allCookies) {
     response.cookies.set(cookieName, value, options);
   }
 
+  // Log cookie names in a runtime-safe way. `headers.getSetCookie()` is not
+  // available in all server runtimes and can throw, which would break login.
+  const cookieNames = response.cookies.getAll().map((cookie) => cookie.name);
+  console.log("[Callback] Response cookies count:", cookieNames.length);
+  console.log("[Callback] Response cookies:", cookieNames);
+
   // Set onboarding cookie if user needs onboarding
+  stage = "set_onboarding_cookie";
   if (needsOnboarding) {
     response.cookies.set("needs_onboarding", "1", {
       httpOnly: true,
@@ -203,5 +230,14 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  stage = "done";
   return response;
+
+  } catch (err) {
+    console.error("[Callback] Unhandled error at stage:", stage, err);
+    const origin = new URL(request.url).origin;
+    return NextResponse.redirect(
+      new URL(`/?error=callback_error&stage=${encodeURIComponent(stage)}`, origin)
+    );
+  }
 }

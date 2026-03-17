@@ -138,9 +138,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     };
 
     supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[AuthStore] onAuthStateChange:", event, "hasSession:", !!session, "hasUser:", !!session?.user);
+
       if (event === "INITIAL_SESSION" || (event === "SIGNED_IN" && !initialSessionHandled)) {
         initialSessionHandled = true;
         if (!session?.user) {
+          console.log("[AuthStore] No user in session for event:", event);
           authRequestId++;
           set({ user: null, loading: false });
           return;
