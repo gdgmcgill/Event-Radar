@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { redirect, notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -31,8 +32,8 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: user } = await (supabase as any)
+  const serviceClient = createServiceClient();
+  const { data: user } = await serviceClient
     .from("users")
     .select("name")
     .eq("id", id)
@@ -58,7 +59,9 @@ export default async function UserProfilePage({ params }: PageProps) {
     redirect("/profile");
   }
 
-  const { data: target, error } = await (supabase as any)
+  // Use service client to bypass RLS for reading public profile data
+  const serviceClient = createServiceClient();
+  const { data: target, error } = await serviceClient
     .from("users")
     .select("id, name, avatar_url, banner_url, email, pronouns, year, faculty, visibility, interest_tags, created_at")
     .eq("id", targetId)
@@ -78,6 +81,7 @@ export default async function UserProfilePage({ params }: PageProps) {
     { data: upcomingRsvps },
     { data: pastRsvps },
   ] = await Promise.all([
+    // Follow status queries use authenticated client (RLS applies)
     authUser
       ? (supabase as any)
           .from("user_follows")
@@ -94,24 +98,25 @@ export default async function UserProfilePage({ params }: PageProps) {
           .eq("following_id", authUser.id)
           .maybeSingle()
       : { data: null },
-    (supabase as any)
+    // Use service client for target user's data (bypasses RLS)
+    serviceClient
       .from("saved_events")
       .select("id, events!inner(start_date)", { count: "exact", head: true })
       .eq("user_id", targetId)
       .lt("events.start_date", now),
-    (supabase as any)
+    serviceClient
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("created_by", targetId)
       .eq("status", "approved")
       .is("deleted_at", null),
-    (supabase as any).rpc("get_friends", { target_user_id: targetId }).limit(20),
-    (supabase as any)
+    serviceClient.rpc("get_friends", { target_user_id: targetId }).limit(20),
+    serviceClient
       .from("club_members")
       .select("id, role, clubs (id, name, logo_url, category)")
       .eq("user_id", targetId)
       .order("created_at", { ascending: false }),
-    (supabase as any)
+    serviceClient
       .from("rsvps")
       .select("id, status, events!inner(*, club:clubs(id, name, logo_url))")
       .eq("user_id", targetId)
@@ -121,7 +126,7 @@ export default async function UserProfilePage({ params }: PageProps) {
       .eq("events.status", "approved")
       .order("created_at", { ascending: false })
       .limit(6),
-    (supabase as any)
+    serviceClient
       .from("rsvps")
       .select("id, status, events!inner(*, club:clubs(id, name, logo_url))")
       .eq("user_id", targetId)
@@ -169,10 +174,12 @@ export default async function UserProfilePage({ params }: PageProps) {
   if (target.faculty) subtitleParts.push(target.faculty);
   if (target.year) subtitleParts.push(`McGill '${target.year}`);
 
-  const joinDate = new Date(target.created_at).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const joinDate = target.created_at
+    ? new Date(target.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "Unknown";
 
   const heroImage = target.banner_url || target.avatar_url;
 
