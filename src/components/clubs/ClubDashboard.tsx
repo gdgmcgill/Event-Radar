@@ -28,6 +28,7 @@ import {
   XCircle,
   AlertTriangle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Club } from "@/types";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
 
@@ -188,8 +189,11 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
         </div>
       </aside>
 
-      {/* Mobile Navigation */}
-      <nav className="md:hidden flex items-center gap-1 px-4 py-2 border-b border-border bg-card/80 backdrop-blur-sm overflow-x-auto shrink-0">
+      {/* Mobile Bottom Tab Bar */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border flex justify-around items-start pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        role="tablist"
+      >
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -197,14 +201,15 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
+              role="tab"
+              aria-selected={isActive}
+              className={cn(
+                "flex flex-col items-center gap-1 min-w-[64px] py-1 transition-colors cursor-pointer",
+                isActive ? "text-primary" : "text-muted-foreground"
+              )}
             >
-              <Icon className="h-4 w-4" />
-              <span>{item.label}</span>
+              <Icon className="h-[22px] w-[22px]" />
+              <span className="text-[10px] font-semibold">{item.label}</span>
             </button>
           );
         })}
@@ -280,7 +285,7 @@ export function ClubDashboard({ clubId }: ClubDashboardProps) {
         )}
 
         {/* Content Area */}
-        <div className="p-4 md:p-8">
+        <div className="p-4 md:p-8 pb-24 md:pb-8">
           {activeTab === "overview" && (
             <ClubOverviewTab
               club={club}
