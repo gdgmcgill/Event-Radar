@@ -1325,38 +1325,99 @@ export default function CalendarPage() {
                 ref={gridRef}
                 tabIndex={0}
                 onKeyDown={handleGridKeyDown}
-                className="px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
+                className="px-4 sm:px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
               >
-                <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
-                  {weekDays.map((d) => {
-                    const isToday = dateKey(d) === todayStr;
-                    return (
-                      <div
-                        key={dateKey(d)}
-                        className={cn(
-                          "bg-secondary p-3 text-center text-xs font-semibold tracking-wider uppercase",
-                          isToday
-                            ? "text-primary"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {d.toLocaleDateString("en-US", { weekday: "short" })}
-                      </div>
-                    );
-                  })}
-
-                  {loading && events.length === 0
-                    ? weekDays.map((_, i) => (
+                {/* Desktop: existing grid */}
+                <div className="hidden lg:block">
+                  <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
+                    {weekDays.map((d) => {
+                      const isToday = dateKey(d) === todayStr;
+                      return (
                         <div
-                          key={`wskel-${i}`}
-                          className="bg-background min-h-[180px] p-2"
+                          key={dateKey(d)}
+                          className={cn(
+                            "bg-secondary p-3 text-center text-xs font-semibold tracking-wider uppercase",
+                            isToday ? "text-primary" : "text-muted-foreground"
+                          )}
                         >
-                          <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
-                          <Skeleton className="h-4 w-full rounded mb-1" />
-                          <Skeleton className="h-4 w-3/4 rounded" />
+                          {d.toLocaleDateString("en-US", { weekday: "short" })}
                         </div>
-                      ))
-                    : weekDays.map((d) => renderDayCell(d, true, true))}
+                      );
+                    })}
+                    {loading && events.length === 0
+                      ? weekDays.map((_, i) => (
+                          <div
+                            key={`wskel-${i}`}
+                            className="bg-background min-h-[180px] p-2"
+                          >
+                            <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
+                            <Skeleton className="h-4 w-full rounded mb-1" />
+                            <Skeleton className="h-4 w-3/4 rounded" />
+                          </div>
+                        ))
+                      : weekDays.map((d) => renderDayCell(d, true, true))}
+                  </div>
+                </div>
+
+                {/* Mobile: pill-style week strip */}
+                <div className="lg:hidden">
+                  <div className="grid grid-cols-7 gap-1 mb-4">
+                    {weekDays.map((d) => {
+                      const key = dateKey(d);
+                      const isToday = key === todayStr;
+                      const isSelected = key === selectedStr;
+                      const dayEvents = eventsByDate.get(key) || [];
+                      const categoryDots = Array.from(
+                        new Set(dayEvents.flatMap((e) => e.tags?.slice(0, 1) || ["academic"]))
+                      ).slice(0, 3);
+
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => handleDayClick(d)}
+                          aria-label={
+                            dayEvents.length > 0
+                              ? `${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}, ${dayEvents.length} event${dayEvents.length > 1 ? "s" : ""}`
+                              : d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
+                          }
+                          className={cn(
+                            "flex flex-col items-center py-2 px-1 rounded-2xl transition-colors cursor-pointer min-w-[44px]",
+                            isToday && isSelected && "bg-primary text-primary-foreground",
+                            isToday && !isSelected && "bg-primary/10",
+                            isSelected && !isToday && "bg-primary text-primary-foreground",
+                            !isToday && !isSelected && "bg-secondary/50",
+                          )}
+                        >
+                          <span className={cn(
+                            "text-[11px] font-semibold uppercase",
+                            (isToday && isSelected) || (isSelected && !isToday) ? "opacity-80" : "text-muted-foreground",
+                          )}>
+                            {d.toLocaleDateString("en-US", { weekday: "short" })}
+                          </span>
+                          <span className={cn(
+                            "text-lg font-bold mt-0.5",
+                            !isToday && !isSelected && "text-foreground",
+                          )}>
+                            {d.getDate()}
+                          </span>
+                          {dayEvents.length > 0 && (
+                            <div className="flex gap-[3px] mt-1" aria-hidden="true">
+                              {categoryDots.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className={cn(
+                                    "size-[5px] rounded-full",
+                                    (isSelected || isToday) && (isSelected) ? "bg-primary-foreground" : (DOT_COLORS[tag] || "bg-primary")
+                                  )}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {renderMobileEventList()}
                 </div>
               </div>
             )}
