@@ -7,7 +7,6 @@ import { ScrollRow } from "@/components/events/ScrollRow";
 import {
   SectionHeader,
   SectionSkeleton,
-  SectionError,
   CARD_WRAPPER_CLASS,
   SECTION_PADDING,
 } from "@/components/ui/SectionRow";
@@ -19,22 +18,15 @@ interface HappeningNowSectionProps {
 export function HappeningNowSection({ onEventClick }: HappeningNowSectionProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchHappeningNowEvents = async () => {
     try {
-      setError(null);
       const res = await fetch("/api/events/happening-now");
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        console.error(`[HappeningNow] ${res.status} ${res.statusText}`, text.slice(0, 500));
-        throw new Error("Failed to fetch happening now events");
-      }
+      if (!res.ok) return;
       const data = await res.json();
       setEvents(Array.isArray(data.events) ? data.events : []);
-    } catch (err) {
-      console.error("Error fetching happening now events:", err);
-      setError("Failed to load happening now events.");
+    } catch {
+      // Silently hide section on error — this is non-critical
     } finally {
       setLoading(false);
     }
@@ -56,15 +48,6 @@ export function HappeningNowSection({ onEventClick }: HappeningNowSectionProps) 
 
   if (loading && events.length === 0) {
     return <SectionSkeleton header={header} />;
-  }
-
-  if (error && events.length === 0) {
-    return (
-      <SectionError
-        message={error}
-        onRetry={() => { setLoading(true); fetchHappeningNowEvents(); }}
-      />
-    );
   }
 
   if (events.length === 0) return null;

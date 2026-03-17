@@ -15,6 +15,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
+import { createServiceClient } from "@/lib/supabase/service";
 import { isMcGillEmail } from "@/lib/utils";
 
 // Hardcoded admin emails — only these accounts can have the admin role
@@ -134,6 +135,8 @@ export async function GET(request: NextRequest) {
   const avatarUrl = (metadata.avatar_url as string) ?? null;
 
   // Upsert user profile into public.users table
+  // Use service client to bypass RLS — the anon client's upsert can fail
+  // silently under RLS, leaving no row for the onboarding PATCH to update.
   const upsertPayload: Database["public"]["Tables"]["users"]["Insert"] = {
     id: user.id,
     email,
@@ -142,7 +145,8 @@ export async function GET(request: NextRequest) {
     updated_at: new Date().toISOString(),
   };
 
-  const { error: upsertError } = await (supabase as any).from("users").upsert(
+  const serviceClient = createServiceClient();
+  const { error: upsertError } = await serviceClient.from("users").upsert(
     upsertPayload,
     {
       onConflict: "id",
@@ -158,7 +162,7 @@ export async function GET(request: NextRequest) {
   // Also fetch current roles for admin auto-assignment
   let needsOnboarding = false;
   try {
-    const { data: profile } = await (supabase as any)
+    const { data: profile } = await serviceClient
       .from("users")
       .select("onboarding_completed, roles")
       .eq("id", user.id)
@@ -167,10 +171,10 @@ export async function GET(request: NextRequest) {
     needsOnboarding = !profile?.onboarding_completed;
 
     // Auto-assign admin role if email is in the hardcoded list
-    const currentRoles = (profile?.roles as string[]) ?? ["user"];
+    const currentRoles = (profile?.roles ?? ["user"]) as Database["public"]["Enums"]["user_role"][];
     if (isAdminEmail(email) && !currentRoles.includes("admin")) {
-      const newRoles = [...currentRoles, "admin"];
-      await (supabase as any)
+      const newRoles: Database["public"]["Enums"]["user_role"][] = [...currentRoles, "admin"];
+      await serviceClient
         .from("users")
         .update({ roles: newRoles })
         .eq("id", user.id);
