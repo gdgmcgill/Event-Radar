@@ -23,7 +23,7 @@ export function FollowButton({
   const [isLoading, setIsLoading] = useState(false);
   const busyRef = useRef(false);
   const user = useAuthStore((s) => s.user);
-  const { followedIds, isLoading: followsLoading } = useFollowedClubIds();
+  const { followedIds, isLoading: followsLoading, mutate } = useFollowedClubIds();
 
   // Hydrate follow state from SWR data (covers page refresh)
   useEffect(() => {
@@ -56,6 +56,8 @@ export function FollowButton({
         method: wasFollowing ? "DELETE" : "POST",
       });
       if (!res.ok) throw new Error("Failed to toggle follow");
+      // Revalidate the SWR cache so followedIds stays in sync
+      mutate();
     } catch {
       // Revert on error
       setIsFollowing(wasFollowing);

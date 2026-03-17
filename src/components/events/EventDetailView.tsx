@@ -1,7 +1,7 @@
 // src/components/events/EventDetailView.tsx
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { EventBadge } from "@/components/events/EventBadge";
@@ -60,10 +60,14 @@ export function EventDetailView({
   onEdit,
 }: EventDetailViewProps) {
   const [saved, setSaved] = useState(isSaved);
-  const [liked, setLiked] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [hasReported, setHasReported] = useState(false);
   const { user } = useAuthStore();
+
+  // Sync saved state when parent updates (e.g. after API fetch on mount)
+  useEffect(() => {
+    setSaved(isSaved);
+  }, [isSaved]);
 
   const eventUrl =
     typeof window !== "undefined"
@@ -97,10 +101,8 @@ export function EventDetailView({
     onSave?.();
   }, [onSave]);
 
-  const handleLike = useCallback(() => {
-    setLiked((prev) => !prev);
-  }, []);
 
+  const isPast = new Date(event.start_date) < new Date();
   const primaryTag = event.tags[0] as EventTag | undefined;
   const categoryInfo = primaryTag ? EVENT_CATEGORIES[primaryTag] : null;
 
@@ -177,6 +179,14 @@ export function EventDetailView({
                 </p>
               )}
             </div>
+
+            {/* Past event notice */}
+            {isPast && (
+              <div className="p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700/50 text-zinc-600 dark:text-zinc-400 text-sm flex items-center gap-3">
+                <Clock className="h-5 w-5 shrink-0" />
+                <p className="font-semibold">This event has already taken place.</p>
+              </div>
+            )}
 
             {/* Pending edits notice */}
             {isCreator && event.pending_edits && (
@@ -401,11 +411,11 @@ export function EventDetailView({
                     </span>
                   </button>
                   <button
-                    onClick={handleLike}
-                    aria-label={liked ? "Unlike" : "Like"}
+                    onClick={handleSave}
+                    aria-label={saved ? "Unlike" : "Like"}
                     className={cn(
                       "flex-1 flex items-center justify-center gap-2 backdrop-blur-md border rounded-xl py-2.5 transition-all duration-300 group cursor-pointer",
-                      liked
+                      saved
                         ? "bg-primary/10 border-primary/30"
                         : "bg-black/[0.03] hover:bg-black/[0.06] border-black/10 hover:border-primary/30 dark:bg-white/[0.05] dark:hover:bg-white/10 dark:border-white/10"
                     )}
@@ -413,7 +423,7 @@ export function EventDetailView({
                     <Heart
                       className={cn(
                         "h-5 w-5 transition-colors",
-                        liked
+                        saved
                           ? "fill-current text-primary"
                           : "text-muted-foreground group-hover:text-primary"
                       )}
@@ -421,12 +431,12 @@ export function EventDetailView({
                     <span
                       className={cn(
                         "text-sm font-semibold transition-colors",
-                        liked
+                        saved
                           ? "text-primary"
                           : "text-muted-foreground group-hover:text-primary"
                       )}
                     >
-                      Like
+                      {saved ? "Liked" : "Like"}
                     </span>
                   </button>
                 </div>

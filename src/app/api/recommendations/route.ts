@@ -36,6 +36,8 @@ export async function GET(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
+    const nowISO = new Date().toISOString();
+
     // Anonymous users get popularity fallback
     if (!user) {
       const { data: popularEvents } = await supabase
@@ -43,6 +45,7 @@ export async function GET(request: NextRequest) {
         .select("*, clubs(*)")
         .eq("status", "approved")
         .is("deleted_at", null)
+        .gte("start_date", nowISO)
         .order("start_date", { ascending: true })
         .limit(topK);
 
@@ -99,9 +102,9 @@ export async function GET(request: NextRequest) {
     };
     const typedScoreRows = (scoreRows ?? []) as ScoreRow[];
 
-    // Filter to only approved events
+    // Filter to only approved, future events
     const approvedScoreRows = typedScoreRows.filter(
-      (r) => r.events && (r.events as any).status === "approved"
+      (r) => r.events && (r.events as any).status === "approved" && (r.events as any).start_date >= nowISO
     );
 
     // --- 4. Fall back to popularity if no scores ---
@@ -115,6 +118,7 @@ export async function GET(request: NextRequest) {
         .select("*, clubs(*)")
         .eq("status", "approved")
         .is("deleted_at", null)
+        .gte("start_date", nowISO)
         .order("start_date", { ascending: true })
         .limit(topK);
 

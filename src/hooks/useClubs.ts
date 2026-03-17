@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import useSWR from "swr";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -87,13 +88,16 @@ export function useFollowedClubIds() {
     fetcher
   );
 
-  const followedIds: Set<string> = new Set();
-  if (data?.following) {
-    for (const f of data.following) {
-      const clubId = f.clubs?.id ?? f.club_id;
-      if (clubId) followedIds.add(clubId);
+  const followedIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (data?.following) {
+      for (const f of data.following) {
+        const id = f.clubs?.id ?? f.club_id;
+        if (id) ids.add(id);
+      }
     }
-  }
+    return ids;
+  }, [data]);
 
   return { followedIds, error, isLoading, mutate };
 }

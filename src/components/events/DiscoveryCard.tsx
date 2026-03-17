@@ -13,6 +13,8 @@ interface DiscoveryCardProps {
 }
 
 export function DiscoveryCard({ event, onClick, badge, badgeVariant = "default" }: DiscoveryCardProps) {
+  const isPast = new Date(event.start_date) < new Date();
+
   const handleClick = (e: React.MouseEvent) => {
     if (onClick) {
       e.preventDefault();
@@ -51,18 +53,25 @@ export function DiscoveryCard({ event, onClick, badge, badgeVariant = "default" 
         {/* Hover Glow */}
         <div className="absolute inset-0 shadow-[inset_0_0_25px_rgba(237,27,47,0.35)] opacity-0 group-hover:opacity-100 transition-opacity duration-400 pointer-events-none rounded-3xl" />
 
-        {/* Badge (Live, Selling Fast, etc.) */}
-        {badge && (
-          <div className="absolute top-4 right-4">
-            <span
-              className={
-                badgeVariant === "glass"
-                  ? "bg-white/10 backdrop-blur-md text-white border border-white/20 text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-lg"
-                  : "bg-primary text-white text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-lg"
-              }
-            >
-              {badge}
-            </span>
+        {/* Badge (Live, Selling Fast, etc.) or Past Event */}
+        {(badge || isPast) && (
+          <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
+            {isPast && (
+              <span className="bg-black/60 backdrop-blur-md text-white/90 border border-white/10 text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-lg">
+                Past Event
+              </span>
+            )}
+            {badge && !isPast && (
+              <span
+                className={
+                  badgeVariant === "glass"
+                    ? "bg-white/10 backdrop-blur-md text-white border border-white/20 text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-lg"
+                    : "bg-primary text-white text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-lg"
+                }
+              >
+                {badge}
+              </span>
+            )}
           </div>
         )}
 

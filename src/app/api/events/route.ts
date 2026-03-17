@@ -241,9 +241,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (dateFrom) {
-      eventsQuery = eventsQuery.gte('start_date', dateFrom);
-    }
+    // Default to upcoming events unless an explicit dateFrom is provided
+    eventsQuery = eventsQuery.gte('start_date', dateFrom || new Date().toISOString());
 
     if (dateTo) {
       eventsQuery = eventsQuery.lte('start_date', dateTo);

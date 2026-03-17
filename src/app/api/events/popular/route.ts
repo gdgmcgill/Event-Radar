@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       `)
       .eq("status", "approved")
       .is("deleted_at", null)
-      .gte("start_date", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
+      .gte("start_date", new Date().toISOString())
       .order("start_date", { ascending: true });
 
     if (eventsError) {
