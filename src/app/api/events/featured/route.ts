@@ -22,7 +22,14 @@ export async function GET() {
       (row: any) => row.event && row.event.status === "approved" && row.event.deleted_at === null
     );
 
-    return NextResponse.json({ featured });
+    return NextResponse.json(
+      { featured },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        },
+      }
+    );
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch featured events" },

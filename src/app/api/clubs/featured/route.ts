@@ -21,7 +21,14 @@ export async function GET() {
       (row: any) => row.club && row.club.status === "approved"
     );
 
-    return NextResponse.json({ featured });
+    return NextResponse.json(
+      { featured },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        },
+      }
+    );
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch featured clubs" },

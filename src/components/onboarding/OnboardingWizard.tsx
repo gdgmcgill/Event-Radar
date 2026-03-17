@@ -76,6 +76,15 @@ export function OnboardingWizard({
         throw new Error(data.error || "Failed to save profile");
       }
 
+      const onboardingCompleteRes = await fetch("/api/onboarding/complete", {
+        method: "POST",
+      });
+
+      if (!onboardingCompleteRes.ok) {
+        const data = await onboardingCompleteRes.json().catch(() => ({}));
+        throw new Error(data.error || "Profile saved, but failed to finish onboarding");
+      }
+
       router.push("/");
       router.refresh();
     } catch (err) {
@@ -88,8 +97,8 @@ export function OnboardingWizard({
     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-lg space-y-8">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-background px-4 py-6 sm:px-6">
+      <div className="mx-auto w-full max-w-lg space-y-6 pb-6">
         {/* Progress indicator */}
         <div className="flex items-center justify-center gap-2">
           {Array.from({ length: totalSteps }).map((_, i) => (

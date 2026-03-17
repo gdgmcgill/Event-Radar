@@ -272,8 +272,32 @@ export async function GET(request: NextRequest) {
     const { data: eventsData, error: eventsError, count } = await eventsQuery;
 
     if (eventsError) {
-      console.error("Supabase error fetching events:", eventsError);
-      return NextResponse.json({ error: eventsError.message }, { status: 500 });
+      // Handle range errors gracefully (e.g., page beyond available data)
+      const errorCode = (eventsError as { code?: string }).code;
+      const errorMessage = eventsError.message;
+
+      // Check for known benign error codes or malformed responses
+      const isBenignError =
+        errorCode === 'PGRST103' ||
+        errorCode === 'PGRST116' ||
+        (typeof errorMessage === 'string' && errorMessage.startsWith('{'));
+
+      if (isBenignError) {
+        // Range not satisfiable, no rows, or malformed response - return empty result
+        return NextResponse.json({
+          events: [],
+          total: count || 0,
+          page,
+          limit,
+          totalPages: Math.ceil((count || 0) / limit),
+        });
+      }
+
+      console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+      const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+        ? errorMessage
+        : 'Failed to fetch events';
+      return NextResponse.json({ error: safeMessage }, { status: 500 });
     }
 
     // Transform events to match frontend expectations
@@ -293,13 +317,20 @@ export async function GET(request: NextRequest) {
       transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
     );
 
-    return NextResponse.json({ 
-      events, 
-      total: count || 0,
-      page,
-      limit,
-      totalPages: Math.ceil((count || 0) / limit)
-    });
+    return NextResponse.json(
+      {
+        events,
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit)
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching events:", error);
     return NextResponse.json(
