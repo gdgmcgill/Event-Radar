@@ -878,6 +878,120 @@ export default function CalendarPage() {
     );
   };
 
+  /* ── Mobile day cell renderer (Apple-style compact) ── */
+
+  const renderMobileDayCell = (date: Date, isCurrentMonth: boolean) => {
+    const key = dateKey(date);
+    const isToday = key === todayStr;
+    const isSelected = key === selectedStr;
+    const dayEvents = eventsByDate.get(key) || [];
+
+    // Get unique category dots (max 3)
+    const categoryDots = Array.from(
+      new Set(dayEvents.flatMap((e) => e.tags?.slice(0, 1) || ["academic"]))
+    ).slice(0, 3);
+
+    return (
+      <button
+        key={key}
+        onClick={() => handleDayClick(date)}
+        aria-label={
+          dayEvents.length > 0
+            ? `${date.toLocaleDateString("en-US", { month: "long", day: "numeric" })}, ${dayEvents.length} event${dayEvents.length > 1 ? "s" : ""}`
+            : date.toLocaleDateString("en-US", { month: "long", day: "numeric" })
+        }
+        className={cn(
+          "flex flex-col items-center justify-center py-2 cursor-pointer transition-colors rounded-lg",
+          !isCurrentMonth && "opacity-30",
+          isSelected && !isToday && "bg-primary/10",
+        )}
+      >
+        <span
+          className={cn(
+            "text-[15px] font-medium w-8 h-8 flex items-center justify-center rounded-full",
+            isToday && "bg-primary text-primary-foreground font-semibold",
+            isSelected && !isToday && "text-primary font-semibold",
+            !isCurrentMonth && "text-muted-foreground",
+          )}
+        >
+          {date.getDate()}
+        </span>
+        {dayEvents.length > 0 && (
+          <div className="flex gap-[3px] mt-1" aria-hidden="true">
+            {categoryDots.map((tag) => (
+              <span
+                key={tag}
+                className={cn(
+                  "size-[5px] rounded-full",
+                  DOT_COLORS[tag] || "bg-primary"
+                )}
+              />
+            ))}
+          </div>
+        )}
+      </button>
+    );
+  };
+
+  /* ── Mobile event list for selected day ── */
+
+  const renderMobileEventList = () => {
+    const dayLabel = selectedDate.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+
+    return (
+      <div className="mt-4 border-t border-border pt-4 px-1">
+        <h3 className="text-sm font-bold text-foreground mb-3">{dayLabel}</h3>
+        {selectedDayEvents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <CalendarOff className="h-8 w-8 text-muted-foreground/30 mb-2" />
+            <p className="text-sm text-muted-foreground">No events on this day</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {selectedDayEvents.map((event) => {
+              const strip = getStripColors(event.tags);
+              const time = formatTimeFromISO(event.start_date);
+              return (
+                <button
+                  key={event.id}
+                  onClick={() => handleEventClick(event)}
+                  className="flex items-stretch gap-3 p-3 bg-card rounded-xl border border-border hover:bg-secondary/50 transition-colors cursor-pointer text-left w-full"
+                >
+                  <div
+                    className={cn(
+                      "w-1 rounded-full shrink-0",
+                      strip.bg.replace("/20", "")
+                    )}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {event.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {time}
+                      {event.end_date &&
+                        ` – ${formatTimeFromISO(event.end_date)}`}
+                    </p>
+                    {event.location && (
+                      <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{event.location}</span>
+                      </p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   /* ── Day cell renderer ── */
 
   const renderDayCell = (
@@ -1086,13 +1200,13 @@ export default function CalendarPage() {
                       ? navigateWeek("prev")
                       : navigateMonth("prev")
                   }
-                  className="flex items-center justify-center size-8 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground transition-colors"
+                  className="flex items-center justify-center size-9 lg:size-8 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground transition-colors"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={goToToday}
-                  className="flex items-center justify-center px-3 h-8 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground text-sm font-medium transition-colors"
+                  className="flex items-center justify-center px-3 h-9 lg:h-8 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground text-sm font-medium transition-colors"
                 >
                   Today
                 </button>
@@ -1102,7 +1216,7 @@ export default function CalendarPage() {
                       ? navigateWeek("next")
                       : navigateMonth("next")
                   }
-                  className="flex items-center justify-center size-8 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground transition-colors"
+                  className="flex items-center justify-center size-9 lg:size-8 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground transition-colors"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -1146,33 +1260,61 @@ export default function CalendarPage() {
                 ref={gridRef}
                 tabIndex={0}
                 onKeyDown={handleGridKeyDown}
-                className="px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
+                className="px-4 sm:px-6 lg:px-8 pb-8 flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
               >
-                <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
-                  {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(
-                    (day) => (
+                {/* Desktop: existing grid */}
+                <div className="hidden lg:block">
+                  <div className="grid grid-cols-7 gap-[1px] bg-border rounded-xl overflow-hidden border border-border">
+                    {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(
+                      (day) => (
+                        <div
+                          key={day}
+                          className="bg-secondary p-3 text-right text-muted-foreground text-xs font-semibold tracking-wider uppercase"
+                        >
+                          {day}
+                        </div>
+                      )
+                    )}
+                    {loading && events.length === 0
+                      ? Array.from({ length: monthGrid.length }).map((_, i) => (
+                          <div
+                            key={`skel-${i}`}
+                            className="bg-background min-h-[100px] p-2"
+                          >
+                            <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
+                            <Skeleton className="h-4 w-3/4 rounded ml-auto" />
+                          </div>
+                        ))
+                      : monthGrid.map(({ date, isCurrentMonth }) =>
+                          renderDayCell(date, isCurrentMonth, false)
+                        )}
+                  </div>
+                </div>
+
+                {/* Mobile: compact Apple-style grid */}
+                <div className="lg:hidden">
+                  <div className="grid grid-cols-7 text-center mb-2">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
                       <div
-                        key={day}
-                        className="bg-secondary p-3 text-right text-muted-foreground text-xs font-semibold tracking-wider uppercase"
+                        key={`${day}-${i}`}
+                        className="text-[11px] font-semibold text-muted-foreground py-2"
                       >
                         {day}
                       </div>
-                    )
-                  )}
-
-                  {loading && events.length === 0
-                    ? Array.from({ length: monthGrid.length }).map((_, i) => (
-                        <div
-                          key={`skel-${i}`}
-                          className="bg-background min-h-[100px] p-2"
-                        >
-                          <Skeleton className="h-5 w-5 rounded-full mb-2 ml-auto" />
-                          <Skeleton className="h-4 w-3/4 rounded ml-auto" />
-                        </div>
-                      ))
-                    : monthGrid.map(({ date, isCurrentMonth }) =>
-                        renderDayCell(date, isCurrentMonth, false)
-                      )}
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7">
+                    {loading && events.length === 0
+                      ? Array.from({ length: monthGrid.length }).map((_, i) => (
+                          <div key={`mskel-${i}`} className="flex flex-col items-center py-2">
+                            <Skeleton className="h-8 w-8 rounded-full" />
+                          </div>
+                        ))
+                      : monthGrid.map(({ date, isCurrentMonth }) =>
+                          renderMobileDayCell(date, isCurrentMonth)
+                        )}
+                  </div>
+                  {renderMobileEventList()}
                 </div>
               </div>
             )}
