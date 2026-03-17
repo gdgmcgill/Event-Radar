@@ -92,7 +92,7 @@ beforeEach(async () => {
 
   // Default: event exists with a past date
   mockQueryResults.set("events", {
-    data: { id: "test-event-id", event_date: "2020-01-01", club_id: "club-1" },
+    data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
     error: null,
   });
 
@@ -139,7 +139,7 @@ describe("POST /api/events/:id/reviews", () => {
     mockUser = { id: "user-123" };
     // Set event date to the future
     mockQueryResults.set("events", {
-      data: { id: "test-event-id", event_date: "2099-12-31", club_id: "club-1" },
+      data: { id: "test-event-id", start_date: "2099-12-31", club_id: "club-1" },
       error: null,
     });
 
@@ -155,7 +155,7 @@ describe("POST /api/events/:id/reviews", () => {
     mockUser = { id: "user-123" };
     // Event in the past
     mockQueryResults.set("events", {
-      data: { id: "test-event-id", event_date: "2020-01-01", club_id: "club-1" },
+      data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
       error: null,
     });
     // No RSVP found
@@ -172,7 +172,7 @@ describe("POST /api/events/:id/reviews", () => {
   it("returns 409 when user already reviewed", async () => {
     mockUser = { id: "user-123" };
     mockQueryResults.set("events", {
-      data: { id: "test-event-id", event_date: "2020-01-01", club_id: "club-1" },
+      data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
       error: null,
     });
     mockQueryResults.set("rsvps", {
@@ -196,7 +196,7 @@ describe("POST /api/events/:id/reviews", () => {
   it("returns 201 and creates review on valid submission", async () => {
     mockUser = { id: "user-123" };
     mockQueryResults.set("events", {
-      data: { id: "test-event-id", event_date: "2020-01-01", club_id: "club-1" },
+      data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
       error: null,
     });
     mockQueryResults.set("rsvps", {
@@ -323,7 +323,7 @@ describe("GET /api/events/:id/reviews", () => {
     });
     // Event is in the past
     mockQueryResults.set("events", {
-      data: { id: "test-event-id", event_date: "2020-01-01", club_id: "club-1" },
+      data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
       error: null,
     });
 

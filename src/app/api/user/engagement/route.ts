@@ -58,15 +58,11 @@ export async function GET() {
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError) {
-      console.error("Error retrieving user:", authError);
-      return NextResponse.json(
-        { error: "Failed to authenticate" },
-        { status: 500 }
-      );
-    }
-
-    if (!user) {
+    // Supabase returns an auth error when no session exists; that should be a 401.
+    if (authError || !user) {
+      if (authError) {
+        console.warn("Unauthenticated request to /api/user/engagement:", authError);
+      }
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -132,15 +128,11 @@ export async function POST() {
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError) {
-      console.error("Error retrieving user:", authError);
-      return NextResponse.json(
-        { error: "Failed to authenticate" },
-        { status: 500 }
-      );
-    }
-
-    if (!user) {
+    // Supabase returns an auth error when no session exists; that should be a 401.
+    if (authError || !user) {
+      if (authError) {
+        console.warn("Unauthenticated request to /api/user/engagement:", authError);
+      }
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }

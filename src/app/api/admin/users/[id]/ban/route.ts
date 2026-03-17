@@ -102,7 +102,7 @@ export async function POST(
     .eq("id", id);
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   // If suspend_content, batch-update user's approved events and clubs to "suspended"
@@ -283,7 +283,7 @@ export async function DELETE(
     .eq("id", id);
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   // Send notification

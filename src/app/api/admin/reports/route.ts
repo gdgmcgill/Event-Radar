@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   const { data: reports, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   // Compute accurate report_count per event via a separate query

@@ -368,8 +368,8 @@ export async function GET() {
       checks,
     };
 
-    // Return appropriate HTTP status code based on health
-    const httpStatus = overallStatus === "healthy" ? 200 : 503;
+    // Return 200 for healthy/degraded and 503 only for unhealthy.
+    const httpStatus = overallStatus === "unhealthy" ? 503 : 200;
 
     return NextResponse.json(response, { status: httpStatus });
   } catch (error: any) {

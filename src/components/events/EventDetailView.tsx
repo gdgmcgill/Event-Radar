@@ -34,7 +34,9 @@ interface EventDetailViewProps {
   event: Event;
   similarEvents?: Event[];
   isSaved?: boolean;
+  isLiked?: boolean;
   onSave?: () => void;
+  onLike?: () => void;
   onShare?: (platform: string) => void;
   onEventClick?: (eventId: string) => void;
   reviews?: ReviewAggregate;
@@ -49,7 +51,9 @@ export function EventDetailView({
   event,
   similarEvents = [],
   isSaved = false,
+  isLiked = false,
   onSave,
+  onLike,
   onShare,
   onEventClick,
   reviews,
@@ -60,6 +64,7 @@ export function EventDetailView({
   onEdit,
 }: EventDetailViewProps) {
   const [saved, setSaved] = useState(isSaved);
+  const [liked, setLiked] = useState(isLiked);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [hasReported, setHasReported] = useState(false);
   const { user } = useAuthStore();
@@ -68,6 +73,10 @@ export function EventDetailView({
   useEffect(() => {
     setSaved(isSaved);
   }, [isSaved]);
+
+  useEffect(() => {
+    setLiked(isLiked);
+  }, [isLiked]);
 
   const eventUrl =
     typeof window !== "undefined"
@@ -100,6 +109,12 @@ export function EventDetailView({
     setSaved((prev) => !prev);
     onSave?.();
   }, [onSave]);
+
+  const handleLike = useCallback(() => {
+    // Like is independent from "saved" state.
+    setLiked(true);
+    onLike?.();
+  }, [onLike]);
 
 
   const isPast = new Date(event.start_date) < new Date();
@@ -411,11 +426,11 @@ export function EventDetailView({
                     </span>
                   </button>
                   <button
-                    onClick={handleSave}
-                    aria-label={saved ? "Unlike" : "Like"}
+                    onClick={handleLike}
+                    aria-label={liked ? "Liked" : "Like"}
                     className={cn(
                       "flex-1 flex items-center justify-center gap-2 backdrop-blur-md border rounded-xl py-2.5 transition-all duration-300 group cursor-pointer",
-                      saved
+                      liked
                         ? "bg-primary/10 border-primary/30"
                         : "bg-black/[0.03] hover:bg-black/[0.06] border-black/10 hover:border-primary/30 dark:bg-white/[0.05] dark:hover:bg-white/10 dark:border-white/10"
                     )}
@@ -423,7 +438,7 @@ export function EventDetailView({
                     <Heart
                       className={cn(
                         "h-5 w-5 transition-colors",
-                        saved
+                        liked
                           ? "fill-current text-primary"
                           : "text-muted-foreground group-hover:text-primary"
                       )}
@@ -431,12 +446,12 @@ export function EventDetailView({
                     <span
                       className={cn(
                         "text-sm font-semibold transition-colors",
-                        saved
+                        liked
                           ? "text-primary"
                           : "text-muted-foreground group-hover:text-primary"
                       )}
                     >
-                      {saved ? "Liked" : "Like"}
+                      {liked ? "Liked" : "Like"}
                     </span>
                   </button>
                 </div>

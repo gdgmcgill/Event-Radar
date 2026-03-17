@@ -1,46 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "./route";
 import { verifyAdmin } from "@/lib/admin";
 
-vi.mock("@/lib/admin", () => ({
-  verifyAdmin: vi.fn(),
+jest.mock("@/lib/admin", () => ({
+  verifyAdmin: jest.fn(),
 }));
 
 describe("GET /api/admin/analytics/users", () => {
-  const mockSelect = vi.fn();
-  const mockGte = vi.fn();
-  const mockOrder = vi.fn();
-  const mockFrom = vi.fn();
-
-  function chainable(result: unknown) {
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    chain.select = vi.fn().mockReturnValue(chain);
-    chain.gte = vi.fn().mockReturnValue(chain);
-    chain.order = vi.fn().mockImplementation(() => result);
-    chain.then = vi.fn().mockImplementation((cb) =>
-      Promise.resolve(cb(result))
-    );
-    Object.defineProperty(chain, "count", { get: () => (result as { count: number }).count });
-    return chain;
-  }
-
-  function headChainable(result: { count: number }) {
-    const chain: Record<string, unknown> = {};
-    chain.select = vi.fn().mockReturnValue(chain);
-    chain.gte = vi.fn().mockReturnValue(chain);
-    chain.then = vi.fn().mockImplementation((cb) =>
-      Promise.resolve(cb(result))
-    );
-    Object.defineProperty(chain, "count", { get: () => result.count });
-    return chain;
-  }
-
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it("returns 403 when user is not admin", async () => {
-    (verifyAdmin as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (verifyAdmin as jest.Mock).mockResolvedValue({
       supabase: {},
       isAdmin: false,
     });
@@ -66,15 +37,15 @@ describe("GET /api/admin/analytics/users", () => {
     let callCount = 0;
 
     const mockSupabase = {
-      from: vi.fn().mockImplementation(() => {
+      from: jest.fn().mockImplementation(() => {
         callCount++;
 
         if (callCount === 1) {
           // allUsers query - returns rows
           return {
-            select: vi.fn().mockReturnValue({
-              gte: vi.fn().mockReturnValue({
-                order: vi.fn().mockResolvedValue({
+            select: jest.fn().mockReturnValue({
+              gte: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({
                   data: mockUsers,
                   error: null,
                 }),
@@ -86,8 +57,8 @@ describe("GET /api/admin/analytics/users", () => {
         if (callCount === 2) {
           // activeUsers - count only
           return {
-            select: vi.fn().mockReturnValue({
-              gte: vi.fn().mockResolvedValue({
+            select: jest.fn().mockReturnValue({
+              gte: jest.fn().mockResolvedValue({
                 count: 5,
                 data: null,
                 error: null,
@@ -99,8 +70,8 @@ describe("GET /api/admin/analytics/users", () => {
         if (callCount === 3) {
           // engagedUsers - count only
           return {
-            select: vi.fn().mockReturnValue({
-              gte: vi.fn().mockResolvedValue({
+            select: jest.fn().mockReturnValue({
+              gte: jest.fn().mockResolvedValue({
                 count: 2,
                 data: null,
                 error: null,
@@ -111,7 +82,7 @@ describe("GET /api/admin/analytics/users", () => {
 
         // totalUsersResult - count only
         return {
-          select: vi.fn().mockResolvedValue({
+          select: jest.fn().mockResolvedValue({
             count: 10,
             data: null,
             error: null,
@@ -120,7 +91,7 @@ describe("GET /api/admin/analytics/users", () => {
       }),
     };
 
-    (verifyAdmin as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (verifyAdmin as jest.Mock).mockResolvedValue({
       supabase: mockSupabase,
       isAdmin: true,
     });
@@ -179,14 +150,14 @@ describe("GET /api/admin/analytics/users", () => {
     let callCount = 0;
 
     const mockSupabase = {
-      from: vi.fn().mockImplementation(() => {
+      from: jest.fn().mockImplementation(() => {
         callCount++;
 
         if (callCount === 1) {
           return {
-            select: vi.fn().mockReturnValue({
-              gte: vi.fn().mockReturnValue({
-                order: vi.fn().mockResolvedValue({
+            select: jest.fn().mockReturnValue({
+              gte: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({
                   data: [],
                   error: null,
                 }),
@@ -197,8 +168,8 @@ describe("GET /api/admin/analytics/users", () => {
 
         if (callCount <= 3) {
           return {
-            select: vi.fn().mockReturnValue({
-              gte: vi.fn().mockResolvedValue({
+            select: jest.fn().mockReturnValue({
+              gte: jest.fn().mockResolvedValue({
                 count: 0,
                 data: null,
                 error: null,
@@ -208,7 +179,7 @@ describe("GET /api/admin/analytics/users", () => {
         }
 
         return {
-          select: vi.fn().mockResolvedValue({
+          select: jest.fn().mockResolvedValue({
             count: 0,
             data: null,
             error: null,
@@ -217,7 +188,7 @@ describe("GET /api/admin/analytics/users", () => {
       }),
     };
 
-    (verifyAdmin as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (verifyAdmin as jest.Mock).mockResolvedValue({
       supabase: mockSupabase,
       isAdmin: true,
     });

@@ -10,7 +10,7 @@
 // Mock chainable Supabase query builder
 function createMockQueryBuilder(resolvedValue: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {};
-  const methods = ["select", "insert", "update", "delete", "eq", "neq", "maybeSingle", "single"];
+  const methods = ["select", "insert", "update", "delete", "eq", "neq", "is", "maybeSingle", "single"];
   for (const method of methods) {
     builder[method] = jest.fn().mockReturnValue(builder);
   }

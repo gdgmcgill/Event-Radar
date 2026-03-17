@@ -31,6 +31,13 @@ const LIMITS: Record<string, number> = {
 // Paths that bypass public rate limits
 const ADMIN_PREFIX = "/api/admin";
 
+// High-frequency analytics endpoints should not consume the same POST quota
+// as user-facing mutations (save/RSVP/follow/etc.).
+const HIGH_FREQUENCY_POST_PREFIXES = [
+  "/api/interactions",
+  "/api/recommendations/feedback",
+];
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -60,8 +67,10 @@ function pruneExpired(now: number): void {
  * Rules:
  *  - Only paths under /api/** are rate-limited.
  *  - Paths under /api/admin/** are excluded (admin has its own auth layer).
- *  - GET  requests: 100 req / min / IP
- *  - POST requests (and all other mutating methods): 30 req / min / IP
+ *  - GET requests: 300 req / min / IP / path
+ *  - Mutating methods: 30 req / min / IP / path
+ *  - High-frequency analytics writes (/api/interactions, /api/recommendations/feedback):
+ *    300 req / min / IP / path
  *  - Responses beyond the limit receive HTTP 429 with a Retry-After header.
  *
  * Returns a NextResponse if the request should be blocked, otherwise null.
@@ -76,14 +85,21 @@ export function applyApiRateLimit(req: NextRequest): NextResponse | null {
   if (pathname.startsWith(ADMIN_PREFIX)) return null;
 
   const method = req.method.toUpperCase();
-  // GET gets the generous limit; everything else (POST, PUT, PATCH, DELETE…) gets the strict limit
-  const limit = LIMITS[method] ?? LIMITS.POST;
+  // GET gets the generous limit; everything else (POST, PUT, PATCH, DELETE…) gets the strict limit.
+  // For high-frequency analytics routes, use a larger write budget.
+  const isHighFrequencyPostRoute =
+    method !== "GET" &&
+    HIGH_FREQUENCY_POST_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const limit = isHighFrequencyPostRoute
+    ? 300
+    : (LIMITS[method] ?? LIMITS.POST);
 
   const now = Date.now();
   pruneExpired(now);
 
   const ip = getIp(req);
-  const key = `${method}:${ip}`;
+  // Scope bucket by path so analytics writes can't starve RSVP/save endpoints.
+  const key = `${method}:${pathname}:${ip}`;
   const bucket = store.get(key);
 
   if (!bucket || bucket.resetAt <= now) {

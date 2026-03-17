@@ -27,43 +27,46 @@ export function HeroSlide({
   secondaryLabel,
 }: HeroSlideProps) {
   return (
-    <div className="relative w-full h-[85vh] min-h-[400px] sm:min-h-[500px] flex-[0_0_100%]">
+    <div className="relative w-full min-h-[500px] h-[clamp(500px,85vh,900px)] flex-[0_0_100%] flex items-end overflow-hidden">
+      {/* Background image */}
       <div
-        className="absolute inset-0 bg-cover bg-center transition-transform duration-1000"
+        className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url("${imageUrl}")` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black from-0% via-black/80 via-[15%] via-black/50 via-[50%] to-black/20 to-100%" />
-      <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background from-10% via-background/40 via-50% to-transparent" />
+      {/* Gradient overlays */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black from-0% via-black/70 via-30% to-black/20 to-100%" />
+      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background via-background/60 to-transparent" />
 
-      <div className="absolute bottom-0 left-0 p-4 sm:p-6 md:p-10 lg:p-12 w-full lg:w-3/4 pb-20 sm:pb-28 md:pb-36">
-        <span className="inline-block px-5 py-2 bg-white/20 dark:bg-white/10 backdrop-blur-xl text-white text-xs font-black uppercase tracking-[0.2em] rounded-full mb-8 border border-white/30 dark:border-white/15 shadow-xl [text-shadow:0_1px_3px_rgba(0,0,0,0.3)]">
+      {/* Content - uses flex parent alignment instead of absolute positioning */}
+      <div className="relative z-10 w-full lg:w-3/4 px-4 sm:px-6 md:px-10 lg:px-12 pt-16 pb-20 sm:pb-28 md:pb-36">
+        <span className="inline-block px-4 py-1.5 bg-white/20 backdrop-blur-xl text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] rounded-full mb-4 sm:mb-6 border border-white/30 shadow-xl">
           {badge}
         </span>
 
-        <h2 className="text-white text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-black leading-[0.9] tracking-tighter mb-6 sm:mb-8 drop-shadow-2xl">
+        <h2 className="text-white text-[clamp(1.75rem,5vw,4.5rem)] font-black leading-[0.95] tracking-tight mb-4 sm:mb-5 drop-shadow-2xl">
           {title}
         </h2>
 
-        <p className="text-white/90 text-base sm:text-lg lg:text-2xl font-medium max-w-2xl mb-6 sm:mb-10 leading-relaxed drop-shadow-lg line-clamp-3">
+        <p className="text-white/90 text-sm sm:text-base lg:text-lg font-medium max-w-2xl mb-5 sm:mb-6 leading-relaxed drop-shadow-lg line-clamp-2 sm:line-clamp-3">
           {description}
         </p>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4">
           <button
             onClick={onPrimary}
-            className="w-full sm:w-auto px-6 sm:px-8 md:px-10 py-3.5 sm:py-4 md:py-5 bg-primary text-white text-base sm:text-lg md:text-xl font-bold rounded-2xl hover:brightness-110 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 cursor-pointer"
+            className="w-full sm:w-auto px-5 sm:px-7 py-3 sm:py-3.5 bg-primary text-white text-sm sm:text-base font-bold rounded-xl sm:rounded-2xl hover:brightness-110 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2.5 cursor-pointer"
           >
-            {primaryIcon || <UserCheck className="h-5 w-5 md:h-6 md:w-6" />}
+            {primaryIcon || <UserCheck className="h-4 w-4 sm:h-5 sm:w-5" />}
             {primaryLabel}
           </button>
           <button
             onClick={onSecondary}
-            className="w-full sm:w-auto px-6 sm:px-6 md:px-8 py-3.5 sm:py-4 md:py-5 bg-white/20 dark:bg-white/10 backdrop-blur-xl text-white font-bold border border-white/30 dark:border-white/15 rounded-2xl hover:bg-white/30 dark:hover:bg-white/20 transition-all flex items-center justify-center gap-3 cursor-pointer shadow-lg"
+            className="w-full sm:w-auto px-5 sm:px-7 py-3 sm:py-3.5 bg-white/20 backdrop-blur-xl text-white font-bold border border-white/30 rounded-xl sm:rounded-2xl hover:bg-white/30 transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-lg"
           >
             {secondaryLabel === "More Info" ? (
-              <Info className="h-5 w-5 md:h-6 md:w-6" />
+              <Info className="h-4 w-4 sm:h-5 sm:w-5" />
             ) : (
-              <ChevronDown className="h-5 w-5 md:h-6 md:w-6" />
+              <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5" />
             )}
             {secondaryLabel}
           </button>

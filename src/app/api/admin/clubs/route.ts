@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error("Error fetching admin clubs:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ clubs: data ?? [], total: count ?? 0 });

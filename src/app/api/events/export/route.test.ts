@@ -46,6 +46,7 @@ const mockEvents = [
 const mockQuery = {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
+    is: jest.fn().mockReturnThis(),
     in: jest.fn().mockReturnThis(),
     order: jest.fn().mockReturnThis(),
     overlaps: jest.fn().mockReturnThis(),
@@ -63,6 +64,7 @@ describe("GET /api/events/export", () => {
         mockFrom.mockClear();
         mockQuery.select.mockClear();
         mockQuery.eq.mockClear();
+        mockQuery.is.mockClear();
         mockQuery.in.mockClear();
         mockQuery.order.mockClear();
         mockQuery.overlaps.mockClear();

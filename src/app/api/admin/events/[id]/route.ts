@@ -48,7 +48,7 @@ export async function PUT(
     if (error.code === "PGRST116") {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   // Log audit action
@@ -88,7 +88,7 @@ export async function DELETE(
     .is("deleted_at", null);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   // Log audit action

@@ -42,7 +42,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     .eq("experiment_id", id);
 
   if (varError) {
-    return NextResponse.json({ error: varError.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   const variants = (variantsRaw ?? []) as VariantRow[];
@@ -61,16 +61,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   ]);
 
   if (assignmentsResult.error) {
-    return NextResponse.json(
-      { error: assignmentsResult.error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
   if (feedbackResult.error) {
-    return NextResponse.json(
-      { error: feedbackResult.error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   const assignments = (assignmentsResult.data ?? []) as AssignmentRow[];

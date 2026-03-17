@@ -197,12 +197,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError) {
-      console.error("Error retrieving user:", authError);
-      return NextResponse.json({ error: "Failed to authenticate" }, { status: 500 });
-    }
-
-    if (!user) {
+    if (authError || !user) {
+      if (authError) {
+        console.warn("Unauthenticated request to RSVP endpoint:", authError);
+      }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -384,12 +382,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError) {
-      console.error("Error retrieving user:", authError);
-      return NextResponse.json({ error: "Failed to authenticate" }, { status: 500 });
-    }
-
-    if (!user) {
+    if (authError || !user) {
+      if (authError) {
+        console.warn("Unauthenticated request to RSVP endpoint:", authError);
+      }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

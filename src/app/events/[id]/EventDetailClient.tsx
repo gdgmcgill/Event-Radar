@@ -46,7 +46,9 @@ export default function EventDetailClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [liked, setLiked] = useState(false);
   const [savingInProgress, setSavingInProgress] = useState(false);
+  const [likingInProgress, setLikingInProgress] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [relatedEvents, setRelatedEvents] = useState<Event[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -124,6 +126,25 @@ export default function EventDetailClient() {
     checkSaved();
   }, [user, id]);
 
+  // Check like state (positive recommendation feedback)
+  useEffect(() => {
+    if (!user || !id) {
+      setLiked(false);
+      return;
+    }
+    const checkLiked = async () => {
+      try {
+        const res = await fetch(`/api/recommendations/feedback?event_ids=${encodeURIComponent(id)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setLiked(data.feedback?.[id] === "positive");
+      } catch {
+        // Silently fail
+      }
+    };
+    checkLiked();
+  }, [user, id]);
+
   // Scroll to top
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -188,6 +209,28 @@ export default function EventDetailClient() {
     // Tracking could go here
   }, []);
 
+  const handleLike = useCallback(async () => {
+    if (!user) {
+      setShowSignInPrompt(true);
+      return;
+    }
+    if (!id || likingInProgress || liked) return;
+    setLikingInProgress(true);
+    setLiked(true);
+    try {
+      const res = await fetch("/api/recommendations/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id: id, feedback: "positive" }),
+      });
+      if (!res.ok) throw new Error("Failed to like event");
+    } catch {
+      setLiked(false);
+    } finally {
+      setLikingInProgress(false);
+    }
+  }, [user, id, likingInProgress, liked]);
+
   const handleEventClick = useCallback((eventId: string) => {
     window.location.href = `/events/${eventId}`;
   }, []);
@@ -248,7 +291,9 @@ export default function EventDetailClient() {
         event={event}
         similarEvents={relatedEvents}
         isSaved={saved}
+        isLiked={liked}
         onSave={handleSave}
+        onLike={handleLike}
         onShare={handleShare}
         onEventClick={handleEventClick}
         reviews={reviewAggregate}

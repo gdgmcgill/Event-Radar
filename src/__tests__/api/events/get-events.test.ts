@@ -76,6 +76,7 @@ function createChainableBuilder() {
   const chainMethods = [
     "select",
     "eq",
+    "is",
     "order",
     "overlaps",
     "or",
@@ -95,6 +96,7 @@ function createChainableBuilder() {
 
 const mockSupabase = {
   from: jest.fn(),
+  rpc: jest.fn(),
 };
 
 jest.mock("@/lib/supabase/server", () => ({
@@ -129,6 +131,7 @@ beforeEach(async () => {
 
   // Reset from() to return a fresh chainable builder each call
   mockSupabase.from.mockImplementation(() => createChainableBuilder());
+  mockSupabase.rpc.mockResolvedValue({ data: [], error: null });
 
   const routeModule = await import("@/app/api/events/route");
   GET = routeModule.GET as typeof GET;
@@ -274,6 +277,11 @@ describe("GET /api/events — filters", () => {
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
       return capturedBuilder;
+    });
+    // Force fallback path to ILIKE query.
+    mockSupabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: "RPC unavailable" },
     });
 
     await GET(makeRequest({ search: "hackathon" }));

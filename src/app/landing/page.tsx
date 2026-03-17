@@ -654,7 +654,7 @@ function HowItWorks() {
       step: "03",
       title: "RSVP & show up",
       description:
-        "Mark yourself as going, get reminders, and show up. It's that simple, no more FOMO.",,
+        "Mark yourself as going, get reminders, and show up. It's that simple, no more FOMO.",
     },
   ];
 

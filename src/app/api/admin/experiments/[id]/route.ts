@@ -30,10 +30,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     .eq("experiment_id", id);
 
   if (variantsError) {
-    return NextResponse.json(
-      { error: variantsError.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   const variantIds = (variants ?? []).map((v) => v.id);
@@ -48,10 +45,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       .in("variant_id", variantIds);
 
     if (assignmentsError) {
-      return NextResponse.json(
-        { error: assignmentsError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
     for (const a of assignments ?? []) {
@@ -112,7 +106,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ experiment });
@@ -152,7 +146,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     .eq("id", id);
 
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

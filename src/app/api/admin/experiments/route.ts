@@ -14,7 +14,7 @@ export async function GET(_request: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   if (!experiments || experiments.length === 0) {
@@ -29,7 +29,7 @@ export async function GET(_request: NextRequest) {
     .in("experiment_id", experimentIds);
 
   if (variantsError) {
-    return NextResponse.json({ error: variantsError.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   const { data: assignments, error: assignmentsError } = await supabase
@@ -38,10 +38,7 @@ export async function GET(_request: NextRequest) {
     .in("experiment_id", experimentIds);
 
   if (assignmentsError) {
-    return NextResponse.json(
-      { error: assignmentsError.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   const assignmentCounts: Record<string, number> = {};
@@ -104,7 +101,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (expError) {
-    return NextResponse.json({ error: expError.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   const variantRows = variants.map(
@@ -124,7 +121,7 @@ export async function POST(request: NextRequest) {
   if (varError) {
     // Clean up the experiment on variant creation failure
     await supabase.from("experiments").delete().eq("id", experiment.id);
-    return NextResponse.json({ error: varError.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json(

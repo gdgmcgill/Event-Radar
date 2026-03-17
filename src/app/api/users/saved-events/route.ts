@@ -45,15 +45,14 @@ export async function GET(request: NextRequest) {
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError) {
-      console.error("Error retrieving user:", authError);
-      return NextResponse.json(
-        { error: "Failed to authenticate" },
-        { status: 500 }
-      );
-    }
-
-    if (!user) {
+    // Missing/invalid session is an authorization failure, not a server failure.
+    if (authError || !user) {
+      if (authError) {
+        console.warn(
+          "Unauthenticated request to /api/users/saved-events:",
+          authError
+        );
+      }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
