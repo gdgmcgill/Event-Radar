@@ -273,7 +273,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
           </div>
 
           {/* Hero Banner — crisp foreground image */}
-          <div className="relative w-full h-[38vh] min-h-[300px]">
+          <div className="relative w-full h-[30vh] sm:h-[38vh] min-h-[220px] sm:min-h-[300px]">
             <div className="absolute inset-0 overflow-hidden">
               {bannerUrl ? (
                 <>
@@ -418,7 +418,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                   { value: data.clubCount, label: "Clubs", icon: Building2 },
                   { value: data.friendCount, label: "Friends", icon: Users },
                 ].map((stat) => (
-                  <div key={stat.label} className="group relative flex flex-col items-center justify-center py-4 rounded-xl bg-white/40 dark:bg-white/[0.05] backdrop-blur-lg border border-white/30 dark:border-white/[0.03] hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-200 cursor-default">
+                  <div key={stat.label} className="group relative flex flex-col items-center justify-center py-4 min-h-[44px] rounded-xl bg-white/40 dark:bg-white/[0.05] backdrop-blur-lg border border-white/30 dark:border-white/[0.03] hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-200 cursor-default">
                     <stat.icon className="h-4 w-4 text-muted-foreground/50 mb-1.5 group-hover:text-primary/60 transition-colors duration-200" />
                     <div className="text-2xl sm:text-3xl font-black text-foreground leading-none">{stat.value}</div>
                     <div className="text-[11px] font-medium text-muted-foreground mt-1 uppercase tracking-wider">{stat.label}</div>
@@ -721,7 +721,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                   const isActive = settingsSection === section.id;
                   return (
                     <button key={section.id} onClick={() => setSettingsSection(section.id)} className={cn(
-                      "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200",
+                      "flex items-center gap-3 px-4 py-3 min-h-[44px] rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200",
                       isActive ? "bg-primary text-white shadow-md shadow-primary/10" : "text-muted-foreground hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10"
                     )}>
                       <Icon className="h-4 w-4 flex-shrink-0" /> {section.label}
@@ -738,7 +738,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                   <SettingsCard icon={Camera} title="Profile Photo & Name" description="How others see you on UNI-VERSE">
                     <div className="flex flex-col sm:flex-row gap-6 items-start">
                       <div className="flex flex-col items-center gap-3">
-                        <div onClick={avatar.openFilePicker} className="relative w-24 h-24 rounded-2xl overflow-hidden cursor-pointer group ring-2 ring-primary/10">
+                        <div onClick={avatar.openFilePicker} className="relative w-16 h-16 sm:w-24 sm:h-24 rounded-2xl overflow-hidden cursor-pointer group ring-2 ring-primary/10">
                           {avatar.avatarUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={avatar.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -777,7 +777,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                     <div className="space-y-3">
                       <div
                         onClick={() => !bannerUploading && bannerInputRef.current?.click()}
-                        className="relative w-full h-36 rounded-xl overflow-hidden cursor-pointer group border border-dashed border-border hover:border-primary/50 transition-colors"
+                        className="relative w-full h-28 sm:h-36 rounded-xl overflow-hidden cursor-pointer group border border-dashed border-border hover:border-primary/50 transition-colors"
                       >
                         {bannerUrl ? (
                           <>
@@ -976,7 +976,7 @@ function SaveBar({ onSave, saving, saved, error, disabled }: { onSave: () => voi
         {saved && <span className="text-green-600 dark:text-green-400 flex items-center gap-1.5"><Check className="h-4 w-4" /> Saved successfully</span>}
         {!error && !saved && <span className="text-muted-foreground">Remember to save your changes</span>}
       </div>
-      <Button onClick={onSave} disabled={disabled || saving} className="gap-2 min-w-[140px]">
+      <Button onClick={onSave} disabled={disabled || saving} className="gap-2 min-w-[140px] w-full sm:w-auto shadow-lg shadow-primary/20">
         {saving && <Loader2 className="h-4 w-4 animate-spin" />}
         {saving ? "Saving..." : "Save Changes"}
       </Button>
