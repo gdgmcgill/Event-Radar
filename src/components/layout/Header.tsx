@@ -113,11 +113,11 @@ export function Header() {
       <header className="sticky top-0 z-50 w-full border-b border-border bg-card/90 backdrop-blur-2xl">
         <div className="flex items-center justify-between h-16 px-4">
           {/* Left: Burger + Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={cn(
-                "p-2 rounded-xl transition-all duration-200",
+                "p-2 rounded-xl transition-all duration-200 flex-shrink-0",
                 isMobileMenuOpen
                   ? "bg-primary text-white shadow-md shadow-primary/10"
                   : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
@@ -135,20 +135,20 @@ export function Header() {
 
             <Link
               href="/"
-              className="flex items-center gap-3 transition-opacity hover:opacity-90"
+              className="flex items-center gap-2 sm:gap-3 transition-opacity hover:opacity-90 min-w-0"
             >
               <Image
                 src="/uni-verse_logo.png"
                 alt="UNI-VERSE"
                 width={36}
                 height={36}
-                className="h-9 w-9 object-contain"
+                className="h-8 w-8 sm:h-9 sm:w-9 object-contain flex-shrink-0"
               />
-              <div>
-                <h1 className="text-base font-black uppercase tracking-widest text-foreground leading-none">
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-base font-black uppercase tracking-widest text-foreground leading-none truncate">
                   UNI-VERSE
                 </h1>
-                <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest mt-0.5">
+                <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest mt-0.5 hidden sm:block">
                   McGill University
                 </p>
               </div>
@@ -156,7 +156,7 @@ export function Header() {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {loading ? (
               <div className="h-9 w-9 animate-pulse rounded-xl bg-muted" />
             ) : isAuthenticated ? (
@@ -167,7 +167,7 @@ export function Header() {
             ) : (
               <>
                 <ThemeToggle />
-                <SignInButton variant="default" />
+                <SignInButton variant="default" compact />
               </>
             )}
           </div>

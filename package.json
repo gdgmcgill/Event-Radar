@@ -20,6 +20,7 @@
     "@supabase/supabase-js": "^2.49.0",
     "@swagger-api/apidom-ns-openapi-3-1": "^1.0.0-rc.3",
     "@vercel/speed-insights": "^2.0.0",
+    "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
     "d3": "^7.9.0",
@@ -30,6 +31,7 @@
     "next": "^16.0.3",
     "next-swagger-doc": "^0.4.1",
     "react": "^18.3.0",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.3.0",
     "react-easy-crop": "^5.5.6",
     "recharts": "^3.7.0",
@@ -52,6 +54,7 @@
     "@types/sanitize-html": "^2.16.1",
     "@types/swagger-ui-react": "^5.18.0",
     "autoprefixer": "^10.4.17",
+    "dotenv": "^17.3.1",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.3",
     "jest": "^30.2.0",
@@ -59,6 +62,7 @@
     "prettier": "^3.2.5",
     "tailwindcss": "^3.4.1",
     "ts-jest": "^29.4.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.4.0"
   }
 }

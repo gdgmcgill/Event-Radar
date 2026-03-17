@@ -14,9 +14,11 @@ interface SignInButtonProps {
   className?: string;
   /** Override where to redirect after login. Defaults to current page. */
   redirectAfterLogin?: string;
+  /** Use compact layout — icon-only on small screens */
+  compact?: boolean;
 }
 
-export function SignInButton({ variant = "default", className, redirectAfterLogin }: SignInButtonProps) {
+export function SignInButton({ variant = "default", className, redirectAfterLogin, compact }: SignInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = async () => {
@@ -54,8 +56,14 @@ export function SignInButton({ variant = "default", className, redirectAfterLogi
 
   return (
     <Button onClick={handleSignIn} variant={variant} disabled={isLoading} className={className}>
-      <LogIn className="mr-2 h-4 w-4" />
-      {isLoading ? "Redirecting..." : "Sign In with McGill Email"}
+      <LogIn className={compact ? "h-4 w-4 sm:mr-2" : "mr-2 h-4 w-4"} />
+      {compact ? (
+        <span className="hidden sm:inline">
+          {isLoading ? "Redirecting..." : "Sign In"}
+        </span>
+      ) : (
+        isLoading ? "Redirecting..." : "Sign In with McGill Email"
+      )}
     </Button>
   );
 }

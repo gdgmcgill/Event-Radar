@@ -379,7 +379,7 @@ function HomePageContent() {
             </div>
 
             {/* Filter Pills — broad categories + quick filters */}
-            <div className="flex items-center gap-2 overflow-x-auto py-1.5 px-0.5 -mx-0.5 scrollbar-none">
+            <div className="flex items-center gap-2 overflow-x-auto py-1.5 px-0.5 -mx-0.5 scrollbar-thin">
               <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
               {/* Broad categories */}
