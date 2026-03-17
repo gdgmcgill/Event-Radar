@@ -220,7 +220,7 @@ export default function PeoplePage() {
                 friends.length === 0 &&
                 query.trim().length < 2 && (
                   <div className="py-12 text-center text-muted-foreground text-sm">
-                    No friends yet. Search for people above to follow them — when
+                    No friends yet. Search for people above to follow them, when
                     they follow you back, you become friends.
                   </div>
                 )}

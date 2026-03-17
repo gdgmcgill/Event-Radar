@@ -250,7 +250,7 @@ export function CreateClubForm() {
         {/* Banner */}
         <div>
           <label className="mb-2 block text-sm font-medium text-foreground">
-            Club Banner <span className="text-muted-foreground font-normal">(optional — displayed on your club page hero)</span>
+            Club Banner <span className="text-muted-foreground font-normal">(optional, displayed on your club page hero)</span>
           </label>
           <div className="relative">
             <div className="w-full aspect-[3/1] rounded-xl bg-secondary border border-border overflow-hidden flex items-center justify-center">

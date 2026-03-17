@@ -713,7 +713,7 @@ export function ClubSettingsTab({ club, onUpdate, members = [] }: ClubSettingsTa
                   <option value="">Select a member...</option>
                   {transferCandidates.map((m) => (
                     <option key={m.user_id} value={m.user_id}>
-                      {m.user?.name || m.user?.email || m.user_id} — {m.role}
+                      {m.user?.name || m.user?.email || m.user_id}, {m.role}
                     </option>
                   ))}
                 </select>

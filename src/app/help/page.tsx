@@ -69,7 +69,7 @@ const SECTIONS: Section[] = [
             Click the <strong>Sign In</strong> button in the top-right corner
             (or in the sidebar on desktop). You&apos;ll be redirected to
             McGill&apos;s Microsoft login page. Enter your McGill credentials
-            and you&apos;ll be signed in automatically — no separate password
+            and you&apos;ll be signed in automatically, no separate password
             needed for UNI-VERSE.
           </p>
         ),
@@ -196,7 +196,7 @@ const SECTIONS: Section[] = [
         question: "Can I cancel my RSVP?",
         answer: (
           <p>
-            Yes — go to{" "}
+            Yes, go to{" "}
             <Link href="/my-events" className="text-primary hover:underline">
               My Events
             </Link>{" "}
@@ -279,7 +279,7 @@ const SECTIONS: Section[] = [
               tags, and an optional banner image.
             </li>
             <li>
-              Submit for review — an admin will approve or reject the event,
+              Submit for review, an admin will approve or reject the event,
               typically within 24 hours.
             </li>
           </ol>
@@ -375,7 +375,7 @@ const SECTIONS: Section[] = [
         ),
       },
       {
-        question: "I found a bug — how do I report it?",
+        question: "I found a bug, how do I report it?",
         answer: (
           <p>
             Please use the{" "}

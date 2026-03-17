@@ -20,7 +20,7 @@ const FEATURES = [
     icon: Search,
     title: "Smart Discovery",
     description:
-      "Filter by category, date, or keyword. Academic talks, socials, sports — find exactly what fits your schedule.",
+      "Filter by category, date, or keyword. Academic talks, socials, sports, find exactly what fits your schedule.",
   },
   {
     icon: Bookmark,
@@ -58,7 +58,7 @@ const STEPS = [
   {
     number: "01",
     title: "Sign in with McGill",
-    description: "Use your @mcgill.ca or @mail.mcgill.ca email. That's it — no extra accounts.",
+    description: "Use your @mcgill.ca or @mail.mcgill.ca email. That's it, no extra accounts.",
   },
   {
     number: "02",
@@ -121,7 +121,7 @@ export default function AboutPage() {
           </h1>
 
           <p className="text-neutral-500 dark:text-neutral-300 text-lg lg:text-2xl font-medium max-w-2xl leading-relaxed">
-            UNI-VERSE pulls every McGill event — clubs, workshops, parties, career fairs — into a
+            UNI-VERSE pulls every McGill event, clubs, workshops, parties, career fairs, into a
             single, personalized feed. Stop scrolling five Instagram pages. Start here.
           </p>
         </div>
@@ -161,7 +161,7 @@ export default function AboutPage() {
           </h2>
           <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
             Events are scattered across Instagram stories, Facebook groups, mailing lists, and
-            word of mouth. UNI-VERSE is a single source of truth — every approved event, searchable
+            word of mouth. UNI-VERSE is a single source of truth, every approved event, searchable
             and filterable, with smart recommendations that learn what you actually care about.
           </p>
         </div>

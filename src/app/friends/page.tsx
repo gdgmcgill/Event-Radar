@@ -444,7 +444,7 @@ export default function FriendsPage() {
           </h3>
           <p className="text-muted-foreground max-w-md mx-auto mb-6">
             Use the search bar above to find any student by name. Follow them
-            and they&apos;ll get notified — when they follow back, you become friends.
+            and they&apos;ll get notified, when they follow back, you become friends.
           </p>
           <button
             onClick={() => {

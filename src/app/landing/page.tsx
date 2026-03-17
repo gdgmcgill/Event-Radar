@@ -263,7 +263,7 @@ function Hero() {
 
           <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed mb-8 max-w-xl">
             Your central hub for McGill events. Browse, RSVP, and never miss a
-            campus moment — from club socials to guest lectures, all in one
+            campus moment, from club socials to guest lectures, all in one
             place.
           </p>
 
@@ -342,7 +342,7 @@ function Hero() {
                   New event near you
                 </p>
                 <p className="text-[9px] text-muted-foreground mt-0.5">
-                  Open Mic Night at Gerts — tonight at 8 PM
+                  Open Mic Night at Gerts, tonight at 8 PM
                 </p>
               </div>
             </div>
@@ -583,13 +583,13 @@ function Features() {
       icon: <Sparkles className="w-6 h-6" />,
       title: "AI-Powered Feed",
       description:
-        "Our recommendation engine learns what you like. The more you explore, the better your feed gets — tailored to your unique campus life.",
+        "Our recommendation engine learns what you like. The more you explore, the better your feed gets, tailored to your unique campus life.",
     },
     {
       icon: <MapPin className="w-6 h-6" />,
       title: "Campus-Wide Coverage",
       description:
-        "From Trottier to Thomson House, from academic lectures to late-night socials — every corner of McGill campus life, covered.",
+        "From Trottier to Thomson House, from academic lectures to late-night socials, every corner of McGill campus life, covered.",
     },
   ];
 
@@ -654,7 +654,7 @@ function HowItWorks() {
       step: "03",
       title: "RSVP & show up",
       description:
-        "Mark yourself as going, get reminders, and show up. It's that simple — no more FOMO.",
+        "Mark yourself as going, get reminders, and show up. It's that simple, no more FOMO.",,
     },
   ];
 
@@ -737,7 +737,7 @@ function OrganizerSection() {
                 Powerful Tools for Club Leaders
               </h2>
               <p className="text-muted-foreground text-base sm:text-lg mb-10 max-w-lg leading-relaxed">
-                Whether you&apos;re running a club of 20 or 2,000 — UNI-VERSE
+                Whether you&apos;re running a club of 20 or 2,000, UNI-VERSE
                 gives you the tools to create, promote, and manage your events
                 with ease.
               </p>

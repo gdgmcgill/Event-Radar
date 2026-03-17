@@ -233,7 +233,7 @@ export function ClubAnalyticsTab({ clubId }: ClubAnalyticsTabProps) {
             Your <span className="text-foreground font-medium">{data.best_event_type.tag}</span> events
             average <span className="text-foreground font-medium">{data.best_event_type.avg_rsvps}</span> RSVPs
             {data.best_event_type.comparison > 1 && (
-              <> — <span className="text-emerald-500 font-medium">{data.best_event_type.comparison}x</span> more than your other events</>
+              <>, <span className="text-emerald-500 font-medium">{data.best_event_type.comparison}x</span> more than your other events</>
             )}
           </p>
         </div>
@@ -332,7 +332,7 @@ export function ClubAnalyticsTab({ clubId }: ClubAnalyticsTabProps) {
                   const churn =
                     evTotal > 0
                       ? ((event.rsvp_cancelled / evTotal) * 100).toFixed(1)
-                      : "—";
+                      : "-";
                   const churnNum = evTotal > 0 ? event.rsvp_cancelled / evTotal * 100 : 0;
 
                   return (
@@ -370,7 +370,7 @@ export function ClubAnalyticsTab({ clubId }: ClubAnalyticsTabProps) {
                               : "text-muted-foreground"
                         }`}
                       >
-                        {churn === "—" ? churn : `${churn}%`}
+                        {churn === "-" ? churn : `${churn}%`}
                       </td>
                     </tr>
                   );

@@ -117,7 +117,7 @@ function InferredTagsToastLayer({ inferredTags }: InferredTagsToastLayerProps) {
         >
           <span className="flex-1 text-foreground">
             We noticed you like{" "}
-            <strong className="text-[#ED1B2F]">{toast.label}</strong> — added to
+            <strong className="text-[#ED1B2F]">{toast.label}</strong>, added to
             your interests
           </span>
           <div className="flex items-center gap-1 shrink-0">

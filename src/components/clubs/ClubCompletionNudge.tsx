@@ -32,20 +32,20 @@ export default function ClubCompletionNudge({
     {
       key: "logo",
       complete: club.logo_url !== null,
-      label: "Add a logo — clubs with logos get 3× more followers",
+      label: "Add a logo, clubs with logos get 3× more followers",
       tab: "settings",
     },
     {
       key: "description",
       complete: !!(club.description && club.description.length > 50),
       label:
-        "Write a description — help students understand what you're about",
+        "Write a description, help students understand what you're about",
       tab: "settings",
     },
     {
       key: "instagram",
       complete: club.instagram_handle !== null,
-      label: "Link your Instagram — let members find you on social",
+      label: "Link your Instagram, let members find you on social",
       tab: "settings",
     },
     {
@@ -58,13 +58,13 @@ export default function ClubCompletionNudge({
       key: "coorganizer",
       complete: memberCount > 1 || pendingInviteCount > 0,
       label:
-        "Invite a co-organizer — teams that share the load post 2× more events",
+        "Invite a co-organizer, teams that share the load post 2× more events",
       tab: "members",
     },
     {
       key: "event",
       complete: eventCount > 0,
-      label: "Create your first event — start building your audience",
+      label: "Create your first event, start building your audience",
       tab: "events",
     },
   ];
