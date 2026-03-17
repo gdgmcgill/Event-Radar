@@ -39,9 +39,10 @@ export async function GET() {
       events,
     });
   } catch (error) {
-    console.error("Error fetching happening now events:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error fetching happening now events:", message, error);
     return NextResponse.json(
-      { error: "Failed to fetch happening now events" },
+      { error: "Failed to fetch happening now events", details: message },
       { status: 500 }
     );
   }
