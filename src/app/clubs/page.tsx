@@ -2,11 +2,13 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/types";
 import { Building2, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { ClubSearch } from "@/components/clubs/ClubSearch";
 import { ClubsPageTabs } from "@/components/clubs/ClubsPageTabs";
 import { ClubsHeroButton } from "@/components/clubs/ClubsHeroButton";
 import { ClubInitials } from "@/components/clubs/ClubInitials";
+import { StopPropagation } from "@/components/clubs/StopPropagation";
 import { ClubsHeroSection } from "@/components/clubs/ClubsHeroSection";
 import { TrendingClubsSection } from "@/components/clubs/TrendingClubsSection";
 import { PopularWithFriendsClubsSection } from "@/components/clubs/PopularWithFriendsClubsSection";
@@ -36,78 +38,92 @@ export default async function ClubsPage({ searchParams }: PageProps) {
   const supabase = await createClient();
 
   // ── Fetch approved clubs ──────────────────────────────────────────────
-  let query = supabase
-    .from("clubs")
-    .select("*", { count: "exact" })
-    .eq("status", "approved")
-    .order("name", { ascending: true });
-
-  if (q) query = query.ilike("name", `%${q}%`);
-  if (category) query = query.eq("category", category);
-
-  const from = (currentPage - 1) * CLUBS_PER_PAGE;
-  const to = from + CLUBS_PER_PAGE - 1;
-  query = query.range(from, to);
-
-  const { data: clubs, count: totalCount } = await query;
-  const totalPages = Math.ceil((totalCount ?? 0) / CLUBS_PER_PAGE);
-
-  // ── Fetch distinct categories ─────────────────────────────────────────
-  const { data: allClubs } = await supabase
-    .from("clubs")
-    .select("category")
-    .eq("status", "approved")
-    .not("category", "is", null);
-
-  const categories = [
-    ...new Set(
-      (allClubs ?? []).map((c) => c.category as string).filter(Boolean)
-    ),
-  ].sort();
-
-  // ── Fetch follower counts ─────────────────────────────────────────────
-  const clubIds = (clubs ?? []).map((c) => c.id);
+  type ClubRow = Database["public"]["Tables"]["clubs"]["Row"];
+  let clubs: ClubRow[] | null = [];
+  let totalCount: number | null = 0;
+  let categories: string[] = [];
   const followerCounts: Record<string, number> = {};
-
-  if (clubIds.length > 0) {
-    const { data: followers } = await supabase
-      .from("club_followers")
-      .select("club_id")
-      .in("club_id", clubIds);
-
-    for (const f of followers ?? []) {
-      followerCounts[f.club_id] = (followerCounts[f.club_id] ?? 0) + 1;
-    }
-  }
-
-  // ── Fetch next upcoming event per club ────────────────────────────────
   const upcomingEvents: Record<
     string,
     { title: string; start_date: string; location: string | null }
   > = {};
 
-  if (clubIds.length > 0) {
-    const today = new Date().toISOString().split("T")[0];
-    const { data: events } = await supabase
-      .from("events")
-      .select("club_id, title, start_date, location")
-      .in("club_id", clubIds)
+  try {
+    let query = supabase
+      .from("clubs")
+      .select("*", { count: "exact" })
       .eq("status", "approved")
-      .is("deleted_at", null)
-      .gte("start_date", today)
-      .order("start_date", { ascending: true });
+      .order("name", { ascending: true });
 
-    // Keep only the first (nearest) event per club
-    for (const ev of events ?? []) {
-      if (ev.club_id && !upcomingEvents[ev.club_id]) {
-        upcomingEvents[ev.club_id] = {
-          title: ev.title,
-          start_date: ev.start_date,
-          location: ev.location,
-        };
+    if (q) query = query.ilike("name", `%${q}%`);
+    if (category) query = query.eq("category", category);
+
+    const from = (currentPage - 1) * CLUBS_PER_PAGE;
+    const to = from + CLUBS_PER_PAGE - 1;
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
+    if (error) console.error("[ClubsPage] clubs query error:", error.message);
+    clubs = data;
+    totalCount = count;
+
+    // ── Fetch distinct categories ───────────────────────────────────────
+    const { data: allClubs, error: catError } = await supabase
+      .from("clubs")
+      .select("category")
+      .eq("status", "approved")
+      .not("category", "is", null);
+
+    if (catError) console.error("[ClubsPage] categories query error:", catError.message);
+
+    categories = [
+      ...new Set(
+        (allClubs ?? []).map((c) => c.category as string).filter(Boolean)
+      ),
+    ].sort();
+
+    // ── Fetch follower counts ───────────────────────────────────────────
+    const clubIds = (clubs ?? []).map((c) => c.id);
+
+    if (clubIds.length > 0) {
+      const { data: followers } = await supabase
+        .from("club_followers")
+        .select("club_id")
+        .in("club_id", clubIds);
+
+      for (const f of followers ?? []) {
+        followerCounts[f.club_id] = (followerCounts[f.club_id] ?? 0) + 1;
       }
     }
+
+    // ── Fetch next upcoming event per club ──────────────────────────────
+    if (clubIds.length > 0) {
+      const today = new Date().toISOString().split("T")[0];
+      const { data: events } = await supabase
+        .from("events")
+        .select("club_id, title, start_date, location")
+        .in("club_id", clubIds)
+        .eq("status", "approved")
+        .is("deleted_at", null)
+        .gte("start_date", today)
+        .order("start_date", { ascending: true });
+
+      // Keep only the first (nearest) event per club
+      for (const ev of events ?? []) {
+        if (ev.club_id && !upcomingEvents[ev.club_id]) {
+          upcomingEvents[ev.club_id] = {
+            title: ev.title,
+            start_date: ev.start_date,
+            location: ev.location,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[ClubsPage] Unexpected error fetching clubs data:", err);
   }
+
+  const totalPages = Math.ceil((totalCount ?? 0) / CLUBS_PER_PAGE);
 
   // ── Featured club (most followers among visible clubs) ────────────────
   const featuredClub =
@@ -273,13 +289,13 @@ export default async function ClubsPage({ searchParams }: PageProps) {
                       </div>
 
                       {/* Follow Club Button */}
-                      <div className="mt-auto" onClick={(e) => e.stopPropagation()}>
+                      <StopPropagation className="mt-auto">
                         <FollowButton
                           clubId={club.id}
                           initialFollowing={false}
                           initialCount={followers}
                         />
-                      </div>
+                      </StopPropagation>
                     </div>
 
                     {/* Upcoming Event Footer */}
