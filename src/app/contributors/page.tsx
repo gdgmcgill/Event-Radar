@@ -10,17 +10,16 @@ interface Contributor {
 }
 
 const TEAM: Contributor[] = [
-  { name: "Team Member 1", role: "Project Lead" },
-  { name: "Team Member 2", role: "Full-Stack Developer" },
-  { name: "Team Member 3", role: "Full-Stack Developer" },
-  { name: "Team Member 4", role: "Frontend Developer" },
-  { name: "Team Member 5", role: "Frontend Developer" },
-  { name: "Team Member 6", role: "Backend Developer" },
-  { name: "Team Member 7", role: "Backend Developer" },
-  { name: "Team Member 8", role: "UI/UX Designer" },
-  { name: "Team Member 9", role: "UI/UX Designer" },
-  { name: "Team Member 10", role: "QA & Testing" },
-  { name: "Team Member 11", role: "DevOps & Infrastructure" },
+  { name: "Adyan Ullah", role: "VP Projects" },
+  { name: "Aaron", role: "AI Team" },
+  { name: "Georges", role: "AI Team" },
+  { name: "Emma", role: "AI Team" },
+  { name: "Daniel", role: "Full-Stack" },
+  { name: "Valère", role: "Full Stack" },
+  { name: "Julien", role: "Back-End" },
+  { name: "Thai", role: "Front-End" },
+  { name: "Jerry", role: "Full-Stack" },
+  { name: "Yejia", role: "Full-Stack" },
 ];
 
 function getInitials(name: string) {
