@@ -20,6 +20,7 @@ const TEAM: Contributor[] = [
   { name: "Thai", role: "Front-End" },
   { name: "Jerry", role: "Full-Stack" },
   { name: "Yejia", role: "Full-Stack" },
+  { name: "Reswanth", role: "Full-Stack" },
 ];
 
 function getInitials(name: string) {
