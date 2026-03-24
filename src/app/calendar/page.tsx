@@ -448,7 +448,10 @@ export default function CalendarPage() {
       const { from, to } = getWeekFetchRange(new Date(weekRangeKey + "T00:00:00"));
       return `${base}?from=${from}&to=${to}`;
     }
-    return base; // List view — no date filter
+    // Saved view — only fetch events from today onwards
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return `${base}?from=${dateKey(today)}`;
   }, [calendarView, year, month, weekRangeKey]);
 
   const fetchEvents = useCallback(async () => {

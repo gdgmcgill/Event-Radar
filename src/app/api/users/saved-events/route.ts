@@ -86,14 +86,21 @@ export async function GET(request: NextRequest) {
     );
     const eventIds = Array.from(savedAtMap.keys());
 
-    // Step 2: Fetch full event details (only approved events)
-     
-    const { data: eventsData, error: eventsError } = await (supabase as any)
+    // Step 2: Fetch full event details (only approved, non-past events)
+    const includePast = request.nextUrl.searchParams.get("include_past") === "true";
+
+    let eventsQuery = (supabase as any)
       .from("events")
       .select("*")
       .in("id", eventIds)
       .eq("status", "approved")
       .is("deleted_at", null);
+
+    if (!includePast) {
+      eventsQuery = eventsQuery.gte("start_date", new Date().toISOString());
+    }
+
+    const { data: eventsData, error: eventsError } = await eventsQuery;
 
     if (eventsError) {
       console.error("Fetch event details error:", eventsError);

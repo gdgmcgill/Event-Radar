@@ -18,7 +18,7 @@ export async function GET() {
     .select("*, club:clubs(id, name, logo_url)")
     .eq("created_by", user.id)
     .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+    .order("start_date", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
