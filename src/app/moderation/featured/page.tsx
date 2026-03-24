@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Star, Trash2, Pencil, Plus, Search, Calendar } from "lucide-react";
 import { FeatureEventModal } from "@/components/moderation/FeatureEventModal";
+import { getESTNowISO } from "@/lib/timezone";
 
 interface FeaturedRow {
   id: string;
@@ -93,7 +94,7 @@ export default function FeaturedManagementPage() {
       );
       if (res.ok) {
         const json = await res.json();
-        const now = new Date().toISOString();
+        const now = getESTNowISO();
         // Only show future events — can't feature past events
         setSearchResults(
           (json.events ?? [])

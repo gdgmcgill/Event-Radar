@@ -1,3 +1,5 @@
+import { getESTNow } from "@/lib/timezone";
+
 /**
  * Date validation utilities for event creation and updates.
  *
@@ -65,7 +67,7 @@ export function isValidISODate(value: unknown): value is string {
  */
 export function isDateInFuture(
   dateStr: string,
-  now: Date = new Date()
+  now: Date = getESTNow()
 ): boolean {
   const d = new Date(dateStr);
   return d > now;

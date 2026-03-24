@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { transformEventFromDB } from "@/lib/tagMapping";
+import { getESTToday } from "@/lib/timezone";
 
 export async function GET() {
   try {
@@ -32,7 +33,7 @@ export async function GET() {
     }
 
     // Fetch upcoming approved events from those clubs
-    const today = new Date().toISOString().split("T")[0];
+    const today = getESTToday();
     const { data: eventsData, error } = await supabase
       .from("events")
       .select("*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)")

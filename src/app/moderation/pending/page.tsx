@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { getESTNowISO } from "@/lib/timezone";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -62,7 +63,7 @@ export default function ModerationPendingEventsPage() {
       .select("id, title, description, start_date, end_date, location, organizer, tags, status, created_at, image_url, appeal_count, pending_edits")
       .is("deleted_at", null)
       .or('status.eq.pending,pending_edits.not.is.null')
-      .gte("start_date", new Date().toISOString())
+      .gte("start_date", getESTNowISO())
       .order("created_at", { ascending: false });
 
     setEvents((data ?? []) as PendingEvent[]);

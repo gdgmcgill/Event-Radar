@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { getESTToday } from "@/lib/timezone";
 
 /**
  * GET /api/events/friends-organizing — Upcoming events created by friends
@@ -27,7 +28,7 @@ export async function GET() {
 
     const friendIds = friends.map((f: any) => f.id);
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = getESTToday();
 
     // Get upcoming approved events created by friends
     const { data: events, error: eventsError } = await supabase

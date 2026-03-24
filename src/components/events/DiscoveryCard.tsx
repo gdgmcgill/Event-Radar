@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { type Event } from "@/types";
 import { formatDate, formatTimeFromISO } from "@/lib/utils";
+import { getESTNow } from "@/lib/timezone";
 
 interface DiscoveryCardProps {
   event: Event;
@@ -13,7 +14,7 @@ interface DiscoveryCardProps {
 }
 
 export function DiscoveryCard({ event, onClick, badge, badgeVariant = "default" }: DiscoveryCardProps) {
-  const isPast = new Date(event.start_date) < new Date();
+  const isPast = new Date(event.start_date) < getESTNow();
 
   const handleClick = (e: React.MouseEvent) => {
     if (onClick) {

@@ -18,6 +18,7 @@ import { FollowButton } from "@/components/clubs/FollowButton";
 import { EventCard } from "@/components/events/EventCard";
 import type { Event } from "@/types";
 import type { Metadata } from "next";
+import { getESTToday } from "@/lib/timezone";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -82,7 +83,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
   }));
 
   // Split events into upcoming and past (using start_date from DB)
-  const today = new Date().toISOString().split("T")[0];
+  const today = getESTToday();
   const upcomingEvents = rawEvents
     .filter((e) => e.start_date >= today)
     .sort((a, b) => a.start_date.localeCompare(b.start_date)) as Event[];

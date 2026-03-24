@@ -8,6 +8,7 @@ import {
   CARD_WRAPPER_CLASS,
   SECTION_PADDING,
 } from "@/components/ui/SectionRow";
+import { getESTNow } from "@/lib/timezone";
 
 interface UpcomingThisWeekSectionProps {
   events: Event[];
@@ -18,7 +19,7 @@ export function UpcomingThisWeekSection({ events, onEventClick }: UpcomingThisWe
   if (events.length === 0) return null;
 
   // Filter to events within the next 7 days
-  const now = new Date();
+  const now = getESTNow();
   const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const thisWeekEvents = events.filter((e) => {
     const eventDate = new Date(e.start_date);

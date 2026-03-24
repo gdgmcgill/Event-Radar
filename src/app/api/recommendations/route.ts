@@ -21,6 +21,7 @@ import {
   generateExplanation,
   type ScoreBreakdown,
 } from "@/lib/recommendations";
+import { getESTNowISO } from "@/lib/timezone";
 
 /**
  * GET handler - recommendations for the current user (or anonymous fallback)
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const nowISO = new Date().toISOString();
+    const nowISO = getESTNowISO();
 
     // Anonymous users get popularity fallback
     if (!user) {

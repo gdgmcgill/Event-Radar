@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { Club } from "@/types";
+import { getESTNow } from "@/lib/timezone";
 import ClubCompletionNudge from "@/components/clubs/ClubCompletionNudge";
 
 interface ClubOverviewTabProps {
@@ -100,7 +101,7 @@ export function ClubOverviewTab({
       : null;
 
   // Next upcoming event
-  const now = new Date();
+  const now = getESTNow();
   const upcomingEvents = typedEvents
     .filter((e) => new Date(e.start_date) >= now && e.status === "approved")
     .sort(

@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { transformEventFromDB } from "@/lib/tagMapping";
+import { getESTNowISO } from "@/lib/timezone";
 
 /**
  * @swagger
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
       `)
       .eq("status", "approved")
       .is("deleted_at", null)
-      .gte("start_date", new Date().toISOString())
+      .gte("start_date", getESTNowISO())
       .order("start_date", { ascending: true });
 
     if (eventsError) {

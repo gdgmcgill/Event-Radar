@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getESTNow } from "@/lib/timezone";
 
 export async function POST(request: NextRequest) {
   // Verify cron secret
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const now = new Date();
+  const now = getESTNow();
   const remindersSent: Record<string, number> = { "24h": 0, "1h": 0 };
   const remindersSkipped: Record<string, number> = { "24h": 0, "1h": 0 };
 

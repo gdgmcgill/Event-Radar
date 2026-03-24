@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import { transformEventFromDB } from "@/lib/tagMapping";
+import { getESTNowISO } from "@/lib/timezone";
 
 /** Shape of event row from DB */
 type EventRow = {
@@ -242,7 +243,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Default to upcoming events unless an explicit dateFrom is provided
-    eventsQuery = eventsQuery.gte('start_date', dateFrom || new Date().toISOString());
+    eventsQuery = eventsQuery.gte('start_date', dateFrom || getESTNowISO());
 
     if (dateTo) {
       eventsQuery = eventsQuery.lte('start_date', dateTo);

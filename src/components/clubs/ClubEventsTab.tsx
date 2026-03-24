@@ -26,6 +26,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import type { EventTag } from "@/types";
+import { getESTNow } from "@/lib/timezone";
 
 interface ClubEventsTabProps {
   clubId: string;
@@ -57,7 +58,7 @@ type DisplayStatus = "published" | "pending" | "rejected" | "past";
 
 const getDisplayStatus = (event: EventWithRsvp): DisplayStatus => {
   const eventDate = new Date(event.start_date);
-  const now = new Date();
+  const now = getESTNow();
   if (eventDate < now) return "past";
   if (event.status === "approved") return "published";
   if (event.status === "rejected") return "rejected";

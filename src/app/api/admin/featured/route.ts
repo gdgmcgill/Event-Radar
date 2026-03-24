@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { verifyAdmin } from "@/lib/admin";
 import { sanitizeText } from "@/lib/sanitize";
 import { logAdminAction } from "@/lib/audit";
+import { getESTNowISO } from "@/lib/timezone";
 
 export async function GET() {
   const { supabase, isAdmin } = await verifyAdmin();
@@ -20,7 +21,7 @@ export async function GET() {
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
-    const now = new Date().toISOString();
+    const now = getESTNowISO();
     const active = (data ?? []).filter(
       (r: any) => r.starts_at <= now && r.ends_at > now
     );
