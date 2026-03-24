@@ -229,20 +229,30 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
           };
         });
 
-        // Peak hours
+        // Peak hours (created_at is real UTC from Supabase now(), convert to EST)
         const hourCounts = new Array(24).fill(0);
+        const estHourFormatter = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/New_York",
+          hour: "numeric",
+          hour12: false,
+        });
         for (const interaction of interactions) {
-          const hour = parseISO(interaction.created_at ?? new Date().toISOString()).getHours();
+          const hour = parseInt(estHourFormatter.format(new Date(interaction.created_at ?? new Date().toISOString())), 10);
           hourCounts[hour]++;
         }
         peakHours = hourCounts.map((count, hour) => ({ hour, count }));
 
-        // Peak days
+        // Peak days (convert created_at from UTC to EST before extracting day)
         const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const dayCounts = new Array(7).fill(0);
+        const estDayFormatter = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/New_York",
+          weekday: "short",
+        });
         for (const interaction of interactions) {
-          const day = parseISO(interaction.created_at ?? new Date().toISOString()).getDay();
-          dayCounts[day]++;
+          const estDay = estDayFormatter.format(new Date(interaction.created_at ?? new Date().toISOString()));
+          const dayIndex = dayNames.indexOf(estDay);
+          dayCounts[dayIndex >= 0 ? dayIndex : 0]++;
         }
         peakDays = dayCounts.map((count, i) => ({ day: dayNames[i], count }));
       }
