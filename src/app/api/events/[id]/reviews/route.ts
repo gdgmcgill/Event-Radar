@@ -77,7 +77,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     // Check 3: No existing review
     const { data: existingReview } = await supabase
-      .from("reviews" as any)
+      .from("reviews")
       .select("id")
       .eq("event_id", eventId)
       .eq("user_id", userId)
@@ -92,7 +92,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     // Insert review
     const { data: review, error: insertError } = await supabase
-      .from("reviews" as any)
+      .from("reviews")
       .insert({
         user_id: userId,
         event_id: eventId,
@@ -156,7 +156,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     // Fetch all reviews for this event
     const { data: reviews } = await supabase
-      .from("reviews" as any)
+      .from("reviews")
       .select("id, user_id, event_id, rating, comment, created_at")
       .eq("event_id", eventId);
 
