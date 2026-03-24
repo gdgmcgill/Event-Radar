@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { uploadEventImage } from "@/lib/upload-utils";
+import { getESTNow } from "@/lib/timezone";
 
 const iconMap: Record<string, LucideIcon> = {
   GraduationCap,
@@ -115,17 +116,17 @@ export function CreateEventForm({
   mode = "create",
 }: CreateEventFormProps) {
   // Parse initial date/time for edit mode
+  // DB stores wall-clock EST as naive UTC, so extract date/time directly
+  // from the ISO string to avoid browser-local timezone conversion.
   const getInitialDateParts = () => {
     const parts = { date: "", time: "", endDate: "", endTime: "" };
     if (mode === "edit" && initialData?.start_date) {
-      const dt = new Date(initialData.start_date);
-      parts.date = dt.toISOString().split("T")[0];
-      parts.time = dt.toTimeString().slice(0, 5);
+      parts.date = initialData.start_date.slice(0, 10);
+      parts.time = initialData.start_date.slice(11, 16);
     }
     if (mode === "edit" && initialData?.end_date) {
-      const dt = new Date(initialData.end_date);
-      parts.endDate = dt.toISOString().split("T")[0];
-      parts.endTime = dt.toTimeString().slice(0, 5);
+      parts.endDate = initialData.end_date.slice(0, 10);
+      parts.endTime = initialData.end_date.slice(11, 16);
     }
     return parts;
   };
@@ -182,10 +183,10 @@ export function CreateEventForm({
     if (!formData.location.trim()) newErrors.location = "Location is required";
     if (formData.tags.length === 0) newErrors.tags = "Select at least one category";
 
-    // Check start date is in the future
+    // Check start date is in the future (compare in naive-UTC / EST convention)
     if (formData.date && formData.time) {
-      const eventDate = new Date(`${formData.date}T${formData.time}`);
-      if (eventDate < new Date()) {
+      const eventDate = new Date(`${formData.date}T${formData.time}:00.000Z`);
+      if (eventDate < getESTNow()) {
         newErrors.date = "Event must be in the future";
       }
     }
@@ -292,13 +293,13 @@ export function CreateEventForm({
         }
       }
 
-      // Build the start_date as ISO string
-      const startDate = new Date(`${formData.date}T${formData.time}`).toISOString();
+      // Build the start_date as naive-UTC ISO string (wall-clock EST stored as UTC)
+      const startDate = `${formData.date}T${formData.time}:00.000Z`;
 
       // Build end_date if provided
       let endDate: string | null = null;
       if (formData.endDate) {
-        endDate = new Date(`${formData.endDate}T${formData.endTime || "23:59"}`).toISOString();
+        endDate = `${formData.endDate}T${formData.endTime || "23:59"}:00.000Z`;
       }
 
       // Determine the image URL to send
