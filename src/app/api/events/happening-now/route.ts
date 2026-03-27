@@ -16,6 +16,12 @@ export async function GET() {
     const soonEST = new Date(nowEST.getTime() + 30 * 60 * 1000);
     const soonISO = soonEST.toISOString();
 
+    // Safety guard: no campus event lasts more than 24 hours.
+    // Exclude events whose start_date is more than 24h in the past to prevent
+    // stale events with bad/null end_dates from appearing.
+    const cutoffEST = new Date(nowEST.getTime() - 24 * 60 * 60 * 1000);
+    const cutoffISO = cutoffEST.toISOString();
+
     // "Happening now" = already started AND not yet ended, OR starting within 30 min
     // We use an OR filter: (start_date <= now AND end_date >= now) OR (start_date > now AND start_date <= now+30m)
     const { data: eventsData, error } = await supabase
@@ -23,6 +29,8 @@ export async function GET() {
       .select("*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)")
       .eq("status", "approved")
       .is("deleted_at", null)
+      .gte("start_date", cutoffISO)
+      .not("end_date", "is", null)
       .or(`and(start_date.lte.${nowISO},end_date.gte.${nowISO}),and(start_date.gt.${nowISO},start_date.lte.${soonISO})`)
       .order("start_date", { ascending: true })
       .limit(10);
