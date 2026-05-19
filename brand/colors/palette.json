@@ -1,0 +1,42 @@
+{
+  "brand": "UNI-VERSE",
+  "tagline": "McGill Campus Events",
+  "mcgill": {
+    "burgundy": { "hex": "#561c24", "usage": "Charts, secondary accents" },
+    "red": { "hex": "#ED1B2F", "usage": "Primary brand color, buttons, focus rings" },
+    "mutedRed": { "hex": "#6d2932", "usage": "Muted red accents" },
+    "sage": { "hex": "#c7c7a3", "usage": "Supporting accent" },
+    "cream": { "hex": "#e8d8c4", "usage": "Warm neutral accent" },
+    "grey": { "hex": "#7f7f7f", "usage": "McGill grey, dark-mode supporting text" }
+  },
+  "semantic": {
+    "light": {
+      "background": "#FFFFFF",
+      "foreground": "#171717",
+      "primary": "#ED1B2F",
+      "primaryForeground": "#FFFFFF",
+      "secondary": "#F5F5F5",
+      "muted": "#F5F5F5",
+      "mutedForeground": "#737373",
+      "border": "#E5E5E5",
+      "card": "#FFFFFF",
+      "destructive": "#EF4444"
+    },
+    "dark": {
+      "background": "#09090B",
+      "foreground": "#FAFAFA",
+      "primary": "#ED1B2F",
+      "primaryForeground": "#FFFFFF",
+      "secondary": "#27272A",
+      "muted": "#27272A",
+      "mutedForeground": "#A1A1AA",
+      "border": "#27272A",
+      "card": "#18181B",
+      "destructive": "#F87171"
+    }
+  },
+  "sources": {
+    "tailwind": "tailwind.config.ts → theme.extend.colors.mcgill",
+    "cssVariables": "src/app/globals.css → :root and .dark"
+  }
+}

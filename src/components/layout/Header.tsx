@@ -138,7 +138,7 @@ export function Header() {
               className="flex items-center gap-2 sm:gap-3 transition-opacity hover:opacity-90 min-w-0"
             >
               <Image
-                src="/uni-verse_logo.png"
+                src="/brand/logo/uni-verse-logo-primary.png"
                 alt="UNI-VERSE"
                 width={36}
                 height={36}

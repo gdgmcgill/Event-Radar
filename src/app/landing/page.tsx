@@ -138,7 +138,7 @@ function LandingHeader() {
         {/* Logo */}
         <Link href="/landing" className="flex items-center gap-2.5">
           <Image
-            src="/uni-verse_logo.png"
+            src="/brand/logo/uni-verse-logo-primary.png"
             alt="UNI-VERSE logo"
             width={36}
             height={36}
@@ -394,7 +394,7 @@ function PhoneScreenContent() {
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1.5">
               <Image
-                src="/uni-verse_logo.png"
+                src="/brand/logo/uni-verse-logo-primary.png"
                 alt=""
                 width={18}
                 height={18}
@@ -986,7 +986,7 @@ function LandingFooter() {
           {/* Brand */}
           <div className="flex items-center gap-2.5">
             <Image
-              src="/uni-verse_logo.png"
+              src="/brand/logo/uni-verse-logo-primary.png"
               alt="UNI-VERSE logo"
               width={28}
               height={28}

@@ -1,0 +1,59 @@
+/**
+ * UNI-VERSE semantic color tokens (mirrors src/app/globals.css).
+ * Use in design tools or static exports; the app reads HSL vars from globals.css.
+ */
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 9%;
+  --primary: 354 85% 52%; /* McGill Red #ED1B2F */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 0 0% 96%;
+  --accent-foreground: 0 0% 9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 354 85% 52%;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 240 6% 4%;
+  --foreground: 0 0% 98%;
+  --card: 240 5% 10%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 5% 10%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 354 85% 52%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 4% 16%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 5% 16%;
+  --muted-foreground: 240 5% 65%;
+  --accent: 240 5% 16%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 84% 63%;
+  --destructive-foreground: 0 0% 10%;
+  --border: 240 5% 16%;
+  --input: 240 5% 16%;
+  --ring: 354 85% 52%;
+}
+
+/* McGill extended palette (Tailwind: mcgill.*) */
+:root {
+  --mcgill-burgundy: #561c24;
+  --mcgill-red: #ed1b2f;
+  --mcgill-muted-red: #6d2932;
+  --mcgill-sage: #c7c7a3;
+  --mcgill-cream: #e8d8c4;
+  --mcgill-grey: #7f7f7f;
+}

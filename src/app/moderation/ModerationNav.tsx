@@ -95,7 +95,7 @@ export function ModerationNav() {
         title="Back to Uni-Verse"
       >
         <Image
-          src="/uni-verse_logo.png"
+          src="/brand/logo/uni-verse-logo-primary.png"
           alt="Uni-Verse"
           width={36}
           height={36}

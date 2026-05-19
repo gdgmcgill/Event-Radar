@@ -148,9 +148,11 @@ Each file contains TODO comments indicating what needs to be implemented.
 - `npm run lint`: Run ESLint
 - `npm run test`: Run unit tests
 
-## 🎨 Styling
+## 🎨 Styling & brand
 
-The project uses Tailwind CSS with shadcn/ui components. Custom colors are defined in `tailwind.config.ts`:
+Brand assets (logos, colors, typography, hero imagery) live in [`brand/`](./brand/README.md). The app serves them at `/brand/...` via `public/brand` → `../brand`.
+
+The project uses Tailwind CSS with shadcn/ui components. Custom colors are defined in `tailwind.config.ts` and `brand/colors/`:
 
 - **McGill Red**: `#ED1B2F`
 - **McGill Grey**: `#7f7f7f`

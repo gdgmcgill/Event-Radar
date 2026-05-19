@@ -1,0 +1,27 @@
+{
+  "description": "Event category accent colors used across badges, filters, and cards. Source: src/lib/constants.ts → EVENT_CATEGORIES",
+  "categories": {
+    "academic": { "label": "Academic", "hex": "#3b82f6" },
+    "social": { "label": "Social", "hex": "#ec4899" },
+    "sports": { "label": "Sports", "hex": "#22c55e" },
+    "career": { "label": "Career", "hex": "#a855f7" },
+    "cultural": { "label": "Cultural", "hex": "#f97316" },
+    "wellness": { "label": "Wellness", "hex": "#14b8a6" },
+    "music": { "label": "Music", "hex": "#e11d48" },
+    "tech": { "label": "Tech", "hex": "#6366f1" },
+    "food": { "label": "Food & Drink", "hex": "#f59e0b" },
+    "volunteer": { "label": "Volunteer", "hex": "#10b981" },
+    "arts": { "label": "Arts", "hex": "#d946ef" },
+    "networking": { "label": "Networking", "hex": "#0ea5e9" }
+  },
+  "quickFilters": {
+    "hackathon": { "label": "Hackathon", "hex": "#6366f1" },
+    "competition": { "label": "Case Comp", "hex": "#f59e0b" },
+    "guest_speaker": { "label": "Guest Speaker", "hex": "#8b5cf6" },
+    "free_food": { "label": "Free Food", "hex": "#ef4444" },
+    "workshop": { "label": "Workshop", "hex": "#10b981" },
+    "party": { "label": "Party", "hex": "#d946ef" },
+    "fitness": { "label": "Fitness", "hex": "#84cc16" },
+    "info_session": { "label": "Info Session", "hex": "#06b6d4" }
+  }
+}

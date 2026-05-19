@@ -59,8 +59,8 @@ export const metadata: Metadata = {
     follow: true,
   },
   icons: {
-    icon: "/uni-verse_logo.png",
-    apple: "/uni-verse_logo.png",
+    icon: "/brand/logo/favicon-32x32.png",
+    apple: "/brand/logo/apple-touch-icon-180x180.png",
   },
 };
 

@@ -160,7 +160,7 @@ export function SideNavBar({ forceCollapsed = false }: { forceCollapsed?: boolea
           style={{ transitionTimingFunction: EASE }}
         >
           <Image
-            src="/uni-verse_logo.png"
+            src="/brand/logo/uni-verse-logo-primary.png"
             alt="UNI-VERSE"
             width={64}
             height={64}
