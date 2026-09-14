@@ -1,0 +1,55 @@
+# .planning/audit/baseline/versions.txt — AUDIT-13
+#
+# The ONLY source of expected counts for .planning/audit/tools/validate.mjs.
+# Every count below was re-derived by running the command in this working tree.
+# Nothing here is transcribed from REQUIREMENTS.md, PROJECT.md, ARCHITECTURE.md,
+# or the orchestrator brief — those are stale (see the discrepancy block at the end).
+#
+# Format: key=value, one per line. Comments start with '#'.
+
+# --- re-derived counts (command shown; run it again to reproduce) ---
+# find src/app -name route.ts | wc -l
+route_ts_count=94
+# find src/app -name page.tsx | wc -l
+page_tsx_count=43
+# ls supabase/migrations | wc -l
+migration_count=44
+# grep -rl 'createServiceClient' src/ | wc -l   (includes the definition module itself)
+service_client_file_count=25
+# grep -rn 'auth\.getSession' src/ | wc -l
+get_session_callsite_count=1
+# grep -n 'PROTECTED_ROUTES' src/middleware.ts — array literal length, read from source
+protected_routes_source_count=8
+
+# --- toolchain on the machine that produced this audit ---
+node_version=24.16.0
+npm_version=11.13.0
+supabase_cli_version=2.115.0
+git_version=2.50.1 (Apple Git-155)
+os_version=Darwin 25.6.0 / macOS 26.6.2
+typescript_version=5.9.3
+# node -p "require('next/package.json').version"
+next_version_resolved=16.2.1
+
+# --- CI vs local split (.github/workflows/ci.yml 'node-version:') ---
+ci_node_major=20
+# docker info --format '{{.ServerVersion}}' — empty means the daemon is not reachable
+docker_daemon_reachable=false
+
+derived_at=2026-09-14T07:00:25Z
+
+# ---------------------------------------------------------------------------
+# UPSTREAM DISCREPANCIES — pre-seeded Low-severity stale-documentation findings.
+# Plan 01-13 files these against FOUNDATION_AUDIT.md / findings.json.
+#
+# 1. Route handler count. REQUIREMENTS.md AUDIT-03 and the orchestrator brief say
+#    92 handlers; ARCHITECTURE.md says 94. Re-derived here: route_ts_count above.
+#    Documented-92 vs actual — REQUIREMENTS.md needs correcting.
+# 2. Migration count. PROJECT.md and the orchestrator brief say 45 migrations.
+#    Re-derived here: migration_count above. Documented-45 vs actual.
+# 3. Protected-route drift. CLAUDE.md documents 6 protected routes
+#    (/my-events, /create-event, /notifications, /profile, /my-clubs, /invites);
+#    src/middleware.ts:114 PROTECTED_ROUTES has 8 — it also contains /settings and
+#    /friends. CLAUDE.md-6 vs source-8. The source is authoritative; AUDIT-04 must
+#    read the array from src/middleware.ts, never from CLAUDE.md.
+# ---------------------------------------------------------------------------
