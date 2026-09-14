@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uni-verse.audit/phase-01/findings.schema.json",
+  "title": "AUDIT-20 finding record",
+  "description": "findings.json is an ARRAY of these; FOUNDATION_AUDIT.md is GENERATED from it so the two cannot drift. Canonical source: 01-RESEARCH.md Architecture Patterns, Pattern 3. Ids are stable and are NEVER renumbered, even when a finding is withdrawn.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "severity",
+    "severity_rationale",
+    "category",
+    "affected_paths",
+    "evidence",
+    "reproduction",
+    "recommended_fix",
+    "validation_criterion",
+    "status",
+    "risk_acceptance",
+    "closes_in_phase",
+    "related"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^F-\\d{3}$",
+      "description": "Stable id, zero-padded to three digits."
+    },
+    "title": { "type": "string" },
+    "severity": {
+      "type": "string",
+      "enum": ["Critical", "High", "Medium", "Low"],
+      "description": "Exposure-adjusted per SEVERITY_SLA.md. CVSS vectors are not assigned to application-logic findings."
+    },
+    "severity_rationale": { "type": "string" },
+    "category": {
+      "type": "string",
+      "enum": [
+        "schema-drift",
+        "authn",
+        "authz",
+        "cache-exposure",
+        "injection",
+        "validation",
+        "performance",
+        "observability",
+        "dead-code",
+        "dependency",
+        "config"
+      ]
+    },
+    "affected_paths": {
+      "type": "array",
+      "description": "Every Critical and High must carry at least one entry WITH line numbers.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "lines"],
+        "properties": {
+          "path": { "type": "string" },
+          "lines": {
+            "type": ["string", "null"],
+            "description": "A line or line range, for example 168-175. Null is permitted only on Medium and Low."
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "string",
+      "description": "A path RELATIVE TO .planning/audit/ that must resolve to an existing file, optionally with a fragment. NEVER an inline literal, because inline evidence is how a cookie or connection string reaches git history."
+    },
+    "reproduction": { "type": "array", "items": { "type": "string" } },
+    "recommended_fix": { "type": "string" },
+    "validation_criterion": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["Open", "Fixed", "Risk-accepted"]
+    },
+    "risk_acceptance": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["owner", "date", "expiry", "rationale"],
+      "properties": {
+        "owner": { "type": "string" },
+        "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "expiry": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "At most ninety days after date. An expired acceptance reverts status to Open automatically, asserted by validate.mjs --check findings."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Must make a reachability argument, not a convenience argument."
+        }
+      }
+    },
+    "closes_in_phase": { "type": ["string", "integer", "null"] },
+    "related": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^F-\\d{3}$" }
+    }
+  }
+}

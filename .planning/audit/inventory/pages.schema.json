@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uni-verse.audit/phase-01/pages.schema.json",
+  "title": "AUDIT-04 page inventory row",
+  "description": "One object per page.tsx file. pages.json is an ARRAY of these. Canonical source: 01-RESEARCH.md Architecture Patterns, Pattern 2 — pages have TWO auth rings, so middleware_protected alone is not the answer; layout_guard resolves the nearest guarded ancestor layout.tsx (src/app/admin/layout.tsx and src/app/moderation/layout.tsx both guard server-side while appearing in no middleware list).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "file",
+    "route",
+    "component_type",
+    "data_source",
+    "middleware_protected",
+    "layout_guard",
+    "page_guard",
+    "effective_protection",
+    "render_mode",
+    "dead_or_duplicate",
+    "findings"
+  ],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "file": { "type": "string", "pattern": "^src/app/" },
+    "route": { "type": "string", "pattern": "^/" },
+    "component_type": {
+      "type": "string",
+      "enum": ["client", "server", "unknown"],
+      "description": "client when the file carries the use-client directive, server otherwise."
+    },
+    "data_source": {
+      "type": "string",
+      "description": "Where the page gets its data: an internal API route, a direct Supabase query, a store, or none."
+    },
+    "middleware_protected": {
+      "type": ["boolean", "string"],
+      "description": "Computed from the PROTECTED_ROUTES array read out of src/middleware.ts source — never from CLAUDE.md, which is stale."
+    },
+    "layout_guard": {
+      "type": ["string", "null"],
+      "description": "Path of the nearest ancestor layout.tsx performing getUser() plus a role check, or null."
+    },
+    "page_guard": {
+      "type": ["string", "null"],
+      "enum": ["getUser", "useAuthStore", "inline_role_check", "unknown", null],
+      "description": "In-page guard mechanism, or null when the page performs no guard of its own."
+    },
+    "effective_protection": {
+      "type": "string",
+      "enum": [
+        "public",
+        "auth",
+        "admin",
+        "club_role",
+        "unprotected_but_should_be",
+        "unknown"
+      ],
+      "description": "Human verdict combining both auth rings."
+    },
+    "render_mode": {
+      "type": "string",
+      "enum": ["static", "dynamic", "unknown"],
+      "description": "Read from inventory/build-routes.txt (circle = static, f = dynamic). Never inferred from source."
+    },
+    "dead_or_duplicate": { "type": ["boolean", "string"] },
+    "findings": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^F-\\d{3}$" }
+    }
+  }
+}

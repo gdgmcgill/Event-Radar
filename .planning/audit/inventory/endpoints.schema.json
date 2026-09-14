@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uni-verse.audit/phase-01/endpoints.schema.json",
+  "title": "AUDIT-03 endpoint inventory row",
+  "description": "One object per route.ts file. endpoints.json is an ARRAY of these; the row shape is the root here so tooling can reach properties.expected_status directly. Canonical source: 01-RESEARCH.md Architecture Patterns, Pattern 1. Consumed verbatim by CERT-06. Hand-rolled subset: only type, required, properties, items, enum, pattern and additionalProperties are honoured by validate.mjs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "file",
+    "route",
+    "methods",
+    "dynamic_segments",
+    "signals",
+    "auth_requirement",
+    "role_required",
+    "rls_reliance",
+    "service_role_justified",
+    "personalized",
+    "cache_policy_today",
+    "cache_policy_target",
+    "input_validation",
+    "test_present",
+    "dead_or_duplicate",
+    "expected_status",
+    "findings"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "description": "Stable slug derived from the route path. Never renumbered; the generator merges by this key."
+    },
+    "file": { "type": "string", "pattern": "^src/app/" },
+    "route": { "type": "string", "pattern": "^/" },
+    "methods": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+      }
+    },
+    "dynamic_segments": { "type": "array", "items": { "type": "string" } },
+
+    "signals": {
+      "type": "object",
+      "description": "Machine-generated grep-derived signals. Regenerable at any time; never hand-edited. additionalProperties is true so a later generator may add signals without a schema change.",
+      "additionalProperties": true,
+      "required": [
+        "uses_cookie_client",
+        "uses_service_client",
+        "calls_verify_admin",
+        "calls_get_user",
+        "calls_get_session",
+        "calls_check_ban",
+        "inline_role_check",
+        "references_club_members",
+        "parses_body",
+        "has_zod",
+        "sets_cache_control",
+        "cache_control_values",
+        "env_vars_referenced",
+        "has_try_catch",
+        "catch_any_count",
+        "console_count",
+        "as_any_count",
+        "tables_referenced",
+        "loc"
+      ],
+      "properties": {
+        "uses_cookie_client": { "type": "boolean" },
+        "uses_service_client": { "type": "boolean" },
+        "calls_verify_admin": { "type": "boolean" },
+        "calls_get_user": { "type": "boolean" },
+        "calls_get_session": { "type": "boolean" },
+        "calls_check_ban": { "type": "boolean" },
+        "inline_role_check": { "type": "boolean" },
+        "references_club_members": { "type": "boolean" },
+        "parses_body": { "type": "boolean" },
+        "has_zod": { "type": "boolean" },
+        "sets_cache_control": { "type": "boolean" },
+        "cache_control_values": { "type": "array", "items": { "type": "string" } },
+        "env_vars_referenced": { "type": "array", "items": { "type": "string" } },
+        "env_gated_auth": {
+          "type": "boolean",
+          "description": "Optional. True when an authorization branch is conditional on an env var being present (AUDIT-10 fail-open shape)."
+        },
+        "has_try_catch": { "type": "boolean" },
+        "catch_any_count": { "type": "integer" },
+        "console_count": { "type": "integer" },
+        "as_any_count": { "type": "integer" },
+        "tables_referenced": { "type": "array", "items": { "type": "string" } },
+        "loc": { "type": "integer" }
+      }
+    },
+
+    "auth_requirement": {
+      "type": "string",
+      "enum": ["anonymous", "authenticated", "admin", "machine", "unknown"]
+    },
+    "role_required": { "type": ["string", "null"] },
+    "rls_reliance": {
+      "type": "string",
+      "enum": ["primary", "partial", "none", "bypassed", "unknown"]
+    },
+    "service_role_justified": { "type": ["boolean", "null", "string"] },
+    "personalized": {
+      "type": ["boolean", "string"],
+      "description": "Boolean once classified. The string placeholder is tolerated only by --check endpoints-signals."
+    },
+    "cache_policy_today": { "type": "string" },
+    "cache_policy_target": { "type": "string" },
+    "input_validation": {
+      "type": "string",
+      "enum": ["none", "manual", "zod", "unknown"]
+    },
+    "test_present": { "type": ["boolean", "string"] },
+    "dead_or_duplicate": { "type": ["boolean", "string"] },
+
+    "expected_status": {
+      "type": "object",
+      "description": "CERT-06 contract. Exactly one required key per CERT-05 persona. A missing key is a schema error, not an implicit placeholder.",
+      "additionalProperties": false,
+      "required": [
+        "anonymous",
+        "onboarded_student",
+        "mid_onboarding_student",
+        "club_member",
+        "club_owner",
+        "multi_club_organizer",
+        "cross_club_attacker",
+        "admin",
+        "banned_permanent",
+        "suspended_active",
+        "suspension_expired",
+        "non_mcgill_signin",
+        "machine_no_credential"
+      ],
+      "properties": {
+        "anonymous": { "type": ["integer", "string"] },
+        "onboarded_student": { "type": ["integer", "string"] },
+        "mid_onboarding_student": { "type": ["integer", "string"] },
+        "club_member": { "type": ["integer", "string"] },
+        "club_owner": { "type": ["integer", "string"] },
+        "multi_club_organizer": { "type": ["integer", "string"] },
+        "cross_club_attacker": { "type": ["integer", "string"] },
+        "admin": { "type": ["integer", "string"] },
+        "banned_permanent": { "type": ["integer", "string"] },
+        "suspended_active": { "type": ["integer", "string"] },
+        "suspension_expired": { "type": ["integer", "string"] },
+        "non_mcgill_signin": { "type": ["integer", "string"] },
+        "machine_no_credential": { "type": ["integer", "string"] }
+      }
+    },
+
+    "findings": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^F-\\d{3}$" }
+    }
+  }
+}
