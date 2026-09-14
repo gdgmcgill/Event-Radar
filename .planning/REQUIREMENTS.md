@@ -31,7 +31,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [ ] **AUDIT-18**: Storage bucket policies for `avatars` and `banners` are reviewed for read visibility, path-prefix ownership, and size/MIME limits
 - [ ] **AUDIT-19**: The production `events` table's authoritative date columns (`start_date`/`end_date` vs `event_date`/`event_time`) are determined from `information_schema.columns`, not from the types file
 - [ ] **AUDIT-20**: `FOUNDATION_AUDIT.md` exists where every finding has a stable ID (`F-nnn`, never renumbered), title, exposure-adjusted severity (Critical/High/Medium/Low with rationale), category, affected paths with line numbers, captured evidence, reproduction steps, recommended fix, validation criterion, and status
-- [ ] **AUDIT-21**: A severity SLA policy is written stating when each severity level must be fixed (e.g. Critical in the first Stage 3 slice, High before Stage 4 starts)
+- [x] **AUDIT-21**: A severity SLA policy is written stating when each severity level must be fixed (e.g. Critical in the first Stage 3 slice, High before Stage 4 starts)
 
 ### Stage 2 — Dependency and Runtime Stabilization (STAB)
 
@@ -180,7 +180,7 @@ No phase crosses a stage boundary.
 | AUDIT-18 | Phase 1 | Pending |
 | AUDIT-19 | Phase 1 | Pending |
 | AUDIT-20 | Phase 1 | Pending |
-| AUDIT-21 | Phase 1 | Pending |
+| AUDIT-21 | Phase 1 | Complete |
 | STAB-01 | Phase 2 | Pending |
 | STAB-02 | Phase 2 | Pending |
 | STAB-03 | Phase 2 | Pending |
@@ -243,6 +243,7 @@ No phase crosses a stage boundary.
 | CERT-20 | Phase 8 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 81 total
 - Mapped to phases: 81
 - Unmapped: 0 ✓
