@@ -1,0 +1,1799 @@
+[
+  {
+    "key": "public.admin_audit_log",
+    "schema": "public",
+    "table": "admin_audit_log",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 2,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Admins can insert audit log",
+      "Service role can insert audit log",
+      "Admins can read audit log"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.club_followers",
+    "schema": "public",
+    "table": "club_followers",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 1,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Authenticated users can unfollow clubs",
+      "Authenticated users can follow clubs",
+      "Anyone can view follower data"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 2,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.club_invitations",
+    "schema": "public",
+    "table": "club_invitations",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Club owners can create club invitations",
+      "Club owners can view club invitations"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.club_members",
+    "schema": "public",
+    "table": "club_members",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 4,
+    "policy_count_by_cmd": {
+      "SELECT": 2,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 1,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Admins manage memberships",
+      "Club owners can remove members",
+      "Club owners can view all club members",
+      "Users see own memberships"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.clubs",
+    "schema": "public",
+    "table": "clubs",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 1,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Admins can insert clubs",
+      "Anyone can read clubs",
+      "Admins can update clubs"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 222,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.email_reminder_log",
+    "schema": "public",
+    "table": "email_reminder_log",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Service role can manage reminder log",
+      "Users can view their own reminder log"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.event_invites",
+    "schema": "public",
+    "table": "event_invites",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 4,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 2,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Users can delete invites sent to them",
+      "Users can delete own sent invites",
+      "Users can send invites",
+      "Users can view own invites"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.event_popularity_scores",
+    "schema": "public",
+    "table": "event_popularity_scores",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 2,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Authenticated users can update popularity scores",
+      "Allow public read access to event_popularity_scores",
+      "Anyone can view popularity scores"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 1,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.event_reports",
+    "schema": "public",
+    "table": "event_reports",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 4,
+    "policy_count_by_cmd": {
+      "SELECT": 2,
+      "INSERT": 1,
+      "UPDATE": 1,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Users can insert own reports",
+      "Admins can read all reports",
+      "Users can read own reports",
+      "Admins can update reports"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.events",
+    "schema": "public",
+    "table": "events",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 7,
+    "policy_count_by_cmd": {
+      "SELECT": 3,
+      "INSERT": 1,
+      "UPDATE": 2,
+      "DELETE": 1,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Admins can delete events",
+      "Authenticated users can insert events",
+      "Admins can view all events",
+      "Approved events are viewable by everyone",
+      "Organizers can view own events",
+      "Admins can update any event",
+      "Organizers can update own events"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 229,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.experiment_assignments",
+    "schema": "public",
+    "table": "experiment_assignments",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Admins can manage experiment assignments",
+      "Users can read own assignments"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.experiment_variants",
+    "schema": "public",
+    "table": "experiment_variants",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 1,
+    "policy_count_by_cmd": {
+      "SELECT": 0,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Admins can manage experiment variants"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.experiments",
+    "schema": "public",
+    "table": "experiments",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 1,
+    "policy_count_by_cmd": {
+      "SELECT": 0,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Admins can manage experiments"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.featured_clubs",
+    "schema": "public",
+    "table": "featured_clubs",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Admins can manage featured clubs",
+      "Anyone can view featured clubs"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.featured_events",
+    "schema": "public",
+    "table": "featured_events",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Admins can manage featured events",
+      "Public can read active featured events"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 1,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.feedback",
+    "schema": "public",
+    "table": "feedback",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Service role full access",
+      "Users can insert feedback",
+      "Admins can read feedback"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 1,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.feedback_request_log",
+    "schema": "public",
+    "table": "feedback_request_log",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Service role can manage feedback request log",
+      "Users can view their own feedback request log"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 6,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.moderation_reviews",
+    "schema": "public",
+    "table": "moderation_reviews",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Admins full access",
+      "Creators can appeal their items",
+      "Creators can view reviews of their items"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.notifications",
+    "schema": "public",
+    "table": "notifications",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 1,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Service role can insert notifications",
+      "Users can view own notifications",
+      "Users can mark own notifications read"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 19,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.organizer_requests",
+    "schema": "public",
+    "table": "organizer_requests",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Admins manage requests",
+      "Users create own requests",
+      "Users see own requests"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.recommendation_explicit_feedback",
+    "schema": "public",
+    "table": "recommendation_explicit_feedback",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 1,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Users can insert own explicit feedback",
+      "Users can read own explicit feedback",
+      "Users can update own explicit feedback"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 3,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.recommendation_feedback",
+    "schema": "public",
+    "table": "recommendation_feedback",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Users can insert own feedback",
+      "Users can read own feedback"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.reviews",
+    "schema": "public",
+    "table": "reviews",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 4,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 1,
+      "DELETE": 1,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Users can delete own review",
+      "Users can insert own review",
+      "Anyone can read reviews",
+      "Users can update own review"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.rsvps",
+    "schema": "public",
+    "table": "rsvps",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 4,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 1,
+      "DELETE": 1,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Users can delete own rsvps",
+      "Users can create own rsvps",
+      "Anyone can view rsvps",
+      "Users can update own rsvps"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 10,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.saved_events",
+    "schema": "public",
+    "table": "saved_events",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 1,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Users can delete their own saved events",
+      "Users can insert their own saved events",
+      "Users can view their own saved events"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 8,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.tag_interaction_counts",
+    "schema": "public",
+    "table": "tag_interaction_counts",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Service role can manage all tag counts",
+      "Users can read their own tag counts"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 3,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.user_event_scores",
+    "schema": "public",
+    "table": "user_event_scores",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 1
+    },
+    "policy_names": [
+      "Service role can manage all scores",
+      "Users can read their own scores"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 0,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.user_follows",
+    "schema": "public",
+    "table": "user_follows",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 3,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 1,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Users can unfollow",
+      "Users can follow others",
+      "Anyone can view follows"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 24,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.user_interactions",
+    "schema": "public",
+    "table": "user_interactions",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 2,
+    "policy_count_by_cmd": {
+      "SELECT": 1,
+      "INSERT": 1,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Anyone can insert interactions",
+      "Users can view their own interactions"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 2,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "public.users",
+    "schema": "public",
+    "table": "users",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 4,
+    "policy_count_by_cmd": {
+      "SELECT": 2,
+      "INSERT": 1,
+      "UPDATE": 1,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Users can insert own profile",
+      "Admins can view all profiles",
+      "Users can read own profile",
+      "Users can update own profile"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": 37,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "storage.buckets",
+    "schema": "storage",
+    "table": "buckets",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 0,
+    "policy_count_by_cmd": {
+      "SELECT": 0,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": null,
+    "flag": "rls-enabled-no-policy",
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "storage.buckets_analytics",
+    "schema": "storage",
+    "table": "buckets_analytics",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 0,
+    "policy_count_by_cmd": {
+      "SELECT": 0,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": null,
+    "flag": "rls-enabled-no-policy",
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "storage.buckets_vectors",
+    "schema": "storage",
+    "table": "buckets_vectors",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 0,
+    "policy_count_by_cmd": {
+      "SELECT": 0,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [],
+    "grants_dml": {
+      "anon": [
+        "SELECT"
+      ],
+      "authenticated": [
+        "SELECT"
+      ],
+      "service_role": [
+        "SELECT"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": null,
+    "flag": "rls-enabled-no-policy",
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "storage.migrations",
+    "schema": "storage",
+    "table": "migrations",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 0,
+    "policy_count_by_cmd": {
+      "SELECT": 0,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [],
+    "grants_dml": {
+      "anon": [],
+      "authenticated": [],
+      "service_role": []
+    },
+    "anon_has_any_grant": false,
+    "approx_rows": null,
+    "flag": "rls-enabled-no-policy",
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "storage.objects",
+    "schema": "storage",
+    "table": "objects",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 15,
+    "policy_count_by_cmd": {
+      "SELECT": 5,
+      "INSERT": 5,
+      "UPDATE": 3,
+      "DELETE": 2,
+      "ALL": 0
+    },
+    "policy_names": [
+      "Allow authenticated delete from own folder",
+      "Users can delete their own banners",
+      "Allow authenticated upload to own folder",
+      "Authenticated users can upload banners",
+      "Authenticated users can upload club logos",
+      "Authenticated users can upload event images",
+      "Service role upload for event images",
+      "Allow public read access 1oj01fe_0",
+      "Anyone can view banners",
+      "Anyone can view club logos",
+      "Anyone can view event images",
+      "Public read access for event images",
+      "Allow authenticated update in own folder",
+      "Authenticated users can update club logos",
+      "Users can update their own banners"
+    ],
+    "grants_dml": {
+      "anon": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "authenticated": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": null,
+    "flag": null,
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "storage.s3_multipart_uploads",
+    "schema": "storage",
+    "table": "s3_multipart_uploads",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 0,
+    "policy_count_by_cmd": {
+      "SELECT": 0,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [],
+    "grants_dml": {
+      "anon": [
+        "SELECT"
+      ],
+      "authenticated": [
+        "SELECT"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": null,
+    "flag": "rls-enabled-no-policy",
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "storage.s3_multipart_uploads_parts",
+    "schema": "storage",
+    "table": "s3_multipart_uploads_parts",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 0,
+    "policy_count_by_cmd": {
+      "SELECT": 0,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [],
+    "grants_dml": {
+      "anon": [
+        "SELECT"
+      ],
+      "authenticated": [
+        "SELECT"
+      ],
+      "service_role": [
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": null,
+    "flag": "rls-enabled-no-policy",
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  },
+  {
+    "key": "storage.vector_indexes",
+    "schema": "storage",
+    "table": "vector_indexes",
+    "relkind": "r",
+    "rls_enabled": true,
+    "rls_forced": false,
+    "policy_count": 0,
+    "policy_count_by_cmd": {
+      "SELECT": 0,
+      "INSERT": 0,
+      "UPDATE": 0,
+      "DELETE": 0,
+      "ALL": 0
+    },
+    "policy_names": [],
+    "grants_dml": {
+      "anon": [
+        "SELECT"
+      ],
+      "authenticated": [
+        "SELECT"
+      ],
+      "service_role": [
+        "SELECT"
+      ]
+    },
+    "anon_has_any_grant": true,
+    "approx_rows": null,
+    "flag": "rls-enabled-no-policy",
+    "captured_at": "2026-09-14T18:23:57Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/tables.json",
+    "source_query": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+    "policy_count_source": ".planning/audit/raw/prod/pg-policies.json"
+  }
+]

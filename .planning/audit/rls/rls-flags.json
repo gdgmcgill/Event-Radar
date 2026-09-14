@@ -1,0 +1,1863 @@
+{
+  "provenance": {
+    "produced_by": "plan 01-09, task 1",
+    "derived_from": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/tables.json",
+      ".planning/audit/raw/prod/grants.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ],
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "transport_note": "Production was read SELECT-only through the Supabase MCP server (Management API) as role postgres, not through tools/sql-readonly.mjs. See 01-06-SUMMARY.md for the transport deviation. The RLS-bypassing service-role client was never used as the transport.",
+    "executed_sql": {
+      "policies": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname",
+      "relations": "select n.nspname as schema, c.relname as name, c.relkind, c.relrowsecurity as rls_enabled, c.relforcerowsecurity as rls_forced, obj_description(c.oid) as comment from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','storage','cron') and c.relkind in ('r','v','m','p') order by 1,2",
+      "grants": "select table_schema, table_name, grantee, string_agg(privilege_type, ',' order by privilege_type) as privileges from information_schema.role_table_grants where table_schema in ('public','storage') and grantee in ('anon','authenticated','service_role','postgres','public') group by 1,2,3 order by 1,2,3",
+      "indexes": "select schemaname, tablename, indexname, indexdef from pg_indexes where schemaname = 'public' order by 1,2,3",
+      "columns": "select table_schema, table_name, ordinal_position, column_name, data_type, udt_name, is_nullable, column_default, character_maximum_length, numeric_precision, numeric_scale, datetime_precision, is_identity, is_generated, generation_expression from information_schema.columns where table_schema in ('public') order by table_schema, table_name, ordinal_position"
+    }
+  },
+  "totals": {
+    "policies_captured": 101,
+    "relations_captured": 38,
+    "policy_columns_examined": 80,
+    "flags": 94
+  },
+  "counts_by_flag_class": {
+    "rls-enabled-no-policy": 7,
+    "using-true": 12,
+    "with-check-true": 9,
+    "no-to-clause": 61,
+    "unindexed-policy-column": 5
+  },
+  "flag_class_definitions": {
+    "rls-disabled": "pg_class.relrowsecurity = false — no policy applies and access is governed only by the table grant.",
+    "rls-enabled-no-policy": "relrowsecurity = true with zero rows in pg_policies — deny-all to every non-bypassing role.",
+    "using-true": "A policy whose USING expression is the unconditional true literal.",
+    "with-check-true": "A policy whose WITH CHECK expression is the unconditional true literal — the write-side twin of using-true.",
+    "no-to-clause": "roles = {public}: the policy was written with no TO clause, so it is evaluated for every concrete role including anon.",
+    "unindexed-policy-column": "A column referenced by a policy predicate with no index covering it."
+  },
+  "flags": [
+    {
+      "flag_class": "rls-enabled-no-policy",
+      "schema": "storage",
+      "table": "buckets",
+      "policy": null,
+      "cmd": null,
+      "roles": null,
+      "evidence": "pg_class.relrowsecurity = true and 0 rows in pg_policies for storage.buckets; anon DML grants = [DELETE,INSERT,SELECT,UPDATE]",
+      "anon_reachable": true,
+      "severity_proposed": "Informational",
+      "rationale": "Supabase-managed storage internal table. Deny-all to anon and authenticated is the intended posture; the Storage API reaches it as service_role, which bypasses RLS. Listed for completeness, not as a defect.",
+      "source": ".planning/audit/raw/prod/tables.json"
+    },
+    {
+      "flag_class": "rls-enabled-no-policy",
+      "schema": "storage",
+      "table": "buckets_analytics",
+      "policy": null,
+      "cmd": null,
+      "roles": null,
+      "evidence": "pg_class.relrowsecurity = true and 0 rows in pg_policies for storage.buckets_analytics; anon DML grants = [DELETE,INSERT,SELECT,UPDATE]",
+      "anon_reachable": true,
+      "severity_proposed": "Informational",
+      "rationale": "Supabase-managed storage internal table. Deny-all to anon and authenticated is the intended posture; the Storage API reaches it as service_role, which bypasses RLS. Listed for completeness, not as a defect.",
+      "source": ".planning/audit/raw/prod/tables.json"
+    },
+    {
+      "flag_class": "rls-enabled-no-policy",
+      "schema": "storage",
+      "table": "buckets_vectors",
+      "policy": null,
+      "cmd": null,
+      "roles": null,
+      "evidence": "pg_class.relrowsecurity = true and 0 rows in pg_policies for storage.buckets_vectors; anon DML grants = [SELECT]",
+      "anon_reachable": true,
+      "severity_proposed": "Informational",
+      "rationale": "Supabase-managed storage internal table. Deny-all to anon and authenticated is the intended posture; the Storage API reaches it as service_role, which bypasses RLS. Listed for completeness, not as a defect.",
+      "source": ".planning/audit/raw/prod/tables.json"
+    },
+    {
+      "flag_class": "rls-enabled-no-policy",
+      "schema": "storage",
+      "table": "migrations",
+      "policy": null,
+      "cmd": null,
+      "roles": null,
+      "evidence": "pg_class.relrowsecurity = true and 0 rows in pg_policies for storage.migrations; anon DML grants = []",
+      "anon_reachable": false,
+      "severity_proposed": "Informational",
+      "rationale": "Supabase-managed storage internal table. Deny-all to anon and authenticated is the intended posture; the Storage API reaches it as service_role, which bypasses RLS. Listed for completeness, not as a defect.",
+      "source": ".planning/audit/raw/prod/tables.json"
+    },
+    {
+      "flag_class": "rls-enabled-no-policy",
+      "schema": "storage",
+      "table": "s3_multipart_uploads",
+      "policy": null,
+      "cmd": null,
+      "roles": null,
+      "evidence": "pg_class.relrowsecurity = true and 0 rows in pg_policies for storage.s3_multipart_uploads; anon DML grants = [SELECT]",
+      "anon_reachable": true,
+      "severity_proposed": "Informational",
+      "rationale": "Supabase-managed storage internal table. Deny-all to anon and authenticated is the intended posture; the Storage API reaches it as service_role, which bypasses RLS. Listed for completeness, not as a defect.",
+      "source": ".planning/audit/raw/prod/tables.json"
+    },
+    {
+      "flag_class": "rls-enabled-no-policy",
+      "schema": "storage",
+      "table": "s3_multipart_uploads_parts",
+      "policy": null,
+      "cmd": null,
+      "roles": null,
+      "evidence": "pg_class.relrowsecurity = true and 0 rows in pg_policies for storage.s3_multipart_uploads_parts; anon DML grants = [SELECT]",
+      "anon_reachable": true,
+      "severity_proposed": "Informational",
+      "rationale": "Supabase-managed storage internal table. Deny-all to anon and authenticated is the intended posture; the Storage API reaches it as service_role, which bypasses RLS. Listed for completeness, not as a defect.",
+      "source": ".planning/audit/raw/prod/tables.json"
+    },
+    {
+      "flag_class": "rls-enabled-no-policy",
+      "schema": "storage",
+      "table": "vector_indexes",
+      "policy": null,
+      "cmd": null,
+      "roles": null,
+      "evidence": "pg_class.relrowsecurity = true and 0 rows in pg_policies for storage.vector_indexes; anon DML grants = [SELECT]",
+      "anon_reachable": true,
+      "severity_proposed": "Informational",
+      "rationale": "Supabase-managed storage internal table. Deny-all to anon and authenticated is the intended posture; the Storage API reaches it as service_role, which bypasses RLS. Listed for completeness, not as a defect.",
+      "source": ".planning/audit/raw/prod/tables.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "club_followers",
+      "policy": "Anyone can view follower data",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "Medium",
+      "rationale": "USING (true) with roles={public}: every club-follow edge, and therefore a per-user interest profile, is readable anonymously.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "clubs",
+      "policy": "Anyone can read clubs",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "Informational",
+      "rationale": "USING (true) on a public directory of approved campus clubs. Intentional. Noted only because the clubs table carries a status column, so a pending or rejected club is readable before it is approved.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "email_reminder_log",
+      "policy": "Service role can manage reminder log",
+      "cmd": "ALL",
+      "roles": [
+        "service_role"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "Informational",
+      "rationale": "USING/WITH CHECK (true) scoped TO service_role, which bypasses RLS regardless. Inert.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "event_popularity_scores",
+      "policy": "Allow public read access to event_popularity_scores",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "Low",
+      "rationale": "USING (true) on derived aggregate data. Intentional-public is defensible; the finding is that it is duplicated.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "event_popularity_scores",
+      "policy": "Anyone can view popularity scores",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "Low",
+      "rationale": "Exact duplicate of the policy above — two PERMISSIVE SELECT policies with identical USING (true). Both are evaluated per row; one is dead weight.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "featured_clubs",
+      "policy": "Anyone can view featured clubs",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "Informational",
+      "rationale": "USING (true) on curated public content. Intentional.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "feedback",
+      "policy": "Service role full access",
+      "cmd": "ALL",
+      "roles": [
+        "service_role"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "Informational",
+      "rationale": "USING/WITH CHECK (true) scoped TO service_role, which bypasses RLS regardless. Inert.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "feedback_request_log",
+      "policy": "Service role can manage feedback request log",
+      "cmd": "ALL",
+      "roles": [
+        "service_role"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "Informational",
+      "rationale": "USING/WITH CHECK (true) scoped TO service_role, which bypasses RLS regardless. Inert.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "reviews",
+      "policy": "Anyone can read reviews",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "Medium",
+      "rationale": "USING (true) with roles={public} exposes every review row including user_id, linking an opinion to an account for anonymous readers.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "rsvps",
+      "policy": "Anyone can view rsvps",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "High",
+      "rationale": "USING (true) with roles={public} on attendance data. anon holds SELECT, so who is attending which event is world-readable. rsvps is also the table plan 01-08 found in production with no migration declaring it, so this policy is unreviewable from the repository.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "public",
+      "table": "user_follows",
+      "policy": "Anyone can view follows",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "Medium",
+      "rationale": "USING (true) with roles={public} exposes the entire user-to-user social graph to the anonymous key. Enumerable in bulk via PostgREST.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "using-true",
+      "schema": "storage",
+      "table": "objects",
+      "policy": "Allow public read access 1oj01fe_0",
+      "cmd": "SELECT",
+      "roles": [
+        "authenticated"
+      ],
+      "evidence": "qual = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "Low",
+      "rationale": "USING (true) but scoped TO authenticated, so the name overstates it. Any signed-in user may read every object in every bucket, across all folders. Plan 01-10 owns the storage verdict.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "with-check-true",
+      "schema": "public",
+      "table": "admin_audit_log",
+      "policy": "Admins can insert audit log",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "with_check = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "Critical",
+      "rationale": "The policy name asserts an admin check the expression does not perform: WITH CHECK (true) with roles={public}. anon holds INSERT on the table, so any unauthenticated caller with the publishable key can forge or flood moderation audit rows. Destroys the integrity of the only moderation-history record.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "with-check-true",
+      "schema": "public",
+      "table": "admin_audit_log",
+      "policy": "Service role can insert audit log",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "with_check = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "Critical",
+      "rationale": "Second unconditional INSERT path on the same table with roles={public}. service_role already bypasses RLS, so this policy grants nothing it needs and everything anon should not have.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "with-check-true",
+      "schema": "public",
+      "table": "email_reminder_log",
+      "policy": "Service role can manage reminder log",
+      "cmd": "ALL",
+      "roles": [
+        "service_role"
+      ],
+      "evidence": "with_check = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "Informational",
+      "rationale": "USING/WITH CHECK (true) scoped TO service_role, which bypasses RLS regardless. Inert.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "with-check-true",
+      "schema": "public",
+      "table": "events",
+      "policy": "Authenticated users can insert events",
+      "cmd": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "evidence": "with_check = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "High",
+      "rationale": "WITH CHECK (true) on INSERT means a signed-in user may insert a row with any created_by and any status, including status='approved' — the moderation pipeline (pending → approved) is bypassable from the client with the publishable key plus any McGill session.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "with-check-true",
+      "schema": "public",
+      "table": "feedback",
+      "policy": "Service role full access",
+      "cmd": "ALL",
+      "roles": [
+        "service_role"
+      ],
+      "evidence": "with_check = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "Informational",
+      "rationale": "USING/WITH CHECK (true) scoped TO service_role, which bypasses RLS regardless. Inert.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "with-check-true",
+      "schema": "public",
+      "table": "feedback",
+      "policy": "Users can insert feedback",
+      "cmd": "INSERT",
+      "roles": [
+        "authenticated"
+      ],
+      "evidence": "with_check = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "Low",
+      "rationale": "WITH CHECK (true) TO authenticated: a signed-in user may insert a feedback row attributed to another user. Bounded by the authenticated ring.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "with-check-true",
+      "schema": "public",
+      "table": "feedback_request_log",
+      "policy": "Service role can manage feedback request log",
+      "cmd": "ALL",
+      "roles": [
+        "service_role"
+      ],
+      "evidence": "with_check = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "Informational",
+      "rationale": "USING/WITH CHECK (true) scoped TO service_role, which bypasses RLS regardless. Inert.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "with-check-true",
+      "schema": "public",
+      "table": "notifications",
+      "policy": "Service role can insert notifications",
+      "cmd": "INSERT",
+      "roles": [
+        "service_role"
+      ],
+      "evidence": "with_check = \"true\"",
+      "anon_reachable": false,
+      "severity_proposed": "Informational",
+      "rationale": "WITH CHECK (true) but scoped TO service_role, which bypasses RLS regardless. Inert.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "with-check-true",
+      "schema": "public",
+      "table": "user_interactions",
+      "policy": "Anyone can insert interactions",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "with_check = \"true\"",
+      "anon_reachable": true,
+      "severity_proposed": "High",
+      "rationale": "WITH CHECK (true) with roles={public} on a table carrying an AFTER INSERT trigger (interaction_popularity_trigger → update_event_popularity). Anonymous callers can write unbounded rows that mutate event_popularity_scores, poisoning the ranking signal and the recommendation feed, and driving write amplification.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "admin_audit_log",
+      "policy": "Admins can insert audit log",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Critical",
+      "rationale": "The policy name asserts an admin check the expression does not perform: WITH CHECK (true) with roles={public}. anon holds INSERT on the table, so any unauthenticated caller with the publishable key can forge or flood moderation audit rows. Destroys the integrity of the only moderation-history record.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "admin_audit_log",
+      "policy": "Service role can insert audit log",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Critical",
+      "rationale": "Second unconditional INSERT path on the same table with roles={public}. service_role already bypasses RLS, so this policy grants nothing it needs and everything anon should not have.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "admin_audit_log",
+      "policy": "Admins can read audit log",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "club_followers",
+      "policy": "Anyone can view follower data",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Medium",
+      "rationale": "USING (true) with roles={public}: every club-follow edge, and therefore a per-user interest profile, is readable anonymously.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "clubs",
+      "policy": "Anyone can read clubs",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Informational",
+      "rationale": "USING (true) on a public directory of approved campus clubs. Intentional. Noted only because the clubs table carries a status column, so a pending or rejected club is readable before it is approved.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "email_reminder_log",
+      "policy": "Users can view their own reminder log",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "event_invites",
+      "policy": "Users can delete invites sent to them",
+      "cmd": "DELETE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "event_invites",
+      "policy": "Users can delete own sent invites",
+      "cmd": "DELETE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "event_invites",
+      "policy": "Users can send invites",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "event_invites",
+      "policy": "Users can view own invites",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "event_popularity_scores",
+      "policy": "Authenticated users can update popularity scores",
+      "cmd": "ALL",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "High",
+      "rationale": "cmd=ALL with USING/WITH CHECK auth.role() = 'authenticated' and roles={public}: any signed-in user may INSERT, UPDATE or DELETE any popularity score row directly. Ranking is attacker-controlled.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "event_popularity_scores",
+      "policy": "Allow public read access to event_popularity_scores",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "USING (true) on derived aggregate data. Intentional-public is defensible; the finding is that it is duplicated.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "event_popularity_scores",
+      "policy": "Anyone can view popularity scores",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "Exact duplicate of the policy above — two PERMISSIVE SELECT policies with identical USING (true). Both are evaluated per row; one is dead weight.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "events",
+      "policy": "Approved events are viewable by everyone",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "experiment_assignments",
+      "policy": "Admins can manage experiment assignments",
+      "cmd": "ALL",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "experiment_assignments",
+      "policy": "Users can read own assignments",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "experiment_variants",
+      "policy": "Admins can manage experiment variants",
+      "cmd": "ALL",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "experiments",
+      "policy": "Admins can manage experiments",
+      "cmd": "ALL",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "featured_clubs",
+      "policy": "Admins can manage featured clubs",
+      "cmd": "ALL",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "featured_clubs",
+      "policy": "Anyone can view featured clubs",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Informational",
+      "rationale": "USING (true) on curated public content. Intentional.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "featured_events",
+      "policy": "Admins can manage featured events",
+      "cmd": "ALL",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "featured_events",
+      "policy": "Public can read active featured events",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "feedback_request_log",
+      "policy": "Users can view their own feedback request log",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "moderation_reviews",
+      "policy": "Admins full access",
+      "cmd": "ALL",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "moderation_reviews",
+      "policy": "Creators can appeal their items",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "moderation_reviews",
+      "policy": "Creators can view reviews of their items",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "notifications",
+      "policy": "Users can mark own notifications read",
+      "cmd": "UPDATE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "recommendation_explicit_feedback",
+      "policy": "Users can insert own explicit feedback",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "recommendation_explicit_feedback",
+      "policy": "Users can read own explicit feedback",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "recommendation_explicit_feedback",
+      "policy": "Users can update own explicit feedback",
+      "cmd": "UPDATE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "recommendation_feedback",
+      "policy": "Users can insert own feedback",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "recommendation_feedback",
+      "policy": "Users can read own feedback",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "reviews",
+      "policy": "Users can delete own review",
+      "cmd": "DELETE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "reviews",
+      "policy": "Users can insert own review",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "reviews",
+      "policy": "Anyone can read reviews",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Medium",
+      "rationale": "USING (true) with roles={public} exposes every review row including user_id, linking an opinion to an account for anonymous readers.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "reviews",
+      "policy": "Users can update own review",
+      "cmd": "UPDATE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "rsvps",
+      "policy": "Users can delete own rsvps",
+      "cmd": "DELETE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "rsvps",
+      "policy": "Users can create own rsvps",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "rsvps",
+      "policy": "Anyone can view rsvps",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "High",
+      "rationale": "USING (true) with roles={public} on attendance data. anon holds SELECT, so who is attending which event is world-readable. rsvps is also the table plan 01-08 found in production with no migration declaring it, so this policy is unreviewable from the repository.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "rsvps",
+      "policy": "Users can update own rsvps",
+      "cmd": "UPDATE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "saved_events",
+      "policy": "Users can delete their own saved events",
+      "cmd": "DELETE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "saved_events",
+      "policy": "Users can insert their own saved events",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "saved_events",
+      "policy": "Users can view their own saved events",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "tag_interaction_counts",
+      "policy": "Service role can manage all tag counts",
+      "cmd": "ALL",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "tag_interaction_counts",
+      "policy": "Users can read their own tag counts",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "user_event_scores",
+      "policy": "Service role can manage all scores",
+      "cmd": "ALL",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "user_event_scores",
+      "policy": "Users can read their own scores",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "user_follows",
+      "policy": "Users can unfollow",
+      "cmd": "DELETE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "user_follows",
+      "policy": "Users can follow others",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "user_follows",
+      "policy": "Anyone can view follows",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Medium",
+      "rationale": "USING (true) with roles={public} exposes the entire user-to-user social graph to the anonymous key. Enumerable in bulk via PostgREST.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "user_interactions",
+      "policy": "Anyone can insert interactions",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "High",
+      "rationale": "WITH CHECK (true) with roles={public} on a table carrying an AFTER INSERT trigger (interaction_popularity_trigger → update_event_popularity). Anonymous callers can write unbounded rows that mutate event_popularity_scores, poisoning the ranking signal and the recommendation feed, and driving write amplification.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "user_interactions",
+      "policy": "Users can view their own interactions",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "users",
+      "policy": "Users can insert own profile",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "users",
+      "policy": "Users can read own profile",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "public",
+      "table": "users",
+      "policy": "Users can update own profile",
+      "cmd": "UPDATE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": true,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "storage",
+      "table": "objects",
+      "policy": "Authenticated users can upload club logos",
+      "cmd": "INSERT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "storage",
+      "table": "objects",
+      "policy": "Anyone can view banners",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "storage",
+      "table": "objects",
+      "policy": "Anyone can view club logos",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "storage",
+      "table": "objects",
+      "policy": "Anyone can view event images",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "storage",
+      "table": "objects",
+      "policy": "Public read access for event images",
+      "cmd": "SELECT",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "no-to-clause",
+      "schema": "storage",
+      "table": "objects",
+      "policy": "Authenticated users can update club logos",
+      "cmd": "UPDATE",
+      "roles": [
+        "public"
+      ],
+      "evidence": "roles = {public} — the catch-all pseudo-role, which every concrete role (anon, authenticated, service_role, postgres) inherits",
+      "concrete_roles_reached": [
+        "anon",
+        "authenticated",
+        "service_role",
+        "postgres"
+      ],
+      "anon_reachable": true,
+      "predicate_gates_on_auth_uid": false,
+      "severity_proposed": "Low",
+      "rationale": "roles={public} means no TO clause was written, so the policy is evaluated for the anonymous role too. The predicate gates on auth.uid(), which is NULL for anon, so the effective result is a deny — but the guard is the expression, not the role clause, and a future edit to the expression silently widens to anon.",
+      "source": ".planning/audit/raw/prod/pg-policies.json"
+    },
+    {
+      "flag_class": "unindexed-policy-column",
+      "schema": "public",
+      "table": "events",
+      "policy": "Approved events are viewable by everyone",
+      "cmd": null,
+      "roles": null,
+      "column": "status",
+      "evidence": "no index in pg_indexes for public.events covers status; referenced by 1 policy predicate(s)",
+      "anon_reachable": null,
+      "severity_proposed": "Low",
+      "rationale": "Every row-level check on this column is a sequential scan. Denial-of-service surface at scale and a REFAC-01 missing-index input.",
+      "source": ".planning/audit/raw/prod/indexes.json"
+    },
+    {
+      "flag_class": "unindexed-policy-column",
+      "schema": "public",
+      "table": "featured_events",
+      "policy": "Public can read active featured events",
+      "cmd": null,
+      "roles": null,
+      "column": "ends_at",
+      "evidence": "no index in pg_indexes for public.featured_events covers ends_at; referenced by 1 policy predicate(s)",
+      "anon_reachable": null,
+      "severity_proposed": "Low",
+      "rationale": "Every row-level check on this column is a sequential scan. Denial-of-service surface at scale and a REFAC-01 missing-index input.",
+      "source": ".planning/audit/raw/prod/indexes.json"
+    },
+    {
+      "flag_class": "unindexed-policy-column",
+      "schema": "public",
+      "table": "featured_events",
+      "policy": "Public can read active featured events",
+      "cmd": null,
+      "roles": null,
+      "column": "starts_at",
+      "evidence": "no index in pg_indexes for public.featured_events covers starts_at; referenced by 1 policy predicate(s)",
+      "anon_reachable": null,
+      "severity_proposed": "Low",
+      "rationale": "Every row-level check on this column is a sequential scan. Denial-of-service surface at scale and a REFAC-01 missing-index input.",
+      "source": ".planning/audit/raw/prod/indexes.json"
+    },
+    {
+      "flag_class": "unindexed-policy-column",
+      "schema": "public",
+      "table": "moderation_reviews",
+      "policy": "Creators can appeal their items",
+      "cmd": null,
+      "roles": null,
+      "column": "action",
+      "evidence": "no index in pg_indexes for public.moderation_reviews covers action; referenced by 1 policy predicate(s)",
+      "anon_reachable": null,
+      "severity_proposed": "Low",
+      "rationale": "Every row-level check on this column is a sequential scan. Denial-of-service surface at scale and a REFAC-01 missing-index input.",
+      "source": ".planning/audit/raw/prod/indexes.json"
+    },
+    {
+      "flag_class": "unindexed-policy-column",
+      "schema": "public",
+      "table": "moderation_reviews",
+      "policy": "Creators can appeal their items",
+      "cmd": null,
+      "roles": null,
+      "column": "author_id",
+      "evidence": "no index in pg_indexes for public.moderation_reviews covers author_id; referenced by 1 policy predicate(s)",
+      "anon_reachable": null,
+      "severity_proposed": "Low",
+      "rationale": "Every row-level check on this column is a sequential scan. Denial-of-service surface at scale and a REFAC-01 missing-index input.",
+      "source": ".planning/audit/raw/prod/indexes.json"
+    }
+  ]
+}

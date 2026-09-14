@@ -1,0 +1,2670 @@
+[
+  {
+    "id": "public.admin_audit_log::Admins can insert audit log",
+    "schemaname": "public",
+    "tablename": "admin_audit_log",
+    "policyname": "Admins can insert audit log",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "true",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": true,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.admin_audit_log::Service role can insert audit log",
+    "schemaname": "public",
+    "tablename": "admin_audit_log",
+    "policyname": "Service role can insert audit log",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "true",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": true,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.admin_audit_log::Admins can read audit log",
+    "schemaname": "public",
+    "tablename": "admin_audit_log",
+    "policyname": "Admins can read audit log",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = auth.uid()) AND ('admin'::user_role = ANY (u.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.club_followers::Authenticated users can unfollow clubs",
+    "schemaname": "public",
+    "tablename": "club_followers",
+    "policyname": "Authenticated users can unfollow clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "(user_id = auth.uid())",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.club_followers::Authenticated users can follow clubs",
+    "schemaname": "public",
+    "tablename": "club_followers",
+    "policyname": "Authenticated users can follow clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(user_id = auth.uid())",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.club_followers::Anyone can view follower data",
+    "schemaname": "public",
+    "tablename": "club_followers",
+    "policyname": "Anyone can view follower data",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "true",
+    "with_check": null,
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.club_invitations::Club owners can create club invitations",
+    "schemaname": "public",
+    "tablename": "club_invitations",
+    "policyname": "Club owners can create club invitations",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "is_club_owner(club_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.club_invitations::Club owners can view club invitations",
+    "schemaname": "public",
+    "tablename": "club_invitations",
+    "policyname": "Club owners can view club invitations",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "is_club_owner(club_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.club_members::Admins manage memberships",
+    "schemaname": "public",
+    "tablename": "club_members",
+    "policyname": "Admins manage memberships",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.club_members::Club owners can remove members",
+    "schemaname": "public",
+    "tablename": "club_members",
+    "policyname": "Club owners can remove members",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "(is_club_owner(club_id) AND (user_id <> ( SELECT auth.uid() AS uid)))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.club_members::Club owners can view all club members",
+    "schemaname": "public",
+    "tablename": "club_members",
+    "policyname": "Club owners can view all club members",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "is_club_owner(club_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.club_members::Users see own memberships",
+    "schemaname": "public",
+    "tablename": "club_members",
+    "policyname": "Users see own memberships",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.clubs::Admins can insert clubs",
+    "schemaname": "public",
+    "tablename": "clubs",
+    "policyname": "Admins can insert clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "is_admin()",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.clubs::Anyone can read clubs",
+    "schemaname": "public",
+    "tablename": "clubs",
+    "policyname": "Anyone can read clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "true",
+    "with_check": null,
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.clubs::Admins can update clubs",
+    "schemaname": "public",
+    "tablename": "clubs",
+    "policyname": "Admins can update clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "is_admin()",
+    "with_check": "is_admin()",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.email_reminder_log::Service role can manage reminder log",
+    "schemaname": "public",
+    "tablename": "email_reminder_log",
+    "policyname": "Service role can manage reminder log",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "service_role"
+    ],
+    "roles_raw": "{service_role}",
+    "has_to_clause": true,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "true",
+    "with_check": "true",
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": true,
+    "applies_to_anon": false,
+    "applies_to_authenticated": false,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.email_reminder_log::Users can view their own reminder log",
+    "schemaname": "public",
+    "tablename": "email_reminder_log",
+    "policyname": "Users can view their own reminder log",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_invites::Users can delete invites sent to them",
+    "schemaname": "public",
+    "tablename": "event_invites",
+    "policyname": "Users can delete invites sent to them",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "(auth.uid() = invitee_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_invites::Users can delete own sent invites",
+    "schemaname": "public",
+    "tablename": "event_invites",
+    "policyname": "Users can delete own sent invites",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "(auth.uid() = inviter_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_invites::Users can send invites",
+    "schemaname": "public",
+    "tablename": "event_invites",
+    "policyname": "Users can send invites",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = inviter_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_invites::Users can view own invites",
+    "schemaname": "public",
+    "tablename": "event_invites",
+    "policyname": "Users can view own invites",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "((auth.uid() = inviter_id) OR (auth.uid() = invitee_id))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_popularity_scores::Authenticated users can update popularity scores",
+    "schemaname": "public",
+    "tablename": "event_popularity_scores",
+    "policyname": "Authenticated users can update popularity scores",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(auth.role() = 'authenticated'::text)",
+    "with_check": "(auth.role() = 'authenticated'::text)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_popularity_scores::Allow public read access to event_popularity_scores",
+    "schemaname": "public",
+    "tablename": "event_popularity_scores",
+    "policyname": "Allow public read access to event_popularity_scores",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "true",
+    "with_check": null,
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_popularity_scores::Anyone can view popularity scores",
+    "schemaname": "public",
+    "tablename": "event_popularity_scores",
+    "policyname": "Anyone can view popularity scores",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "true",
+    "with_check": null,
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_reports::Users can insert own reports",
+    "schemaname": "public",
+    "tablename": "event_reports",
+    "policyname": "Users can insert own reports",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = reporter_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_reports::Admins can read all reports",
+    "schemaname": "public",
+    "tablename": "event_reports",
+    "policyname": "Admins can read all reports",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_reports::Users can read own reports",
+    "schemaname": "public",
+    "tablename": "event_reports",
+    "policyname": "Users can read own reports",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = reporter_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.event_reports::Admins can update reports",
+    "schemaname": "public",
+    "tablename": "event_reports",
+    "policyname": "Admins can update reports",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.events::Admins can delete events",
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Admins can delete events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "is_admin()",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.events::Authenticated users can insert events",
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Authenticated users can insert events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "true",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": true,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.events::Admins can view all events",
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Admins can view all events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "is_admin()",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.events::Approved events are viewable by everyone",
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Approved events are viewable by everyone",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(status = 'approved'::text)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.events::Organizers can view own events",
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Organizers can view own events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = created_by)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.events::Admins can update any event",
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Admins can update any event",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "is_admin()",
+    "with_check": "is_admin()",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.events::Organizers can update own events",
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Organizers can update own events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "(auth.uid() = created_by)",
+    "with_check": "(auth.uid() = created_by)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.experiment_assignments::Admins can manage experiment assignments",
+    "schemaname": "public",
+    "tablename": "experiment_assignments",
+    "policyname": "Admins can manage experiment assignments",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.experiment_assignments::Users can read own assignments",
+    "schemaname": "public",
+    "tablename": "experiment_assignments",
+    "policyname": "Users can read own assignments",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.experiment_variants::Admins can manage experiment variants",
+    "schemaname": "public",
+    "tablename": "experiment_variants",
+    "policyname": "Admins can manage experiment variants",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.experiments::Admins can manage experiments",
+    "schemaname": "public",
+    "tablename": "experiments",
+    "policyname": "Admins can manage experiments",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.featured_clubs::Admins can manage featured clubs",
+    "schemaname": "public",
+    "tablename": "featured_clubs",
+    "policyname": "Admins can manage featured clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.featured_clubs::Anyone can view featured clubs",
+    "schemaname": "public",
+    "tablename": "featured_clubs",
+    "policyname": "Anyone can view featured clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "true",
+    "with_check": null,
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.featured_events::Admins can manage featured events",
+    "schemaname": "public",
+    "tablename": "featured_events",
+    "policyname": "Admins can manage featured events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.featured_events::Public can read active featured events",
+    "schemaname": "public",
+    "tablename": "featured_events",
+    "policyname": "Public can read active featured events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "((starts_at <= now()) AND (ends_at > now()))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.feedback::Service role full access",
+    "schemaname": "public",
+    "tablename": "feedback",
+    "policyname": "Service role full access",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "service_role"
+    ],
+    "roles_raw": "{service_role}",
+    "has_to_clause": true,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "true",
+    "with_check": "true",
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": true,
+    "applies_to_anon": false,
+    "applies_to_authenticated": false,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.feedback::Users can insert feedback",
+    "schemaname": "public",
+    "tablename": "feedback",
+    "policyname": "Users can insert feedback",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "true",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": true,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.feedback::Admins can read feedback",
+    "schemaname": "public",
+    "tablename": "feedback",
+    "policyname": "Admins can read feedback",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.feedback_request_log::Service role can manage feedback request log",
+    "schemaname": "public",
+    "tablename": "feedback_request_log",
+    "policyname": "Service role can manage feedback request log",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "service_role"
+    ],
+    "roles_raw": "{service_role}",
+    "has_to_clause": true,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "true",
+    "with_check": "true",
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": true,
+    "applies_to_anon": false,
+    "applies_to_authenticated": false,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.feedback_request_log::Users can view their own feedback request log",
+    "schemaname": "public",
+    "tablename": "feedback_request_log",
+    "policyname": "Users can view their own feedback request log",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.moderation_reviews::Admins full access",
+    "schemaname": "public",
+    "tablename": "moderation_reviews",
+    "policyname": "Admins full access",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.moderation_reviews::Creators can appeal their items",
+    "schemaname": "public",
+    "tablename": "moderation_reviews",
+    "policyname": "Creators can appeal their items",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "((action = 'appeal'::text) AND (author_id = auth.uid()) AND (((target_type = 'event'::text) AND (EXISTS ( SELECT 1\n   FROM events\n  WHERE ((events.id = moderation_reviews.target_id) AND (events.created_by = auth.uid()))))) OR ((target_type = 'club'::text) AND (EXISTS ( SELECT 1\n   FROM clubs\n  WHERE ((clubs.id = moderation_reviews.target_id) AND (clubs.created_by = auth.uid())))))))",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.moderation_reviews::Creators can view reviews of their items",
+    "schemaname": "public",
+    "tablename": "moderation_reviews",
+    "policyname": "Creators can view reviews of their items",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(((target_type = 'event'::text) AND (EXISTS ( SELECT 1\n   FROM events\n  WHERE ((events.id = moderation_reviews.target_id) AND (events.created_by = auth.uid()))))) OR ((target_type = 'club'::text) AND (EXISTS ( SELECT 1\n   FROM clubs\n  WHERE ((clubs.id = moderation_reviews.target_id) AND (clubs.created_by = auth.uid()))))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.notifications::Service role can insert notifications",
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Service role can insert notifications",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "service_role"
+    ],
+    "roles_raw": "{service_role}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "true",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": true,
+    "applies_to_anon": false,
+    "applies_to_authenticated": false,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.notifications::Users can view own notifications",
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Users can view own notifications",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.notifications::Users can mark own notifications read",
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Users can mark own notifications read",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": "(auth.uid() = user_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.organizer_requests::Admins manage requests",
+    "schemaname": "public",
+    "tablename": "organizer_requests",
+    "policyname": "Admins manage requests",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.organizer_requests::Users create own requests",
+    "schemaname": "public",
+    "tablename": "organizer_requests",
+    "policyname": "Users create own requests",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.organizer_requests::Users see own requests",
+    "schemaname": "public",
+    "tablename": "organizer_requests",
+    "policyname": "Users see own requests",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.recommendation_explicit_feedback::Users can insert own explicit feedback",
+    "schemaname": "public",
+    "tablename": "recommendation_explicit_feedback",
+    "policyname": "Users can insert own explicit feedback",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.recommendation_explicit_feedback::Users can read own explicit feedback",
+    "schemaname": "public",
+    "tablename": "recommendation_explicit_feedback",
+    "policyname": "Users can read own explicit feedback",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.recommendation_explicit_feedback::Users can update own explicit feedback",
+    "schemaname": "public",
+    "tablename": "recommendation_explicit_feedback",
+    "policyname": "Users can update own explicit feedback",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": "(auth.uid() = user_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.recommendation_feedback::Users can insert own feedback",
+    "schemaname": "public",
+    "tablename": "recommendation_feedback",
+    "policyname": "Users can insert own feedback",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.recommendation_feedback::Users can read own feedback",
+    "schemaname": "public",
+    "tablename": "recommendation_feedback",
+    "policyname": "Users can read own feedback",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.reviews::Users can delete own review",
+    "schemaname": "public",
+    "tablename": "reviews",
+    "policyname": "Users can delete own review",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.reviews::Users can insert own review",
+    "schemaname": "public",
+    "tablename": "reviews",
+    "policyname": "Users can insert own review",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.reviews::Anyone can read reviews",
+    "schemaname": "public",
+    "tablename": "reviews",
+    "policyname": "Anyone can read reviews",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "true",
+    "with_check": null,
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.reviews::Users can update own review",
+    "schemaname": "public",
+    "tablename": "reviews",
+    "policyname": "Users can update own review",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": "(auth.uid() = user_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.rsvps::Users can delete own rsvps",
+    "schemaname": "public",
+    "tablename": "rsvps",
+    "policyname": "Users can delete own rsvps",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.rsvps::Users can create own rsvps",
+    "schemaname": "public",
+    "tablename": "rsvps",
+    "policyname": "Users can create own rsvps",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.rsvps::Anyone can view rsvps",
+    "schemaname": "public",
+    "tablename": "rsvps",
+    "policyname": "Anyone can view rsvps",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "true",
+    "with_check": null,
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.rsvps::Users can update own rsvps",
+    "schemaname": "public",
+    "tablename": "rsvps",
+    "policyname": "Users can update own rsvps",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.saved_events::Users can delete their own saved events",
+    "schemaname": "public",
+    "tablename": "saved_events",
+    "policyname": "Users can delete their own saved events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.saved_events::Users can insert their own saved events",
+    "schemaname": "public",
+    "tablename": "saved_events",
+    "policyname": "Users can insert their own saved events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.saved_events::Users can view their own saved events",
+    "schemaname": "public",
+    "tablename": "saved_events",
+    "policyname": "Users can view their own saved events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.tag_interaction_counts::Service role can manage all tag counts",
+    "schemaname": "public",
+    "tablename": "tag_interaction_counts",
+    "policyname": "Service role can manage all tag counts",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(auth.role() = 'service_role'::text)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.tag_interaction_counts::Users can read their own tag counts",
+    "schemaname": "public",
+    "tablename": "tag_interaction_counts",
+    "policyname": "Users can read their own tag counts",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.user_event_scores::Service role can manage all scores",
+    "schemaname": "public",
+    "tablename": "user_event_scores",
+    "policyname": "Service role can manage all scores",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "ALL",
+    "commands": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "qual": "(auth.role() = 'service_role'::text)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.user_event_scores::Users can read their own scores",
+    "schemaname": "public",
+    "tablename": "user_event_scores",
+    "policyname": "Users can read their own scores",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.user_follows::Users can unfollow",
+    "schemaname": "public",
+    "tablename": "user_follows",
+    "policyname": "Users can unfollow",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "(auth.uid() = follower_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.user_follows::Users can follow others",
+    "schemaname": "public",
+    "tablename": "user_follows",
+    "policyname": "Users can follow others",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = follower_id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.user_follows::Anyone can view follows",
+    "schemaname": "public",
+    "tablename": "user_follows",
+    "policyname": "Anyone can view follows",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "true",
+    "with_check": null,
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.user_interactions::Anyone can insert interactions",
+    "schemaname": "public",
+    "tablename": "user_interactions",
+    "policyname": "Anyone can insert interactions",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "true",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": true,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.user_interactions::Users can view their own interactions",
+    "schemaname": "public",
+    "tablename": "user_interactions",
+    "policyname": "Users can view their own interactions",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.users::Users can insert own profile",
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Users can insert own profile",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(auth.uid() = id)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.users::Admins can view all profiles",
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Admins can view all profiles",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "is_admin()",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.users::Users can read own profile",
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Users can read own profile",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(auth.uid() = id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "public.users::Users can update own profile",
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Users can update own profile",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "(auth.uid() = id)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Allow authenticated delete from own folder",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Allow authenticated delete from own folder",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Users can delete their own banners",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Users can delete their own banners",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "DELETE",
+    "commands": [
+      "DELETE"
+    ],
+    "qual": "((bucket_id = 'banners'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Allow authenticated upload to own folder",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Allow authenticated upload to own folder",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Authenticated users can upload banners",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Authenticated users can upload banners",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(bucket_id = 'banners'::text)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Authenticated users can upload club logos",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Authenticated users can upload club logos",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Authenticated users can upload event images",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Authenticated users can upload event images",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(bucket_id = 'event-images'::text)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Service role upload for event images",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Service role upload for event images",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "service_role"
+    ],
+    "roles_raw": "{service_role}",
+    "has_to_clause": true,
+    "cmd": "INSERT",
+    "commands": [
+      "INSERT"
+    ],
+    "qual": null,
+    "with_check": "(bucket_id = 'event-images'::text)",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": false,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Allow public read access 1oj01fe_0",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Allow public read access 1oj01fe_0",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "true",
+    "with_check": null,
+    "qual_is_unconditional_true": true,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Anyone can view banners",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Anyone can view banners",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(bucket_id = 'banners'::text)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Anyone can view club logos",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Anyone can view club logos",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(bucket_id = 'club-logos'::text)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Anyone can view event images",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Anyone can view event images",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(bucket_id = 'event-images'::text)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Public read access for event images",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Public read access for event images",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "SELECT",
+    "commands": [
+      "SELECT"
+    ],
+    "qual": "(bucket_id = 'event-images'::text)",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Allow authenticated update in own folder",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Allow authenticated update in own folder",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "with_check": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Authenticated users can update club logos",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Authenticated users can update club logos",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "has_to_clause": false,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": true,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Users can update their own banners",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Users can update their own banners",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "has_to_clause": true,
+    "cmd": "UPDATE",
+    "commands": [
+      "UPDATE"
+    ],
+    "qual": "((bucket_id = 'banners'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+    "with_check": null,
+    "qual_is_unconditional_true": false,
+    "with_check_is_unconditional_true": false,
+    "applies_to_anon": false,
+    "applies_to_authenticated": true,
+    "captured_at": "2026-09-14T18:27:11Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/pg-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname"
+  }
+]

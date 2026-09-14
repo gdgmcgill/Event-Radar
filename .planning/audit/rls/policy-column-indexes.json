@@ -1,0 +1,2346 @@
+[
+  {
+    "key": "public.admin_audit_log.id",
+    "schema": "public",
+    "table": "admin_audit_log",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins can read audit log"
+    ],
+    "indexed": true,
+    "index_names": [
+      "admin_audit_log_pkey"
+    ],
+    "leading_column_of": [
+      "admin_audit_log_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.club_followers.club_id",
+    "schema": "public",
+    "table": "club_followers",
+    "column": "club_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "club_followers_unique",
+      "idx_club_followers_club_id"
+    ],
+    "leading_column_of": [
+      "idx_club_followers_club_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.club_followers.id",
+    "schema": "public",
+    "table": "club_followers",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "club_followers_pkey"
+    ],
+    "leading_column_of": [
+      "club_followers_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.club_followers.user_id",
+    "schema": "public",
+    "table": "club_followers",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Authenticated users can unfollow clubs",
+      "Authenticated users can follow clubs"
+    ],
+    "indexed": true,
+    "index_names": [
+      "club_followers_unique",
+      "idx_club_followers_user_id"
+    ],
+    "leading_column_of": [
+      "club_followers_unique",
+      "idx_club_followers_user_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.club_invitations.club_id",
+    "schema": "public",
+    "table": "club_invitations",
+    "column": "club_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Club owners can create club invitations",
+      "Club owners can view club invitations"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_club_invitations_club_id"
+    ],
+    "leading_column_of": [
+      "idx_club_invitations_club_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.club_invitations.id",
+    "schema": "public",
+    "table": "club_invitations",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "club_invitations_pkey"
+    ],
+    "leading_column_of": [
+      "club_invitations_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.club_members.club_id",
+    "schema": "public",
+    "table": "club_members",
+    "column": "club_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Club owners can remove members",
+      "Club owners can view all club members"
+    ],
+    "indexed": true,
+    "index_names": [
+      "club_members_user_id_club_id_key",
+      "idx_club_members_club",
+      "idx_club_members_club_role"
+    ],
+    "leading_column_of": [
+      "idx_club_members_club",
+      "idx_club_members_club_role"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.club_members.id",
+    "schema": "public",
+    "table": "club_members",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins manage memberships"
+    ],
+    "indexed": true,
+    "index_names": [
+      "club_members_pkey"
+    ],
+    "leading_column_of": [
+      "club_members_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.club_members.user_id",
+    "schema": "public",
+    "table": "club_members",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Club owners can remove members",
+      "Users see own memberships"
+    ],
+    "indexed": true,
+    "index_names": [
+      "club_members_user_id_club_id_key",
+      "idx_club_members_user"
+    ],
+    "leading_column_of": [
+      "club_members_user_id_club_id_key",
+      "idx_club_members_user"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.clubs.created_by",
+    "schema": "public",
+    "table": "clubs",
+    "column": "created_by",
+    "data_type": "uuid",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_clubs_created_by"
+    ],
+    "leading_column_of": [
+      "idx_clubs_created_by"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "qualified <table>.<column> match inside a policy predicate on another table (an EXISTS subquery reaching across tables)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ],
+    "referenced_by_policies_cross_table": [
+      {
+        "policy": "Creators can appeal their items",
+        "on_table": "public.moderation_reviews"
+      },
+      {
+        "policy": "Creators can view reviews of their items",
+        "on_table": "public.moderation_reviews"
+      }
+    ]
+  },
+  {
+    "key": "public.clubs.id",
+    "schema": "public",
+    "table": "clubs",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "clubs_pkey"
+    ],
+    "leading_column_of": [
+      "clubs_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ],
+    "referenced_by_policies_cross_table": [
+      {
+        "policy": "Creators can appeal their items",
+        "on_table": "public.moderation_reviews"
+      },
+      {
+        "policy": "Creators can view reviews of their items",
+        "on_table": "public.moderation_reviews"
+      }
+    ]
+  },
+  {
+    "key": "public.email_reminder_log.event_id",
+    "schema": "public",
+    "table": "email_reminder_log",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "email_reminder_log_type_event_idx",
+      "email_reminder_log_user_id_event_id_reminder_type_key"
+    ],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.email_reminder_log.id",
+    "schema": "public",
+    "table": "email_reminder_log",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "email_reminder_log_pkey"
+    ],
+    "leading_column_of": [
+      "email_reminder_log_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.email_reminder_log.user_id",
+    "schema": "public",
+    "table": "email_reminder_log",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can view their own reminder log"
+    ],
+    "indexed": true,
+    "index_names": [
+      "email_reminder_log_user_id_event_id_reminder_type_key"
+    ],
+    "leading_column_of": [
+      "email_reminder_log_user_id_event_id_reminder_type_key"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.event_invites.event_id",
+    "schema": "public",
+    "table": "event_invites",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "event_invites_inviter_id_invitee_id_event_id_key",
+      "idx_event_invites_event"
+    ],
+    "leading_column_of": [
+      "idx_event_invites_event"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.event_invites.id",
+    "schema": "public",
+    "table": "event_invites",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "event_invites_pkey"
+    ],
+    "leading_column_of": [
+      "event_invites_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.event_invites.invitee_id",
+    "schema": "public",
+    "table": "event_invites",
+    "column": "invitee_id",
+    "data_type": "uuid",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can delete invites sent to them",
+      "Users can view own invites"
+    ],
+    "indexed": true,
+    "index_names": [
+      "event_invites_inviter_id_invitee_id_event_id_key",
+      "idx_event_invites_invitee"
+    ],
+    "leading_column_of": [
+      "idx_event_invites_invitee"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.event_invites.inviter_id",
+    "schema": "public",
+    "table": "event_invites",
+    "column": "inviter_id",
+    "data_type": "uuid",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can delete own sent invites",
+      "Users can send invites",
+      "Users can view own invites"
+    ],
+    "indexed": true,
+    "index_names": [
+      "event_invites_inviter_id_invitee_id_event_id_key"
+    ],
+    "leading_column_of": [
+      "event_invites_inviter_id_invitee_id_event_id_key"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.event_popularity_scores.event_id",
+    "schema": "public",
+    "table": "event_popularity_scores",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "event_popularity_scores_pkey"
+    ],
+    "leading_column_of": [
+      "event_popularity_scores_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.event_reports.event_id",
+    "schema": "public",
+    "table": "event_reports",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "event_reports_unique_per_user"
+    ],
+    "leading_column_of": [
+      "event_reports_unique_per_user"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.event_reports.id",
+    "schema": "public",
+    "table": "event_reports",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins can read all reports",
+      "Admins can update reports"
+    ],
+    "indexed": true,
+    "index_names": [
+      "event_reports_pkey"
+    ],
+    "leading_column_of": [
+      "event_reports_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.event_reports.reporter_id",
+    "schema": "public",
+    "table": "event_reports",
+    "column": "reporter_id",
+    "data_type": "uuid",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can insert own reports",
+      "Users can read own reports"
+    ],
+    "indexed": true,
+    "index_names": [
+      "event_reports_unique_per_user",
+      "idx_event_reports_reporter_id"
+    ],
+    "leading_column_of": [
+      "idx_event_reports_reporter_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.events.club_id",
+    "schema": "public",
+    "table": "events",
+    "column": "club_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_events_club_id"
+    ],
+    "leading_column_of": [
+      "idx_events_club_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.events.created_by",
+    "schema": "public",
+    "table": "events",
+    "column": "created_by",
+    "data_type": "uuid",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Organizers can view own events",
+      "Organizers can update own events"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_events_created_by"
+    ],
+    "leading_column_of": [
+      "idx_events_created_by"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ],
+    "referenced_by_policies_cross_table": [
+      {
+        "policy": "Creators can appeal their items",
+        "on_table": "public.moderation_reviews"
+      },
+      {
+        "policy": "Creators can view reviews of their items",
+        "on_table": "public.moderation_reviews"
+      }
+    ]
+  },
+  {
+    "key": "public.events.id",
+    "schema": "public",
+    "table": "events",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "events_pkey",
+      "idx_events_not_deleted"
+    ],
+    "leading_column_of": [
+      "events_pkey",
+      "idx_events_not_deleted"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ],
+    "referenced_by_policies_cross_table": [
+      {
+        "policy": "Creators can appeal their items",
+        "on_table": "public.moderation_reviews"
+      },
+      {
+        "policy": "Creators can view reviews of their items",
+        "on_table": "public.moderation_reviews"
+      }
+    ]
+  },
+  {
+    "key": "public.events.status",
+    "schema": "public",
+    "table": "events",
+    "column": "status",
+    "data_type": "text",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Approved events are viewable by everyone"
+    ],
+    "indexed": false,
+    "index_names": [],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "every row-level check on this column is a sequential scan — REFAC-01 missing-index input",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.experiment_assignments.id",
+    "schema": "public",
+    "table": "experiment_assignments",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins can manage experiment assignments"
+    ],
+    "indexed": true,
+    "index_names": [
+      "experiment_assignments_pkey"
+    ],
+    "leading_column_of": [
+      "experiment_assignments_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.experiment_assignments.user_id",
+    "schema": "public",
+    "table": "experiment_assignments",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can read own assignments"
+    ],
+    "indexed": true,
+    "index_names": [
+      "experiment_assignments_experiment_id_user_id_key"
+    ],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.experiment_variants.id",
+    "schema": "public",
+    "table": "experiment_variants",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins can manage experiment variants"
+    ],
+    "indexed": true,
+    "index_names": [
+      "experiment_variants_pkey"
+    ],
+    "leading_column_of": [
+      "experiment_variants_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.experiments.id",
+    "schema": "public",
+    "table": "experiments",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins can manage experiments"
+    ],
+    "indexed": true,
+    "index_names": [
+      "experiments_pkey"
+    ],
+    "leading_column_of": [
+      "experiments_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.featured_clubs.club_id",
+    "schema": "public",
+    "table": "featured_clubs",
+    "column": "club_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_featured_clubs_club_id"
+    ],
+    "leading_column_of": [
+      "idx_featured_clubs_club_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.featured_clubs.id",
+    "schema": "public",
+    "table": "featured_clubs",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins can manage featured clubs"
+    ],
+    "indexed": true,
+    "index_names": [
+      "featured_clubs_pkey"
+    ],
+    "leading_column_of": [
+      "featured_clubs_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.featured_events.ends_at",
+    "schema": "public",
+    "table": "featured_events",
+    "column": "ends_at",
+    "data_type": "timestamp with time zone",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Public can read active featured events"
+    ],
+    "indexed": false,
+    "index_names": [],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "every row-level check on this column is a sequential scan — REFAC-01 missing-index input",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.featured_events.event_id",
+    "schema": "public",
+    "table": "featured_events",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "featured_events_event_id"
+    ],
+    "leading_column_of": [
+      "featured_events_event_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.featured_events.id",
+    "schema": "public",
+    "table": "featured_events",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins can manage featured events"
+    ],
+    "indexed": true,
+    "index_names": [
+      "featured_events_pkey"
+    ],
+    "leading_column_of": [
+      "featured_events_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.featured_events.starts_at",
+    "schema": "public",
+    "table": "featured_events",
+    "column": "starts_at",
+    "data_type": "timestamp with time zone",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Public can read active featured events"
+    ],
+    "indexed": false,
+    "index_names": [],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "every row-level check on this column is a sequential scan — REFAC-01 missing-index input",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.feedback_request_log.event_id",
+    "schema": "public",
+    "table": "feedback_request_log",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "feedback_request_log_event_idx",
+      "feedback_request_log_type_event_idx",
+      "feedback_request_log_user_id_event_id_request_type_key"
+    ],
+    "leading_column_of": [
+      "feedback_request_log_event_idx"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.feedback_request_log.id",
+    "schema": "public",
+    "table": "feedback_request_log",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "feedback_request_log_pkey"
+    ],
+    "leading_column_of": [
+      "feedback_request_log_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.feedback_request_log.user_id",
+    "schema": "public",
+    "table": "feedback_request_log",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can view their own feedback request log"
+    ],
+    "indexed": true,
+    "index_names": [
+      "feedback_request_log_user_id_event_id_request_type_key"
+    ],
+    "leading_column_of": [
+      "feedback_request_log_user_id_event_id_request_type_key"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.feedback.id",
+    "schema": "public",
+    "table": "feedback",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins can read feedback"
+    ],
+    "indexed": true,
+    "index_names": [
+      "feedback_pkey"
+    ],
+    "leading_column_of": [
+      "feedback_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.feedback.user_id",
+    "schema": "public",
+    "table": "feedback",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_feedback_user_id"
+    ],
+    "leading_column_of": [
+      "idx_feedback_user_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.moderation_reviews.action",
+    "schema": "public",
+    "table": "moderation_reviews",
+    "column": "action",
+    "data_type": "text",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Creators can appeal their items"
+    ],
+    "indexed": false,
+    "index_names": [],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "every row-level check on this column is a sequential scan — REFAC-01 missing-index input",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.moderation_reviews.author_id",
+    "schema": "public",
+    "table": "moderation_reviews",
+    "column": "author_id",
+    "data_type": "uuid",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Creators can appeal their items"
+    ],
+    "indexed": false,
+    "index_names": [],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "every row-level check on this column is a sequential scan — REFAC-01 missing-index input",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.moderation_reviews.id",
+    "schema": "public",
+    "table": "moderation_reviews",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins full access",
+      "Creators can appeal their items",
+      "Creators can view reviews of their items"
+    ],
+    "indexed": true,
+    "index_names": [
+      "moderation_reviews_pkey"
+    ],
+    "leading_column_of": [
+      "moderation_reviews_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.moderation_reviews.target_id",
+    "schema": "public",
+    "table": "moderation_reviews",
+    "column": "target_id",
+    "data_type": "uuid",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Creators can appeal their items",
+      "Creators can view reviews of their items"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_moderation_reviews_target"
+    ],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.moderation_reviews.target_type",
+    "schema": "public",
+    "table": "moderation_reviews",
+    "column": "target_type",
+    "data_type": "text",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Creators can appeal their items",
+      "Creators can view reviews of their items"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_moderation_reviews_target"
+    ],
+    "leading_column_of": [
+      "idx_moderation_reviews_target"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.notifications.club_id",
+    "schema": "public",
+    "table": "notifications",
+    "column": "club_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_notifications_club_id"
+    ],
+    "leading_column_of": [
+      "idx_notifications_club_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.notifications.event_id",
+    "schema": "public",
+    "table": "notifications",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_notifications_event_id",
+      "notifications_dedup_idx"
+    ],
+    "leading_column_of": [
+      "idx_notifications_event_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.notifications.id",
+    "schema": "public",
+    "table": "notifications",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "notifications_pkey"
+    ],
+    "leading_column_of": [
+      "notifications_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.notifications.user_id",
+    "schema": "public",
+    "table": "notifications",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can view own notifications",
+      "Users can mark own notifications read"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_notifications_read",
+      "idx_notifications_user_id",
+      "idx_notifications_user_unread",
+      "notifications_dedup_idx",
+      "notifications_user_id_idx",
+      "notifications_user_unread_idx"
+    ],
+    "leading_column_of": [
+      "idx_notifications_read",
+      "idx_notifications_user_id",
+      "idx_notifications_user_unread",
+      "notifications_dedup_idx",
+      "notifications_user_id_idx",
+      "notifications_user_unread_idx"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.organizer_requests.club_id",
+    "schema": "public",
+    "table": "organizer_requests",
+    "column": "club_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "organizer_requests_user_id_club_id_key"
+    ],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.organizer_requests.id",
+    "schema": "public",
+    "table": "organizer_requests",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Admins manage requests"
+    ],
+    "indexed": true,
+    "index_names": [
+      "organizer_requests_pkey"
+    ],
+    "leading_column_of": [
+      "organizer_requests_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.organizer_requests.user_id",
+    "schema": "public",
+    "table": "organizer_requests",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users create own requests",
+      "Users see own requests"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_organizer_requests_user",
+      "organizer_requests_user_id_club_id_key"
+    ],
+    "leading_column_of": [
+      "idx_organizer_requests_user",
+      "organizer_requests_user_id_club_id_key"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.recommendation_explicit_feedback.event_id",
+    "schema": "public",
+    "table": "recommendation_explicit_feedback",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_recommendation_explicit_feedback_event_id",
+      "recommendation_explicit_feedback_user_id_event_id_key"
+    ],
+    "leading_column_of": [
+      "idx_recommendation_explicit_feedback_event_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.recommendation_explicit_feedback.id",
+    "schema": "public",
+    "table": "recommendation_explicit_feedback",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "recommendation_explicit_feedback_pkey"
+    ],
+    "leading_column_of": [
+      "recommendation_explicit_feedback_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.recommendation_explicit_feedback.user_id",
+    "schema": "public",
+    "table": "recommendation_explicit_feedback",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can insert own explicit feedback",
+      "Users can read own explicit feedback",
+      "Users can update own explicit feedback"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_recommendation_explicit_feedback_user_id",
+      "recommendation_explicit_feedback_user_id_event_id_key"
+    ],
+    "leading_column_of": [
+      "idx_recommendation_explicit_feedback_user_id",
+      "recommendation_explicit_feedback_user_id_event_id_key"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.recommendation_feedback.event_id",
+    "schema": "public",
+    "table": "recommendation_feedback",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": false,
+    "index_names": [],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "identity column carries no index; no policy references it today",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.recommendation_feedback.id",
+    "schema": "public",
+    "table": "recommendation_feedback",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "recommendation_feedback_pkey"
+    ],
+    "leading_column_of": [
+      "recommendation_feedback_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.recommendation_feedback.user_id",
+    "schema": "public",
+    "table": "recommendation_feedback",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can insert own feedback",
+      "Users can read own feedback"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_recommendation_feedback_user_created"
+    ],
+    "leading_column_of": [
+      "idx_recommendation_feedback_user_created"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.reviews.event_id",
+    "schema": "public",
+    "table": "reviews",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_reviews_event_id",
+      "idx_reviews_user_event",
+      "reviews_user_id_event_id_key"
+    ],
+    "leading_column_of": [
+      "idx_reviews_event_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.reviews.id",
+    "schema": "public",
+    "table": "reviews",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "reviews_pkey"
+    ],
+    "leading_column_of": [
+      "reviews_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.reviews.user_id",
+    "schema": "public",
+    "table": "reviews",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can delete own review",
+      "Users can insert own review",
+      "Users can update own review"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_reviews_user_event",
+      "reviews_user_id_event_id_key"
+    ],
+    "leading_column_of": [
+      "idx_reviews_user_event",
+      "reviews_user_id_event_id_key"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.rsvps.event_id",
+    "schema": "public",
+    "table": "rsvps",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_rsvps_event_id",
+      "rsvps_user_id_event_id_key"
+    ],
+    "leading_column_of": [
+      "idx_rsvps_event_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.rsvps.id",
+    "schema": "public",
+    "table": "rsvps",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "rsvps_pkey"
+    ],
+    "leading_column_of": [
+      "rsvps_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.rsvps.user_id",
+    "schema": "public",
+    "table": "rsvps",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can delete own rsvps",
+      "Users can create own rsvps",
+      "Users can update own rsvps"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_rsvps_user_id",
+      "rsvps_user_id_event_id_key"
+    ],
+    "leading_column_of": [
+      "idx_rsvps_user_id",
+      "rsvps_user_id_event_id_key"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.saved_events.event_id",
+    "schema": "public",
+    "table": "saved_events",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_saved_events_event_id",
+      "saved_events_user_id_event_id_key"
+    ],
+    "leading_column_of": [
+      "idx_saved_events_event_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.saved_events.id",
+    "schema": "public",
+    "table": "saved_events",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "saved_events_pkey"
+    ],
+    "leading_column_of": [
+      "saved_events_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.saved_events.user_id",
+    "schema": "public",
+    "table": "saved_events",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can delete their own saved events",
+      "Users can insert their own saved events",
+      "Users can view their own saved events"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_saved_events_user_id",
+      "saved_events_user_id_event_id_key"
+    ],
+    "leading_column_of": [
+      "idx_saved_events_user_id",
+      "saved_events_user_id_event_id_key"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.tag_interaction_counts.user_id",
+    "schema": "public",
+    "table": "tag_interaction_counts",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can read their own tag counts"
+    ],
+    "indexed": true,
+    "index_names": [
+      "tag_interaction_counts_pkey"
+    ],
+    "leading_column_of": [
+      "tag_interaction_counts_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.user_event_scores.event_id",
+    "schema": "public",
+    "table": "user_event_scores",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "user_event_scores_pkey"
+    ],
+    "leading_column_of": [],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.user_event_scores.user_id",
+    "schema": "public",
+    "table": "user_event_scores",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can read their own scores"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_user_event_scores_user_score",
+      "user_event_scores_pkey"
+    ],
+    "leading_column_of": [
+      "idx_user_event_scores_user_score",
+      "user_event_scores_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.user_follows.follower_id",
+    "schema": "public",
+    "table": "user_follows",
+    "column": "follower_id",
+    "data_type": "uuid",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can unfollow",
+      "Users can follow others"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_user_follows_follower",
+      "user_follows_follower_id_following_id_key"
+    ],
+    "leading_column_of": [
+      "idx_user_follows_follower",
+      "user_follows_follower_id_following_id_key"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.user_follows.id",
+    "schema": "public",
+    "table": "user_follows",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "user_follows_pkey"
+    ],
+    "leading_column_of": [
+      "user_follows_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.user_interactions.event_id",
+    "schema": "public",
+    "table": "user_interactions",
+    "column": "event_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_user_interactions_event_id"
+    ],
+    "leading_column_of": [
+      "idx_user_interactions_event_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.user_interactions.id",
+    "schema": "public",
+    "table": "user_interactions",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": false,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "user_interactions_pkey"
+    ],
+    "leading_column_of": [
+      "user_interactions_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.user_interactions.user_id",
+    "schema": "public",
+    "table": "user_interactions",
+    "column": "user_id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can view their own interactions"
+    ],
+    "indexed": true,
+    "index_names": [
+      "idx_user_interactions_user_id"
+    ],
+    "leading_column_of": [
+      "idx_user_interactions_user_id"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "public.users.id",
+    "schema": "public",
+    "table": "users",
+    "column": "id",
+    "data_type": "uuid",
+    "is_identity_column": true,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can insert own profile",
+      "Users can read own profile",
+      "Users can update own profile"
+    ],
+    "indexed": true,
+    "index_names": [
+      "users_pkey"
+    ],
+    "leading_column_of": [
+      "users_pkey"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ],
+    "referenced_by_policies_cross_table": [
+      {
+        "policy": "Admins manage memberships",
+        "on_table": "public.club_members"
+      },
+      {
+        "policy": "Admins can read all reports",
+        "on_table": "public.event_reports"
+      },
+      {
+        "policy": "Admins can update reports",
+        "on_table": "public.event_reports"
+      },
+      {
+        "policy": "Admins can manage experiment assignments",
+        "on_table": "public.experiment_assignments"
+      },
+      {
+        "policy": "Admins can manage experiment variants",
+        "on_table": "public.experiment_variants"
+      },
+      {
+        "policy": "Admins can manage experiments",
+        "on_table": "public.experiments"
+      },
+      {
+        "policy": "Admins can manage featured clubs",
+        "on_table": "public.featured_clubs"
+      },
+      {
+        "policy": "Admins can manage featured events",
+        "on_table": "public.featured_events"
+      },
+      {
+        "policy": "Admins can read feedback",
+        "on_table": "public.feedback"
+      },
+      {
+        "policy": "Admins full access",
+        "on_table": "public.moderation_reviews"
+      },
+      {
+        "policy": "Admins manage requests",
+        "on_table": "public.organizer_requests"
+      }
+    ]
+  },
+  {
+    "key": "public.users.roles",
+    "schema": "public",
+    "table": "users",
+    "column": "roles",
+    "data_type": "ARRAY",
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [],
+    "indexed": true,
+    "index_names": [
+      "idx_users_roles"
+    ],
+    "leading_column_of": [
+      "idx_users_roles"
+    ],
+    "index_census_available": true,
+    "column_census_available": true,
+    "consequence": "policy predicate on this column can use an index",
+    "detection": "qualified <table>.<column> match inside a policy predicate on another table (an EXISTS subquery reaching across tables)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ],
+    "referenced_by_policies_cross_table": [
+      {
+        "policy": "Admins manage memberships",
+        "on_table": "public.club_members"
+      },
+      {
+        "policy": "Admins can read all reports",
+        "on_table": "public.event_reports"
+      },
+      {
+        "policy": "Admins can update reports",
+        "on_table": "public.event_reports"
+      },
+      {
+        "policy": "Admins can manage experiment assignments",
+        "on_table": "public.experiment_assignments"
+      },
+      {
+        "policy": "Admins can manage experiment variants",
+        "on_table": "public.experiment_variants"
+      },
+      {
+        "policy": "Admins can manage experiments",
+        "on_table": "public.experiments"
+      },
+      {
+        "policy": "Admins can manage featured clubs",
+        "on_table": "public.featured_clubs"
+      },
+      {
+        "policy": "Admins can manage featured events",
+        "on_table": "public.featured_events"
+      },
+      {
+        "policy": "Admins can read feedback",
+        "on_table": "public.feedback"
+      },
+      {
+        "policy": "Admins full access",
+        "on_table": "public.moderation_reviews"
+      },
+      {
+        "policy": "Admins manage requests",
+        "on_table": "public.organizer_requests"
+      }
+    ]
+  },
+  {
+    "key": "storage.objects.bucket_id",
+    "schema": "storage",
+    "table": "objects",
+    "column": "bucket_id",
+    "data_type": null,
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Users can delete their own banners",
+      "Authenticated users can upload banners",
+      "Authenticated users can upload club logos",
+      "Authenticated users can upload event images",
+      "Service role upload for event images",
+      "Anyone can view banners",
+      "Anyone can view club logos",
+      "Anyone can view event images",
+      "Public read access for event images",
+      "Authenticated users can update club logos",
+      "Users can update their own banners"
+    ],
+    "indexed": null,
+    "index_names": [],
+    "leading_column_of": [],
+    "index_census_available": false,
+    "column_census_available": false,
+    "consequence": "index census not captured for this schema — indexing state unknown, not asserted",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  },
+  {
+    "key": "storage.objects.name",
+    "schema": "storage",
+    "table": "objects",
+    "column": "name",
+    "data_type": null,
+    "is_identity_column": false,
+    "referenced_in_policy_predicate": true,
+    "referenced_by_policies": [
+      "Allow authenticated delete from own folder",
+      "Users can delete their own banners",
+      "Allow authenticated upload to own folder",
+      "Allow authenticated update in own folder",
+      "Users can update their own banners"
+    ],
+    "indexed": null,
+    "index_names": [],
+    "leading_column_of": [],
+    "index_census_available": false,
+    "column_census_available": false,
+    "consequence": "index census not captured for this schema — indexing state unknown, not asserted",
+    "detection": "bare word-boundary match of the column name against the table's policy qual/with_check text (heuristic — a predicate may reference a column of another table inside an EXISTS subquery)",
+    "sources": [
+      ".planning/audit/raw/prod/pg-policies.json",
+      ".planning/audit/raw/prod/indexes.json",
+      ".planning/audit/raw/prod/information-schema-columns.json"
+    ]
+  }
+]
