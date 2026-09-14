@@ -19,16 +19,16 @@ Inferred from the existing codebase (see `.planning/codebase/`). These are worki
 - ✓ User selects interest tags during onboarding; middleware guards unfinished onboarding — existing
 - ✓ User can browse, search, and filter events by tag, date, and time of day — existing
 - ✓ User can save/unsave events and RSVP (going/interested/cancelled) — existing
-- ✓ User sees personalized recommendations from the Postgres-native scoring engine (`compute_user_scores`, pg_cron every 6h), with popularity fallback for new users — existing
-- ✓ Club organizers create and edit clubs, post events, invite members by McGill email, manage member roles, and switch between multiple clubs — existing
+- ✓ User sees personalized recommendations from the Postgres-native scoring engine (`compute_user_scores`, pg_cron every 6h), with popularity fallback for new users — existing; contradicted by Phase 1 evidence (F-041), keep on the preservation list only after Stage 3 fixes it
+- ✓ Club organizers create and edit clubs, post events, invite members by McGill email, manage member roles, and switch between multiple clubs — existing; contradicted by Phase 1 evidence (F-016), keep on the preservation list only after Stage 3 fixes it
 - ✓ Events posted by organizers for their own clubs are auto-approved; other events and clubs go through pending → approved/rejected moderation — existing
 - ✓ Students follow/unfollow clubs; public club pages show logo, description, follower count, upcoming and past events — existing
 - ✓ Organizers see event-level analytics (RSVPs, saves, clicks) and club-level trends — existing
 - ✓ Attendees review past events; organizers see aggregate feedback — existing
-- ✓ Admins approve/reject events and clubs, ban/suspend users, review reports and appeals, with actions written to `admin_audit_log` — existing
-- ✓ In-app notifications and email reminders — existing
+- ✓ Admins approve/reject events and clubs, ban/suspend users, review reports and appeals, with actions written to `admin_audit_log` — existing; contradicted by Phase 1 evidence (F-007), keep on the preservation list only after Stage 3 fixes it
+- ✓ In-app notifications and email reminders — existing; contradicted by Phase 1 evidence (F-038), keep on the preservation list only after Stage 3 fixes it
 - ✓ Instagram scraper pipeline (Apify) classifies posts and ingests events with content-hash dedup — existing
-- ✓ A/B experiment framework for recommendation variants — existing
+- ✓ A/B experiment framework for recommendation variants — existing; contradicted by Phase 1 evidence (F-017), keep on the preservation list only after Stage 3 fixes it
 - ✓ Interaction tracking feeds popularity and interaction signals — existing
 
 ### Active
@@ -38,7 +38,7 @@ Organized by the four stages. Each stage has an exit gate; a stage does not star
 **Stage 1 — Read-only foundation audit**
 
 - [ ] Inventory and assess production schema versus migrations versus generated Supabase types
-- [ ] Inventory and classify all 92 API handlers and 43 pages (auth requirement, role, caching, personalization, dead/duplicate)
+- [ ] Inventory and classify all 94 API handlers and 43 pages (auth requirement, role, caching, personalization, dead/duplicate)
 - [ ] Assess authentication, middleware, roles, permissions, and RLS policies
 - [ ] Assess every service-role client usage for RLS bypass risk
 - [ ] Assess route caching against personalized-data exposure (the blanket `s-maxage=60` on `/api/*` is a known suspect)
@@ -102,6 +102,7 @@ Organized by the four stages. Each stage has an exit gate; a stage does not star
 
 ## Context
 
+- **Phase 1 complete (2026-09-14):** `.planning/audit/FOUNDATION_AUDIT.md` holds 70 findings (4 Critical, 17 High, 27 Medium, 22 Low). Criticals: admin popularity endpoint fails open on a service-role client with no `ADMIN_API_KEY` in production (F-001); any signed-in user can self-promote to admin via a direct `users` write (F-006); anonymous inserts into `admin_audit_log` (F-007); personalized API responses shared-cached under a session-independent CDN key (F-025). Migrations do not replay from zero (F-043) and gate seven other findings. Three requirements withheld pending inputs: AUDIT-01 (staging/local snapshots), AUDIT-08 (two-session cache probe), AUDIT-16 (keyed bundle sweep); retry commands are in the blocked-item index of the audit document.
 - **Codebase state:** Next.js 16 App Router monolith, React 18, TypeScript strict, Supabase (Postgres, Auth, Storage, Edge Functions), Zustand, SWR, Tailwind + shadcn/ui, deployed on Vercel (`iad1`). Full map in `.planning/codebase/` (dated 2026-03-05; six months old, so the audit re-verifies rather than trusts it).
 - **Prior milestones:** v1 (discovery + recommendations) and v2.0 "Club Organizer UX Overhaul" shipped as of 2026-03-06. Planning artifacts for those were reset on 2026-09-13 to start this program fresh; they remain in git history.
 - **Known concerns already recorded in the codebase map** (to be re-verified and formalized by the audit): hand-written Supabase types; `getSession()` used for auth checks; admin analytics endpoint without authorization; admin calculate-popularity endpoint falls open without `ADMIN_API_KEY`; no CSRF protection on state-changing routes; in-memory-only rate limiting that excludes admin endpoints; RSVP counts computed by loading all rows; `select('*')` on events then fabricating club objects; dual event date schema; 179 unstructured console calls across 62 files; zero tests on the auth callback and recommendation routes.
@@ -148,4 +149,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-13 after initialization*
+*Last updated: 2026-09-14 after Phase 1 (Read-Only Foundation Audit) completion*
