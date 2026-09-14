@@ -1,0 +1,772 @@
+[
+  {
+    "name": "pg_net",
+    "schema": null,
+    "default_version": "0.19.5",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Async HTTP",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgmq",
+    "schema": null,
+    "default_version": "1.5.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "A lightweight message queue. Like AWS SQS and RSMQ but on Postgres.",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "insert_username",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "functions for tracking who changed a table",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "wrappers",
+    "schema": null,
+    "default_version": "0.5.6",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Foreign data wrappers developed by Supabase",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "btree_gin",
+    "schema": null,
+    "default_version": "1.3",
+    "installed_version": null,
+    "installed": false,
+    "comment": "support for indexing common datatypes in GIN",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "bloom",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "bloom access method - signature file based index",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "seg",
+    "schema": null,
+    "default_version": "1.4",
+    "installed_version": null,
+    "installed": false,
+    "comment": "data type for representing line segments or floating-point intervals",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_cron",
+    "schema": "pg_catalog",
+    "default_version": "1.6.4",
+    "installed_version": "1.6.4",
+    "installed": true,
+    "comment": "Job scheduler for PostgreSQL",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "wal2json",
+    "schema": null,
+    "default_version": "2.6",
+    "installed_version": null,
+    "installed": false,
+    "comment": null,
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "address_standardizer",
+    "schema": null,
+    "default_version": "3.3.7",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Used to parse an address into constituent elements. Generally used to support geocoding address normalization step.",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_stat_monitor",
+    "schema": null,
+    "default_version": "2.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "The pg_stat_monitor is a PostgreSQL Query Performance Monitoring tool, based on PostgreSQL contrib module pg_stat_statements. pg_stat_monitor provides aggregated statistics, client information, plan details including plan, and histogram information.",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "postgis_topology",
+    "schema": null,
+    "default_version": "3.3.7",
+    "installed_version": null,
+    "installed": false,
+    "comment": "PostGIS topology spatial types and functions",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "plpgsql",
+    "schema": "pg_catalog",
+    "default_version": "1.0",
+    "installed_version": "1.0",
+    "installed": true,
+    "comment": "PL/pgSQL procedural language",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_freespacemap",
+    "schema": null,
+    "default_version": "1.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "examine the free space map (FSM)",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "postgis_tiger_geocoder",
+    "schema": null,
+    "default_version": "3.3.7",
+    "installed_version": null,
+    "installed": false,
+    "comment": "PostGIS tiger geocoder and reverse geocoder",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "vector",
+    "schema": null,
+    "default_version": "0.8.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "vector data type and ivfflat and hnsw access methods",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "autoinc",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "functions for autoincrementing fields",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "tcn",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Triggered change notifications",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "file_fdw",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "foreign-data wrapper for flat file access",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "postgis_raster",
+    "schema": null,
+    "default_version": "3.3.7",
+    "installed_version": null,
+    "installed": false,
+    "comment": "PostGIS raster types and functions",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_tle",
+    "schema": null,
+    "default_version": "1.4.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Trusted Language Extensions for PostgreSQL",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "hypopg",
+    "schema": null,
+    "default_version": "1.4.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Hypothetical indexes for PostgreSQL",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_repack",
+    "schema": null,
+    "default_version": "1.5.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Reorganize tables in PostgreSQL databases with minimal locks",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "tablefunc",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "functions that manipulate whole tables, including crosstab",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "amcheck",
+    "schema": null,
+    "default_version": "1.4",
+    "installed_version": null,
+    "installed": false,
+    "comment": "functions for verifying relation integrity",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "sslinfo",
+    "schema": null,
+    "default_version": "1.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "information about SSL certificates",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgstattuple",
+    "schema": null,
+    "default_version": "1.5",
+    "installed_version": null,
+    "installed": false,
+    "comment": "show tuple-level statistics",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_buffercache",
+    "schema": null,
+    "default_version": "1.5",
+    "installed_version": null,
+    "installed": false,
+    "comment": "examine the shared buffer cache",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "supabase_vault",
+    "schema": "vault",
+    "default_version": "0.3.1",
+    "installed_version": "0.3.1",
+    "installed": true,
+    "comment": "Supabase Vault Extension",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "uuid-ossp",
+    "schema": "extensions",
+    "default_version": "1.1",
+    "installed_version": "1.1",
+    "installed": true,
+    "comment": "generate universally unique identifiers (UUIDs)",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "tsm_system_time",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "TABLESAMPLE method which accepts time in milliseconds as a limit",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgcrypto",
+    "schema": "extensions",
+    "default_version": "1.3",
+    "installed_version": "1.3",
+    "installed": true,
+    "comment": "cryptographic functions",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "moddatetime",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "functions for tracking last modification time",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgjwt",
+    "schema": null,
+    "default_version": "0.2.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "JSON Web Token API for Postgresql",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "lo",
+    "schema": null,
+    "default_version": "1.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Large Object maintenance",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "unaccent",
+    "schema": null,
+    "default_version": "1.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "text search dictionary that removes accents",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgrowlocks",
+    "schema": null,
+    "default_version": "1.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "show row-level locking information",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "address_standardizer_data_us",
+    "schema": null,
+    "default_version": "3.3.7",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Address Standardizer US dataset example",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "dict_int",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "text search dictionary template for integers",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgroonga",
+    "schema": null,
+    "default_version": "3.2.5",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Super fast and all languages supported full text search index based on Groonga",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "dict_xsyn",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "text search dictionary template for extended synonym processing",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "tsm_system_rows",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "TABLESAMPLE method which accepts number of rows as a limit",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "postgres_fdw",
+    "schema": null,
+    "default_version": "1.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "foreign-data wrapper for remote PostgreSQL servers",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "intagg",
+    "schema": null,
+    "default_version": "1.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "integer aggregator and enumerator (obsolete)",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "fuzzystrmatch",
+    "schema": null,
+    "default_version": "1.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "determine similarities and distance between strings",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "hstore",
+    "schema": null,
+    "default_version": "1.8",
+    "installed_version": null,
+    "installed": false,
+    "comment": "data type for storing sets of (key, value) pairs",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_prewarm",
+    "schema": null,
+    "default_version": "1.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "prewarm relation data",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_jsonschema",
+    "schema": null,
+    "default_version": "0.3.3",
+    "installed_version": null,
+    "installed": false,
+    "comment": "pg_jsonschema",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "plpgsql_check",
+    "schema": null,
+    "default_version": "2.7",
+    "installed_version": null,
+    "installed": false,
+    "comment": "extended check for plpgsql functions",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "postgis",
+    "schema": null,
+    "default_version": "3.3.7",
+    "installed_version": null,
+    "installed": false,
+    "comment": "PostGIS geometry and geography spatial types and functions",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_hashids",
+    "schema": null,
+    "default_version": "1.3.0-cd0e1b31d52b394a0df64079406a14a4f7387cd6",
+    "installed_version": null,
+    "installed": false,
+    "comment": "pg_hashids",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_surgery",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "extension to perform surgery on a damaged relation",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_stat_statements",
+    "schema": "extensions",
+    "default_version": "1.11",
+    "installed_version": "1.11",
+    "installed": true,
+    "comment": "track planning and execution statistics of all SQL statements executed",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pageinspect",
+    "schema": null,
+    "default_version": "1.12",
+    "installed_version": null,
+    "installed": false,
+    "comment": "inspect the contents of database pages at a low level",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "refint",
+    "schema": null,
+    "default_version": "1.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "functions for implementing referential integrity (obsolete)",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "ltree",
+    "schema": null,
+    "default_version": "1.3",
+    "installed_version": null,
+    "installed": false,
+    "comment": "data type for hierarchical tree-like structures",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "earthdistance",
+    "schema": null,
+    "default_version": "1.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "calculate great-circle distances on the surface of the Earth",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgrouting",
+    "schema": null,
+    "default_version": "3.4.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "pgRouting Extension",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "rum",
+    "schema": null,
+    "default_version": "1.3",
+    "installed_version": null,
+    "installed": false,
+    "comment": "RUM index access method",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "xml2",
+    "schema": null,
+    "default_version": "1.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "XPath querying and XSLT",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "citext",
+    "schema": null,
+    "default_version": "1.6",
+    "installed_version": null,
+    "installed": false,
+    "comment": "data type for case-insensitive character strings",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgtap",
+    "schema": null,
+    "default_version": "1.2.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Unit testing for PostgreSQL",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgsodium",
+    "schema": null,
+    "default_version": "3.1.8",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Postgres extension for libsodium functions",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "isn",
+    "schema": null,
+    "default_version": "1.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "data types for international product numbering standards",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgroonga_database",
+    "schema": null,
+    "default_version": "3.2.5",
+    "installed_version": null,
+    "installed": false,
+    "comment": "PGroonga database management module",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "index_advisor",
+    "schema": null,
+    "default_version": "0.2.0",
+    "installed_version": null,
+    "installed": false,
+    "comment": "Query index advisor",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_trgm",
+    "schema": "public",
+    "default_version": "1.6",
+    "installed_version": "1.6",
+    "installed": true,
+    "comment": "text similarity measurement and index searching based on trigrams",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "btree_gist",
+    "schema": null,
+    "default_version": "1.7",
+    "installed_version": null,
+    "installed": false,
+    "comment": "support for indexing common datatypes in GiST",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "dblink",
+    "schema": null,
+    "default_version": "1.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "connect to other PostgreSQL databases from within a database",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "intarray",
+    "schema": null,
+    "default_version": "1.5",
+    "installed_version": null,
+    "installed": false,
+    "comment": "functions, operators, and index support for 1-D arrays of integers",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "cube",
+    "schema": null,
+    "default_version": "1.5",
+    "installed_version": null,
+    "installed": false,
+    "comment": "data type for multidimensional cubes",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "postgis_sfcgal",
+    "schema": null,
+    "default_version": "3.3.7",
+    "installed_version": null,
+    "installed": false,
+    "comment": "PostGIS SFCGAL functions",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "http",
+    "schema": null,
+    "default_version": "1.6",
+    "installed_version": null,
+    "installed": false,
+    "comment": "HTTP client for PostgreSQL, allows web page retrieval inside the database.",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_graphql",
+    "schema": null,
+    "default_version": "1.5.11",
+    "installed_version": null,
+    "installed": false,
+    "comment": "pg_graphql: GraphQL support",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_walinspect",
+    "schema": null,
+    "default_version": "1.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "functions to inspect contents of PostgreSQL Write-Ahead Log",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pgaudit",
+    "schema": null,
+    "default_version": "17.1",
+    "installed_version": null,
+    "installed": false,
+    "comment": "provides auditing functionality",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  },
+  {
+    "name": "pg_visibility",
+    "schema": null,
+    "default_version": "1.2",
+    "installed_version": null,
+    "installed": false,
+    "comment": "examine the visibility map (VM) and page-level visibility info",
+    "captured_at": "2026-09-14T18:32:38Z",
+    "source": ".planning/audit/raw/prod/extensions.json"
+  }
+]

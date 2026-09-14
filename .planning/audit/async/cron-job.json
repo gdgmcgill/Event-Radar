@@ -1,0 +1,71 @@
+[
+  {
+    "jobid": 1,
+    "jobname": "send-event-reminders",
+    "schedule": "*/15 * * * *",
+    "command": "select public.send_event_reminders()",
+    "nodename": "localhost",
+    "nodeport": 5432,
+    "database": "postgres",
+    "username": "postgres",
+    "active": true,
+    "runs_in_captured_window": 65,
+    "run_status_counts": {
+      "succeeded": 65
+    },
+    "last_run_start": "2026-09-14 18:30:00.194647+00",
+    "last_run_status": "succeeded",
+    "issues_http_request": false,
+    "calls_next_js_handler": false,
+    "captured_at": "2026-09-14T18:31:30Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/cron-job.json",
+    "source_query": "select jobid, jobname, schedule, command, nodename, nodeport, database, username, active from cron.job order by jobid"
+  },
+  {
+    "jobid": 2,
+    "jobname": "compute-user-scores",
+    "schedule": "0 */6 * * *",
+    "command": "SELECT compute_user_scores()",
+    "nodename": "localhost",
+    "nodeport": 5432,
+    "database": "postgres",
+    "username": "postgres",
+    "active": true,
+    "runs_in_captured_window": 3,
+    "run_status_counts": {
+      "succeeded": 3
+    },
+    "last_run_start": "2026-09-14 18:00:00.209916+00",
+    "last_run_status": "succeeded",
+    "issues_http_request": false,
+    "calls_next_js_handler": false,
+    "captured_at": "2026-09-14T18:31:30Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/cron-job.json",
+    "source_query": "select jobid, jobname, schedule, command, nodename, nodeport, database, username, active from cron.job order by jobid"
+  },
+  {
+    "jobid": 4,
+    "jobname": "send-feedback-requests",
+    "schedule": "*/30 * * * *",
+    "command": "SELECT public.send_feedback_requests()",
+    "nodename": "localhost",
+    "nodeport": 5432,
+    "database": "postgres",
+    "username": "postgres",
+    "active": true,
+    "runs_in_captured_window": 32,
+    "run_status_counts": {
+      "succeeded": 32
+    },
+    "last_run_start": "2026-09-14 18:30:00.193026+00",
+    "last_run_status": "succeeded",
+    "issues_http_request": false,
+    "calls_next_js_handler": false,
+    "captured_at": "2026-09-14T18:31:30Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/cron-job.json",
+    "source_query": "select jobid, jobname, schedule, command, nodename, nodeport, database, username, active from cron.job order by jobid"
+  }
+]
