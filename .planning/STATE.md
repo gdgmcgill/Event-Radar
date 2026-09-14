@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
-stopped_at: Completed 01-10-PLAN.md
-last_updated: "2026-09-14T20:13:44.305Z"
+stopped_at: Completed 01-11-PLAN.md
+last_updated: "2026-09-14T22:53:34.235Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 11 of 13
+Plan: 12 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P08 | 52 min | 2 tasks | 9 files |
 | Phase 01 P09 | 27 min | 3 tasks | 8 files |
 | Phase 01 P10 | 22 min | 3 tasks | 9 files |
+| Phase 01 P11 | ~50 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,8 @@ Recent decisions affecting current work:
 - [Phase 01]: The Vercel env-name capture converts two hedged fail-open rows into observed production state — CRON_SECRET and ADMIN_API_KEY are not configured on the production project, so FO-02 compares against the literal Bearer undefined and FO-01's admin gate is skipped entirely - both in front of service-role clients. 01-07 had to record these as conditional; they are now empirical.
 - [Phase 01]: club-logos is the highest-severity storage finding, and it is a bucket no requirement named — Its INSERT and UPDATE policies test only bucket_id and auth.role(), with no path-prefix ownership, so any authenticated user can overwrite any club's logo or banner - bypassing the route-level club-owner check by addressing the Storage REST API directly. It also has neither a size limit nor a MIME allow-list. Reviewing only the two buckets AUDIT-18 named would have missed it.
 - [Phase 01]: The email half of the Validated 'in-app notifications and email reminders' workflow does not exist in any implementation — No email provider dependency exists anywhere in the project; both the live pg_cron function and the dead route handler only insert in-app notifications rows, while the table name email_reminder_log and the route name send-reminders assert otherwise.
+- [Phase 01]: expected_status records what a route should return, never what it returns today — The divergence between the contract and current behaviour is the finding; recording broken behaviour as the contract would launder a defect into a specification (T-01-11-04)
+- [Phase 01]: The aborted run's 33 hand-edited endpoint rows were discarded and the classification re-derived by a committed script — A hand edit is not reproducible: nobody downstream can re-derive it and nobody can tell which cells came from a rule and which from fatigue
 
 ### Pending Todos
 
@@ -144,6 +147,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T20:12:05.010Z
-Stopped at: Completed 01-10-PLAN.md
+Last session: 2026-09-14T22:53:34.232Z
+Stopped at: Completed 01-11-PLAN.md
 Resume file: None
