@@ -1,0 +1,411 @@
+PASS src/lib/__tests__/ban.test.ts
+  isBanned
+    ✓ returns false when banned_at is null (2 ms)
+    ✓ returns true for permanent ban (no expiry)
+    ✓ returns true for active temporary ban
+    ✓ returns false for expired temporary ban
+
+  console.error
+    Error looking up event: { message: 'DB error' }
+
+      82 |
+      83 |     if (eventError) {
+    > 84 |       /* eslint-disable */console.error(...oo_tx(`2164524930_84_6_84_58_11`,"Error looking up event:", eventError));
+         |                                   ^
+      85 |       return NextResponse.json({ error: "Failed to verify event" }, { status: 500 });
+      86 |     }
+      87 |
+
+      at GET (src/app/api/events/[id]/rsvp/route.ts:84:35)
+      at Object.<anonymous> (src/__tests__/api/events/rsvp.test.ts:128:17)
+
+PASS src/__tests__/api/clubs/analytics.test.ts
+  GET /api/clubs/:id/analytics
+    ✓ returns 401 when not authenticated (123 ms)
+    ✓ returns 403 when user is not a club member (55 ms)
+    ✓ returns empty analytics for club with no data (35 ms)
+    ✓ returns follower growth bucketed by day (31 ms)
+    ✓ returns popular tags sorted by count (34 ms)
+
+PASS src/__tests__/api/events/analytics.test.ts
+  GET /api/events/:id/analytics
+    ✓ returns 401 when not authenticated (23 ms)
+    ✓ returns 403 when user is not a club member (28 ms)
+    ✓ returns event analytics with zero defaults for new event (11 ms)
+    ✓ returns correct analytics aggregation (10 ms)
+
+PASS src/__tests__/api/events/rsvp.test.ts
+  GET /api/events/:id/rsvp
+    ✓ returns RSVP counts and null user_rsvp for unauthenticated user (216 ms)
+    ✓ returns 404 when event does not exist (7 ms)
+    ✓ returns 500 when event lookup fails (60 ms)
+  POST /api/events/:id/rsvp
+    ✓ returns 401 when user is not authenticated (20 ms)
+    ✓ returns 400 when user_id is missing (5 ms)
+    ✓ returns 403 when user_id does not match authenticated user (13 ms)
+    ✓ returns 400 when status is missing (3 ms)
+    ✓ returns 400 when status is invalid (6 ms)
+    ✓ returns 404 when event does not exist (6 ms)
+    ✓ returns 400 when JSON body is invalid (7 ms)
+  DELETE /api/events/:id/rsvp
+    ✓ returns 401 when user is not authenticated (4 ms)
+    ✓ returns 400 when user_id is missing (7 ms)
+    ✓ returns 403 when user_id does not match authenticated user (7 ms)
+    ✓ returns 404 when no active RSVP exists (8 ms)
+
+  console.error
+    Fuzzy search RPC error: { message: 'RPC unavailable' }
+
+      221 |
+      222 |       if (searchError) {
+    > 223 |         /* eslint-disable */console.error(...oo_tx(`3666725074_223_8_223_61_11`,'Fuzzy search RPC error:', searchError));
+          |                                     ^
+      224 |         // Fallback to basic ILIKE search if RPC fails
+      225 |         eventsQuery = eventsQuery.or(
+      226 |           `title.ilike.%${search}%,description.ilike.%${search}%`
+
+      at GET (src/app/api/events/route.ts:223:37)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:287:5)
+
+  console.error
+    Supabase error fetching events: {"message":"Database connection failed"}
+
+      295 |       }
+      296 |
+    > 297 |       /* eslint-disable */console.error(...oo_tx(`3666725074_297_6_297_83_11`,"Supabase error fetching events:", JSON.stringify(eventsError)));
+          |                                   ^
+      298 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      299 |         ? errorMessage
+      300 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:297:35)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:383:17)
+
+  console.error
+    Supabase error fetching events: {"message":"relation \"events\" does not exist"}
+
+      295 |       }
+      296 |
+    > 297 |       /* eslint-disable */console.error(...oo_tx(`3666725074_297_6_297_83_11`,"Supabase error fetching events:", JSON.stringify(eventsError)));
+          |                                   ^
+      298 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      299 |         ? errorMessage
+      300 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:297:35)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:398:17)
+
+  console.error
+    Error fetching events: Error: Unexpected crash
+        at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:406:13)
+        at /Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:305:39
+        at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:312:13)
+        at Object.mockConstructor [as from] (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:102:19)
+        at GET (/Users/adyan/Documents/GitHub/Event-Radar/src/app/api/events/route.ts:194:8)
+        at processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:409:17)
+
+      334 |     );
+      335 |   } catch (error) {
+    > 336 |     /* eslint-disable */console.error(...oo_tx(`3666725074_336_4_336_50_11`,"Error fetching events:", error));
+          |                                 ^
+      337 |     return NextResponse.json(
+      338 |       { error: "Failed to fetch events" },
+      339 |       { status: 500 }
+
+      at GET (src/app/api/events/route.ts:336:33)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:409:17)
+
+PASS src/__tests__/api/events/get-events.test.ts
+  GET /api/events — success
+    ✓ returns 200 with events array and pagination metadata (254 ms)
+    ✓ returns the events returned by Supabase (10 ms)
+    ✓ returns multiple events (6 ms)
+    ✓ uses default pagination: page=1, limit=50 (9 ms)
+    ✓ respects custom page and limit query parameters (10 ms)
+    ✓ computes totalPages correctly (2 ms)
+    ✓ returns totalPages=0 when there are no events (3 ms)
+  GET /api/events — empty response
+    ✓ returns 200 with an empty events array when no events exist (4 ms)
+    ✓ handles null data from Supabase gracefully (6 ms)
+    ✓ returns empty events when search query matches nothing (6 ms)
+  GET /api/events — filters
+    ✓ calls overlaps() when tags parameter is provided (43 ms)
+    ✓ calls or() with ilike when search parameter is provided (61 ms)
+    ✓ calls gte() when dateFrom parameter is provided (3 ms)
+    ✓ calls lte() when dateTo parameter is provided (3 ms)
+    ✓ does not call overlaps() when tags parameter is absent (9 ms)
+    ✓ trims whitespace from individual tag values (5 ms)
+    ✓ applies correct range offset for page 2 with limit 10 (2 ms)
+  GET /api/events — error handling
+    ✓ returns 500 when Supabase returns an error (4 ms)
+    ✓ includes the Supabase error message in the 500 response (29 ms)
+    ✓ returns 500 with generic message when an unexpected exception is thrown (6 ms)
+  GET /api/events — response shape
+    ✓ queries the 'events' table (6 ms)
+    ✓ response contains exactly the keys: events, total, page, limit, totalPages (21 ms)
+    ✓ total reflects the count returned by Supabase, not the events array length (6 ms)
+    ○ skipped only queries with eq('status', 'approved') — route no longer uses eq() for status filtering
+
+PASS src/app/api/admin/analytics/users/route.test.ts
+  GET /api/admin/analytics/users
+    ✓ returns 403 when user is not admin (3 ms)
+    ✓ returns analytics data for admin users (5 ms)
+    ✓ handles empty user data gracefully (3 ms)
+
+PASS src/lib/exportUtils.test.ts
+  exportEventsCsv
+    ✓ uses eventIds query parameter for bulk CSV export (1 ms)
+    ✓ de-duplicates event IDs before export
+    ✓ throws when no event IDs are provided (5 ms)
+
+PASS src/app/api/events/export/route.test.ts
+  GET /api/events/export
+    ✓ should return 400 if format is invalid (7 ms)
+    ✓ should return CSV data with correct headers and content (1 ms)
+    ✓ should return iCal data with correct structure (1 ms)
+    ✓ should return 400 if eventId is invalid (1 ms)
+    ✓ should filter by eventId (1 ms)
+    ✓ should filter by eventIds
+    ✓ should return 400 if eventIds contains invalid UUID (1 ms)
+    ✓ should return 400 if eventId and eventIds are both provided (1 ms)
+
+PASS src/lib/experiments.test.ts
+  fnv1aHash
+    ✓ returns consistent hash for same input
+    ✓ returns different hashes for different inputs
+    ✓ returns a non-negative number
+  pickVariant
+    ✓ returns a variant from the list
+    ✓ is deterministic for same user+experiment
+    ✓ distributes roughly evenly with 50/50 weights (2 ms)
+    ✓ handles unequal weights (1 ms)
+  chiSquaredTest
+    ✓ returns null for fewer than 2 variants
+    ✓ returns not significant for similar rates
+    ✓ returns significant for very different rates
+    ✓ returns null when total is 0
+
+PASS src/lib/dateValidation.test.ts
+  isValidISODate
+    ✓ accepts YYYY-MM-DD date-only strings (1 ms)
+    ✓ accepts ISO 8601 UTC datetime (Z suffix) (1 ms)
+    ✓ accepts ISO 8601 datetime with milliseconds
+    ✓ accepts ISO 8601 datetime with positive UTC offset
+    ✓ accepts ISO 8601 datetime with negative UTC offset
+    ✓ rejects an empty string
+    ✓ rejects null
+    ✓ rejects undefined (1 ms)
+    ✓ rejects a number
+    ✓ rejects MM/DD/YYYY format
+    ✓ rejects DD-MM-YYYY format
+    ✓ rejects plain text
+    ✓ rejects partial ISO string missing day
+    ✓ rejects ISO string with invalid month 13
+    ✓ rejects ISO string with invalid day 32
+    ✓ rejects ISO string with invalid day 00 (1 ms)
+    ✓ rejects calendar-invalid Feb 30
+    ✓ rejects calendar-invalid Feb 29 on non-leap year
+    ✓ accepts calendar-valid Feb 29 on a leap year
+    ✓ rejects a datetime string missing the time-zone designator
+  isDateInFuture
+    ✓ returns true for a far-future date (34 ms)
+    ✓ returns true for a far-future datetime
+    ✓ returns false for a past date
+    ✓ returns false for a past datetime
+    ✓ returns false when date equals `now` exactly
+    ✓ accepts a custom `now` reference for deterministic testing
+  isEndAfterStart
+    ✓ returns true when end is after start
+    ✓ returns true when end is a different day after start
+    ✓ returns false when end equals start
+    ✓ returns false when end is before start
+  validateEventDates
+    ✓ returns null for a valid future start_date without end_date
+    ✓ returns null for a valid future start_date with valid end_date after it
+    ✓ returns null when end_date is undefined (explicitly)
+    ✓ returns null when end_date is null (explicitly) (1 ms)
+    ✓ returns null when end_date is empty string (treated as absent)
+    ✓ returns start_date error for a non-ISO format
+    ✓ returns start_date error for a null value
+    ✓ returns start_date error for a past date
+    ✓ returns start_date error for a past datetime
+    ✓ returns end_date error for a non-ISO end_date
+    ✓ returns end_date error when end_date is before start_date
+    ✓ returns end_date error when end_date equals start_date
+
+PASS src/__tests__/api/events/reviews.test.ts
+  POST /api/events/:id/reviews
+    ✓ returns 401 when not authenticated (14 ms)
+    ✓ returns 400 when rating is out of range (too low) (18 ms)
+    ✓ returns 400 when rating is out of range (too high) (4 ms)
+    ✓ returns 400 when event has not ended yet (2 ms)
+    ✓ returns 403 when user did not RSVP going (3 ms)
+    ✓ returns 409 when user already reviewed (2 ms)
+    ✓ returns 201 and creates review on valid submission (3 ms)
+  GET /api/events/:id/reviews
+    ✓ returns 401 when not authenticated (3 ms)
+    ✓ returns aggregate with empty data for no reviews (8 ms)
+    ✓ returns correct aggregate calculation (6 ms)
+    ✓ includes anonymized comments for organizer (4 ms)
+    ✓ excludes comments for non-organizer (6 ms)
+    ✓ returns can_review and user_review fields (4 ms)
+
+PASS src/lib/sanitize.test.ts
+  sanitizeText
+    ✓ strips <script> tags from input (1 ms)
+    ✓ removes <img> with onerror attribute (1 ms)
+    ✓ preserves plain text
+    ✓ strips HTML but keeps inner text content
+
+PASS src/lib/classifier.test.ts
+  classifyPost
+    ✓ classifies a clear event post with high confidence (2 ms)
+    ✓ classifies a non-event recap post with low confidence (1 ms)
+    ✓ classifies a meme/social post as non-event (1 ms)
+    ✓ handles image-only posts (empty caption) (1 ms)
+    ✓ handles bilingual (French) event posts
+    ✓ extracts location from @ prefix
+    ✓ extracts location from known McGill buildings (1 ms)
+    ✓ assigns tags based on caption content
+    ✓ defaults tag to social when no keywords match
+    ✓ uses first line as title (1 ms)
+    ✓ includes source_url from post_url in extracted fields
+  extractDate
+    ✓ parses 'January 15' format
+    ✓ parses 'January 15, 2026' with year
+    ✓ parses 'Monday, March 10' format
+    ✓ parses MM/DD/YYYY format (1 ms)
+    ✓ parses French date 'le 15 janvier'
+    ✓ parses date with ordinal suffix '15th'
+    ✓ returns null for no date
+    ✓ parses 'this Thursday' relative to post timestamp
+    ✓ parses 'next Friday' relative to post timestamp
+  extractTime
+    ✓ parses '5:30 PM'
+    ✓ parses '5 PM'
+    ✓ parses '17:30' (24-hour)
+    ✓ parses '18h30' (French)
+    ✓ parses '16 h 00' (French spaced) (1 ms)
+    ✓ parses '12:00 AM' as midnight
+    ✓ parses '12:00 PM' as noon
+    ✓ returns null for no time
+  extractLocation
+    ✓ extracts location from 'Location:' prefix
+    ✓ extracts location from 'Lieu:' prefix (French)
+    ✓ extracts known McGill buildings
+    ✓ extracts location from pin emoji
+    ✓ does NOT match bare @ Instagram handles as locations
+    ✓ extracts Gert's Bar
+    ✓ extracts ENGTR
+    ✓ extracts EUS Common Room
+    ✓ returns null for no location
+  classifyBatch
+    ✓ returns results sorted by confidence descending
+  partitionByAction
+    ✓ partitions results into three buckets
+
+PASS src/lib/diversity.test.ts
+  jaccardSimilarity
+    ✓ returns 1 for identical sets (1 ms)
+    ✓ returns 0 for completely disjoint sets
+    ✓ computes correct value for partial overlap (1 ms)
+    ✓ returns 0 when both sets are empty
+    ✓ returns 0 when one set is empty
+  rerankWithMMR
+    ✓ with lambda=1 preserves original relevance order
+    ✓ with lambda=0 pushes similar items apart (1 ms)
+    ✓ returns all items
+    ✓ metadata has correct fields and types
+    ✓ handles empty input (1 ms)
+    ✓ handles single item
+    ✓ tag distribution counts are correct
+
+PASS src/lib/__tests__/recommendations.test.ts
+  expandTagsWithHierarchy
+    ✓ returns direct tags plus parent tags with reduced weight
+    ✓ deduplicates when a direct tag is also a parent
+    ✓ returns empty array for empty input
+  computeTagAffinity
+    ✓ returns 1.0 for perfect overlap
+    ✓ returns 0.0 for no overlap
+    ✓ accounts for partial weight from hierarchy
+  computeSessionBoost
+    ✓ returns 0 when no session tags match
+    ✓ returns 0.05 per matching tag
+    ✓ caps at 0.15
+  generateExplanation
+    ✓ explains tag affinity when it is the top signal
+    ✓ explains interaction affinity when it is the top signal
+    ✓ explains social signal when it is the top signal
+    ✓ falls back to trending for popularity-dominated scores
+
+PASS src/__tests__/api/events/date-validation.test.ts
+  POST /api/events/create — date validation
+    ✓ returns 201 for a valid future start_date (date-only) (396 ms)
+    ✓ returns 201 for a valid future ISO datetime with end_date after start (1158 ms)
+    ✓ returns 400 when start_date is missing (34 ms)
+    ✓ returns 400 when start_date is an empty string (21 ms)
+    ✓ returns 400 for MM/DD/YYYY start_date format (33 ms)
+    ✓ returns 400 for DD-MM-YYYY start_date format (7 ms)
+    ✓ returns 400 for a past start_date (date-only) (7 ms)
+    ✓ returns 400 for a past start_date (datetime) (6 ms)
+    ✓ returns 400 for a calendar-invalid date (Feb 30) (6 ms)
+    ✓ returns 400 when end_date is not a valid ISO string (6 ms)
+    ✓ returns 400 when end_date is before start_date (5 ms)
+    ✓ returns 400 when end_date equals start_date (10 ms)
+    ✓ returns 400 for a plain number as start_date (6 ms)
+    ✓ returns 400 for an ISO datetime without timezone designator (5 ms)
+  PATCH /api/events/:id — date validation
+    ✓ returns 200 when updating start_date to a valid future datetime (9 ms)
+    ✓ returns 200 when updating only end_date to a valid ISO date (10 ms)
+    ✓ returns 200 when updating non-date fields only (6 ms)
+    ✓ returns 400 when start_date is a past date (5 ms)
+    ✓ returns 400 when start_date uses MM/DD/YYYY format (5 ms)
+    ✓ returns 400 when end_date is before start_date in an update (4 ms)
+    ✓ returns 400 when only end_date is updated to an invalid format (5 ms)
+    ✓ returns 400 when end_date is a past datetime on its own (5 ms)
+
+Test Suites: 5 skipped, 16 passed, 16 of 21 total
+Tests:       36 skipped, 220 passed, 256 total
+Snapshots:   0 total
+Time:        2.652 s
+Ran all test suites.
+
+
+# ==============================================================================
+# Capture provenance — appended by plan 01-04.
+# Everything ABOVE this block is the verbatim combined stdout+stderr of the
+# command below, untrimmed and unsummarised. Nothing below it is command output.
+#   command     : npx jest --ci --verbose
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-14T07:37:01Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1
+#   note        : package.json declares no "test" script, so Jest is invoked directly
+#                 via npx. `npm test` fails with a missing-script error.
+#   note        : nothing was installed to make a suite pass. A skipped suite is a
+#                 recorded finding for Stage 2 (STAB-08), not a defect repaired here.
+#
+# THE FIVE SKIPPED SUITES ARE NOT NAMED IN THE OUTPUT ABOVE.
+# jest 30 prints no PASS/FAIL/SKIP line for a suite in which every test is skipped,
+# and --verbose does not change that: the run above prints 16 PASS lines for the 16
+# suites that executed, and the aggregate "5 skipped" only on the Test Suites line.
+# The five are therefore DERIVED, not read — as the set difference between the 21
+# paths in baseline/jest-listtests.txt and the 16 PASS lines above:
+#
+#   src/app/api/events/route.test.ts
+#   src/components/ErrorBoundary.test.tsx
+#   src/components/events/EventFilters.test.tsx
+#   src/components/events/FilterSidebar.test.tsx
+#   src/hooks/useEvents.test.ts
+#
+# Reproduce the derivation:
+#   node -e 'const f=require("fs");const l=f.readFileSync(".planning/audit/baseline/jest-listtests.txt","utf8").split("\n").map(s=>s.trim()).filter(s=>s.includes(".test.")).map(s=>s.replace(process.cwd()+"/",""));const r=new Set(f.readFileSync(".planning/audit/baseline/jest.txt","utf8").split("\n").filter(x=>/^(PASS|FAIL)\s/.test(x)).map(x=>x.split(/\s+/)[1]));console.log(l.filter(x=>!r.has(x)).sort().join("\n"))'
+#
+# A reason for each of the five, plus the one it.skip inside a suite that DID run
+# (src/__tests__/api/events/get-events.test.ts, visible on the "○ skipped" line
+# above), is recorded in baseline/test-runner-decision.md. 35 skipped tests live in
+# the five suites; that one it.skip is the 36th.
+# ==============================================================================
+exit_code=0

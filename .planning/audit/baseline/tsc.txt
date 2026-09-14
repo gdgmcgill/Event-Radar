@@ -1,0 +1,31 @@
+--- begin verbatim combined stdout+stderr of `npx tsc --noEmit` ---
+(zero bytes: the compiler emitted no diagnostics at all)
+--- end verbatim combined stdout+stderr ---
+
+# ==============================================================================
+# Capture provenance — appended by plan 01-04. Nothing below is command output.
+#   command     : npx tsc --noEmit          (the exact command .github/workflows/ci.yml runs)
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-14T07:37:01Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#   output      : 0 bytes on stdout and stderr. The delimiters above exist because a
+#                 file containing only an exit code is not readable evidence.
+#
+# EXCLUSIONS — what this clean result does NOT cover.
+# tsconfig.json "exclude" is:
+#   node_modules, demo-video, internal, supabase/functions,
+#   vitest.config.ts, **/*.test.ts, **/*.test.tsx
+# Consequences that belong in the baseline, not in a later surprise:
+#   1. All 21 Jest test files are excluded from type-checking. A clean tsc says
+#      nothing about whether the test suites type-check. ts-jest type-checks them
+#      at run time instead, and only for the 16 suites that actually execute.
+#   2. vitest.config.ts is explicitly excluded — it imports "vitest/config" and
+#      "@vitejs/plugin-react", neither of which is installed, so including it would
+#      fail this command. The exclusion is load-bearing evidence for the orphan
+#      status recorded in baseline/test-runner-decision.md.
+#   3. supabase/functions (the Deno edge function) and internal/ are excluded too.
+#   4. tsc --noEmit with "incremental": true writes tsconfig.tsbuildinfo. That file
+#      is gitignored (*.tsbuildinfo) and was deleted after each capture so the tree
+#      is byte-identical to its pre-audit state; readonly-guard.sh exits 0.
+# ==============================================================================
+exit_code=0
