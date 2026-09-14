@@ -1,3 +1,4 @@
 ?? .agents/
+?? .mcp.json
 ?? docs/product-master-plan.md
 ?? skills-lock.json
