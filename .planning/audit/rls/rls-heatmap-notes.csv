@@ -1,0 +1,153 @@
+table,command,rls_enabled,policy_count,allowing_policies
+public.admin_audit_log,SELECT,true,1,Admins can read audit log [anon authenticated public service_role]
+public.admin_audit_log,INSERT,true,2,Admins can insert audit log [anon authenticated public service_role]; Service role can insert audit log [anon authenticated public service_role]
+public.admin_audit_log,UPDATE,true,0,
+public.admin_audit_log,DELETE,true,0,
+public.club_followers,SELECT,true,1,Anyone can view follower data [anon authenticated public service_role]
+public.club_followers,INSERT,true,1,Authenticated users can follow clubs [authenticated]
+public.club_followers,UPDATE,true,0,
+public.club_followers,DELETE,true,1,Authenticated users can unfollow clubs [authenticated]
+public.club_invitations,SELECT,true,1,Club owners can view club invitations [authenticated]
+public.club_invitations,INSERT,true,1,Club owners can create club invitations [authenticated]
+public.club_invitations,UPDATE,true,0,
+public.club_invitations,DELETE,true,0,
+public.club_members,SELECT,true,3,Admins manage memberships [authenticated]; Club owners can view all club members [authenticated]; Users see own memberships [authenticated]
+public.club_members,INSERT,true,1,Admins manage memberships [authenticated]
+public.club_members,UPDATE,true,1,Admins manage memberships [authenticated]
+public.club_members,DELETE,true,2,Admins manage memberships [authenticated]; Club owners can remove members [authenticated]
+public.clubs,SELECT,true,1,Anyone can read clubs [anon authenticated public service_role]
+public.clubs,INSERT,true,1,Admins can insert clubs [authenticated]
+public.clubs,UPDATE,true,1,Admins can update clubs [authenticated]
+public.clubs,DELETE,true,0,
+public.email_reminder_log,SELECT,true,2,Service role can manage reminder log [service_role]; Users can view their own reminder log [anon authenticated public service_role]
+public.email_reminder_log,INSERT,true,1,Service role can manage reminder log [service_role]
+public.email_reminder_log,UPDATE,true,1,Service role can manage reminder log [service_role]
+public.email_reminder_log,DELETE,true,1,Service role can manage reminder log [service_role]
+public.event_invites,SELECT,true,1,Users can view own invites [anon authenticated public service_role]
+public.event_invites,INSERT,true,1,Users can send invites [anon authenticated public service_role]
+public.event_invites,UPDATE,true,0,
+public.event_invites,DELETE,true,2,Users can delete invites sent to them [anon authenticated public service_role]; Users can delete own sent invites [anon authenticated public service_role]
+public.event_popularity_scores,SELECT,true,3,Allow public read access to event_popularity_scores [anon authenticated public service_role]; Anyone can view popularity scores [anon authenticated public service_role]; Authenticated users can update popularity scores [anon authenticated public service_role]
+public.event_popularity_scores,INSERT,true,1,Authenticated users can update popularity scores [anon authenticated public service_role]
+public.event_popularity_scores,UPDATE,true,1,Authenticated users can update popularity scores [anon authenticated public service_role]
+public.event_popularity_scores,DELETE,true,1,Authenticated users can update popularity scores [anon authenticated public service_role]
+public.event_reports,SELECT,true,2,Admins can read all reports [authenticated]; Users can read own reports [authenticated]
+public.event_reports,INSERT,true,1,Users can insert own reports [authenticated]
+public.event_reports,UPDATE,true,1,Admins can update reports [authenticated]
+public.event_reports,DELETE,true,0,
+public.events,SELECT,true,3,Admins can view all events [authenticated]; Approved events are viewable by everyone [anon authenticated public service_role]; Organizers can view own events [authenticated]
+public.events,INSERT,true,1,Authenticated users can insert events [authenticated]
+public.events,UPDATE,true,2,Admins can update any event [authenticated]; Organizers can update own events [authenticated]
+public.events,DELETE,true,1,Admins can delete events [authenticated]
+public.experiment_assignments,SELECT,true,2,Admins can manage experiment assignments [anon authenticated public service_role]; Users can read own assignments [anon authenticated public service_role]
+public.experiment_assignments,INSERT,true,1,Admins can manage experiment assignments [anon authenticated public service_role]
+public.experiment_assignments,UPDATE,true,1,Admins can manage experiment assignments [anon authenticated public service_role]
+public.experiment_assignments,DELETE,true,1,Admins can manage experiment assignments [anon authenticated public service_role]
+public.experiment_variants,SELECT,true,1,Admins can manage experiment variants [anon authenticated public service_role]
+public.experiment_variants,INSERT,true,1,Admins can manage experiment variants [anon authenticated public service_role]
+public.experiment_variants,UPDATE,true,1,Admins can manage experiment variants [anon authenticated public service_role]
+public.experiment_variants,DELETE,true,1,Admins can manage experiment variants [anon authenticated public service_role]
+public.experiments,SELECT,true,1,Admins can manage experiments [anon authenticated public service_role]
+public.experiments,INSERT,true,1,Admins can manage experiments [anon authenticated public service_role]
+public.experiments,UPDATE,true,1,Admins can manage experiments [anon authenticated public service_role]
+public.experiments,DELETE,true,1,Admins can manage experiments [anon authenticated public service_role]
+public.featured_clubs,SELECT,true,2,Admins can manage featured clubs [anon authenticated public service_role]; Anyone can view featured clubs [anon authenticated public service_role]
+public.featured_clubs,INSERT,true,1,Admins can manage featured clubs [anon authenticated public service_role]
+public.featured_clubs,UPDATE,true,1,Admins can manage featured clubs [anon authenticated public service_role]
+public.featured_clubs,DELETE,true,1,Admins can manage featured clubs [anon authenticated public service_role]
+public.featured_events,SELECT,true,2,Admins can manage featured events [anon authenticated public service_role]; Public can read active featured events [anon authenticated public service_role]
+public.featured_events,INSERT,true,1,Admins can manage featured events [anon authenticated public service_role]
+public.featured_events,UPDATE,true,1,Admins can manage featured events [anon authenticated public service_role]
+public.featured_events,DELETE,true,1,Admins can manage featured events [anon authenticated public service_role]
+public.feedback,SELECT,true,2,Admins can read feedback [authenticated]; Service role full access [service_role]
+public.feedback,INSERT,true,2,Service role full access [service_role]; Users can insert feedback [authenticated]
+public.feedback,UPDATE,true,1,Service role full access [service_role]
+public.feedback,DELETE,true,1,Service role full access [service_role]
+public.feedback_request_log,SELECT,true,2,Service role can manage feedback request log [service_role]; Users can view their own feedback request log [anon authenticated public service_role]
+public.feedback_request_log,INSERT,true,1,Service role can manage feedback request log [service_role]
+public.feedback_request_log,UPDATE,true,1,Service role can manage feedback request log [service_role]
+public.feedback_request_log,DELETE,true,1,Service role can manage feedback request log [service_role]
+public.moderation_reviews,SELECT,true,2,Admins full access [anon authenticated public service_role]; Creators can view reviews of their items [anon authenticated public service_role]
+public.moderation_reviews,INSERT,true,2,Admins full access [anon authenticated public service_role]; Creators can appeal their items [anon authenticated public service_role]
+public.moderation_reviews,UPDATE,true,1,Admins full access [anon authenticated public service_role]
+public.moderation_reviews,DELETE,true,1,Admins full access [anon authenticated public service_role]
+public.notifications,SELECT,true,1,Users can view own notifications [authenticated]
+public.notifications,INSERT,true,1,Service role can insert notifications [service_role]
+public.notifications,UPDATE,true,1,Users can mark own notifications read [anon authenticated public service_role]
+public.notifications,DELETE,true,0,
+public.organizer_requests,SELECT,true,2,Admins manage requests [authenticated]; Users see own requests [authenticated]
+public.organizer_requests,INSERT,true,2,Admins manage requests [authenticated]; Users create own requests [authenticated]
+public.organizer_requests,UPDATE,true,1,Admins manage requests [authenticated]
+public.organizer_requests,DELETE,true,1,Admins manage requests [authenticated]
+public.recommendation_explicit_feedback,SELECT,true,1,Users can read own explicit feedback [anon authenticated public service_role]
+public.recommendation_explicit_feedback,INSERT,true,1,Users can insert own explicit feedback [anon authenticated public service_role]
+public.recommendation_explicit_feedback,UPDATE,true,1,Users can update own explicit feedback [anon authenticated public service_role]
+public.recommendation_explicit_feedback,DELETE,true,0,
+public.recommendation_feedback,SELECT,true,1,Users can read own feedback [anon authenticated public service_role]
+public.recommendation_feedback,INSERT,true,1,Users can insert own feedback [anon authenticated public service_role]
+public.recommendation_feedback,UPDATE,true,0,
+public.recommendation_feedback,DELETE,true,0,
+public.reviews,SELECT,true,1,Anyone can read reviews [anon authenticated public service_role]
+public.reviews,INSERT,true,1,Users can insert own review [anon authenticated public service_role]
+public.reviews,UPDATE,true,1,Users can update own review [anon authenticated public service_role]
+public.reviews,DELETE,true,1,Users can delete own review [anon authenticated public service_role]
+public.rsvps,SELECT,true,1,Anyone can view rsvps [anon authenticated public service_role]
+public.rsvps,INSERT,true,1,Users can create own rsvps [anon authenticated public service_role]
+public.rsvps,UPDATE,true,1,Users can update own rsvps [anon authenticated public service_role]
+public.rsvps,DELETE,true,1,Users can delete own rsvps [anon authenticated public service_role]
+public.saved_events,SELECT,true,1,Users can view their own saved events [anon authenticated public service_role]
+public.saved_events,INSERT,true,1,Users can insert their own saved events [anon authenticated public service_role]
+public.saved_events,UPDATE,true,0,
+public.saved_events,DELETE,true,1,Users can delete their own saved events [anon authenticated public service_role]
+public.tag_interaction_counts,SELECT,true,2,Service role can manage all tag counts [anon authenticated public service_role]; Users can read their own tag counts [anon authenticated public service_role]
+public.tag_interaction_counts,INSERT,true,1,Service role can manage all tag counts [anon authenticated public service_role]
+public.tag_interaction_counts,UPDATE,true,1,Service role can manage all tag counts [anon authenticated public service_role]
+public.tag_interaction_counts,DELETE,true,1,Service role can manage all tag counts [anon authenticated public service_role]
+public.user_event_scores,SELECT,true,2,Service role can manage all scores [anon authenticated public service_role]; Users can read their own scores [anon authenticated public service_role]
+public.user_event_scores,INSERT,true,1,Service role can manage all scores [anon authenticated public service_role]
+public.user_event_scores,UPDATE,true,1,Service role can manage all scores [anon authenticated public service_role]
+public.user_event_scores,DELETE,true,1,Service role can manage all scores [anon authenticated public service_role]
+public.user_follows,SELECT,true,1,Anyone can view follows [anon authenticated public service_role]
+public.user_follows,INSERT,true,1,Users can follow others [anon authenticated public service_role]
+public.user_follows,UPDATE,true,0,
+public.user_follows,DELETE,true,1,Users can unfollow [anon authenticated public service_role]
+public.user_interactions,SELECT,true,1,Users can view their own interactions [anon authenticated public service_role]
+public.user_interactions,INSERT,true,1,Anyone can insert interactions [anon authenticated public service_role]
+public.user_interactions,UPDATE,true,0,
+public.user_interactions,DELETE,true,0,
+public.users,SELECT,true,2,Admins can view all profiles [authenticated]; Users can read own profile [anon authenticated public service_role]
+public.users,INSERT,true,1,Users can insert own profile [anon authenticated public service_role]
+public.users,UPDATE,true,1,Users can update own profile [anon authenticated public service_role]
+public.users,DELETE,true,0,
+storage.buckets,SELECT,true,0,
+storage.buckets,INSERT,true,0,
+storage.buckets,UPDATE,true,0,
+storage.buckets,DELETE,true,0,
+storage.buckets_analytics,SELECT,true,0,
+storage.buckets_analytics,INSERT,true,0,
+storage.buckets_analytics,UPDATE,true,0,
+storage.buckets_analytics,DELETE,true,0,
+storage.buckets_vectors,SELECT,true,0,
+storage.buckets_vectors,INSERT,true,0,
+storage.buckets_vectors,UPDATE,true,0,
+storage.buckets_vectors,DELETE,true,0,
+storage.migrations,SELECT,true,0,
+storage.migrations,INSERT,true,0,
+storage.migrations,UPDATE,true,0,
+storage.migrations,DELETE,true,0,
+storage.objects,SELECT,true,5,Allow public read access 1oj01fe_0 [authenticated]; Anyone can view banners [anon authenticated public service_role]; Anyone can view club logos [anon authenticated public service_role]; Anyone can view event images [anon authenticated public service_role]; Public read access for event images [anon authenticated public service_role]
+storage.objects,INSERT,true,5,Allow authenticated upload to own folder [authenticated]; Authenticated users can upload banners [authenticated]; Authenticated users can upload club logos [anon authenticated public service_role]; Authenticated users can upload event images [authenticated]; Service role upload for event images [service_role]
+storage.objects,UPDATE,true,3,Allow authenticated update in own folder [authenticated]; Authenticated users can update club logos [anon authenticated public service_role]; Users can update their own banners [authenticated]
+storage.objects,DELETE,true,2,Allow authenticated delete from own folder [authenticated]; Users can delete their own banners [authenticated]
+storage.s3_multipart_uploads,SELECT,true,0,
+storage.s3_multipart_uploads,INSERT,true,0,
+storage.s3_multipart_uploads,UPDATE,true,0,
+storage.s3_multipart_uploads,DELETE,true,0,
+storage.s3_multipart_uploads_parts,SELECT,true,0,
+storage.s3_multipart_uploads_parts,INSERT,true,0,
+storage.s3_multipart_uploads_parts,UPDATE,true,0,
+storage.s3_multipart_uploads_parts,DELETE,true,0,
+storage.vector_indexes,SELECT,true,0,
+storage.vector_indexes,INSERT,true,0,
+storage.vector_indexes,UPDATE,true,0,
+storage.vector_indexes,DELETE,true,0,
