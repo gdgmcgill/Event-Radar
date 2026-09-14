@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-09-14T07:33:49.871Z"
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-09-14T07:44:32.254Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 13
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 4 of 13
+Plan: 5 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 13 min | 3 tasks | 13 files |
 | Phase 01 P02 | 20 min | 2 tasks | 4 files |
 | Phase 01 P03 | 15 min | 3 tasks | 7 files |
+| Phase 01 P04 | 9 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,10 @@ Recent decisions affecting current work:
 - [Phase 01]: Per-page grep signals are folded into component_type and data_source instead of being emitted as top-level row keys — pages.schema.json sets additionalProperties:false over a fixed 12-key list with no signals object, unlike endpoints.schema.json; emitting is_client_component/uses_service_client fails schema-valid on all 43 rows.
 - [Phase 01]: build_route_row_count is the measured 140, not the 139 the plan and RESEARCH state — 140 = 94 endpoints + 43 pages + 3 build-only routes, which is RESEARCH's own arithmetic; 139 was a transcription slip. Phase rule: counts are re-derived, never transcribed.
 - [Phase 01]: The two page authorization rings are disjoint: 0 of 43 pages carry both middleware_protected and layout_guard — Every page depends on a single control; for the 14 admin/moderation pages that control is one layout.tsx file apiece. Input to AUDIT-17 threat models.
+- [Phase 01]: AUDIT-13 baseline captured: 220 passing tests across 16 of 21 Jest suites (5 suites / 36 tests skipped), tsc --noEmit clean, eslint 12 warnings and 0 errors, all exit 0. This is the STAB-13 green target.
+- [Phase 01]: Keep Jest, recorded not re-litigated: 14 of 21 test files call the jest.* mock API and 0 call vi.*; vitest is absent from package.json, package-lock.json and node_modules while vitest.config.ts and vitest.setup.ts remain as orphans; ts-jest 29.4.6 peers jest ^29 or ^30 against the installed jest 30.2.0, so no version skew argues for a switch.
+- [Phase 01]: Jest 30 prints no reporter line for a fully-skipped suite and --verbose does not change that, so the five skipped suites are DERIVED as a set difference against jest-listtests.txt, with the derivation command embedded in baseline/jest.txt rather than the list merely asserted.
+- [Phase 01]: AUDIT-13 marked complete, departing from the 01-01 and 01-03 withholding precedent, because every clause of the requirement maps to an artifact on disk and validate.mjs --check baseline exits 0 with 9 passing rules. The precedent is to withhold when artifacts contradict the claim, not to withhold reflexively.
 
 ### Pending Todos
 
@@ -110,6 +115,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T07:33:49.868Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-09-14T07:44:32.250Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None

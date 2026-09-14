@@ -23,7 +23,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [ ] **AUDIT-10**: Every authorization check conditional on an env var being present (fail-open shape, e.g. `ADMIN_API_KEY`, `CRON_SECRET`) is listed with its reachable route
 - [ ] **AUDIT-11**: Cron and webhook inventory covers pg_cron jobs from `cron.job`, `/api/cron/*` handlers and what (if anything) triggers them, `vercel.json` crons, the Supabase edge function, the Apify/Instagram webhook, and Supabase auth hooks
 - [ ] **AUDIT-12**: Dependency report records `npm audit --omit=dev` and `npm outdated` output with a reachability judgment for every High/Critical in production dependencies, and answers whether `swagger-ui-react` and `redoc` are reachable from any production route
-- [ ] **AUDIT-13**: Test/build/lint/type-check baseline is captured as actual command output, including the Jest pass/skip counts and the reason for each skipped suite; the test-runner decision (keep Jest, delete Vitest orphans) is recorded with the 14-vs-0 mock-call evidence
+- [x] **AUDIT-13**: Test/build/lint/type-check baseline is captured as actual command output, including the Jest pass/skip counts and the reason for each skipped suite; the test-runner decision (keep Jest, delete Vitest orphans) is recorded with the 14-vs-0 mock-call evidence
 - [ ] **AUDIT-14**: Error handling and observability assessment quantifies: routes with no try/catch, routes that leak internal error text, `catch (error: any)` count, `console.*` call count, absence of request correlation
 - [ ] **AUDIT-15**: Dead-code report (via knip) lists unreferenced routes, components superseded by prior milestones, `API_ENDPOINTS` constants bypassed by hardcoded URLs, and stale docs including the disposition of `internal/` and `backend/` directories
 - [ ] **AUDIT-16**: Client-bundle secret sweep builds the app and greps `.next/static` for the service-role key prefix, `ADMIN_EMAILS`, and `ADMIN_API_KEY`
@@ -172,7 +172,7 @@ No phase crosses a stage boundary.
 | AUDIT-10 | Phase 1 | Pending |
 | AUDIT-11 | Phase 1 | Pending |
 | AUDIT-12 | Phase 1 | Pending |
-| AUDIT-13 | Phase 1 | Pending |
+| AUDIT-13 | Phase 1 | Complete |
 | AUDIT-14 | Phase 1 | Pending |
 | AUDIT-15 | Phase 1 | Pending |
 | AUDIT-16 | Phase 1 | Pending |
