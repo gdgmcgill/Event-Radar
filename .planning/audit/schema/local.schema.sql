@@ -1,0 +1,44 @@
+-- .planning/audit/schema/local.schema.sql
+--
+-- BLOCKED — local database could not be built from supabase/migrations/
+--
+-- Requirement: AUDIT-01 (live schema snapshots: production, staging, local)
+-- Plan:        01-06
+-- Date:        2026-09-14
+--
+-- This is a deferred-with-reason stub, not a schema. It contains no DDL because no
+-- local database exists to dump: the migration replay aborts at the 12th of 44
+-- migrations. That failure is itself the finding, and its full transcript and
+-- analysis are in:
+--
+--     .planning/audit/schema/local-reset.txt
+--
+-- Summary of the blocking reason:
+--   * 008b_add_is_admin_to_users.sql is SKIPPED by the CLI — its version does not
+--     parse from the filename's leading digits.
+--   * 011_event_images_bucket.sql and 011_rls_audit.sql both derive version `011`,
+--     and the second one violates the primary key of
+--     supabase_migrations.schema_migrations, aborting the replay.
+--   * Three further version collisions (008, 20260305000002, 20260306) would abort
+--     subsequent attempts even if `011` were resolved.
+--
+-- This is NOT "input not supplied". The input was supplied (Docker was running, the
+-- migrations are all present and tracked); the repository's own migration history is
+-- what blocks the snapshot. Stage 3 REFAC-01 owns the fix.
+--
+-- To produce a real snapshot once the migration history replays cleanly, run, from
+-- the repository root, on a machine with ports 54320-54327 free:
+--
+--     supabase start
+--     supabase db reset --local 2>&1 | tee .planning/audit/schema/local-reset.txt
+--     supabase db dump --local --schema public,storage,extensions \
+--       -f .planning/audit/schema/local.schema.sql
+--     bash .planning/audit/tools/readonly-guard.sh
+--
+-- The `auth` schema is deliberately excluded from `--schema`: an auth dump can carry
+-- role grants and inline keys into git history permanently, and `.planning/` is
+-- committed. Never pass `--role-only` into a committed path.
+--
+-- `node .planning/audit/tools/validate.mjs --check schema-snapshots` FAILS while this
+-- stub is in place. That failure is correct and intended: AUDIT-01 is incomplete, and
+-- the gate should say so rather than be satisfied by a placeholder.

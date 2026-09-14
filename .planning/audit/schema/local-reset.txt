@@ -1,0 +1,127 @@
+LOCAL MIGRATION REPLAY — captured output
+========================================
+Requirement:  AUDIT-01 (local snapshot), input to AUDIT-02 and to Stage 3 REFAC-01
+Plan:         01-06
+Captured:     2026-09-14
+Outcome:      FAILED — the 44 migrations in supabase/migrations/ DO NOT replay from zero.
+              Per 01-RESEARCH.md § Open Questions 5, a failed local replay is the
+              artifact, not a blocked task. This is a finding, and a high-value one.
+
+HOW THIS WAS CAPTURED
+---------------------
+Intended command (from the plan):
+
+    supabase start
+    supabase db reset --local
+
+That is NOT the command that produced the transcript below, and the deviation matters
+for reproducibility. `supabase start` in the repository working directory failed before
+reaching any migration:
+
+    failed to start docker container "supabase_db_Event-Radar": ...
+    Bind for 0.0.0.0:54322 failed: port is already allocated
+
+An unrelated local Supabase stack (docker project `PassiveIncomeInvestingDEMO`) was
+already holding 54321/54322/54323/54324/54327 on this machine. The audit has no
+authority to stop another project's containers, and changing `[db].port` in
+supabase/config.toml would be a write outside `.planning/`, which this phase forbids.
+
+The replay was therefore run against an OUT-OF-REPO COPY of the `supabase/` directory,
+with only two things changed in the copied config.toml — `project_id` and the six host
+port numbers — and with `supabase/migrations/` byte-identical to the repository's:
+
+    SCRATCH="$(mktemp -d)"                       # outside the repository
+    cp -R supabase "$SCRATCH/supabase" && rm -rf "$SCRATCH/supabase/.temp"
+    # in $SCRATCH/supabase/config.toml only: project_id -> "Event-Radar-audit",
+    #   54321->55321  54322->55322  54320->55320  54329->55329
+    #   54323->55323  54324->55324  54327->55327
+    supabase start --workdir "$SCRATCH"
+
+Nothing in the repository was read-write at any point; `readonly-guard.sh` exits 0
+after this capture. `supabase start` applies `supabase/migrations/` from an empty
+database in exactly the same way `supabase db reset --local` does, so the replay under
+test is the real one. `db reset --local` itself could not be reached, because the stack
+never came up.
+
+To reproduce on a machine with 54321-54327 free, use the plan's original commands:
+
+    supabase start
+    supabase db reset --local 2>&1 | tee .planning/audit/schema/local-reset.txt
+
+VERBATIM TRANSCRIPT
+-------------------
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Starting database...
+Initialising schema...
+Seeding globals from roles.sql...
+Skipping migration 008b_add_is_admin_to_users.sql... (file name must match pattern "<timestamp>_name.sql")
+Applying migration 001_initial_schema.sql...
+Applying migration 002_rls_policies.sql...
+Applying migration 003_user_interactions.sql...
+Applying migration 004_event_popularity.sql...
+Applying migration 005_user_engagement.sql...
+Applying migration 006_tracking_rls_policies.sql...
+Applying migration 007_add_created_by_and_notifications.sql...
+Applying migration 008_event_source_tracking.sql...
+Applying migration 009_user_roles.sql...
+Applying migration 010_feedback_table.sql...
+Applying migration 011_event_images_bucket.sql...
+Applying migration 011_rls_audit.sql...
+Stopping containers...
+{"_tag":"Error","error":{"code":"LegacyMigrationApplyError","message":"ERROR: duplicate key value violates unique constraint \"schema_migrations_pkey\" (SQLSTATE 23505)\nKey (version)=(011) already exists.\nAt statement: 39\nINSERT INTO supabase_migrations.schema_migrations(version, name, statements) VALUES($1, $2, $3)"}}
+
+WHAT THE TRANSCRIPT SHOWS
+-------------------------
+Two distinct defects, both in `supabase/migrations/` and both reproducible on any
+clean machine. 12 of 44 migrations were attempted; 11 applied; the replay aborted.
+
+1. A MIGRATION IS SILENTLY SKIPPED, NOT FAILED.
+   `008b_add_is_admin_to_users.sql` does not parse as `<version>_<name>.sql` — the CLI
+   derives a migration's version from the LEADING DIGITS of the filename, and `008b`
+   leaves a trailing `b`. The CLI printed "Skipping" and moved on with exit status
+   still 0 at that point. Whatever that file does (its name says it adds an is_admin
+   column to `users`) is applied in NO environment built from the migrations folder.
+   A skip is worse than a failure: it is silent, and any environment rebuilt from
+   migrations diverges from production without anyone being told.
+
+2. TWO MIGRATIONS SHARE A VERSION, AND THE SECOND ABORTS THE REPLAY.
+   `011_event_images_bucket.sql` and `011_rls_audit.sql` both derive version `011`.
+   `supabase_migrations.schema_migrations` has `version` as its primary key, so the
+   second INSERT violates the key and the whole replay stops there. Statement 39 is
+   the bookkeeping INSERT, which the CLI issues last in each migration; whether the
+   preceding statements of `011_rls_audit.sql` were rolled back with it was not
+   verified here, because the containers were torn down by the CLI's own error path.
+   Either way the outcome is the same: 11 of 44 migrations applied, and the database
+   stops well short of the schema the application expects.
+
+   This is not the only colliding pair. The full duplicate-version census over the 44
+   files, derived by the same leading-digits rule the CLI uses:
+
+       version 008            -> 008_event_source_tracking.sql, 008b_add_is_admin_to_users.sql
+       version 011            -> 011_event_images_bucket.sql, 011_rls_audit.sql
+       version 20260305000002 -> 20260305000002_email_reminder_log.sql,
+                                 20260305000002_phase1_club_rls_and_schema.sql
+       version 20260306       -> 20260306_add_user_profile_fields.sql,
+                                 20260306_create_event_invites.sql,
+                                 20260306_create_user_follows.sql
+
+   Four colliding version groups covering nine files. Fixing the `011` pair alone is
+   not enough: the replay would advance and then abort again at `20260305000002`, and
+   again at `20260306`. Version `008` does not abort only because its partner is the
+   file that gets skipped by defect 1.
+
+CONSEQUENCES FOR THIS PHASE
+---------------------------
+- AUDIT-01's local snapshot cannot be produced. `schema/local.schema.sql` is written
+  as a deferred-with-reason stub pointing back at this file.
+- AUDIT-02's shadow-database diff (plan 01-08) builds the shadow from exactly these
+  migrations and will hit the same duplicate-key abort. Plan 01-08 should expect
+  `supabase db diff` to fail rather than treat the failure as a tooling problem.
+- The migrations-side column of the three-way drift table cannot be derived by
+  replaying; it has to be derived by reading the files statically.
+- Scope for Stage 3: this is REFAC-01's headline. No environment can be rebuilt from
+  source today, which means production's schema exists only in production.
+
+Finding candidate: "supabase/migrations/ does not replay from zero — one migration is
+silently skipped and four version-number collisions abort the replay at the 12th of 44
+files." Severity rationale belongs in findings.json (plan 01-13), not here.

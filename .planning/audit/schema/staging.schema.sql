@@ -1,0 +1,50 @@
+-- .planning/audit/schema/staging.schema.sql
+--
+-- BLOCKED — input not supplied
+--
+-- Requirement: AUDIT-01 (live schema snapshots: production, staging, local)
+-- Plan:        01-06
+-- Date:        2026-09-14
+--
+-- This is a deferred-with-reason stub, not a schema. It contains no DDL.
+--
+-- Blocking reason: at the plan's credential gate the operator was asked whether a
+-- staging Supabase project exists and whether its credentials would be supplied for
+-- this pass. The answer, verbatim, was "Not now." No staging project reference, no
+-- staging access token, and no staging connection string were provided, so no staging
+-- database was contacted. See .planning/audit/BLOCKING-INPUTS.md § 1 for the variable
+-- NAMES this artifact waits on (STAGING_PROJECT_REF, or STAGING_DB_URL for the
+-- direct-connection fallback).
+--
+-- Note for whoever fills this gap: 01-RESEARCH.md § Assumptions Log A4 records that
+-- PROJECT.md asserts a staging project exists, but that this was never verified in
+-- session. "Not now" is a scheduling answer, not a statement that staging is absent.
+-- If it turns out no staging project exists at all, that is itself an AUDIT-01
+-- finding — a two-environment promotion story documented as a three-environment one —
+-- and should be filed rather than recorded here as a deferral.
+--
+-- To produce a real snapshot once the staging credentials are available, run from the
+-- repository root, with the credential exported into the shell (never written to a
+-- file, never passed as a CLI argument):
+--
+--     # preferred: per-command project ref, no `supabase link` (link writes project
+--     # state into supabase/.temp/ and needs a personal access token)
+--     export SUPABASE_ACCESS_TOKEN=...        # in the shell only
+--     supabase db dump --project-ref "$STAGING_PROJECT_REF" \
+--       --schema public,storage,extensions \
+--       -f .planning/audit/schema/staging.schema.sql
+--
+--     # direct-connection fallback, when no access token can be issued
+--     supabase db dump --db-url "$STAGING_DB_URL" \
+--       --schema public,storage,extensions \
+--       -f .planning/audit/schema/staging.schema.sql
+--
+--     bash .planning/audit/tools/readonly-guard.sh
+--
+-- The `auth` schema is deliberately excluded from `--schema`: an auth dump can carry
+-- role grants and inline keys into git history permanently, and `.planning/` is
+-- committed. Never pass `--role-only` into a committed path.
+--
+-- `node .planning/audit/tools/validate.mjs --check schema-snapshots` FAILS while this
+-- stub is in place. That failure is correct and intended: AUDIT-01 is incomplete, and
+-- the gate should say so rather than be satisfied by a placeholder.
