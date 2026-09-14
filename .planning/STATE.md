@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-09-14T07:13:22.136Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-09-14T07:21:06.488Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 13
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 2 of 13
+Plan: 3 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01 P01 | 13 min | 3 tasks | 13 files |
+| Phase 01 P02 | 20 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase 01]: JSON Schemas are hand-written draft-2020-12 subsets checked inside validate.mjs; installing a schema library would mutate package.json and fail the phase exit criterion.
 - [Phase 01]: Severity is exposure-adjusted with a written rationale; CVSS is not assigned to application-logic findings and a Critical may not be risk-accepted.
 - [Phase 01]: AUDIT-13 and AUDIT-20 are NOT marked complete by plan 01-01 — it stands up their enforcement only; plans 01-04 and 01-13 deliver them.
+- [Phase 01]: expected_status seeds all 13 CERT-05 persona keys with the 'unknown' sentinel, not an empty object — endpoints.schema.json declares the 13 keys required with additionalProperties false and validate.mjs treats a missing key as a hard schema error, so an empty object fails --check endpoints-signals on all 94 rows while still needing to fail --check endpoints before classification
+- [Phase 01]: Audit generators merge into their artifact by id and overwrite only machine-derived keys; idempotence is the acceptance proof — A replace-semantics regeneration silently discards a day of hand classification (threat T-01-02-03); a byte-identical second run plus a mutate-regenerate-assert test proves the merge rather than asserting it
+- [Phase 01]: signals.env_gated_auth is emitted by plan 01-02 even though its task signal list omits it — Plan 01-01 recorded it as a contract owed to --check authz-registers, and plan 01-07's AUDIT-10 fail-open register has no other data source; without it 01-07 would re-scan src/ with a divergent second regex
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T07:13:13.069Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-09-14T07:20:58.578Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
