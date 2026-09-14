@@ -6,7 +6,7 @@ current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
 stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-09-14T18:48:54.088Z"
+last_updated: "2026-09-14T19:07:34.263Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 7 of 13
+Plan: 8 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P04 | 9 min | 2 tasks | 5 files |
 | Phase 01 P05 | 11 min | 3 tasks | 12 files |
 | Phase 01 P06 | 45 min | 3 tasks | 33 files |
+| Phase 01-read-only-foundation-audit P07 | 21min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,10 @@ Recent decisions affecting current work:
 - [Phase 01]: AUDIT-19 resolved as a negative finding: event_date/event_time exist on no production table; start_date and end_date (timestamptz, NOT NULL) are authoritative. Five stale references survive in three Jest fixtures and two comments.
 - [Phase 01]: AUDIT-01 withheld, not claimed. prod.schema.sql is catalog-derived rather than a pg_dump, staging is unreachable, and the local snapshot is blocked by the repository's own migration history. validate.mjs --check schema-snapshots fails on staging and local by design.
 - [Phase 01]: Raw capture envelopes under .planning/audit/raw/prod/ are committed as evidence and are the shared input for plans 01-08, 01-09, and 01-10.
+- [Phase 01]: AUDIT-07 register is 25 rows including the factory module; validate.mjs NON_ROUTE_SERVICE_CLIENT_CALLSITES corrected 2 -> 3 and cross-checked against baseline/versions.txt service_client_file_count
+- [Phase 01]: Service-role verdicts: 10 justified / 14 needs-decision / 1 unjustified; needs-decision marks rows blocked on a policy fact (plan 01-09 RLS) or a product decision, not on more reading
+- [Phase 01]: src/app/users/[id]/page.tsx generateMetadata line 35 is the sole unjustified service-role callsite: no authentication before construction, attacker-supplied path param as filter
+- [Phase 01]: AUDIT-10 found four env-conditional authorization checks, not two; the PATTERNS.md detector finds only calculate-popularity, so three further detectors were required
 
 ### Pending Todos
 
@@ -125,6 +130,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T18:46:05.906Z
+Last session: 2026-09-14T19:07:28.210Z
 Stopped at: Completed 01-05-PLAN.md
 Resume file: None

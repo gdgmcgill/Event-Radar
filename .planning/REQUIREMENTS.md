@@ -18,14 +18,14 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [ ] **AUDIT-04**: Every page (43 at time of writing) is inventoried with: public/protected, client/server component, data source, auth guard, dead/duplicate status, cross-checked against the middleware protected-route list
 - [ ] **AUDIT-05**: RLS policies are reviewed from live `pg_policies` (not from migration files) for every table × command × role, flagging RLS-disabled tables, RLS-enabled-with-no-policy tables, `USING (true)` policies, and policies with no `TO` clause
 - [ ] **AUDIT-06**: An RLS coverage heatmap (table × command × role, allow/deny/none) is produced from AUDIT-05
-- [ ] **AUDIT-07**: Every `createServiceClient()` callsite is registered with a per-callsite answer to: is RLS bypass actually required, is the caller authenticated first, is user-supplied input used as a filter, is the module reachable from a client bundle
+- [x] **AUDIT-07**: Every `createServiceClient()` callsite is registered with a per-callsite answer to: is RLS bypass actually required, is the caller authenticated first, is user-supplied input used as a filter, is the module reachable from a client bundle
 - [ ] **AUDIT-08**: A cache/personalization exposure matrix classifies every handler by whether its body varies by user and what `Cache-Control` it actually emits, and includes an empirical two-session curl test against production recording `x-vercel-cache` and `age` for personalized routes
-- [ ] **AUDIT-09**: Every `getSession()` call is classified as authorization-gating (defect) or non-gating (annotate why safe)
-- [ ] **AUDIT-10**: Every authorization check conditional on an env var being present (fail-open shape, e.g. `ADMIN_API_KEY`, `CRON_SECRET`) is listed with its reachable route
+- [x] **AUDIT-09**: Every `getSession()` call is classified as authorization-gating (defect) or non-gating (annotate why safe)
+- [x] **AUDIT-10**: Every authorization check conditional on an env var being present (fail-open shape, e.g. `ADMIN_API_KEY`, `CRON_SECRET`) is listed with its reachable route
 - [ ] **AUDIT-11**: Cron and webhook inventory covers pg_cron jobs from `cron.job`, `/api/cron/*` handlers and what (if anything) triggers them, `vercel.json` crons, the Supabase edge function, the Apify/Instagram webhook, and Supabase auth hooks
 - [x] **AUDIT-12**: Dependency report records `npm audit --omit=dev` and `npm outdated` output with a reachability judgment for every High/Critical in production dependencies, and answers whether `swagger-ui-react` and `redoc` are reachable from any production route
 - [x] **AUDIT-13**: Test/build/lint/type-check baseline is captured as actual command output, including the Jest pass/skip counts and the reason for each skipped suite; the test-runner decision (keep Jest, delete Vitest orphans) is recorded with the 14-vs-0 mock-call evidence
-- [ ] **AUDIT-14**: Error handling and observability assessment quantifies: routes with no try/catch, routes that leak internal error text, `catch (error: any)` count, `console.*` call count, absence of request correlation
+- [x] **AUDIT-14**: Error handling and observability assessment quantifies: routes with no try/catch, routes that leak internal error text, `catch (error: any)` count, `console.*` call count, absence of request correlation
 - [x] **AUDIT-15**: Dead-code report (via knip) lists unreferenced routes, components superseded by prior milestones, `API_ENDPOINTS` constants bypassed by hardcoded URLs, and stale docs including the disposition of `internal/` and `backend/` directories
 - [ ] **AUDIT-16**: Client-bundle secret sweep builds the app and greps `.next/static` for the service-role key prefix, `ADMIN_EMAILS`, and `ADMIN_API_KEY`
 - [ ] **AUDIT-17**: A one-page threat model exists for each of three trust boundaries: anonymous → app, authenticated student → other tenants' data, organizer → admin escalation
@@ -167,14 +167,14 @@ No phase crosses a stage boundary.
 | AUDIT-04 | Phase 1 | Pending |
 | AUDIT-05 | Phase 1 | Pending |
 | AUDIT-06 | Phase 1 | Pending |
-| AUDIT-07 | Phase 1 | Pending |
+| AUDIT-07 | Phase 1 | Complete |
 | AUDIT-08 | Phase 1 | Pending |
-| AUDIT-09 | Phase 1 | Pending |
-| AUDIT-10 | Phase 1 | Pending |
+| AUDIT-09 | Phase 1 | Complete |
+| AUDIT-10 | Phase 1 | Complete |
 | AUDIT-11 | Phase 1 | Pending |
 | AUDIT-12 | Phase 1 | Complete |
 | AUDIT-13 | Phase 1 | Complete |
-| AUDIT-14 | Phase 1 | Pending |
+| AUDIT-14 | Phase 1 | Complete |
 | AUDIT-15 | Phase 1 | Complete |
 | AUDIT-16 | Phase 1 | Pending |
 | AUDIT-17 | Phase 1 | Pending |
