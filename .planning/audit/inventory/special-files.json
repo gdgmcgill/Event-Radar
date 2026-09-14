@@ -1,0 +1,146 @@
+[
+  {
+    "id": "admin:layout.tsx",
+    "file": "src/app/admin/layout.tsx",
+    "kind": "layout",
+    "segment": "/admin",
+    "route": "/admin",
+    "has_auth_guard": true,
+    "findings": []
+  },
+  {
+    "id": "clubs:error.tsx",
+    "file": "src/app/clubs/error.tsx",
+    "kind": "error",
+    "segment": "/clubs",
+    "route": "/clubs",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "index:error.tsx",
+    "file": "src/app/error.tsx",
+    "kind": "error",
+    "segment": "/",
+    "route": "/",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "invites:loading.tsx",
+    "file": "src/app/invites/loading.tsx",
+    "kind": "loading",
+    "segment": "/invites",
+    "route": "/invites",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "landing:layout.tsx",
+    "file": "src/app/landing/layout.tsx",
+    "kind": "layout",
+    "segment": "/landing",
+    "route": "/landing",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "index:layout.tsx",
+    "file": "src/app/layout.tsx",
+    "kind": "layout",
+    "segment": "/",
+    "route": "/",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "index:loading.tsx",
+    "file": "src/app/loading.tsx",
+    "kind": "loading",
+    "segment": "/",
+    "route": "/",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "moderation:layout.tsx",
+    "file": "src/app/moderation/layout.tsx",
+    "kind": "layout",
+    "segment": "/moderation",
+    "route": "/moderation",
+    "has_auth_guard": true,
+    "findings": []
+  },
+  {
+    "id": "my-clubs:layout.tsx",
+    "file": "src/app/my-clubs/layout.tsx",
+    "kind": "layout",
+    "segment": "/my-clubs",
+    "route": "/my-clubs",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "my-clubs:loading.tsx",
+    "file": "src/app/my-clubs/loading.tsx",
+    "kind": "loading",
+    "segment": "/my-clubs",
+    "route": "/my-clubs",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "my-events:loading.tsx",
+    "file": "src/app/my-events/loading.tsx",
+    "kind": "loading",
+    "segment": "/my-events",
+    "route": "/my-events",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "index:not-found.tsx",
+    "file": "src/app/not-found.tsx",
+    "kind": "not-found",
+    "segment": "/",
+    "route": "/_not-found",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "notifications:loading.tsx",
+    "file": "src/app/notifications/loading.tsx",
+    "kind": "loading",
+    "segment": "/notifications",
+    "route": "/notifications",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "profile:loading.tsx",
+    "file": "src/app/profile/loading.tsx",
+    "kind": "loading",
+    "segment": "/profile",
+    "route": "/profile",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "index:robots.ts",
+    "file": "src/app/robots.ts",
+    "kind": "robots",
+    "segment": "/",
+    "route": "/robots.txt",
+    "has_auth_guard": false,
+    "findings": []
+  },
+  {
+    "id": "index:sitemap.ts",
+    "file": "src/app/sitemap.ts",
+    "kind": "sitemap",
+    "segment": "/",
+    "route": "/sitemap.xml",
+    "has_auth_guard": false,
+    "findings": []
+  }
+]
