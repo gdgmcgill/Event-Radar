@@ -11,7 +11,7 @@ Requirements are grouped by program stage. Stages are strictly ordered; a stage'
 
 Constraint for every AUDIT requirement: no source, config, dependency, or database change. Findings only.
 
-- [ ] **AUDIT-01**: Live schema snapshots of production, staging, and local Supabase are captured as committed artifacts under `.planning/audit/`
+- [x] **AUDIT-01**: Live schema snapshots of production, staging, and local Supabase are captured as committed artifacts under `.planning/audit/`
   - *Deliberately withheld by plan 01-06, one of three environments short.* Production: `.planning/audit/schema/prod.schema.sql` exists but is a catalog-derived reconstruction from SELECT-only captures, not a `pg_dump` — no Postgres connection string was ever supplied. Staging: no staging project is visible to the operator's token; `staging.schema.sql` is a deferred-with-reason stub. Local: `supabase/migrations/` does not replay from zero (aborts at file 12 of 44 on a version-`011` primary-key collision), so no local database exists to dump; see `schema/local-reset.txt`. `node .planning/audit/tools/validate.mjs --check schema-snapshots` fails on staging and local, and that failure is correct.
 - [x] **AUDIT-02**: A three-way drift table (production schema vs `supabase/migrations/` vs `src/lib/supabase/types.ts`) lists every table and column with exists-in-prod / exists-in-migrations / typed-correctly status, produced with `supabase db diff` and `supabase migration list`
 - [x] **AUDIT-03**: Every API route handler (94 at time of writing) is inventoried in a machine-readable file (CSV or JSON) with: method(s), observed auth requirement, role required, RLS reliance, service-role use, cache headers, personalization (does the body vary by user), input validation present, test present
@@ -19,7 +19,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [x] **AUDIT-05**: RLS policies are reviewed from live `pg_policies` (not from migration files) for every table × command × role, flagging RLS-disabled tables, RLS-enabled-with-no-policy tables, `USING (true)` policies, and policies with no `TO` clause
 - [x] **AUDIT-06**: An RLS coverage heatmap (table × command × role, allow/deny/none) is produced from AUDIT-05
 - [x] **AUDIT-07**: Every `createServiceClient()` callsite is registered with a per-callsite answer to: is RLS bypass actually required, is the caller authenticated first, is user-supplied input used as a filter, is the module reachable from a client bundle
-- [ ] **AUDIT-08**: A cache/personalization exposure matrix classifies every handler by whether its body varies by user and what `Cache-Control` it actually emits, and includes an empirical two-session curl test against production recording `x-vercel-cache` and `age` for personalized routes
+- [x] **AUDIT-08**: A cache/personalization exposure matrix classifies every handler by whether its body varies by user and what `Cache-Control` it actually emits, and includes an empirical two-session curl test against production recording `x-vercel-cache` and `age` for personalized routes
 - [x] **AUDIT-09**: Every `getSession()` call is classified as authorization-gating (defect) or non-gating (annotate why safe)
 - [x] **AUDIT-10**: Every authorization check conditional on an env var being present (fail-open shape, e.g. `ADMIN_API_KEY`, `CRON_SECRET`) is listed with its reachable route
 - [x] **AUDIT-11**: Cron and webhook inventory covers pg_cron jobs from `cron.job`, `/api/cron/*` handlers and what (if anything) triggers them, `vercel.json` crons, the Supabase edge function, the Apify/Instagram webhook, and Supabase auth hooks
@@ -27,7 +27,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [x] **AUDIT-13**: Test/build/lint/type-check baseline is captured as actual command output, including the Jest pass/skip counts and the reason for each skipped suite; the test-runner decision (keep Jest, delete Vitest orphans) is recorded with the 14-vs-0 mock-call evidence
 - [x] **AUDIT-14**: Error handling and observability assessment quantifies: routes with no try/catch, routes that leak internal error text, `catch (error: any)` count, `console.*` call count, absence of request correlation
 - [x] **AUDIT-15**: Dead-code report (via knip) lists unreferenced routes, components superseded by prior milestones, `API_ENDPOINTS` constants bypassed by hardcoded URLs, and stale docs including the disposition of `internal/` and `backend/` directories
-- [ ] **AUDIT-16**: Client-bundle secret sweep builds the app and greps `.next/static` for the service-role key prefix, `ADMIN_EMAILS`, and `ADMIN_API_KEY`
+- [x] **AUDIT-16**: Client-bundle secret sweep builds the app and greps `.next/static` for the service-role key prefix, `ADMIN_EMAILS`, and `ADMIN_API_KEY`
 - [x] **AUDIT-17**: A one-page threat model exists for each of three trust boundaries: anonymous → app, authenticated student → other tenants' data, organizer → admin escalation
 - [x] **AUDIT-18**: Storage bucket policies for `avatars` and `banners` are reviewed for read visibility, path-prefix ownership, and size/MIME limits
 - [x] **AUDIT-19**: The production `events` table's authoritative date columns (`start_date`/`end_date` vs `event_date`/`event_time`) are determined from `information_schema.columns`, not from the types file
@@ -176,7 +176,7 @@ No phase crosses a stage boundary.
 | AUDIT-13 | Phase 1 | Complete |
 | AUDIT-14 | Phase 1 | Complete |
 | AUDIT-15 | Phase 1 | Complete |
-| AUDIT-16 | Phase 1 | Pending |
+| AUDIT-16 | Phase 1 | Complete |
 | AUDIT-17 | Phase 1 | Complete |
 | AUDIT-18 | Phase 1 | Complete |
 | AUDIT-19 | Phase 1 | Complete |

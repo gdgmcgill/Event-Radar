@@ -206,7 +206,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Read-Only Foundation Audit | 13/13 | Complete   | 2026-09-14 |
+| 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
 | 2. Dependency and Runtime Stabilization | 0/TBD | Not started | - |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/TBD | Not started | - |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
