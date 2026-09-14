@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
-stopped_at: Completed 01-11-PLAN.md
-last_updated: "2026-09-14T22:53:34.235Z"
+stopped_at: Completed 01-12-PLAN.md
+last_updated: "2026-09-14T23:13:42.548Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 12 of 13
+Plan: 13 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -66,6 +66,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P09 | 27 min | 3 tasks | 8 files |
 | Phase 01 P10 | 22 min | 3 tasks | 9 files |
 | Phase 01 P11 | ~50 min | 3 tasks | 5 files |
+| Phase 01 P12 | 45 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,7 @@ Recent decisions affecting current work:
 - [Phase 01]: The email half of the Validated 'in-app notifications and email reminders' workflow does not exist in any implementation — No email provider dependency exists anywhere in the project; both the live pg_cron function and the dead route handler only insert in-app notifications rows, while the table name email_reminder_log and the route name send-reminders assert otherwise.
 - [Phase 01]: expected_status records what a route should return, never what it returns today — The divergence between the contract and current behaviour is the finding; recording broken behaviour as the contract would launder a defect into a specification (T-01-11-04)
 - [Phase 01]: The aborted run's 33 hand-edited endpoint rows were discarded and the classification re-derived by a committed script — A hand edit is not reproducible: nobody downstream can re-derive it and nobody can tell which cells came from a rule and which from fatigue
+- [Phase 01]: Shared caching of personalized API responses is PROVEN on production: 8 personalized routes returned x-vercel-cache HIT/STALE with age up to 96s under the blanket vercel.json s-maxage=60, and no response varies on Cookie or Authorization — The cache key is the URL alone, so a stored entry is served to every caller regardless of session. Held at latent-hazard/Critical rather than leak-confirmed only because the two-account observation was blocked.
 
 ### Pending Todos
 
@@ -135,6 +137,7 @@ None yet.
 - AUDIT-01 is incomplete. No staging Supabase project is visible to the operator's token (staging.schema.sql is a deferred-with-reason stub), the local snapshot is blocked because supabase/migrations does not replay from zero (aborts at file 12 of 44 on a version-011 primary-key collision), and prod.schema.sql is a catalog-derived reconstruction rather than a pg_dump because no Postgres connection string was supplied. Unblocked by: a PROD_DB_URL/STAGING_DB_URL, or by REFAC-01 repairing the migration history.
 - Club-invitation acceptance is broken in production: the invitee SELECT/UPDATE policies exist in 20260226000001_invitee_select_update_policy.sql but not in the database, and /api/clubs/[id]/invites is RLS-reliant so nothing masks it.
 - AUDIT-11 leaves two closable gaps needing one credentialed read each: whether the events-webhook edge function is deployed (supabase functions list), and whether any GoTrue auth hook is configured in the dashboard (Management API GET /v1/projects/{ref}/config/auth). A third open question: user_event_scores reports 0 rows while compute_user_scores succeeds every 6 hours.
+- AUDIT-08 two-session cache probe BLOCKED: COOKIE_A/COOKIE_B not supplied. Retry: export PROD_HOST=https://universeapp.ca plus COOKIE_A/COOKIE_B, then bash .planning/audit/tools/cache-probe.sh && node .planning/audit/tools/gen-cache-matrix.mjs
 
 ## Deferred Items
 
@@ -147,6 +150,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T22:53:34.232Z
-Stopped at: Completed 01-11-PLAN.md
+Last session: 2026-09-14T23:13:35.414Z
+Stopped at: Completed 01-12-PLAN.md
 Resume file: None
