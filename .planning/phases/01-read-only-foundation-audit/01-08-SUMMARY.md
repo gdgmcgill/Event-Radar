@@ -99,7 +99,7 @@ status: complete
 | `schema/migration-list.local.txt` | The local applied set transcribed from `local-reset.txt`: 11 applied, 1 silently skipped, 1 aborting, 32 never reached |
 | `schema/db-diff.prod.sql` | Blocked twice — no credential, and a shadow build that fails regardless. Records the verified preconditions (Docker **is** reachable, CLI **is** installed, project **is not** linked) so the block is not misattributed later |
 | `schema/db-diff.staging.sql` | Blocked three times — the two above plus no staging baseline to diff against |
-| `tools/gen-drift-table.mjs` | 1,079-line zero-dependency ESM generator: SQL lexer respecting quotes and dollar-quoted bodies, `CREATE TABLE`/`ALTER TABLE ADD COLUMN`/`DROP` extraction, brace-depth `types.ts` Row parser, pg→TS expectation table keyed on `udt_name`, merge-by-key writer |
+| `tools/gen-drift-table.mjs` | 1,058-line zero-dependency ESM generator: SQL lexer respecting quotes and dollar-quoted bodies, `CREATE TABLE`/`ALTER TABLE ADD COLUMN`/`DROP` extraction, brace-depth `types.ts` Row parser, pg→TS expectation table keyed on `udt_name`, merge-by-key writer |
 | `schema/drift.json` | 288 rows, the machine-readable table. Sorted to a total order; two consecutive runs are byte-identical |
 | `schema/drift.md` | Generated human view: source hierarchy, per-class summary, the `types.ts`-is-generator-output correction, named consequences, per-table sections listing only the drifting rows |
 | `redaction/01-08.md` | Per-plan redaction ledger: nine artifacts, seven patterns, per-file counts, the one non-zero count itemised and dismissed, and the false-clean incident |
@@ -113,7 +113,7 @@ status: complete
 | `migrations-only` | 22 | a migration declares it; **production does not have it** |
 | `type-mismatch` | 0 | production and migrations agree but `types.ts` disagrees |
 | `types-only` | 15 | `types.ts` declares it; nothing else does |
-| **total** | **288** | 278 column rows, 7 table rows, 7 object rows |
+| **total** | **288** | 278 column rows, 3 table rows, 7 object rows |
 
 **76 of 288 rows are not in sync.**
 
@@ -216,3 +216,26 @@ Open concerns carried forward: staging remains entirely unaudited and unverified
 ---
 *Phase: 01-read-only-foundation-audit*
 *Completed: 2026-09-14*
+
+## Self-Check: PASSED
+
+Verified after writing this summary, against disk and git rather than against memory:
+
+- All 9 artifacts in `key-files.created` exist on disk (`[ -f ]` on each).
+- All 3 commits resolve in `git log --oneline --all`: `0f08b29`, `c6c9710`, `cc98792`.
+- `git diff --name-only 0f08b29~1..HEAD` lists **no path outside `.planning/`**.
+- `node .planning/audit/tools/validate.mjs --check drift` — exit 0, 4 assertions passed.
+- `bash .planning/audit/tools/readonly-guard.sh` — exit 0.
+- `git status --porcelain -- supabase/` — empty. `ls supabase/migrations | wc -l` — 44, matching baseline.
+- Generator idempotency re-confirmed: two consecutive runs leave `drift.json` and `drift.md` byte-identical.
+
+Two numeric claims written from memory were wrong and were corrected here before this
+section was appended: the generator is **1,058** lines, not 1,079; and `drift.json` holds
+**3** table-scope rows, not 7 (278 column + 3 table + 7 object = 288). Both were caught by
+re-deriving them from disk. Recorded rather than silently fixed, because a summary that
+quietly corrects itself gives no signal about which of its other numbers were derived and
+which were recalled.
+
+---
+*Phase: 01-read-only-foundation-audit*
+*Plan: 01-08*
