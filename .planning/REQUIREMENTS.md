@@ -13,7 +13,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 
 - [ ] **AUDIT-01**: Live schema snapshots of production, staging, and local Supabase are captured as committed artifacts under `.planning/audit/`
 - [ ] **AUDIT-02**: A three-way drift table (production schema vs `supabase/migrations/` vs `src/lib/supabase/types.ts`) lists every table and column with exists-in-prod / exists-in-migrations / typed-correctly status, produced with `supabase db diff` and `supabase migration list`
-- [ ] **AUDIT-03**: Every API route handler (92 at time of writing) is inventoried in a machine-readable file (CSV or JSON) with: method(s), observed auth requirement, role required, RLS reliance, service-role use, cache headers, personalization (does the body vary by user), input validation present, test present
+- [ ] **AUDIT-03**: Every API route handler (94 at time of writing) is inventoried in a machine-readable file (CSV or JSON) with: method(s), observed auth requirement, role required, RLS reliance, service-role use, cache headers, personalization (does the body vary by user), input validation present, test present
 - [ ] **AUDIT-04**: Every page (43 at time of writing) is inventoried with: public/protected, client/server component, data source, auth guard, dead/duplicate status, cross-checked against the middleware protected-route list
 - [ ] **AUDIT-05**: RLS policies are reviewed from live `pg_policies` (not from migration files) for every table × command × role, flagging RLS-disabled tables, RLS-enabled-with-no-policy tables, `USING (true)` policies, and policies with no `TO` clause
 - [ ] **AUDIT-06**: An RLS coverage heatmap (table × command × role, allow/deny/none) is produced from AUDIT-05

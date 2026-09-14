@@ -9,6 +9,7 @@ The through-line is behavior preservation. Every phase after Phase 1 re-confirms
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -28,107 +29,163 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Read-Only Foundation Audit
+
 **Goal**: The true current state of the codebase is known with captured evidence — every endpoint, page, policy, dependency, and risk inventoried, and every finding recorded with a reproduction and a validation criterion — without a single source, config, dependency, or database change.
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
 **Requirements**: AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04, AUDIT-05, AUDIT-06, AUDIT-07, AUDIT-08, AUDIT-09, AUDIT-10, AUDIT-11, AUDIT-12, AUDIT-13, AUDIT-14, AUDIT-15, AUDIT-16, AUDIT-17, AUDIT-18, AUDIT-19, AUDIT-20, AUDIT-21
 **Success Criteria** (what must be TRUE):
-  1. `.planning/audit/` holds committed live schema snapshots (production, staging, local), the three-way prod-vs-migrations-vs-types drift table, machine-readable inventories of all 92 handlers and 43 pages, the RLS policy review and coverage heatmap from live `pg_policies`, the `createServiceClient()` callsite register with a per-callsite bypass justification, the cron/webhook inventory, the storage bucket policy review, the dependency and dead-code reports, and the client-bundle secret sweep.
+
+  1. `.planning/audit/` holds committed live schema snapshots (production, staging, local), the three-way prod-vs-migrations-vs-types drift table, machine-readable inventories of all 94 handlers and 43 pages, the RLS policy review and coverage heatmap from live `pg_policies`, the `createServiceClient()` callsite register with a per-callsite bypass justification, the cron/webhook inventory, the storage bucket policy review, the dependency and dead-code reports, and the client-bundle secret sweep.
   2. The cache/personalization exposure matrix classifies every handler by whether its body varies by user and what `Cache-Control` it actually emits, and includes the empirical two-session curl test against production recording `x-vercel-cache` and `age` — so the `s-maxage=60` question is answered by evidence, not reasoning.
   3. A reviewer can answer, from the artifacts alone without reading source: which authorization checks fail open, which `getSession()` calls gate authorization, which cron and webhook triggers actually fire, which `events` date columns are authoritative per `information_schema.columns`, and which trust boundaries are exposed (three one-page threat models: anonymous → app, student → other tenants, organizer → admin).
   4. `FOUNDATION_AUDIT.md` exists where every finding carries a stable `F-nnn` id, exposure-adjusted severity with rationale, category, affected paths with line numbers, captured evidence, reproduction steps, recommended fix, validation criterion, and status — accompanied by a written severity SLA policy stating when each level must be fixed.
   5. The test/build/lint/type-check baseline is actual captured command output (including Jest pass/skip counts and a reason per skipped suite, and the test-runner decision with its mock-call evidence), and `git diff` for the phase touches nothing outside `.planning/`.
-**Plans**: TBD
+
+**Plans**: 13 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 01-01-PLAN.md — Audit harness: read-only guard, baseline captures, zero-dependency validator, three JSON schemas, blocking-input request, severity SLA
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 01-02-PLAN.md — Endpoint inventory: merging generator, 94 signal rows, derived CSV review view
+- [ ] 01-03-PLAN.md — Build-derived surface: reachable-route table, 43-row page inventory with both auth rings, client-bundle secret sweep
+- [ ] 01-04-PLAN.md — Toolchain baseline: verbatim test/type-check/lint capture, test-runner decision with mock-call evidence
+- [ ] 01-05-PLAN.md — Dependency reachability and dead code: pinned one-shot tools, per-advisory reachability, API-doc reachability answer, disposition report
+- [ ] 01-06-PLAN.md — Read-only SQL transport, three schema snapshots, authoritative events date columns
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 01-07-PLAN.md — Static authorization registers: service-role, session-reading, fail-open, plus quantified observability
+- [ ] 01-08-PLAN.md — Three-way schema drift table from migration history and the shadow-database diff
+- [ ] 01-09-PLAN.md — RLS policy review from live policies and the table-by-command-by-role coverage heatmap
+- [ ] 01-10-PLAN.md — Storage bucket policy review and the six-source cron and webhook inventory
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 01-11-PLAN.md — Endpoint and page classification, including the 13-persona expectation matrix
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 01-12-PLAN.md — Production two-session cache exposure probe with a positive control
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 01-13-PLAN.md — Three threat models, the F-nnn finding register in both representations, and the phase gate
 
 ### Phase 2: Dependency and Runtime Stabilization
+
 **Goal**: The toolchain and dependency tree are pinned, patched, and reproducible, and the test suite that already passes is wired to actually gate changes — so Stage 3 refactors land on a bisectable base.
 **Mode:** mvp
 **Depends on**: Phase 1 (Stage 1 gate — no dependency change may start before the audit baseline is captured)
 **Requirements**: STAB-01, STAB-02, STAB-03, STAB-04, STAB-05, STAB-06, STAB-07, STAB-08, STAB-09, STAB-10, STAB-11, STAB-12, STAB-13, STAB-14, STAB-15, STAB-16, STAB-17
 **Success Criteria** (what must be TRUE):
+
   1. A clean-room install (`rm -rf node_modules && npm ci` in a fresh checkout) succeeds and builds on the pinned Node/npm from `engines` and `.nvmrc`, with the output captured as evidence; `package-lock.json` changes were reviewed as diffs, never regenerated wholesale, and `npm audit fix --force` was never used.
   2. `npm test` exists and runs Jest as the single test runner — Vitest orphans deleted, `jest-environment-jsdom` and testing-library installed so the previously-skipped `.tsx` suites actually run — and CI runs it plus `npm audit --audit-level=high --omit=dev` on every pull request.
   3. `vercel` is gone from production dependencies with the devDependency decision recorded; Next.js is on the patched release as its own commit with `react` and `react-dom` untouched; `middleware.ts` → `proxy.ts` landed as its own gated change with rate-limiting and ban-check behavior smoke-tested before and after; Swagger/Redoc disposition matches the AUDIT-12 reachability answer.
   4. Every Validated workflow in PROJECT.md still works: each upgrade batch is one labeled commit followed by lint, type-check, test, build, and a smoke pass, with any major upgrade isolated behind its own migration note.
   5. A Stage 2 completion note evidences the exit gate — no unexplained Critical production vulnerabilities, no reachable High without a dated owner-signed exception against the written vulnerability policy, reproducible install, checks green at or better than the AUDIT-13 baseline, reviewed lockfile — alongside a committed CycloneDX SBOM, Renovate/Dependabot configuration, and before/after bundle size.
+
 **Plans**: TBD
 
 ### Phase 3: Refactor Foundations — Schema Truth and the Seam Kit
+
 **Goal**: The schema, the generated types, the server seam, the persona test harness, and the deterministic seed all exist and agree with production — so a vertical slice has a layer to refactor into and a net to fall into.
 **Mode:** mvp
 **Depends on**: Phase 2 (Stage 2 exit gate STAB-17 must be evidenced before any refactor begins)
 **Requirements**: REFAC-01, REFAC-02, REFAC-03, REFAC-04, REFAC-05, REFAC-06, REFAC-07, REFAC-08
 **Success Criteria** (what must be TRUE):
+
   1. `supabase db reset` from the migrations folder produces a schema that diffs clean against production (reconciled by baseline plus `migration repair`, never by renaming existing files), with audit-identified missing FK indexes and RLS policy gaps fixed by new migrations that each carry a pgTAP allow/deny test, and the `compute_user_scores` pg_cron schedule codified as an idempotent migration so local and staging match production instead of silently falling back to popularity.
   2. Supabase types are generated by `supabase gen types` from the reconciled schema, a CI step fails on type drift, and `(supabase as any)` casts in `src/` count zero.
   3. `src/server/` exists with request context computed once per request, http/error helpers, `requireUser`/`requireRole`/`requireClubRole`, and `src/server/db/elevated/` as the only door to the service-role client — applied to zero routes so far — with an ESLint import-boundary rule that fails the build when `src/app/**` imports the service-role client directly.
   4. A Playwright persona harness runs against local Supabase with one storage state per persona from a setup project and at least six happy-path specs covering Validated workflows, backed by a deterministic seed (fixed UUIDs, fixed timestamps against a pinned now, fixed PRNG seed) covering every user role, ban state, club status, and event status — whose loader hard-refuses any Supabase URL outside local and staging.
   5. The auth callback route has passing characterization tests (OAuth exchange, McGill enforcement, user upsert, admin auto-assignment, onboarding routing) written before anything modifies it.
+
 **Plans**: TBD
 
 ### Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path
+
 **Goal**: The seam kit is proven end-to-end on the two highest-traffic user workflows, and the data-shape confusion sitting under the event read path is settled before anything downstream depends on it.
 **Mode:** mvp
 **Depends on**: Phase 3
 **Requirements**: REFAC-09, REFAC-10
 **Success Criteria** (what must be TRUE):
+
   1. Saved-events and RSVP handlers run through the seam kit, RSVP counts come from a count query or DB function instead of loading all rows, and characterization tests tagged PRESERVE or DEFECT (referencing their `F-nnn`) pass before and after the refactor.
   2. The events list returns clubs from a real join instead of fabricating club objects, and the dual date schema is resolved to the authoritative columns determined in AUDIT-19.
   3. Tag mapping is centralized with unknown tags surfaced rather than silently coerced to SOCIAL, and `%` and `_` are escaped in search input.
   4. After each slice the Playwright happy-path specs pass and the Validated workflow list in PROJECT.md is re-confirmed — browse, search, filter, save, and RSVP behave exactly as before, with no intentional visual change shipped alongside either slice.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 5: Slices 3–5 — Auth, Club Authorization, Admin Containment
+
 **Goal**: Authorization decisions happen in exactly one fails-closed place, cross-tenant and privilege-escalation paths are denied at both the authz ring and the RLS ring, and the service-role client has exactly one registered door.
 **Mode:** mvp
 **Depends on**: Phase 4 (the characterization harness from Slices 1–2 must exist before the highest-blast-radius change in the program)
 **Requirements**: REFAC-11, REFAC-12, REFAC-13, REFAC-17, REFAC-18
 **Success Criteria** (what must be TRUE):
+
   1. Every authorization decision uses `getUser()` rather than `getSession()`, middleware is advisory-only, the ban check fails closed instead of letting a thrown error through, the onboarding guard cannot be bypassed by direct API calls, and env-var non-null assertions are replaced with validated config.
   2. The 19 hand-rolled club-membership checks collapse into `requireClubRole`, and a cross-club access attempt returns 403 at the authz ring and is independently denied at the RLS ring.
   3. Every fail-open endpoint fails closed, `verifyAdmin()` guards every admin route, and every remaining service-role use goes through `src/server/db/elevated/` with a registered justification.
   4. Rate limiting runs from a distributed store so it holds across serverless instances and now covers `/api/admin/*`; CSRF exposure is assessed against Supabase cookie SameSite behavior and protection added on state-changing routes wherever exposure remains.
   5. After each of the three slices the Playwright specs pass and the Validated workflow list is re-confirmed — in particular every persona can still sign in, non-McGill sign-in is still rejected, banned users are still blocked, and organizers still reach their club surfaces.
+
 **Plans**: TBD
 
 ### Phase 6: Slices 6–7 — Async Edge, Contracts, Caching, Observability
+
 **Goal**: The asynchronous edge is credentialed and characterized, every handler validates its input, personalized responses stop being shareable by the CDN, and a failure in production becomes visible — closing Stage 3 with the behavior it started with.
 **Mode:** mvp
 **Depends on**: Phase 5 (the cache default cannot be inverted until every route is classified and refactored)
 **Requirements**: REFAC-14, REFAC-15, REFAC-16, REFAC-19, REFAC-20, REFAC-21, REFAC-22, REFAC-23
 **Success Criteria** (what must be TRUE):
+
   1. Cron and webhook routes require credentials and fail closed when they are absent, and the recommendation API surface is characterized input → ranked output with the scoring formula left unchanged.
   2. Every handler validates input with a zod schema from `src/contracts/` at its boundary and returns a consistent 400 shape on malformed input, with the same schemas exported and reused by client hooks so client and handler cannot drift.
   3. The blanket `s-maxage=60` is gone from `vercel.json`, personalized routes return `private, no-store`, public routes opt in to caching explicitly, and a cross-user cache regression test passes.
   4. Server code emits structured JSON logs with levels and a request correlation id on both Node and middleware runtimes, a deliberately triggered error appears in Sentry carrying that correlation id (Turbopack-aware setup, source maps, environment and release tagging, PII scrubbing decided before install), and `/api/health` reports DB, auth, storage, pg_cron freshness, and last webhook receipt in a documented shape without using `getSession()` for access control.
   5. After the final slice the Playwright happy-path specs pass and every Validated workflow in PROJECT.md is re-confirmed, with each slice landing as one reviewable change naming the finding IDs it closes and any intentional behavior change logged.
+
 **Plans**: TBD
 
 ### Phase 7: Certification Datasets and Persona Coverage
+
 **Goal**: Three datasets and a persona-driven test suite exist that prove, for every role and every workflow, that the app allows exactly what it should and denies everything else.
 **Mode:** mvp
 **Depends on**: Phase 6 (Stage 3 must be complete — certification is only credible against a stable, classified, characterized codebase)
 **Requirements**: CERT-01, CERT-02, CERT-03, CERT-04, CERT-05, CERT-06, CERT-07, CERT-08, CERT-09, CERT-10, CERT-19
 **Success Criteria** (what must be TRUE):
+
   1. Deterministic, adversarial, and scale datasets load idempotently into local and staging and re-run cleanly after `supabase db reset` — the functional set covering every entity, role, ban state, status, and edge case; the adversarial set covering malformed input, injection-shaped strings, unsafe links, duplicates, America/Toronto timezone and DST cases, expired content, cross-tenant probes, auth and upload abuse; the scale set generated from a fixed seed with a skewed popularity distribution — and the loader refuses any Supabase URL outside the allowlist.
   2. The 13-persona × workflow matrix executes with an asserted expected outcome per cell, including the personas usually skipped (mid-onboarding, expired suspension, machine callers with absent credentials, non-McGill sign-in).
   3. A generated persona × endpoint authorization matrix, data-driven from the AUDIT-03 inventory, asserts the expected status for every endpoint × persona and fails on any unclassified endpoint.
   4. pgTAP RLS allow/deny tests exist per table using `set local role` impersonation, asserting affected row counts in both directions rather than `lives_ok` alone, with a CI guard that fails if any RLS test file references the service-role client.
   5. Playwright E2E specs cover every Validated critical workflow with per-persona storage state and no shared mutable accounts, every endpoint has an authenticated-vs-anonymous assertion plus a cross-tenant probe, every page has a smoke test asserting load, no console error or unhandled rejection, and correct auth redirect, a cross-user cache-exposure test proves no A-data and no shared-cache HIT — and CI runs the pgTAP and Playwright suites against a seeded local Supabase on every pull request.
+
 **Plans**: TBD
 
 ### Phase 8: Operational Certification and Sign-Off
+
 **Goal**: The system is proven to hold under load, to fail visibly, and to be recoverable — and the foundation is declared certified so the next milestone can start.
 **Mode:** mvp
 **Depends on**: Phase 7
 **Requirements**: CERT-11, CERT-12, CERT-13, CERT-14, CERT-15, CERT-16, CERT-17, CERT-18, CERT-20
 **Success Criteria** (what must be TRUE):
+
   1. Every Critical and High finding in `FOUNDATION_AUDIT.md` is closed by its own validation criterion passing, or carries a dated, owned, written risk acceptance.
   2. k6 load tests against the scale dataset on staging — extended from the existing scripts with event-list and event-detail hot paths — pass p95 latency and error-rate thresholds that were stated before the run, and staging configuration is diffed against production (env vars, `vercel.json`, RLS state, extensions).
   3. A production deploy followed by a real `vercel rollback` is confirmed serving the prior build with deployment ids and timestamps recorded, and a Supabase backup restored into a scratch or staging project yields a measured RTO with PITR status confirmed and the restore drill scheduled to recur.
   4. A deliberately triggered error and a downtime condition each produce an alert a human observes receiving with the Sentry event and correlation id retrievable, and a chaos probe with Supabase unreachable shows recommendations falling back to popularity and pages rendering an error state rather than crashing.
   5. A written certification report states what was tested, by which persona, with which dataset, what passed, what is accepted risk, and declares the foundation certified for the next milestone.
+
 **Plans**: TBD
 
 ## Cross-Cutting Disciplines
@@ -149,7 +206,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Read-Only Foundation Audit | 0/TBD | Not started | - |
+| 1. Read-Only Foundation Audit | 0/13 | Planned | - |
 | 2. Dependency and Runtime Stabilization | 0/TBD | Not started | - |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/TBD | Not started | - |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
