@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Stage gates:** Phases 2–8 may not start until the prior stage's exit gate is evidenced. Phase 1 is the Stage 1 gate, Phase 2 is the Stage 2 gate (STAB-17), Phases 3–6 are Stage 3, Phases 7–8 are Stage 4 (ending at CERT-20).
 
-- [ ] **Phase 1: Read-Only Foundation Audit** - Inventory and assess everything with evidence; change nothing
+- [x] **Phase 1: Read-Only Foundation Audit** - Inventory and assess everything with evidence; change nothing (completed 2026-09-14)
 - [ ] **Phase 2: Dependency and Runtime Stabilization** - Pin, patch, and make the tree reproducible; make the test suite gate changes
 - [ ] **Phase 3: Refactor Foundations — Schema Truth and the Seam Kit** - Reconcile schema, generate types, build the server seam, the persona harness, and the seed
 - [ ] **Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path** - Prove the seam on the two highest-traffic workflows and settle the event data shape
@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `FOUNDATION_AUDIT.md` exists where every finding carries a stable `F-nnn` id, exposure-adjusted severity with rationale, category, affected paths with line numbers, captured evidence, reproduction steps, recommended fix, validation criterion, and status — accompanied by a written severity SLA policy stating when each level must be fixed.
   5. The test/build/lint/type-check baseline is actual captured command output (including Jest pass/skip counts and a reason per skipped suite, and the test-runner decision with its mock-call evidence), and `git diff` for the phase touches nothing outside `.planning/`.
 
-**Plans**: 12/13 plans executed
+**Plans**: 13/13 plans complete
 
 Plans:
 **Wave 1**
@@ -74,7 +74,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 01-13-PLAN.md — Three threat models, the F-nnn finding register in both representations, and the phase gate
+- [x] 01-13-PLAN.md — Three threat models, the F-nnn finding register in both representations, and the phase gate
 
 ### Phase 2: Dependency and Runtime Stabilization
 
@@ -206,7 +206,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Read-Only Foundation Audit | 12/13 | In Progress|  |
+| 1. Read-Only Foundation Audit | 13/13 | Complete   | 2026-09-14 |
 | 2. Dependency and Runtime Stabilization | 0/TBD | Not started | - |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/TBD | Not started | - |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
