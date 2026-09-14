@@ -1,0 +1,160 @@
+{
+  "name": "storage-policies",
+  "captured_at": "2026-09-14T18:31:13Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname",
+  "row_count": 15,
+  "redactions": [],
+  "rows": [
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Allow authenticated delete from own folder",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "((auth.uid())::text = (storage.foldername(name))[1])",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Allow authenticated update in own folder",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "((auth.uid())::text = (storage.foldername(name))[1])",
+      "with_check": "((auth.uid())::text = (storage.foldername(name))[1])"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Allow authenticated upload to own folder",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((auth.uid())::text = (storage.foldername(name))[1])"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Allow public read access 1oj01fe_0",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Anyone can view banners",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'banners'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Anyone can view club logos",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'club-logos'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Anyone can view event images",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'event-images'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Authenticated users can update club logos",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Authenticated users can upload banners",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(bucket_id = 'banners'::text)"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Authenticated users can upload club logos",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Authenticated users can upload event images",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(bucket_id = 'event-images'::text)"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Public read access for event images",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'event-images'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Service role upload for event images",
+      "permissive": "PERMISSIVE",
+      "roles": "{service_role}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(bucket_id = 'event-images'::text)"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Users can delete their own banners",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "((bucket_id = 'banners'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Users can update their own banners",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = 'banners'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+      "with_check": null
+    }
+  ]
+}

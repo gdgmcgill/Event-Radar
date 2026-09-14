@@ -1,0 +1,87 @@
+{
+  "name": "triggers",
+  "captured_at": "2026-09-14T18:30:45Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select n.nspname as schema, c.relname as \"table\", t.tgname, t.tgenabled, pg_get_triggerdef(t.oid, true) as definition from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace where not t.tgisinternal and n.nspname in ('public','auth','storage') order by 1,2,3",
+  "row_count": 11,
+  "redactions": [],
+  "rows": [
+    {
+      "schema": "public",
+      "table": "clubs",
+      "tgname": "update_clubs_updated_at",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER update_clubs_updated_at BEFORE UPDATE ON clubs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "schema": "public",
+      "table": "events",
+      "tgname": "update_events_updated_at",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "schema": "public",
+      "table": "organizer_requests",
+      "tgname": "update_organizer_requests_updated_at",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER update_organizer_requests_updated_at BEFORE UPDATE ON organizer_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "schema": "public",
+      "table": "rsvps",
+      "tgname": "trigger_rsvps_updated_at",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER trigger_rsvps_updated_at BEFORE UPDATE ON rsvps FOR EACH ROW EXECUTE FUNCTION update_rsvps_updated_at()"
+    },
+    {
+      "schema": "public",
+      "table": "saved_events",
+      "tgname": "saved_events_count_trigger",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER saved_events_count_trigger AFTER INSERT OR DELETE ON saved_events FOR EACH ROW EXECUTE FUNCTION update_saved_events_count()"
+    },
+    {
+      "schema": "public",
+      "table": "user_interactions",
+      "tgname": "interaction_popularity_trigger",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER interaction_popularity_trigger AFTER INSERT ON user_interactions FOR EACH ROW EXECUTE FUNCTION recalculate_on_interaction()"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "tgname": "update_users_updated_at",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "schema": "storage",
+      "table": "buckets",
+      "tgname": "enforce_bucket_name_length_trigger",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER enforce_bucket_name_length_trigger BEFORE INSERT OR UPDATE OF name ON storage.buckets FOR EACH ROW EXECUTE FUNCTION storage.enforce_bucket_name_length()"
+    },
+    {
+      "schema": "storage",
+      "table": "buckets",
+      "tgname": "protect_buckets_delete",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER protect_buckets_delete BEFORE DELETE ON storage.buckets FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete()"
+    },
+    {
+      "schema": "storage",
+      "table": "objects",
+      "tgname": "protect_objects_delete",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER protect_objects_delete BEFORE DELETE ON storage.objects FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete()"
+    },
+    {
+      "schema": "storage",
+      "table": "objects",
+      "tgname": "update_objects_updated_at",
+      "tgenabled": "O",
+      "definition": "CREATE TRIGGER update_objects_updated_at BEFORE UPDATE ON storage.objects FOR EACH ROW EXECUTE FUNCTION storage.update_updated_at_column()"
+    }
+  ]
+}

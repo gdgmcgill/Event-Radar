@@ -1,0 +1,102 @@
+{
+  "name": "auth-config-tables",
+  "captured_at": "2026-09-14T18:33:02Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select table_schema, table_name from information_schema.tables where table_schema = 'auth' order by 2",
+  "row_count": 23,
+  "redactions": [],
+  "rows": [
+    {
+      "table_schema": "auth",
+      "table_name": "audit_log_entries"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "custom_oauth_providers"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "flow_state"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "identities"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "instances"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "mfa_amr_claims"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "mfa_challenges"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "mfa_factors"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "oauth_authorizations"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "oauth_client_states"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "oauth_clients"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "oauth_consents"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "one_time_tokens"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "refresh_tokens"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "saml_providers"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "saml_relay_states"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "schema_migrations"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "sessions"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "sso_domains"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "sso_providers"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "users"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "webauthn_challenges"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "webauthn_credentials"
+    }
+  ]
+}

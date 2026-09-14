@@ -1,0 +1,868 @@
+{
+  "name": "grants",
+  "captured_at": "2026-09-14T18:30:56Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select table_schema, table_name, grantee, string_agg(privilege_type, ',' order by privilege_type) as privileges from information_schema.role_table_grants where table_schema in ('public','storage') and grantee in ('anon','authenticated','service_role','postgres','public') group by 1,2,3 order by 1,2,3",
+  "row_count": 143,
+  "redactions": [],
+  "rows": [
+    {
+      "table_schema": "public",
+      "table_name": "admin_audit_log",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "admin_audit_log",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "admin_audit_log",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "admin_audit_log",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_followers",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_followers",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_followers",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_followers",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_invitations",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_invitations",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_invitations",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_invitations",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_members",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_members",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_members",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "club_members",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clubs",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clubs",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clubs",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clubs",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "email_reminder_log",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "email_reminder_log",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "email_reminder_log",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "email_reminder_log",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_invites",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_invites",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_invites",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_invites",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_popularity_scores",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_popularity_scores",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_popularity_scores",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_popularity_scores",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_reports",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_reports",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_reports",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "event_reports",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiment_assignments",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiment_assignments",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiment_assignments",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiment_assignments",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiment_variants",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiment_variants",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiment_variants",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiment_variants",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiments",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiments",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiments",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "experiments",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "featured_clubs",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "featured_clubs",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "featured_clubs",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "featured_clubs",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "featured_events",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "featured_events",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "featured_events",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "featured_events",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "feedback",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "feedback",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "feedback",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "feedback",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "feedback_request_log",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "feedback_request_log",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "feedback_request_log",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "feedback_request_log",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "moderation_reviews",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "moderation_reviews",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "moderation_reviews",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "moderation_reviews",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "notifications",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "notifications",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "notifications",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "notifications",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "organizer_requests",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "organizer_requests",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "organizer_requests",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "organizer_requests",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "recommendation_explicit_feedback",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "recommendation_explicit_feedback",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "recommendation_explicit_feedback",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "recommendation_explicit_feedback",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "recommendation_feedback",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "recommendation_feedback",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "recommendation_feedback",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "recommendation_feedback",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "reviews",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "reviews",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "reviews",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "reviews",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "rsvps",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "rsvps",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "rsvps",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "rsvps",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saved_events",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saved_events",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saved_events",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saved_events",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tag_interaction_counts",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tag_interaction_counts",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tag_interaction_counts",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tag_interaction_counts",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_event_scores",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_event_scores",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_event_scores",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_event_scores",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_follows",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_follows",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_follows",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_follows",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_interactions",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_interactions",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_interactions",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "user_interactions",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "users",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "users",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "users",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "users",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets_analytics",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets_analytics",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets_analytics",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets_vectors",
+      "grantee": "anon",
+      "privileges": "SELECT"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets_vectors",
+      "grantee": "authenticated",
+      "privileges": "SELECT"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "buckets_vectors",
+      "grantee": "service_role",
+      "privileges": "SELECT"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "objects",
+      "grantee": "anon",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "objects",
+      "grantee": "authenticated",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "objects",
+      "grantee": "postgres",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "objects",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "s3_multipart_uploads",
+      "grantee": "anon",
+      "privileges": "SELECT"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "s3_multipart_uploads",
+      "grantee": "authenticated",
+      "privileges": "SELECT"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "s3_multipart_uploads",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "s3_multipart_uploads_parts",
+      "grantee": "anon",
+      "privileges": "SELECT"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "s3_multipart_uploads_parts",
+      "grantee": "authenticated",
+      "privileges": "SELECT"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "s3_multipart_uploads_parts",
+      "grantee": "service_role",
+      "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "vector_indexes",
+      "grantee": "anon",
+      "privileges": "SELECT"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "vector_indexes",
+      "grantee": "authenticated",
+      "privileges": "SELECT"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "vector_indexes",
+      "grantee": "service_role",
+      "privileges": "SELECT"
+    }
+  ]
+}

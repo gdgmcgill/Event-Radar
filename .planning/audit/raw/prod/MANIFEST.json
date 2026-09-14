@@ -1,0 +1,220 @@
+{
+  "name": "MANIFEST",
+  "project": "universe-events (production)",
+  "project_ref": "<PROD-PROJECT-REF>",
+  "transport": "supabase-mcp (Management API), SELECT-only",
+  "capture_started_at": "2026-09-14T18:23:47Z",
+  "capture_finished_at": "2026-09-14T18:33:16Z",
+  "current_user": "postgres",
+  "server_version": "17.6",
+  "capture_count": 20,
+  "total_redactions": 0,
+  "failed_queries": [],
+  "notes": [
+    "All statements were read-only SELECTs. No DDL/DML executed.",
+    "Some captures were re-run with an extra constant padding column (_pad) purely to force the MCP result over the inline size cap so it would be written to a local result file; _pad was stripped before writing and is not part of the recorded query.",
+    "constraints/triggers/row-counts used a quoted \"table\" alias since `table` is a reserved word."
+  ],
+  "files": [
+    {
+      "file": "transport-identity.json",
+      "name": "transport-identity",
+      "row_count": 1,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:23:56Z"
+    },
+    {
+      "file": "information-schema-columns.json",
+      "name": "information-schema-columns",
+      "row_count": 243,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:25:10Z"
+    },
+    {
+      "file": "tables.json",
+      "name": "tables",
+      "row_count": 40,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:23:57Z"
+    },
+    {
+      "file": "pg-policies.json",
+      "name": "pg-policies",
+      "row_count": 101,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:27:11Z"
+    },
+    {
+      "file": "constraints.json",
+      "name": "constraints",
+      "row_count": 123,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:28:36Z"
+    },
+    {
+      "file": "indexes.json",
+      "name": "indexes",
+      "row_count": 119,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:30:03Z"
+    },
+    {
+      "file": "functions.json",
+      "name": "functions",
+      "row_count": 45,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:30:29Z"
+    },
+    {
+      "file": "triggers.json",
+      "name": "triggers",
+      "row_count": 11,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:30:45Z"
+    },
+    {
+      "file": "views.json",
+      "name": "views",
+      "row_count": 0,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:30:46Z"
+    },
+    {
+      "file": "sequences.json",
+      "name": "sequences",
+      "row_count": 0,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:30:56Z"
+    },
+    {
+      "file": "grants.json",
+      "name": "grants",
+      "row_count": 143,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:30:56Z"
+    },
+    {
+      "file": "storage-buckets.json",
+      "name": "storage-buckets",
+      "row_count": 4,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:31:13Z"
+    },
+    {
+      "file": "storage-policies.json",
+      "name": "storage-policies",
+      "row_count": 15,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:31:13Z"
+    },
+    {
+      "file": "cron-job.json",
+      "name": "cron-job",
+      "row_count": 3,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:31:30Z"
+    },
+    {
+      "file": "cron-job-run-details.json",
+      "name": "cron-job-run-details",
+      "row_count": 100,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:31:30Z"
+    },
+    {
+      "file": "extensions.json",
+      "name": "extensions",
+      "row_count": 77,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp list_extensions (Management API)",
+      "captured_at": "2026-09-14T18:32:38Z"
+    },
+    {
+      "file": "migrations-applied.json",
+      "name": "migrations-applied",
+      "row_count": 45,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp list_migrations (Management API)",
+      "captured_at": "2026-09-14T18:32:38Z"
+    },
+    {
+      "file": "auth-config-tables.json",
+      "name": "auth-config-tables",
+      "row_count": 23,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:33:02Z"
+    },
+    {
+      "file": "events-date-columns.json",
+      "name": "events-date-columns",
+      "row_count": 5,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:33:02Z"
+    },
+    {
+      "file": "row-counts.json",
+      "name": "row-counts",
+      "row_count": 30,
+      "error": null,
+      "redaction_count": 0,
+      "redactions": [],
+      "transport": "supabase-mcp execute_sql (Management API)",
+      "captured_at": "2026-09-14T18:33:02Z"
+    }
+  ]
+}

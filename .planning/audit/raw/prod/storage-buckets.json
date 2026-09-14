@@ -1,0 +1,59 @@
+{
+  "name": "storage-buckets",
+  "captured_at": "2026-09-14T18:31:13Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select id, name, public, file_size_limit, allowed_mime_types, avif_autodetection, created_at, updated_at from storage.buckets order by name",
+  "row_count": 4,
+  "redactions": [],
+  "rows": [
+    {
+      "id": "avatars",
+      "name": "avatars",
+      "public": true,
+      "file_size_limit": 5242880,
+      "allowed_mime_types": null,
+      "avif_autodetection": false,
+      "created_at": "2026-02-08 21:58:39.862898+00",
+      "updated_at": "2026-02-08 21:58:39.862898+00"
+    },
+    {
+      "id": "banners",
+      "name": "banners",
+      "public": true,
+      "file_size_limit": 8388608,
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+      ],
+      "avif_autodetection": false,
+      "created_at": "2026-03-16 09:37:51.395733+00",
+      "updated_at": "2026-03-16 09:37:51.395733+00"
+    },
+    {
+      "id": "club-logos",
+      "name": "club-logos",
+      "public": true,
+      "file_size_limit": null,
+      "allowed_mime_types": null,
+      "avif_autodetection": false,
+      "created_at": "2026-03-15 05:28:34.274878+00",
+      "updated_at": "2026-03-15 05:28:34.274878+00"
+    },
+    {
+      "id": "event-images",
+      "name": "event-images",
+      "public": true,
+      "file_size_limit": 5242880,
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+      ],
+      "avif_autodetection": false,
+      "created_at": "2026-02-14 19:54:27.461812+00",
+      "updated_at": "2026-02-14 19:54:27.461812+00"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "transport-identity",
+  "captured_at": "2026-09-14T18:23:56Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select current_user as role, current_database() as db, current_setting('server_version') as server_version, current_setting('transaction_read_only') as txn_read_only, now() as captured_at",
+  "row_count": 1,
+  "redactions": [],
+  "rows": [
+    {
+      "role": "postgres",
+      "db": "postgres",
+      "server_version": "17.6",
+      "txn_read_only": "off",
+      "captured_at": "2026-09-14 18:23:56.895714+00"
+    }
+  ]
+}

@@ -1,0 +1,810 @@
+{
+  "name": "cron-job-run-details",
+  "captured_at": "2026-09-14T18:31:30Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select jobid, runid, status, return_message, start_time, end_time from cron.job_run_details order by start_time desc limit 100",
+  "row_count": 100,
+  "redactions": [],
+  "rows": [
+    {
+      "jobid": 1,
+      "runid": 29246,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 18:30:00.194647+00",
+      "end_time": "2026-09-14 18:30:00.220277+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29245,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 18:30:00.193026+00",
+      "end_time": "2026-09-14 18:30:00.239023+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29244,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 18:15:00.185442+00",
+      "end_time": "2026-09-14 18:15:00.266878+00"
+    },
+    {
+      "jobid": 2,
+      "runid": 29241,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 18:00:00.209916+00",
+      "end_time": "2026-09-14 18:00:00.260604+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29243,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 18:00:00.209419+00",
+      "end_time": "2026-09-14 18:00:00.237685+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29242,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 18:00:00.208849+00",
+      "end_time": "2026-09-14 18:00:00.247789+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29240,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 17:45:00.212136+00",
+      "end_time": "2026-09-14 17:45:00.236984+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29239,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 17:30:00.220765+00",
+      "end_time": "2026-09-14 17:30:00.246982+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29238,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 17:30:00.218148+00",
+      "end_time": "2026-09-14 17:30:00.271129+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29237,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 17:15:00.387324+00",
+      "end_time": "2026-09-14 17:15:00.601272+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29236,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 17:00:00.202604+00",
+      "end_time": "2026-09-14 17:00:00.232363+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29235,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 17:00:00.201437+00",
+      "end_time": "2026-09-14 17:00:00.259794+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29234,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 16:45:00.194828+00",
+      "end_time": "2026-09-14 16:45:00.234034+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29233,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 16:30:00.17294+00",
+      "end_time": "2026-09-14 16:30:00.206462+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29232,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 16:30:00.171903+00",
+      "end_time": "2026-09-14 16:30:00.220568+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29231,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 16:15:00.28309+00",
+      "end_time": "2026-09-14 16:15:00.50745+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29230,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 16:00:00.219216+00",
+      "end_time": "2026-09-14 16:00:00.258568+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29229,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 16:00:00.21806+00",
+      "end_time": "2026-09-14 16:00:00.269993+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29228,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 15:45:00.202571+00",
+      "end_time": "2026-09-14 15:45:00.301293+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29227,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 15:30:00.180972+00",
+      "end_time": "2026-09-14 15:30:00.192903+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29226,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 15:30:00.172799+00",
+      "end_time": "2026-09-14 15:30:00.221177+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29225,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 15:15:00.228188+00",
+      "end_time": "2026-09-14 15:15:00.36713+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29223,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 15:00:00.188984+00",
+      "end_time": "2026-09-14 15:00:00.217257+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29224,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 15:00:00.187113+00",
+      "end_time": "2026-09-14 15:00:00.205689+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29222,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 14:45:00.204692+00",
+      "end_time": "2026-09-14 14:45:00.347182+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29221,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 14:30:00.218094+00",
+      "end_time": "2026-09-14 14:30:00.321306+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29220,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 14:30:00.216874+00",
+      "end_time": "2026-09-14 14:30:00.344446+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29219,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 14:15:00.325914+00",
+      "end_time": "2026-09-14 14:15:00.390093+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29218,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 14:00:00.183632+00",
+      "end_time": "2026-09-14 14:00:00.207421+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29217,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 14:00:00.182492+00",
+      "end_time": "2026-09-14 14:00:00.217804+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29216,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 13:45:00.238183+00",
+      "end_time": "2026-09-14 13:45:00.344902+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29215,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 13:30:00.209293+00",
+      "end_time": "2026-09-14 13:30:00.304545+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29214,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 13:30:00.208767+00",
+      "end_time": "2026-09-14 13:30:00.336646+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29213,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 13:15:00.194644+00",
+      "end_time": "2026-09-14 13:15:00.30275+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29212,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 13:00:00.213789+00",
+      "end_time": "2026-09-14 13:00:00.280687+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29211,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 13:00:00.213212+00",
+      "end_time": "2026-09-14 13:00:00.300638+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29210,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 12:45:00.236392+00",
+      "end_time": "2026-09-14 12:45:00.371875+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29208,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 12:30:00.213201+00",
+      "end_time": "2026-09-14 12:30:00.329402+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29209,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 12:30:00.211473+00",
+      "end_time": "2026-09-14 12:30:00.299632+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29207,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 12:15:00.18004+00",
+      "end_time": "2026-09-14 12:15:00.200896+00"
+    },
+    {
+      "jobid": 2,
+      "runid": 29204,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 12:00:00.215088+00",
+      "end_time": "2026-09-14 12:00:00.355721+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29206,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 12:00:00.21337+00",
+      "end_time": "2026-09-14 12:00:00.266518+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29205,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 12:00:00.212824+00",
+      "end_time": "2026-09-14 12:00:00.285218+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29203,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 11:45:00.218415+00",
+      "end_time": "2026-09-14 11:45:00.34628+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29202,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 11:30:00.19105+00",
+      "end_time": "2026-09-14 11:30:00.298675+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29201,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 11:30:00.190535+00",
+      "end_time": "2026-09-14 11:30:00.312708+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29200,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 11:15:00.206547+00",
+      "end_time": "2026-09-14 11:15:00.309522+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29199,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 11:00:00.201691+00",
+      "end_time": "2026-09-14 11:00:00.219436+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29198,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 11:00:00.198768+00",
+      "end_time": "2026-09-14 11:00:00.238369+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29197,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 10:45:00.233758+00",
+      "end_time": "2026-09-14 10:45:00.399011+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29196,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 10:30:00.219705+00",
+      "end_time": "2026-09-14 10:30:00.308308+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29195,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 10:30:00.218366+00",
+      "end_time": "2026-09-14 10:30:00.326177+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29194,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 10:15:00.205256+00",
+      "end_time": "2026-09-14 10:15:00.358518+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29193,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 10:00:00.203757+00",
+      "end_time": "2026-09-14 10:00:00.292819+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29192,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 10:00:00.201424+00",
+      "end_time": "2026-09-14 10:00:00.3037+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29191,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 09:45:00.259223+00",
+      "end_time": "2026-09-14 09:45:00.387011+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29190,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 09:30:00.214792+00",
+      "end_time": "2026-09-14 09:30:00.287322+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29189,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 09:30:00.21427+00",
+      "end_time": "2026-09-14 09:30:00.315897+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29188,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 09:15:00.242255+00",
+      "end_time": "2026-09-14 09:15:00.425851+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29187,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 09:00:00.194733+00",
+      "end_time": "2026-09-14 09:00:00.2829+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29186,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 09:00:00.192483+00",
+      "end_time": "2026-09-14 09:00:00.302613+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29185,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 08:45:00.238504+00",
+      "end_time": "2026-09-14 08:45:00.361978+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29184,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 08:30:00.225409+00",
+      "end_time": "2026-09-14 08:30:00.348114+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29183,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 08:30:00.223316+00",
+      "end_time": "2026-09-14 08:30:00.370407+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29182,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 08:15:00.216285+00",
+      "end_time": "2026-09-14 08:15:00.382244+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29181,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 08:00:00.222328+00",
+      "end_time": "2026-09-14 08:00:00.256615+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29180,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 08:00:00.220062+00",
+      "end_time": "2026-09-14 08:00:00.263963+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29179,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 07:45:00.237209+00",
+      "end_time": "2026-09-14 07:45:00.294464+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29178,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 07:30:00.188924+00",
+      "end_time": "2026-09-14 07:30:00.227413+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29177,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 07:30:00.186795+00",
+      "end_time": "2026-09-14 07:30:00.243445+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29176,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 07:15:00.199501+00",
+      "end_time": "2026-09-14 07:15:00.314302+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29175,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 07:00:00.191263+00",
+      "end_time": "2026-09-14 07:00:00.223925+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29174,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 07:00:00.188724+00",
+      "end_time": "2026-09-14 07:00:00.24612+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29173,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 06:45:00.218288+00",
+      "end_time": "2026-09-14 06:45:00.292071+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29172,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 06:30:00.202535+00",
+      "end_time": "2026-09-14 06:30:00.254277+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29171,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 06:30:00.2015+00",
+      "end_time": "2026-09-14 06:30:00.275867+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29170,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 06:15:00.213945+00",
+      "end_time": "2026-09-14 06:15:00.321303+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29169,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 06:00:00.22408+00",
+      "end_time": "2026-09-14 06:00:00.260229+00"
+    },
+    {
+      "jobid": 2,
+      "runid": 29167,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 06:00:00.222389+00",
+      "end_time": "2026-09-14 06:00:00.319161+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29168,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 06:00:00.2218+00",
+      "end_time": "2026-09-14 06:00:00.280486+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29166,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 05:45:00.217387+00",
+      "end_time": "2026-09-14 05:45:00.296005+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29165,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 05:30:00.214151+00",
+      "end_time": "2026-09-14 05:30:00.242245+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29164,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 05:30:00.213141+00",
+      "end_time": "2026-09-14 05:30:00.262558+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29163,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 05:15:00.195494+00",
+      "end_time": "2026-09-14 05:15:00.263244+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29162,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 05:00:00.199681+00",
+      "end_time": "2026-09-14 05:00:00.25242+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29161,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 05:00:00.197995+00",
+      "end_time": "2026-09-14 05:00:00.270647+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29160,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 04:45:00.472234+00",
+      "end_time": "2026-09-14 04:45:00.670514+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29159,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 04:30:00.18835+00",
+      "end_time": "2026-09-14 04:30:00.223463+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29158,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 04:30:00.186009+00",
+      "end_time": "2026-09-14 04:30:00.242322+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29157,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 04:15:00.216267+00",
+      "end_time": "2026-09-14 04:15:00.351011+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29156,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 04:00:00.20896+00",
+      "end_time": "2026-09-14 04:00:00.243359+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29155,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 04:00:00.206501+00",
+      "end_time": "2026-09-14 04:00:00.272892+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29154,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 03:45:00.194188+00",
+      "end_time": "2026-09-14 03:45:00.269431+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29152,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 03:30:00.208084+00",
+      "end_time": "2026-09-14 03:30:00.280492+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29153,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 03:30:00.205224+00",
+      "end_time": "2026-09-14 03:30:00.256813+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29151,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 03:15:00.305446+00",
+      "end_time": "2026-09-14 03:15:00.533073+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29150,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 03:00:00.192779+00",
+      "end_time": "2026-09-14 03:00:00.213986+00"
+    },
+    {
+      "jobid": 4,
+      "runid": 29149,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 03:00:00.190895+00",
+      "end_time": "2026-09-14 03:00:00.215558+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29148,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 02:45:00.198746+00",
+      "end_time": "2026-09-14 02:45:00.253006+00"
+    },
+    {
+      "jobid": 1,
+      "runid": 29147,
+      "status": "succeeded",
+      "return_message": "1 row",
+      "start_time": "2026-09-14 02:30:00.222119+00",
+      "end_time": "2026-09-14 02:30:00.269474+00"
+    }
+  ]
+}

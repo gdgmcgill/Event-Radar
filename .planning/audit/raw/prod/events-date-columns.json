@@ -1,0 +1,50 @@
+{
+  "name": "events-date-columns",
+  "captured_at": "2026-09-14T18:33:02Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select column_name, data_type, udt_name, is_nullable, column_default, ordinal_position from information_schema.columns where table_schema='public' and table_name='events' and (column_name ilike '%date%' or column_name ilike '%time%' or column_name ilike '%_at') order by ordinal_position",
+  "row_count": 5,
+  "redactions": [],
+  "rows": [
+    {
+      "column_name": "start_date",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 4
+    },
+    {
+      "column_name": "end_date",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null,
+      "ordinal_position": 5
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": "now()",
+      "ordinal_position": 12
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": "now()",
+      "ordinal_position": 13
+    },
+    {
+      "column_name": "deleted_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null,
+      "ordinal_position": 21
+    }
+  ]
+}

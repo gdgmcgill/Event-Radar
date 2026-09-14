@@ -1,0 +1,724 @@
+{
+  "name": "indexes",
+  "captured_at": "2026-09-14T18:30:03Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select schemaname, tablename, indexname, indexdef from pg_indexes where schemaname = 'public' order by 1,2,3",
+  "row_count": 119,
+  "redactions": [],
+  "rows": [
+    {
+      "schemaname": "public",
+      "tablename": "admin_audit_log",
+      "indexname": "admin_audit_log_pkey",
+      "indexdef": "CREATE UNIQUE INDEX admin_audit_log_pkey ON public.admin_audit_log USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "admin_audit_log",
+      "indexname": "idx_audit_log_action",
+      "indexdef": "CREATE INDEX idx_audit_log_action ON public.admin_audit_log USING btree (action)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "admin_audit_log",
+      "indexname": "idx_audit_log_admin",
+      "indexdef": "CREATE INDEX idx_audit_log_admin ON public.admin_audit_log USING btree (admin_user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "admin_audit_log",
+      "indexname": "idx_audit_log_created_at",
+      "indexdef": "CREATE INDEX idx_audit_log_created_at ON public.admin_audit_log USING btree (created_at DESC)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_followers",
+      "indexname": "club_followers_pkey",
+      "indexdef": "CREATE UNIQUE INDEX club_followers_pkey ON public.club_followers USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_followers",
+      "indexname": "club_followers_unique",
+      "indexdef": "CREATE UNIQUE INDEX club_followers_unique ON public.club_followers USING btree (user_id, club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_followers",
+      "indexname": "idx_club_followers_club_id",
+      "indexdef": "CREATE INDEX idx_club_followers_club_id ON public.club_followers USING btree (club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_followers",
+      "indexname": "idx_club_followers_user_id",
+      "indexdef": "CREATE INDEX idx_club_followers_user_id ON public.club_followers USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_invitations",
+      "indexname": "club_invitations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX club_invitations_pkey ON public.club_invitations USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_invitations",
+      "indexname": "club_invitations_token_key",
+      "indexdef": "CREATE UNIQUE INDEX club_invitations_token_key ON public.club_invitations USING btree (token)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_invitations",
+      "indexname": "idx_club_invitations_club_id",
+      "indexdef": "CREATE INDEX idx_club_invitations_club_id ON public.club_invitations USING btree (club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_invitations",
+      "indexname": "idx_club_invitations_email",
+      "indexdef": "CREATE INDEX idx_club_invitations_email ON public.club_invitations USING btree (invitee_email)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_invitations",
+      "indexname": "idx_club_invitations_inviter_id",
+      "indexdef": "CREATE INDEX idx_club_invitations_inviter_id ON public.club_invitations USING btree (inviter_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_invitations",
+      "indexname": "idx_club_invitations_token",
+      "indexdef": "CREATE INDEX idx_club_invitations_token ON public.club_invitations USING btree (token)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_members",
+      "indexname": "club_members_pkey",
+      "indexdef": "CREATE UNIQUE INDEX club_members_pkey ON public.club_members USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_members",
+      "indexname": "club_members_user_id_club_id_key",
+      "indexdef": "CREATE UNIQUE INDEX club_members_user_id_club_id_key ON public.club_members USING btree (user_id, club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_members",
+      "indexname": "idx_club_members_club",
+      "indexdef": "CREATE INDEX idx_club_members_club ON public.club_members USING btree (club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_members",
+      "indexname": "idx_club_members_club_role",
+      "indexdef": "CREATE INDEX idx_club_members_club_role ON public.club_members USING btree (club_id, role)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_members",
+      "indexname": "idx_club_members_user",
+      "indexdef": "CREATE INDEX idx_club_members_user ON public.club_members USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "clubs",
+      "indexname": "clubs_pkey",
+      "indexdef": "CREATE UNIQUE INDEX clubs_pkey ON public.clubs USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "clubs",
+      "indexname": "idx_clubs_created_by",
+      "indexdef": "CREATE INDEX idx_clubs_created_by ON public.clubs USING btree (created_by)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "clubs",
+      "indexname": "idx_clubs_status",
+      "indexdef": "CREATE INDEX idx_clubs_status ON public.clubs USING btree (status)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "email_reminder_log",
+      "indexname": "email_reminder_log_pkey",
+      "indexdef": "CREATE UNIQUE INDEX email_reminder_log_pkey ON public.email_reminder_log USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "email_reminder_log",
+      "indexname": "email_reminder_log_type_event_idx",
+      "indexdef": "CREATE INDEX email_reminder_log_type_event_idx ON public.email_reminder_log USING btree (reminder_type, event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "email_reminder_log",
+      "indexname": "email_reminder_log_user_id_event_id_reminder_type_key",
+      "indexdef": "CREATE UNIQUE INDEX email_reminder_log_user_id_event_id_reminder_type_key ON public.email_reminder_log USING btree (user_id, event_id, reminder_type)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_invites",
+      "indexname": "event_invites_inviter_id_invitee_id_event_id_key",
+      "indexdef": "CREATE UNIQUE INDEX event_invites_inviter_id_invitee_id_event_id_key ON public.event_invites USING btree (inviter_id, invitee_id, event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_invites",
+      "indexname": "event_invites_pkey",
+      "indexdef": "CREATE UNIQUE INDEX event_invites_pkey ON public.event_invites USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_invites",
+      "indexname": "idx_event_invites_event",
+      "indexdef": "CREATE INDEX idx_event_invites_event ON public.event_invites USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_invites",
+      "indexname": "idx_event_invites_invitee",
+      "indexdef": "CREATE INDEX idx_event_invites_invitee ON public.event_invites USING btree (invitee_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_popularity_scores",
+      "indexname": "event_popularity_scores_pkey",
+      "indexdef": "CREATE UNIQUE INDEX event_popularity_scores_pkey ON public.event_popularity_scores USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_reports",
+      "indexname": "event_reports_pkey",
+      "indexdef": "CREATE UNIQUE INDEX event_reports_pkey ON public.event_reports USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_reports",
+      "indexname": "event_reports_unique_per_user",
+      "indexdef": "CREATE UNIQUE INDEX event_reports_unique_per_user ON public.event_reports USING btree (event_id, reporter_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_reports",
+      "indexname": "idx_event_reports_reporter_id",
+      "indexdef": "CREATE INDEX idx_event_reports_reporter_id ON public.event_reports USING btree (reporter_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_reports",
+      "indexname": "idx_event_reports_reviewed_by",
+      "indexdef": "CREATE INDEX idx_event_reports_reviewed_by ON public.event_reports USING btree (reviewed_by)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_reports",
+      "indexname": "idx_event_reports_status_created",
+      "indexdef": "CREATE INDEX idx_event_reports_status_created ON public.event_reports USING btree (status, created_at DESC)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "indexname": "events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX events_pkey ON public.events USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "indexname": "idx_events_category",
+      "indexdef": "CREATE INDEX idx_events_category ON public.events USING btree (category)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "indexname": "idx_events_club_id",
+      "indexdef": "CREATE INDEX idx_events_club_id ON public.events USING btree (club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "indexname": "idx_events_content_hash",
+      "indexdef": "CREATE UNIQUE INDEX idx_events_content_hash ON public.events USING btree (content_hash) WHERE (content_hash IS NOT NULL)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "indexname": "idx_events_created_by",
+      "indexdef": "CREATE INDEX idx_events_created_by ON public.events USING btree (created_by)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "indexname": "idx_events_not_deleted",
+      "indexdef": "CREATE INDEX idx_events_not_deleted ON public.events USING btree (id) WHERE (deleted_at IS NULL)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "indexname": "idx_events_start_date",
+      "indexdef": "CREATE INDEX idx_events_start_date ON public.events USING btree (start_date)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiment_assignments",
+      "indexname": "experiment_assignments_experiment_id_user_id_key",
+      "indexdef": "CREATE UNIQUE INDEX experiment_assignments_experiment_id_user_id_key ON public.experiment_assignments USING btree (experiment_id, user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiment_assignments",
+      "indexname": "experiment_assignments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX experiment_assignments_pkey ON public.experiment_assignments USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiment_assignments",
+      "indexname": "idx_experiment_assignments_experiment_id",
+      "indexdef": "CREATE INDEX idx_experiment_assignments_experiment_id ON public.experiment_assignments USING btree (experiment_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiment_assignments",
+      "indexname": "idx_experiment_assignments_variant_id",
+      "indexdef": "CREATE INDEX idx_experiment_assignments_variant_id ON public.experiment_assignments USING btree (variant_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiment_variants",
+      "indexname": "experiment_variants_pkey",
+      "indexdef": "CREATE UNIQUE INDEX experiment_variants_pkey ON public.experiment_variants USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiment_variants",
+      "indexname": "idx_experiment_variants_experiment_id",
+      "indexdef": "CREATE INDEX idx_experiment_variants_experiment_id ON public.experiment_variants USING btree (experiment_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiments",
+      "indexname": "experiments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX experiments_pkey ON public.experiments USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_clubs",
+      "indexname": "featured_clubs_pkey",
+      "indexdef": "CREATE UNIQUE INDEX featured_clubs_pkey ON public.featured_clubs USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_clubs",
+      "indexname": "idx_featured_clubs_active",
+      "indexdef": "CREATE INDEX idx_featured_clubs_active ON public.featured_clubs USING btree (starts_at, ends_at, priority DESC)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_clubs",
+      "indexname": "idx_featured_clubs_club_id",
+      "indexdef": "CREATE INDEX idx_featured_clubs_club_id ON public.featured_clubs USING btree (club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_clubs",
+      "indexname": "idx_featured_clubs_created_by",
+      "indexdef": "CREATE INDEX idx_featured_clubs_created_by ON public.featured_clubs USING btree (created_by)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_events",
+      "indexname": "featured_events_event_id",
+      "indexdef": "CREATE INDEX featured_events_event_id ON public.featured_events USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_events",
+      "indexname": "featured_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX featured_events_pkey ON public.featured_events USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_events",
+      "indexname": "idx_featured_events_created_by",
+      "indexdef": "CREATE INDEX idx_featured_events_created_by ON public.featured_events USING btree (created_by)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback",
+      "indexname": "feedback_pkey",
+      "indexdef": "CREATE UNIQUE INDEX feedback_pkey ON public.feedback USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback",
+      "indexname": "idx_feedback_created_at",
+      "indexdef": "CREATE INDEX idx_feedback_created_at ON public.feedback USING btree (created_at DESC)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback",
+      "indexname": "idx_feedback_status",
+      "indexdef": "CREATE INDEX idx_feedback_status ON public.feedback USING btree (status)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback",
+      "indexname": "idx_feedback_user_id",
+      "indexdef": "CREATE INDEX idx_feedback_user_id ON public.feedback USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback_request_log",
+      "indexname": "feedback_request_log_event_idx",
+      "indexdef": "CREATE INDEX feedback_request_log_event_idx ON public.feedback_request_log USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback_request_log",
+      "indexname": "feedback_request_log_pkey",
+      "indexdef": "CREATE UNIQUE INDEX feedback_request_log_pkey ON public.feedback_request_log USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback_request_log",
+      "indexname": "feedback_request_log_type_event_idx",
+      "indexdef": "CREATE INDEX feedback_request_log_type_event_idx ON public.feedback_request_log USING btree (request_type, event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback_request_log",
+      "indexname": "feedback_request_log_user_id_event_id_request_type_key",
+      "indexdef": "CREATE UNIQUE INDEX feedback_request_log_user_id_event_id_request_type_key ON public.feedback_request_log USING btree (user_id, event_id, request_type)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "moderation_reviews",
+      "indexname": "idx_moderation_reviews_target",
+      "indexdef": "CREATE INDEX idx_moderation_reviews_target ON public.moderation_reviews USING btree (target_type, target_id, created_at)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "moderation_reviews",
+      "indexname": "moderation_reviews_pkey",
+      "indexdef": "CREATE UNIQUE INDEX moderation_reviews_pkey ON public.moderation_reviews USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "indexname": "idx_notifications_club_id",
+      "indexdef": "CREATE INDEX idx_notifications_club_id ON public.notifications USING btree (club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "indexname": "idx_notifications_event_id",
+      "indexdef": "CREATE INDEX idx_notifications_event_id ON public.notifications USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "indexname": "idx_notifications_read",
+      "indexdef": "CREATE INDEX idx_notifications_read ON public.notifications USING btree (user_id, read)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "indexname": "idx_notifications_user_id",
+      "indexdef": "CREATE INDEX idx_notifications_user_id ON public.notifications USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "indexname": "idx_notifications_user_unread",
+      "indexdef": "CREATE INDEX idx_notifications_user_unread ON public.notifications USING btree (user_id, read) WHERE (read = false)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "indexname": "notifications_dedup_idx",
+      "indexdef": "CREATE UNIQUE INDEX notifications_dedup_idx ON public.notifications USING btree (user_id, event_id, type) WHERE (event_id IS NOT NULL)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "indexname": "notifications_pkey",
+      "indexdef": "CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "indexname": "notifications_user_id_idx",
+      "indexdef": "CREATE INDEX notifications_user_id_idx ON public.notifications USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "indexname": "notifications_user_unread_idx",
+      "indexdef": "CREATE INDEX notifications_user_unread_idx ON public.notifications USING btree (user_id, read) WHERE (read = false)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "organizer_requests",
+      "indexname": "idx_organizer_requests_reviewed_by",
+      "indexdef": "CREATE INDEX idx_organizer_requests_reviewed_by ON public.organizer_requests USING btree (reviewed_by)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "organizer_requests",
+      "indexname": "idx_organizer_requests_status",
+      "indexdef": "CREATE INDEX idx_organizer_requests_status ON public.organizer_requests USING btree (status)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "organizer_requests",
+      "indexname": "idx_organizer_requests_user",
+      "indexdef": "CREATE INDEX idx_organizer_requests_user ON public.organizer_requests USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "organizer_requests",
+      "indexname": "organizer_requests_pkey",
+      "indexdef": "CREATE UNIQUE INDEX organizer_requests_pkey ON public.organizer_requests USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "organizer_requests",
+      "indexname": "organizer_requests_user_id_club_id_key",
+      "indexdef": "CREATE UNIQUE INDEX organizer_requests_user_id_club_id_key ON public.organizer_requests USING btree (user_id, club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_explicit_feedback",
+      "indexname": "idx_recommendation_explicit_feedback_event_id",
+      "indexdef": "CREATE INDEX idx_recommendation_explicit_feedback_event_id ON public.recommendation_explicit_feedback USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_explicit_feedback",
+      "indexname": "idx_recommendation_explicit_feedback_user_id",
+      "indexdef": "CREATE INDEX idx_recommendation_explicit_feedback_user_id ON public.recommendation_explicit_feedback USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_explicit_feedback",
+      "indexname": "recommendation_explicit_feedback_pkey",
+      "indexdef": "CREATE UNIQUE INDEX recommendation_explicit_feedback_pkey ON public.recommendation_explicit_feedback USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_explicit_feedback",
+      "indexname": "recommendation_explicit_feedback_user_id_event_id_key",
+      "indexdef": "CREATE UNIQUE INDEX recommendation_explicit_feedback_user_id_event_id_key ON public.recommendation_explicit_feedback USING btree (user_id, event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_feedback",
+      "indexname": "idx_recommendation_feedback_action",
+      "indexdef": "CREATE INDEX idx_recommendation_feedback_action ON public.recommendation_feedback USING btree (action)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_feedback",
+      "indexname": "idx_recommendation_feedback_created_at",
+      "indexdef": "CREATE INDEX idx_recommendation_feedback_created_at ON public.recommendation_feedback USING btree (created_at)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_feedback",
+      "indexname": "idx_recommendation_feedback_user_created",
+      "indexdef": "CREATE INDEX idx_recommendation_feedback_user_created ON public.recommendation_feedback USING btree (user_id, created_at)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_feedback",
+      "indexname": "idx_recommendation_feedback_variant",
+      "indexdef": "CREATE INDEX idx_recommendation_feedback_variant ON public.recommendation_feedback USING btree (experiment_variant_id) WHERE (experiment_variant_id IS NOT NULL)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_feedback",
+      "indexname": "recommendation_feedback_pkey",
+      "indexdef": "CREATE UNIQUE INDEX recommendation_feedback_pkey ON public.recommendation_feedback USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reviews",
+      "indexname": "idx_reviews_event_id",
+      "indexdef": "CREATE INDEX idx_reviews_event_id ON public.reviews USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reviews",
+      "indexname": "idx_reviews_user_event",
+      "indexdef": "CREATE INDEX idx_reviews_user_event ON public.reviews USING btree (user_id, event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reviews",
+      "indexname": "reviews_pkey",
+      "indexdef": "CREATE UNIQUE INDEX reviews_pkey ON public.reviews USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reviews",
+      "indexname": "reviews_user_id_event_id_key",
+      "indexdef": "CREATE UNIQUE INDEX reviews_user_id_event_id_key ON public.reviews USING btree (user_id, event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "rsvps",
+      "indexname": "idx_rsvps_event_id",
+      "indexdef": "CREATE INDEX idx_rsvps_event_id ON public.rsvps USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "rsvps",
+      "indexname": "idx_rsvps_status",
+      "indexdef": "CREATE INDEX idx_rsvps_status ON public.rsvps USING btree (status) WHERE (status <> 'cancelled'::text)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "rsvps",
+      "indexname": "idx_rsvps_user_id",
+      "indexdef": "CREATE INDEX idx_rsvps_user_id ON public.rsvps USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "rsvps",
+      "indexname": "rsvps_pkey",
+      "indexdef": "CREATE UNIQUE INDEX rsvps_pkey ON public.rsvps USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "rsvps",
+      "indexname": "rsvps_user_id_event_id_key",
+      "indexdef": "CREATE UNIQUE INDEX rsvps_user_id_event_id_key ON public.rsvps USING btree (user_id, event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "saved_events",
+      "indexname": "idx_saved_events_event_id",
+      "indexdef": "CREATE INDEX idx_saved_events_event_id ON public.saved_events USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "saved_events",
+      "indexname": "idx_saved_events_user_id",
+      "indexdef": "CREATE INDEX idx_saved_events_user_id ON public.saved_events USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "saved_events",
+      "indexname": "saved_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX saved_events_pkey ON public.saved_events USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "saved_events",
+      "indexname": "saved_events_user_id_event_id_key",
+      "indexdef": "CREATE UNIQUE INDEX saved_events_user_id_event_id_key ON public.saved_events USING btree (user_id, event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tag_interaction_counts",
+      "indexname": "tag_interaction_counts_pkey",
+      "indexdef": "CREATE UNIQUE INDEX tag_interaction_counts_pkey ON public.tag_interaction_counts USING btree (user_id, tag)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_event_scores",
+      "indexname": "idx_user_event_scores_user_score",
+      "indexdef": "CREATE INDEX idx_user_event_scores_user_score ON public.user_event_scores USING btree (user_id, score DESC)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_event_scores",
+      "indexname": "user_event_scores_pkey",
+      "indexdef": "CREATE UNIQUE INDEX user_event_scores_pkey ON public.user_event_scores USING btree (user_id, event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_follows",
+      "indexname": "idx_user_follows_follower",
+      "indexdef": "CREATE INDEX idx_user_follows_follower ON public.user_follows USING btree (follower_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_follows",
+      "indexname": "idx_user_follows_following",
+      "indexdef": "CREATE INDEX idx_user_follows_following ON public.user_follows USING btree (following_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_follows",
+      "indexname": "user_follows_follower_id_following_id_key",
+      "indexdef": "CREATE UNIQUE INDEX user_follows_follower_id_following_id_key ON public.user_follows USING btree (follower_id, following_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_follows",
+      "indexname": "user_follows_pkey",
+      "indexdef": "CREATE UNIQUE INDEX user_follows_pkey ON public.user_follows USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_interactions",
+      "indexname": "idx_user_interactions_created_at",
+      "indexdef": "CREATE INDEX idx_user_interactions_created_at ON public.user_interactions USING btree (created_at DESC)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_interactions",
+      "indexname": "idx_user_interactions_event_id",
+      "indexdef": "CREATE INDEX idx_user_interactions_event_id ON public.user_interactions USING btree (event_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_interactions",
+      "indexname": "idx_user_interactions_type",
+      "indexdef": "CREATE INDEX idx_user_interactions_type ON public.user_interactions USING btree (interaction_type)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_interactions",
+      "indexname": "idx_user_interactions_user_id",
+      "indexdef": "CREATE INDEX idx_user_interactions_user_id ON public.user_interactions USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_interactions",
+      "indexname": "user_interactions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX user_interactions_pkey ON public.user_interactions USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "users",
+      "indexname": "idx_users_banned_at",
+      "indexdef": "CREATE INDEX idx_users_banned_at ON public.users USING btree (banned_at) WHERE (banned_at IS NOT NULL)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "users",
+      "indexname": "idx_users_banned_by",
+      "indexdef": "CREATE INDEX idx_users_banned_by ON public.users USING btree (banned_by)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "users",
+      "indexname": "idx_users_roles",
+      "indexdef": "CREATE INDEX idx_users_roles ON public.users USING gin (roles)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "users",
+      "indexname": "users_email_key",
+      "indexdef": "CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "users",
+      "indexname": "users_pkey",
+      "indexdef": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)"
+    }
+  ]
+}

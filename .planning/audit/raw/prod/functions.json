@@ -1,0 +1,415 @@
+{
+  "name": "functions",
+  "captured_at": "2026-09-14T18:30:29Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select n.nspname as schema, p.proname as name, pg_get_function_identity_arguments(p.oid) as args, l.lanname as language, p.prosecdef as security_definer, p.provolatile, pg_get_functiondef(p.oid) as definition from pg_proc p join pg_namespace n on n.oid = p.pronamespace join pg_language l on l.oid = p.prolang where n.nspname = 'public' order by 1,2,3",
+  "row_count": 45,
+  "redactions": [],
+  "rows": [
+    {
+      "schema": "public",
+      "name": "compute_user_scores",
+      "args": "",
+      "language": "plpgsql",
+      "security_definer": true,
+      "provolatile": "v",
+      "definition": "CREATE OR REPLACE FUNCTION public.compute_user_scores()\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  _user RECORD;\n  _event RECORD;\n  _score float;\n  _tag_score float;\n  _interaction_score float;\n  _popularity_score float;\n  _recency_score float;\n  _social_score float;\n  _max_popularity float;\n  _user_tags text[];\n  _expanded_tags text[];\n  _overlap_count int;\n  _partial_count int;\n  _total_user_tags int;\n  _interaction_weight float;\n  _max_interaction float;\n  _friend_count int;\n  _max_friends int;\n  _days_until float;\n  _breakdown jsonb;\n  _valid_tags text[];\n  _tag_parents jsonb := '{\n    \"hackathon\": \"tech\",\n    \"competition\": \"career\",\n    \"guest_speaker\": \"academic\",\n    \"free_food\": \"food\",\n    \"workshop\": \"tech\",\n    \"party\": \"social\",\n    \"fitness\": \"sports\",\n    \"info_session\": \"career\"\n  }'::jsonb;\nBEGIN\n  DELETE FROM tag_interaction_counts;\n\n  INSERT INTO tag_interaction_counts (user_id, tag, save_count, click_count, view_count, last_interaction)\n  SELECT\n    ui.user_id,\n    unnest(e.tags) AS tag,\n    COUNT(*) FILTER (WHERE ui.interaction_type = 'save') AS save_count,\n    COUNT(*) FILTER (WHERE ui.interaction_type = 'click') AS click_count,\n    COUNT(*) FILTER (WHERE ui.interaction_type = 'view') AS view_count,\n    MAX(ui.created_at) AS last_interaction\n  FROM user_interactions ui\n  JOIN events e ON e.id = ui.event_id\n  WHERE ui.user_id IS NOT NULL\n    AND ui.interaction_type IN ('save', 'click', 'view')\n  GROUP BY ui.user_id, unnest(e.tags)\n  ON CONFLICT (user_id, tag)\n  DO UPDATE SET\n    save_count = EXCLUDED.save_count,\n    click_count = EXCLUDED.click_count,\n    view_count = EXCLUDED.view_count,\n    last_interaction = EXCLUDED.last_interaction;\n\n  _valid_tags := ARRAY[\n    'academic','social','sports','career','cultural','wellness',\n    'music','tech','food','volunteer','arts','networking',\n    'hackathon','competition','guest_speaker','free_food',\n    'workshop','party','fitness','info_session'\n  ];\n\n  UPDATE users u\n  SET inferred_tags = (\n    SELECT COALESCE(array_agg(DISTINCT tic.tag), '{}')\n    FROM tag_interaction_counts tic\n    WHERE tic.user_id = u.id\n      AND (tic.save_count + tic.click_count) >= 3\n      AND tic.tag = ANY(_valid_tags)\n      AND tic.tag != ALL(u.interest_tags)\n      AND tic.tag != ALL(u.inferred_tags)\n  ) || u.inferred_tags\n  WHERE EXISTS (\n    SELECT 1 FROM tag_interaction_counts tic\n    WHERE tic.user_id = u.id\n      AND (tic.save_count + tic.click_count) >= 3\n      AND tic.tag = ANY(_valid_tags)\n      AND tic.tag != ALL(u.interest_tags)\n      AND tic.tag != ALL(u.inferred_tags)\n  );\n\n  SELECT COALESCE(MAX(popularity_score), 1) INTO _max_popularity\n  FROM event_popularity_scores;\n\n  DELETE FROM user_event_scores;\n\n  FOR _user IN\n    SELECT id, interest_tags, inferred_tags\n    FROM users\n    WHERE id IN (\n      SELECT DISTINCT user_id FROM user_interactions\n      WHERE created_at > NOW() - INTERVAL '90 days'\n      UNION\n      SELECT id FROM users WHERE array_length(interest_tags, 1) > 0\n    )\n  LOOP\n    _user_tags := _user.interest_tags || _user.inferred_tags;\n    _expanded_tags := _user_tags;\n    FOR i IN 1..COALESCE(array_length(_user_tags, 1), 0) LOOP\n      IF _tag_parents ? _user_tags[i] THEN\n        _expanded_tags := array_append(_expanded_tags, _tag_parents->>_user_tags[i]);\n      END IF;\n    END LOOP;\n    _total_user_tags := COALESCE(array_length(_user_tags, 1), 0);\n\n    SELECT COALESCE(MAX(save_count * 5 + click_count * 3 + view_count), 1)\n    INTO _max_interaction\n    FROM tag_interaction_counts WHERE user_id = _user.id;\n\n    _max_friends := 1;\n\n    FOR _event IN\n      SELECT e.id, e.tags, e.start_date,\n             COALESCE(eps.popularity_score, 0) AS pop_score\n      FROM events e\n      LEFT JOIN event_popularity_scores eps ON eps.event_id = e.id\n      WHERE e.status = 'approved'\n        AND e.start_date >= CURRENT_DATE\n    LOOP\n      IF _total_user_tags > 0 THEN\n        SELECT COUNT(*) INTO _overlap_count\n        FROM unnest(_user_tags) ut\n        WHERE ut = ANY(_event.tags);\n\n        SELECT COUNT(*) INTO _partial_count\n        FROM unnest(_expanded_tags) et\n        WHERE et = ANY(_event.tags)\n          AND et != ALL(_user_tags);\n\n        _tag_score := LEAST(\n          ((_overlap_count::float + _partial_count::float * 0.5) / _total_user_tags),\n          1.0\n        );\n      ELSE\n        _tag_score := 0;\n      END IF;\n\n      SELECT COALESCE(SUM(save_count * 5 + click_count * 3 + view_count), 0)\n      INTO _interaction_weight\n      FROM tag_interaction_counts\n      WHERE user_id = _user.id\n        AND tag = ANY(_event.tags);\n\n      _interaction_score := LEAST(_interaction_weight / _max_interaction, 1.0);\n      _popularity_score := _event.pop_score / _max_popularity;\n\n      _days_until := GREATEST(EXTRACT(EPOCH FROM (_event.start_date - CURRENT_DATE)) / 86400, 0);\n      _recency_score := EXP(-0.12 * _days_until);\n\n      _friend_count := 0;\n      _social_score := 0;\n\n      _score := (_tag_score * 0.35)\n              + (_interaction_score * 0.25)\n              + (_popularity_score * 0.20)\n              + (_recency_score * 0.15)\n              + (_social_score * 0.05);\n\n      _breakdown := jsonb_build_object(\n        'tag', ROUND((_tag_score * 0.35)::numeric, 4),\n        'interaction', ROUND((_interaction_score * 0.25)::numeric, 4),\n        'popularity', ROUND((_popularity_score * 0.20)::numeric, 4),\n        'recency', ROUND((_recency_score * 0.15)::numeric, 4),\n        'social', ROUND((_social_score * 0.05)::numeric, 4)\n      );\n\n      INSERT INTO user_event_scores (user_id, event_id, score, breakdown, scored_at)\n      VALUES (_user.id, _event.id, ROUND(_score::numeric, 4)::float, _breakdown, NOW());\n    END LOOP;\n  END LOOP;\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "get_event_ids_by_time_filter",
+      "args": "time_of_day text, day_type text",
+      "language": "plpgsql",
+      "security_definer": false,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_event_ids_by_time_filter(time_of_day text DEFAULT NULL::text, day_type text DEFAULT NULL::text)\n RETURNS TABLE(event_id uuid)\n LANGUAGE plpgsql\n STABLE\nAS $function$\nBEGIN\n  RETURN QUERY\n  SELECT e.id AS event_id\n  FROM public.events e\n  WHERE\n    (time_of_day IS NULL OR\n      CASE time_of_day\n        WHEN 'morning' THEN EXTRACT(HOUR FROM e.start_date) >= 6 AND EXTRACT(HOUR FROM e.start_date) < 12\n        WHEN 'afternoon' THEN EXTRACT(HOUR FROM e.start_date) >= 12 AND EXTRACT(HOUR FROM e.start_date) < 17\n        WHEN 'evening' THEN EXTRACT(HOUR FROM e.start_date) >= 17 AND EXTRACT(HOUR FROM e.start_date) < 22\n        WHEN 'night' THEN EXTRACT(HOUR FROM e.start_date) >= 22 OR EXTRACT(HOUR FROM e.start_date) < 6\n        ELSE TRUE\n      END)\n    AND\n    (day_type IS NULL OR\n      CASE day_type\n        WHEN 'weekday' THEN EXTRACT(DOW FROM e.start_date) BETWEEN 1 AND 5\n        WHEN 'weekend' THEN EXTRACT(DOW FROM e.start_date) IN (0, 6)\n        ELSE TRUE\n      END);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "get_friends",
+      "args": "target_user_id uuid",
+      "language": "sql",
+      "security_definer": true,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_friends(target_user_id uuid)\n RETURNS TABLE(id uuid, name text, avatar_url text)\n LANGUAGE sql\n STABLE SECURITY DEFINER\nAS $function$\n  SELECT u.id, u.name, u.avatar_url\n  FROM users u\n  JOIN user_follows f1 ON f1.following_id = u.id AND f1.follower_id = target_user_id\n  JOIN user_follows f2 ON f2.follower_id = u.id AND f2.following_id = target_user_id;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "get_friends_going_to_event",
+      "args": "current_user_id uuid, target_event_id uuid",
+      "language": "sql",
+      "security_definer": true,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_friends_going_to_event(current_user_id uuid, target_event_id uuid)\n RETURNS TABLE(id uuid, name text, avatar_url text)\n LANGUAGE sql\n STABLE SECURITY DEFINER\nAS $function$\n  SELECT u.id, u.name, u.avatar_url\n  FROM users u\n  JOIN saved_events se ON se.user_id = u.id AND se.event_id = target_event_id\n  JOIN user_follows f1 ON f1.following_id = u.id AND f1.follower_id = current_user_id\n  JOIN user_follows f2 ON f2.follower_id = u.id AND f2.following_id = current_user_id;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gin_extract_query_trgm",
+      "args": "text, internal, smallint, internal, internal, internal, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gin_extract_query_trgm(text, internal, smallint, internal, internal, internal, internal)\n RETURNS internal\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gin_extract_query_trgm$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gin_extract_value_trgm",
+      "args": "text, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gin_extract_value_trgm(text, internal)\n RETURNS internal\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gin_extract_value_trgm$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gin_trgm_consistent",
+      "args": "internal, smallint, text, integer, internal, internal, internal, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gin_trgm_consistent(internal, smallint, text, integer, internal, internal, internal, internal)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gin_trgm_consistent$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gin_trgm_triconsistent",
+      "args": "internal, smallint, text, integer, internal, internal, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gin_trgm_triconsistent(internal, smallint, text, integer, internal, internal, internal)\n RETURNS \"char\"\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gin_trgm_triconsistent$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_compress",
+      "args": "internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_compress(internal)\n RETURNS internal\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_compress$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_consistent",
+      "args": "internal, text, smallint, oid, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_consistent(internal, text, smallint, oid, internal)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_consistent$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_decompress",
+      "args": "internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_decompress(internal)\n RETURNS internal\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_decompress$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_distance",
+      "args": "internal, text, smallint, oid, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_distance(internal, text, smallint, oid, internal)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_distance$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_in",
+      "args": "cstring",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_in(cstring)\n RETURNS gtrgm\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_in$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_options",
+      "args": "internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_options(internal)\n RETURNS void\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE\nAS '$libdir/pg_trgm', $function$gtrgm_options$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_out",
+      "args": "gtrgm",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_out(gtrgm)\n RETURNS cstring\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_out$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_penalty",
+      "args": "internal, internal, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_penalty(internal, internal, internal)\n RETURNS internal\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_penalty$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_picksplit",
+      "args": "internal, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_picksplit(internal, internal)\n RETURNS internal\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_picksplit$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_same",
+      "args": "gtrgm, gtrgm, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_same(gtrgm, gtrgm, internal)\n RETURNS internal\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_same$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "gtrgm_union",
+      "args": "internal, internal",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.gtrgm_union(internal, internal)\n RETURNS gtrgm\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$gtrgm_union$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "is_admin",
+      "args": "",
+      "language": "sql",
+      "security_definer": true,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.is_admin()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n  SELECT EXISTS (\r\n    SELECT 1 FROM public.users\r\n    WHERE id = auth.uid() AND 'admin' = ANY(roles)\r\n  );\r\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "is_club_owner",
+      "args": "p_club_id uuid",
+      "language": "sql",
+      "security_definer": true,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.is_club_owner(p_club_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  SELECT EXISTS (\n    SELECT 1 FROM public.club_members\n    WHERE club_id = p_club_id\n      AND user_id = auth.uid()\n      AND role = 'owner'\n  );\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "recalculate_on_interaction",
+      "args": "",
+      "language": "plpgsql",
+      "security_definer": false,
+      "provolatile": "v",
+      "definition": "CREATE OR REPLACE FUNCTION public.recalculate_on_interaction()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\r\nBEGIN\r\n  PERFORM update_event_popularity(NEW.event_id);\r\n  RETURN NEW;\r\nEND;\r\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "search_events_fuzzy",
+      "args": "search_term text, result_limit integer",
+      "language": "plpgsql",
+      "security_definer": false,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.search_events_fuzzy(search_term text, result_limit integer DEFAULT 50)\n RETURNS TABLE(event_id uuid, rank double precision)\n LANGUAGE plpgsql\n STABLE\nAS $function$\nBEGIN\n  SET pg_trgm.similarity_threshold = 0.1;\n  RETURN QUERY\n  SELECT\n    e.id AS event_id,\n    GREATEST(\n      similarity(e.title, search_term) * 2.0,\n      similarity(e.description, search_term)\n    )::FLOAT AS rank\n  FROM public.events e\n  WHERE\n    e.title % search_term\n    OR e.description % search_term\n    OR e.title ILIKE '%' || search_term || '%'\n    OR e.description ILIKE '%' || search_term || '%'\n  ORDER BY rank DESC\n  LIMIT result_limit;\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "send_event_reminders",
+      "args": "",
+      "language": "plpgsql",
+      "security_definer": true,
+      "provolatile": "v",
+      "definition": "CREATE OR REPLACE FUNCTION public.send_event_reminders()\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\ndeclare\n  row record;\n  cnt int;\n  sent_24h int := 0;\n  sent_1h int := 0;\nbegin\n  -- 24-hour reminders: events starting between now+23h and now+25h\n  for row in\n    select se.user_id, e.id as event_id, e.title\n    from saved_events se\n    join events e on e.id = se.event_id\n    where e.start_date between (now() + interval '23 hours') and (now() + interval '25 hours')\n  loop\n    select count(*) into cnt\n    from notifications\n    where user_id = row.user_id\n      and event_id = row.event_id\n      and type = 'reminder_24h';\n\n    if cnt = 0 then\n      insert into notifications (user_id, type, title, message, event_id)\n      values (\n        row.user_id,\n        'reminder_24h',\n        'Event Tomorrow',\n        '\"' || row.title || '\" starts in about 24 hours.',\n        row.event_id\n      );\n      sent_24h := sent_24h + 1;\n    end if;\n  end loop;\n\n  -- 1-hour reminders: events starting between now+55min and now+65min\n  for row in\n    select se.user_id, e.id as event_id, e.title\n    from saved_events se\n    join events e on e.id = se.event_id\n    where e.start_date between (now() + interval '55 minutes') and (now() + interval '65 minutes')\n  loop\n    select count(*) into cnt\n    from notifications\n    where user_id = row.user_id\n      and event_id = row.event_id\n      and type = 'reminder_1h';\n\n    if cnt = 0 then\n      insert into notifications (user_id, type, title, message, event_id)\n      values (\n        row.user_id,\n        'reminder_1h',\n        'Event Starting Soon',\n        '\"' || row.title || '\" starts in about 1 hour!',\n        row.event_id\n      );\n      sent_1h := sent_1h + 1;\n    end if;\n  end loop;\n\n  return jsonb_build_object('24h', sent_24h, '1h', sent_1h, 'checked_at', now());\nend;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "send_feedback_requests",
+      "args": "",
+      "language": "plpgsql",
+      "security_definer": true,
+      "provolatile": "v",
+      "definition": "CREATE OR REPLACE FUNCTION public.send_feedback_requests()\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\ndeclare\n  row record;\n  cnt int;\n  sent int := 0;\n  skipped int := 0;\n  events_processed int := 0;\nbegin\n  -- Find events that ended 1-25 hours ago, approved and not deleted\n  for row in\n    select r.user_id, e.id as event_id, e.title\n    from rsvps r\n    join events e on e.id = r.event_id\n    where e.status = 'approved'\n      and e.deleted_at is null\n      and r.status = 'going'\n      and e.end_date between (now() - interval '25 hours') and (now() - interval '1 hour')\n  loop\n    -- Check if we already sent a feedback request for this user+event\n    select count(*) into cnt\n    from feedback_request_log\n    where user_id = row.user_id\n      and event_id = row.event_id\n      and request_type = 'post_event';\n\n    if cnt > 0 then\n      skipped := skipped + 1;\n      continue;\n    end if;\n\n    -- Create notification\n    insert into notifications (user_id, event_id, type, title, message, read)\n    values (\n      row.user_id,\n      row.event_id,\n      'feedback_request',\n      'How was ' || row.title || '?',\n      'Share your experience \u2014 your feedback helps organizers improve future events.',\n      false\n    )\n    on conflict do nothing;\n\n    -- Log to prevent re-sending\n    insert into feedback_request_log (user_id, event_id, request_type)\n    values (row.user_id, row.event_id, 'post_event')\n    on conflict do nothing;\n\n    sent := sent + 1;\n  end loop;\n\n  -- Count distinct events processed\n  select count(distinct e.id) into events_processed\n  from events e\n  where e.status = 'approved'\n    and e.deleted_at is null\n    and e.end_date between (now() - interval '25 hours') and (now() - interval '1 hour');\n\n  return jsonb_build_object(\n    'events_processed', events_processed,\n    'feedback_requests_sent', sent,\n    'feedback_requests_skipped', skipped,\n    'checked_at', now()\n  );\nend;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "set_limit",
+      "args": "real",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "v",
+      "definition": "CREATE OR REPLACE FUNCTION public.set_limit(real)\n RETURNS real\n LANGUAGE c\n STRICT\nAS '$libdir/pg_trgm', $function$set_limit$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "show_limit",
+      "args": "",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.show_limit()\n RETURNS real\n LANGUAGE c\n STABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$show_limit$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "show_trgm",
+      "args": "text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.show_trgm(text)\n RETURNS text[]\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$show_trgm$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "similarity",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.similarity(text, text)\n RETURNS real\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$similarity$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "similarity_dist",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.similarity_dist(text, text)\n RETURNS real\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$similarity_dist$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "similarity_op",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.similarity_op(text, text)\n RETURNS boolean\n LANGUAGE c\n STABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$similarity_op$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "strict_word_similarity",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.strict_word_similarity(text, text)\n RETURNS real\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$strict_word_similarity$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "strict_word_similarity_commutator_op",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.strict_word_similarity_commutator_op(text, text)\n RETURNS boolean\n LANGUAGE c\n STABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$strict_word_similarity_commutator_op$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "strict_word_similarity_dist_commutator_op",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.strict_word_similarity_dist_commutator_op(text, text)\n RETURNS real\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$strict_word_similarity_dist_commutator_op$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "strict_word_similarity_dist_op",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.strict_word_similarity_dist_op(text, text)\n RETURNS real\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$strict_word_similarity_dist_op$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "strict_word_similarity_op",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.strict_word_similarity_op(text, text)\n RETURNS boolean\n LANGUAGE c\n STABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$strict_word_similarity_op$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "update_event_popularity",
+      "args": "p_event_id uuid",
+      "language": "plpgsql",
+      "security_definer": false,
+      "provolatile": "v",
+      "definition": "CREATE OR REPLACE FUNCTION public.update_event_popularity(p_event_id uuid)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\r\nDECLARE\r\n  v_view_count INT;\r\n  v_click_count INT;\r\n  v_save_count INT;\r\n  v_calendar_add_count INT;\r\n  v_unique_viewers INT;\r\n  v_popularity FLOAT;\r\n  v_trending FLOAT;\r\nBEGIN\r\n  SELECT\r\n    COALESCE(SUM(CASE WHEN interaction_type = 'view' THEN 1 ELSE 0 END), 0),\r\n    COALESCE(SUM(CASE WHEN interaction_type = 'click' THEN 1 ELSE 0 END), 0),\r\n    COALESCE(SUM(CASE WHEN interaction_type = 'save' THEN 1 ELSE 0 END), 0),\r\n    COALESCE(SUM(CASE WHEN interaction_type = 'calendar_add' THEN 1 ELSE 0 END), 0),\r\n    COALESCE(COUNT(DISTINCT user_id), 0)\r\n  INTO v_view_count, v_click_count, v_save_count, v_calendar_add_count, v_unique_viewers\r\n  FROM user_interactions\r\n  WHERE event_id = p_event_id;\r\n\r\n  v_popularity := (v_view_count * 1.0) + (v_click_count * 2.0) + (v_save_count * 5.0) + (v_calendar_add_count * 3.0);\r\n\r\n  SELECT\r\n    COALESCE(SUM(CASE WHEN interaction_type = 'view' THEN 1.0\r\n                      WHEN interaction_type = 'click' THEN 2.0\r\n                      WHEN interaction_type = 'save' THEN 5.0\r\n                      WHEN interaction_type = 'calendar_add' THEN 3.0\r\n                      ELSE 0 END), 0)\r\n  INTO v_trending\r\n  FROM user_interactions\r\n  WHERE event_id = p_event_id\r\n    AND created_at >= NOW() - INTERVAL '7 days';\r\n\r\n  INSERT INTO event_popularity_scores (\r\n    event_id, popularity_score, trending_score,\r\n    view_count, click_count, save_count,\r\n    calendar_add_count, unique_viewers, last_calculated_at\r\n  ) VALUES (\r\n    p_event_id, v_popularity, v_trending,\r\n    v_view_count, v_click_count, v_save_count,\r\n    v_calendar_add_count, v_unique_viewers, NOW()\r\n  )\r\n  ON CONFLICT (event_id) DO UPDATE SET\r\n    popularity_score = EXCLUDED.popularity_score,\r\n    trending_score = EXCLUDED.trending_score,\r\n    view_count = EXCLUDED.view_count,\r\n    click_count = EXCLUDED.click_count,\r\n    save_count = EXCLUDED.save_count,\r\n    calendar_add_count = EXCLUDED.calendar_add_count,\r\n    unique_viewers = EXCLUDED.unique_viewers,\r\n    last_calculated_at = NOW();\r\nEND;\r\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "update_rsvps_updated_at",
+      "args": "",
+      "language": "plpgsql",
+      "security_definer": false,
+      "provolatile": "v",
+      "definition": "CREATE OR REPLACE FUNCTION public.update_rsvps_updated_at()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n  NEW.updated_at = now();\n  RETURN NEW;\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "update_saved_events_count",
+      "args": "",
+      "language": "plpgsql",
+      "security_definer": false,
+      "provolatile": "v",
+      "definition": "CREATE OR REPLACE FUNCTION public.update_saved_events_count()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\r\nBEGIN\r\n  IF TG_OP = 'INSERT' THEN\r\n    UPDATE users\r\n    SET saved_events_count = saved_events_count + 1\r\n    WHERE id = NEW.user_id;\r\n    RETURN NEW;\r\n  ELSIF TG_OP = 'DELETE' THEN\r\n    UPDATE users\r\n    SET saved_events_count = saved_events_count - 1\r\n    WHERE id = OLD.user_id;\r\n    RETURN OLD;\r\n  END IF;\r\n  RETURN NULL;\r\nEND;\r\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "update_updated_at_column",
+      "args": "",
+      "language": "plpgsql",
+      "security_definer": false,
+      "provolatile": "v",
+      "definition": "CREATE OR REPLACE FUNCTION public.update_updated_at_column()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    NEW.updated_at = NOW();\n    RETURN NEW;\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "word_similarity",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.word_similarity(text, text)\n RETURNS real\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$word_similarity$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "word_similarity_commutator_op",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.word_similarity_commutator_op(text, text)\n RETURNS boolean\n LANGUAGE c\n STABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$word_similarity_commutator_op$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "word_similarity_dist_commutator_op",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.word_similarity_dist_commutator_op(text, text)\n RETURNS real\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$word_similarity_dist_commutator_op$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "word_similarity_dist_op",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "i",
+      "definition": "CREATE OR REPLACE FUNCTION public.word_similarity_dist_op(text, text)\n RETURNS real\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$word_similarity_dist_op$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "word_similarity_op",
+      "args": "text, text",
+      "language": "c",
+      "security_definer": false,
+      "provolatile": "s",
+      "definition": "CREATE OR REPLACE FUNCTION public.word_similarity_op(text, text)\n RETURNS boolean\n LANGUAGE c\n STABLE PARALLEL SAFE STRICT\nAS '$libdir/pg_trgm', $function$word_similarity_op$function$\n"
+    }
+  ]
+}

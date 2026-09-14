@@ -1,0 +1,9 @@
+{
+  "name": "sequences",
+  "captured_at": "2026-09-14T18:30:56Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select sequence_schema, sequence_name, data_type, start_value, increment from information_schema.sequences where sequence_schema = 'public' order by 1,2",
+  "row_count": 0,
+  "redactions": [],
+  "rows": []
+}

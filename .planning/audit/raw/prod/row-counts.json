@@ -1,0 +1,130 @@
+{
+  "name": "row-counts",
+  "captured_at": "2026-09-14T18:33:02Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select relname as \"table\", n_live_tup as approx_rows from pg_stat_user_tables where schemaname = 'public' order by relname",
+  "row_count": 30,
+  "redactions": [],
+  "rows": [
+    {
+      "table": "admin_audit_log",
+      "approx_rows": 0
+    },
+    {
+      "table": "club_followers",
+      "approx_rows": 2
+    },
+    {
+      "table": "club_invitations",
+      "approx_rows": 0
+    },
+    {
+      "table": "club_members",
+      "approx_rows": 0
+    },
+    {
+      "table": "clubs",
+      "approx_rows": 222
+    },
+    {
+      "table": "email_reminder_log",
+      "approx_rows": 0
+    },
+    {
+      "table": "event_invites",
+      "approx_rows": 0
+    },
+    {
+      "table": "event_popularity_scores",
+      "approx_rows": 1
+    },
+    {
+      "table": "event_reports",
+      "approx_rows": 0
+    },
+    {
+      "table": "events",
+      "approx_rows": 229
+    },
+    {
+      "table": "experiment_assignments",
+      "approx_rows": 0
+    },
+    {
+      "table": "experiment_variants",
+      "approx_rows": 0
+    },
+    {
+      "table": "experiments",
+      "approx_rows": 0
+    },
+    {
+      "table": "featured_clubs",
+      "approx_rows": 0
+    },
+    {
+      "table": "featured_events",
+      "approx_rows": 1
+    },
+    {
+      "table": "feedback",
+      "approx_rows": 1
+    },
+    {
+      "table": "feedback_request_log",
+      "approx_rows": 6
+    },
+    {
+      "table": "moderation_reviews",
+      "approx_rows": 0
+    },
+    {
+      "table": "notifications",
+      "approx_rows": 19
+    },
+    {
+      "table": "organizer_requests",
+      "approx_rows": 0
+    },
+    {
+      "table": "recommendation_explicit_feedback",
+      "approx_rows": 3
+    },
+    {
+      "table": "recommendation_feedback",
+      "approx_rows": 0
+    },
+    {
+      "table": "reviews",
+      "approx_rows": 0
+    },
+    {
+      "table": "rsvps",
+      "approx_rows": 10
+    },
+    {
+      "table": "saved_events",
+      "approx_rows": 8
+    },
+    {
+      "table": "tag_interaction_counts",
+      "approx_rows": 3
+    },
+    {
+      "table": "user_event_scores",
+      "approx_rows": 0
+    },
+    {
+      "table": "user_follows",
+      "approx_rows": 24
+    },
+    {
+      "table": "user_interactions",
+      "approx_rows": 2
+    },
+    {
+      "table": "users",
+      "approx_rows": 37
+    }
+  ]
+}

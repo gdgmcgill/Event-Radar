@@ -1,0 +1,43 @@
+{
+  "name": "cron-job",
+  "captured_at": "2026-09-14T18:31:30Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select jobid, jobname, schedule, command, nodename, nodeport, database, username, active from cron.job order by jobid",
+  "row_count": 3,
+  "redactions": [],
+  "rows": [
+    {
+      "jobid": 1,
+      "jobname": "send-event-reminders",
+      "schedule": "*/15 * * * *",
+      "command": "select public.send_event_reminders()",
+      "nodename": "localhost",
+      "nodeport": 5432,
+      "database": "postgres",
+      "username": "postgres",
+      "active": true
+    },
+    {
+      "jobid": 2,
+      "jobname": "compute-user-scores",
+      "schedule": "0 */6 * * *",
+      "command": "SELECT compute_user_scores()",
+      "nodename": "localhost",
+      "nodeport": 5432,
+      "database": "postgres",
+      "username": "postgres",
+      "active": true
+    },
+    {
+      "jobid": 4,
+      "jobname": "send-feedback-requests",
+      "schedule": "*/30 * * * *",
+      "command": "SELECT public.send_feedback_requests()",
+      "nodename": "localhost",
+      "nodeport": 5432,
+      "database": "postgres",
+      "username": "postgres",
+      "active": true
+    }
+  ]
+}

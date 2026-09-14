@@ -1,0 +1,180 @@
+{
+  "name": "migrations-applied",
+  "captured_at": "2026-09-14T18:32:38Z",
+  "transport": "supabase-mcp list_migrations (Management API)",
+  "query": "mcp list_migrations",
+  "row_count": 45,
+  "redactions": [],
+  "rows": [
+    {
+      "version": "001"
+    },
+    {
+      "version": "002"
+    },
+    {
+      "version": "003"
+    },
+    {
+      "version": "004"
+    },
+    {
+      "version": "005"
+    },
+    {
+      "version": "006"
+    },
+    {
+      "version": "007"
+    },
+    {
+      "version": "008"
+    },
+    {
+      "version": "009"
+    },
+    {
+      "version": "010"
+    },
+    {
+      "version": "011",
+      "name": "event_images_bucket"
+    },
+    {
+      "version": "012",
+      "name": "add_my_events_to_interaction_source"
+    },
+    {
+      "version": "013",
+      "name": "users_name_avatar_columns"
+    },
+    {
+      "version": "020",
+      "name": "reviews_table"
+    },
+    {
+      "version": "20250210000000",
+      "name": "create_recommendation_feedback"
+    },
+    {
+      "version": "20250210100000",
+      "name": "create_recommendation_explicit_feedback"
+    },
+    {
+      "version": "20251128053245",
+      "name": "remote_schema"
+    },
+    {
+      "version": "20251128060836",
+      "name": "events_add_status_column"
+    },
+    {
+      "version": "20260223",
+      "name": "add_clubs_status_category"
+    },
+    {
+      "version": "20260223000000",
+      "name": "notifications_rls_and_dedup"
+    },
+    {
+      "version": "20260223193741",
+      "name": "notifications_rls_and_dedup"
+    },
+    {
+      "version": "20260225000001",
+      "name": "club_roles_and_invitations"
+    },
+    {
+      "version": "20260226000001",
+      "name": "invitee_select_update_policy"
+    },
+    {
+      "version": "20260227000001",
+      "name": "club_followers"
+    },
+    {
+      "version": "20260305000001",
+      "name": "experiments"
+    },
+    {
+      "version": "20260305000002",
+      "name": "email_reminder_log"
+    },
+    {
+      "version": "20260306",
+      "name": "add_user_profile_fields"
+    },
+    {
+      "version": "20260307000001",
+      "name": "events_query_performance_indexes"
+    },
+    {
+      "version": "20260315041343",
+      "name": "add_club_social_links_and_featured_clubs"
+    },
+    {
+      "version": "20260315045155",
+      "name": "add_club_banner_url"
+    },
+    {
+      "version": "20260315103436",
+      "name": "add_contact_email_to_clubs"
+    },
+    {
+      "version": "20260315231016",
+      "name": "moderation_reviews"
+    },
+    {
+      "version": "20260316002951",
+      "name": "soft_delete"
+    },
+    {
+      "version": "20260316034955",
+      "name": "add_banner_url_to_users"
+    },
+    {
+      "version": "20260316042746",
+      "name": "add_event_pricing_and_rsvp_link"
+    },
+    {
+      "version": "20260316050743",
+      "name": "add_pending_edits_to_events"
+    },
+    {
+      "version": "20260316051022",
+      "name": "create_event_reports"
+    },
+    {
+      "version": "20260316061922",
+      "name": "admin_enforcement_ban_fields"
+    },
+    {
+      "version": "20260316090343",
+      "name": "pre_release_fixes"
+    },
+    {
+      "version": "20260316091121",
+      "name": "add_experiment_variant_id_to_feedback"
+    },
+    {
+      "version": "20260316091643",
+      "name": "feedback_request_log"
+    },
+    {
+      "version": "20260316093431",
+      "name": "create_feedback_table"
+    },
+    {
+      "version": "20260316094048",
+      "name": "send_feedback_requests_function"
+    },
+    {
+      "version": "20260316101601",
+      "name": "fk_indexes_and_cleanup"
+    },
+    {
+      "version": "20260324061310",
+      "name": "create_reviews_table"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "views",
+  "captured_at": "2026-09-14T18:30:46Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select n.nspname as schema, c.relname as name, c.relkind, pg_get_viewdef(c.oid, true) as definition from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('v','m') order by 1,2",
+  "row_count": 0,
+  "redactions": [],
+  "rows": []
+}

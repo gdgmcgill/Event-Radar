@@ -1,0 +1,1020 @@
+{
+  "name": "pg-policies",
+  "captured_at": "2026-09-14T18:27:11Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by schemaname, tablename, policyname",
+  "row_count": 101,
+  "redactions": [],
+  "rows": [
+    {
+      "schemaname": "public",
+      "tablename": "admin_audit_log",
+      "policyname": "Admins can insert audit log",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "true"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "admin_audit_log",
+      "policyname": "Admins can read audit log",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = auth.uid()) AND ('admin'::user_role = ANY (u.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "admin_audit_log",
+      "policyname": "Service role can insert audit log",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "true"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_followers",
+      "policyname": "Anyone can view follower data",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_followers",
+      "policyname": "Authenticated users can follow clubs",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(user_id = auth.uid())"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_followers",
+      "policyname": "Authenticated users can unfollow clubs",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(user_id = auth.uid())",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_invitations",
+      "policyname": "Club owners can create club invitations",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "is_club_owner(club_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_invitations",
+      "policyname": "Club owners can view club invitations",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "is_club_owner(club_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_members",
+      "policyname": "Admins manage memberships",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_members",
+      "policyname": "Club owners can remove members",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(is_club_owner(club_id) AND (user_id <> ( SELECT auth.uid() AS uid)))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_members",
+      "policyname": "Club owners can view all club members",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "is_club_owner(club_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "club_members",
+      "policyname": "Users see own memberships",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "clubs",
+      "policyname": "Admins can insert clubs",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "is_admin()"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "clubs",
+      "policyname": "Admins can update clubs",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "is_admin()",
+      "with_check": "is_admin()"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "clubs",
+      "policyname": "Anyone can read clubs",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "email_reminder_log",
+      "policyname": "Service role can manage reminder log",
+      "permissive": "PERMISSIVE",
+      "roles": "{service_role}",
+      "cmd": "ALL",
+      "qual": "true",
+      "with_check": "true"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "email_reminder_log",
+      "policyname": "Users can view their own reminder log",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_invites",
+      "policyname": "Users can delete invites sent to them",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "DELETE",
+      "qual": "(auth.uid() = invitee_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_invites",
+      "policyname": "Users can delete own sent invites",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "DELETE",
+      "qual": "(auth.uid() = inviter_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_invites",
+      "policyname": "Users can send invites",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = inviter_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_invites",
+      "policyname": "Users can view own invites",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "((auth.uid() = inviter_id) OR (auth.uid() = invitee_id))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_popularity_scores",
+      "policyname": "Allow public read access to event_popularity_scores",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_popularity_scores",
+      "policyname": "Anyone can view popularity scores",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_popularity_scores",
+      "policyname": "Authenticated users can update popularity scores",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(auth.role() = 'authenticated'::text)",
+      "with_check": "(auth.role() = 'authenticated'::text)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_reports",
+      "policyname": "Admins can read all reports",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_reports",
+      "policyname": "Admins can update reports",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_reports",
+      "policyname": "Users can insert own reports",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = reporter_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "event_reports",
+      "policyname": "Users can read own reports",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = reporter_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "Admins can delete events",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "is_admin()",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "Admins can update any event",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "is_admin()",
+      "with_check": "is_admin()"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "Admins can view all events",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "is_admin()",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "Approved events are viewable by everyone",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(status = 'approved'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "Authenticated users can insert events",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "true"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "Organizers can update own events",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(auth.uid() = created_by)",
+      "with_check": "(auth.uid() = created_by)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "Organizers can view own events",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = created_by)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiment_assignments",
+      "policyname": "Admins can manage experiment assignments",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiment_assignments",
+      "policyname": "Users can read own assignments",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiment_variants",
+      "policyname": "Admins can manage experiment variants",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "experiments",
+      "policyname": "Admins can manage experiments",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_clubs",
+      "policyname": "Admins can manage featured clubs",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_clubs",
+      "policyname": "Anyone can view featured clubs",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_events",
+      "policyname": "Admins can manage featured events",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "featured_events",
+      "policyname": "Public can read active featured events",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "((starts_at <= now()) AND (ends_at > now()))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback",
+      "policyname": "Admins can read feedback",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback",
+      "policyname": "Service role full access",
+      "permissive": "PERMISSIVE",
+      "roles": "{service_role}",
+      "cmd": "ALL",
+      "qual": "true",
+      "with_check": "true"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback",
+      "policyname": "Users can insert feedback",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "true"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback_request_log",
+      "policyname": "Service role can manage feedback request log",
+      "permissive": "PERMISSIVE",
+      "roles": "{service_role}",
+      "cmd": "ALL",
+      "qual": "true",
+      "with_check": "true"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "feedback_request_log",
+      "policyname": "Users can view their own feedback request log",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "moderation_reviews",
+      "policyname": "Admins full access",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "moderation_reviews",
+      "policyname": "Creators can appeal their items",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((action = 'appeal'::text) AND (author_id = auth.uid()) AND (((target_type = 'event'::text) AND (EXISTS ( SELECT 1\n   FROM events\n  WHERE ((events.id = moderation_reviews.target_id) AND (events.created_by = auth.uid()))))) OR ((target_type = 'club'::text) AND (EXISTS ( SELECT 1\n   FROM clubs\n  WHERE ((clubs.id = moderation_reviews.target_id) AND (clubs.created_by = auth.uid())))))))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "moderation_reviews",
+      "policyname": "Creators can view reviews of their items",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(((target_type = 'event'::text) AND (EXISTS ( SELECT 1\n   FROM events\n  WHERE ((events.id = moderation_reviews.target_id) AND (events.created_by = auth.uid()))))) OR ((target_type = 'club'::text) AND (EXISTS ( SELECT 1\n   FROM clubs\n  WHERE ((clubs.id = moderation_reviews.target_id) AND (clubs.created_by = auth.uid()))))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "policyname": "Service role can insert notifications",
+      "permissive": "PERMISSIVE",
+      "roles": "{service_role}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "true"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "policyname": "Users can mark own notifications read",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "notifications",
+      "policyname": "Users can view own notifications",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "organizer_requests",
+      "policyname": "Admins manage requests",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.id = auth.uid()) AND ('admin'::user_role = ANY (users.roles)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "organizer_requests",
+      "policyname": "Users create own requests",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "organizer_requests",
+      "policyname": "Users see own requests",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_explicit_feedback",
+      "policyname": "Users can insert own explicit feedback",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_explicit_feedback",
+      "policyname": "Users can read own explicit feedback",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_explicit_feedback",
+      "policyname": "Users can update own explicit feedback",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_feedback",
+      "policyname": "Users can insert own feedback",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "recommendation_feedback",
+      "policyname": "Users can read own feedback",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reviews",
+      "policyname": "Anyone can read reviews",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reviews",
+      "policyname": "Users can delete own review",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "DELETE",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reviews",
+      "policyname": "Users can insert own review",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reviews",
+      "policyname": "Users can update own review",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "rsvps",
+      "policyname": "Anyone can view rsvps",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "rsvps",
+      "policyname": "Users can create own rsvps",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "rsvps",
+      "policyname": "Users can delete own rsvps",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "DELETE",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "rsvps",
+      "policyname": "Users can update own rsvps",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "saved_events",
+      "policyname": "Users can delete their own saved events",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "DELETE",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "saved_events",
+      "policyname": "Users can insert their own saved events",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "saved_events",
+      "policyname": "Users can view their own saved events",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tag_interaction_counts",
+      "policyname": "Service role can manage all tag counts",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(auth.role() = 'service_role'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tag_interaction_counts",
+      "policyname": "Users can read their own tag counts",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_event_scores",
+      "policyname": "Service role can manage all scores",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(auth.role() = 'service_role'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_event_scores",
+      "policyname": "Users can read their own scores",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_follows",
+      "policyname": "Anyone can view follows",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_follows",
+      "policyname": "Users can follow others",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = follower_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_follows",
+      "policyname": "Users can unfollow",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "DELETE",
+      "qual": "(auth.uid() = follower_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_interactions",
+      "policyname": "Anyone can insert interactions",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "true"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_interactions",
+      "policyname": "Users can view their own interactions",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "users",
+      "policyname": "Admins can view all profiles",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "is_admin()",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "users",
+      "policyname": "Users can insert own profile",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "users",
+      "policyname": "Users can read own profile",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "users",
+      "policyname": "Users can update own profile",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "(auth.uid() = id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Allow authenticated delete from own folder",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "((auth.uid())::text = (storage.foldername(name))[1])",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Allow authenticated update in own folder",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "((auth.uid())::text = (storage.foldername(name))[1])",
+      "with_check": "((auth.uid())::text = (storage.foldername(name))[1])"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Allow authenticated upload to own folder",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((auth.uid())::text = (storage.foldername(name))[1])"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Allow public read access 1oj01fe_0",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Anyone can view banners",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'banners'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Anyone can view club logos",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'club-logos'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Anyone can view event images",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'event-images'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Authenticated users can update club logos",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Authenticated users can upload banners",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(bucket_id = 'banners'::text)"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Authenticated users can upload club logos",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Authenticated users can upload event images",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(bucket_id = 'event-images'::text)"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Public read access for event images",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'event-images'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Service role upload for event images",
+      "permissive": "PERMISSIVE",
+      "roles": "{service_role}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(bucket_id = 'event-images'::text)"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Users can delete their own banners",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "((bucket_id = 'banners'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Users can update their own banners",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = 'banners'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+      "with_check": null
+    }
+  ]
+}

@@ -1,0 +1,871 @@
+{
+  "name": "constraints",
+  "captured_at": "2026-09-14T18:28:36Z",
+  "transport": "supabase-mcp execute_sql (Management API)",
+  "query": "select n.nspname as schema, c.relname as \"table\", con.conname, con.contype, pg_get_constraintdef(con.oid, true) as definition from pg_constraint con join pg_class c on c.oid = con.conrelid join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' order by 1,2,3",
+  "row_count": 123,
+  "redactions": [],
+  "rows": [
+    {
+      "schema": "public",
+      "table": "admin_audit_log",
+      "conname": "admin_audit_log_admin_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (admin_user_id) REFERENCES auth.users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_log",
+      "conname": "admin_audit_log_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "club_followers",
+      "conname": "club_followers_club_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "club_followers",
+      "conname": "club_followers_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "club_followers",
+      "conname": "club_followers_unique",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, club_id)"
+    },
+    {
+      "schema": "public",
+      "table": "club_followers",
+      "conname": "club_followers_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "club_invitations",
+      "conname": "club_invitations_club_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "club_invitations",
+      "conname": "club_invitations_inviter_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (inviter_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "club_invitations",
+      "conname": "club_invitations_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "club_invitations",
+      "conname": "club_invitations_status_check",
+      "contype": "c",
+      "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'accepted'::text, 'expired'::text, 'revoked'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "club_invitations",
+      "conname": "club_invitations_token_key",
+      "contype": "u",
+      "definition": "UNIQUE (token)"
+    },
+    {
+      "schema": "public",
+      "table": "club_members",
+      "conname": "club_members_club_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "club_members",
+      "conname": "club_members_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "club_members",
+      "conname": "club_members_role_check",
+      "contype": "c",
+      "definition": "CHECK (role = ANY (ARRAY['owner'::text, 'organizer'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "club_members",
+      "conname": "club_members_user_id_club_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, club_id)"
+    },
+    {
+      "schema": "public",
+      "table": "club_members",
+      "conname": "club_members_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "clubs",
+      "conname": "clubs_created_by_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES auth.users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "clubs",
+      "conname": "clubs_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "email_reminder_log",
+      "conname": "email_reminder_log_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "email_reminder_log",
+      "conname": "email_reminder_log_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "email_reminder_log",
+      "conname": "email_reminder_log_reminder_type_check",
+      "contype": "c",
+      "definition": "CHECK (reminder_type = ANY (ARRAY['reminder_24h'::text, 'reminder_1h'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "email_reminder_log",
+      "conname": "email_reminder_log_user_id_event_id_reminder_type_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, event_id, reminder_type)"
+    },
+    {
+      "schema": "public",
+      "table": "email_reminder_log",
+      "conname": "email_reminder_log_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "event_invites",
+      "conname": "event_invites_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "event_invites",
+      "conname": "event_invites_invitee_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (invitee_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "event_invites",
+      "conname": "event_invites_inviter_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (inviter_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "event_invites",
+      "conname": "event_invites_inviter_id_invitee_id_event_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (inviter_id, invitee_id, event_id)"
+    },
+    {
+      "schema": "public",
+      "table": "event_invites",
+      "conname": "event_invites_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "event_popularity_scores",
+      "conname": "event_popularity_scores_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "event_popularity_scores",
+      "conname": "event_popularity_scores_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (event_id)"
+    },
+    {
+      "schema": "public",
+      "table": "event_reports",
+      "conname": "event_reports_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "event_reports",
+      "conname": "event_reports_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "event_reports",
+      "conname": "event_reports_reporter_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (reporter_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "event_reports",
+      "conname": "event_reports_reviewed_by_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (reviewed_by) REFERENCES auth.users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "event_reports",
+      "conname": "event_reports_status_check",
+      "contype": "c",
+      "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'reviewed'::text, 'dismissed'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "event_reports",
+      "conname": "event_reports_unique_per_user",
+      "contype": "u",
+      "definition": "UNIQUE (event_id, reporter_id)"
+    },
+    {
+      "schema": "public",
+      "table": "events",
+      "conname": "events_appeal_count_non_negative",
+      "contype": "c",
+      "definition": "CHECK (appeal_count >= 0)"
+    },
+    {
+      "schema": "public",
+      "table": "events",
+      "conname": "events_club_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "public",
+      "table": "events",
+      "conname": "events_created_by_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "public",
+      "table": "events",
+      "conname": "events_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "events",
+      "conname": "events_source_check",
+      "contype": "c",
+      "definition": "CHECK (source = ANY (ARRAY['manual'::text, 'instagram'::text, 'admin'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "events",
+      "conname": "events_status_check",
+      "contype": "c",
+      "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'suspended'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "experiment_assignments",
+      "conname": "experiment_assignments_experiment_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES experiments(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "experiment_assignments",
+      "conname": "experiment_assignments_experiment_id_user_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (experiment_id, user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "experiment_assignments",
+      "conname": "experiment_assignments_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "experiment_assignments",
+      "conname": "experiment_assignments_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "experiment_assignments",
+      "conname": "experiment_assignments_variant_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (variant_id) REFERENCES experiment_variants(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "experiment_variants",
+      "conname": "experiment_variants_experiment_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES experiments(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "experiment_variants",
+      "conname": "experiment_variants_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "experiments",
+      "conname": "experiments_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "experiments",
+      "conname": "experiments_status_check",
+      "contype": "c",
+      "definition": "CHECK (status = ANY (ARRAY['draft'::text, 'running'::text, 'paused'::text, 'completed'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "featured_clubs",
+      "conname": "featured_clubs_club_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "featured_clubs",
+      "conname": "featured_clubs_created_by_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES auth.users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "featured_clubs",
+      "conname": "featured_clubs_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "featured_events",
+      "conname": "featured_events_created_by_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "featured_events",
+      "conname": "featured_events_date_order",
+      "contype": "c",
+      "definition": "CHECK (ends_at > starts_at)"
+    },
+    {
+      "schema": "public",
+      "table": "featured_events",
+      "conname": "featured_events_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "featured_events",
+      "conname": "featured_events_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "feedback",
+      "conname": "feedback_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "feedback",
+      "conname": "feedback_status_check",
+      "contype": "c",
+      "definition": "CHECK (status = ANY (ARRAY['new'::text, 'reviewed'::text, 'resolved'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "feedback",
+      "conname": "feedback_type_check",
+      "contype": "c",
+      "definition": "CHECK (type = ANY (ARRAY['bug'::text, 'feature'::text, 'general'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "feedback",
+      "conname": "feedback_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "public",
+      "table": "feedback_request_log",
+      "conname": "feedback_request_log_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "feedback_request_log",
+      "conname": "feedback_request_log_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "feedback_request_log",
+      "conname": "feedback_request_log_request_type_check",
+      "contype": "c",
+      "definition": "CHECK (request_type = ANY (ARRAY['post_event'::text, 'post_event_reminder'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "feedback_request_log",
+      "conname": "feedback_request_log_user_id_event_id_request_type_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, event_id, request_type)"
+    },
+    {
+      "schema": "public",
+      "table": "feedback_request_log",
+      "conname": "feedback_request_log_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "moderation_reviews",
+      "conname": "category_required_for_rejection",
+      "contype": "c",
+      "definition": "CHECK (action = 'rejection'::text AND category IS NOT NULL OR (action = ANY (ARRAY['appeal'::text, 'approval'::text, 'suspension'::text])) AND category IS NULL)"
+    },
+    {
+      "schema": "public",
+      "table": "moderation_reviews",
+      "conname": "moderation_reviews_action_check",
+      "contype": "c",
+      "definition": "CHECK (action = ANY (ARRAY['rejection'::text, 'appeal'::text, 'approval'::text, 'suspension'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "moderation_reviews",
+      "conname": "moderation_reviews_category_check",
+      "contype": "c",
+      "definition": "CHECK (category = ANY (ARRAY['inappropriate_content'::text, 'missing_information'::text, 'duplicate'::text, 'policy_violation'::text, 'incorrect_details'::text, 'other'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "moderation_reviews",
+      "conname": "moderation_reviews_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "moderation_reviews",
+      "conname": "moderation_reviews_target_type_check",
+      "contype": "c",
+      "definition": "CHECK (target_type = ANY (ARRAY['event'::text, 'club'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "notifications",
+      "conname": "notifications_club_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "notifications",
+      "conname": "notifications_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "public",
+      "table": "notifications",
+      "conname": "notifications_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "notifications",
+      "conname": "notifications_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "organizer_requests",
+      "conname": "organizer_requests_club_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "organizer_requests",
+      "conname": "organizer_requests_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "organizer_requests",
+      "conname": "organizer_requests_reviewed_by_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (reviewed_by) REFERENCES users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "organizer_requests",
+      "conname": "organizer_requests_status_check",
+      "contype": "c",
+      "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "organizer_requests",
+      "conname": "organizer_requests_user_id_club_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, club_id)"
+    },
+    {
+      "schema": "public",
+      "table": "organizer_requests",
+      "conname": "organizer_requests_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "recommendation_explicit_feedback",
+      "conname": "recommendation_explicit_feedback_feedback_type_check",
+      "contype": "c",
+      "definition": "CHECK (feedback_type = ANY (ARRAY['positive'::text, 'negative'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "recommendation_explicit_feedback",
+      "conname": "recommendation_explicit_feedback_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "recommendation_explicit_feedback",
+      "conname": "recommendation_explicit_feedback_user_id_event_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, event_id)"
+    },
+    {
+      "schema": "public",
+      "table": "recommendation_explicit_feedback",
+      "conname": "recommendation_explicit_feedback_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "recommendation_feedback",
+      "conname": "recommendation_feedback_action_check",
+      "contype": "c",
+      "definition": "CHECK (action = ANY (ARRAY['impression'::text, 'click'::text, 'save'::text, 'dismiss'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "recommendation_feedback",
+      "conname": "recommendation_feedback_experiment_variant_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (experiment_variant_id) REFERENCES experiment_variants(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "public",
+      "table": "recommendation_feedback",
+      "conname": "recommendation_feedback_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "recommendation_feedback",
+      "conname": "recommendation_feedback_recommendation_rank_check",
+      "contype": "c",
+      "definition": "CHECK (recommendation_rank >= 1)"
+    },
+    {
+      "schema": "public",
+      "table": "recommendation_feedback",
+      "conname": "recommendation_feedback_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "reviews",
+      "conname": "reviews_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "reviews",
+      "conname": "reviews_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "reviews",
+      "conname": "reviews_rating_check",
+      "contype": "c",
+      "definition": "CHECK (rating >= 1 AND rating <= 5)"
+    },
+    {
+      "schema": "public",
+      "table": "reviews",
+      "conname": "reviews_user_id_event_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, event_id)"
+    },
+    {
+      "schema": "public",
+      "table": "reviews",
+      "conname": "reviews_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "rsvps",
+      "conname": "rsvps_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "rsvps",
+      "conname": "rsvps_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "rsvps",
+      "conname": "rsvps_status_check",
+      "contype": "c",
+      "definition": "CHECK (status = ANY (ARRAY['going'::text, 'interested'::text, 'cancelled'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "rsvps",
+      "conname": "rsvps_user_id_event_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, event_id)"
+    },
+    {
+      "schema": "public",
+      "table": "rsvps",
+      "conname": "rsvps_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "saved_events",
+      "conname": "saved_events_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "saved_events",
+      "conname": "saved_events_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "saved_events",
+      "conname": "saved_events_user_id_event_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, event_id)"
+    },
+    {
+      "schema": "public",
+      "table": "saved_events",
+      "conname": "saved_events_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "tag_interaction_counts",
+      "conname": "tag_interaction_counts_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, tag)"
+    },
+    {
+      "schema": "public",
+      "table": "tag_interaction_counts",
+      "conname": "tag_interaction_counts_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "user_event_scores",
+      "conname": "user_event_scores_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "user_event_scores",
+      "conname": "user_event_scores_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, event_id)"
+    },
+    {
+      "schema": "public",
+      "table": "user_event_scores",
+      "conname": "user_event_scores_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "user_follows",
+      "conname": "user_follows_check",
+      "contype": "c",
+      "definition": "CHECK (follower_id <> following_id)"
+    },
+    {
+      "schema": "public",
+      "table": "user_follows",
+      "conname": "user_follows_follower_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "user_follows",
+      "conname": "user_follows_follower_id_following_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (follower_id, following_id)"
+    },
+    {
+      "schema": "public",
+      "table": "user_follows",
+      "conname": "user_follows_following_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "user_follows",
+      "conname": "user_follows_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "user_interactions",
+      "conname": "user_interactions_event_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "user_interactions",
+      "conname": "user_interactions_interaction_type_check",
+      "contype": "c",
+      "definition": "CHECK (interaction_type = ANY (ARRAY['view'::text, 'click'::text, 'save'::text, 'unsave'::text, 'share'::text, 'calendar_add'::text]))"
+    },
+    {
+      "schema": "public",
+      "table": "user_interactions",
+      "conname": "user_interactions_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "user_interactions",
+      "conname": "user_interactions_source_check",
+      "contype": "c",
+      "definition": "CHECK (source IS NULL OR (source = ANY (ARRAY['home'::text, 'search'::text, 'recommendation'::text, 'calendar'::text, 'direct'::text, 'modal'::text])))"
+    },
+    {
+      "schema": "public",
+      "table": "user_interactions",
+      "conname": "user_interactions_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "conname": "users_banned_by_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (banned_by) REFERENCES auth.users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "conname": "users_email_key",
+      "contype": "u",
+      "definition": "UNIQUE (email)"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "conname": "users_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    }
+  ]
+}
