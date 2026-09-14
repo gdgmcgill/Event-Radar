@@ -259,7 +259,7 @@ This is the one place where the obvious answer is wrong for this codebase.
 3. Node pin (`.nvmrc` + `engines` + CI 20→24) — own commit, full gate
 4. Delete Vitest configs; install the 4 testing-library packages; un-skip the 4 component suites; add `test` script; add the CI test step
 5. Remaining non-major bumps in batches via `ncu -t minor`
-6. Delete the dead `describe.skip` cursor-pagination suite
+6. Sweep **all** skip markers rather than deleting only the one known suite. Test decay against changed routes happened in at least two places: `src/app/api/events/route.test.ts:19` (`describe.skip`, cursor-pagination route deleted) and `src/__tests__/api/events/get-events.test.ts:420` (`it.skip`, "route no longer uses `eq()` for status filtering"). Run `grep -rn "describe.skip\|it.skip\|test.skip\|xdescribe\|xit" src` and triage every hit into *un-skip* (blocked only by a missing dependency) or *delete* (asserts behavior that no longer exists). The second kind is worse than no test — it inflates the suite count while asserting nothing.
 7. `rm -rf node_modules package-lock.json && npm install` → verify reproducibility, then review the lockfile diff
 
 **Stage 3 — Refactor.** `supabase gen types` first (schema → types is the bottom of the stated bottom-up order), then zod contracts per handler, then the logger wrapper + Sentry, then a `/api/health` endpoint. Add dependency-cruiser boundary rules to CI as each service boundary is established — that is what keeps the refactor from regressing.
