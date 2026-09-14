@@ -1,0 +1,185 @@
+MIGRATION LIST — PRODUCTION
+===========================
+
+Requirement:  AUDIT-02 (three-way schema drift)
+Plan:         01-08
+Captured:     2026-09-14
+Outcome:      CAPTURED, by a deviating transport. Read the provenance block before
+              treating any line below as CLI output — it is not.
+
+PROVENANCE — THIS IS NOT `supabase migration list` OUTPUT
+---------------------------------------------------------
+The command the plan specifies is:
+
+    supabase migration list --linked   > .planning/audit/schema/migration-list.prod.txt
+    # or, without linking:
+    supabase migration list --project-ref "$PROD_PROJECT_REF"
+    # or, with a direct connection:
+    supabase migration list --db-url "$PROD_DB_URL"
+
+None of those could run. `--linked` requires `supabase link`, which writes project
+state into supabase/.temp/ — a write inside the directory under audit, forbidden by
+this phase. `--project-ref` requires SUPABASE_ACCESS_TOKEN and `--db-url` requires a
+connection string; per .planning/audit/redaction/01-06.md § 1 neither was ever supplied.
+
+The REMOTE column below is nonetheless real production data. It was read in plan 01-06
+through the authenticated Supabase MCP server (Management API `list_migrations`), which
+reads the same table `supabase migration list` reads — supabase_migrations.schema_migrations.
+The captured envelope is:
+
+    .planning/audit/raw/prod/migrations-applied.json
+      name:        migrations-applied
+      captured_at: 2026-09-14T18:32:38Z
+      transport:   supabase-mcp list_migrations (Management API)
+      row_count:   45
+
+The LOCAL column is NOT a local database's applied set — no local database exists
+(see migration-list.local.txt and schema/local-reset.txt). It is the set of versions
+DECLARED by the files in supabase/migrations/, derived with the same rule the CLI uses:
+the leading digits of the filename. That is exactly what `supabase migration list`
+puts in its LOCAL column when the local stack has been reset from the folder, so the
+bucketing (local-only / remote-only / both) is the same question the CLI answers.
+
+TABLE
+-----
+
+  LOCAL            | REMOTE           | TIME (UTC)            | NOTE
+  -----------------+------------------+-----------------------+-----------------------------------------
+  001              | 001              | -                     | both
+  002              | 002              | -                     | both
+  003              | 003              | -                     | both
+  004              | 004              | -                     | both
+  005              | 005              | -                     | both
+  006              | 006              | -                     | both
+  007              | 007              | -                     | both
+  008              | 008              | -                     | both  [VERSION COLLISION: 008_event_source_tracking.sql + 008b_add_is_admin_to_users.sql (SKIPPED by CLI)]
+  009              | 009              | -                     | both
+  010              | 010              | -                     | both
+  011              | 011              | -                     | both  [VERSION COLLISION: 011_event_images_bucket.sql + 011_rls_audit.sql]
+  012              | 012              | -                     | both
+  013              | 013              | -                     | both
+  020              | 020              | -                     | both
+  20250210000000   | 20250210000000   | 2025-02-10 00:00:00   | both
+  20250210100000   | 20250210100000   | 2025-02-10 10:00:00   | both
+  20251128053245   | 20251128053245   | 2025-11-28 05:32:45   | both
+  20251128060836   | 20251128060836   | 2025-11-28 06:08:36   | both
+  20260223         | 20260223         | 2026-02-23 (no time)  | both
+  20260223000000   | 20260223000000   | 2026-02-23 00:00:00   | both
+  20260223193741   | 20260223193741   | 2026-02-23 19:37:41   | both
+  20260225000001   | 20260225000001   | 2026-02-25 00:00:01   | both
+  20260226000001   | 20260226000001   | 2026-02-26 00:00:01   | both
+  20260227000001   | 20260227000001   | 2026-02-27 00:00:01   | both
+  20260305000001   | 20260305000001   | 2026-03-05 00:00:01   | both
+  20260305000002   | 20260305000002   | 2026-03-05 00:00:02   | both  [VERSION COLLISION: 20260305000002_email_reminder_log.sql + 20260305000002_phase1_club_rls_and_schema.sql]
+  20260306         | 20260306         | 2026-03-06 (no time)  | both  [VERSION COLLISION: 20260306_add_user_profile_fields.sql + 20260306_create_event_invites.sql + 20260306_create_user_follows.sql]
+                   | 20260307000001   | 2026-03-07 00:00:01   | REMOTE ONLY — no file in supabase/migrations/
+  20260308000001   |                  | 2026-03-08 00:00:01   | LOCAL ONLY — never applied to production
+  20260308000002   |                  | 2026-03-08 00:00:02   | LOCAL ONLY — never applied to production
+  20260308000003   |                  | 2026-03-08 00:00:03   | LOCAL ONLY — never applied to production
+  20260308000004   |                  | 2026-03-08 00:00:04   | LOCAL ONLY — never applied to production
+  20260313000001   |                  | 2026-03-13 00:00:01   | LOCAL ONLY — never applied to production
+  20260313000002   |                  | 2026-03-13 00:00:02   | LOCAL ONLY — never applied to production
+  20260315000001   |                  | 2026-03-15 00:00:01   | LOCAL ONLY — never applied to production
+  20260315000002   |                  | 2026-03-15 00:00:02   | LOCAL ONLY — never applied to production
+                   | 20260315041343   | 2026-03-15 04:13:43   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260315045155   | 2026-03-15 04:51:55   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260315103436   | 2026-03-15 10:34:36   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260315231016   | 2026-03-15 23:10:16   | REMOTE ONLY — no file in supabase/migrations/
+  20260316000001   |                  | 2026-03-16 00:00:01   | LOCAL ONLY — never applied to production
+  20260316000002   |                  | 2026-03-16 00:00:02   | LOCAL ONLY — never applied to production
+  20260316000003   |                  | 2026-03-16 00:00:03   | LOCAL ONLY — never applied to production
+  20260316000004   |                  | 2026-03-16 00:00:04   | LOCAL ONLY — never applied to production
+                   | 20260316002951   | 2026-03-16 00:29:51   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316034955   | 2026-03-16 03:49:55   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316042746   | 2026-03-16 04:27:46   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316050743   | 2026-03-16 05:07:43   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316051022   | 2026-03-16 05:10:22   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316061922   | 2026-03-16 06:19:22   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316090343   | 2026-03-16 09:03:43   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316091121   | 2026-03-16 09:11:21   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316091643   | 2026-03-16 09:16:43   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316093431   | 2026-03-16 09:34:31   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316094048   | 2026-03-16 09:40:48   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260316101601   | 2026-03-16 10:16:01   | REMOTE ONLY — no file in supabase/migrations/
+                   | 20260324061310   | 2026-03-24 06:13:10   | REMOTE ONLY — no file in supabase/migrations/
+
+COUNTS
+------
+  files in supabase/migrations/          44   (baseline/versions.txt migration_count=44)
+  distinct versions declared by files    39   (44 files collapse to 39 versions — see collisions)
+  versions applied in production         45
+  applied in production AND declared     27
+  declared but NEVER applied (local-only) 12
+  applied but no file (remote-only)       18
+
+THE 45-VS-44 DISCREPANCY IS NOT THE REAL ONE
+--------------------------------------------
+PROJECT.md and the orchestrator brief say 45 migrations; the folder holds 44 files, and
+production reports 45 applied versions. Read naively that is an off-by-one. It is not.
+The 44 files collapse to 39 distinct versions because of four version collisions, and
+the two sets overlap in only 27 versions:
+
+  18 versions are applied in production with NO file in supabase/migrations/:
+      20260307000001   2026-03-07 00:00:01
+      20260315041343   2026-03-15 04:13:43
+      20260315045155   2026-03-15 04:51:55
+      20260315103436   2026-03-15 10:34:36
+      20260315231016   2026-03-15 23:10:16
+      20260316002951   2026-03-16 00:29:51
+      20260316034955   2026-03-16 03:49:55
+      20260316042746   2026-03-16 04:27:46
+      20260316050743   2026-03-16 05:07:43
+      20260316051022   2026-03-16 05:10:22
+      20260316061922   2026-03-16 06:19:22
+      20260316090343   2026-03-16 09:03:43
+      20260316091121   2026-03-16 09:11:21
+      20260316091643   2026-03-16 09:16:43
+      20260316093431   2026-03-16 09:34:31
+      20260316094048   2026-03-16 09:40:48
+      20260316101601   2026-03-16 10:16:01
+      20260324061310   2026-03-24 06:13:10
+
+  12 files declare a version that was NEVER applied to production:
+      20260308000001   20260308000001_fuzzy_search.sql
+      20260308000002   20260308000002_admin_audit_log.sql
+      20260308000003   20260308000003_time_of_day_filter.sql
+      20260308000004   20260308000004_content_hash_dedup.sql
+      20260313000001   20260313000001_featured_events.sql
+      20260313000002   20260313000002_recommendation_engine.sql
+      20260315000001   20260315000001_moderation_reviews.sql
+      20260315000002   20260315000002_soft_delete.sql
+      20260316000001   20260316000001_feedback_request_log.sql
+      20260316000002   20260316000002_event_reports.sql
+      20260316000003   20260316000003_audit_fixes.sql
+      20260316000004   20260316000004_fk_indexes_and_cleanup.sql
+
+  4 version collisions (9 files):
+      008              008_event_source_tracking.sql + 008b_add_is_admin_to_users.sql
+      011              011_event_images_bucket.sql + 011_rls_audit.sql
+      20260305000002   20260305000002_email_reminder_log.sql + 20260305000002_phase1_club_rls_and_schema.sql
+      20260306         20260306_add_user_profile_fields.sql + 20260306_create_event_invites.sql + 20260306_create_user_follows.sql
+
+So the honest statement of drift is: production and the migrations folder agree on 27
+versions, disagree on 30, and the folder cannot even name 5 of its own files
+distinctly. "45 vs 44" understates the gap by an order of magnitude.
+
+WHAT THE REMOTE-ONLY VERSIONS ARE
+---------------------------------
+All 18 are bare timestamps with no name recorded — the shape the Supabase dashboard SQL
+editor writes when DDL is run there, and the shape `supabase db push` writes for a
+migration whose file has since been deleted. The Management API returns only `version`
+for these rows (the envelope's rows each carry a single key), so the statements they
+applied are not recoverable from the history table alone. Seventeen of the eighteen fall
+in 2026-03-15/16, one on 2026-03-24 — i.e. production received a burst of out-of-band
+schema changes that the repository never saw. The columns they created are visible in the
+production census, and drift.json marks them prod-only.
+
+CROSS-REFERENCES
+----------------
+  .planning/audit/raw/prod/migrations-applied.json   the production envelope (REMOTE column)
+  .planning/audit/schema/local-reset.txt             why the folder cannot be replayed
+  .planning/audit/schema/migration-list.local.txt    what actually applied locally
+  .planning/audit/schema/db-diff.prod.sql            why the shadow diff could not be built
+  .planning/audit/schema/drift.json                  the per-column consequence of this table
+
+No credential was read, written, or passed as a command-line argument to produce this file.

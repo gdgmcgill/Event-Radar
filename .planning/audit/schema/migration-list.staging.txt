@@ -1,0 +1,65 @@
+MIGRATION LIST — STAGING
+========================
+
+BLOCKED — input not supplied
+
+Requirement:  AUDIT-02 (three-way schema drift)
+Plan:         01-08
+Date:         2026-09-14
+
+This is a deferred-with-reason stub, not a migration list. It contains no history.
+
+BLOCKING REASON
+---------------
+No staging environment was reachable by any transport available to this phase:
+
+  * No staging project reference and no staging access token were supplied. At plan
+    01-06's credential gate the operator was asked whether a staging Supabase project
+    exists and whether its credentials would be supplied for this pass; the answer,
+    verbatim, was "Not now." See .planning/audit/schema/staging.schema.sql, which is
+    blocked for the same reason, and .planning/audit/BLOCKING-INPUTS.md § 1 for the
+    variable NAMES this artifact waits on (STAGING_PROJECT_REF, or STAGING_DB_URL for
+    the direct-connection fallback).
+  * The Supabase MCP server that stood in for the CLI in plan 01-06 is authenticated
+    against ONE project. No second project is visible to that grant, so the Management
+    API fallback that produced migration-list.prod.txt has nothing to read here.
+
+Note for whoever fills this gap: 01-RESEARCH.md § Assumptions Log A4 records that
+PROJECT.md asserts a staging project exists, but that this was never verified in
+session. "Not now" is a scheduling answer, not a statement that staging is absent.
+If it turns out no staging project exists at all, that is itself an AUDIT-02 finding —
+a two-environment promotion story documented as a three-environment one, with no
+staging gate between the repository and production — and should be filed rather than
+recorded here as a deferral. The 18 remote-only versions in migration-list.prod.txt
+are circumstantial support for that reading: schema changes that reached production
+without passing through any migration file would, in a working three-environment
+promotion flow, have had to clear staging first.
+
+TO PRODUCE A REAL LIST
+----------------------
+Run from the repository root with the credential exported into the shell only — never
+written to a file, never passed as a command-line argument:
+
+    export SUPABASE_ACCESS_TOKEN=...            # in the shell only
+    supabase migration list --project-ref "$STAGING_PROJECT_REF" \
+      > .planning/audit/schema/migration-list.staging.txt
+
+    # direct-connection fallback, when no access token can be issued
+    supabase migration list --db-url "$STAGING_DB_URL" \
+      > .planning/audit/schema/migration-list.staging.txt
+
+    bash .planning/audit/tools/readonly-guard.sh
+
+Do NOT use `supabase link --project-ref "$STAGING_PROJECT_REF"` followed by `--linked`.
+`link` writes project state into supabase/.temp/, which is inside the directory this
+phase is auditing; the per-command `--project-ref` form avoids that write entirely.
+
+CONSEQUENCE FOR AUDIT-02
+------------------------
+The drift table in .planning/audit/schema/drift.json is a TWO-way reconciliation of
+three SOURCES — production catalog, migration files, and src/lib/supabase/types.ts —
+not a three-ENVIRONMENT one. No staging column exists in it, and none is implied.
+Adding staging later requires only re-running the generator with a staging census
+captured the same way as the production one.
+
+No credential was read, written, or passed as a command-line argument to produce this file.

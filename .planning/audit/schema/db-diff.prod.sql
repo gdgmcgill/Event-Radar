@@ -1,0 +1,115 @@
+-- .planning/audit/schema/db-diff.prod.sql
+--
+-- BLOCKED — twice over, and the second block is a finding
+--
+-- Requirement: AUDIT-02 (three-way schema drift)
+-- Plan:        01-08
+-- Date:        2026-09-14
+--
+-- This is a deferred-with-reason stub, not a diff. It contains no DDL.
+-- No migration file was written to produce it; `-f` was never passed to any command.
+--
+-- ---------------------------------------------------------------------------
+-- BLOCK 1 — NO CONNECTION TO PRODUCTION IS AVAILABLE TO THIS PHASE
+-- ---------------------------------------------------------------------------
+-- The command the plan specifies is:
+--
+--     supabase db diff --linked --schema public \
+--       > .planning/audit/schema/db-diff.prod.sql
+--
+--     # equivalent forms, neither of which needs `link`:
+--     supabase db diff --project-ref "$PROD_PROJECT_REF" --schema public \
+--       > .planning/audit/schema/db-diff.prod.sql
+--     supabase db diff --db-url "$PROD_DB_URL" --schema public \
+--       > .planning/audit/schema/db-diff.prod.sql
+--
+-- `--linked` requires `supabase link`, which writes project state into supabase/.temp/
+-- — a write inside the directory under audit, forbidden by this phase, and on this
+-- phase's explicit forbidden-command list. `--project-ref` requires
+-- SUPABASE_ACCESS_TOKEN and `--db-url` requires a connection string; per
+-- .planning/audit/redaction/01-06.md § 1, no credential of either kind ever entered
+-- this machine's shell. Production was read instead through the authenticated Supabase
+-- MCP server (Management API), which exposes a read-only SQL endpoint but NOT the
+-- CLI's shadow-database machinery, so it cannot stand in for `db diff` the way it
+-- stood in for `migration list` and `db dump`.
+--
+-- ---------------------------------------------------------------------------
+-- BLOCK 2 — THE SHADOW DATABASE CANNOT BE BUILT AT ALL. THIS IS THE FINDING.
+-- ---------------------------------------------------------------------------
+-- Supplying a credential would NOT unblock this artifact.
+--
+-- `supabase db diff` works by building a SHADOW Postgres and replaying every file in
+-- supabase/migrations/ into it, then comparing that shadow against the live database
+-- with migra. The replay is the first half of the command, and it is exactly the
+-- replay that plan 01-06 captured failing:
+--
+--     .planning/audit/schema/local-reset.txt
+--
+--     Skipping migration 008b_add_is_admin_to_users.sql... (file name must match
+--       pattern "<timestamp>_name.sql")
+--     ...
+--     Applying migration 011_event_images_bucket.sql...
+--     Applying migration 011_rls_audit.sql...
+--     Stopping containers...
+--     {"_tag":"Error","error":{"code":"LegacyMigrationApplyError","message":"ERROR:
+--     duplicate key value violates unique constraint \"schema_migrations_pkey\"
+--     (SQLSTATE 23505)\nKey (version)=(011) already exists."}}
+--
+-- The shadow build aborts at the 12th of 44 migrations. Four version-collision groups
+-- across nine files (008, 011, 20260305000002, 20260306) and one filename that does
+-- not parse as a version guarantee it, on any machine, with or without a credential.
+--
+-- So the correct statement of this artifact's status is not "we lacked a password."
+-- It is: THE REPOSITORY CANNOT PRODUCE A SHADOW DATABASE, THEREFORE IT CANNOT BE
+-- DIFFED AGAINST ANY ENVIRONMENT. That is a Stage-3 REFAC-01 headline, and it is
+-- recorded as a finding candidate rather than as a tooling gap.
+--
+-- Preconditions actually verified at capture time, so that the block is not
+-- misattributed later:
+--   docker info --format '{{.ServerVersion}}'   -> 29.4.0     (daemon IS reachable)
+--   supabase --version                          -> 2.115.0    (CLI IS installed)
+--   cat supabase/.temp/project-ref              -> NOT LINKED (and must stay that way)
+-- The container-daemon precondition from 01-RESEARCH.md Pitfall 5 is MET. Docker is
+-- not the reason this file is empty.
+--
+-- ---------------------------------------------------------------------------
+-- WHAT STANDS IN FOR THE DIFF
+-- ---------------------------------------------------------------------------
+-- The question `db diff` would have answered — "what does production have that the
+-- migrations do not, and vice versa" — is answered per column, by a different route,
+-- in:
+--
+--     .planning/audit/schema/drift.json     machine-readable, one row per column
+--     .planning/audit/schema/drift.md       the human view, generated from the JSON
+--
+-- Production truth there comes from the catalog census captured through the Management
+-- API (.planning/audit/schema/information-schema-columns.json, 243 columns over 30
+-- tables), and migration truth comes from STATIC PARSING of the SQL files. Static
+-- parsing answers "does a migration file declare this column?" — which is what a
+-- reviewer needs — but it deliberately does NOT claim "a rebuilt database would have
+-- this column", because today no database can be rebuilt at all.
+--
+-- ---------------------------------------------------------------------------
+-- TO PRODUCE A REAL DIFF
+-- ---------------------------------------------------------------------------
+-- BOTH of these must be true first:
+--   1. Stage 3 REFAC-01 has resolved the four version collisions and the unparseable
+--      filename, and `supabase db reset --local` replays all 44 files cleanly.
+--   2. A production credential is available in the shell environment.
+--
+-- Then, from the repository root:
+--
+--     export SUPABASE_ACCESS_TOKEN=...          # in the shell only, never a CLI arg
+--     supabase db diff --project-ref "$PROD_PROJECT_REF" --schema public \
+--       > .planning/audit/schema/db-diff.prod.sql
+--     bash .planning/audit/tools/readonly-guard.sh
+--
+-- NEVER pass -f/--file. The CLI's own help says "in normal mode, -f names and saves
+-- the complete schema diff as a new migration" — that creates
+-- supabase/migrations/<timestamp>_<name>.sql, a repository change in the exact
+-- directory under audit, and one that would later be APPLIED. Output is printed to
+-- stdout by default; redirect it. `git status --porcelain -- supabase/` must stay
+-- empty and `ls supabase/migrations | wc -l` must stay at 44.
+--
+-- No credential was read, written, or passed as a command-line argument to produce
+-- this file, and no file was created anywhere under supabase/.

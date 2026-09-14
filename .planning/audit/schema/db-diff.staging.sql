@@ -1,0 +1,70 @@
+-- .planning/audit/schema/db-diff.staging.sql
+--
+-- BLOCKED — three times over
+--
+-- Requirement: AUDIT-02 (three-way schema drift)
+-- Plan:        01-08
+-- Date:        2026-09-14
+--
+-- This is a deferred-with-reason stub, not a diff. It contains no DDL.
+-- No migration file was written to produce it; `-f` was never passed to any command.
+--
+-- ---------------------------------------------------------------------------
+-- BLOCK 1 — NO STAGING ENVIRONMENT IS REACHABLE (input not supplied)
+-- ---------------------------------------------------------------------------
+-- No staging project reference, access token, or connection string was supplied. At
+-- plan 01-06's credential gate the operator answered "Not now." The Supabase MCP
+-- server that stood in for the CLI elsewhere in this phase is authenticated against
+-- ONE project, so it offers no fallback here either. See
+-- .planning/audit/schema/migration-list.staging.txt and
+-- .planning/audit/schema/staging.schema.sql, blocked for the same reason, and
+-- .planning/audit/BLOCKING-INPUTS.md § 1 for the variable NAMES this waits on.
+--
+-- Whether a staging project exists at all is unverified. 01-RESEARCH.md § Assumptions
+-- Log A4 records that PROJECT.md asserts one exists and that the assertion was never
+-- confirmed in session. If none exists, that is an AUDIT-02 finding in its own right.
+--
+-- ---------------------------------------------------------------------------
+-- BLOCK 2 — THE SHADOW DATABASE CANNOT BE BUILT AT ALL
+-- ---------------------------------------------------------------------------
+-- Even with a staging credential this file would stay empty. `supabase db diff` builds
+-- a SHADOW Postgres by replaying supabase/migrations/ before it compares anything, and
+-- that replay aborts at the 12th of 44 files — one unparseable filename silently
+-- skipped, then a primary-key violation on the duplicated version `011`, with three
+-- further colliding groups waiting behind it. Verbatim transcript and full
+-- duplicate-version census:
+--
+--     .planning/audit/schema/local-reset.txt
+--
+-- The block is a property of the repository, not of the environment being diffed. It
+-- applies identically to db-diff.prod.sql.
+--
+-- ---------------------------------------------------------------------------
+-- BLOCK 3 — THERE IS NO STAGING BASELINE TO DIFF AGAINST
+-- ---------------------------------------------------------------------------
+-- Unlike production, staging has no captured catalog either, so the static-parsing
+-- route that rescued the production column of the drift table has no input here. The
+-- staging column of an eventual three-environment table has to start from a census
+-- capture, not from this file.
+--
+-- ---------------------------------------------------------------------------
+-- TO PRODUCE A REAL DIFF
+-- ---------------------------------------------------------------------------
+-- All three blocks must clear first: a staging project must be confirmed to exist and
+-- its credential supplied, Stage 3 REFAC-01 must make supabase/migrations/ replay
+-- cleanly, and a staging census must be captured the way the production one was. Then,
+-- from the repository root:
+--
+--     export SUPABASE_ACCESS_TOKEN=...          # in the shell only, never a CLI arg
+--     supabase db diff --project-ref "$STAGING_PROJECT_REF" --schema public \
+--       > .planning/audit/schema/db-diff.staging.sql
+--     bash .planning/audit/tools/readonly-guard.sh
+--
+-- NEVER pass -f/--file: it saves the diff as a new migration inside
+-- supabase/migrations/, a repository change in the exact directory under audit. Output
+-- is printed to stdout by default; redirect it. Do NOT use `supabase link` — it writes
+-- into supabase/.temp/. `git status --porcelain -- supabase/` must stay empty and
+-- `ls supabase/migrations | wc -l` must stay at 44.
+--
+-- No credential was read, written, or passed as a command-line argument to produce
+-- this file, and no file was created anywhere under supabase/.

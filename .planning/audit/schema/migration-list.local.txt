@@ -1,0 +1,118 @@
+MIGRATION LIST — LOCAL
+======================
+
+Requirement:  AUDIT-02 (three-way schema drift)
+Plan:         01-08
+Captured:     2026-09-14
+Outcome:      PARTIAL BY DEFECT, not by missing input. A local database CAN be started
+              on this machine; it CANNOT be built from supabase/migrations/. 11 of 44
+              migrations applied, 1 was silently skipped, and the replay then aborted.
+
+PROVENANCE — THIS IS NOT `supabase migration list --local` OUTPUT
+-----------------------------------------------------------------
+The command the plan specifies is:
+
+    supabase migration list --local > .planning/audit/schema/migration-list.local.txt
+
+`--local` reads supabase_migrations.schema_migrations out of the local stack's Postgres
+container. That command cannot return a meaningful answer here for two compounding
+reasons, and only the second is a defect of this repository:
+
+  1. The local stack will not start in the repository working directory. Ports
+     54321/54322/54323/54324/54327 are held by an unrelated local Supabase stack
+     (docker project `PassiveIncomeInvestingDEMO`, confirmed still running at the time
+     of this capture). The audit has no authority to stop another project's containers,
+     and editing [db].port in supabase/config.toml would be a write outside .planning/,
+     which this phase forbids. Plan 01-06 worked around this with an OUT-OF-REPO COPY
+     of supabase/ (byte-identical migrations, only project_id and the six host ports
+     changed). That scratch stack was torn down by the CLI's own error path and no
+     longer exists, so it could not be re-queried for this file.
+  2. Even with free ports, the replay does not complete. That is the real answer, and
+     it is a finding rather than a blocker.
+
+The LOCAL column below is therefore transcribed from the verbatim replay transcript
+captured in plan 01-06:
+
+    .planning/audit/schema/local-reset.txt
+
+which records, line by line, which migrations the CLI applied, which it skipped, and
+where it aborted. That transcript IS the local applied set; re-deriving it from a
+database would produce the same 11 rows.
+
+TABLE
+-----
+
+  LOCAL            | STATUS                  | FILE
+  -----------------+-------------------------+-------------------------------------------
+  001              | applied                 | 001_initial_schema.sql
+  002              | applied                 | 002_rls_policies.sql
+  003              | applied                 | 003_user_interactions.sql
+  004              | applied                 | 004_event_popularity.sql
+  005              | applied                 | 005_user_engagement.sql
+  006              | applied                 | 006_tracking_rls_policies.sql
+  007              | applied                 | 007_add_created_by_and_notifications.sql
+  008              | applied                 | 008_event_source_tracking.sql
+  (none)           | SKIPPED — unparseable   | 008b_add_is_admin_to_users.sql
+  009              | applied                 | 009_user_roles.sql
+  010              | applied                 | 010_feedback_table.sql
+  011              | applied                 | 011_event_images_bucket.sql
+  011              | ABORTED — duplicate key | 011_rls_audit.sql
+  -----------------+-------------------------+-------------------------------------------
+  (32 further files were never attempted — the CLI stopped and tore the stack down)
+
+COUNTS
+------
+  files in supabase/migrations/          44
+  attempted by the CLI                   12
+  applied                                11
+  skipped without error                   1   (008b_add_is_admin_to_users.sql)
+  aborted the run                         1   (011_rls_audit.sql)
+  never reached                          32
+
+WHY IT STOPS
+------------
+Verbatim from local-reset.txt:
+
+    Skipping migration 008b_add_is_admin_to_users.sql... (file name must match pattern
+    "<timestamp>_name.sql")
+    ...
+    {"_tag":"Error","error":{"code":"LegacyMigrationApplyError","message":"ERROR:
+    duplicate key value violates unique constraint \"schema_migrations_pkey\"
+    (SQLSTATE 23505)\nKey (version)=(011) already exists."}}
+
+Two defects, both in supabase/migrations/, both reproducible on any clean machine:
+
+  * The CLI derives a migration's version from the LEADING DIGITS of the filename.
+    `008b` leaves a trailing `b`, so the file does not match `<version>_<name>.sql` and
+    is skipped with exit status still 0. A skip is worse than a failure: it is silent,
+    and whatever that file does is applied in NO environment built from the folder.
+  * `supabase_migrations.schema_migrations` has `version` as its primary key, so the
+    second file deriving version `011` violates the key and stops the run. Fixing the
+    `011` pair alone is not enough — the replay would advance and abort again at
+    `20260305000002`, and again at `20260306`. Four colliding groups, nine files.
+    See the full census in local-reset.txt § WHAT THE TRANSCRIPT SHOWS.
+
+CONSEQUENCE FOR AUDIT-02
+------------------------
+This is the reason .planning/audit/schema/db-diff.prod.sql and db-diff.staging.sql are
+blocked: `supabase db diff` builds its SHADOW database by replaying exactly these
+migrations, so it hits this same abort before it can compare anything. The missing
+diff is not a tooling gap — it is this defect, observed through a second command.
+
+It is also the reason the migrations column of the drift table is derived by STATIC
+PARSING of the SQL files rather than by replaying them. A statically-parsed column
+answers "does a migration file declare this?", which is the useful question; it cannot
+answer "would a rebuilt database actually have this?", whose answer today is "no, for
+every column introduced after the 12th file."
+
+TO PRODUCE A REAL LIST
+----------------------
+On a machine with ports 54320-54327 free, AFTER Stage 3 REFAC-01 has resolved the
+version collisions and the unparseable filename:
+
+    supabase start
+    supabase db reset --local
+    supabase migration list --local > .planning/audit/schema/migration-list.local.txt
+    bash .planning/audit/tools/readonly-guard.sh
+
+No credential was read, written, or passed as a command-line argument to produce this file.
