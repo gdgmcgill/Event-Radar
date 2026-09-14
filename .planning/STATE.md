@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
-stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-09-14T19:07:34.263Z"
+stopped_at: Completed 01-08-PLAN.md
+last_updated: "2026-09-14T19:25:31.647Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 13
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 8 of 13
+Plan: 9 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P05 | 11 min | 3 tasks | 12 files |
 | Phase 01 P06 | 45 min | 3 tasks | 33 files |
 | Phase 01-read-only-foundation-audit P07 | 21min | 3 tasks | 6 files |
+| Phase 01 P08 | 52 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Service-role verdicts: 10 justified / 14 needs-decision / 1 unjustified; needs-decision marks rows blocked on a policy fact (plan 01-09 RLS) or a product decision, not on more reading
 - [Phase 01]: src/app/users/[id]/page.tsx generateMetadata line 35 is the sole unjustified service-role callsite: no authentication before construction, attacker-supplied path param as filter
 - [Phase 01]: AUDIT-10 found four env-conditional authorization checks, not two; the PATTERNS.md detector finds only calculate-popularity, so three further detectors were required
+- [Phase 01]: Mark AUDIT-02 complete despite neither named tool having run — The drift table's substance is delivered at higher fidelity than supabase db diff would give; the tool failed because the migrations folder cannot build a shadow database, which is itself a Stage 3 finding
+- [Phase 01]: Derive the migrations column of the drift table by static SQL parsing, not by replay — supabase/migrations/ aborts at the 12th of 44 files, so replay cannot answer the question; static parsing answers the weaker but useful 'does a migration declare this'
 
 ### Pending Todos
 
@@ -130,6 +133,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T19:07:28.210Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-09-14T19:25:31.644Z
+Stopped at: Completed 01-08-PLAN.md
 Resume file: None
