@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-09-14T07:21:06.488Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-09-14T07:33:49.871Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 13
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 3 of 13
+Plan: 4 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 01 P01 | 13 min | 3 tasks | 13 files |
 | Phase 01 P02 | 20 min | 2 tasks | 4 files |
+| Phase 01 P03 | 15 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,10 @@ Recent decisions affecting current work:
 - [Phase 01]: expected_status seeds all 13 CERT-05 persona keys with the 'unknown' sentinel, not an empty object — endpoints.schema.json declares the 13 keys required with additionalProperties false and validate.mjs treats a missing key as a hard schema error, so an empty object fails --check endpoints-signals on all 94 rows while still needing to fail --check endpoints before classification
 - [Phase 01]: Audit generators merge into their artifact by id and overwrite only machine-derived keys; idempotence is the acceptance proof — A replace-semantics regeneration silently discards a day of hand classification (threat T-01-02-03); a byte-identical second run plus a mutate-regenerate-assert test proves the merge rather than asserting it
 - [Phase 01]: signals.env_gated_auth is emitted by plan 01-02 even though its task signal list omits it — Plan 01-01 recorded it as a contract owed to --check authz-registers, and plan 01-07's AUDIT-10 fail-open register has no other data source; without it 01-07 would re-scan src/ with a divergent second regex
+- [Phase 01]: pages.json seeds effective_protection and dead_or_duplicate with derived values, not the 'unknown' placeholder — validate.mjs has no pages-signals pre-classification check, so --check pages runs no-residual-placeholders unconditionally; a placeholder seed makes plan 01-03's own gate unpassable. Merge-by-id preserves plan 01-11's hand overrides.
+- [Phase 01]: Per-page grep signals are folded into component_type and data_source instead of being emitted as top-level row keys — pages.schema.json sets additionalProperties:false over a fixed 12-key list with no signals object, unlike endpoints.schema.json; emitting is_client_component/uses_service_client fails schema-valid on all 43 rows.
+- [Phase 01]: build_route_row_count is the measured 140, not the 139 the plan and RESEARCH state — 140 = 94 endpoints + 43 pages + 3 build-only routes, which is RESEARCH's own arithmetic; 139 was a transcription slip. Phase rule: counts are re-derived, never transcribed.
+- [Phase 01]: The two page authorization rings are disjoint: 0 of 43 pages carry both middleware_protected and layout_guard — Every page depends on a single control; for the 14 admin/moderation pages that control is one layout.tsx file apiece. Input to AUDIT-17 threat models.
 
 ### Pending Todos
 
@@ -92,6 +97,7 @@ None yet.
 - `compute_user_scores` pg_cron exists only as a commented SQL line, so local/staging silently fall back to popularity. REFAC-03 must fix this before Stage 4 certifies a recommendation flow that is not production's.
 - The `.planning/codebase/` map is dated 2026-03-05 and is demonstrably stale in places. Treat it as leads to re-verify, not facts.
 - Shell 'grep' in the execution environment is a ugrep shim honouring .gitignore and rejecting some BRE patterns; cross-check count-derivation greps with 'command grep' in later Phase 1 plans.
+- AUDIT-16 is INCONCLUSIVE: the client-bundle sweep ran against a build whose environment had no SUPABASE_SERVICE_ROLE_KEY, so its zeros prove absence of the key, not absence of leakage. Closing it needs one credentialed re-build — procedure in .planning/audit/security/client-bundle-sweep.md section 7.
 
 ## Deferred Items
 
@@ -104,6 +110,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T07:20:58.578Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-09-14T07:33:49.868Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None
