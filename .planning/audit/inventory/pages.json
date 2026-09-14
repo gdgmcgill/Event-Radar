@@ -596,7 +596,7 @@
     "middleware_protected": false,
     "layout_guard": null,
     "page_guard": "getUser",
-    "effective_protection": "auth",
+    "effective_protection": "unprotected_but_should_be",
     "render_mode": "dynamic",
     "dead_or_duplicate": false,
     "findings": []

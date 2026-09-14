@@ -293,6 +293,24 @@ const EXPECTED_OVERRIDES = {
   // persona is an authentication-flow case and does not apply to endpoint rows.
 };
 
+/**
+ * Page-level hand overrides. Recorded in classification-rules.md § 5.
+ *
+ * users.id — pages.json carried effective_protection "auth" on the strength of
+ * page_guard "getUser". Plan 01-07 proved that guard does not gate: the
+ * getUser() at src/app/users/[id]/page.tsx:56 only redirects a SELF-view to
+ * /profile (lines 58-60) and has no unauthenticated branch, so an anonymous
+ * request reaches the service-role read at line 63, which selects `email`,
+ * `visibility` and `interest_tags` for an attacker-supplied path id. Worse,
+ * generateMetadata at lines 33-48 constructs the same RLS-bypassing client with
+ * no session read of any kind. A page that renders another tenant's data while
+ * neither ring covers it is, by the plan's own definition,
+ * unprotected_but_should_be.
+ */
+const PAGE_OVERRIDES = {
+  'users.id': 'unprotected_but_should_be',
+};
+
 function successCode(row) {
   if (row.id.startsWith('auth.')) return 302;
   if (row.methods.includes('GET')) return 200;
@@ -463,7 +481,8 @@ function main() {
       // Plan 01-03 already resolved these from source; this pass re-asserts the
       // rule so a regeneration cannot silently weaken a verdict, and applies the
       // one override plan 01-07 raised.
-      if (p.layout_guard) p.effective_protection = 'admin';
+      if (p.id in PAGE_OVERRIDES) p.effective_protection = PAGE_OVERRIDES[p.id];
+      else if (p.layout_guard) p.effective_protection = 'admin';
       else if (!p.middleware_protected && !p.page_guard && p.effective_protection === 'auth') {
         p.effective_protection = 'unprotected_but_should_be';
       }
