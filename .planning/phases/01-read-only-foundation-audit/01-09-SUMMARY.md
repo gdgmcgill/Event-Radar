@@ -144,7 +144,7 @@ status: complete
 | Live policies declared by **no** migration | **41 (41%)** |
 | Migration-declared policies **absent** from production | **24** |
 | Flags raised | **94** across 6 classes |
-| Proposed findings | **21** — 2 Critical, 5 High, 7 Medium/Low-Medium, 6 Low, 1 Informational |
+| Proposed findings | **21** — 2 Critical, 5 High, 5 Medium, 8 Low, 1 Informational |
 
 ### The two Criticals
 
@@ -234,3 +234,36 @@ Open concerns carried forward: the `storage` index census does not exist, so two
 *Phase: 01-read-only-foundation-audit*
 *Plan: 01-09*
 *Completed: 2026-09-14*
+
+## Self-Check: PASSED
+
+Verified after writing this summary, against disk and git rather than against memory:
+
+- All 9 artifacts in `key-files.created` exist on disk (`[ -f ]` on each), plus this summary.
+- All 4 commits resolve in `git log --oneline --all`: `0a4d788`, `47da840`, `7a6b866`, `0ab514a`.
+- `git diff --name-only 0a4d788~1..HEAD` lists **13 paths, none outside `.planning/`**.
+- `node .planning/audit/tools/validate.mjs --check rls` — exit 0, 5 assertions passed.
+- `node .planning/audit/tools/validate.mjs --check heatmap` — exit 0, 2 assertions passed.
+- `bash .planning/audit/tools/readonly-guard.sh` — exit 0, after every task and again now.
+- `git status --porcelain -- supabase/ src/` — empty. `ls supabase/migrations | wc -l` — 44,
+  matching `baseline/versions.txt migration_count`.
+- Pivot idempotency re-confirmed: two consecutive runs leave `rls-heatmap.csv` and
+  `rls-heatmap-notes.csv` byte-identical (`shasum -a 256 -c`).
+- Counts re-derived from the files rather than recalled: 101 policies, 38 relations, 80 columns,
+  94 flags across the 6 classes, 152 grid rows, 152 sidecar rows, 331 `allow` / 277 `deny` /
+  0 `none` summing to 608 = 152 × 4 role columns.
+- No artifact under `.planning/audit/rls/` matches a JWT, secret-prefix, or password-bearing
+  connection-string pattern (`grep -rlE` returns nothing, exit 1).
+
+**One number written from memory was wrong and was corrected here before this section was
+appended:** the proposed-findings severity split is **2 Critical / 5 High / 5 Medium / 8 Low /
+1 Informational**, not the "7 Medium, 6 Low" first written. Caught by parsing § 7's table out of
+`rls-review.md` rather than counting it by eye. This is the second recalled-number error in this
+plan — the first, the inline-admin-`EXISTS` count, is recorded under § Issues Encountered — and
+both were caught the same way: re-deriving the figure from a file-based script. Recorded rather
+than silently fixed, because a summary that quietly corrects itself gives no signal about which
+of its other numbers were derived and which were recalled.
+
+---
+*Phase: 01-read-only-foundation-audit*
+*Plan: 01-09*
