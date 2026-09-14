@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `FOUNDATION_AUDIT.md` exists where every finding carries a stable `F-nnn` id, exposure-adjusted severity with rationale, category, affected paths with line numbers, captured evidence, reproduction steps, recommended fix, validation criterion, and status — accompanied by a written severity SLA policy stating when each level must be fixed.
   5. The test/build/lint/type-check baseline is actual captured command output (including Jest pass/skip counts and a reason per skipped suite, and the test-runner decision with its mock-call evidence), and `git diff` for the phase touches nothing outside `.planning/`.
 
-**Plans**: 8/13 plans executed
+**Plans**: 10/13 plans executed
 
 Plans:
 **Wave 1**
@@ -61,8 +61,8 @@ Plans:
 
 - [x] 01-07-PLAN.md — Static authorization registers: service-role, session-reading, fail-open, plus quantified observability
 - [x] 01-08-PLAN.md — Three-way schema drift table from migration history and the shadow-database diff
-- [ ] 01-09-PLAN.md — RLS policy review from live policies and the table-by-command-by-role coverage heatmap
-- [ ] 01-10-PLAN.md — Storage bucket policy review and the six-source cron and webhook inventory
+- [x] 01-09-PLAN.md — RLS policy review from live policies and the table-by-command-by-role coverage heatmap
+- [x] 01-10-PLAN.md — Storage bucket policy review and the six-source cron and webhook inventory
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -206,7 +206,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Read-Only Foundation Audit | 8/13 | In Progress|  |
+| 1. Read-Only Foundation Audit | 10/13 | In Progress|  |
 | 2. Dependency and Runtime Stabilization | 0/TBD | Not started | - |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/TBD | Not started | - |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |

@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
-stopped_at: Completed 01-08-PLAN.md
-last_updated: "2026-09-14T19:49:14.882Z"
+stopped_at: Completed 01-10-PLAN.md
+last_updated: "2026-09-14T20:13:44.305Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 13
-  completed_plans: 8
+  completed_plans: 10
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 10 of 13
+Plan: 11 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-read-only-foundation-audit P07 | 21min | 3 tasks | 6 files |
 | Phase 01 P08 | 52 min | 2 tasks | 9 files |
 | Phase 01 P09 | 27 min | 3 tasks | 8 files |
+| Phase 01 P10 | 22 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,10 @@ Recent decisions affecting current work:
 - [Phase 01]: Do not replay supabase/migrations/ against any environment: 41 of 101 live policies are declared by no migration, so a reset would drop them. Baseline from production first (REFAC-01 blocking input).
 - [Phase 01]: Emit AUDIT-06 heatmap traceability as rls-heatmap-notes.csv rather than trailing columns, because validate.mjs --check heatmap rejects any non-empty cell outside table/command that is not allow|deny|none.
 - [Phase 01]: Extend the AUDIT-05 flag set from four classes to six, adding WITH CHECK (true) and unindexed-policy-column, because the write-side unconditional expressions carry the Critical and High findings a read-side-only review would miss.
+- [Phase 01]: The two /api/cron/* handlers are redundant dead code, not a broken schedule: pg_cron runs in-database reimplementations of both every 15 and 30 minutes — cron.job shows send_event_reminders and send_feedback_requests active and succeeding; the handlers have no trigger from any of the six sources and email_reminder_log has 0 rows. Remediation is deletion or a fail-closed guard, never scheduling them - the two implementations diverge on notification type strings and dedup store, so activating both would duplicate user-visible notifications.
+- [Phase 01]: The Vercel env-name capture converts two hedged fail-open rows into observed production state — CRON_SECRET and ADMIN_API_KEY are not configured on the production project, so FO-02 compares against the literal Bearer undefined and FO-01's admin gate is skipped entirely - both in front of service-role clients. 01-07 had to record these as conditional; they are now empirical.
+- [Phase 01]: club-logos is the highest-severity storage finding, and it is a bucket no requirement named — Its INSERT and UPDATE policies test only bucket_id and auth.role(), with no path-prefix ownership, so any authenticated user can overwrite any club's logo or banner - bypassing the route-level club-owner check by addressing the Storage REST API directly. It also has neither a size limit nor a MIME allow-list. Reviewing only the two buckets AUDIT-18 named would have missed it.
+- [Phase 01]: The email half of the Validated 'in-app notifications and email reminders' workflow does not exist in any implementation — No email provider dependency exists anywhere in the project; both the live pg_cron function and the dead route handler only insert in-app notifications rows, while the table name email_reminder_log and the route name send-reminders assert otherwise.
 
 ### Pending Todos
 
@@ -126,6 +131,7 @@ None yet.
 - AUDIT-16 is INCONCLUSIVE: the client-bundle sweep ran against a build whose environment had no SUPABASE_SERVICE_ROLE_KEY, so its zeros prove absence of the key, not absence of leakage. Closing it needs one credentialed re-build — procedure in .planning/audit/security/client-bundle-sweep.md section 7.
 - AUDIT-01 is incomplete. No staging Supabase project is visible to the operator's token (staging.schema.sql is a deferred-with-reason stub), the local snapshot is blocked because supabase/migrations does not replay from zero (aborts at file 12 of 44 on a version-011 primary-key collision), and prod.schema.sql is a catalog-derived reconstruction rather than a pg_dump because no Postgres connection string was supplied. Unblocked by: a PROD_DB_URL/STAGING_DB_URL, or by REFAC-01 repairing the migration history.
 - Club-invitation acceptance is broken in production: the invitee SELECT/UPDATE policies exist in 20260226000001_invitee_select_update_policy.sql but not in the database, and /api/clubs/[id]/invites is RLS-reliant so nothing masks it.
+- AUDIT-11 leaves two closable gaps needing one credentialed read each: whether the events-webhook edge function is deployed (supabase functions list), and whether any GoTrue auth hook is configured in the dashboard (Management API GET /v1/projects/{ref}/config/auth). A third open question: user_event_scores reports 0 rows while compute_user_scores succeeds every 6 hours.
 
 ## Deferred Items
 
@@ -138,6 +144,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T19:49:09.041Z
-Stopped at: Completed 01-08-PLAN.md
+Last session: 2026-09-14T20:12:05.010Z
+Stopped at: Completed 01-10-PLAN.md
 Resume file: None
