@@ -1,0 +1,399 @@
+[
+  {
+    "id": "storage.objects::Allow authenticated delete from own folder",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Allow authenticated delete from own folder",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "cmd": "DELETE",
+    "qual": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "with_check": null,
+    "effective_check_expression": null,
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": null,
+    "applies_to_every_bucket": true,
+    "has_ownership_predicate": true,
+    "is_write_command": true,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Allow authenticated update in own folder",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Allow authenticated update in own folder",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "cmd": "UPDATE",
+    "qual": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "with_check": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "effective_check_expression": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": null,
+    "applies_to_every_bucket": true,
+    "has_ownership_predicate": true,
+    "is_write_command": true,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Allow authenticated upload to own folder",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Allow authenticated upload to own folder",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "effective_check_expression": "((auth.uid())::text = (storage.foldername(name))[1])",
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": null,
+    "applies_to_every_bucket": true,
+    "has_ownership_predicate": true,
+    "is_write_command": true,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Allow public read access 1oj01fe_0",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Allow public read access 1oj01fe_0",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null,
+    "effective_check_expression": null,
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": null,
+    "applies_to_every_bucket": true,
+    "has_ownership_predicate": false,
+    "is_write_command": false,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Anyone can view banners",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Anyone can view banners",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "cmd": "SELECT",
+    "qual": "(bucket_id = 'banners'::text)",
+    "with_check": null,
+    "effective_check_expression": null,
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": [
+      "banners"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": false,
+    "is_write_command": false,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Anyone can view club logos",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Anyone can view club logos",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "cmd": "SELECT",
+    "qual": "(bucket_id = 'club-logos'::text)",
+    "with_check": null,
+    "effective_check_expression": null,
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": [
+      "club-logos"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": false,
+    "is_write_command": false,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Anyone can view event images",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Anyone can view event images",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "cmd": "SELECT",
+    "qual": "(bucket_id = 'event-images'::text)",
+    "with_check": null,
+    "effective_check_expression": null,
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": [
+      "event-images"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": false,
+    "is_write_command": false,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Authenticated users can update club logos",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Authenticated users can update club logos",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "cmd": "UPDATE",
+    "qual": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))",
+    "with_check": null,
+    "effective_check_expression": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))",
+    "with_check_defaulted_from_using": true,
+    "bucket_scope": [
+      "club-logos"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": false,
+    "is_write_command": true,
+    "write_without_ownership_predicate": true,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Authenticated users can upload banners",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Authenticated users can upload banners",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(bucket_id = 'banners'::text)",
+    "effective_check_expression": "(bucket_id = 'banners'::text)",
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": [
+      "banners"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": false,
+    "is_write_command": true,
+    "write_without_ownership_predicate": true,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Authenticated users can upload club logos",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Authenticated users can upload club logos",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))",
+    "effective_check_expression": "((bucket_id = 'club-logos'::text) AND (auth.role() = 'authenticated'::text))",
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": [
+      "club-logos"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": false,
+    "is_write_command": true,
+    "write_without_ownership_predicate": true,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Authenticated users can upload event images",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Authenticated users can upload event images",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(bucket_id = 'event-images'::text)",
+    "effective_check_expression": "(bucket_id = 'event-images'::text)",
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": [
+      "event-images"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": false,
+    "is_write_command": true,
+    "write_without_ownership_predicate": true,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Public read access for event images",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Public read access for event images",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "roles_raw": "{public}",
+    "cmd": "SELECT",
+    "qual": "(bucket_id = 'event-images'::text)",
+    "with_check": null,
+    "effective_check_expression": null,
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": [
+      "event-images"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": false,
+    "is_write_command": false,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Service role upload for event images",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Service role upload for event images",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "service_role"
+    ],
+    "roles_raw": "{service_role}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(bucket_id = 'event-images'::text)",
+    "effective_check_expression": "(bucket_id = 'event-images'::text)",
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": [
+      "event-images"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": false,
+    "is_write_command": true,
+    "write_without_ownership_predicate": true,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Users can delete their own banners",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Users can delete their own banners",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "cmd": "DELETE",
+    "qual": "((bucket_id = 'banners'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+    "with_check": null,
+    "effective_check_expression": null,
+    "with_check_defaulted_from_using": false,
+    "bucket_scope": [
+      "banners"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": true,
+    "is_write_command": true,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  },
+  {
+    "id": "storage.objects::Users can update their own banners",
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "Users can update their own banners",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "authenticated"
+    ],
+    "roles_raw": "{authenticated}",
+    "cmd": "UPDATE",
+    "qual": "((bucket_id = 'banners'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+    "with_check": null,
+    "effective_check_expression": "((bucket_id = 'banners'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+    "with_check_defaulted_from_using": true,
+    "bucket_scope": [
+      "banners"
+    ],
+    "applies_to_every_bucket": false,
+    "has_ownership_predicate": true,
+    "is_write_command": true,
+    "write_without_ownership_predicate": false,
+    "captured_at": "2026-09-14T18:31:13Z",
+    "transport": "supabase-mcp execute_sql (Management API)",
+    "source": ".planning/audit/raw/prod/storage-policies.json",
+    "source_query": "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname = 'storage' order by tablename, policyname"
+  }
+]
