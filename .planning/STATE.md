@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-09-14T07:44:32.254Z"
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-09-14T17:29:01.363Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 13
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 5 of 13
+Plan: 6 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 20 min | 2 tasks | 4 files |
 | Phase 01 P03 | 15 min | 3 tasks | 7 files |
 | Phase 01 P04 | 9 min | 2 tasks | 5 files |
+| Phase 01 P05 | 11 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ Recent decisions affecting current work:
 - [Phase 01]: Keep Jest, recorded not re-litigated: 14 of 21 test files call the jest.* mock API and 0 call vi.*; vitest is absent from package.json, package-lock.json and node_modules while vitest.config.ts and vitest.setup.ts remain as orphans; ts-jest 29.4.6 peers jest ^29 or ^30 against the installed jest 30.2.0, so no version skew argues for a switch.
 - [Phase 01]: Jest 30 prints no reporter line for a fully-skipped suite and --verbose does not change that, so the five skipped suites are DERIVED as a set difference against jest-listtests.txt, with the derivation command embedded in baseline/jest.txt rather than the list merely asserted.
 - [Phase 01]: AUDIT-13 marked complete, departing from the 01-01 and 01-03 withholding precedent, because every clause of the requirement maps to an artifact on disk and validate.mjs --check baseline exits 0 with 9 passing rules. The precedent is to withhold when artifacts contradict the claim, not to withhold reflexively.
+- [Phase 01]: redoc and next-swagger-doc are reachable from the public /docs route; swagger-ui-react is absent from the module graph — The dependency-cruiser command from RESEARCH returns an empty graph on 18.3.0 (a bare directory argument cruises 0 modules, and --reaches cannot reach an excluded module); the corrected glob plus node_modules-as-leaves form cruises 308 modules and yields the real reachability path
+- [Phase 01]: vercel ^32.3.0 sits in production dependencies, is imported by nothing, and roots 7 of the 24 High/Critical advisories including the tar critical — Removal (or a move to devDependencies) retires 7 rows at once; npm audit fix would instead jump the CLI 27 major versions to 59.16.0
+- [Phase 01]: No dependency enters the dead list on knip alone: each of the 13 unused-dependency hits carries the grep that confirmed or refuted it — prettier and tsx were refuted as tooling false-positives and held back; removing them would have broken the formatter and the three scripts maintenance files
 
 ### Pending Todos
 
@@ -115,6 +119,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T07:44:32.250Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-09-14T17:28:41.203Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
