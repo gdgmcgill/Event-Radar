@@ -12,6 +12,7 @@ Requirements are grouped by program stage. Stages are strictly ordered; a stage'
 Constraint for every AUDIT requirement: no source, config, dependency, or database change. Findings only.
 
 - [ ] **AUDIT-01**: Live schema snapshots of production, staging, and local Supabase are captured as committed artifacts under `.planning/audit/`
+  - *Deliberately withheld by plan 01-06, one of three environments short.* Production: `.planning/audit/schema/prod.schema.sql` exists but is a catalog-derived reconstruction from SELECT-only captures, not a `pg_dump` — no Postgres connection string was ever supplied. Staging: no staging project is visible to the operator's token; `staging.schema.sql` is a deferred-with-reason stub. Local: `supabase/migrations/` does not replay from zero (aborts at file 12 of 44 on a version-`011` primary-key collision), so no local database exists to dump; see `schema/local-reset.txt`. `node .planning/audit/tools/validate.mjs --check schema-snapshots` fails on staging and local, and that failure is correct.
 - [ ] **AUDIT-02**: A three-way drift table (production schema vs `supabase/migrations/` vs `src/lib/supabase/types.ts`) lists every table and column with exists-in-prod / exists-in-migrations / typed-correctly status, produced with `supabase db diff` and `supabase migration list`
 - [x] **AUDIT-03**: Every API route handler (94 at time of writing) is inventoried in a machine-readable file (CSV or JSON) with: method(s), observed auth requirement, role required, RLS reliance, service-role use, cache headers, personalization (does the body vary by user), input validation present, test present
 - [ ] **AUDIT-04**: Every page (43 at time of writing) is inventoried with: public/protected, client/server component, data source, auth guard, dead/duplicate status, cross-checked against the middleware protected-route list
@@ -29,7 +30,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [ ] **AUDIT-16**: Client-bundle secret sweep builds the app and greps `.next/static` for the service-role key prefix, `ADMIN_EMAILS`, and `ADMIN_API_KEY`
 - [ ] **AUDIT-17**: A one-page threat model exists for each of three trust boundaries: anonymous → app, authenticated student → other tenants' data, organizer → admin escalation
 - [ ] **AUDIT-18**: Storage bucket policies for `avatars` and `banners` are reviewed for read visibility, path-prefix ownership, and size/MIME limits
-- [ ] **AUDIT-19**: The production `events` table's authoritative date columns (`start_date`/`end_date` vs `event_date`/`event_time`) are determined from `information_schema.columns`, not from the types file
+- [x] **AUDIT-19**: The production `events` table's authoritative date columns (`start_date`/`end_date` vs `event_date`/`event_time`) are determined from `information_schema.columns`, not from the types file
 - [ ] **AUDIT-20**: `FOUNDATION_AUDIT.md` exists where every finding has a stable ID (`F-nnn`, never renumbered), title, exposure-adjusted severity (Critical/High/Medium/Low with rationale), category, affected paths with line numbers, captured evidence, reproduction steps, recommended fix, validation criterion, and status
 - [x] **AUDIT-21**: A severity SLA policy is written stating when each severity level must be fixed (e.g. Critical in the first Stage 3 slice, High before Stage 4 starts)
 
@@ -160,7 +161,7 @@ No phase crosses a stage boundary.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUDIT-01 | Phase 1 | Pending |
+| AUDIT-01 | Phase 1 | Pending — partial (plan 01-06: production captured as a catalog-derived snapshot, not a `pg_dump`; staging unreachable; local blocked by the migration history) |
 | AUDIT-02 | Phase 1 | Pending |
 | AUDIT-03 | Phase 1 | Complete |
 | AUDIT-04 | Phase 1 | Pending |
@@ -178,7 +179,7 @@ No phase crosses a stage boundary.
 | AUDIT-16 | Phase 1 | Pending |
 | AUDIT-17 | Phase 1 | Pending |
 | AUDIT-18 | Phase 1 | Pending |
-| AUDIT-19 | Phase 1 | Pending |
+| AUDIT-19 | Phase 1 | Complete |
 | AUDIT-20 | Phase 1 | Pending |
 | AUDIT-21 | Phase 1 | Complete |
 | STAB-01 | Phase 2 | Pending |

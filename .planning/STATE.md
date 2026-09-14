@@ -6,14 +6,14 @@ current_phase: 01
 current_phase_name: Read-Only Foundation Audit
 status: executing
 stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-09-14T17:29:01.363Z"
+last_updated: "2026-09-14T18:48:54.088Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 13
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 01 (Read-Only Foundation Audit) — EXECUTING
-Plan: 6 of 13
+Plan: 7 of 13
 Status: Ready to execute
 Last activity: 2026-09-14 — Phase 01 execution started
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P03 | 15 min | 3 tasks | 7 files |
 | Phase 01 P04 | 9 min | 2 tasks | 5 files |
 | Phase 01 P05 | 11 min | 3 tasks | 12 files |
+| Phase 01 P06 | 45 min | 3 tasks | 33 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,10 @@ Recent decisions affecting current work:
 - [Phase 01]: redoc and next-swagger-doc are reachable from the public /docs route; swagger-ui-react is absent from the module graph — The dependency-cruiser command from RESEARCH returns an empty graph on 18.3.0 (a bare directory argument cruises 0 modules, and --reaches cannot reach an excluded module); the corrected glob plus node_modules-as-leaves form cruises 308 modules and yields the real reachability path
 - [Phase 01]: vercel ^32.3.0 sits in production dependencies, is imported by nothing, and roots 7 of the 24 High/Critical advisories including the tar critical — Removal (or a move to devDependencies) retires 7 rows at once; npm audit fix would instead jump the CLI 27 major versions to 59.16.0
 - [Phase 01]: No dependency enters the dead list on knip alone: each of the 13 unused-dependency hits carries the grep that confirmed or refuted it — prettier and tsx were refuted as tooling false-positives and held back; removing them would have broken the formatter and the three scripts maintenance files
+- [Phase 01]: Production capture ran over the Supabase MCP server (Management API), not the plan's sql-readonly.mjs transport: the operator authenticated MCP instead of supplying a PAT or connection string. Role postgres, transaction_read_only=off, so the safeguard in force was SELECT-only discipline with all 20 statements recorded verbatim in .planning/audit/raw/prod/.
+- [Phase 01]: AUDIT-19 resolved as a negative finding: event_date/event_time exist on no production table; start_date and end_date (timestamptz, NOT NULL) are authoritative. Five stale references survive in three Jest fixtures and two comments.
+- [Phase 01]: AUDIT-01 withheld, not claimed. prod.schema.sql is catalog-derived rather than a pg_dump, staging is unreachable, and the local snapshot is blocked by the repository's own migration history. validate.mjs --check schema-snapshots fails on staging and local by design.
+- [Phase 01]: Raw capture envelopes under .planning/audit/raw/prod/ are committed as evidence and are the shared input for plans 01-08, 01-09, and 01-10.
 
 ### Pending Todos
 
@@ -107,6 +112,7 @@ None yet.
 - The `.planning/codebase/` map is dated 2026-03-05 and is demonstrably stale in places. Treat it as leads to re-verify, not facts.
 - Shell 'grep' in the execution environment is a ugrep shim honouring .gitignore and rejecting some BRE patterns; cross-check count-derivation greps with 'command grep' in later Phase 1 plans.
 - AUDIT-16 is INCONCLUSIVE: the client-bundle sweep ran against a build whose environment had no SUPABASE_SERVICE_ROLE_KEY, so its zeros prove absence of the key, not absence of leakage. Closing it needs one credentialed re-build — procedure in .planning/audit/security/client-bundle-sweep.md section 7.
+- AUDIT-01 is incomplete. No staging Supabase project is visible to the operator's token (staging.schema.sql is a deferred-with-reason stub), the local snapshot is blocked because supabase/migrations does not replay from zero (aborts at file 12 of 44 on a version-011 primary-key collision), and prod.schema.sql is a catalog-derived reconstruction rather than a pg_dump because no Postgres connection string was supplied. Unblocked by: a PROD_DB_URL/STAGING_DB_URL, or by REFAC-01 repairing the migration history.
 
 ## Deferred Items
 
@@ -119,6 +125,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T17:28:41.203Z
+Last session: 2026-09-14T18:46:05.906Z
 Stopped at: Completed 01-05-PLAN.md
 Resume file: None
