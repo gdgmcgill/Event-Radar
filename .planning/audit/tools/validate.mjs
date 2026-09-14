@@ -202,8 +202,22 @@ const MIN_SNAPSHOT_BYTES = 1024;
 const MAX_THREAT_MODEL_LINES = 120;
 const RLS_COMMANDS = ['select', 'insert', 'update', 'delete'];
 const RLS_CELL_VALUES = ['allow', 'deny', 'none'];
-/** The two createServiceClient callsites that are not route.ts handlers. */
-const NON_ROUTE_SERVICE_CLIENT_CALLSITES = 2;
+/**
+ * The service-role callsites that are not route.ts handlers:
+ *   src/app/users/[id]/page.tsx   — the single page component
+ *   src/lib/audit.ts              — the admin audit-logging library module
+ *   src/lib/supabase/service.ts   — the factory itself
+ *
+ * Seeded as 2 in plan 01-01 (page + lib/audit.ts, following 01-RESEARCH.md
+ * § Validation Architecture Test Map), which omitted the factory module. That
+ * disagreed with this file's own rule that versions.txt is the only count
+ * source: baseline/versions.txt records service_client_file_count=25 from
+ * `grep -rl createServiceClient src/`, whose comment states it "includes the
+ * definition module itself", and 22 route handlers + 2 is 24. Plan 01-07 Task 1
+ * registers all three non-route callsites, so the literal is now only a
+ * fallback and the assertion below is cross-checked against versions.txt.
+ */
+const NON_ROUTE_SERVICE_CLIENT_CALLSITES = 3;
 const MAX_RISK_ACCEPTANCE_DAYS = 90;
 const MS_PER_DAY = 86400000;
 
@@ -481,7 +495,7 @@ const CHECKS = {
   /* ---------------------------------------------------------------- AUDIT-07 */
   'service-role': {
     requirement: 'AUDIT-07',
-    inputs: ['authz/service-role-register.json', ENDPOINTS_FILE],
+    inputs: ['authz/service-role-register.json', ENDPOINTS_FILE, VERSIONS_FILE],
     run(ctx) {
       const register = readJson('authz/service-role-register.json');
       const endpoints = readJson(ENDPOINTS_FILE);
@@ -490,6 +504,13 @@ const CHECKS = {
 
       ctx.assert(register.length === want, 'row-count-equals-callsite-count',
         `${routeCallsites} route handlers with signals.uses_service_client true plus ${NON_ROUTE_SERVICE_CLIENT_CALLSITES} non-route callsites is ${want}, register has ${register.length}`);
+
+      // versions.txt is this harness's only count source; a register that agrees
+      // with the inventory signal but not with the re-derived file count means a
+      // callsite that does not go through the factory is being missed.
+      const baseline = expectedCount(ctx.versions, 'service_client_file_count');
+      ctx.assert(want === baseline, 'callsite-count-agrees-with-baseline',
+        `baseline/versions.txt service_client_file_count is ${baseline}, derived count is ${want}`);
 
       const incomplete = [];
       register.forEach((row, index) => {
