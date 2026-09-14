@@ -53,3 +53,12 @@ derived_at=2026-09-14T07:00:25Z
 #    /friends. CLAUDE.md-6 vs source-8. The source is authoritative; AUDIT-04 must
 #    read the array from src/middleware.ts, never from CLAUDE.md.
 # ---------------------------------------------------------------------------
+
+# --- build-derived counts (plan 01-03; `npm run build` on this tree, exit code captured) ---
+# npm run build > baseline/build.txt 2>&1; echo $?
+build_exit_code=0
+# unique route paths in inventory/build-routes.txt (94 route.ts + 43 page.tsx + 3 build-only)
+build_route_row_count=140
+# find .next/static -type f -exec stat -f%z {} + | awk '{s+=$1} END{print s}'
+next_static_bytes=4490961
+build_derived_at=2026-09-14T07:25:05Z
