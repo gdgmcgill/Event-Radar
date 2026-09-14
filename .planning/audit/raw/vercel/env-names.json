@@ -1,0 +1,44 @@
+{
+  "name": "vercel-env-names",
+  "captured_at": "2026-09-14T19:13:06.928Z",
+  "transport": "Vercel REST API GET /v9/projects/{id}/env via CLI login token (read-only)",
+  "fields": "key, target, type only — values were present in the response and were discarded without being logged",
+  "row_count": 3,
+  "error": null,
+  "rows": [
+    {
+      "key": "SUPABASE_SERVICE_ROLE_KEY",
+      "target": [
+        "production"
+      ],
+      "type": "encrypted",
+      "gitBranch": null,
+      "createdAt": 1773766148800,
+      "updatedAt": 1773766148800
+    },
+    {
+      "key": "NEXT_PUBLIC_SUPABASE_URL",
+      "target": [
+        "development",
+        "preview",
+        "production"
+      ],
+      "type": "encrypted",
+      "gitBranch": null,
+      "createdAt": 1771630857052,
+      "updatedAt": 1771630857052
+    },
+    {
+      "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "target": [
+        "development",
+        "preview",
+        "production"
+      ],
+      "type": "encrypted",
+      "gitBranch": null,
+      "createdAt": 1771630857052,
+      "updatedAt": 1771630857052
+    }
+  ]
+}

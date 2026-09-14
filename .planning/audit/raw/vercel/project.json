@@ -1,0 +1,34 @@
+{
+  "name": "vercel-project",
+  "captured_at": "2026-09-14T19:13:06.928Z",
+  "transport": "Vercel REST API GET /v9/projects/{id} via CLI login token (read-only)",
+  "fields": "selected fields only; no env values, no tokens",
+  "data": {
+    "name": "event-radar",
+    "id": "prj_EMMhGxDpAyv3LUJvGGlrGJlifCfA",
+    "framework": "nextjs",
+    "nodeVersion": "24.x",
+    "rootDirectory": null,
+    "crons": {
+      "enabledAt": 1771626390060,
+      "disabledAt": null,
+      "updatedAt": 1774585708660,
+      "deploymentId": "dpl_6NvnFrYRXtC8AAr4RHXyfEREYoj1",
+      "definitions": []
+    },
+    "link": {
+      "type": "github",
+      "repo": "event-radar",
+      "org": "apollo-ullah",
+      "productionBranch": "main"
+    },
+    "latestProductionDeployment": {
+      "id": "dpl_6NvnFrYRXtC8AAr4RHXyfEREYoj1",
+      "url": "event-radar-eb6vwj5bs-adyan-ullahs-projects.vercel.app",
+      "createdAt": 1774585614010,
+      "readyState": "READY"
+    },
+    "updatedAt": 1789413143079,
+    "error": null
+  }
+}
