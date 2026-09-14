@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,template,loading,error,not-found,global-error,default,route,robots,sitemap}.{ts,tsx}",
+    "src/middleware.ts",
+    "src/middlewareRateLimit.ts",
+    "next.config.js",
+    "tailwind.config.ts",
+    "postcss.config.js",
+    "eslint.config.mjs",
+    "jest.config.js",
+    "scripts/**/*.{ts,mjs,js}",
+    "load-tests/**/*.js",
+    "src/**/*.test.{ts,tsx}"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,mjs,js}"],
+  "ignore": ["supabase/functions/**", "src/lib/supabase/types.ts"],
+  "ignoreBinaries": ["k6", "supabase"],
+  "ignoreDependencies": ["k6"]
+}

@@ -1,0 +1,367 @@
+{
+  "modules": [
+    {
+      "source": "src/app/docs/page.tsx",
+      "dependencies": [
+        {
+          "module": "@/components/redoc/RedocUI",
+          "moduleSystem": "es6",
+          "dynamic": false,
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "undetermined",
+            "import"
+          ],
+          "resolved": "src/components/redoc/RedocUI.tsx",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        },
+        {
+          "module": "@/lib/swagger",
+          "moduleSystem": "es6",
+          "dynamic": false,
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "undetermined",
+            "import"
+          ],
+          "resolved": "src/lib/swagger.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        }
+      ],
+      "dependents": [],
+      "orphan": false,
+      "valid": true,
+      "matchesReaches": false
+    },
+    {
+      "source": "src/components/redoc/RedocUI.tsx",
+      "dependencies": [
+        {
+          "module": "redoc",
+          "moduleSystem": "es6",
+          "dynamic": false,
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "npm",
+            "import"
+          ],
+          "resolved": "node_modules/redoc/bundles/redoc.lib.js",
+          "coreModule": false,
+          "followable": false,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": true,
+          "circular": false,
+          "valid": true
+        }
+      ],
+      "dependents": [
+        "src/app/docs/page.tsx"
+      ],
+      "orphan": false,
+      "valid": true,
+      "matchesReaches": false
+    },
+    {
+      "source": "node_modules/redoc/bundles/redoc.lib.js",
+      "followable": false,
+      "coreModule": false,
+      "couldNotResolve": false,
+      "matchesDoNotFollow": true,
+      "dependencyTypes": [
+        "npm",
+        "import"
+      ],
+      "dependencies": [],
+      "dependents": [
+        "src/components/redoc/RedocUI.tsx"
+      ],
+      "orphan": false,
+      "valid": true,
+      "matchesReaches": true
+    },
+    {
+      "source": "src/lib/swagger.ts",
+      "dependencies": [
+        {
+          "module": "next-swagger-doc",
+          "moduleSystem": "es6",
+          "dynamic": false,
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "npm",
+            "import"
+          ],
+          "resolved": "node_modules/next-swagger-doc/dist/index.cjs",
+          "coreModule": false,
+          "followable": false,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": true,
+          "circular": false,
+          "valid": true
+        }
+      ],
+      "dependents": [
+        "src/app/docs/page.tsx"
+      ],
+      "orphan": false,
+      "valid": true,
+      "matchesReaches": false
+    },
+    {
+      "source": "node_modules/next-swagger-doc/dist/index.cjs",
+      "followable": false,
+      "coreModule": false,
+      "couldNotResolve": false,
+      "matchesDoNotFollow": true,
+      "dependencyTypes": [
+        "npm",
+        "import"
+      ],
+      "dependencies": [],
+      "dependents": [
+        "src/lib/swagger.ts"
+      ],
+      "orphan": false,
+      "valid": true,
+      "matchesReaches": true
+    }
+  ],
+  "summary": {
+    "violations": [],
+    "error": 0,
+    "warn": 0,
+    "info": 0,
+    "ignore": 0,
+    "totalCruised": 5,
+    "totalDependenciesCruised": 4,
+    "optionsUsed": {
+      "baseDir": "/Users/adyan/Documents/GitHub/Event-Radar",
+      "combinedDependencies": false,
+      "detectJSDocImports": false,
+      "detectProcessBuiltinModuleCalls": false,
+      "doNotFollow": {
+        "path": "(^|/)node_modules/"
+      },
+      "enhancedResolveOptions": {
+        "exportsFields": [
+          "exports"
+        ],
+        "conditionNames": [
+          "import",
+          "require",
+          "node",
+          "default",
+          "types"
+        ],
+        "extensions": [
+          ".js",
+          ".jsx",
+          ".mjs",
+          ".cjs",
+          ".ts",
+          ".tsx",
+          ".d.ts"
+        ],
+        "mainFields": [
+          "module",
+          "main",
+          "types",
+          "typings"
+        ]
+      },
+      "exoticRequireStrings": [],
+      "externalModuleResolutionStrategy": "node_modules",
+      "metrics": false,
+      "moduleSystems": [
+        "es6",
+        "cjs",
+        "tsd",
+        "amd"
+      ],
+      "outputTo": "-",
+      "outputType": "json",
+      "preserveSymlinks": false,
+      "reaches": {
+        "path": "node_modules/(swagger-ui-react|redoc|next-swagger-doc)"
+      },
+      "reporterOptions": {
+        "text": {
+          "highlightFocused": true
+        }
+      },
+      "rulesFile": ".planning/audit/quality/depcruise.config.cjs",
+      "skipAnalysisNotInRules": false,
+      "tsConfig": {
+        "fileName": "tsconfig.json"
+      },
+      "tsPreCompilationDeps": true,
+      "args": "src/**/*.{ts,tsx}"
+    },
+    "ruleSetUsed": {
+      "forbidden": []
+    },
+    "environment": {
+      "version": "18.3.0",
+      "nodeVersionSupported": "^22||^24||>=26",
+      "nodeVersionFound": "v24.16.0",
+      "osVersionFound": "arm64 darwin@25.6.0",
+      "transpilersFound": [
+        {
+          "name": "javascript",
+          "version": "*",
+          "available": true,
+          "currentVersion": "acorn@8.18.0"
+        },
+        {
+          "name": "babel",
+          "version": ">=7.0.0 <8.0.0",
+          "available": false,
+          "currentVersion": "-"
+        },
+        {
+          "name": "coffee-script",
+          "version": ">=1.0.0 <2.0.0",
+          "available": false,
+          "currentVersion": "-"
+        },
+        {
+          "name": "coffeescript",
+          "version": ">=1.0.0 <3.0.0",
+          "available": false,
+          "currentVersion": "-"
+        },
+        {
+          "name": "livescript",
+          "version": ">=1.0.0 <2.0.0",
+          "available": false,
+          "currentVersion": "-"
+        },
+        {
+          "name": "svelte",
+          "version": ">=3.0.0 <6.0.0",
+          "available": false,
+          "currentVersion": "-"
+        },
+        {
+          "name": "swc",
+          "version": ">=1.0.0 <2.0.0",
+          "available": false,
+          "currentVersion": "-"
+        },
+        {
+          "name": "typescript",
+          "version": ">=2.0.0 <7.0.0",
+          "available": false,
+          "currentVersion": "-"
+        },
+        {
+          "name": "vue-template-compiler",
+          "version": ">=2.0.0 <3.0.0",
+          "available": false,
+          "currentVersion": "-"
+        },
+        {
+          "name": "@vue/compiler-sfc",
+          "version": ">=3.0.0 <4.0.0",
+          "available": false,
+          "currentVersion": "-"
+        }
+      ],
+      "extensionsFound": [
+        {
+          "extension": ".js",
+          "available": true
+        },
+        {
+          "extension": ".cjs",
+          "available": true
+        },
+        {
+          "extension": ".mjs",
+          "available": true
+        },
+        {
+          "extension": ".jsx",
+          "available": true
+        },
+        {
+          "extension": ".ts",
+          "available": false
+        },
+        {
+          "extension": ".tsx",
+          "available": false
+        },
+        {
+          "extension": ".d.ts",
+          "available": false
+        },
+        {
+          "extension": ".cts",
+          "available": false
+        },
+        {
+          "extension": ".d.cts",
+          "available": false
+        },
+        {
+          "extension": ".mts",
+          "available": false
+        },
+        {
+          "extension": ".d.mts",
+          "available": false
+        },
+        {
+          "extension": ".vue",
+          "available": false
+        },
+        {
+          "extension": ".svelte",
+          "available": false
+        },
+        {
+          "extension": ".ls",
+          "available": false
+        },
+        {
+          "extension": ".coffee",
+          "available": false
+        },
+        {
+          "extension": ".litcoffee",
+          "available": false
+        },
+        {
+          "extension": ".coffee.md",
+          "available": false
+        },
+        {
+          "extension": ".csx",
+          "available": false
+        },
+        {
+          "extension": ".cjsx",
+          "available": false
+        }
+      ],
+      "issues": [
+        {
+          "severity": "warn",
+          "name": "missing-typescript-transpiler",
+          "description": "dependency-cruiser detected a TypeScript environment,\n    but not a compatible TypeScript compiler (typescript: >=2.0.0 <7.0.0). This means\n    it's likely to have missed TypeScript sources and dependencies.\n\n    Install typescript to get better results (e.g. npm i -D typescript@^6).\n\n    => Support for typescript@>=7 will follow when its API is published and stable.\n"
+        }
+      ]
+    }
+  }
+}
