@@ -154,15 +154,108 @@ Deferred past this program. Tracked but not in the current roadmap.
 
 Which phases cover which requirements. Updated during roadmap creation.
 
+Stage → phase mapping: Stage 1 (AUDIT) = Phase 1. Stage 2 (STAB) = Phase 2.
+Stage 3 (REFAC) = Phases 3-6. Stage 4 (CERT) = Phases 7-8.
+No phase crosses a stage boundary.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmap) | | |
+| AUDIT-01 | Phase 1 | Pending |
+| AUDIT-02 | Phase 1 | Pending |
+| AUDIT-03 | Phase 1 | Pending |
+| AUDIT-04 | Phase 1 | Pending |
+| AUDIT-05 | Phase 1 | Pending |
+| AUDIT-06 | Phase 1 | Pending |
+| AUDIT-07 | Phase 1 | Pending |
+| AUDIT-08 | Phase 1 | Pending |
+| AUDIT-09 | Phase 1 | Pending |
+| AUDIT-10 | Phase 1 | Pending |
+| AUDIT-11 | Phase 1 | Pending |
+| AUDIT-12 | Phase 1 | Pending |
+| AUDIT-13 | Phase 1 | Pending |
+| AUDIT-14 | Phase 1 | Pending |
+| AUDIT-15 | Phase 1 | Pending |
+| AUDIT-16 | Phase 1 | Pending |
+| AUDIT-17 | Phase 1 | Pending |
+| AUDIT-18 | Phase 1 | Pending |
+| AUDIT-19 | Phase 1 | Pending |
+| AUDIT-20 | Phase 1 | Pending |
+| AUDIT-21 | Phase 1 | Pending |
+| STAB-01 | Phase 2 | Pending |
+| STAB-02 | Phase 2 | Pending |
+| STAB-03 | Phase 2 | Pending |
+| STAB-04 | Phase 2 | Pending |
+| STAB-05 | Phase 2 | Pending |
+| STAB-06 | Phase 2 | Pending |
+| STAB-07 | Phase 2 | Pending |
+| STAB-08 | Phase 2 | Pending |
+| STAB-09 | Phase 2 | Pending |
+| STAB-10 | Phase 2 | Pending |
+| STAB-11 | Phase 2 | Pending |
+| STAB-12 | Phase 2 | Pending |
+| STAB-13 | Phase 2 | Pending |
+| STAB-14 | Phase 2 | Pending |
+| STAB-15 | Phase 2 | Pending |
+| STAB-16 | Phase 2 | Pending |
+| STAB-17 | Phase 2 | Pending |
+| REFAC-01 | Phase 3 | Pending |
+| REFAC-02 | Phase 3 | Pending |
+| REFAC-03 | Phase 3 | Pending |
+| REFAC-04 | Phase 3 | Pending |
+| REFAC-05 | Phase 3 | Pending |
+| REFAC-06 | Phase 3 | Pending |
+| REFAC-07 | Phase 3 | Pending |
+| REFAC-08 | Phase 3 | Pending |
+| REFAC-09 | Phase 4 | Pending |
+| REFAC-10 | Phase 4 | Pending |
+| REFAC-11 | Phase 5 | Pending |
+| REFAC-12 | Phase 5 | Pending |
+| REFAC-13 | Phase 5 | Pending |
+| REFAC-14 | Phase 6 | Pending |
+| REFAC-15 | Phase 6 | Pending |
+| REFAC-16 | Phase 6 | Pending |
+| REFAC-17 | Phase 5 | Pending |
+| REFAC-18 | Phase 5 | Pending |
+| REFAC-19 | Phase 6 | Pending |
+| REFAC-20 | Phase 6 | Pending |
+| REFAC-21 | Phase 6 | Pending |
+| REFAC-22 | Phase 6 | Pending |
+| REFAC-23 | Phase 6 | Pending |
+| CERT-01 | Phase 7 | Pending |
+| CERT-02 | Phase 7 | Pending |
+| CERT-03 | Phase 7 | Pending |
+| CERT-04 | Phase 7 | Pending |
+| CERT-05 | Phase 7 | Pending |
+| CERT-06 | Phase 7 | Pending |
+| CERT-07 | Phase 7 | Pending |
+| CERT-08 | Phase 7 | Pending |
+| CERT-09 | Phase 7 | Pending |
+| CERT-10 | Phase 7 | Pending |
+| CERT-11 | Phase 8 | Pending |
+| CERT-12 | Phase 8 | Pending |
+| CERT-13 | Phase 8 | Pending |
+| CERT-14 | Phase 8 | Pending |
+| CERT-15 | Phase 8 | Pending |
+| CERT-16 | Phase 8 | Pending |
+| CERT-17 | Phase 8 | Pending |
+| CERT-18 | Phase 8 | Pending |
+| CERT-19 | Phase 7 | Pending |
+| CERT-20 | Phase 8 | Pending |
 
 **Coverage:**
 - v1 requirements: 81 total
-- Mapped to phases: 0
-- Unmapped: 81 ⚠️
+- Mapped to phases: 81
+- Unmapped: 0 ✓
+
+**Per-phase counts:** Phase 1: 21 · Phase 2: 17 · Phase 3: 8 · Phase 4: 2 · Phase 5: 5 · Phase 6: 8 · Phase 7: 11 · Phase 8: 9
+
+**Cross-cutting note:** REFAC-15/16 (zod contracts for every handler), REFAC-19 (cache
+default inversion), and REFAC-23 (harness re-confirmation after each slice) are worked
+incrementally across Phases 4-6 but map to Phase 6, where their "every handler / every
+route / every slice" criterion first becomes verifiable. REFAC-17/18 map to Phase 5
+because CSRF exposure and distributed rate limiting both depend on the session and
+middleware work in that phase, and REFAC-13 requires `/api/admin/*` rate limiting.
 
 ---
 *Requirements defined: 2026-09-13*
-*Last updated: 2026-09-13 after initial definition*
+*Last updated: 2026-09-13 after roadmap creation (81/81 mapped across 8 phases)*
