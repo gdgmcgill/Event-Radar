@@ -1,0 +1,10 @@
+HTTP/2 404 
+content-type: application/json
+age: 19
+cache-control: s-maxage=60, stale-while-revalidate=300
+x-matched-path: /api/events/[id]/rsvp
+x-vercel-cache: HIT
+x-vercel-id: pdx1::iad1::42jp4-1789427195953-6c00064ceaa8
+cf-cache-status: DYNAMIC
+vary: accept-encoding
+cf-ray: a3b30b0668493a07-YYZ

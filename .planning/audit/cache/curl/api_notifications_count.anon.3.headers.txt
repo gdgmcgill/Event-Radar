@@ -1,0 +1,10 @@
+HTTP/2 200 
+content-type: application/json
+age: 22
+cache-control: s-maxage=60, stale-while-revalidate=300
+x-matched-path: /api/notifications/count
+x-vercel-cache: HIT
+x-vercel-id: pdx1::iad1::zbvcm-1789427207783-cf27fda6eb91
+cf-cache-status: DYNAMIC
+vary: accept-encoding
+cf-ray: a3b30b506923a22e-YYZ

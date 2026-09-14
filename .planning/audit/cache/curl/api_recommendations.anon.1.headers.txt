@@ -1,0 +1,10 @@
+HTTP/2 200 
+content-type: application/json
+age: 0
+cache-control: private, no-store
+x-matched-path: /api/recommendations
+x-vercel-cache: MISS
+x-vercel-id: pdx1::iad1::29q2j-1789427167496-bf4d5794ce3b
+cf-cache-status: DYNAMIC
+vary: accept-encoding
+cf-ray: a3b30a548fb4a1e7-YYZ

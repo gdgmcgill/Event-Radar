@@ -1,0 +1,11 @@
+HTTP/2 200 
+content-type: application/json
+age: 0
+cache-control: s-maxage=60, stale-while-revalidate=300
+set-cookie: <REDACTED>
+x-matched-path: /api/health
+x-vercel-cache: MISS
+x-vercel-id: pdx1::iad1::jvm2d-1789427204923-afff7772094f
+cf-cache-status: DYNAMIC
+vary: accept-encoding
+cf-ray: a3b30b3e7d793773-YYZ

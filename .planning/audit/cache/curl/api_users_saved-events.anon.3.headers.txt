@@ -1,0 +1,9 @@
+HTTP/2 401 
+content-type: application/json
+age: 0
+cache-control: s-maxage=60, stale-while-revalidate=300
+x-matched-path: /api/users/saved-events
+x-vercel-cache: MISS
+x-vercel-id: pdx1::iad1::h7zf4-1789427217744-ecd6b6af144c
+cf-cache-status: DYNAMIC
+cf-ray: a3b30b8eabe3ab82-YYZ

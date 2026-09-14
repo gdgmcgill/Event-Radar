@@ -1,0 +1,10 @@
+HTTP/2 200 
+content-type: application/json
+age: 19
+cache-control: s-maxage=60, stale-while-revalidate=300
+x-matched-path: /api/clubs/[id]/events
+x-vercel-cache: HIT
+x-vercel-id: pdx1::iad1::5htq9-1789427189662-c44d270f5592
+cf-cache-status: DYNAMIC
+vary: accept-encoding
+cf-ray: a3b30adf2c5035ae-YYZ

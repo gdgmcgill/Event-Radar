@@ -1,0 +1,10 @@
+HTTP/2 200 
+content-type: application/json
+age: 97
+cache-control: public
+x-matched-path: /api/events/featured
+x-vercel-cache: STALE
+x-vercel-id: yul1::iad1::g286n-1789427184276-652dd3e6e309
+cf-cache-status: DYNAMIC
+vary: accept-encoding
+cf-ray: a3b30abd8df6ac48-YYZ

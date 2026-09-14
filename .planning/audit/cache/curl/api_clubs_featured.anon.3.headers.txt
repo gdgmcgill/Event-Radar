@@ -1,0 +1,10 @@
+HTTP/2 200 
+content-type: application/json
+age: 77
+cache-control: public
+x-matched-path: /api/clubs/featured
+x-vercel-cache: STALE
+x-vercel-id: pdx1::iad1::hhwhs-1789427202512-ff2e7aa09b76
+cf-cache-status: DYNAMIC
+vary: accept-encoding
+cf-ray: a3b30b2f6d8424ee-YYZ

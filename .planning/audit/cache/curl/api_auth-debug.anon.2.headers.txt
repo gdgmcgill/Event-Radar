@@ -1,0 +1,10 @@
+HTTP/2 200 
+content-type: application/json
+age: 56
+cache-control: s-maxage=60, stale-while-revalidate=300
+x-matched-path: /api/auth-debug
+x-vercel-cache: HIT
+x-vercel-id: yul1::iad1::vg8ks-1789427197196-acd5d4d59d04
+cf-cache-status: DYNAMIC
+vary: accept-encoding
+cf-ray: a3b30b0e5c94ac1b-YYZ

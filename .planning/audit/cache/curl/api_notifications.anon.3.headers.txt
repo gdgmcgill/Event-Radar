@@ -1,0 +1,9 @@
+HTTP/2 401 
+content-type: application/json
+age: 0
+cache-control: s-maxage=60, stale-while-revalidate=300
+x-matched-path: /api/notifications
+x-vercel-cache: MISS
+x-vercel-id: yul1::iad1::xbb6v-1789427219183-d5d38af093f5
+cf-cache-status: DYNAMIC
+cf-ray: a3b30b97dd6d8af6-YYZ

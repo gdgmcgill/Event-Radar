@@ -1,0 +1,8 @@
+HTTP/2 307 
+age: 0
+cache-control: public, max-age=0, must-revalidate
+x-matched-path: /auth/callback
+x-vercel-cache: MISS
+x-vercel-id: pdx1::iad1::rrknd-1789427220429-3508b650701c
+cf-cache-status: DYNAMIC
+cf-ray: a3b30b9f7aedebbc-YYZ

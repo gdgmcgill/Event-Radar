@@ -1,0 +1,10 @@
+HTTP/2 200 
+content-type: application/json
+age: 38
+cache-control: s-maxage=60, stale-while-revalidate=300
+x-matched-path: /api/events/friends-organizing
+x-vercel-cache: HIT
+x-vercel-id: pdx1::iad1::9m84s-1789427212758-9d88b4197e4f
+cf-cache-status: DYNAMIC
+vary: accept-encoding
+cf-ray: a3b30b6f8c2c8ea1-YYZ
