@@ -45,7 +45,8 @@
     "security_enforcement": true,
     "security_asvs_level": 1,
     "security_block_on": "high",
-    "_auto_chain_active": false
+    "_auto_chain_active": false,
+    "test_command": "npx jest --ci"
   },
   "ship": {
     "pr_body_sections": [
