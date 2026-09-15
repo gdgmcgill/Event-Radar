@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Stage gates:** Phases 2–8 may not start until the prior stage's exit gate is evidenced. Phase 1 is the Stage 1 gate, Phase 2 is the Stage 2 gate (STAB-17), Phases 3–6 are Stage 3, Phases 7–8 are Stage 4 (ending at CERT-20).
 
 - [x] **Phase 1: Read-Only Foundation Audit** - Inventory and assess everything with evidence; change nothing (completed 2026-09-14)
-- [ ] **Phase 2: Dependency and Runtime Stabilization** - Pin, patch, and make the tree reproducible; make the test suite gate changes
+- [x] **Phase 2: Dependency and Runtime Stabilization** - Pin, patch, and make the tree reproducible; make the test suite gate changes (completed 2026-09-15)
 - [ ] **Phase 3: Refactor Foundations — Schema Truth and the Seam Kit** - Reconcile schema, generate types, build the server seam, the persona harness, and the seed
 - [ ] **Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path** - Prove the seam on the two highest-traffic workflows and settle the event data shape
 - [ ] **Phase 5: Slices 3–5 — Auth, Club Authorization, Admin Containment** - One fails-closed authorization ring; cross-tenant and escalation paths denied twice
@@ -89,7 +89,7 @@ Plans:
   4. Every Validated workflow in PROJECT.md still works: each upgrade batch is one labeled commit followed by lint, type-check, test, build, and a smoke pass, with any major upgrade isolated behind its own migration note.
   5. A Stage 2 completion note evidences the exit gate — no unexplained Critical production vulnerabilities, no reachable High without a dated owner-signed exception against the written vulnerability policy, reproducible install, checks green at or better than the AUDIT-13 baseline, reviewed lockfile — alongside a committed CycloneDX SBOM, Renovate/Dependabot configuration, and before/after bundle size.
 
-**Plans**: 10/11 plans executed
+**Plans**: 11/11 plans complete
 
 Plans:
 **Wave 1**
@@ -125,7 +125,7 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
-- [ ] 02-11-PLAN.md — Batch 6c: clean-room reproducible install, finding register reconciled to the roadmap, stale docs corrected, Stage 2 completion note
+- [x] 02-11-PLAN.md — Batch 6c: clean-room reproducible install, finding register reconciled to the roadmap, stale docs corrected, Stage 2 completion note
 
 ### Phase 3: Refactor Foundations — Schema Truth and the Seam Kit
 
@@ -242,7 +242,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
-| 2. Dependency and Runtime Stabilization | 10/11 | In Progress|  |
+| 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/TBD | Not started | - |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |

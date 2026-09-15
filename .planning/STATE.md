@@ -5,16 +5,16 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Dependency and Runtime Stabilization
 status: executing
-stopped_at: "Completed 02-10-PLAN.md (batch 6b: CycloneDX SBOM, 320 components, byte-identical across regenerations; renovate.json with 6 described rules, 1 patch-only auto-merge, React majors disabled at the PR level; STAB-16 after side with two-family attribution). STAB-15 and STAB-16 complete."
-last_updated: "2026-09-15T15:48:26.427Z"
+stopped_at: "Completed 02-11-PLAN.md (batch 6c: clean-room install at 01c7394 with 20 exit codes all 0; finding register reconciled to the roadmap and regenerated through its generator; CLAUDE.md and README.md corrected against the tree; STAGE-2-COMPLETION.md written). Phase 2 plans 1-11 complete. STAGE 2 EXIT GATE MET. STAB-11, STAB-12, STAB-13, STAB-17 complete; STAB-02, STAB-06, STAB-09, STAB-14 held Pending."
+last_updated: "2026-09-15T16:13:56.705Z"
 last_activity: 2026-09-15
-last_activity_desc: "Completed 02-10 (batch 6b: SBOM committed and proven reproducible, Renovate configured but inert until the GitHub App is installed, bundle delta recorded in two families with per-batch attribution; STAB-15 and STAB-16 complete)"
+last_activity_desc: "Completed 02-11 (batch 6c: clean-room reproducible install proven at the final commit, finding register reconciled to the roadmap, stale documentation corrected, Stage 2 exit gate evidenced and MET)"
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 24
-  completed_plans: 23
-  percent: 13
+  completed_plans: 24
+  percent: 25
 ---
 
 # Project State
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 Phase: 02 (Dependency and Runtime Stabilization) — EXECUTING
 Plan: 11 of 11
-Status: Executing — 02-01..02-10 complete (batches 0-6b done). Wave 8 next: 02-11 (exit gate: clean-room install, final baseline comparison, phase completion note). Two human steps outstanding from 02-10 — install the Renovate GitHub App, and mark the CI checks REQUIRED in branch protection on main
-Last activity: 2026-09-15 — Completed 02-10 (batch 6b: SBOM committed and proven reproducible, Renovate configured but inert until the GitHub App is installed, bundle delta recorded in two families with per-batch attribution; STAB-15 and STAB-16 complete)
+Status: All 11 plans executed (batches 0-6c done). STAGE 2 EXIT GATE MET — evidence/STAGE-2-COMPLETION.md. Ready for verification. Twelve STAB requirements complete; STAB-02, STAB-06, STAB-09 and STAB-14 held Pending, three of them blocked on a single act: a push. Three human steps outstanding — push (closes three requirement clauses), install the Renovate GitHub App, and mark the CI checks REQUIRED in branch protection on main
+Last activity: 2026-09-15 — Completed 02-11 (batch 6c: clean room at 01c7394 with 20 exit codes all 0, finding register reconciled to the roadmap and regenerated, CLAUDE.md/README.md corrected against the tree, Stage 2 completion note written; STAB-11, STAB-12, STAB-13 and STAB-17 complete)
 
-Progress: [█░░░░░░░░░] 9%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress: [█░░░░░░░░░] 9%
 | Phase 02 P08 | 13min | 3 tasks | 12 files |
 | Phase 02 P09 | 14min | 2 tasks | 15 files |
 | Phase 02 P10 | 25min | 3 tasks | 7 files |
+| Phase 02 P11 | 38 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,11 @@ Recent decisions affecting current work:
 - [Phase 02]: Batch 6b (02-10): the SBOM is generated with --package-lock-only, added to the research command, because the installed-tree variant is platform-dependent (288 components on macOS vs 320 from the lockfile) and omits @next/swc-linux-x64-gnu and the sharp Linux binaries that actually run on Vercel iad1 — and because byte-stability across regenerations, which the plan requires, is false across machines without it
 - [Phase 02]: Batch 6b (02-10): renovate.json package rules are ordered general -> specific so the blanket major rule precedes the React rule; both match exactly [major], and in the research order the React rule shadows the blanket protection and makes it look absent
 - [Phase 02]: Batch 6b (02-10): the -6.32% route-bundle reduction is attributed to batch 2 on 02-04's MEASURED 0-byte batch-1 delta, not on Pitfall 9's prediction; batch 1's removals had zero importers and were already tree-shaken, and the +1,109 B that batches 3-6 added is reported rather than rounded away
+- [Phase 02]: The roadmap is the phase contract: five findings whose closes_in_phase disagreed with it were reassigned to 02 — F-051/052/053 read 03 and F-056/057 read null while the ROADMAP's Phase 2 success criteria name the CLI removal, the framework patch and the API-documentation disposition by name. Five adjacent rows were corrected in the same direction: F-063 and F-064 to Fixed, F-065 held Open on an unobserved CI run, F-066 to 03 as partially closed, F-025 05 -> 06 and still Critical/Open.
+- [Phase 02]: findings.schema.json gained an OPTIONAL resolution field, rendered by gen-foundation-audit.mjs — The register could record THAT a finding closed, via status and closes_in_phase, and had nowhere to record HOW, in which commit, or which clause did NOT close. Optional, so all 70 rows stay schema-valid and every untouched row renders byte-identically.
+- [Phase 02]: .claude/CLAUDE.md corrected on disk but deliberately NOT force-added to git — .claude/ is gitignored at .gitignore:43 and the file has never been tracked. Overriding a deliberate gitignore is not the executor's call. The correction is live for agents and absent from history; the split is recorded in the commit body, STAGE-2-COMPLETION.md section 12 and the plan summary rather than left to be discovered.
+- [Phase 02]: Twelve STAB requirements marked complete; five held Pending with named unblock conditions — STAB-02, STAB-06, STAB-09 and STAB-14 each have at least one clause the artifacts do not support. Three of them — STAB-02's CI half, STAB-14's observed run, STAB-06's Tier 3 — are blocked on one act: a push.
+- [Phase 02]: The Stage 2 exit gate is MET on all five clauses — 0 Critical and 0 High in the production tree; the exception register is examined-and-empty because the Highs were fixed rather than excepted; the clean room at 01c7394 records 20 exit codes all 0; 278 passing against a baseline of 220 AND 5 skipped against 36; the lockfile was reviewed as diffs on every batch and never regenerated.
 
 ### Pending Todos
 
@@ -176,6 +182,8 @@ None yet.
 - ENVIRONMENT, not repository: the git binary stopped running partway through plan 02-09 — /usr/bin/git now exits 69 with 'You have not agreed to the Xcode license agreements'. Both 02-09 task commits landed first (refs/heads/main = b554d8f66eccc856a0cd3c69df3161bb0ac961ed, confirmed in .git/logs/HEAD). The 02-09 docs commit (SUMMARY.md, STATE.md, ROADMAP.md) is UNCOMMITTED on disk. Unblock: run 'sudo xcodebuild -license' in a Terminal, accept, then commit those files. Plan 02-10 cannot commit until this is cleared
 - STAB-14 is partial: the CI production vulnerability gate is in .github/workflows/ci.yml and exits 0 locally, but no CI run has been observed — all 113 Phase 2 commits are unpushed and the one run on the remote (26121379844) has GitHub-expired logs (HTTP 410). Unblock: push, then confirm six step conclusions and grep the Install step log for 'Unknown <scope> config' to also close STAB-02's CI half. Procedure in evidence/ci-green-run.md sections 3 and 6
 - Renovate is inert until two human steps are done: install the Renovate GitHub App on gdgmcgill/Event-Radar (four indirect probes found no evidence it ever has been), and mark the CI checks REQUIRED in branch protection on main — without the second, 'checks passed' is vacuous and patch auto-merge merges on a green tick that guarantees nothing
+- STAB-02 / STAB-14 / STAB-06 Tier 3 are blocked on ONE act: a git push. No Phase 2 commit has been pushed (~123 local commits ahead of origin/main), so no CI run exists to observe, the last completed run's logs return HTTP 410, and the proxy migration's Tier 3 human verification has no preview deployment to run against. Unblocks three requirement clauses at once.
+- Renovate GitHub App is NOT installed. renovate.json is committed and strict-validated in both modes but inert — zero PRs or issues ever authored by app/renovate. Install at https://github.com/apps/renovate on the owning org, grant this repository, confirm the Dependency Dashboard issue appears. Evidence: evidence/renovate-validation.txt, STAGE-2-COMPLETION.md section 7.
 
 ## Deferred Items
 
@@ -188,6 +196,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T15:48:26.423Z
-Stopped at: Completed 02-10-PLAN.md (batch 6b: CycloneDX SBOM, 320 components, byte-identical across regenerations; renovate.json with 6 described rules, 1 patch-only auto-merge, React majors disabled at the PR level; STAB-16 after side with two-family attribution). STAB-15 and STAB-16 complete.
+Last session: 2026-09-15T16:11:45.554Z
+Stopped at: Completed 02-11-PLAN.md (batch 6c: clean-room install at 01c7394 with 20 exit codes all 0; finding register reconciled to the roadmap and regenerated through its generator; CLAUDE.md and README.md corrected against the tree; STAGE-2-COMPLETION.md written). Phase 2 plans 1-11 complete. STAGE 2 EXIT GATE MET. STAB-11, STAB-12, STAB-13, STAB-17 complete; STAB-02, STAB-06, STAB-09, STAB-14 held Pending.
 Resume file: None

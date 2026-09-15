@@ -40,19 +40,19 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [ ] **STAB-02**: The npm `devdir` configuration warning is resolved or its source documented
 - [x] **STAB-03**: A written vulnerability policy exists before any scan-driven change: zero unexplained Criticals in production deps; Highs in production deps need a fix or a dated, owner-signed exception with a reachability argument; dev-only findings are tracked, not blocking
 - [x] **STAB-04**: The `vercel` package is removed from production dependencies, and the decision on whether it remains as a devDependency is recorded
-- [x] **STAB-05**: Next.js is upgraded to the patched release closing the July-2026 CVE batch, as its own commit with `react` and `react-dom` untouched
+- [x] **STAB-05**: Next.js is upgraded to the patched release closing the July-2026 CVE batch, as its own commit with `react` and `react-dom` untouched — **shipped as 16.3.5, not the 16.2.11 this text originally named.** Amended by plan 02-11 on the instruction of 02-05: the original version predates the 2026-08-25 security release and would have satisfied this requirement's letter while leaving two unauthenticated-RCE criticals open. See `.planning/phases/02-dependency-and-runtime-stabilization/evidence/next-upgrade-note.md` § 1
 - [ ] **STAB-06**: `middleware.ts` is migrated to `proxy.ts` per the Next 16 deprecation, as its own gated change with the rate limiter and ban-check behavior smoke-tested before and after
 - [x] **STAB-07**: `swagger-ui-react` and `redoc` are upgraded, isolated behind auth or a build-time static artifact, or removed, based on the AUDIT-12 reachability answer
 - [x] **STAB-08**: Jest is the single test runner: `vitest.config.ts` and `vitest.setup.ts` are deleted, `jest-environment-jsdom` and testing-library packages are installed so the skipped `.tsx` suites run, a `test` script exists in `package.json`, and CI runs it
 - [ ] **STAB-09**: Remaining patch/minor upgrades are applied in small labeled batches, one commit per batch, each followed by lint, type-check, test, build, and a smoke pass
 - [x] **STAB-10**: Any major upgrade is its own change with a migration note and its own smoke pass (React 19 is explicitly deferred; see Out of Scope)
-- [ ] **STAB-11**: `package-lock.json` changes are reviewed as diffs, never regenerated wholesale; `npm audit fix --force` is never used
-- [ ] **STAB-12**: A clean-room install (`rm -rf node_modules && npm ci` in a fresh checkout, ideally in CI) succeeds and builds, with output captured as evidence
-- [ ] **STAB-13**: Build, lint, type-check, and tests are green at the same or better state than the AUDIT-13 baseline
+- [x] **STAB-11**: `package-lock.json` changes are reviewed as diffs, never regenerated wholesale; `npm audit fix --force` is never used
+- [x] **STAB-12**: A clean-room install (`rm -rf node_modules && npm ci` in a fresh checkout, ideally in CI) succeeds and builds, with output captured as evidence
+- [x] **STAB-13**: Build, lint, type-check, and tests are green at the same or better state than the AUDIT-13 baseline
 - [ ] **STAB-14**: CI runs `npm audit --audit-level=high --omit=dev` on every pull request
 - [x] **STAB-15**: A CycloneDX SBOM is generated and committed, and Renovate (or Dependabot) is configured with grouping and patch-only auto-merge after the batch upgrades land
 - [x] **STAB-16**: Bundle size is recorded before and after the dependency removals
-- [ ] **STAB-17**: Exit gate: no unexplained Critical production vulnerabilities, no reachable High without a documented exception, reproducible install, green checks, reviewed lockfile — all evidenced in a Stage 2 completion note
+- [x] **STAB-17**: Exit gate: no unexplained Critical production vulnerabilities, no reachable High without a documented exception, reproducible install, green checks, reviewed lockfile — all evidenced in a Stage 2 completion note
 
 ### Stage 3 — Targeted Foundation Refactor (REFAC)
 
@@ -192,13 +192,13 @@ No phase crosses a stage boundary.
 | STAB-08 | Phase 2 | Complete |
 | STAB-09 | Phase 2 | Pending |
 | STAB-10 | Phase 2 | Complete |
-| STAB-11 | Phase 2 | Pending |
-| STAB-12 | Phase 2 | Pending |
-| STAB-13 | Phase 2 | Pending |
+| STAB-11 | Phase 2 | Complete |
+| STAB-12 | Phase 2 | Complete |
+| STAB-13 | Phase 2 | Complete |
 | STAB-14 | Phase 2 | Pending |
 | STAB-15 | Phase 2 | Complete |
 | STAB-16 | Phase 2 | Complete |
-| STAB-17 | Phase 2 | Pending |
+| STAB-17 | Phase 2 | Complete |
 | REFAC-01 | Phase 3 | Pending |
 | REFAC-02 | Phase 3 | Pending |
 | REFAC-03 | Phase 3 | Pending |
