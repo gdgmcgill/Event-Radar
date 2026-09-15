@@ -6,14 +6,14 @@ current_phase: 3
 current_phase_name: Refactor Foundations — Schema Truth and the Seam Kit
 status: executing
 stopped_at: "Completed 02-11-PLAN.md (batch 6c: clean-room install at 01c7394 with 20 exit codes all 0; finding register reconciled to the roadmap and regenerated through its generator; CLAUDE.md and README.md corrected against the tree; STAGE-2-COMPLETION.md written). Phase 2 plans 1-11 complete. STAGE 2 EXIT GATE MET. STAB-11, STAB-12, STAB-13, STAB-17 complete; STAB-02, STAB-06, STAB-09, STAB-14 held Pending."
-last_updated: "2026-09-15T20:54:04.611Z"
+last_updated: "2026-09-15T21:25:03.179Z"
 last_activity: 2026-09-15
 last_activity_desc: Phase 3 execution started
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 32
-  completed_plans: 24
+  completed_plans: 27
   percent: 25
 ---
 
@@ -184,6 +184,7 @@ None yet.
 - Renovate is inert until two human steps are done: install the Renovate GitHub App on gdgmcgill/Event-Radar (four indirect probes found no evidence it ever has been), and mark the CI checks REQUIRED in branch protection on main — without the second, 'checks passed' is vacuous and patch auto-merge merges on a green tick that guarantees nothing
 - STAB-02 / STAB-14 / STAB-06 Tier 3 are blocked on ONE act: a git push. No Phase 2 commit has been pushed (~123 local commits ahead of origin/main), so no CI run exists to observe, the last completed run's logs return HTTP 410, and the proxy migration's Tier 3 human verification has no preview deployment to run against. Unblocks three requirement clauses at once.
 - Renovate GitHub App is NOT installed. renovate.json is committed and strict-validated in both modes but inert — zero PRs or issues ever authored by app/renovate. Install at https://github.com/apps/renovate on the owning org, grant this repository, confirm the Dependency Dashboard issue appears. Evidence: evidence/renovate-validation.txt, STAGE-2-COMPLETION.md section 7.
+- 03-04 Task 2 BLOCKED on SUPABASE_DB_PASSWORD — the baseline pull (supabase db pull --linked) and its documented fallback (supabase db dump --linked) both require the production database password, which is not exported and exists nowhere reachable. The archive (44 pure renames) is landed; tasks 2 and 3 await the password. Also flagged: supabase db pull --linked updates the REMOTE migration history, a production write that D-02 gates to plan 03-08 — prefer db dump.
 
 ## Deferred Items
 
@@ -196,6 +197,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T16:11:45.554Z
+Last session: 2026-09-15T21:24:59.709Z
 Stopped at: Completed 02-11-PLAN.md (batch 6c: clean-room install at 01c7394 with 20 exit codes all 0; finding register reconciled to the roadmap and regenerated through its generator; CLAUDE.md and README.md corrected against the tree; STAGE-2-COMPLETION.md written). Phase 2 plans 1-11 complete. STAGE 2 EXIT GATE MET. STAB-11, STAB-12, STAB-13, STAB-17 complete; STAB-02, STAB-06, STAB-09, STAB-14 held Pending.
 Resume file: None
