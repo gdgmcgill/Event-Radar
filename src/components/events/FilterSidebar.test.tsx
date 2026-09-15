@@ -1,16 +1,18 @@
 import React from "react";
-// @testing-library/react and @testing-library/jest-dom are not installed — tests skipped
- 
-const { render, screen, fireEvent } = {} as any;
+import { render, screen, fireEvent } from "@testing-library/react";
+// Imported before the component under test on purpose: jest.mock is hoisted above
+// the imports, and the factory below reads EventTag when EventFilters is first
+// required — which happens while the FilterSidebar import is being resolved.
+import { EventTag } from "@/types";
 import { FilterSidebar } from "@/components/events/FilterSidebar";
 
 jest.mock("@/components/events/EventFilters", () => ({
-   
+
   EventFilters: ({ onFilterChange, initialTags }: any) => (
     <div data-testid="mock-event-filters">
       <button
         data-testid="mock-filter-button"
-        onClick={() => onFilterChange?.({ tags: ["academic"] })}
+        onClick={() => onFilterChange?.({ tags: [EventTag.ACADEMIC] })}
       >
         Trigger Filter
       </button>
@@ -19,7 +21,7 @@ jest.mock("@/components/events/EventFilters", () => ({
   ),
 }));
 
-describe.skip("FilterSidebar (@testing-library/react not installed)", () => {
+describe("FilterSidebar", () => {
   it("renders closed when isOpen is false", () => {
     const { container } = render(
       <FilterSidebar isOpen={false} onToggle={() => {}} />
@@ -49,14 +51,18 @@ describe.skip("FilterSidebar (@testing-library/react not installed)", () => {
         isOpen={true}
         onToggle={() => {}}
         onFilterChange={mockOnFilterChange}
-        initialTags={["academic"]}
+        initialTags={[EventTag.ACADEMIC]}
       />
     );
 
-    expect(screen.getByTestId("mock-initial-tags")).toHaveTextContent("academic");
+    expect(screen.getByTestId("mock-initial-tags")).toHaveTextContent(
+      EventTag.ACADEMIC
+    );
 
     fireEvent.click(screen.getByTestId("mock-filter-button"));
-    expect(mockOnFilterChange).toHaveBeenCalledWith({ tags: ["academic"] });
+    expect(mockOnFilterChange).toHaveBeenCalledWith({
+      tags: [EventTag.ACADEMIC],
+    });
   });
 
   it("applies custom className", () => {

@@ -1,11 +1,9 @@
-// @testing-library/react is not installed — all tests in this file are skipped
- 
-const { render, screen, cleanup, fireEvent, waitFor } = {} as any;
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EVENT_CATEGORIES, EVENT_TAGS } from "@/lib/constants";
 import type { EventTag } from "@/types";
 
-describe.skip("EventFilters Component (@testing-library/react not installed)", () => {
+describe("EventFilters Component", () => {
   afterEach(() => {
     cleanup();
     jest.clearAllMocks();

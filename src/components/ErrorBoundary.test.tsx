@@ -1,9 +1,5 @@
-"use client";
-
 import { useState } from "react";
-// @testing-library/react is not installed — all tests in this file are skipped
- 
-const { render, screen, fireEvent, waitFor } = {} as any;
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 function Thrower(): JSX.Element {
@@ -42,7 +38,7 @@ function ResettableWrapper() {
   );
 }
 
-describe.skip("ErrorBoundary (@testing-library/react not installed)", () => {
+describe("ErrorBoundary", () => {
   beforeEach(() => {
     jest.spyOn(console, "error").mockImplementation(() => {});
   });

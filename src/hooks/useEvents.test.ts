@@ -1,36 +1,52 @@
-// TODO: Rework — all tests are skipped because @testing-library/react is not installed.
-// Install @testing-library/react and @testing-library/react-hooks, then remove the skip + fake imports.
-
-// @testing-library/react is not installed — all tests in this file are skipped
-const { act, renderHook, waitFor } = {} as any;
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { useEvents } from "./useEvents";
-import type { Event } from "@/types";
+import { EventTag, type Event, type EventFilter } from "@/types";
 
 // Mock fetch globally
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
+// AUDIT-19 / F-050: the two separate day-and-clock columns this fixture used to
+// carry exist on no production table. `start_date` and `end_date` (timestamptz,
+// NOT NULL) are authoritative, so the fixture carries those and only those.
 const createMockEvent = (id: string, date: string = "2026-02-25"): Event => ({
   id,
   title: `Event ${id}`,
   description: `Description for event ${id}`,
-  event_date: date,
-  event_time: "18:00",
   start_date: new Date(date).toISOString(),
   end_date: new Date(date).toISOString(),
   location: "Test Location",
+  organizer: null,
   club_id: "club-1",
-  tags: ["Academic"],
+  tags: [EventTag.ACADEMIC],
   image_url: null,
+  category: null,
+  source: "manual",
+  source_url: null,
+  content_hash: null,
+  rsvp_count: 0,
+  is_free: true,
+  price: null,
+  rsvp_link: null,
+  created_by: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   status: "approved",
+  deleted_at: null,
   club: {
     id: "club-1",
     name: "Test Club",
+    description: "Test club description",
     instagram_handle: "@testclub",
     logo_url: null,
-    description: "Test club description",
+    banner_url: null,
+    website_url: null,
+    discord_url: null,
+    twitter_url: null,
+    linkedin_url: null,
+    contact_email: null,
+    status: "approved",
+    created_by: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -51,7 +67,7 @@ const mockApiResponse = (
   }),
 });
 
-describe.skip("useEvents Hook (@testing-library/react not installed)", () => {
+describe("useEvents Hook", () => {
   beforeEach(() => {
     mockFetch.mockClear();
     // Default mock response to prevent undefined errors on unexpected secondary fetches
@@ -385,7 +401,7 @@ describe.skip("useEvents Hook (@testing-library/react not installed)", () => {
       await act(async () => {
         await result.current.loadAll({
           filters: {
-            tags: ["Academic"],
+            tags: [EventTag.ACADEMIC],
             searchQuery: "test",
           },
         });
@@ -396,7 +412,7 @@ describe.skip("useEvents Hook (@testing-library/react not installed)", () => {
       });
 
       const callUrl = mockFetch.mock.calls[0][0];
-      expect(callUrl).toContain("tags=Academic");
+      expect(callUrl).toContain(`tags=${EventTag.ACADEMIC}`);
       expect(callUrl).toContain("search=test");
     });
   });
@@ -409,7 +425,7 @@ describe.skip("useEvents Hook (@testing-library/react not installed)", () => {
       renderHook(() =>
         useEvents({
           filters: {
-            tags: ["Academic", "Social"],
+            tags: [EventTag.ACADEMIC, EventTag.SOCIAL],
             searchQuery: "hackathon",
             dateRange: {
               start: new Date("2026-02-01"),
@@ -428,7 +444,9 @@ describe.skip("useEvents Hook (@testing-library/react not installed)", () => {
       });
 
       const callUrl = mockFetch.mock.calls[0][0];
-      expect(callUrl).toContain("tags=Academic%2CSocial");
+      expect(callUrl).toContain(
+        `tags=${EventTag.ACADEMIC}%2C${EventTag.SOCIAL}`
+      );
       expect(callUrl).toContain("search=hackathon");
       expect(callUrl).toContain("dateFrom=");
       expect(callUrl).toContain("dateTo=");
@@ -447,9 +465,9 @@ describe.skip("useEvents Hook (@testing-library/react not installed)", () => {
       );
 
       const { result, rerender } = renderHook(
-        ({ filters }) => useEvents({ filters }),
+        ({ filters }: { filters: EventFilter }) => useEvents({ filters }),
         {
-          initialProps: { filters: { tags: ["Academic"] } },
+          initialProps: { filters: { tags: [EventTag.ACADEMIC] } },
         }
       );
 
@@ -462,7 +480,7 @@ describe.skip("useEvents Hook (@testing-library/react not installed)", () => {
       // Change filters
       mockFetch.mockResolvedValueOnce(mockApiResponse(events2, 1, null));
 
-      rerender({ filters: { tags: ["Social"] } });
+      rerender({ filters: { tags: [EventTag.SOCIAL] } });
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -511,7 +529,7 @@ describe.skip("useEvents Hook (@testing-library/react not installed)", () => {
       const { result } = renderHook(() => useEvents({ enabled: false }));
 
       const response = await result.current.fetchPage({
-        filters: { tags: ["Sports"] },
+        filters: { tags: [EventTag.SPORTS] },
         limit: 10,
       });
 
