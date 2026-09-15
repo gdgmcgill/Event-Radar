@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Dependency and Runtime Stabilization
 status: executing
-stopped_at: "Completed 02-04-PLAN.md (batch 1: ten dead declarations removed, advisory rows 38 -> 15)"
-last_updated: "2026-09-15T05:02:50.869Z"
+stopped_at: "Completed 02-05-PLAN.md (batch 2: next 16.2.1 -> 16.3.5 alone, production Criticals 1 -> 0)"
+last_updated: "2026-09-15T05:28:58.346Z"
 last_activity: 2026-09-15
-last_activity_desc: "Completed 02-04 (batch 1: vercel CLI + nine more dead declarations removed, advisory rows 38 -> 15, prod deps 680 -> 293)"
+last_activity_desc: "Completed 02-05 (batch 2: next 16.2.1 -> 16.3.5 alone, production Criticals 1 -> 0, react provably untouched)"
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 24
-  completed_plans: 17
+  completed_plans: 18
   percent: 13
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 02 (Dependency and Runtime Stabilization) — EXECUTING
-Plan: 5 of 11
-Status: Executing — 02-01..02-04 complete (batch 0 and batch 1 done), 02-05 next
-Last activity: 2026-09-15 — Completed 02-04 (batch 1: vercel CLI + nine more dead declarations removed, advisory rows 38 -> 15, prod deps 680 -> 293)
+Plan: 6 of 11
+Status: Executing — 02-01..02-05 complete (batch 0, batch 1 and batch 2 done), 02-06 next (batch 3: the middleware -> proxy rename)
+Last activity: 2026-09-15 — Completed 02-05 (batch 2: next 16.2.1 -> 16.3.5 alone, production Criticals 1 -> 0, react provably untouched)
 
 Progress: [█░░░░░░░░░] 9%
 
@@ -72,6 +72,7 @@ Progress: [█░░░░░░░░░] 9%
 | Phase 02 P02 | 22min | 3 tasks | 5 files |
 | Phase 02 P03 | 9min | 2 tasks | 3 files |
 | Phase 02 P04 | 35min | 3 tasks | 15 files |
+| Phase 02 P05 | 21min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T05:02:39.780Z
-Stopped at: Completed 02-04-PLAN.md (batch 1: ten dead declarations removed, advisory rows 38 -> 15)
+Last session: 2026-09-15T05:28:58.342Z
+Stopped at: Completed 02-05-PLAN.md (batch 2: next 16.2.1 -> 16.3.5 alone, production Criticals 1 -> 0)
 Resume file: None

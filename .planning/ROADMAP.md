@@ -89,7 +89,7 @@ Plans:
   4. Every Validated workflow in PROJECT.md still works: each upgrade batch is one labeled commit followed by lint, type-check, test, build, and a smoke pass, with any major upgrade isolated behind its own migration note.
   5. A Stage 2 completion note evidences the exit gate — no unexplained Critical production vulnerabilities, no reachable High without a dated owner-signed exception against the written vulnerability policy, reproducible install, checks green at or better than the AUDIT-13 baseline, reviewed lockfile — alongside a committed CycloneDX SBOM, Renovate/Dependabot configuration, and before/after bundle size.
 
-**Plans**: 4/11 plans executed
+**Plans**: 5/11 plans executed
 
 Plans:
 **Wave 1**
@@ -104,7 +104,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-05-PLAN.md — Batch 2: Next.js to the re-verified patched release alone, react/react-dom untouched, image-optimization config comment
+- [x] 02-05-PLAN.md — Batch 2: Next.js to the re-verified patched release alone, react/react-dom untouched, image-optimization config comment
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -242,7 +242,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
-| 2. Dependency and Runtime Stabilization | 4/11 | In Progress|  |
+| 2. Dependency and Runtime Stabilization | 5/11 | In Progress|  |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/TBD | Not started | - |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |
