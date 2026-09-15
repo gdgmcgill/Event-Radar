@@ -1,0 +1,102 @@
+-- RECOVERED HISTORY — production version 20260316090343 ("pre_release_fixes"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+
+-- 1. Create experiments table (A/B testing framework)
+CREATE TABLE IF NOT EXISTS public.experiments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'running', 'paused', 'completed')),
+  target_metric text,
+  start_date timestamptz,
+  end_date timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.experiment_variants (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  experiment_id uuid NOT NULL REFERENCES public.experiments(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  config jsonb NOT NULL DEFAULT '{}',
+  weight integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.experiment_assignments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  experiment_id uuid NOT NULL REFERENCES public.experiments(id) ON DELETE CASCADE,
+  variant_id uuid NOT NULL REFERENCES public.experiment_variants(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  assigned_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(experiment_id, user_id)
+);
+
+-- Indexes for experiment tables
+CREATE INDEX IF NOT EXISTS idx_experiment_variants_experiment_id ON public.experiment_variants(experiment_id);
+CREATE INDEX IF NOT EXISTS idx_experiment_assignments_variant_id ON public.experiment_assignments(variant_id);
+CREATE INDEX IF NOT EXISTS idx_experiment_assignments_experiment_id ON public.experiment_assignments(experiment_id);
+
+-- RLS for experiment tables (admin-only)
+ALTER TABLE public.experiments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.experiment_variants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.experiment_assignments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can manage experiments" ON public.experiments
+  FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND 'admin' = ANY(roles)));
+
+CREATE POLICY "Admins can manage experiment variants" ON public.experiment_variants
+  FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND 'admin' = ANY(roles)));
+
+CREATE POLICY "Admins can manage experiment assignments" ON public.experiment_assignments
+  FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND 'admin' = ANY(roles)));
+
+-- Users can read their own assignments
+CREATE POLICY "Users can read own assignments" ON public.experiment_assignments
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- 2. Update events status CHECK to include 'suspended'
+ALTER TABLE public.events DROP CONSTRAINT events_status_check;
+ALTER TABLE public.events ADD CONSTRAINT events_status_check
+  CHECK (status IN ('pending', 'approved', 'rejected', 'suspended'));
+
+-- 3. Update moderation_reviews action CHECK to include 'suspension'
+ALTER TABLE public.moderation_reviews DROP CONSTRAINT moderation_reviews_action_check;
+ALTER TABLE public.moderation_reviews ADD CONSTRAINT moderation_reviews_action_check
+  CHECK (action IN ('rejection', 'appeal', 'approval', 'suspension'));
+
+-- Update category_required_for_rejection to allow suspension without category
+ALTER TABLE public.moderation_reviews DROP CONSTRAINT category_required_for_rejection;
+ALTER TABLE public.moderation_reviews ADD CONSTRAINT category_required_for_rejection
+  CHECK (
+    ((action = 'rejection') AND (category IS NOT NULL)) OR
+    ((action IN ('appeal', 'approval', 'suspension')) AND (category IS NULL))
+  );
+
+-- 4. Enable RLS on featured_clubs
+ALTER TABLE public.featured_clubs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view featured clubs" ON public.featured_clubs
+  FOR SELECT USING (true);
+
+CREATE POLICY "Admins can manage featured clubs" ON public.featured_clubs
+  FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND 'admin' = ANY(roles)));
+
+-- 5. Add missing indexes for performance
+CREATE INDEX IF NOT EXISTS idx_events_created_by ON public.events(created_by);
+CREATE INDEX IF NOT EXISTS idx_clubs_created_by ON public.clubs(created_by);
+CREATE INDEX IF NOT EXISTS idx_event_reports_reporter_id ON public.event_reports(reporter_id);
+
+-- 6. Add DELETE policy for event_invites
+CREATE POLICY "Users can delete own sent invites" ON public.event_invites
+  FOR DELETE USING (auth.uid() = inviter_id);
+
+CREATE POLICY "Users can delete invites sent to them" ON public.event_invites
+  FOR DELETE USING (auth.uid() = invitee_id);
+
+-- 7. Add appeal_count non-negative constraints
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'events_appeal_count_non_negative') THEN
+    ALTER TABLE public.events ADD CONSTRAINT events_appeal_count_non_negative CHECK (appeal_count >= 0);
+  END IF;
+END $$;

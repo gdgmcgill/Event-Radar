@@ -1,0 +1,44 @@
+-- RECOVERED HISTORY — production version 20260324061310 ("create_reviews_table"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+
+-- Create the reviews table for event feedback (star ratings + comments)
+CREATE TABLE public.reviews (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  rating smallint NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  -- Each user can only review an event once
+  UNIQUE (user_id, event_id)
+);
+
+-- Index for fetching all reviews for an event
+CREATE INDEX idx_reviews_event_id ON public.reviews(event_id);
+
+-- Index for checking if a user already reviewed
+CREATE INDEX idx_reviews_user_event ON public.reviews(user_id, event_id);
+
+-- Enable RLS
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+
+-- Users can read all reviews (needed for aggregate display)
+CREATE POLICY "Anyone can read reviews"
+  ON public.reviews FOR SELECT
+  USING (true);
+
+-- Authenticated users can insert their own review
+CREATE POLICY "Users can insert own review"
+  ON public.reviews FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own review
+CREATE POLICY "Users can update own review"
+  ON public.reviews FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can delete their own review
+CREATE POLICY "Users can delete own review"
+  ON public.reviews FOR DELETE
+  USING (auth.uid() = user_id);

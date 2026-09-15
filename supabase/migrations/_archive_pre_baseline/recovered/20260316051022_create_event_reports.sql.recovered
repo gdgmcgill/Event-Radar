@@ -1,0 +1,58 @@
+-- RECOVERED HISTORY — production version 20260316051022 ("create_event_reports"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+-- Create event_reports table
+CREATE TABLE event_reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  reporter_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  category text NOT NULL,
+  message text,
+  status text NOT NULL DEFAULT 'pending',
+  reviewed_by uuid REFERENCES auth.users(id),
+  reviewed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT event_reports_unique_per_user UNIQUE (event_id, reporter_id),
+  CONSTRAINT event_reports_status_check CHECK (status IN ('pending', 'reviewed', 'dismissed'))
+);
+
+-- Index for admin queries (filter by status, order by created_at)
+CREATE INDEX idx_event_reports_status_created ON event_reports(status, created_at DESC);
+
+-- RLS policies
+ALTER TABLE event_reports ENABLE ROW LEVEL SECURITY;
+
+-- Authenticated users can insert their own reports
+CREATE POLICY "Users can insert own reports"
+  ON event_reports FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = reporter_id);
+
+-- Users can read their own reports (to show "Reported" state)
+CREATE POLICY "Users can read own reports"
+  ON event_reports FOR SELECT
+  TO authenticated
+  USING (auth.uid() = reporter_id);
+
+-- Admins can read all reports
+CREATE POLICY "Admins can read all reports"
+  ON event_reports FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND 'admin' = ANY(users.roles)
+    )
+  );
+
+-- Admins can update reports (review/dismiss)
+CREATE POLICY "Admins can update reports"
+  ON event_reports FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND 'admin' = ANY(users.roles)
+    )
+  );

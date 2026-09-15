@@ -123,3 +123,27 @@ still wanted, and it will arrive as new migrations:
   involved in this change at all.
 - **No file's content.** Not one byte inside any `.sql` file here differs from what it held at
   `7d4735f`.
+
+---
+
+## 6. `recovered/` — the 18 versions that have no file here at all
+
+Added by plan 03-04 after the baseline existed. `recovered/` holds the SQL for the **eighteen
+versions that are applied in production but that no file in this directory declares** — the March
+2026 out-of-band burst, recovered from production's own history table, where plan 03-01 measured all
+eighteen `statements` columns to be populated (Open Question Q1).
+
+**They are documentation, not migrations, and the two rules above apply to them unchanged.** Each
+carries a one-line header naming its version, and a `.sql.recovered` suffix so that the CLI could not
+read one as a migration even if it were moved to the top level.
+
+There is a specific reason not to reach for them: **the baseline already contains their effects.**
+They are applied in production, and the baseline is a dump of production. `recovered/README.md`
+explains the derivation and the sweep.
+
+The three files named in § 4 above were also re-checked against the generated baseline by plan 03-04,
+and one of those checks changed the answer — see `evidence/reconciliation-note.md` § 2. In short:
+`fk_indexes_and_cleanup` is confirmed a **no-op** and should not be re-issued; the invitee policies
+are confirmed **absent** and should be; and a fourth file not listed above,
+`20260308000001_fuzzy_search.sql`, turned out to have two missing trigram indexes and is now
+REFAC-02's strongest candidate.

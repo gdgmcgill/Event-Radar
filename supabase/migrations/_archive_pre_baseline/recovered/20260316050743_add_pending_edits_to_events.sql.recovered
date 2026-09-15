@@ -1,0 +1,5 @@
+-- RECOVERED HISTORY — production version 20260316050743 ("add_pending_edits_to_events"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+ALTER TABLE events ADD COLUMN pending_edits JSONB DEFAULT NULL;
+
+COMMENT ON COLUMN events.pending_edits IS 'Stores proposed title/image_url changes awaiting admin approval. Shape: {title?: string, image_url?: string, submitted_at: string}. NULL = no pending edits.';

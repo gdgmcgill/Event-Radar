@@ -1,0 +1,164 @@
+# supabase db reset — the [BLOCKING] local schema apply
+#
+# Plan: 03-04 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+#
+# SAFETY NOTE, load-bearing: `db reset` defaults to the LOCAL database, but this project is
+# now LINKED, and `--linked` on this same command resets the REMOTE project with local
+# migrations. `--local` is passed EXPLICITLY on every run below rather than relied on as a
+# default, because the blast radius of the default being wrong is production.
+#
+# The exit code alone is NOT sufficient evidence (Pitfall 3): the CLI passes over an
+# unparseable filename and continues with status 0, so a reset can be green while a
+# migration silently did not run. The tripwire grep is at the end of this file.
+#
+# THREE RUNS are recorded. Runs 1 and 2 are kept deliberately. Run 1 failed and produced
+# deviation D-16; run 2 was green but the baseline was still INCOMPLETE, which only the
+# diff could reveal, and that produced D-17. Keeping only run 3 would make a corrected
+# baseline look like a first guess that happened to be right.
+#
+# Docker image-pull progress lines are filtered out as noise. Nothing else is filtered.
+
+================================================================================
+RUN 1 — FAILED (exit 1). Baseline carried the full `public,storage` dump.
+================================================================================
+
+$ supabase db reset --local
+
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+{"_tag":"Error","error":{"code":"LegacyMigrationApplyError","message":"ERROR: permission denied for schema storage (SQLSTATE 42501)\nAt statement: 21\nCREATE TYPE \"storage\".\"buckettype\" AS ENUM (\n    'STANDARD',\n    'ANALYTICS',\n    'VECTOR'\n)"}}
+
+exit_code=1
+
+# D-16, stated plainly: the migration role is `postgres`; it holds no CREATE on the storage
+# schema, so a dumped `CREATE TYPE "storage"."buckettype"` cannot be replayed. This is
+# equally true in production — the storage schema is owned and created by the storage
+# SERVICE in every environment, from the same image. Probes that established it, run
+# directly against the local database as `postgres`:
+#
+#   has_schema_privilege('postgres','storage','CREATE')          -> f
+#   pg_tables.tableowner for storage.objects                     -> supabase_storage_admin
+#   pg_roles.rolsuper for postgres                               -> f
+#   pg_has_role('postgres','supabase_storage_admin','MEMBER')    -> f
+#   CREATE POLICY ... ON storage.objects                         -> CREATE POLICY   (PERMITTED)
+#   CREATE TYPE storage.__probe_t AS ENUM ('a')                  -> permission denied for schema storage
+#   ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY        -> must be owner of table objects
+#   pg_class.relrowsecurity for storage.objects, pre-migration   -> t  (the service already enabled it)
+#   count(information_schema.tables where table_schema='storage')-> 10 (present before any migration)
+#
+# So the privilege boundary falls exactly where the ownership boundary does: storage
+# POLICIES are application-owned and creatable; storage STRUCTURE is service-owned and is
+# not this repository's to declare. The baseline was rebuilt to carry `public` in full plus
+# the 15 storage.objects policies, and nothing else from the storage schema.
+
+================================================================================
+RUN 2 — exit 0, but the baseline was still incomplete. Only the diff could tell.
+================================================================================
+
+$ supabase db reset --local
+
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+
+exit_code=0
+
+# Green, and still wrong — which is the whole argument for the diff gate existing. The
+# first `supabase db diff --linked --schema public,storage` after this run reported one
+# remaining difference:
+#
+#     create extension if not exists "pg_trgm" with schema "public";
+#
+# D-17: `supabase db dump` filters CREATE EXTENSION out of its output, so the dumped
+# baseline silently lacked an extension that `public.search_events_fuzzy` genuinely needs
+# — it executes `SET pg_trgm.similarity_threshold = 0.1`. A reset cannot catch this,
+# because CREATE FUNCTION does not validate a GUC in its body. migra's own emitted DDL was
+# added to the baseline verbatim, ahead of every type and table.
+
+================================================================================
+RUN 3 — FINAL. exit 0, baseline complete, and the diff that follows it is zero bytes.
+================================================================================
+
+$ supabase db reset --local
+
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+
+exit_code=0
+
+# The one WARN is expected and REQUIRED: supabase/seed.sql is deliberately absent
+# (T-03-04-10). A file there would execute inside every reset and would falsify the seed
+# loader's determinism claim in plan 03-07 before that loader is written.
+
+--------------------------------------------------------------------------------
+PITFALL-3 TRIPWIRE — the grep the exit code cannot replace
+--------------------------------------------------------------------------------
+
+# The two literals are NOT inlined below, on purpose: an evidence file that writes out the
+# token whose absence it asserts makes itself match the grep it is reporting on. That is how
+# a tripwire starts lying about itself — the same reason baseline-review.md § 6 cites its
+# credential patterns by reference. The tokens are (a) the CLI's silent-pass-over word,
+# quoted verbatim in F-047 and in the header of scripts/check-migration-filenames.mjs, and
+# (b) the CLI's write-to-remote subcommand, prohibited by name in 03-04-PLAN.md and T-03-04-04.
+
+$ grep -ic '<the CLI silent-pass-over word>' <run 3 transcript>
+cli_silent_pass_word_matches_in_run3=0
+
+$ grep -c '<the CLI write-to-remote subcommand>' <run 3 transcript>
+write_to_remote_subcommand_matches_in_run3=0
+
+# Both zero. The reset applied the one top-level migration to completion, passed over
+# nothing, and no production write was issued at any point in this plan.
+
+--------------------------------------------------------------------------------
+THE DIFF THAT FOLLOWED RUN 3 — REFAC-01's success criterion
+--------------------------------------------------------------------------------
+
+# Recorded here because evidence/db-diff.prod.sql must be ZERO BYTES to pass its own
+# acceptance test, which leaves it no room to carry its own provenance.
+
+$ supabase db diff --linked --schema public,storage --agent no > evidence/db-diff.prod.sql
+
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Creating shadow database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Diffing schemas: public,storage
+Finished supabase db diff on branch main.
+
+No schema changes found
+
+exit_code=0
+db_diff_prod_sql_bytes=0
+
+# `--agent no` is required in CLI 2.115.0: under agent auto-detection the command wraps its
+# output in a JSON envelope, so stdout is never empty even when the diff is. The envelope
+# form was captured too and agrees exactly:
+#   {"diff":"
+","file":null,"files":[],"schemas":["public","storage"],"engine":"migra","dropStatements":[],"message":"Diff complete."}
+# Empty diff, no files, and — the one worth naming — NO DROP STATEMENTS: replaying the
+# baseline produces production's schema without needing to remove anything from it.

@@ -33,6 +33,9 @@ jobs:
       - name: TypeScript type-check
         run: npx tsc --noEmit
 
+      - name: Migration filename parse check
+        run: node scripts/check-migration-filenames.mjs
+
       - name: Run tests
         run: npm test
 

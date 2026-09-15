@@ -1,0 +1,59 @@
+GREEN CAPTURE — scripts/check-migration-filenames.mjs observed PASSING after the archive.
+
+This is the green half of the pair whose red half is filename-check.red.txt. The check did
+not change between the two captures; the TREE did. In 03-01 it exited 1 on
+008b_add_is_admin_to_users.sql, the file F-047 is about and the one the Supabase CLI passes
+over in silence with exit status 0. Plan 03-04 task 1 moved that file, byte-identical and
+name-identical, into _archive_pre_baseline/ — so it is no longer at the top level, which is
+the only scope the CLI reads and therefore the only scope at which this check's answer means
+anything. The offending NAME still exists, unchanged, in the archive. It simply stopped being
+a migration.
+
+Because the pair is now complete, this check earns a CI step. That step is added to the
+existing fast job in .github/workflows/ci.yml by this same plan — a few milliseconds of file
+listing, no Docker, no database.
+
+Plan: 03-04 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit
+Recorded: 2026-09-15T21:58:43Z
+Node: 24.16.0 · Supabase CLI: 2.115.0
+
+================================================================================
+1. THE GREEN RUN — one top-level file, and it parses
+================================================================================
+
+$ node scripts/check-migration-filenames.mjs
+
+PASS: 1 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql
+
+EXIT CODE: 0
+
+================================================================================
+2. THE NEGATIVE CONTROL — the check still FAILS on an empty directory
+================================================================================
+
+Worth capturing, because the archive left the top level empty for the length of one commit,
+and a checker that passed on zero inputs would have reported success for work it did not do
+— the same class of defect as the silent pass-over it exists to catch. The script treats an
+empty top level as a FAILURE by design and reports it distinctly. Proven, not assumed:
+
+$ mkdir -p /tmp/fc-neg/supabase/migrations && cd /tmp/fc-neg
+$ node <repo>/scripts/check-migration-filenames.mjs
+
+FAIL: no .sql files at the top level of supabase/migrations/
+      An empty migrations directory is reported as a failure, not a pass:
+      a check that passes on zero inputs is the silent skip it exists to catch.
+
+EXIT CODE: 1
+
+================================================================================
+3. DERIVED
+================================================================================
+
+$ ls supabase/migrations/*.sql | wc -l
+toplevel_sql_count=1
+$ ls supabase/migrations/_archive_pre_baseline/*.sql | wc -l
+archived_sql_count=44
+$ ls supabase/migrations/_archive_pre_baseline/008b_add_is_admin_to_users.sql
+offending_name_survives_in_archive=true
+green_exit_code=0
+empty_dir_negative_control_exit_code=1

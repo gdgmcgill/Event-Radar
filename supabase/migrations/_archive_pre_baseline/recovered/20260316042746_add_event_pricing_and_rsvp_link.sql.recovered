@@ -1,0 +1,11 @@
+-- RECOVERED HISTORY — production version 20260316042746 ("add_event_pricing_and_rsvp_link"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+
+ALTER TABLE events
+  ADD COLUMN IF NOT EXISTS is_free BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS price TEXT,
+  ADD COLUMN IF NOT EXISTS rsvp_link TEXT;
+
+COMMENT ON COLUMN events.is_free IS 'Whether the event is free to attend';
+COMMENT ON COLUMN events.price IS 'Display price text (e.g. "$5", "$10-20")';
+COMMENT ON COLUMN events.rsvp_link IS 'External registration/RSVP URL';

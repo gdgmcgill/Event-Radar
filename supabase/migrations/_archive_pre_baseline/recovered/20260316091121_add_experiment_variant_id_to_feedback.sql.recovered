@@ -1,0 +1,7 @@
+-- RECOVERED HISTORY — production version 20260316091121 ("add_experiment_variant_id_to_feedback"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+
+ALTER TABLE public.recommendation_feedback
+  ADD COLUMN IF NOT EXISTS experiment_variant_id uuid REFERENCES public.experiment_variants(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_recommendation_feedback_variant ON public.recommendation_feedback(experiment_variant_id) WHERE experiment_variant_id IS NOT NULL;

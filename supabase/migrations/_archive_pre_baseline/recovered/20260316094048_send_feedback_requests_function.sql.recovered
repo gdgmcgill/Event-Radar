@@ -1,0 +1,72 @@
+-- RECOVERED HISTORY — production version 20260316094048 ("send_feedback_requests_function"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+
+CREATE OR REPLACE FUNCTION public.send_feedback_requests()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+declare
+  row record;
+  cnt int;
+  sent int := 0;
+  skipped int := 0;
+  events_processed int := 0;
+begin
+  -- Find events that ended 1-25 hours ago, approved and not deleted
+  for row in
+    select r.user_id, e.id as event_id, e.title
+    from rsvps r
+    join events e on e.id = r.event_id
+    where e.status = 'approved'
+      and e.deleted_at is null
+      and r.status = 'going'
+      and e.end_date between (now() - interval '25 hours') and (now() - interval '1 hour')
+  loop
+    -- Check if we already sent a feedback request for this user+event
+    select count(*) into cnt
+    from feedback_request_log
+    where user_id = row.user_id
+      and event_id = row.event_id
+      and request_type = 'post_event';
+
+    if cnt > 0 then
+      skipped := skipped + 1;
+      continue;
+    end if;
+
+    -- Create notification
+    insert into notifications (user_id, event_id, type, title, message, read)
+    values (
+      row.user_id,
+      row.event_id,
+      'feedback_request',
+      'How was ' || row.title || '?',
+      'Share your experience — your feedback helps organizers improve future events.',
+      false
+    )
+    on conflict do nothing;
+
+    -- Log to prevent re-sending
+    insert into feedback_request_log (user_id, event_id, request_type)
+    values (row.user_id, row.event_id, 'post_event')
+    on conflict do nothing;
+
+    sent := sent + 1;
+  end loop;
+
+  -- Count distinct events processed
+  select count(distinct e.id) into events_processed
+  from events e
+  where e.status = 'approved'
+    and e.deleted_at is null
+    and e.end_date between (now() - interval '25 hours') and (now() - interval '1 hour');
+
+  return jsonb_build_object(
+    'events_processed', events_processed,
+    'feedback_requests_sent', sent,
+    'feedback_requests_skipped', skipped,
+    'checked_at', now()
+  );
+end;
+$$;

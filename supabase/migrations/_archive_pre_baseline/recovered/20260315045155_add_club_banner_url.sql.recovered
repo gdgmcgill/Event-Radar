@@ -1,0 +1,3 @@
+-- RECOVERED HISTORY — production version 20260315045155 ("add_club_banner_url"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+ALTER TABLE clubs ADD COLUMN IF NOT EXISTS banner_url text;

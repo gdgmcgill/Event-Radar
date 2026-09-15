@@ -1,0 +1,27 @@
+# supabase migration list --local — what the local history table now holds
+#
+# Plan: 03-04 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+#
+# `--local` is explicit: the project is linked, and the unqualified form reaches for the
+# remote history table as well. This capture is about the LOCAL database only.
+#
+# No explicit `migration repair --local` was needed — a reset rebuilds the local history
+# table from scratch, which is what 03-RESEARCH.md § Pattern 2 predicted. Had one been
+# needed, that would have been a finding to record, not a step to perform quietly.
+
+$ supabase migration list --local
+Connecting to local database...
+{"migrations":[{"local":"20260915214553","remote":"20260915214553","time":"2026-09-15 21:45:53"}],"message":"Migrations listed"}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+
+exit_code=0
+
+--- DERIVED ---
+$ supabase migration list --local  |  jq '.migrations | length'
+applied_version_count=1
+$ ls supabase/migrations/*.sql | xargs -n1 basename
+toplevel_file_count=1
+toplevel_file=20260915214553_baseline.sql
+applied_version=20260915214553
+versions_match_toplevel_files=true

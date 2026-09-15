@@ -1,0 +1,24 @@
+-- RECOVERED HISTORY — production version 20260315041343 ("add_club_social_links_and_featured_clubs"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+-- Add social link columns to clubs table
+ALTER TABLE clubs
+  ADD COLUMN IF NOT EXISTS website_url text,
+  ADD COLUMN IF NOT EXISTS discord_url text,
+  ADD COLUMN IF NOT EXISTS twitter_url text,
+  ADD COLUMN IF NOT EXISTS linkedin_url text;
+
+-- Create featured_clubs table (mirrors featured_events pattern)
+CREATE TABLE IF NOT EXISTS featured_clubs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  club_id uuid NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  sponsor_name text,
+  priority integer NOT NULL DEFAULT 0,
+  starts_at timestamptz NOT NULL,
+  ends_at timestamptz NOT NULL,
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Index for the common query: active featured clubs ordered by priority
+CREATE INDEX IF NOT EXISTS idx_featured_clubs_active
+  ON featured_clubs (starts_at, ends_at, priority DESC);

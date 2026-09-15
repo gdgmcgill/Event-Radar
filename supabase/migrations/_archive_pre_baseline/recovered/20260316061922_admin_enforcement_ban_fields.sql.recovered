@@ -1,0 +1,11 @@
+-- RECOVERED HISTORY — production version 20260316061922 ("admin_enforcement_ban_fields"). NOT a migration: this file is documentation of what production already ran; it is never replayed, and the .sql.recovered suffix keeps it unreadable to the Supabase CLI even from the top level.
+
+-- Add ban fields to users table
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS banned_at timestamptz DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS ban_expires_at timestamptz DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS ban_reason text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS banned_by uuid DEFAULT NULL REFERENCES auth.users(id);
+
+-- Index for middleware ban checks (used on every authenticated request via cookie refresh)
+CREATE INDEX IF NOT EXISTS idx_users_banned_at ON users (banned_at) WHERE banned_at IS NOT NULL;
