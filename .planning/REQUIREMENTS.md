@@ -42,7 +42,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [x] **STAB-04**: The `vercel` package is removed from production dependencies, and the decision on whether it remains as a devDependency is recorded
 - [x] **STAB-05**: Next.js is upgraded to the patched release closing the July-2026 CVE batch, as its own commit with `react` and `react-dom` untouched
 - [ ] **STAB-06**: `middleware.ts` is migrated to `proxy.ts` per the Next 16 deprecation, as its own gated change with the rate limiter and ban-check behavior smoke-tested before and after
-- [ ] **STAB-07**: `swagger-ui-react` and `redoc` are upgraded, isolated behind auth or a build-time static artifact, or removed, based on the AUDIT-12 reachability answer
+- [x] **STAB-07**: `swagger-ui-react` and `redoc` are upgraded, isolated behind auth or a build-time static artifact, or removed, based on the AUDIT-12 reachability answer
 - [ ] **STAB-08**: Jest is the single test runner: `vitest.config.ts` and `vitest.setup.ts` are deleted, `jest-environment-jsdom` and testing-library packages are installed so the skipped `.tsx` suites run, a `test` script exists in `package.json`, and CI runs it
 - [ ] **STAB-09**: Remaining patch/minor upgrades are applied in small labeled batches, one commit per batch, each followed by lint, type-check, test, build, and a smoke pass
 - [x] **STAB-10**: Any major upgrade is its own change with a migration note and its own smoke pass (React 19 is explicitly deferred; see Out of Scope)
@@ -188,7 +188,7 @@ No phase crosses a stage boundary.
 | STAB-04 | Phase 2 | Complete |
 | STAB-05 | Phase 2 | Complete |
 | STAB-06 | Phase 2 | Pending |
-| STAB-07 | Phase 2 | Pending |
+| STAB-07 | Phase 2 | Complete |
 | STAB-08 | Phase 2 | Pending |
 | STAB-09 | Phase 2 | Pending |
 | STAB-10 | Phase 2 | Complete |
