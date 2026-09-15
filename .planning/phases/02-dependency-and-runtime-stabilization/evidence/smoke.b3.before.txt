@@ -1,0 +1,61 @@
+# smoke.sh — Tier 2 anonymous HTTP smoke pass
+# host        : http://localhost:3000
+# label       : b3.before
+# started_at  : 2026-09-15T05:33:00Z
+# curl        : curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1
+# ring rows   : 5 6 8 10 (request path only — independent of Supabase data)
+# data rows   : 1 2 3 4 7 9 (need a reachable Supabase with content)
+
+PASS 1 GET / :: expected 200+marker got 200+marker
+FAIL 2 GET /api/events :: expected 200 and >=1 event got 200 and 0 events
+PASS 3 GET /api/events?search=test&tags=academic :: expected 200 got 200
+PASS 4 GET /clubs :: expected 200 got 200
+PASS 5 GET /profile :: expected 307 -> signin=required&next=/profile got 307 /?signin=required&next=/profile
+PASS 6 GET /my-events :: expected 307 -> signin=required got 307 /?signin=required&next=/my-events
+PASS 7 GET /docs :: expected 200 got 200
+PASS 8 POST(x31) /api/events :: expected 429 + Retry-After got 429 Retry-After=60
+PASS 9 GET /api/health :: expected 200 got 200
+PASS 10 GET /_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js :: expected 200 no redirect got 200 no-location
+
+--- ring rows (5 6 8 10): 4/4 passed
+--- data rows (1 2 3 4 7 9): 5/6 passed
+--- total: 9/10 passed, 1 failed
+--- NOTE: a failing data row may be environment-limited (unreachable or
+---       empty Supabase). The expectation is NOT lowered; name the row
+---       and the reason in the run record instead.
+# finished_at : 2026-09-15T05:33:03Z
+
+# ==============================================================================
+# RUN RECORD — appended after the capture. Everything above is script output.
+#   command     : SMOKE_HOST=http://localhost:3000 SMOKE_LABEL=b3.before bash scripts/smoke.sh
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T05:33:03Z
+#   target      : `npm run dev` (Next.js 16.3.5, Turbopack) on the PRE-RENAME tree
+#                 at commit 2a56084 — src/middleware.ts present, src/proxy.ts absent.
+#   toolchain   : node v24.16.0 | npm 11.13.0 | next 16.3.5 | curl 8.7.1
+#   exit_code   : 1 (one failing row; the exit code is the failure count by contract)
+#
+# RING ROWS 4/4 — these are what batch 3 is about, and they are the BEFORE side.
+#   row 5  GET /profile      307 -> /?signin=required&next=/profile
+#   row 6  GET /my-events    307 -> /?signin=required&next=/my-events
+#   row 8  POST x31 /api/events   429 with Retry-After: 60
+#   row 10 GET /_next/static/...  200 with no Location header
+#   Row 5 is the single most important line in the table: it is the observed
+#   proof that the application's only page-level authentication ring is live
+#   right now. The after capture must reproduce it exactly.
+#
+# ROW 2 FAILS, AS IT HAS IN EVERY CAPTURE THIS PHASE.
+#   expected : 200 and >=1 event
+#   got      : 200 and 0 events        <- actual value printed, not suppressed
+#   reason   : the local Supabase reachable from this machine holds no approved
+#              events. The route is correct; the dataset is empty. Identical in
+#              smoke.b0.txt, smoke.b1.txt and smoke.b2.txt, which is what makes
+#              it pre-existing rather than something batch 3 could have caused.
+#   The expectation is NOT lowered and the row is NOT removed from the script.
+#
+# BATCH 2 -> BATCH 3 BEFORE: byte-for-byte the same verdicts on all ten rows as
+#   evidence/smoke.b2.txt. Nothing drifted between the end of wave 3 and the
+#   start of this task. Row 10's chunk URL differs textually because the script
+#   discovers a real chunk filename from the served HTML at run time; the
+#   ASSERTION (a /_next/static/ path returns 200 with no Location) is identical.
+# ==============================================================================

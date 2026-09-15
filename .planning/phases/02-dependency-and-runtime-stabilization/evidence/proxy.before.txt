@@ -1,0 +1,76 @@
+PASS src/middleware.test.ts
+  middleware matcher (PRESERVE — must be identical after the proxy rename)
+    ✓ runs on /my-events (1 ms)
+    ✓ runs on /create-event (1 ms)
+    ✓ runs on /notifications
+    ✓ runs on /profile
+    ✓ runs on /settings
+    ✓ runs on /my-clubs
+    ✓ runs on /invites
+    ✓ runs on /friends (1 ms)
+    ✓ runs on /
+    ✓ runs on /api/events
+    ✓ runs on /docs
+    ✓ runs on /banned
+    ✓ runs on /onboarding
+    ✓ skips /_next/static/chunks/main-app.js
+    ✓ skips /_next/image
+    ✓ skips /favicon.ico (1 ms)
+    ✓ skips /auth/callback
+    ✓ skips /logo.png
+    ✓ skips /icon.svg
+    ✓ exports exactly one matcher entry
+
+PASS src/middlewareRateLimit.test.ts
+  applyApiRateLimit (PRESERVE — must behave identically after the proxy rename)
+    ✓ returns 429 with a Retry-After header once the POST budget is exceeded (4 ms)
+    ✓ exempts /api/admin/* from the public budget entirely (1 ms)
+    ✓ gives /api/interactions the larger high-frequency write budget (1 ms)
+    ✓ gives /api/recommendations/feedback the larger high-frequency write budget
+    ✓ never rate-limits a non-/api path (GET /profile) (3 ms)
+    ✓ never rate-limits a non-/api path (POST /profile) (8 ms)
+    ✓ allows exactly POST_BUDGET requests and blocks the next one (1 ms)
+
+Test Suites: 2 passed, 2 total
+Tests:       27 passed, 27 total
+Snapshots:   0 total
+Time:        0.217 s, estimated 1 s
+Ran all test suites matching src/middlewareRateLimit.test.ts|src/middleware.test.ts.
+
+# ==============================================================================
+# PROVENANCE — this block was appended after the capture. Everything above it is
+# the command below, untrimmed and unsummarised. Nothing below it is command output.
+#   command     : npx jest --ci --verbose src/middlewareRateLimit.test.ts src/middleware.test.ts
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T05:32:13Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.3.5
+#   subject     : PRE-RENAME tree at commit 2a56084. src/middleware.ts exists;
+#                 src/proxy.ts does not. This is the BEFORE side of STAB-06.
+#   suites      : src/middlewareRateLimit.test.ts (the rate limiter) and
+#                 src/middleware.test.ts (the matcher). Both were written in plan
+#                 02-02 for exactly this comparison. 27 passed, 0 failed.
+#   --verbose   : passed deliberately. The default --ci reporter prints suite-level
+#                 PASS lines only; the after/before comparison in plan 02-06's
+#                 verify block compares the SET OF PASSING TEST NAMES, which only
+#                 exists on disk if each `it` prints its own line.
+#   tree state  : `git status --porcelain -- src/` was EMPTY at capture time — no
+#                 source file was modified before this reading was taken.
+#   tree state  : `git status --short` was NOT empty. Five research-cache JSON
+#                 files, .agents/, .mcp.json, docs/product-master-plan.md and
+#                 skills-lock.json are untracked and PRE-EXISTING — they predate
+#                 this plan and none is under src/. The plan's clean-tree
+#                 precondition exists so the rename diff reads as a rename; that
+#                 property is preserved by staging the rename's files by name
+#                 instead of with `git add -A`. See the SUMMARY's deviation 1.
+#   deprecation_warning_lines_before=1
+#                 Derived from evidence/batch-02-build.txt line 9:
+#                   ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+#                 Counted as lines matching '^⚠ The "middleware" file convention is
+#                 deprecated' in that capture's command output. The only other
+#                 occurrence of that string in the file is inside its own
+#                 provenance block (line 193) and is not command output.
+#                 Batch 3 makes this warning disappear; a 0 here would have meant
+#                 the before marker was missing and the after side proved nothing.
+# ==============================================================================
+exit_code=0
