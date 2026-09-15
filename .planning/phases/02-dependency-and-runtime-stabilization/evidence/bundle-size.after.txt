@@ -1,0 +1,156 @@
+# bundle-size.after.txt — STAB-16, after side
+# Phase 02-dependency-and-runtime-stabilization, plan 02-10 (batch 6b)
+#
+# Format: key=value, one per line, with the producing command in a comment line
+# directly above each key. Identical contract to evidence/bundle-size.before.txt
+# and to .planning/audit/baseline/versions.txt.
+#
+# Every figure below was RE-DERIVED by running the command shown, in this working
+# tree, on 2026-09-15. Nothing is transcribed from 02-RESEARCH.md § Code Examples 7,
+# from 02-10-PLAN.md, or from any intermediate batch summary. Where an intermediate
+# figure is quoted in evidence/bundle-size.md for attribution, it is cited to the
+# summary that measured it and is clearly marked as a quoted datum, not a key here.
+#
+# ---------------------------------------------------------------------------
+# PROCEDURE PARITY WITH THE BEFORE SIDE
+#
+# The before side is only a comparison base if the after side was produced the
+# same way. Both sides used, verbatim:
+#
+#   rm -rf .next && npm run build          # cold build, exit 0
+#   cp .next/diagnostics/route-bundle-stats.json  evidence/bundle-size.$SIDE.json
+#
+# Next 16's Turbopack build prints NO Size / First Load JS table on stdout — there
+# is nothing to parse there. .next/diagnostics/route-bundle-stats.json, written by
+# next/dist/build/route-bundle-stats.js, is the only first-party source, and it is
+# copied unmodified. The four route-bundle keys below are derived from that copy.
+#
+# The same byte-count pipeline is used on both sides (`find | xargs cat | wc -c`),
+# and it was re-confirmed here to agree with the macOS stat variant on the SAME
+# build tree, so no measurement-method delta is folded into the comparison:
+#   find .next/static -type f -exec stat -f%z {} + | awk '{s+=$1} END{print s}'  -> 4014162
+#   find .next/static -type f -print0 | xargs -0 cat | wc -c                     -> 4014162
+#
+# DETERMINISM RE-CONFIRMED ON THE AFTER SIDE. Two independent cold builds
+# (rm -rf .next && npm run build) were run back to back. The route-bundle
+# diagnostics were BYTE-IDENTICAL between them:
+#   diff -q <run1 route-bundle-stats.json> <run2 route-bundle-stats.json>  -> no output
+# and every derived figure matched: routes 44/44, first_load_js_sum 37328142 both
+# times, /docs 1908114 both times, next_static_bytes 4014162 both times, 76 files
+# both times. The +1,109 B residual discussed in evidence/bundle-size.md is
+# therefore not build noise — noise would have shown up here.
+# ---------------------------------------------------------------------------
+#
+# NOTE ON THE KEY `lock_sha256_before`. The key name is retained VERBATIM from the
+# before file, not renamed to `lock_sha256_after`, because 02-10-PLAN.md task 1's
+# verifier asserts that the after file carries the same key SET as the before file.
+# Its VALUE here is this side's hash. `lock_sha256_after` is also emitted, with the
+# same value, so a reader who searches for the sensible name finds it.
+
+# date -u +"%Y-%m-%dT%H:%M:%SZ"
+measured_at=2026-09-15T15:47:00Z
+
+# git rev-parse --short HEAD
+git_head_at_measure=e95714b
+
+# node -p "require('next/package.json').version"
+next_version_resolved=16.3.5
+
+# node -v | npm -v
+node_version=24.16.0
+npm_version=11.13.0
+
+# ===========================================================================
+# FAMILY 1 — ROUTE-BUNDLE METRICS
+#
+# Source: evidence/bundle-size.after.json (an unmodified copy of
+# .next/diagnostics/route-bundle-stats.json from the cold build above).
+#
+# These moved on BATCH 2 (next 16.2.1 -> 16.3.5) and essentially nowhere else.
+# See evidence/bundle-size.md for the per-batch attribution and the per-route table.
+# ===========================================================================
+
+# node -e 'const a=Object.values(require("./.next/diagnostics/route-bundle-stats.json"));console.log(a.length)'
+routes=44
+
+# node -e 'const a=Object.values(require("./.next/diagnostics/route-bundle-stats.json"));console.log(a.reduce((s,x)=>s+x.firstLoadUncompressedJsBytes,0))'
+first_load_js_sum=37328142
+
+# node -e 'const a=Object.values(require("./.next/diagnostics/route-bundle-stats.json"));a.sort((x,y)=>y.firstLoadUncompressedJsBytes-x.firstLoadUncompressedJsBytes);console.log(a[0].route+":"+a[0].firstLoadUncompressedJsBytes)'
+first_load_js_max=/docs:1908114
+
+# node -e 'const a=Object.values(require("./.next/diagnostics/route-bundle-stats.json"));a.sort((x,y)=>y.firstLoadUncompressedJsBytes-x.firstLoadUncompressedJsBytes);console.log(a[a.length>>1].route+":"+a[a.length>>1].firstLoadUncompressedJsBytes)'
+first_load_js_median=/help:783002
+
+# find .next/static -type f -print0 | xargs -0 cat | wc -c
+next_static_bytes=4014162
+
+# find .next/static -type f | wc -l
+next_static_file_count=76
+
+# NOTE on /docs, still the maximum at 1.91 MB: that is `redoc`, which is REACHABLE
+# from the public /docs route and STAYED. The before file predicted that removing
+# swagger-ui-react would not move it, and it did not — /docs fell by 56,120 B, which
+# is LESS than the 57,218 B that every other route fell by, i.e. it moved purely on
+# the shared framework chunk and its redoc-specific chunks did not shrink at all.
+# That is Pitfall 9 surviving contact with the measurement.
+#
+# The universal first-load chunk set — the chunks present on all 44 routes — is the
+# whole story of this family:
+#   before  13 chunks, 823,979 B   (= the minimum route's first-load total)
+#   after   12 chunks, 766,761 B   (= the minimum route's first-load total)
+#   delta   -1 chunk,  -57,218 B
+# Re-derivable from the two committed JSON copies by intersecting firstLoadChunkPaths
+# across all routes. Every route inherits that -57,218 B, which is why the per-route
+# table in evidence/bundle-size.md is almost a constant column.
+
+# ===========================================================================
+# FAMILY 2 — INSTALL-TREE METRICS
+#
+# These are the numbers batch 1 was about, and they moved there.
+# ===========================================================================
+
+# npm ls --omit=dev --all --json --package-lock-only | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const seen=new Set();(function w(n){for(const [k,v] of Object.entries(n.dependencies||{})){seen.add(k+"@"+v.version);w(v);}})(JSON.parse(s));console.log(seen.size);})'
+#   Counts DISTINCT name@version pairs reachable from production dependencies,
+#   walking the whole tree. NOT the same quantity as npm audit's
+#   metadata.dependencies.prod (298, below), which counts differently. Both are
+#   recorded on both sides so neither can be mistaken for the other.
+prod_pkg_count=354
+
+# du -sk node_modules | awk '{print $1}'
+#   Whole installed tree, prod + dev. Note this figure is NOT prod-only and the
+#   phase ADDED dev dependencies (batch 5's jsdom + testing-library harness), so it
+#   understates the production removal. See evidence/bundle-size.md.
+node_modules_kb=723520
+
+# npm audit --omit=dev --json --package-lock-only
+#   The committed verbatim JSON for this side is evidence/audit.after.json, written
+#   by plan 02-09. Re-running the command here reproduced it exactly:
+#   {"info":0,"low":0,"moderate":2,"high":0,"critical":0,"total":2}, prod 298, 2 rows.
+#   These keys are a flattened index of that file so the before/after delta can be
+#   read without parsing.
+audit_prod_info=0
+audit_prod_low=0
+audit_prod_moderate=2
+audit_prod_high=0
+audit_prod_critical=0
+audit_prod_total=2
+audit_prod_dependencies=298
+# node -e 'console.log(Object.keys(require("./...audit.after.json").vulnerabilities).length)'
+audit_prod_advisory_rows=2
+
+# shasum -a 256 package-lock.json    (NOT sha256sum — absent on this toolchain;
+#                                     shasum -a 256 is the repository convention)
+#   Key name kept verbatim from the before file for the key-set assertion; the value
+#   is this side's hash. See the NOTE at the top.
+lock_sha256_before=842ed8a7ea336d74e3dd4966467743df7aaf886a62aa191a7209b78ec9af3812
+lock_sha256_after=842ed8a7ea336d74e3dd4966467743df7aaf886a62aa191a7209b78ec9af3812
+
+# ===========================================================================
+# THIS PLAN CHANGED NEITHER MANIFEST NOR LOCKFILE
+#
+#   git status --porcelain -- package.json package-lock.json src/   -> empty
+#
+# The hash above is the one plan 02-09 left behind (batch 6a's postcss override).
+# 02-10 measures the tree; it does not move it.
+# ===========================================================================
