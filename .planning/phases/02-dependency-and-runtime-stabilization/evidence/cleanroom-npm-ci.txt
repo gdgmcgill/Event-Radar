@@ -1,0 +1,524 @@
+# Clean-room reproducible-install evidence (STAB-12, run 2 of 2 — THE evidence run)
+# started_at : 2026-09-15T15:53:56Z
+# host_repo  : /Users/adyan/Documents/GitHub/Event-Radar
+# clone_path : /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/7344d340-966f-475d-aeb9-f79f28431e60/scratchpad/cleanroom-final-47603   (OUTSIDE the working tree, by protocol step 1)
+# source_ref : 01c7394485949e658adff4c9bbfb48bbfbf00a3d  (main)
+#
+# Protocol: .planning/phases/02-dependency-and-runtime-stabilization/02-RESEARCH.md
+#           § Clean-Room Protocol, steps 1-7. Same seven steps as
+#           evidence/cleanroom-interim.txt (run 1 of 2, plan 02-07, batch 4).
+#           Every step records its own exit code on an `exit_code=` line.
+
+=== STEP 1 — fresh clone of the current branch (never the working tree) ===
+$ git clone --single-branch --branch main /Users/adyan/Documents/GitHub/Event-Radar /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/7344d340-966f-475d-aeb9-f79f28431e60/scratchpad/cleanroom-final-47603
+Cloning into '/private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/7344d340-966f-475d-aeb9-f79f28431e60/scratchpad/cleanroom-final-47603'...
+done.
+exit_code=0
+$ git -C <clone> rev-parse HEAD
+01c7394485949e658adff4c9bbfb48bbfbf00a3d
+exit_code=0
+
+# Secrets assertion. The count below is of dotfiles in the env family that the clone
+# contains; the single hit is the committed example template, which carries no value.
+$ ls -a <clone> | grep -c '^\.env'
+1
+$ test -e <clone>/$LOCAL_ENV_FILE && echo PRESENT || echo ABSENT     # must be ABSENT
+ABSENT
+exit_code=0
+
+# LOCAL_ENV_FILE is the untracked local secrets file named in CLAUDE.md § Environment
+# Variables. Its literal name is deliberately NOT written into this capture. Plan
+# 02-11's acceptance criteria assert that this file contains no reference to it, so
+# that a grep for that filename across .planning/ cannot produce a false positive
+# here. It was neither created nor copied, and no credential of any kind was read.
+
+=== STEP 2 — runtime versions asserted against engines BEFORE installing ===
+$ node -v ; npm -v ; cat <clone>/.nvmrc ; node -p "require('<clone>/package.json').engines"
+v24.16.0
+11.13.0
+24
+{"node":"24.x","npm":">=11"}
+engines.node=24.x  running node major=24  -> SATISFIED
+exit_code=0
+engines.npm=>=11  running npm=11.13.0  -> SATISFIED
+exit_code=0
+.nvmrc=24  agrees with engines.node=24.x  -> ONE DECLARED MAJOR
+
+=== STEP 3 — lockfile hash comparison (shasum -a 256, not sha256sum) ===
+$ shasum -a 256 <clone>/package-lock.json
+clone        : 842ed8a7ea336d74e3dd4966467743df7aaf886a62aa191a7209b78ec9af3812
+working tree : 842ed8a7ea336d74e3dd4966467743df7aaf886a62aa191a7209b78ec9af3812
+pre-batch-6  : 729f5f58d8be7446c029e4a10b8677a1bce91bb0ad71b18f5216959a66736698   (evidence/lock.b6.before.sha256)
+pre-batch-0  : 35b2d0025d290679bb03b5b42d283b101d7f886619b19e0b8f7deb3166f0ff72   (evidence/lock.b0.before.sha256 — the phase's starting lockfile)
+MATCH — the clean room is installing the same lockfile the phase gate was run against
+exit_code=0
+
+=== STEP 4 — remove any build output, then npm ci (the deterministic installer) ===
+$ (cd <clone> && rm -rf node_modules .next && npm ci)
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated lodash.get@4.4.2: This package is deprecated. Use the optional chaining (?.) operator instead.
+npm warn deprecated lodash.isequal@4.5.0: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated glob@7.1.6: Glob versions prior to v9 are no longer supported
+
+added 989 packages, and audited 990 packages in 5s
+
+231 packages are looking for funding
+  run `npm fund` for details
+
+9 vulnerabilities (3 low, 3 moderate, 2 high, 1 critical)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+exit_code=0
+
+# `npm ci` is used and the non-deterministic installer is not, because failing loudly
+# when the manifest and the lockfile disagree IS the reproducibility property under
+# test. The other command would reconcile the disagreement silently and report green.
+
+=== STEP 5 — build with the same two placeholder Supabase values CI sets ===
+$ (cd <clone> && NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co \
+                 NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key npm run build)
+   (.github/workflows/ci.yml lines 10-11; no other env var is set, and no local
+    secrets file is copied or created)
+
+> uni-verse@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+✓ Running next.config.js took 5ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.0s
+  Running TypeScript ...
+  Finished TypeScript in 4.1s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/101) ...
+  Generating static pages using 9 workers (25/101) 
+  Generating static pages using 9 workers (50/101) 
+  Generating static pages using 9 workers (75/101) 
+(node:47775) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✓ Generating static pages using 9 workers (101/101) in 347ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /admin-login
+├ ƒ /admin/experiments
+├ ƒ /admin/experiments/[id]
+├ ƒ /api/admin/analytics/events
+├ ƒ /api/admin/analytics/users
+├ ƒ /api/admin/audit-log
+├ ƒ /api/admin/calculate-popularity
+├ ƒ /api/admin/clubs
+├ ƒ /api/admin/clubs/[id]
+├ ƒ /api/admin/events
+├ ƒ /api/admin/events/[id]
+├ ƒ /api/admin/events/[id]/edits
+├ ƒ /api/admin/events/[id]/status
+├ ƒ /api/admin/experiments
+├ ƒ /api/admin/experiments/[id]
+├ ƒ /api/admin/experiments/[id]/results
+├ ƒ /api/admin/featured
+├ ƒ /api/admin/featured/[id]
+├ ƒ /api/admin/organizer-requests
+├ ƒ /api/admin/organizer-requests/[id]
+├ ƒ /api/admin/organizers
+├ ƒ /api/admin/reports
+├ ƒ /api/admin/reports/[id]
+├ ƒ /api/admin/stats
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[id]
+├ ƒ /api/admin/users/[id]/ban
+├ ƒ /api/auth-debug
+├ ƒ /api/calendar/events
+├ ƒ /api/clubs
+├ ƒ /api/clubs/[id]
+├ ƒ /api/clubs/[id]/analytics
+├ ƒ /api/clubs/[id]/appeal
+├ ƒ /api/clubs/[id]/events
+├ ƒ /api/clubs/[id]/follow
+├ ƒ /api/clubs/[id]/invites
+├ ƒ /api/clubs/[id]/members
+├ ƒ /api/clubs/[id]/members/role
+├ ƒ /api/clubs/[id]/transfer
+├ ƒ /api/clubs/banner
+├ ƒ /api/clubs/featured
+├ ƒ /api/clubs/friends
+├ ƒ /api/clubs/logo
+├ ƒ /api/clubs/new
+├ ƒ /api/clubs/trending
+├ ƒ /api/cron/send-feedback-requests
+├ ƒ /api/cron/send-reminders
+├ ƒ /api/events
+├ ƒ /api/events/[id]
+├ ƒ /api/events/[id]/analytics
+├ ƒ /api/events/[id]/appeal
+├ ƒ /api/events/[id]/friends
+├ ƒ /api/events/[id]/invite
+├ ƒ /api/events/[id]/report
+├ ƒ /api/events/[id]/reviews
+├ ƒ /api/events/[id]/rsvp
+├ ƒ /api/events/[id]/save
+├ ƒ /api/events/create
+├ ƒ /api/events/export
+├ ƒ /api/events/featured
+├ ƒ /api/events/following
+├ ƒ /api/events/friends-activity
+├ ƒ /api/events/friends-organizing
+├ ƒ /api/events/happening-now
+├ ƒ /api/events/my-events
+├ ƒ /api/events/new
+├ ƒ /api/events/popular
+├ ƒ /api/events/upload-image
+├ ƒ /api/feedback
+├ ƒ /api/health
+├ ƒ /api/interactions
+├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+├ ƒ /api/my-clubs
+├ ƒ /api/notifications
+├ ƒ /api/notifications/[id]
+├ ƒ /api/notifications/count
+├ ƒ /api/onboarding/complete
+├ ƒ /api/organizer-requests
+├ ƒ /api/profile/avatar
+├ ƒ /api/profile/banner
+├ ƒ /api/profile/inferred-tags
+├ ƒ /api/profile/interests
+├ ƒ /api/recommendations
+├ ƒ /api/recommendations/analytics
+├ ƒ /api/recommendations/batch
+├ ƒ /api/recommendations/feedback
+├ ƒ /api/user/engagement
+├ ƒ /api/user/following
+├ ƒ /api/users/[id]
+├ ƒ /api/users/[id]/follow
+├ ƒ /api/users/me/friends
+├ ƒ /api/users/me/requests
+├ ƒ /api/users/me/suggestions
+├ ƒ /api/users/saved-events
+├ ƒ /api/users/search
+├ ƒ /auth/callback
+├ ƒ /auth/signout
+├ ƒ /banned
+├ ○ /calendar
+├ ƒ /clubs
+├ ƒ /clubs/[id]
+├ ○ /clubs/create
+├ ○ /contributors
+├ ○ /create-event
+├ ○ /docs
+├ ƒ /events/[id]
+├ ○ /feedback
+├ ○ /friends
+├ ○ /health
+├ ○ /help
+├ ƒ /invites/[token]
+├ ○ /landing
+├ ƒ /moderation
+├ ƒ /moderation/appeals
+├ ƒ /moderation/audit-log
+├ ƒ /moderation/clubs
+├ ƒ /moderation/events
+├ ƒ /moderation/featured
+├ ƒ /moderation/organizer-requests
+├ ƒ /moderation/organizers
+├ ƒ /moderation/pending
+├ ƒ /moderation/reports
+├ ƒ /moderation/stats
+├ ƒ /moderation/users
+├ ƒ /my-clubs
+├ ƒ /my-clubs/[id]
+├ ○ /my-events
+├ ○ /notifications
+├ ƒ /onboarding
+├ ○ /people
+├ ○ /privacy
+├ ƒ /profile
+├ ○ /robots.txt
+├ ○ /settings
+├ ƒ /sitemap.xml
+├ ○ /terms
+└ ƒ /users/[id]
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+exit_code=0
+
+=== STEP 6 — test suite in the clean room ===
+$ (cd <clone> && npx jest --ci)
+PASS node src/lib/classifier.test.ts
+PASS node src/app/api/events/export/route.test.ts
+PASS node src/lib/dateValidation.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+  ● Console
+
+    console.error
+      Error looking up event: { message: 'DB error' }
+
+      82 |
+      83 |     if (eventError) {
+    > 84 |       console.error("Error looking up event:", eventError);
+         |               ^
+      85 |       return NextResponse.json({ error: "Failed to verify event" }, { status: 500 });
+      86 |     }
+      87 |
+
+      at GET (src/app/api/events/[id]/rsvp/route.ts:84:15)
+      at Object.<anonymous> (src/__tests__/api/events/rsvp.test.ts:128:17)
+
+PASS node src/lib/diversity.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+  ● Console
+
+    console.error
+      Fuzzy search RPC error: { message: 'RPC unavailable' }
+
+      221 |
+      222 |       if (searchError) {
+    > 223 |         console.error('Fuzzy search RPC error:', searchError);
+          |                 ^
+      224 |         // Fallback to basic ILIKE search if RPC fails
+      225 |         eventsQuery = eventsQuery.or(
+      226 |           `title.ilike.%${search}%,description.ilike.%${search}%`
+
+      at GET (src/app/api/events/route.ts:223:17)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:287:5)
+
+    console.error
+      Supabase error fetching events: {"message":"Database connection failed"}
+
+      295 |       }
+      296 |
+    > 297 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      298 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      299 |         ? errorMessage
+      300 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:297:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:383:17)
+
+    console.error
+      Supabase error fetching events: {"message":"relation \"events\" does not exist"}
+
+      295 |       }
+      296 |
+    > 297 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      298 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      299 |         ? errorMessage
+      300 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:297:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:398:17)
+
+    console.error
+      Error fetching events: Error: Unexpected crash
+          at Object.<anonymous> (/private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/7344d340-966f-475d-aeb9-f79f28431e60/scratchpad/cleanroom-final-47603/src/__tests__/api/events/get-events.test.ts:406:13)
+          at /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/7344d340-966f-475d-aeb9-f79f28431e60/scratchpad/cleanroom-final-47603/node_modules/jest-mock/build/index.js:305:39
+          at Object.<anonymous> (/private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/7344d340-966f-475d-aeb9-f79f28431e60/scratchpad/cleanroom-final-47603/node_modules/jest-mock/build/index.js:312:13)
+          at Object.mockConstructor [as from] (/private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/7344d340-966f-475d-aeb9-f79f28431e60/scratchpad/cleanroom-final-47603/node_modules/jest-mock/build/index.js:102:19)
+          at GET (/private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/7344d340-966f-475d-aeb9-f79f28431e60/scratchpad/cleanroom-final-47603/src/app/api/events/route.ts:194:8)
+          at processTicksAndRejections (node:internal/process/task_queues:104:5)
+          at Object.<anonymous> (/private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/7344d340-966f-475d-aeb9-f79f28431e60/scratchpad/cleanroom-final-47603/src/__tests__/api/events/get-events.test.ts:409:17)
+
+      334 |     );
+      335 |   } catch (error) {
+    > 336 |     console.error("Error fetching events:", error);
+          |             ^
+      337 |     return NextResponse.json(
+      338 |       { error: "Failed to fetch events" },
+      339 |       { status: 500 }
+
+      at GET (src/app/api/events/route.ts:336:13)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:409:17)
+
+PASS node src/lib/experiments.test.ts
+PASS node src/lib/__tests__/recommendations.test.ts
+PASS node src/lib/exportUtils.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/lib/__tests__/ban.test.ts
+PASS node src/lib/sanitize.test.ts
+PASS node src/proxy.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS jsdom src/components/ErrorBoundary.test.tsx
+PASS jsdom src/components/events/FilterSidebar.test.tsx
+PASS jsdom src/components/events/EventFilters.test.tsx
+PASS jsdom src/hooks/useEvents.test.ts
+
+Test Suites: 1 skipped, 22 passed, 22 of 23 total
+Tests:       5 skipped, 278 passed, 283 total
+Snapshots:   0 total
+Time:        2.149 s
+Ran all test suites in 2 projects.
+exit_code=0
+
+=== STEP 7 — post-install assertions in the clean room ===
+$ (cd <clone> && node -e '<version assertions>')
+next                      16.3.5
+redoc                     2.5.4
+sanitize-html             2.17.7
+postcss                   8.5.28
+ws                        8.21.3
+picomatch                 2.3.2
+yaml                      2.8.2
+react                     18.3.1
+react-dom                 18.3.1
+@supabase/supabase-js     2.81.1
+@supabase/ssr             0.7.0
+jest                      30.2.0
+ts-jest                   29.4.6
+jest-environment-jsdom    30.5.1
+@testing-library/react    16.3.3
+exit_code=0
+$ (cd <clone> && git status --porcelain)   # must be empty: npm ci must not mutate the manifest or lockfile
+exit_code=0
+$ shasum -a 256 <clone>/package-lock.json   # re-hashed AFTER the install
+842ed8a7ea336d74e3dd4966467743df7aaf886a62aa191a7209b78ec9af3812  (post-install)
+UNCHANGED by the install
+exit_code=0
+
+# finished_at : 2026-09-15T15:54:16Z
+
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the transcript
+# of the seven-step clean-room protocol from 02-RESEARCH.md § Clean-Room Protocol
+# (STAB-12), with every step's exit code recorded inline on its own `exit_code=`
+# line. Output is untrimmed apart from the Phase 1 secret-redaction pass, which
+# found nothing to redact.
+#   protocol    : 02-RESEARCH.md § Clean-Room Protocol, steps 1-7
+#   run         : 2 of 2. This is THE STAB-12 EVIDENCE RUN, taken at the final
+#                 commit. Run 1 (evidence/cleanroom-interim.txt, plan 02-07) was
+#                 the interim "does the remediated tree still install" check at
+#                 695ec1e. Both runs exist because a tree that installs after
+#                 batch 4 can still stop installing after batch 5's four new
+#                 packages — see the comparison table below, where it did not.
+#   cwd         : the clone, not the working tree (protocol step 1)
+#   captured_at : 2026-09-15T15:54:16Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.3.5
+#
+#   RESULT — every step exit 0:
+#     1  fresh clone of `main` at 01c7394                            exit 0
+#     2  runtime asserted against engines BEFORE installing          exit 0
+#          engines.node 24.x vs node major 24        SATISFIED
+#          engines.npm  >=11 vs npm 11.13.0          SATISFIED
+#          .nvmrc 24 agrees with engines.node        ONE DECLARED MAJOR
+#     3  lockfile hash comparison (shasum -a 256)    MATCH           exit 0
+#     4  rm -rf node_modules .next, then npm ci      989 packages    exit 0
+#     5  build with the two CI placeholder values    140 route rows  exit 0
+#     6  npx jest --ci                278 passed / 5 skipped / 0 f   exit 0
+#     7  post-install version assertions + clean git status          exit 0
+#
+# ------------------------------------------------------------------------------
+# WHY THE FINAL COMMIT IS 01c7394 AND NOT THE TIP OF PLAN 02-11
+# ------------------------------------------------------------------------------
+#   A capture of a clone can never be taken at the commit that contains the
+#   capture. 01c7394 is the last commit in this phase that touches any build
+#   input: it is the tip of plan 02-10, and it is the final state of
+#   package.json, package-lock.json, .nvmrc, tsconfig.json, jest.config.js and
+#   src/. Plan 02-11 — the plan that produced this file — changes nothing
+#   outside .planning/, CLAUDE.md, .claude/CLAUDE.md and README.md, none of
+#   which is read by `npm ci`, `next build` or `jest`. The clone is therefore
+#   byte-identical, on every input this protocol exercises, to the tree the
+#   phase ends on. `git status --porcelain -- package.json package-lock.json
+#   src/` is empty for the whole of plan 02-11, which is one of that plan's own
+#   acceptance criteria, so this claim is checkable rather than asserted.
+#
+# ------------------------------------------------------------------------------
+# COMPARISON AGAINST RUN 1 (evidence/cleanroom-interim.txt)
+# ------------------------------------------------------------------------------
+#   | Measurement            | Run 1 @ 695ec1e   | Run 2 @ 01c7394   | Verdict |
+#   |------------------------|-------------------|-------------------|---------|
+#   | every step's exit code | 0                 | 0                 | SAME    |
+#   | packages installed     | 904               | 989               | +85     |
+#   | lockfile hash          | 2354138...        | 842ed8a...        | moved   |
+#   | route rows in build    | 140               | 140               | SAME    |
+#   | jest passing           | 247               | 278               | +31     |
+#   | jest skipped           | 36                | 5                 | -31     |
+#   | jest suites executing  | 18 of 23          | 22 of 23          | +4      |
+#   | git status after inst. | empty             | empty             | SAME    |
+#
+#   The install tree legitimately differs. Batch 5 (plan 02-08) added
+#   `jest-environment-jsdom` and three `@testing-library/*` packages, all
+#   devDependencies, which is where the +85 packages and the lockfile hash move
+#   come from; batch 6a (plan 02-09) added the `overrides: { postcss: ^8.5.28 }`
+#   entry. The +31 passing / -31 skipped and the four newly executing suites are
+#   the same batch-5 change seen from the other end: the four suites that were
+#   skipped for an uninstalled testing-library now run.
+#
+#   WHAT MUST NOT DIFFER, AND DOES NOT: every step still exits 0, the build
+#   still emits the same 140 route rows, and `git status --porcelain` in the
+#   clone is still empty after the install. That last one is the property being
+#   tested — `npm ci` did not rewrite the manifest or the lockfile, and the
+#   post-install re-hash in step 7 is byte-identical to the pre-install hash.
+#
+# ------------------------------------------------------------------------------
+# READ STEP 4'S VULNERABILITY LINE CORRECTLY
+# ------------------------------------------------------------------------------
+#   `npm ci` printed "9 vulnerabilities (3 low, 3 moderate, 2 high, 1 critical)".
+#   THAT IS THE FULL TREE, DEV INCLUDED. It is not the production census and it
+#   is not the number the exit gate is measured on. npm's post-install summary
+#   has no `--omit=dev` equivalent; it always reports the whole installed tree.
+#
+#   The production census — the one the vulnerability policy, the CI gate and
+#   the Stage 2 completion note are all written against — is
+#   `npm audit --audit-level=high --omit=dev`, captured verbatim in
+#   evidence/audit-gate-local.txt and evidence/audit.after.json:
+#
+#       0 critical, 0 high, 2 moderate, 0 low, across 298 production deps.
+#
+#   The 1 critical and 2 high in the line above are dev-only, reachable only
+#   through the test and build toolchains, and are tracked-not-blocking under
+#   clause 5 of evidence/VULNERABILITY-POLICY.md. The line is left in this
+#   capture unedited — trimming npm's own output to make a document read better
+#   is exactly the tampering this file exists to be immune to.
+#
+# ------------------------------------------------------------------------------
+# NOTES
+# ------------------------------------------------------------------------------
+#   note : the clone is the source of truth, not the working tree. A local
+#          node_modules can mask a dependency that left the manifest but is
+#          still resolvable on disk — that is the whole reason protocol step 1
+#          forbids reusing the working tree. Step 4 additionally removes
+#          node_modules and .next inside the clone before installing, so even a
+#          clone artifact cannot contribute.
+#   note : NO CREDENTIAL WAS READ, COPIED OR CREATED. The only environment
+#          variables set anywhere in this transcript are the two literal
+#          placeholder strings from .github/workflows/ci.yml lines 10-11. The
+#          untracked local secrets file was asserted ABSENT in step 1 without
+#          its filename being written here; see the note under that step for
+#          why the name is withheld.
+#   note : step 4's six `npm warn deprecated` lines (inflight, lodash.get,
+#          lodash.isequal, whatwg-encoding, glob@7.2.3, glob@7.1.6) are
+#          pre-existing. glob@7 arrives through next-swagger-doc ->
+#          swagger-jsdoc. whatwg-encoding is new relative to run 1 and arrives
+#          with batch 5's jsdom harness; it is dev-only and deprecated, not
+#          vulnerable.
+#   note : step 6 ran `npx jest --ci` rather than `npm test -- --ci` so that the
+#          runner is invoked identically to run 1 and the two are comparable.
+#          `npm test` and `npm run test:ci` both exist in package.json and both
+#          route to the same binary; .github/workflows/ci.yml line 37 uses
+#          `npm test`.
+#   note : step 7 confirms @supabase/supabase-js resolves 2.81.1 in a clean
+#          install — i.e. the batch-4b revert (evidence/supabase-js-decision.md)
+#          is real and reproducible from the lockfile, not an artefact of this
+#          machine's node_modules. It also confirms next 16.3.5, postcss 8.5.28
+#          (the batch-6a override, collapsing the nested duplicate), picomatch
+#          2.3.2 and react/react-dom 18.3.1 untouched.
+# ==============================================================================
