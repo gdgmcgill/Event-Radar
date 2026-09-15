@@ -36,7 +36,7 @@ metrics:
   duration: "~17 min"
   completed: 2026-09-15
   tasks_completed: 2
-  commits: 2
+  commits: 4
   tests_added: 8
   mutation_cycles: 9
 ---
@@ -174,3 +174,12 @@ None.
 |--------|------|---------|
 | `2bd955c` | 1 | `test(03-02)`: the 8-behaviour characterization suite + the passing-run capture |
 | `1f2797b` | 2 | `docs(03-02)`: mutation check, non-modification proof, characterization note |
+| `02651a9` | — | `docs(03-02)`: this summary |
+| (next) | — | `docs(03-02)`: self-check result appended below |
+
+## Self-Check: PASSED
+
+All 6 claimed files verified present on disk. All 3 claimed commit hashes
+(`2bd955c`, `1f2797b`, `02651a9`) verified in `git log`. Working tree clean.
+`src/app/auth/callback/route.ts` confirmed unmodified: empty diff, empty
+porcelain status, `shasum -a 256` matching the plan-start value.
