@@ -1,0 +1,201 @@
+
+> uni-verse@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.js took 5ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.5s
+  Running TypeScript ...
+  Finished TypeScript in 3.8s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/101) ...
+  Generating static pages using 9 workers (25/101) 
+  Generating static pages using 9 workers (50/101) 
+  Generating static pages using 9 workers (75/101) 
+(node:27731) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✓ Generating static pages using 9 workers (101/101) in 364ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /admin-login
+├ ƒ /admin/experiments
+├ ƒ /admin/experiments/[id]
+├ ƒ /api/admin/analytics/events
+├ ƒ /api/admin/analytics/users
+├ ƒ /api/admin/audit-log
+├ ƒ /api/admin/calculate-popularity
+├ ƒ /api/admin/clubs
+├ ƒ /api/admin/clubs/[id]
+├ ƒ /api/admin/events
+├ ƒ /api/admin/events/[id]
+├ ƒ /api/admin/events/[id]/edits
+├ ƒ /api/admin/events/[id]/status
+├ ƒ /api/admin/experiments
+├ ƒ /api/admin/experiments/[id]
+├ ƒ /api/admin/experiments/[id]/results
+├ ƒ /api/admin/featured
+├ ƒ /api/admin/featured/[id]
+├ ƒ /api/admin/organizer-requests
+├ ƒ /api/admin/organizer-requests/[id]
+├ ƒ /api/admin/organizers
+├ ƒ /api/admin/reports
+├ ƒ /api/admin/reports/[id]
+├ ƒ /api/admin/stats
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[id]
+├ ƒ /api/admin/users/[id]/ban
+├ ƒ /api/auth-debug
+├ ƒ /api/calendar/events
+├ ƒ /api/clubs
+├ ƒ /api/clubs/[id]
+├ ƒ /api/clubs/[id]/analytics
+├ ƒ /api/clubs/[id]/appeal
+├ ƒ /api/clubs/[id]/events
+├ ƒ /api/clubs/[id]/follow
+├ ƒ /api/clubs/[id]/invites
+├ ƒ /api/clubs/[id]/members
+├ ƒ /api/clubs/[id]/members/role
+├ ƒ /api/clubs/[id]/transfer
+├ ƒ /api/clubs/banner
+├ ƒ /api/clubs/featured
+├ ƒ /api/clubs/friends
+├ ƒ /api/clubs/logo
+├ ƒ /api/clubs/new
+├ ƒ /api/clubs/trending
+├ ƒ /api/cron/send-feedback-requests
+├ ƒ /api/cron/send-reminders
+├ ƒ /api/events
+├ ƒ /api/events/[id]
+├ ƒ /api/events/[id]/analytics
+├ ƒ /api/events/[id]/appeal
+├ ƒ /api/events/[id]/friends
+├ ƒ /api/events/[id]/invite
+├ ƒ /api/events/[id]/report
+├ ƒ /api/events/[id]/reviews
+├ ƒ /api/events/[id]/rsvp
+├ ƒ /api/events/[id]/save
+├ ƒ /api/events/create
+├ ƒ /api/events/export
+├ ƒ /api/events/featured
+├ ƒ /api/events/following
+├ ƒ /api/events/friends-activity
+├ ƒ /api/events/friends-organizing
+├ ƒ /api/events/happening-now
+├ ƒ /api/events/my-events
+├ ƒ /api/events/new
+├ ƒ /api/events/popular
+├ ƒ /api/events/upload-image
+├ ƒ /api/feedback
+├ ƒ /api/health
+├ ƒ /api/interactions
+├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+├ ƒ /api/my-clubs
+├ ƒ /api/notifications
+├ ƒ /api/notifications/[id]
+├ ƒ /api/notifications/count
+├ ƒ /api/onboarding/complete
+├ ƒ /api/organizer-requests
+├ ƒ /api/profile/avatar
+├ ƒ /api/profile/banner
+├ ƒ /api/profile/inferred-tags
+├ ƒ /api/profile/interests
+├ ƒ /api/recommendations
+├ ƒ /api/recommendations/analytics
+├ ƒ /api/recommendations/batch
+├ ƒ /api/recommendations/feedback
+├ ƒ /api/user/engagement
+├ ƒ /api/user/following
+├ ƒ /api/users/[id]
+├ ƒ /api/users/[id]/follow
+├ ƒ /api/users/me/friends
+├ ƒ /api/users/me/requests
+├ ƒ /api/users/me/suggestions
+├ ƒ /api/users/saved-events
+├ ƒ /api/users/search
+├ ƒ /auth/callback
+├ ƒ /auth/signout
+├ ƒ /banned
+├ ○ /calendar
+├ ƒ /clubs
+├ ƒ /clubs/[id]
+├ ○ /clubs/create
+├ ○ /contributors
+├ ○ /create-event
+├ ○ /docs
+├ ƒ /events/[id]
+├ ○ /feedback
+├ ○ /friends
+├ ○ /health
+├ ○ /help
+├ ƒ /invites/[token]
+├ ○ /landing
+├ ƒ /moderation
+├ ƒ /moderation/appeals
+├ ƒ /moderation/audit-log
+├ ƒ /moderation/clubs
+├ ƒ /moderation/events
+├ ƒ /moderation/featured
+├ ƒ /moderation/organizer-requests
+├ ƒ /moderation/organizers
+├ ƒ /moderation/pending
+├ ƒ /moderation/reports
+├ ƒ /moderation/stats
+├ ƒ /moderation/users
+├ ƒ /my-clubs
+├ ƒ /my-clubs/[id]
+├ ○ /my-events
+├ ○ /notifications
+├ ƒ /onboarding
+├ ○ /people
+├ ○ /privacy
+├ ƒ /profile
+├ ○ /robots.txt
+├ ○ /settings
+├ ƒ /sitemap.xml
+├ ○ /terms
+└ ƒ /users/[id]
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the output of
+# the command below, untrimmed and unsummarised. .next was deleted first, so this
+# is a cold build.
+#   command     : rm -rf .next && npm run build
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T06:00:36Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.3.5
+#   note        : THE STALE-BROWSER-DATABASE WARNING IS GONE. Batches 0, 1, 2 and
+#                 3 all printed "Browserslist: browsers data (caniuse-lite) is 10
+#                 months old" immediately before the compile line. This log does
+#                 not contain the string "Browserslist" at all. That absence is
+#                 the receipt for the pinned update-browserslist-db@1.3.3 run:
+#                 caniuse-lite 1.0.30001754 -> 1.0.30001810,
+#                 baseline-browser-mapping 2.10.10 -> 2.11.23.
+#   note        : the updater reported "No target browser changes", so the refresh
+#                 moved the database and not the compilation targets. Nothing in
+#                 the emitted output should differ on account of it.
+#   note        : the DEP0169 url.parse() DeprecationWarning at line 18 is NOT new.
+#                 It is present in batch-00, batch-01, batch-02 and batch-03 build
+#                 captures at the same position. It is a Next/Turbopack internal
+#                 and no batch in this phase has addressed it.
+#   note        : route table unchanged — 139 route-table lines, the same count as
+#                 batch 2 and batch 3. No route appeared, disappeared or changed
+#                 kind. "Proxy (Middleware)" still present, as in batch 3.
+#   note        : bundle figures are deliberately NOT tallied here. The formal
+#                 STAB-16 after side belongs to plan 02-11 and compares against
+#                 evidence/bundle-size.before.txt, never against versions.txt.
+# ==============================================================================
+exit_code=0

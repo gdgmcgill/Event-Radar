@@ -1,0 +1,19 @@
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the output of
+# the command below, untrimmed and unsummarised.
+#   command     : npx tsc --noEmit
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T06:00:36Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.3.5
+#   note        : zero bytes of output. The file was empty before this block was
+#                 appended; that emptiness IS the capture.
+#   note        : this is the command that stopped batch 4b. On the attempted
+#                 @supabase/supabase-js ^2.116.0 tree it exited 2 with six TS2345
+#                 errors; the six are reproduced in evidence/supabase-js-decision.md
+#                 section 5. It exits 0 here because 4b was reverted, not fixed.
+#   note        : tsconfig.json still excludes **/*.test.ts and **/*.test.tsx, so
+#                 this run does not type-check the test suite. F-066 stays partial
+#                 for Phase 2 and plan 02-11 must record it as partial.
+# ==============================================================================
+exit_code=0

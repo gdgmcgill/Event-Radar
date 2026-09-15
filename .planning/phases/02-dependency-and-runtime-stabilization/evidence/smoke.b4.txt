@@ -1,0 +1,60 @@
+# smoke.sh — Tier 2 anonymous HTTP smoke pass
+# host        : http://localhost:3000
+# label       : b4
+# started_at  : 2026-09-15T06:01:31Z
+# curl        : curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1
+# ring rows   : 5 6 8 10 (request path only — independent of Supabase data)
+# data rows   : 1 2 3 4 7 9 (need a reachable Supabase with content)
+
+PASS 1 GET / :: expected 200+marker got 200+marker
+FAIL 2 GET /api/events :: expected 200 and >=1 event got 200 and 0 events
+PASS 3 GET /api/events?search=test&tags=academic :: expected 200 got 200
+PASS 4 GET /clubs :: expected 200 got 200
+PASS 5 GET /profile :: expected 307 -> signin=required&next=/profile got 307 /?signin=required&next=/profile
+PASS 6 GET /my-events :: expected 307 -> signin=required got 307 /?signin=required&next=/my-events
+PASS 7 GET /docs :: expected 200 got 200
+PASS 8 POST(x31) /api/events :: expected 429 + Retry-After got 429 Retry-After=60
+PASS 9 GET /api/health :: expected 200 got 200
+PASS 10 GET /_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js :: expected 200 no redirect got 200 no-location
+
+--- ring rows (5 6 8 10): 4/4 passed
+--- data rows (1 2 3 4 7 9): 5/6 passed
+--- total: 9/10 passed, 1 failed
+--- NOTE: a failing data row may be environment-limited (unreachable or
+---       empty Supabase). The expectation is NOT lowered; name the row
+---       and the reason in the run record instead.
+# finished_at : 2026-09-15T06:01:35Z
+
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the output of
+# the command below, untrimmed and unsummarised.
+#   command     : SMOKE_HOST=http://localhost:3000 SMOKE_LABEL=b4 bash scripts/smoke.sh
+#   target      : local `npm run dev` (Next 16.3.5, Turbopack) on the batch-4 tree
+#                 at commit 695ec1e (4a landed, 4b reverted)
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   exit_code   : 1  (one failing row — row 2, see below)
+#   note        : ROW 7 IS THE LOAD-BEARING ROW IN THIS BATCH. GET /docs returned
+#                 200 after redoc 2.5.2 -> 2.5.4. Supplementary check beyond the
+#                 status code: the response body is 82,679 bytes and contains the
+#                 "API Documentation" heading plus 16 redoc-component references,
+#                 so the renderer mounted rather than the route merely 200-ing.
+#                 This simultaneously confirms that removing swagger-ui-react in
+#                 batch 1 changed nothing about this route.
+#   note        : ring rows 5, 6, 8, 10 all PASS — 4/4, identical to batches 0-3.
+#                 /profile and /my-events still 307 to ?signin=required, the rate
+#                 limiter still returns 429 with Retry-After: 60 after 31 POSTs,
+#                 and /_next/static still 200s with no Location.
+#   note        : ROW 2 FAILS AND THAT IS UNCHANGED, NOT A REGRESSION. It returned
+#                 "200 and 0 events" — the same verdict as smoke.b0.txt, captured
+#                 before any dependency in this phase changed, and the same as b1,
+#                 b2 and b3. The local Supabase dataset is empty. The expectation
+#                 is NOT lowered; the row is named here with its reason, per the
+#                 script's own contract. Phase 3's deterministic seed (REFAC-05)
+#                 is what turns row 2 into a usable instrument.
+#   note        : the ban check is still not covered. It needs a banned user's
+#                 session, which needs the Phase 3 seed; Tier 2 is anonymous by
+#                 contract. It lands in Phase 7's CERT-05 persona matrix.
+#   note        : row 10's chunk filename is discovered at run time from row 1's
+#                 HTML, so it differs from batch 3's capture by construction. The
+#                 assertion (200, no Location) is what is compared, not the name.
+# ==============================================================================
