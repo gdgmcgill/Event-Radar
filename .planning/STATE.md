@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 02
-current_phase_name: Dependency and Runtime Stabilization
+current_phase: 3
+current_phase_name: Refactor Foundations — Schema Truth and the Seam Kit
 status: executing
 stopped_at: "Completed 02-11-PLAN.md (batch 6c: clean-room install at 01c7394 with 20 exit codes all 0; finding register reconciled to the roadmap and regenerated through its generator; CLAUDE.md and README.md corrected against the tree; STAGE-2-COMPLETION.md written). Phase 2 plans 1-11 complete. STAGE 2 EXIT GATE MET. STAB-11, STAB-12, STAB-13, STAB-17 complete; STAB-02, STAB-06, STAB-09, STAB-14 held Pending."
-last_updated: "2026-09-15T16:13:56.705Z"
+last_updated: "2026-09-15T20:54:04.611Z"
 last_activity: 2026-09-15
-last_activity_desc: "Completed 02-11 (batch 6c: clean-room reproducible install proven at the final commit, finding register reconciled to the roadmap, stale documentation corrected, Stage 2 exit gate evidenced and MET)"
+last_activity_desc: Phase 3 execution started
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 24
+  total_plans: 32
   completed_plans: 24
   percent: 25
 ---
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Every critical workflow in the existing app is verified correct, secure, and reproducible across all user roles before any new product feature is started. If a foundation change breaks a workflow that worked before, the program has failed.
-**Current focus:** Phase 02 — Dependency and Runtime Stabilization
+**Current focus:** Phase 3 — Refactor Foundations — Schema Truth and the Seam Kit
 
 ## Current Position
 
-Phase: 02 (Dependency and Runtime Stabilization) — EXECUTING
-Plan: 11 of 11
-Status: All 11 plans executed (batches 0-6c done). STAGE 2 EXIT GATE MET — evidence/STAGE-2-COMPLETION.md. Ready for verification. Twelve STAB requirements complete; STAB-02, STAB-06, STAB-09 and STAB-14 held Pending, three of them blocked on a single act: a push. Three human steps outstanding — push (closes three requirement clauses), install the Renovate GitHub App, and mark the CI checks REQUIRED in branch protection on main
-Last activity: 2026-09-15 — Completed 02-11 (batch 6c: clean room at 01c7394 with 20 exit codes all 0, finding register reconciled to the roadmap and regenerated, CLAUDE.md/README.md corrected against the tree, Stage 2 completion note written; STAB-11, STAB-12, STAB-13 and STAB-17 complete)
+Phase: 3 (Refactor Foundations — Schema Truth and the Seam Kit) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 3
+Last activity: 2026-09-15 — Phase 3 execution started
 
 Progress: [██░░░░░░░░] 25%
 
