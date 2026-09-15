@@ -36,5 +36,8 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Production vulnerability gate
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Run build
         run: npm run build

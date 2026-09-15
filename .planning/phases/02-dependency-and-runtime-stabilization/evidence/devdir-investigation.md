@@ -196,6 +196,31 @@ dashboard setting, which is exactly what plan 02-01 pinned. An unknown-config wa
 advisory output; it cannot change a resolved dependency tree, because the tree comes from
 `package-lock.json`. Recorded as a bounded unknown with no action.
 
+### 6a. Re-checked by plan 02-09 on 2026-09-15 — **still unobserved**
+
+Plan 02-09 was the plan that was supposed to close this, by reading the install step's log of
+the CI run it adds the vulnerability gate to. **It did not close.** The full attempt, with its
+commands and their output, is in **`evidence/ci-green-run.md` § 6**, and that section is now
+the authoritative record for the CI half of STAB-02. This section points at it rather than
+restating it, so the two cannot drift apart.
+
+The short version, and the two things that changed and did not:
+
+- **Unchanged — the CI side is still unknown.** No run exists to read: all 113 Phase 2 commits
+  are local (`git rev-list --count origin/main..HEAD` → 113), so GitHub Actions has never seen
+  the workflow. Run `26121379844` still returns **HTTP 410** on both `gh run view --log` and
+  the job-level `gh api .../jobs/76823962562/logs`; **both paths were re-tried, not assumed.**
+- **Changed — the local side was re-derived six batches later and still says zero.**
+  `npm ci --dry-run 2>&1 | command grep -ciE 'unknown .* config|npm warn'` → `0` on the batch-6
+  tree, which now carries a `postcss` `overrides` entry, a Node 24 pin, and 382 fewer production
+  dependencies than the tree § 2 measured. The absence is a property of the machine's npm
+  configuration, not of the repository's dependency tree, and six batches of dependency change
+  did not move it — which is exactly what § 1's conclusion predicts.
+
+**`ci_npm_unknown_config=unobserved` stands.** The unblock condition is a push, and the check is
+one `grep` for the scope word (`project` / `user` / `global` / `env`) in the `Install
+dependencies` step log. Procedure in `ci-green-run.md` § 6.
+
 ---
 
 ## 7. Reproduce this file
