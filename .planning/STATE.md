@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Dependency and Runtime Stabilization
 status: executing
-stopped_at: "Completed 02-06-PLAN.md (batch 3: src/middleware.ts -> src/proxy.ts, one atomic rename; STAB-06 still Pending on the ban-check clause)"
-last_updated: "2026-09-15T06:06:42.905Z"
+stopped_at: "Completed 02-08-PLAN.md (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)"
+last_updated: "2026-09-15T06:25:11.688Z"
 last_activity: 2026-09-15
-last_activity_desc: "Completed 02-06 (batch 3: src/middleware.ts -> src/proxy.ts in one atomic rename; 27 assertions and all 10 smoke rows identical either side; deprecation warning 1 -> 0)"
+last_activity_desc: "Completed 02-08 (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)"
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 24
-  completed_plans: 19
+  completed_plans: 21
   percent: 13
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 02 (Dependency and Runtime Stabilization) — EXECUTING
-Plan: 8 of 11
-Status: Executing — 02-01..02-06 complete (batches 0-3 done), 02-07 next (batch 4: browserslist/caniuse-lite, the only warning left in the build log)
-Last activity: 2026-09-15 — Completed 02-06 (batch 3: src/middleware.ts -> src/proxy.ts in one atomic rename; 27 assertions and all 10 smoke rows identical either side; deprecation warning 1 -> 0)
+Plan: 9 of 11
+Status: Executing — 02-01..02-08 complete (batches 0-5 done), wave 7 next: 02-09 (batch 6a: CI audit gate, exception register) and 02-10 (batch 6b: SBOM, Renovate, bundle delta)
+Last activity: 2026-09-15 — Completed 02-08 (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)
 
 Progress: [█░░░░░░░░░] 9%
 
@@ -75,6 +75,7 @@ Progress: [█░░░░░░░░░] 9%
 | Phase 02 P05 | 21min | 3 tasks | 16 files |
 | Phase 02 P06 | 12min | 3 tasks | 12 files |
 | Phase 02 P07 | 20min | 3 tasks | 14 files |
+| Phase 02 P08 | 13min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -174,6 +175,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T06:06:42.901Z
-Stopped at: Completed 02-06-PLAN.md (batch 3: src/middleware.ts -> src/proxy.ts, one atomic rename; STAB-06 still Pending on the ban-check clause)
+Last session: 2026-09-15T06:25:11.685Z
+Stopped at: Completed 02-08-PLAN.md (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)
 Resume file: None
