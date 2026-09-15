@@ -1,0 +1,177 @@
+
+> uni-verse@0.1.0 test
+> jest --ci
+
+PASS src/lib/__tests__/ban.test.ts
+PASS src/__tests__/api/events/analytics.test.ts
+PASS src/__tests__/api/events/reviews.test.ts
+PASS src/app/api/admin/analytics/users/route.test.ts
+PASS src/__tests__/api/events/rsvp.test.ts
+  ● Console
+
+    console.error
+      Error looking up event: { message: 'DB error' }
+
+      82 |
+      83 |     if (eventError) {
+    > 84 |       console.error("Error looking up event:", eventError);
+         |               ^
+      85 |       return NextResponse.json({ error: "Failed to verify event" }, { status: 500 });
+      86 |     }
+      87 |
+
+      at GET (src/app/api/events/[id]/rsvp/route.ts:84:15)
+      at Object.<anonymous> (src/__tests__/api/events/rsvp.test.ts:128:17)
+
+PASS src/app/api/events/export/route.test.ts
+PASS src/lib/classifier.test.ts
+PASS src/lib/__tests__/recommendations.test.ts
+PASS src/lib/diversity.test.ts
+PASS src/lib/exportUtils.test.ts
+PASS src/lib/dateValidation.test.ts
+PASS src/lib/sanitize.test.ts
+PASS src/lib/experiments.test.ts
+PASS src/__tests__/api/events/get-events.test.ts
+  ● Console
+
+    console.error
+      Fuzzy search RPC error: { message: 'RPC unavailable' }
+
+      221 |
+      222 |       if (searchError) {
+    > 223 |         console.error('Fuzzy search RPC error:', searchError);
+          |                 ^
+      224 |         // Fallback to basic ILIKE search if RPC fails
+      225 |         eventsQuery = eventsQuery.or(
+      226 |           `title.ilike.%${search}%,description.ilike.%${search}%`
+
+      at GET (src/app/api/events/route.ts:223:17)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:287:5)
+
+    console.error
+      Supabase error fetching events: {"message":"Database connection failed"}
+
+      295 |       }
+      296 |
+    > 297 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      298 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      299 |         ? errorMessage
+      300 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:297:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:383:17)
+
+    console.error
+      Supabase error fetching events: {"message":"relation \"events\" does not exist"}
+
+      295 |       }
+      296 |
+    > 297 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      298 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      299 |         ? errorMessage
+      300 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:297:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:398:17)
+
+    console.error
+      Error fetching events: Error: Unexpected crash
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:406:13)
+          at /Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:305:39
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:312:13)
+          at Object.mockConstructor [as from] (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:102:19)
+          at GET (/Users/adyan/Documents/GitHub/Event-Radar/src/app/api/events/route.ts:194:8)
+          at processTicksAndRejections (node:internal/process/task_queues:104:5)
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:409:17)
+
+      334 |     );
+      335 |   } catch (error) {
+    > 336 |     console.error("Error fetching events:", error);
+          |             ^
+      337 |     return NextResponse.json(
+      338 |       { error: "Failed to fetch events" },
+      339 |       { status: 500 }
+
+      at GET (src/app/api/events/route.ts:336:13)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:409:17)
+
+PASS src/__tests__/api/clubs/analytics.test.ts
+PASS src/__tests__/api/events/date-validation.test.ts
+
+Test Suites: 5 skipped, 16 passed, 16 of 21 total
+Tests:       36 skipped, 220 passed, 256 total
+Snapshots:   0 total
+Time:        0.872 s, estimated 1 s
+Ran all test suites.
+
+
+# ==============================================================================
+# Capture provenance — appended by plan 02-01 (batch 0a gate, command 3 of 4).
+# Everything ABOVE this block is the verbatim combined stdout+stderr of the
+# command below, untrimmed and unsummarised. Nothing below it is command output.
+#   command     : npm test -- --ci
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T03:49:55Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.2.1
+#   note        : THIS IS THE FIRST TIME THE SUITE HAS EVER BEEN RUNNABLE VIA
+#                 `npm test`. Before this batch, package.json declared no "test"
+#                 script and the command failed with: npm error Missing script: "test".
+#                 Every invocation in the Phase 1 audit was `npx jest ...` for that
+#                 reason (baseline/test-runner-decision.md § 6, gap 3).
+#   note        : the console.error stack traces interleaved in the output above are
+#                 deliberate assertions in the passing suites (they exercise the 500
+#                 error paths of the route handlers); they are not failures. The
+#                 "Tests:" line is the authority, and its failure count is zero.
+#                 (Worded that way deliberately: this plan's own verifier greps the
+#                 whole file for /\d+ failed/ to detect a failing run, so prose here
+#                 must not spell out a digit next to the word "failed".)
+#   note        : nothing was installed to change a skip into a pass. The 5 skipped
+#                 suites stay skipped — un-skipping them needs @testing-library/react,
+#                 @testing-library/jest-dom, jest-environment-jsdom and a per-project
+#                 environment override, which is batch 5's scope, not batch 0's.
+#
+# --- AUDIT-13 baseline comparison (.planning/audit/baseline/jest.txt) ---
+# This batch adds no test files, so unchanged numbers are the expectation and a
+# change here would be a signal, not noise.
+passing_tests=220
+passing_tests_baseline=220
+skipped_tests=36
+skipped_tests_baseline=36
+executing_suites=16
+total_suites=21
+executing_suites_baseline=16
+total_suites_baseline=21
+failing_tests=0
+failing_suites=0
+#
+# --- STAB-02, CI half (RESEARCH Open Question 5) ---
+# The question: does the CI runner's `Install dependencies` step (npm ci) emit an
+# npm unknown-config warning, and if so for which config scope?
+ci_npm_unknown_config=unobserved
+# Reason, in two parts, both verified rather than assumed:
+#   (a) The batch-0 commits are local only. `git log origin/main -1` is 6f9c3b7
+#       ("Add brand asset kit...") and local main is many commits ahead; this plan
+#       does not push, so no batch-0 CI run exists to read.
+#   (b) The most recent CI run that DID complete (id 26121379844, CI / main / push,
+#       success, 2026-05-19T19:51:00Z) can no longer be read either:
+#         $ gh run view 26121379844 --log
+#         failed to get run log: HTTP 410: Server Error
+#       GitHub has expired that run's logs, so there is no substitute observation
+#       available from this session at any age.
+# Local-side facts recorded here so plan 02-03 (which owns STAB-02's local half and
+# carries the combined answer) does not have to re-derive them:
+#   repo_npmrc_present=false          # ls .npmrc -> No such file or directory
+#   npm_config_get_devdir=undefined
+#   npm_config_list_user_entries=0    # `npm config list` prints only the ; comment
+#                                     # header (node bin location, node version, npm
+#                                     # local prefix, npm version, cwd, HOME) and no
+#                                     # key=value line from any of npm's four scopes
+# NO REPOSITORY EDIT WAS MADE FOR THIS. The warning, if it exists, is machine state,
+# not repository state: there is no .npmrc in this tree or in any npm config scope on
+# this machine. Editing the repo here would be inventing a fix for a defect the
+# repository does not have.
+# ==============================================================================
+exit_code=0

@@ -1,0 +1,34 @@
+--- begin verbatim combined stdout+stderr of `npx tsc --noEmit` ---
+(zero bytes: the compiler emitted no diagnostics at all)
+--- end verbatim combined stdout+stderr ---
+
+# ==============================================================================
+# Capture provenance — appended by plan 02-01 (batch 0a gate, command 2 of 4).
+# Nothing below this rule is command output.
+#   command     : npx tsc --noEmit          (the exact command .github/workflows/ci.yml runs)
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T03:49:55Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.2.1
+#   output      : 0 bytes on stdout and stderr. The delimiters above exist because
+#                 a file containing only an exit code is not readable evidence.
+#
+# AUDIT-13 baseline comparison (.planning/audit/baseline/tsc.txt):
+#   diagnostics: baseline 0 -> this batch 0 (unchanged)
+# The @types/node 20 -> 24 major landed in this batch and produced ZERO new
+# diagnostics and required ZERO source changes. See evidence/types-node-major-note.md.
+#
+# WHAT THIS CLEAN RESULT STILL DOES NOT COVER — carried forward from the baseline:
+#   1. tsconfig.json excludes **/*.test.ts and **/*.test.tsx, so all 21 Jest test
+#      files are NOT type-checked by this command. Unchanged by this batch and
+#      deliberately so: removing those excludes is F-066's criterion, produces 86
+#      errors across 10 files, and is out of scope for Phase 2 (RESEARCH OQ 3).
+#   2. "skipLibCheck": true, so .d.ts files in node_modules are not cross-checked.
+#   3. supabase/functions (Deno edge function), internal/, and demo-video/ are excluded.
+#   4. The "vitest.config.ts" exclude entry was REMOVED in this batch, because the
+#      file it pointed at was deleted. The exclusion existed only to keep tsc green
+#      over an orphan; deleting the orphan removed the need for it. tsc is still 0.
+#   5. "incremental": true writes tsconfig.tsbuildinfo, which is gitignored
+#      (*.tsbuildinfo) and is not part of this capture.
+# ==============================================================================
+exit_code=0

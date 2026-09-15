@@ -1,0 +1,62 @@
+
+> uni-verse@0.1.0 lint
+> eslint .
+
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-onboarding.js
+  67:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-online-users.js
+  33:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/calendar/page.tsx
+  779:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/contributors/page.tsx
+  74:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/moderation/organizers/page.tsx
+  251:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/moderation/page.tsx
+  66:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/my-events/page.tsx
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 159) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 167) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 181) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/page.tsx
+  64:17  warning  The ref value 'timerRefs.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'timerRefs.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubSettingsTab.tsx
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/onboarding/OnboardingWizard.tsx
+  123:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 12 problems (0 errors, 12 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+
+
+# ==============================================================================
+# Capture provenance — appended by plan 02-01 (batch 0a gate, command 1 of 4).
+# Everything ABOVE this block is the verbatim combined stdout+stderr of the
+# command below, untrimmed and unsummarised. Nothing below it is command output.
+#   command     : npm run lint   # -> eslint .
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T03:49:55Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.2.1
+#   note        : eslint --fix was NOT run. The 12 warnings are baseline state
+#                 carried forward from .planning/audit/baseline/lint.txt, not
+#                 defects introduced or repaired by this batch.
+#   note        : no max-warnings threshold is configured, so 12 warnings do not
+#                 fail the command. Exit 0. Identical to the AUDIT-13 baseline.
+#
+# AUDIT-13 baseline comparison (.planning/audit/baseline/lint.txt):
+#   errors:   baseline 0  -> this batch 0   (unchanged)
+#   warnings: baseline 12 -> this batch 12  (unchanged)
+# ==============================================================================
+exit_code=0
