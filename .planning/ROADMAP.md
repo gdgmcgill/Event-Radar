@@ -141,7 +141,34 @@ Plans:
   4. A Playwright persona harness runs against local Supabase with one storage state per persona from a setup project and at least six happy-path specs covering Validated workflows, backed by a deterministic seed (fixed UUIDs, fixed timestamps against a pinned now, fixed PRNG seed) covering every user role, ban state, club status, and event status — whose loader hard-refuses any Supabase URL outside local and staging.
   5. The auth callback route has passing characterization tests (OAuth exchange, McGill enforcement, user upsert, admin auto-assignment, onboarding routing) written before anything modifies it.
 
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+**Wave 1** *(three independent tributaries — none touches a database)*
+
+- [ ] 03-01-PLAN.md — Preflight and production transport: free the Supabase ports, re-scope the MCP endpoint read-only, capture the AR-12 envelope, answer Q1, write the migration-filename checker captured RED
+- [ ] 03-02-PLAN.md — Auth callback characterization: eight behaviours against unmodified source, each mutation-checked, route file provably untouched
+- [ ] 03-03-PLAN.md — The seam kit: `src/server/` context, http/errors, three authz guards, the single elevated door, plus the ESLint import boundary with an escaped-bracket shrink-only ratchet — applied to zero routes
+
+**Wave 2** *(the critical path, alone — blocked on 03-01)*
+
+- [ ] 03-04-PLAN.md — Migration reconciliation: 44 files archived as 44 pure renames, baseline pulled from production, policy census cross-checked by name, `db reset` green and `db diff` empty
+
+**Wave 3** *(blocked on 03-04)*
+
+- [ ] 03-05-PLAN.md — Schema fixes with tests that bite: FK indexes, the audit-named RLS policy gaps, the idempotent scoring schedule, pgTAP allow/deny pairs, and an automated mutation-check harness
+
+**Wave 4** *(blocked on 03-05)*
+
+- [ ] 03-06-PLAN.md — Generated types and cast retirement: regenerate from the reconciled schema, a CI drift gate proven red-then-green, 47 casts to zero, two latent defects characterized and registered
+
+**Wave 5** *(blocked on 03-05 and 03-06)*
+
+- [ ] 03-07-PLAN.md — Deterministic seed and persona harness: fail-closed target guard with four refusal tests, ten storage states, six happy-path specs, the cookie-equivalence cross-check
+
+**Wave 6** *(blocked on all)*
+
+- [ ] 03-08-PLAN.md — The gated production-repair decision and the Stage 3 foundation readiness note, with every deferral written down and its owning phase named
 
 ### Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 
@@ -243,7 +270,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 |-------|----------------|--------|-----------|
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
-| 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/TBD | Not started | - |
+| 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/8 | Planned | - |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |
