@@ -1,0 +1,258 @@
+# sbom-generation.txt — STAB-15, CycloneDX SBOM provenance
+# Phase 02-dependency-and-runtime-stabilization, plan 02-10 (batch 6b), task 2
+#
+# PROVENANCE
+#   generated_at      = 2026-09-15T15:39:00Z
+#   generated_by      = plan 02-10, task 2
+#   git_head          = 45c1ab1   (task 1's commit; sbom.cyclonedx.json is committed on top of it)
+#   host              = darwin arm64 (macOS 25.6.0)
+#   node_version      = 24.16.0
+#   npm_version       = 11.13.0
+#   package_json_sha256     = 2fe97c11a76042294d9664332fc6029f028b35ef2ef909085a95ceb87ab9c905
+#   package_lock_json_sha256 = 842ed8a7ea336d74e3dd4966467743df7aaf886a62aa191a7209b78ec9af3812
+#   sbom_sha256             = 5fdbf855c392f8a960b348aaa7d391e46bee0d2ab8960babe6f68d4dde32d618
+#
+# The two manifest hashes above were taken BEFORE the generator ran and re-taken
+# AFTER it ran. They are identical on both sides. Nothing was installed.
+
+# ===========================================================================
+# THE GENERATING COMMAND
+# ===========================================================================
+
+$ npx --yes @cyclonedx/cyclonedx-npm@6.0.1 \
+    --omit dev \
+    --package-lock-only \
+    --spec-version 1.6 \
+    --output-format JSON \
+    --output-file sbom.cyclonedx.json \
+    --output-reproducible \
+    --validate \
+    --mc-type application \
+    package.json
+
+exit_code=0
+stdout=(empty)
+stderr=(empty — the tool is silent on success at the default verbosity)
+
+# Flag-by-flag, because each one is load-bearing:
+#
+#   --omit dev            The document describes the PRODUCTION tree, the same scope
+#                         evidence/VULNERABILITY-POLICY.md and 02-09's CI gate
+#                         (`npm audit --omit=dev --package-lock-only`) scope themselves to.
+#                         Verified: jest, ts-jest, jest-environment-jsdom, @testing-library/*,
+#                         typescript, eslint, prettier, tailwindcss, autoprefixer, dotenv and
+#                         tsx are all ABSENT from the document.
+#
+#                         ONE APPARENT EXCEPTION, CHECKED AND NOT A LEAK: @types/node@24.13.4
+#                         IS in the document. It is a root devDependency, but it is also a
+#                         genuine production transitive:
+#                           npm ls @types/node --omit=dev --package-lock-only
+#                             uni-verse@0.1.0
+#                             `-- @supabase/supabase-js@2.81.1
+#                                 `-- @supabase/realtime-js@2.81.1
+#                                     `-- @types/ws@8.18.1
+#                                         `-- @types/node@24.13.4
+#                         npm's own production walk includes it, so the SBOM is right to.
+#
+#   --package-lock-only   Read the LOCKFILE, not ./node_modules. See the DEVIATION block
+#                         below — this flag is not in 02-RESEARCH.md § Code Examples 8 and
+#                         was added deliberately. Without it the document is
+#                         platform-dependent and the byte-stability guarantee is false.
+#
+#   --spec-version 1.6    Pinned explicitly rather than accepting the tool's default.
+#                         Today the default HAPPENS to be 1.6, so the pin is currently a
+#                         no-op — and that is exactly why it has to be written down. The
+#                         tool already accepts 1.7 (`--help` lists choices 1.2 1.3 1.4 1.5
+#                         1.6 1.7, default 1.6), so a future generator release that moves
+#                         its default to 1.7 would silently change this document's shape on
+#                         the next regeneration and the diff would look like a tree change.
+#
+#   --output-reproducible NOT OPTIONAL FOR A COMMITTED SBOM. Without it the tool emits a
+#                         fresh `serialNumber` (a random UUID) and a `metadata.timestamp`
+#                         on every run, so the file shows a diff on EVERY regeneration and
+#                         you could never tell a real dependency change from a re-run.
+#                         Confirmed in the emitted document: `serialNumber` is absent and
+#                         `metadata.timestamp` is absent. Top-level keys are exactly
+#                         $schema, bomFormat, specVersion, version, metadata, components,
+#                         dependencies — no non-deterministic field among them.
+#
+#   --validate            Fails the command if the document does not satisfy the CycloneDX
+#                         1.6 JSON schema. The tool is silent about this on success, which
+#                         is indistinguishable from not having validated at all, so the
+#                         run was repeated at -vvv to prove the code path executes:
+#
+#                           $ npx --yes @cyclonedx/cyclonedx-npm@6.0.1 ... -vvv --output-file -
+#                           DEBUG | options: {...,"specVersion":"1.6","outputReproducible":true,"validate":true}
+#                           LOG   | try validating BOM result ...
+#                           INFO  | BOM result appears valid
+#                           exit_code=0
+#
+#   --mc-type application The main component (`metadata.component`) is the application
+#                         itself, not a library. Confirmed:
+#                           metadata.component = uni-verse@0.1.0, type=application,
+#                                                bom-ref=uni-verse@0.1.0
+#
+#   package.json          The manifest the generator reads. It is read, never written.
+
+# ===========================================================================
+# THE REPRODUCIBILITY CHECK — RUN, NOT ASSUMED
+#
+# A committed SBOM is only worth committing if a regeneration that differs means the
+# tree actually moved. That was proven rather than asserted: regenerate to stdout with
+# the identical flags and diff against the committed file.
+# ===========================================================================
+
+$ npx --yes @cyclonedx/cyclonedx-npm@6.0.1 --omit dev --package-lock-only --spec-version 1.6 \
+    --output-format JSON --output-reproducible --validate --mc-type application \
+    --output-file - package.json | diff -q - sbom.cyclonedx.json
+
+exit_code=0
+output=(empty — no difference)
+
+reproducible=yes
+reproducibility_method=regenerate-to-stdout-and-diff
+reproducibility_result=byte-identical
+
+# This is the basis of any future CI freshness check. The command above IS the check:
+# drop it into .github/workflows/ci.yml and a stale SBOM fails the build. It is NOT
+# added to CI by this plan — 02-10 adds no CI steps — but nothing else is needed to add it.
+
+# ===========================================================================
+# DEVIATION FROM 02-RESEARCH.md § Code Examples 8 — `--package-lock-only` ADDED
+#
+# Recorded here rather than applied quietly, because it changes the document.
+# ===========================================================================
+#
+# WHAT WAS FOUND. The research command reads ./node_modules. Both variants were
+# generated and their component sets compared:
+#
+#   installed-tree mode (research command)   288 components
+#   lockfile mode (--package-lock-only)      320 components
+#   only in installed-tree                   none
+#   only in lockfile mode                    32 components
+#
+# All 32 are PLATFORM-SPECIFIC OPTIONAL BINARIES that npm did not materialise on this
+# macOS arm64 host: the seven non-darwin-arm64 @next/swc-* packages and twenty-five
+# @img/sharp-* / @emnapi/runtime packages. Among them:
+#
+#   @next/swc-linux-x64-gnu@16.3.5
+#   @img/sharp-linux-x64@0.35.4
+#   @img/sharp-libvips-linux-x64@1.3.3
+#
+# WHY IT MATTERS. vercel.json deploys this application to region iad1 — Linux x64.
+# Those three packages are precisely the native binaries that RUN IN PRODUCTION. An SBOM
+# generated on a developer's Mac and committed would have omitted the binaries that
+# actually ship, which is the single most expensive way for a bill of materials to be
+# wrong: a consumer scanning it for a native-binary advisory would find nothing.
+#
+# It also breaks this plan's own must-have. `must_haves.truths` requires "The SBOM is
+# byte-stable across regenerations, so a diff on it means the tree actually changed."
+# In installed-tree mode that is FALSE across machines — regenerating on ubuntu-latest
+# with an unchanged lockfile produces a different document, so the CI freshness check
+# the plan names as the point of the exercise could never pass. With --package-lock-only
+# the document depends only on package.json + package-lock.json, both committed, so the
+# guarantee holds on any host.
+#
+# It is also what the plan asks for in words: 02-10-PLAN.md `key_links` says the SBOM is
+# "generated from the final lockfile", and this flag is what makes that literally true.
+#
+# WHAT IT COSTS. Lockfile mode cannot see each package's own package.json on disk, so
+# two human-readable fields are lost. Measured, not guessed:
+#
+#   field              installed-tree      lockfile mode
+#   components               288                320
+#   with purl                288/288            320/320
+#   with licenses            286/288            318/320
+#   with externalReferences  288/288            320/320
+#   with description         258/288              0/320
+#   dependency graph edges   319                351
+#
+# purls, licences, external references and the dependency graph — everything an SBOM is
+# consumed for — are preserved or improved. Only `description` and `author`, which no
+# scanner reads, are lost. The trade was taken.
+
+# ===========================================================================
+# WHAT THE DOCUMENT CONTAINS
+# ===========================================================================
+
+bom_format=CycloneDX
+spec_version=1.6
+bom_version=1
+serial_number=OMITTED (--output-reproducible)
+metadata_timestamp=OMITTED (--output-reproducible)
+main_component=uni-verse@0.1.0
+main_component_type=application
+components=320
+dependency_graph_edges=351
+components_with_license=318
+components_with_purl=320
+generator_toolchain=npm@11.13.0, @cyclonedx/cyclonedx-library@10.2.0, @cyclonedx/cyclonedx-npm@6.0.1
+
+# Batch-1 removals — every one of the eight production declarations plan 02-04 removed is
+# ABSENT from this document, which is the SBOM independently confirming the removal:
+#   vercel                                   absent
+#   swagger-ui-react                         absent
+#   @swagger-api/apidom-ns-openapi-3-1       absent
+#   chart.js                                 absent
+#   react-chartjs-2                          absent
+#   @radix-ui/react-switch                   absent
+#   @radix-ui/react-tabs                     absent
+#   @radix-ui/react-dropdown-menu            absent
+#
+# `yaml` IS PRESENT, and that is correct. 02-10-PLAN.md task 2's verifier lists it among
+# the batch-1 removals, but it was WITHDRAWN from that batch — see 02-04-SUMMARY.md
+# deviation 1 and commit 5fd6745. redoc@2.5.x's prebuilt bundles `require("yaml")` while
+# declaring it in neither dependencies nor peerDependencies, and redoc is reachable from
+# the public /docs route, so removing yaml broke the build. It was restored at ^2.8.2 and
+# batch 1 removed TEN declarations, not eleven. The plan's verifier list is stale against
+# its own phase; the SBOM is right and the list is wrong.
+
+# ===========================================================================
+# THE GENERATOR WAS NEVER ADDED TO THE TREE IT MEASURES
+#
+# Adding an SBOM generator to the dependency tree it is describing is self-defeating, and
+# the same reasoning already governed the codemod in batch 3 and the browserslist updater
+# in batch 4a. One-shot npx only, at a pinned version.
+# ===========================================================================
+
+$ node -e "process.exit(/cyclonedx/i.test(JSON.stringify(require('./package.json')))?1:0)"
+exit_code=0            # 0 means the string does not appear in package.json
+
+$ ls node_modules | grep -i cyclonedx
+exit_code=1            # absent
+
+$ grep -c cyclonedx package-lock.json
+0
+exit_code=1            # absent
+
+$ git status --porcelain -- package.json package-lock.json
+(empty)
+
+# Package legitimacy: @cyclonedx/cyclonedx-npm is approved in 02-RESEARCH.md § Package
+# Legitimacy Audit with verdict OK — first-party source repository
+# github.com/CycloneDX/cyclonedx-node-npm, 370,187 weekly downloads, and listed in the
+# CycloneDX project's own Tool Center. Resolved integrity of the pinned version:
+#   @cyclonedx/cyclonedx-npm@6.0.1
+#   sha512-/aU3bBC6qP6cV/qQ5SfUSygE/+2hQhwgg6sJML31/gZ96NyMvIUuwdk637H4z+LS/NryRT2kjR2wtD0qBEVVHQ==
+
+# ===========================================================================
+# THE RULE FOR WHOEVER TOUCHES THE LOCKFILE NEXT
+#
+#   >>> sbom.cyclonedx.json IS GENERATED. NEVER HAND-EDIT IT. <<<
+#   >>> REGENERATE IT IN THE SAME COMMIT AS ANY package-lock.json CHANGE. <<<
+#
+# The handling rule is copied from .planning/audit/quality/npm-audit.prod.json — a
+# committed, generated, never-hand-edited JSON — per 02-PATTERNS.md § No Analog Found.
+# There is no SBOM precedent in this repository; this is the first one.
+#
+# A lockfile change without a matching SBOM regeneration produces the one failure mode
+# that makes an SBOM worse than having none: a document that is trusted because it is
+# committed and wrong because it is stale. If a dependency moves, run:
+#
+#   npx --yes @cyclonedx/cyclonedx-npm@6.0.1 --omit dev --package-lock-only \
+#     --spec-version 1.6 --output-format JSON --output-file sbom.cyclonedx.json \
+#     --output-reproducible --validate --mc-type application package.json
+#
+# and commit the result alongside the lockfile. Because the output is reproducible, a
+# regeneration with no lockfile change produces no diff at all — so running it
+# unnecessarily costs nothing, and NOT running it is the only way to get this wrong.
