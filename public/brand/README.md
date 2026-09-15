@@ -1,6 +1,6 @@
 # UNI-VERSE Brand Assets
 
-Canonical branding kit for the McGill campus events platform. Files here are served in production via `public/brand` (symlink).
+Canonical branding kit for the McGill campus events platform. This directory lives at `public/brand/` and is served by Next.js at `/brand/*`. (It was previously a top-level `brand/` folder reached through a `public/brand` symlink; Vercel's build cannot copy a symlinked public directory — `Cannot copy '../brand' to a subdirectory of itself` — so the files now live here directly.)
 
 ## Folder structure
 
