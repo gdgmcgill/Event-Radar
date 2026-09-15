@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 2
+current_phase: 02
 current_phase_name: Dependency and Runtime Stabilization
 status: executing
-stopped_at: Completed 01-12-PLAN.md
-last_updated: "2026-09-15T02:28:27.036Z"
-last_activity: 2026-09-14
-last_activity_desc: Phase 01 complete, transitioned to Phase 2
+stopped_at: "Completed 02-01-PLAN.md (batch 0a: toolchain floor)"
+last_updated: "2026-09-15T03:54:49.185Z"
+last_activity: 2026-09-15
+last_activity_desc: "Completed 02-01 (toolchain floor: Node 24 pin, npm test, CI test step, Vitest/Playwright residue deleted)"
 progress:
   total_phases: 8
   completed_phases: 1
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 24
+  completed_plans: 14
   percent: 13
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Every critical workflow in the existing app is verified correct, secure, and reproducible across all user roles before any new product feature is started. If a foundation change breaks a workflow that worked before, the program has failed.
-**Current focus:** Phase 01 — Read-Only Foundation Audit
+**Current focus:** Phase 02 — Dependency and Runtime Stabilization
 
 ## Current Position
 
-Phase: 2 — Dependency and Runtime Stabilization
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-09-14 — Phase 01 complete, transitioned to Phase 2
+Phase: 02 (Dependency and Runtime Stabilization) — EXECUTING
+Plan: 2 of 11
+Status: Executing — 02-01 complete (batch 0a), 02-02 next
+Last activity: 2026-09-15 — Completed 02-01 (toolchain floor: Node 24 pin, npm test, CI test step, Vitest/Playwright residue deleted)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 9%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P11 | ~50 min | 3 tasks | 5 files |
 | Phase 01 P12 | 45 min | 3 tasks | 7 files |
 | Phase 01 P13 | 48 min | 3 tasks | 8 files |
+| Phase 02 P01 | 14min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,12 @@ Recent decisions affecting current work:
 - [Phase 01]: expected_status records what a route should return, never what it returns today — The divergence between the contract and current behaviour is the finding; recording broken behaviour as the contract would launder a defect into a specification (T-01-11-04)
 - [Phase 01]: The aborted run's 33 hand-edited endpoint rows were discarded and the classification re-derived by a committed script — A hand edit is not reproducible: nobody downstream can re-derive it and nobody can tell which cells came from a rule and which from fatigue
 - [Phase 01]: Shared caching of personalized API responses is PROVEN on production: 8 personalized routes returned x-vercel-cache HIT/STALE with age up to 96s under the blanket vercel.json s-maxage=60, and no response varies on Cookie or Authorization — The cache key is the URL alone, so a stored entry is served to every caller regardless of session. Held at latent-hazard/Critical rather than leak-confirmed only because the two-account observation was blocked.
+- [Phase 02]: Node 24 pinned as engines.node '24.x' + .nvmrc '24' + CI node-version-file — one declared major, three consumers that read it rather than restate it
+- [Phase 02]: @types/node 20 -> 24 is Phase 2's only major bump; forced by the runtime pin, zero new tsc diagnostics, zero source changes (evidence/types-node-major-note.md)
+- [Phase 02]: npm test = plain 'jest', deliberately without --passWithNoTests, so a config error matching no tests cannot report green in CI
+- [Phase 02]: The npm audit --audit-level=high CI gate is deferred to plan 02-09: it exits 1 on this tree today and would red-light every PR through batch 5
+- [Phase 02]: tsconfig.json keeps excluding **/*.test.ts and **/*.test.tsx — F-066 is only partially closed by Phase 2 and 02-11 must record it as partial, not claimed
+- [Phase 02]: STAB-02/08/13 reverted to Pending after mark-complete: batch 0a only partially satisfies each (STAB-08 still needs jsdom+testing-library in batch 5; STAB-13 is a phase exit criterion for 02-11; STAB-02's CI half is unobserved and 02-03 owns it)
 
 ### Pending Todos
 
@@ -151,6 +158,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T23:36:05.708Z
-Stopped at: Completed 01-12-PLAN.md
+Last session: 2026-09-15T03:53:19.079Z
+Stopped at: Completed 02-01-PLAN.md (batch 0a: toolchain floor)
 Resume file: None

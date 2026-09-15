@@ -89,12 +89,12 @@ Plans:
   4. Every Validated workflow in PROJECT.md still works: each upgrade batch is one labeled commit followed by lint, type-check, test, build, and a smoke pass, with any major upgrade isolated behind its own migration note.
   5. A Stage 2 completion note evidences the exit gate — no unexplained Critical production vulnerabilities, no reachable High without a dated owner-signed exception against the written vulnerability policy, reproducible install, checks green at or better than the AUDIT-13 baseline, reviewed lockfile — alongside a committed CycloneDX SBOM, Renovate/Dependabot configuration, and before/after bundle size.
 
-**Plans**: 11 plans
+**Plans**: 1/11 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Toolchain floor: Node 24 pin across engines/.nvmrc/CI, `npm test` script, CI test step, Vitest and Playwright residue deleted
+- [x] 02-01-PLAN.md — Toolchain floor: Node 24 pin across engines/.nvmrc/CI, `npm test` script, CI test step, Vitest and Playwright residue deleted
 - [ ] 02-02-PLAN.md — Wave 0 instruments: rate-limit and matcher characterization suites, zero-dependency baseline comparator, Tier 2 smoke script
 - [ ] 02-03-PLAN.md — Written vulnerability policy (before any scan-driven change) and the npm devdir four-scope probe
 
@@ -242,7 +242,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
-| 2. Dependency and Runtime Stabilization | 0/11 | Planned | - |
+| 2. Dependency and Runtime Stabilization | 1/11 | In Progress|  |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/TBD | Not started | - |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |

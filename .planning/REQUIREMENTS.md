@@ -36,7 +36,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 
 ### Stage 2 — Dependency and Runtime Stabilization (STAB)
 
-- [ ] **STAB-01**: Node and npm versions are pinned in `package.json` `engines` and `.nvmrc`, matched to the Vercel runtime, and CI uses the same Node major
+- [x] **STAB-01**: Node and npm versions are pinned in `package.json` `engines` and `.nvmrc`, matched to the Vercel runtime, and CI uses the same Node major
 - [ ] **STAB-02**: The npm `devdir` configuration warning is resolved or its source documented
 - [ ] **STAB-03**: A written vulnerability policy exists before any scan-driven change: zero unexplained Criticals in production deps; Highs in production deps need a fix or a dated, owner-signed exception with a reachability argument; dev-only findings are tracked, not blocking
 - [ ] **STAB-04**: The `vercel` package is removed from production dependencies, and the decision on whether it remains as a devDependency is recorded
@@ -45,7 +45,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [ ] **STAB-07**: `swagger-ui-react` and `redoc` are upgraded, isolated behind auth or a build-time static artifact, or removed, based on the AUDIT-12 reachability answer
 - [ ] **STAB-08**: Jest is the single test runner: `vitest.config.ts` and `vitest.setup.ts` are deleted, `jest-environment-jsdom` and testing-library packages are installed so the skipped `.tsx` suites run, a `test` script exists in `package.json`, and CI runs it
 - [ ] **STAB-09**: Remaining patch/minor upgrades are applied in small labeled batches, one commit per batch, each followed by lint, type-check, test, build, and a smoke pass
-- [ ] **STAB-10**: Any major upgrade is its own change with a migration note and its own smoke pass (React 19 is explicitly deferred; see Out of Scope)
+- [x] **STAB-10**: Any major upgrade is its own change with a migration note and its own smoke pass (React 19 is explicitly deferred; see Out of Scope)
 - [ ] **STAB-11**: `package-lock.json` changes are reviewed as diffs, never regenerated wholesale; `npm audit fix --force` is never used
 - [ ] **STAB-12**: A clean-room install (`rm -rf node_modules && npm ci` in a fresh checkout, ideally in CI) succeeds and builds, with output captured as evidence
 - [ ] **STAB-13**: Build, lint, type-check, and tests are green at the same or better state than the AUDIT-13 baseline
@@ -182,7 +182,7 @@ No phase crosses a stage boundary.
 | AUDIT-19 | Phase 1 | Complete |
 | AUDIT-20 | Phase 1 | Complete |
 | AUDIT-21 | Phase 1 | Complete |
-| STAB-01 | Phase 2 | Pending |
+| STAB-01 | Phase 2 | Complete |
 | STAB-02 | Phase 2 | Pending |
 | STAB-03 | Phase 2 | Pending |
 | STAB-04 | Phase 2 | Pending |
@@ -191,7 +191,7 @@ No phase crosses a stage boundary.
 | STAB-07 | Phase 2 | Pending |
 | STAB-08 | Phase 2 | Pending |
 | STAB-09 | Phase 2 | Pending |
-| STAB-10 | Phase 2 | Pending |
+| STAB-10 | Phase 2 | Complete |
 | STAB-11 | Phase 2 | Pending |
 | STAB-12 | Phase 2 | Pending |
 | STAB-13 | Phase 2 | Pending |
