@@ -34,7 +34,6 @@
     "demo-video",
     "internal",
     "supabase/functions",
-    "vitest.config.ts",
     "**/*.test.ts",
     "**/*.test.tsx"
   ]

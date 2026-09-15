@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "check:feedback": "node scripts/check-feedback-loop.mjs",
+    "test": "jest",
+    "test:ci": "jest --ci",
     "load:online": "k6 run load-tests/k6-online-users.js",
     "load:onboarding": "k6 run load-tests/k6-onboarding.js"
   },
