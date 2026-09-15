@@ -1,0 +1,174 @@
+# bundle-size.before.txt — STAB-16, before side
+# Phase 02-dependency-and-runtime-stabilization, plan 02-04 (batch 1)
+#
+# Format: key=value, one per line, with the producing command in a comment line
+# directly above each key. Same contract as .planning/audit/baseline/versions.txt.
+# Every figure below was re-derived by running the command shown, in this working
+# tree, on 2026-09-15. NOTHING is transcribed from 02-RESEARCH.md § Code Examples 7 —
+# that table's values are reference points, not inputs, and two of them differ from
+# what this tree produces today (see the DRIFT block at the end).
+#
+# ---------------------------------------------------------------------------
+# WHY TWO FAMILIES OF METRICS (02-RESEARCH.md § Pitfall 9)
+#
+# "Remove unused dependencies" and "shrink the bundle" sound like the same thing
+# and are not. Every package batch 1 removes has zero importers, so Turbopack
+# already tree-shook all of them out of every route. The route-bundle delta for
+# batch 1 is therefore expected to be approximately ZERO, and the only removal
+# that can move a route bundle at all is @radix-ui/react-dropdown-menu — and only
+# because its dead wrapper file goes with it.
+#
+#   ROUTE-BUNDLE family  -> moves on batch 2 (next 16.2.1 -> 16.3.5 rewrites the
+#                           framework chunks). Essentially nowhere else.
+#   INSTALL-TREE family  -> moves on batch 1. This is where these removals show up.
+#
+# A single-column bundle table for this batch would be dishonest. Read the
+# install-tree keys for the batch-1 story; read the route-bundle keys only to
+# prove that nothing regressed.
+# ---------------------------------------------------------------------------
+
+measured_at=2026-09-15T04:46:57Z
+git_head_at_measure=3a2bee6
+# node -p "require('next/package.json').version"
+next_version_resolved=16.2.1
+# node -v | npm -v
+node_version=24.16.0
+npm_version=11.13.0
+
+# ===========================================================================
+# FAMILY 1 — ROUTE-BUNDLE METRICS
+#
+# Next 16's Turbopack build prints no Size / First Load JS table at all; there is
+# nothing on stdout to parse. .next/diagnostics/route-bundle-stats.json, written
+# by next/dist/build/route-bundle-stats.js, is the only first-party source. It is
+# copied unmodified to evidence/bundle-size.before.json; the four keys below are
+# derived from that copy.
+#
+# Produced from a COLD build:  rm -rf .next && npm run build   # -> exit 0
+# ===========================================================================
+
+# node -e 'const a=Object.values(require("./.next/diagnostics/route-bundle-stats.json"));console.log(a.length)'
+routes=44
+
+# node -e 'const a=Object.values(require("./.next/diagnostics/route-bundle-stats.json"));console.log(a.reduce((s,x)=>s+x.firstLoadUncompressedJsBytes,0))'
+first_load_js_sum=39846495
+
+# node -e 'const a=Object.values(require("./.next/diagnostics/route-bundle-stats.json"));a.sort((x,y)=>y.firstLoadUncompressedJsBytes-x.firstLoadUncompressedJsBytes);console.log(a[0].route+":"+a[0].firstLoadUncompressedJsBytes)'
+first_load_js_max=/docs:1964234
+
+# node -e 'const a=Object.values(require("./.next/diagnostics/route-bundle-stats.json"));a.sort((x,y)=>y.firstLoadUncompressedJsBytes-x.firstLoadUncompressedJsBytes);console.log(a[a.length>>1].route+":"+a[a.length>>1].firstLoadUncompressedJsBytes)'
+first_load_js_median=/help:840219
+
+# find .next/static -type f -print0 | xargs -0 cat | wc -c
+next_static_bytes=4491132
+
+# find .next/static -type f | wc -l
+next_static_file_count=78
+
+# NOTE on /docs, the 1.96 MB maximum: that is `redoc`, which is REACHABLE from the
+# public /docs route and is STAYING. Removing swagger-ui-react will not move it.
+# .planning/audit/quality/dependency-report.md is the authority for that split:
+# redoc and next-swagger-doc are in the module graph, swagger-ui-react is not.
+# If a later reader sees /docs unchanged after batch 1 and calls the removal
+# ineffective, this is the line that answers them. Pitfall 9 in one number.
+
+# ===========================================================================
+# FAMILY 2 — INSTALL-TREE METRICS
+#
+# These are the numbers batch 1 is actually about.
+# ===========================================================================
+
+# npm ls --omit=dev --all --json --package-lock-only | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const seen=new Set();(function w(n){for(const [k,v] of Object.entries(n.dependencies||{})){seen.add(k+"@"+v.version);w(v);}})(JSON.parse(s));console.log(seen.size);})'
+#   Counts DISTINCT name@version pairs reachable from production dependencies,
+#   walking the whole tree. Not the same quantity as npm audit's metadata.dependencies.prod
+#   (which is 680 and counts differently); both are recorded so neither is mistaken
+#   for the other.
+prod_pkg_count=786
+
+# du -sk node_modules | awk '{print $1}'
+#   Whole installed tree, prod + dev. Batch 1 moves this only after `npm ci`
+#   re-materialises the tree from the reconciled lockfile.
+node_modules_kb=999564
+
+# npm audit --omit=dev --json --package-lock-only > evidence/audit.b1.before.json
+#   then: node -e '...metadata.vulnerabilities'
+#   The JSON is committed verbatim; these keys are a flattened index of it so the
+#   before/after delta can be read without parsing.
+audit_prod_info=0
+audit_prod_low=1
+audit_prod_moderate=13
+audit_prod_high=22
+audit_prod_critical=2
+audit_prod_total=38
+audit_prod_dependencies=680
+# node -e 'console.log(Object.keys(require("./...audit.b1.before.json").vulnerabilities).length)'
+audit_prod_advisory_rows=38
+
+# shasum -a 256 package-lock.json    (NOT sha256sum — absent on this toolchain;
+#                                     shasum -a 256 is the repository convention
+#                                     and produced the Phase 1 lock hash)
+lock_sha256_before=26e97664cf426747cabf98bca1fb497a2c8057958202df637748cac964dfa808
+
+# ===========================================================================
+# DRIFT vs THE PHASE 1 BASELINE — recorded, not reconciled away
+#
+# 02-04-PLAN.md task 1 asserts that next_static_bytes here must EQUAL the
+# next_static_bytes in .planning/audit/baseline/versions.txt. It does not:
+#
+#   .planning/audit/baseline/versions.txt   next_static_bytes=4490961  (2026-09-14T07:25:05Z)
+#   this file                               next_static_bytes=4491132  (2026-09-15T04:46:57Z)
+#   delta                                   +171 bytes  (+0.0038%)
+#
+# The expectation is NOT lowered and the number is NOT adjusted to match. What
+# follows is what was established about the delta, each line re-runnable.
+#
+# 1. The two byte-count commands are equivalent. The Phase 1 figure used a macOS
+#    stat format flag; this file uses the portable pipeline. Run on the SAME build
+#    tree they return the same integer, so the delta is not a measurement artifact:
+#      find .next/static -type f -exec stat -f%z {} + | awk '{s+=$1} END{print s}'   # -> 4491132
+#      find .next/static -type f -print0 | xargs -0 cat | wc -c                       # -> 4491132
+#
+# 2. The build is deterministic within a run-to-run comparison. Two independent
+#    cold builds (rm -rf .next && npm run build) on this tree produced byte-identical
+#    output: next_static_bytes 4491132 both times, first_load_js_sum 39846495 both
+#    times, /docs 1964234 both times. The delta is not build noise.
+#
+# 3. The delta is localised to ONE SHARED CHUNK. It is uniformly +171 bytes on
+#    EVERY route, not concentrated anywhere:
+#      /docs   1964063 -> 1964234   (+171)
+#      /help    840048 ->  840219   (+171)
+#      sum    39838971 -> 39846495  (+7524 = 44 routes x 171)
+#    A chunk in every route's first-load set grew by 171 bytes; nothing else moved.
+#
+# 4. No committed build input that Next reads changed. Everything altered between
+#    the baseline commit and HEAD (git diff --stat 1e2647e^ HEAD -- . ':!.planning'):
+#      package.json      scripts (check:feedback -> test/test:ci), engines, @types/node major
+#      package-lock.json @types/node only (12 insertions / 34 deletions)
+#      tsconfig.json     removed the now-deleted vitest.config.ts from `exclude`
+#      .github/workflows/ci.yml, .nvmrc, .gitignore   CI and tooling only
+#      src/middleware.test.ts, src/middlewareRateLimit.test.ts   new test files, outside
+#                        the App Router bundling graph and excluded by tsconfig
+#      vitest.config.ts, vitest.setup.ts, test-results/   deleted residue
+#    None of these is a client-bundle input. No runtime production dependency
+#    resolved to a different version.
+#
+# 5. Two candidate causes remain, both outside what this plan may touch:
+#    (a) .env.local. Next inlines NEXT_PUBLIC_* values into a shared client chunk.
+#        The file is uncommitted and phase-locked constraint 3 forbids reading it,
+#        so this cannot be confirmed here. It is the single most likely cause: a
+#        value edited between 2026-09-14 and 2026-09-15 would shift one shared
+#        chunk by a fixed amount and every route by that same amount, which is
+#        exactly the shape of observation 3.
+#    (b) browserslist date sensitivity. The build emits a caniuse-lite staleness
+#        warning, and the `not dead` term in browserslist's `defaults` query is
+#        evaluated against the CURRENT DATE rather than static data. A browser
+#        crossing that boundary between the two capture dates changes the
+#        transpile target set and therefore shared-chunk bytes.
+#
+# CONSEQUENCE FOR THE AFTER SIDE (plan 02-11): compare bundle-size.after.txt
+# against THIS file, never against versions.txt. Phase 1's figure was measured on
+# a different day and a different manifest; treating it as the batch-1 before side
+# would silently fold this 171-byte drift into whatever batch 1 is credited with.
+# The value of a before/after pair is that its delta is attributable, and this
+# block exists so that 171 bytes cannot be attributed to a dependency removal.
+# ===========================================================================
