@@ -79,7 +79,6 @@ Plans:
 ### Phase 2: Dependency and Runtime Stabilization
 
 **Goal**: The toolchain and dependency tree are pinned, patched, and reproducible, and the test suite that already passes is wired to actually gate changes — so Stage 3 refactors land on a bisectable base.
-**Mode:** mvp
 **Depends on**: Phase 1 (Stage 1 gate — no dependency change may start before the audit baseline is captured)
 **Requirements**: STAB-01, STAB-02, STAB-03, STAB-04, STAB-05, STAB-06, STAB-07, STAB-08, STAB-09, STAB-10, STAB-11, STAB-12, STAB-13, STAB-14, STAB-15, STAB-16, STAB-17
 **Success Criteria** (what must be TRUE):
