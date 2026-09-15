@@ -1,0 +1,60 @@
+# Seam kit unit suites — REFAC-05, plan 03-03, task 1
+# Recorded: 2026-09-15T21:06:32Z
+# Node: v24.16.0
+
+## Canonical command (plan 03-03, task 1 <verify>)
+
+    npx jest --ci --selectProjects node --testPathPatterns "src/server"
+
+## Command actually run
+
+    npx jest --ci --selectProjects node \
+      --testPathIgnorePatterns "/node_modules/" "/supabase/functions/tests/" \
+      --testPathPatterns "src/server"
+
+## Why the two differ
+
+This plan executed in a git worktree at .claude/worktrees/agent-<id>/.
+jest.config.js carries
+
+    testPathIgnorePatterns: ['/node_modules/', '/.claude/', '/supabase/functions/tests/']
+
+and the worktree's ABSOLUTE path contains '/.claude/', so every suite in the
+worktree is filtered out. The canonical command reports:
+
+    Running one project: node
+    No tests found, exiting with code 1
+    Pattern: src/server - 0 matches
+
+That is not a property of these suites — it filters all 27 suites in the tree,
+including the 20 that pre-date this plan. `npx jest --listTests` returns empty
+in the worktree for the same reason.
+
+The CLI flag overrides that one config value and restores the other two ignores
+verbatim. Nothing else is changed, and jest.config.js is NOT edited — leaving it
+alone is a phase-locked constraint of this plan. In the main checkout, which is
+not under '/.claude/', the canonical command runs unmodified.
+
+## Output
+
+Running one project: node
+PASS node src/server/__tests__/errors.test.ts
+PASS node src/server/__tests__/context.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/elevated.test.ts
+
+Test Suites: 7 passed, 7 total
+Tests:       46 passed, 46 total
+Snapshots:   0 total
+Time:        0.245 s, estimated 1 s
+Ran all test suites matching src/server.
+
+exit=0
+
+## Companion type-check
+
+    npx tsc --noEmit
+    TSC_EXIT=0   (no output)
