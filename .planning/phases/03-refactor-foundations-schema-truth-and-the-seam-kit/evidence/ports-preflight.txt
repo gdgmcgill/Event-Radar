@@ -1,0 +1,255 @@
+RESOLUTION TAKEN: the other project's stack was STOPPED. `supabase/config.toml` was NOT re-ported —
+every declared port keeps its committed value (api 54321, db 54322, db.shadow_port 54320,
+db.pooler 54329, studio 54323, inbucket 54324, analytics 54327). Plan 03-04, the seed loader
+and `playwright.config.ts` inherit the committed numbers unchanged and must still read them
+from `supabase status -o env` rather than hard-coding them.
+
+Plan: 03-01 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit
+Recorded: 2026-09-15T20:56:43Z
+
+================================================================================
+0. PORT LIST RE-DERIVED FROM supabase/config.toml (not transcribed from research)
+================================================================================
+
+$ grep -n "^\[\|^port\|^shadow_port" supabase/config.toml
+
+    7:[api]
+   10:port = 54321
+   27:[db]
+   29:port = 54322
+   31:shadow_port = 54320
+   36:[db.pooler]
+   39:port = 54329
+   82:[studio]
+   85:port = 54323
+   93:[inbucket]
+   96:port = 54324
+  340:[analytics]
+  342:port = 54327
+
+Section-to-port mapping as committed today:
+
+  [api] port            = 54321
+  [db] port             = 54322
+  [db] shadow_port      = 54320
+  [db.pooler] port      = 54329
+  [studio] port         = 54323
+  [inbucket] port       = 54324
+  [analytics] port      = 54327
+
+CORRECTION TO 03-01-PLAN.md TASK 1 PROSE. The plan's inline recital states
+"`[db] shadow_port` is 54329". That is wrong on today's file. `[db] shadow_port` is
+**54320**; **54329** is `[db.pooler] port`. The plan instructed re-derivation from
+config.toml precisely so a stale transcription could not propagate, and this is that
+transcription being caught. Both values are probed below, so the probe set is a
+superset of either reading and no port was left unchecked. `supabase/config.toml` is
+NOT edited by this plan — this note corrects a plan recital, not the file.
+
+================================================================================
+1. BEFORE-PROBE — every port declared in supabase/config.toml
+================================================================================
+
+$ for p in 54320 54321 54322 54323 54324 54327 54329; do nc -z 127.0.0.1 $p && echo "$p BUSY" || echo "$p free"; done
+
+54320 free
+Connection to 127.0.0.1 port 54321 [tcp/*] succeeded!
+54321 BUSY
+Connection to 127.0.0.1 port 54322 [tcp/*] succeeded!
+54322 BUSY
+Connection to 127.0.0.1 port 54323 [tcp/*] succeeded!
+54323 BUSY
+Connection to 127.0.0.1 port 54324 [tcp/*] succeeded!
+54324 BUSY
+Connection to 127.0.0.1 port 54327 [tcp/*] succeeded!
+54327 BUSY
+54329 free
+
+Five of seven BUSY — matching 03-RESEARCH.md § Environment Availability exactly
+(54321-54324, 54327). The two free ports (54320 shadow, 54329 pooler) are bound only
+on demand and were never in contention.
+
+================================================================================
+2. HOLDER IDENTIFIED BY CONTAINER NAME BEFORE ANYTHING WAS STOPPED
+================================================================================
+
+$ docker ps --format '{{.Names}}\t{{.Ports}}'
+
+supabase_studio_PassiveIncomeInvestingDEMO	0.0.0.0:54323->3000/tcp, [::]:54323->3000/tcp
+supabase_pg_meta_PassiveIncomeInvestingDEMO	8080/tcp
+supabase_storage_PassiveIncomeInvestingDEMO	5000/tcp
+supabase_rest_PassiveIncomeInvestingDEMO	3000/tcp
+supabase_realtime_PassiveIncomeInvestingDEMO	4000/tcp
+supabase_inbucket_PassiveIncomeInvestingDEMO	1025/tcp, 1110/tcp, 0.0.0.0:54324->8025/tcp, [::]:54324->8025/tcp
+supabase_auth_PassiveIncomeInvestingDEMO	9999/tcp
+supabase_kong_PassiveIncomeInvestingDEMO	8001/tcp, 8088/tcp, 8443-8444/tcp, 0.0.0.0:54321->8000/tcp, [::]:54321->8000/tcp
+supabase_vector_PassiveIncomeInvestingDEMO
+supabase_analytics_PassiveIncomeInvestingDEMO	0.0.0.0:54327->4000/tcp, [::]:54327->4000/tcp
+supabase_db_PassiveIncomeInvestingDEMO	0.0.0.0:54322->5432/tcp, [::]:54322->5432/tcp
+redis-track-stack	0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp, 0.0.0.0:8081->8001/tcp, [::]:8081->8001/tcp
+
+$ docker ps --filter name=PassiveIncomeInvestingDEMO --format '{{.Names}}' | wc -l
+      11
+
+Confirmed still true on 2026-09-15, not assumed from the research table. `redis-track-stack`
+holds 6379/8081, neither of which this project declares, and it was left running.
+
+================================================================================
+3. ACTION TAKEN AGAINST STATE OUTSIDE THIS REPOSITORY  (threat row T-03-01-07)
+================================================================================
+
+WHAT: the eleven `supabase_*_PassiveIncomeInvestingDEMO` containers were stopped.
+HOW:  the CLI's own project-scoped stop, NOT `docker stop` on raw containers.
+WHY:  those eleven containers are the sole holders of 54321, 54322, 54323, 54324 and
+      54327, and nothing in Phase 3 — `db reset`, `test db`, `gen types --local`, the
+      seed loader, the Playwright harness — can run until they are released.
+      Declared in 03-01-PLAN.md `user_setup` and approved with the plan.
+
+$ supabase stop --project-id PassiveIncomeInvestingDEMO
+
+{"project_id_filter":"PassiveIncomeInvestingDEMO","backup":true,"message":"Stopped supabase local development setup."}
+
+REVERSIBILITY, STATED PRECISELY: `backup: true` in the CLI's own response. `supabase stop`
+was invoked WITHOUT `--no-backup`, so that project's data volumes were retained and its
+database was dumped to its backup volume. Running `supabase start` inside the
+PassiveIncomeInvestingDEMO project restores it. No `docker volume rm`, no `docker system prune`,
+no `--no-backup` was run. Nothing belonging to that project was deleted.
+
+================================================================================
+4. AFTER-STOP PROBE — every declared port released
+================================================================================
+
+$ for p in 54320 54321 54322 54323 54324 54327 54329; do nc -z 127.0.0.1 $p && echo "$p BUSY" || echo "$p free"; done
+
+54320 free
+54321 free
+54322 free
+54323 free
+54324 free
+54327 free
+54329 free
+
+================================================================================
+5. FIRST `supabase start` ATTEMPT — FAILED, AND THE FAILURE IS F-043 ITSELF
+================================================================================
+
+$ supabase start
+
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Starting database...
+Initialising schema...
+Seeding globals from roles.sql...
+Skipping migration 008b_add_is_admin_to_users.sql... (file name must match pattern "<timestamp>_name.sql")
+Applying migration 001_initial_schema.sql...
+Applying migration 002_rls_policies.sql...
+Applying migration 003_user_interactions.sql...
+Applying migration 004_event_popularity.sql...
+Applying migration 005_user_engagement.sql...
+Applying migration 006_tracking_rls_policies.sql...
+Applying migration 007_add_created_by_and_notifications.sql...
+Applying migration 008_event_source_tracking.sql...
+Applying migration 009_user_roles.sql...
+Applying migration 010_feedback_table.sql...
+Applying migration 011_event_images_bucket.sql...
+Applying migration 011_rls_audit.sql...
+Stopping containers...
+{"_tag":"Error","error":{"code":"LegacyMigrationApplyError","message":"ERROR: duplicate key value violates unique constraint \"schema_migrations_pkey\" (SQLSTATE 23505)\nKey (version)=(011) already exists.\nAt statement: 39\nINSERT INTO supabase_migrations.schema_migrations(version, name, statements) VALUES($1, $2, $3)"}}
+
+THIS IS NOT A NEW PROBLEM AND IT IS NOT A PORT PROBLEM. Freeing the ports was necessary
+and was not sufficient. `supabase start` replays `supabase/migrations/` on first
+initialisation, and that replay is the exact defect Phase 3 exists to remove:
+
+  - line 4 of the transcript reproduces F-047 verbatim — `Skipping migration
+    008b_add_is_admin_to_users.sql...` — and the run CONTINUED past it with no error.
+    That is the silent skip `scripts/check-migration-filenames.mjs` (Task 3) converts
+    into a non-zero exit.
+  - the run then aborted at the TWELFTH applied file, `011_rls_audit.sql`, on
+    `Key (version)=(011) already exists` — F-043's abort point, at the file
+    03-RESEARCH.md § Migration State Table predicted, on the key it predicted.
+
+Two independent predictions in 03-RESEARCH.md confirmed by execution, unprompted.
+
+================================================================================
+6. HOW THE STACK WAS BROUGHT UP WITHOUT TOUCHING A SINGLE MIGRATION FILE
+================================================================================
+
+CONSTRAINT: 03-01-PLAN.md prohibits this plan from renaming, moving, editing or deleting
+any file under `supabase/migrations/`. Repairing the replay is plan 03-04's job
+(archive-then-baseline, decision D-01). Task 1's job is narrower: leave a stack running
+that 03-04 can `db reset` against.
+
+WHAT WAS DONE: `[db.migrations] enabled` in `supabase/config.toml` was flipped
+`true` -> `false` for the duration of one `supabase start`, then flipped back to `true`
+before anything was committed. The CLI's own comment on that key reads
+"# If disabled, migrations will be skipped during a db push or reset." No migration file
+was read, renamed, moved, edited or deleted. `supabase start` offers no equivalent flag
+(`supabase start --help` exposes only `--exclude` and `--ignore-health-check`), which is
+why the toggle went through config.toml rather than the command line.
+
+$ supabase start          # with [db.migrations] enabled = false
+
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Starting database...
+Initialising schema...
+Seeding globals from roles.sql...
+WARN: no files matched pattern: supabase/seed.sql
+<startup key block — redacted, see evidence/supabase-status.txt>
+
+The `no files matched pattern: supabase/seed.sql` warning is expected and benign:
+03-RESEARCH.md § Pitfall 8 records that `[db.seed] sql_paths` already points at a file
+that does not exist, that this is currently harmless, and that it should STAY that way
+because the seed belongs in the Node loader (plan 03-07), not in `seed.sql`.
+
+CONSEQUENCE, STATED PLAINLY SO 03-04 INHERITS IT RATHER THAN DISCOVERING IT: the running
+local database has the Supabase-managed schemas (`auth`, `storage`, `realtime`, …) and an
+**EMPTY `public` schema**. `supabase_migrations.schema_migrations` is empty. No application
+table exists locally yet. This is the correct state to hand to 03-04: after 03-04 archives
+the 44 files and writes the baseline, its `supabase db reset` populates `public` from the
+baseline alone, with no pre-existing partial state to confuse the result.
+
+REVERT VERIFIED — the toggle is not in the committed tree:
+
+$ git status --porcelain supabase/
+(no output)
+
+================================================================================
+7. AFTER-START PROBE — the declared ports are now held by THIS project
+================================================================================
+
+$ for p in 54320 54321 54322 54323 54324 54327 54329; do nc -z 127.0.0.1 $p && echo "$p BUSY" || echo "$p free"; done
+
+54320 free
+Connection to 127.0.0.1 port 54321 [tcp/*] succeeded!
+54321 BUSY
+Connection to 127.0.0.1 port 54322 [tcp/*] succeeded!
+54322 BUSY
+Connection to 127.0.0.1 port 54323 [tcp/*] succeeded!
+54323 BUSY
+Connection to 127.0.0.1 port 54324 [tcp/*] succeeded!
+54324 BUSY
+Connection to 127.0.0.1 port 54327 [tcp/*] succeeded!
+54327 BUSY
+54329 free
+
+$ docker ps --filter name=Event-Radar --format '{{.Names}}\t{{.Ports}}'
+
+supabase_studio_Event-Radar	0.0.0.0:54323->3000/tcp, [::]:54323->3000/tcp
+supabase_pg_meta_Event-Radar	8080/tcp
+supabase_edge_runtime_Event-Radar
+supabase_storage_Event-Radar	5000/tcp
+supabase_rest_Event-Radar	3000/tcp
+supabase_realtime_Event-Radar	4000/tcp
+supabase_inbucket_Event-Radar	1025/tcp, 1110/tcp, 0.0.0.0:54324->8025/tcp, [::]:54324->8025/tcp
+supabase_auth_Event-Radar	9999/tcp
+supabase_kong_Event-Radar	8001/tcp, 8088/tcp, 8443-8444/tcp, 0.0.0.0:54321->8000/tcp, [::]:54321->8000/tcp
+supabase_vector_Event-Radar
+supabase_analytics_Event-Radar	0.0.0.0:54327->4000/tcp, [::]:54327->4000/tcp
+supabase_db_Event-Radar	0.0.0.0:54322->5432/tcp, [::]:54322->5432/tcp
+
+The port-to-container mapping is identical to the before-probe with one difference that is
+the whole point of this task: the suffix reads `_Event-Radar` (this repository's
+`project_id`, config.toml line 5) and no longer `_PassiveIncomeInvestingDEMO`.
+
+`supabase_imgproxy_Event-Radar` and `supabase_pooler_Event-Radar` are reported by
+`supabase status` as stopped services. Neither binds a declared port, neither is required
+by any Phase 3 requirement, and no plan in this phase uses the transaction pooler or
+Storage image transforms. Recorded so a later reader does not mistake it for a failure.
