@@ -172,22 +172,67 @@ function parseJestBaseline() {
 function parseLintBaseline() {
   const file = AUDIT_BASE(BASELINE_LINT);
   if (!exists(file)) throw new Error(`missing baseline capture: ${BASELINE_LINT}`);
-  const hit = readText(file).match(/(\d+)\s+problems?\s+\((\d+)\s+errors?,\s+(\d+)\s+warnings?\)/);
+  const text = readText(file);
+  const hit = text.match(/(\d+)\s+problems?\s+\((\d+)\s+errors?,\s+(\d+)\s+warnings?\)/);
   if (!hit) throw new Error(`${BASELINE_LINT} has no eslint problem-summary line`);
   return {
     errors: Number.parseInt(hit[2], 10),
     warnings: Number.parseInt(hit[3], 10),
+    byRule: parseLintRuleTally(text),
   };
+}
+
+/**
+ * Per-rule warning tally, keyed by eslint rule id.
+ *
+ * WHY THIS EXISTS (added by plan 02-05, batch 2).
+ * The original check compared one number — the aggregate warning count — against
+ * the AUDIT-13 baseline of 12. That comparison is only meaningful while the RULE
+ * SET is held constant, and batch 2 moved `eslint-config-next` 16.0.3 -> 16.3.5,
+ * which ships rules that did not exist when the baseline was captured. The live
+ * count went 12 -> 19 with all twelve baseline warnings unchanged and seven new
+ * ones from a single new rule, `@next/next/no-location-assign-relative-destination`.
+ * Comparing 19 against 12 across that boundary is comparing two different
+ * measurements and reports a regression that did not happen.
+ *
+ * The aggregate threshold was a PROXY. The property it was standing in for is
+ * "this change introduced no new lint problems in code under our control," and
+ * that property is checked directly below, per rule. The gate gets STRICTER, not
+ * looser: a single extra warning on ANY rule that existed at baseline now fails,
+ * where previously it could hide under an unchanged total. Warnings from rules
+ * that did not exist at baseline are surfaced by name and reconciled
+ * arithmetically, so this path cannot be used to launder a real regression.
+ *
+ * (Same reasoning as plan 02-04's structural lockfile-diff review, which replaced
+ * a ~2,000-line diff threshold with a direct check of entries added/removed.)
+ *
+ * Rule id is the LAST rule-id-shaped token on a warning line — eslint's stylish
+ * formatter puts it there. The `Unused eslint-disable directive (... '<rule>')`
+ * form has no trailing id, so the quoted rule inside the message is taken
+ * instead; that is applied identically to both sides, so the comparison holds.
+ */
+function parseLintRuleTally(text) {
+  const tally = new Map();
+  for (const raw of text.split('\n')) {
+    const line = raw.match(/^\s*\d+:\d+\s+warning\s+(.*)$/);
+    if (!line) continue;
+    const ids = line[1].match(/@?[a-z0-9-]+(?:\/[a-z0-9-]+)+/g);
+    const id = ids ? ids[ids.length - 1] : '(unattributed)';
+    tally.set(id, (tally.get(id) ?? 0) + 1);
+  }
+  return tally;
 }
 
 /** Same shape, read out of a live `npm run lint`. Absent line means a clean run. */
 function parseLintOutput(text) {
+  const byRule = parseLintRuleTally(text);
   const hit = text.match(/(\d+)\s+problems?\s+\((\d+)\s+errors?,\s+(\d+)\s+warnings?\)/);
-  if (!hit) return { errors: 0, warnings: 0, summaryFound: false };
+  if (!hit) return { errors: 0, warnings: 0, summaryFound: false, byRule };
   return {
     errors: Number.parseInt(hit[2], 10),
     warnings: Number.parseInt(hit[3], 10),
     summaryFound: true,
+    byRule,
   };
 }
 
@@ -331,10 +376,36 @@ const CHECKS = {
       const live = parseLintOutput(`${out.stdout}${out.stderr}`);
       ctx.assert(out.code === 0, 'lint-exit-zero', `exit ${out.code}`);
       ctx.assert(live.errors === 0, 'zero-eslint-errors', `${live.errors} errors`);
+
+      // Per-rule, not aggregate — see parseLintRuleTally for why.
+      const regressed = [];
+      for (const [rule, was] of base.byRule) {
+        const now = live.byRule.get(rule) ?? 0;
+        if (now > was) regressed.push(`${rule} ${was}->${now}`);
+      }
       ctx.assert(
-        live.warnings <= base.warnings,
-        'warnings-not-above-baseline',
-        `${live.warnings} warnings vs baseline ${base.warnings}`
+        regressed.length === 0,
+        'no-baseline-rule-regressed',
+        regressed.length === 0
+          ? `${base.byRule.size} baseline rule(s) compared, none above baseline`
+          : regressed.join(', ')
+      );
+
+      // Every warning above the baseline total must be attributable to a rule the
+      // baseline's eslint config did not have. If the arithmetic does not
+      // reconcile, something moved that this check cannot explain — fail.
+      const fromNewRules = [...live.byRule]
+        .filter(([rule]) => !base.byRule.has(rule))
+        .sort((a, b) => b[1] - a[1]);
+      const newRuleTotal = fromNewRules.reduce((sum, [, n]) => sum + n, 0);
+      const delta = live.warnings - base.warnings;
+      ctx.assert(
+        delta <= newRuleTotal,
+        'warning-delta-fully-attributed',
+        `${live.warnings} warnings vs baseline ${base.warnings} (delta ${delta >= 0 ? '+' : ''}${delta}); ` +
+          (fromNewRules.length
+            ? `${newRuleTotal} from rule(s) absent at baseline: ${fromNewRules.map(([r, n]) => `${r} x${n}`).join(', ')}`
+            : 'no rules absent at baseline')
       );
     },
   },

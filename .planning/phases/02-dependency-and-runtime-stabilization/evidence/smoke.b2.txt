@@ -1,0 +1,74 @@
+# smoke.sh — Tier 2 anonymous HTTP smoke pass
+# host        : http://localhost:3000
+# label       : manual
+# started_at  : 2026-09-15T05:13:48Z
+# curl        : curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1
+# ring rows   : 5 6 8 10 (request path only — independent of Supabase data)
+# data rows   : 1 2 3 4 7 9 (need a reachable Supabase with content)
+
+PASS 1 GET / :: expected 200+marker got 200+marker
+FAIL 2 GET /api/events :: expected 200 and >=1 event got 200 and 0 events
+PASS 3 GET /api/events?search=test&tags=academic :: expected 200 got 200
+PASS 4 GET /clubs :: expected 200 got 200
+PASS 5 GET /profile :: expected 307 -> signin=required&next=/profile got 307 /?signin=required&next=/profile
+PASS 6 GET /my-events :: expected 307 -> signin=required got 307 /?signin=required&next=/my-events
+PASS 7 GET /docs :: expected 200 got 200
+PASS 8 POST(x31) /api/events :: expected 429 + Retry-After got 429 Retry-After=60
+PASS 9 GET /api/health :: expected 200 got 200
+PASS 10 GET /_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js :: expected 200 no redirect got 200 no-location
+
+--- ring rows (5 6 8 10): 4/4 passed
+--- data rows (1 2 3 4 7 9): 5/6 passed
+--- total: 9/10 passed, 1 failed
+--- NOTE: a failing data row may be environment-limited (unreachable or
+---       empty Supabase). The expectation is NOT lowered; name the row
+---       and the reason in the run record instead.
+# finished_at : 2026-09-15T05:13:52Z
+# ==============================================================================
+# Capture provenance — appended by plan 02-05 (batch 2 gate, Tier 2 smoke).
+# Everything ABOVE this block is the verbatim combined stdout+stderr of the
+# command below, untrimmed and unsummarised. Nothing below it is command output.
+#   command     : SMOKE_HOST=http://localhost:3000 bash scripts/smoke.sh
+#   target      : a local `npm run dev` started by this plan, next 16.3.5
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T05:14:13Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | next 16.3.5
+#
+# RING ROWS 5, 6, 8, 10 — 4/4 PASS. These are the rows STAB-09 requires, and the
+# rows that are independent of Supabase data:
+#   row 5  /profile    307 -> /?signin=required&next=/profile   the page-level auth ring
+#   row 6  /my-events  307 -> /?signin=required&next=/my-events second protected route
+#   row 8  POST x31    429 + Retry-After=60                     the rate limiter
+#   row 10 /_next/...  200, no Location                         the matcher exclusion
+#
+# The framework moved a minor and the only page-level authentication ring this
+# application has still redirects anonymous requests away from both protected
+# pages. That is the behaviour-preservation claim batch 2 is making.
+#
+# ROW 2 FAILS, AND IT IS THE SAME ENVIRONMENT LIMITATION AS BATCH 0 AND BATCH 1.
+#   expected : 200 and >=1 event
+#   got      : 200 and 0 events        <- actual value printed, not suppressed
+#   reason   : the local Supabase reachable from this machine holds no approved
+#              events, so the query is correct and the dataset is empty. The
+#              route returns 200 with a well-formed empty array; this is a data
+#              condition, not a request-path defect.
+#   The expectation is NOT lowered and the row is NOT removed from the script.
+#   Identical behaviour was recorded in evidence/smoke.b0.txt (before any
+#   dependency changed) and evidence/smoke.b1.txt, which is what establishes it
+#   as pre-existing rather than introduced by the framework upgrade.
+#
+# BATCH 1 -> BATCH 2 COMPARISON: byte-for-byte the same verdicts on all ten rows
+#   (9/10 passed, ring 4/4, row 2 the only failure). The framework went
+#   16.2.1 -> 16.3.5 and no smoke row changed.
+#
+#   Row 10's URL differs textually from batch 1's because the script discovers a
+#   real chunk filename from the served HTML at run time, and 16.3.5 emits
+#   different chunk names than 16.2.1. The ASSERTION is unchanged — a
+#   /_next/static/ path returns 200 with no Location header, proving the
+#   middleware matcher's negative lookahead still excludes static assets. A
+#   hard-coded chunk name would have made this row fail on a framework upgrade
+#   for a reason that has nothing to do with the matcher.
+#
+#   Row 7 (/docs -> 200) still passes: redoc and its undeclared yaml requirement
+#   survived the framework bump. That subtree is batch 4's business.
+# ==============================================================================
