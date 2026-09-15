@@ -39,7 +39,7 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [x] **STAB-01**: Node and npm versions are pinned in `package.json` `engines` and `.nvmrc`, matched to the Vercel runtime, and CI uses the same Node major
 - [ ] **STAB-02**: The npm `devdir` configuration warning is resolved or its source documented
 - [x] **STAB-03**: A written vulnerability policy exists before any scan-driven change: zero unexplained Criticals in production deps; Highs in production deps need a fix or a dated, owner-signed exception with a reachability argument; dev-only findings are tracked, not blocking
-- [ ] **STAB-04**: The `vercel` package is removed from production dependencies, and the decision on whether it remains as a devDependency is recorded
+- [x] **STAB-04**: The `vercel` package is removed from production dependencies, and the decision on whether it remains as a devDependency is recorded
 - [ ] **STAB-05**: Next.js is upgraded to the patched release closing the July-2026 CVE batch, as its own commit with `react` and `react-dom` untouched
 - [ ] **STAB-06**: `middleware.ts` is migrated to `proxy.ts` per the Next 16 deprecation, as its own gated change with the rate limiter and ban-check behavior smoke-tested before and after
 - [ ] **STAB-07**: `swagger-ui-react` and `redoc` are upgraded, isolated behind auth or a build-time static artifact, or removed, based on the AUDIT-12 reachability answer
@@ -185,7 +185,7 @@ No phase crosses a stage boundary.
 | STAB-01 | Phase 2 | Complete |
 | STAB-02 | Phase 2 | Pending |
 | STAB-03 | Phase 2 | Complete |
-| STAB-04 | Phase 2 | Pending |
+| STAB-04 | Phase 2 | Complete |
 | STAB-05 | Phase 2 | Pending |
 | STAB-06 | Phase 2 | Pending |
 | STAB-07 | Phase 2 | Pending |

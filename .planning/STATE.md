@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Dependency and Runtime Stabilization
 status: executing
-stopped_at: "Completed 02-03-PLAN.md (batch 0c: vulnerability policy + devdir probe)"
-last_updated: "2026-09-15T04:29:08.759Z"
+stopped_at: "Completed 02-04-PLAN.md (batch 1: ten dead declarations removed, advisory rows 38 -> 15)"
+last_updated: "2026-09-15T05:02:50.869Z"
 last_activity: 2026-09-15
-last_activity_desc: "Completed 02-03 (batch 0c: STAB-03 vulnerability policy committed pre-remediation, STAB-02 closed as documentation)"
+last_activity_desc: "Completed 02-04 (batch 1: vercel CLI + nine more dead declarations removed, advisory rows 38 -> 15, prod deps 680 -> 293)"
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 24
-  completed_plans: 16
+  completed_plans: 17
   percent: 13
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 02 (Dependency and Runtime Stabilization) — EXECUTING
-Plan: 4 of 11
-Status: Executing — 02-01, 02-02 and 02-03 complete (batch 0 done), 02-04 next
-Last activity: 2026-09-15 — Completed 02-03 (batch 0c: STAB-03 vulnerability policy committed pre-remediation, STAB-02 closed as documentation)
+Plan: 5 of 11
+Status: Executing — 02-01..02-04 complete (batch 0 and batch 1 done), 02-05 next
+Last activity: 2026-09-15 — Completed 02-04 (batch 1: vercel CLI + nine more dead declarations removed, advisory rows 38 -> 15, prod deps 680 -> 293)
 
 Progress: [█░░░░░░░░░] 9%
 
@@ -39,7 +39,7 @@ Progress: [█░░░░░░░░░] 9%
 
 **Velocity:**
 
-- Total plans completed: 13
+- Total plans completed: 17
 - Average duration: —
 - Total execution time: —
 
@@ -71,6 +71,7 @@ Progress: [█░░░░░░░░░] 9%
 | Phase 02 P01 | 14min | 3 tasks | 14 files |
 | Phase 02 P02 | 22min | 3 tasks | 5 files |
 | Phase 02 P03 | 9min | 2 tasks | 3 files |
+| Phase 02 P04 | 35min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,12 @@ Recent decisions affecting current work:
 - [Phase 02]: The npm audit --audit-level=high CI gate is deferred to plan 02-09: it exits 1 on this tree today and would red-light every PR through batch 5
 - [Phase 02]: tsconfig.json keeps excluding **/*.test.ts and **/*.test.tsx — F-066 is only partially closed by Phase 2 and 02-11 must record it as partial, not claimed
 - [Phase 02]: STAB-02/08/13 reverted to Pending after mark-complete: batch 0a only partially satisfies each (STAB-08 still needs jsdom+testing-library in batch 5; STAB-13 is a phase exit criterion for 02-11; STAB-02's CI half is unobserved and 02-03 owns it)
+- [Phase 02]: The vercel CLI is removed outright, not relocated to devDependencies — relocation retains the whole subtree including the tar critical and buys nothing, because four negative checks find no lifecycle point that invokes it and deployment is Vercel's git integration with buildCommand 'npm run build'
+- [Phase 02]: yaml is NOT dead and was withdrawn from batch 1 — redoc@2.5.2's prebuilt bundles require('yaml') while declaring it in neither dependencies nor peerDependencies, and redoc is reachable from the public /docs route. Batch 1 removes ten declarations, not eleven
+- [Phase 02]: Phase 1's reachability rule has a blind spot — a src/-only grep cannot see a require() inside another dependency's prebuilt bundle. Batches 2-5 must also search node_modules/*/bundles and node_modules/*/dist before removing a non-application-facing package
+- [Phase 02]: The ~2,000-line lockfile-diff threshold is a proxy, not the property — at 8,842 lines batch 1 passed on a structural check (299 entries removed, 0 added, 0 re-resolved, lockfileVersion unchanged) rather than on the count; method committed as evidence/lock.b1.diff-review.md
+- [Phase 02]: next_static_bytes does not reproduce the Phase 1 baseline (4491132 vs 4490961, +171 B uniform across all 44 routes). Measurement is sound and deterministic; the figure is recorded with the delta named, and 02-11 must compare its after side against evidence/bundle-size.before.txt, never versions.txt
+- [Phase 02]: STAB-07, STAB-09, STAB-11 and STAB-16 left Pending by 02-04 — each has clauses this plan does not deliver (redoc untouched; batches 2-5 outstanding; lockfile discipline is a standing property; the formal after side belongs to 02-11). Only STAB-04 marked complete
 
 ### Pending Todos
 
@@ -160,6 +167,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T04:29:03.754Z
-Stopped at: Completed 02-03-PLAN.md (batch 0c: vulnerability policy + devdir probe)
+Last session: 2026-09-15T05:02:39.780Z
+Stopped at: Completed 02-04-PLAN.md (batch 1: ten dead declarations removed, advisory rows 38 -> 15)
 Resume file: None
