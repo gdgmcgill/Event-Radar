@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Dependency and Runtime Stabilization
 status: executing
-stopped_at: "Completed 02-08-PLAN.md (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)"
-last_updated: "2026-09-15T06:25:11.688Z"
+stopped_at: "Completed 02-09-PLAN.md (batch 6a: production census 0 critical / 0 high across 298 prod deps; CI vulnerability gate added unsuppressed between test and build; exception register closed empty). BLOCKED on the 02-09 docs commit — git binary refuses to run pending 'sudo xcodebuild -license'"
+last_updated: "2026-09-15T15:29:20.539Z"
 last_activity: 2026-09-15
 last_activity_desc: "Completed 02-08 (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)"
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 24
-  completed_plans: 21
+  completed_plans: 22
   percent: 13
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 02 (Dependency and Runtime Stabilization) — EXECUTING
-Plan: 9 of 11
+Plan: 10 of 11
 Status: Executing — 02-01..02-08 complete (batches 0-5 done), wave 7 next: 02-09 (batch 6a: CI audit gate, exception register) and 02-10 (batch 6b: SBOM, Renovate, bundle delta)
 Last activity: 2026-09-15 — Completed 02-08 (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)
 
@@ -76,6 +76,7 @@ Progress: [█░░░░░░░░░] 9%
 | Phase 02 P06 | 12min | 3 tasks | 12 files |
 | Phase 02 P07 | 20min | 3 tasks | 14 files |
 | Phase 02 P08 | 13min | 3 tasks | 12 files |
+| Phase 02 P09 | 14min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,11 @@ Recent decisions affecting current work:
 - [Phase 02]: Batch 3 (02-06): the proxy rename is one atomic commit of two renames and two changed lines; the [Middleware] log prefix, src/middlewareRateLimit.ts and the three Phase 5 findings in the file were left untouched so 'same behaviour as before' stays provable
 - [Phase 02]: Batch 3 (02-06): 'Proxy (Middleware)' in the build route table is NOT a rename receipt — batch 2's build printed it on the pre-rename tree. The only receipt is deprecation_warning_lines 1 -> 0
 - [Phase 02]: Batch 3 (02-06): 47 pre-existing untracked files mean the codemod needs --force and staging must be by explicit path, never 'git add -A' — the rename diff is the STAB-06 artifact and must read as a rename
+- [Phase 02]: Batch 6 (02-09): the plan's no-manifest-change constraint (phase_locked_constraints #7, threat T-02-09-SC) was set aside on user decision (Adyan Ullah, 2026-09-15) — the plan required both a green audit gate and a frozen manifest while one production High survived batch 4, and an exception-register row cannot change an exit code. 02-11's completion note must carry this
+- [Phase 02]: Batch 6 (02-09): 02-07's recommended styled-components ^6.5.3 override is INFEASIBLE — every release that drops the postcss dependency (>=6.4.0) adds react-native as an optional peer, and npm 11 resolves react-native@0.87.1 which peer-requires react ^19.2.3, colliding with react 18.3.1 and phase-locked constraint 1. Shipped overrides postcss ^8.5.28 instead — same advisory, smaller blast radius, redoc's peer contract unrewritten
+- [Phase 02]: Batch 6 (02-09): final production census is 0 critical / 0 high / 2 moderate / 0 low across 298 prod deps (phase start: 2/22/13/1 across 680). The exception register closes EMPTY because the last High was fixed, not excepted
+- [Phase 02]: Batch 6 (02-09): STAB-14 is delivered IN PART and 02-11 must record it as partial — the CI gate step exists unsuppressed between the test and build steps and is green locally, but all 113 Phase 2 commits are unpushed so no run has been observed. evidence/ci-green-run.md says UNOBSERVED in its first line
+- [Phase 02]: Batch 6 (02-09): the postcss override collapses next's exact 8.5.23 pin into the single root 8.5.28 copy — 02-07 declined exactly this. Plans 02-10 and 02-11 now measure a tree with an overrides entry: the clean-room install and the bundle-size after side both moved (299 -> 298 prod deps)
 
 ### Pending Todos
 
@@ -163,6 +169,8 @@ None yet.
 - Club-invitation acceptance is broken in production: the invitee SELECT/UPDATE policies exist in 20260226000001_invitee_select_update_policy.sql but not in the database, and /api/clubs/[id]/invites is RLS-reliant so nothing masks it.
 - AUDIT-11 leaves two closable gaps needing one credentialed read each: whether the events-webhook edge function is deployed (supabase functions list), and whether any GoTrue auth hook is configured in the dashboard (Management API GET /v1/projects/{ref}/config/auth). A third open question: user_event_scores reports 0 rows while compute_user_scores succeeds every 6 hours.
 - AUDIT-08 two-session cache probe BLOCKED: COOKIE_A/COOKIE_B not supplied. Retry: export PROD_HOST=https://universeapp.ca plus COOKIE_A/COOKIE_B, then bash .planning/audit/tools/cache-probe.sh && node .planning/audit/tools/gen-cache-matrix.mjs
+- ENVIRONMENT, not repository: the git binary stopped running partway through plan 02-09 — /usr/bin/git now exits 69 with 'You have not agreed to the Xcode license agreements'. Both 02-09 task commits landed first (refs/heads/main = b554d8f66eccc856a0cd3c69df3161bb0ac961ed, confirmed in .git/logs/HEAD). The 02-09 docs commit (SUMMARY.md, STATE.md, ROADMAP.md) is UNCOMMITTED on disk. Unblock: run 'sudo xcodebuild -license' in a Terminal, accept, then commit those files. Plan 02-10 cannot commit until this is cleared
+- STAB-14 is partial: the CI production vulnerability gate is in .github/workflows/ci.yml and exits 0 locally, but no CI run has been observed — all 113 Phase 2 commits are unpushed and the one run on the remote (26121379844) has GitHub-expired logs (HTTP 410). Unblock: push, then confirm six step conclusions and grep the Install step log for 'Unknown <scope> config' to also close STAB-02's CI half. Procedure in evidence/ci-green-run.md sections 3 and 6
 
 ## Deferred Items
 
@@ -175,6 +183,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T06:25:11.685Z
-Stopped at: Completed 02-08-PLAN.md (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)
+Last session: 2026-09-15T15:29:20.535Z
+Stopped at: Completed 02-09-PLAN.md (batch 6a: production census 0 critical / 0 high across 298 prod deps; CI vulnerability gate added unsuppressed between test and build; exception register closed empty). BLOCKED on the 02-09 docs commit — git binary refuses to run pending 'sudo xcodebuild -license'
 Resume file: None
