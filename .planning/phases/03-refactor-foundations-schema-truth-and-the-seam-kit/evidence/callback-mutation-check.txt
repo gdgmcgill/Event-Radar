@@ -1,0 +1,189 @@
+REFAC-08 — mutation check: every characterized branch, removed in turn
+=====================================================================
+
+Plan:     03-02
+Phase:    03-refactor-foundations-schema-truth-and-the-seam-kit
+Recorded: 2026-09-15
+Suite:    src/app/auth/callback/route.test.ts
+Subject:  src/app/auth/callback/route.ts
+
+Method. For each characterized behaviour: apply the minimal edit to the route
+that removes that behaviour, run the suite, record the exit code and the name of
+the test that failed, then restore with `git checkout -- src/app/auth/callback/
+route.ts` — never by hand. The script asserts after every restoration that the
+file is byte-identical to the string it read before the first mutation; any
+divergence aborts the run. This is the WR-04 countermeasure: a PRESERVE suite
+whose assertions cannot fail when the preserved behaviour is removed is not
+coverage, it is decoration.
+
+Command under test (see callback-characterization.txt for why the ignore list is
+overridden in this worktree):
+
+    npx jest --ci --selectProjects node --testPathPatterns auth/callback --testPathIgnorePatterns /node_modules/ /supabase/functions/tests/ src/hooks/
+
+Route hash before the first mutation:  ade670847466dac9ee2fd1af226f07f8e02000d207e33e25758c30a14a8be273
+
+Baseline — unmutated route, suite must be GREEN:
+    Tests:       8 passed, 8 total
+    EXIT CODE: 0
+
+------------------------------------------------------------------------------
+M1 — behaviour 1 — inbound provider-error parameter passes through (route.ts:42-47)
+------------------------------------------------------------------------------
+Edit applied:     delete the `if (errorParam)` early-return block entirely
+Expected red:     passes an inbound provider error through without attempting an exchange
+
+Failing test(s) reported by Jest:
+    ● GET /auth/callback (PRESERVE — REFAC-08) › passes an inbound provider error through without attempting an exchange
+
+    Tests:       1 failed, 7 passed, 8 total
+    EXIT CODE: 1
+    NAMED THE EXPECTED TEST: yes
+    VERDICT: BITES — assertion is load-bearing
+    Restored with `git checkout -- src/app/auth/callback/route.ts`; file verified byte-identical.
+
+------------------------------------------------------------------------------
+M2 — behaviour 2 — absent `code` redirects with error=no_code (route.ts:49-54)
+------------------------------------------------------------------------------
+Edit applied:     delete the `if (!code)` early-return block entirely
+Expected red:     redirects with error=no_code when the code parameter is absent
+
+Failing test(s) reported by Jest:
+    ● GET /auth/callback (PRESERVE — REFAC-08) › redirects with error=no_code when the code parameter is absent
+
+    Tests:       1 failed, 7 passed, 8 total
+    EXIT CODE: 1
+    NAMED THE EXPECTED TEST: yes
+    VERDICT: BITES — assertion is load-bearing
+    Restored with `git checkout -- src/app/auth/callback/route.ts`; file verified byte-identical.
+
+------------------------------------------------------------------------------
+M3 — behaviour 3 — failed code exchange redirects with error=auth_failed (route.ts:89-94)
+------------------------------------------------------------------------------
+Edit applied:     delete the `if (exchangeError)` early-return block entirely
+Expected red:     redirects with error=auth_failed and the provider message when the exchange fails
+
+Failing test(s) reported by Jest:
+    ● GET /auth/callback (PRESERVE — REFAC-08) › redirects with error=auth_failed and the provider message when the exchange fails
+
+    Tests:       1 failed, 7 passed, 8 total
+    EXIT CODE: 1
+    NAMED THE EXPECTED TEST: yes
+    VERDICT: BITES — assertion is load-bearing
+    Restored with `git checkout -- src/app/auth/callback/route.ts`; file verified byte-identical.
+
+------------------------------------------------------------------------------
+M4 — behaviour 4 — McGill domain enforcement, sign-out and orphaned-user delete (route.ts:113)
+------------------------------------------------------------------------------
+Edit applied:     neutralize the enforcement predicate: `!isMcGillEmail(email)` -> `false`
+Expected red:     rejects a non-McGill address, signs it out, and deletes the orphaned auth user
+
+Failing test(s) reported by Jest:
+    ● GET /auth/callback (PRESERVE — REFAC-08) › rejects a non-McGill address, signs it out, and deletes the orphaned auth user
+
+    Tests:       1 failed, 7 passed, 8 total
+    EXIT CODE: 1
+    NAMED THE EXPECTED TEST: yes
+    VERDICT: BITES — assertion is load-bearing
+    Restored with `git checkout -- src/app/auth/callback/route.ts`; file verified byte-identical.
+
+------------------------------------------------------------------------------
+M5 — behaviour 5 — new McGill user's profile is upserted (route.ts:165-171)
+------------------------------------------------------------------------------
+Edit applied:     remove the `.upsert()` write, leaving the surrounding block intact
+Expected red:     upserts the profile and routes a new McGill user to /onboarding
+
+Failing test(s) reported by Jest:
+    ● GET /auth/callback (PRESERVE — REFAC-08) › upserts the profile and routes a new McGill user to /onboarding
+    ● GET /auth/callback (PRESERVE — REFAC-08) › routes an already-onboarded McGill user to the next destination, with no onboarding cookie
+
+    Tests:       2 failed, 6 passed, 8 total
+    EXIT CODE: 1
+    NAMED THE EXPECTED TEST: yes
+    VERDICT: BITES — assertion is load-bearing
+    Restored with `git checkout -- src/app/auth/callback/route.ts`; file verified byte-identical.
+
+    Note. M5 is the one cycle that reds two tests, and the second is deliberate
+    rather than collateral: behaviour 6's test also asserts `expect(mockUpsert)
+    .toHaveBeenCalled()`, because "an already-onboarded user still gets their
+    profile written, it just does not get routed to onboarding" is part of what
+    that test pins. Removing the upsert removes it for both users, so both go
+    red. The cycle that isolates behaviour 6's *routing* half on its own is M6,
+    which reds exactly one test. Every other cycle reds exactly one.
+
+------------------------------------------------------------------------------
+M5b — behaviour 5 (supplementary) — the needs_onboarding cookie is set on the onboarding path (route.ts:224-231)
+------------------------------------------------------------------------------
+Edit applied:     delete the `if (needsOnboarding)` cookie-set block entirely
+Expected red:     upserts the profile and routes a new McGill user to /onboarding
+
+Failing test(s) reported by Jest:
+    ● GET /auth/callback (PRESERVE — REFAC-08) › upserts the profile and routes a new McGill user to /onboarding
+
+    Tests:       1 failed, 7 passed, 8 total
+    EXIT CODE: 1
+    NAMED THE EXPECTED TEST: yes
+    VERDICT: BITES — assertion is load-bearing
+    Restored with `git checkout -- src/app/auth/callback/route.ts`; file verified byte-identical.
+
+------------------------------------------------------------------------------
+M6 — behaviour 6 — an already-onboarded user routes to `next` rather than to onboarding (route.ts:183)
+------------------------------------------------------------------------------
+Edit applied:     force the flag: `needsOnboarding = !profile?.onboarding_completed;` -> `needsOnboarding = true;`
+Expected red:     routes an already-onboarded McGill user to the next destination, with no onboarding cookie
+
+Failing test(s) reported by Jest:
+    ● GET /auth/callback (PRESERVE — REFAC-08) › routes an already-onboarded McGill user to the next destination, with no onboarding cookie
+
+    Tests:       1 failed, 7 passed, 8 total
+    EXIT CODE: 1
+    NAMED THE EXPECTED TEST: yes
+    VERDICT: BITES — assertion is load-bearing
+    Restored with `git checkout -- src/app/auth/callback/route.ts`; file verified byte-identical.
+
+------------------------------------------------------------------------------
+M7 — behaviour 7 — ADMIN_EMAILS address has "admin" appended to its roles (route.ts:187-193)
+------------------------------------------------------------------------------
+Edit applied:     delete the admin role-append block entirely
+Expected red:     appends admin to the existing roles for an address in ADMIN_EMAILS
+
+Failing test(s) reported by Jest:
+    ● GET /auth/callback (PRESERVE — REFAC-08) › appends admin to the existing roles for an address in ADMIN_EMAILS
+
+    Tests:       1 failed, 7 passed, 8 total
+    EXIT CODE: 1
+    NAMED THE EXPECTED TEST: yes
+    VERDICT: BITES — assertion is load-bearing
+    Restored with `git checkout -- src/app/auth/callback/route.ts`; file verified byte-identical.
+
+------------------------------------------------------------------------------
+M8 — behaviour 8 — profile sync is skipped wholesale when SUPABASE_SERVICE_ROLE_KEY is absent (route.ts:162)
+------------------------------------------------------------------------------
+Edit applied:     neutralize the guard: `if (process.env.SUPABASE_SERVICE_ROLE_KEY) {` -> `if (true) {`
+Expected red:     skips profile sync entirely and still admits the user when the service key is absent
+
+Failing test(s) reported by Jest:
+    ● GET /auth/callback (PRESERVE — REFAC-08) › skips profile sync entirely and still admits the user when the service key is absent
+
+    Tests:       1 failed, 7 passed, 8 total
+    EXIT CODE: 1
+    NAMED THE EXPECTED TEST: yes
+    VERDICT: BITES — assertion is load-bearing
+    Restored with `git checkout -- src/app/auth/callback/route.ts`; file verified byte-identical.
+
+==============================================================================
+SUMMARY
+==============================================================================
+
+Mutation cycles run:                       9
+Cycles that turned the suite red:          9
+Cycles that left the suite GREEN:          0  (none — every branch is load-bearing)
+Cycles whose red named the expected test:  9 of 9
+
+Route hash before first mutation:  ade670847466dac9ee2fd1af226f07f8e02000d207e33e25758c30a14a8be273
+Route hash after last restoration: ade670847466dac9ee2fd1af226f07f8e02000d207e33e25758c30a14a8be273
+MATCH: yes — the route is byte-identical to where this check started
+
+Final confirmation run on the restored route:
+    Tests:       8 passed, 8 total
+    EXIT CODE: 0

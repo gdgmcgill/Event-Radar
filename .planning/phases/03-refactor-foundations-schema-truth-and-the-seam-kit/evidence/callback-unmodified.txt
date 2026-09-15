@@ -1,0 +1,115 @@
+REFAC-08 — proof that src/app/auth/callback/route.ts was never modified
+======================================================================
+
+Plan:     03-02
+Phase:    03-refactor-foundations-schema-truth-and-the-seam-kit
+Recorded: 2026-09-15
+
+Why this file exists. A characterization plan creates a standing pressure to
+edit the subject until the assertions pass (T-03-02-05). If that happens the
+artifact stops being a contract and becomes a transcription of whatever shape
+was convenient. The plan's central claim is therefore not "the tests pass" but
+"the tests pass against code nobody touched", and that claim needs its own
+evidence. Task 2 additionally applied nine deliberate mutations to this file and
+restored each one; the hash below is taken AFTER all nine cycles completed.
+
+
+------------------------------------------------------------------------------
+1. Hash at plan start, before the suite was written
+------------------------------------------------------------------------------
+
+$ shasum -a 256 src/app/auth/callback/route.ts
+ade670847466dac9ee2fd1af226f07f8e02000d207e33e25758c30a14a8be273  src/app/auth/callback/route.ts
+
+(`shasum -a 256`, not `sha256sum` — the Phase 2 evidence convention, and
+`sha256sum` is not present on this platform.)
+
+
+------------------------------------------------------------------------------
+2. Hash after the suite, and after all nine mutation cycles were restored
+------------------------------------------------------------------------------
+
+$ shasum -a 256 src/app/auth/callback/route.ts
+ade670847466dac9ee2fd1af226f07f8e02000d207e33e25758c30a14a8be273  src/app/auth/callback/route.ts
+
+MATCH. The value is identical to the plan-start value in § 1. The file is
+byte-for-byte what it was before this plan began.
+
+The same two values are independently recorded by the mutation-check script,
+which computed them itself at the top and bottom of its run — see
+callback-mutation-check.txt § SUMMARY, "Route hash before first mutation" and
+"Route hash after last restoration".
+
+
+------------------------------------------------------------------------------
+3. Git agrees: no diff, no status entry
+------------------------------------------------------------------------------
+
+$ git diff -- src/app/auth/callback/route.ts
+[no output]
+[exit code: 0]
+
+$ git diff --exit-code --stat -- src/app/auth/callback/route.ts
+[no output]
+[exit code: 0]        <- --exit-code returns 1 on any difference; it returned 0
+
+$ git status --porcelain src/app/auth/callback/route.ts
+[no output]
+[exit code: 0]
+
+
+------------------------------------------------------------------------------
+4. Exactly one path under src/ was touched by this plan
+------------------------------------------------------------------------------
+
+$ git diff --name-only HEAD~1 HEAD -- src/
+src/app/auth/callback/route.test.ts
+
+$ git diff --name-only -- src/
+[no output]           <- nothing left uncommitted under src/
+
+One new file. No modification to the subject, and no modification to any other
+file under src/, which is what the plan's prohibitions require while plans 03-01
+and 03-03 run in their own worktrees against the same base commit.
+
+
+------------------------------------------------------------------------------
+5. The files this plan deliberately did not touch
+------------------------------------------------------------------------------
+
+$ git status --porcelain package.json package-lock.json jest.config.js supabase/
+[no output]
+
+`npm ci` was run in this worktree to install the committed lockfile — it neither
+rewrote `package-lock.json` nor altered `package.json`. No package was installed
+(T-03-02-SC). `jest.config.js` was not edited: the suite is a `.test.ts` under
+`src/` and outside `src/hooks/`, so the existing `node` project's
+`testMatch: ['<rootDir>/src/**/*.test.ts']` picks it up with no config change.
+
+
+------------------------------------------------------------------------------
+6. How the restoration was performed
+------------------------------------------------------------------------------
+
+Every one of the nine mutation cycles restored the file with
+
+    git checkout -- src/app/auth/callback/route.ts
+
+and never by re-editing it by hand. The script then re-read the file and
+asserted it was identical to the string captured before the first mutation,
+aborting the whole run on any divergence. Nine hand-restorations is exactly how
+a stray character survives into a commit, and this plan's whole claim is that it
+did not.
+
+
+------------------------------------------------------------------------------
+7. What this proves, and what it does not
+------------------------------------------------------------------------------
+
+Proves: the eight characterized behaviours were read off unmodified source and
+the assertions were fitted to the code, not the code to the assertions.
+
+Does NOT prove: that the behaviours are correct, or desirable, or that they fire
+in production. Two of them are tagged DEFECT. See
+callback-characterization-note.md for the tagging and for the three coverage
+caveats a later reader would otherwise get wrong.
