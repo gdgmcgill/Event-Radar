@@ -1,0 +1,51 @@
+# ESLint import boundary — GREEN capture (REFAC-05, plan 03-03, task 2)
+# Recorded: 2026-09-15T21:09:20Z
+# This run POSTDATES the deletion of src/app/boundary-fixture.ts. The red
+# capture was taken at 21:09Z with the fixture present; the file was then
+# removed, and this run started at 21:09:20Z. Ordering verified by:
+#
+#     rm src/app/boundary-fixture.ts
+#     git status --porcelain src/app/     ->  (empty)
+#     npm run lint                        ->  exit 0
+#
+# grep -c "boundary-fixture" over this output returns 0 — the fixture does not
+# appear anywhere in the green run.
+
+## Command
+
+    npm run lint
+
+## Output (tail — the full run lists the same 19 pre-existing warnings as the
+## red capture, with the two fixture errors gone)
+
+> uni-verse@0.1.0 lint
+> eslint .
+
+…19 pre-existing warnings, byte-for-byte the set in the red capture…
+
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+
+## What this proves
+
+  - exit is ZERO with the boundary rule ACTIVE at error severity
+  - the lint step is back at its measured floor: 0 errors, 19 warnings — the
+    same warning count recorded before this plan touched anything, so the rule
+    moved the error count only, and only for the fixture
+  - the 24 legacy callsites lint clean, because the generated allow-list has
+    its BRACKETS ESCAPED. Unescaped, 13 of the 24 entries are dynamic routes
+    whose `[id]` segments a glob reads as character classes; those entries
+    would match nothing and the files would leak through as errors (research
+    measured 12 leaking on a 23-entry list)
+  - therefore the phase gate's zero-error floor holds:
+    check-baseline.mjs :: lint :: zero-eslint-errors still passes
+
+## The pair, together
+
+red  -> exit 1, 2 × no-restricted-imports on a NEW violating file
+green -> exit 0, 0 errors, fixture gone
+
+A rule that only ever passes proves nothing. A rule that fails on a new
+violation and passes without it is a control.

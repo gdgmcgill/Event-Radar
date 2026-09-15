@@ -1,0 +1,67 @@
+# Service-role callsite census under src/app/** — REFAC-05, plan 03-03, task 2
+# Recorded: 2026-09-15T21:07:41Z
+# Re-derived live, on this tree, at plan start. NOT copied from the research.
+
+## Producing command
+
+    grep -rl "supabase/service\|@supabase/supabase-js" src/app/ | sort
+
+## Files
+
+src/app/api/admin/calculate-popularity/route.ts
+src/app/api/admin/clubs/[id]/route.ts
+src/app/api/admin/events/[id]/edits/route.ts
+src/app/api/admin/events/[id]/status/route.ts
+src/app/api/admin/organizer-requests/[id]/route.ts
+src/app/api/admin/organizers/route.ts
+src/app/api/admin/reports/[id]/route.ts
+src/app/api/admin/reports/route.ts
+src/app/api/admin/users/[id]/ban/route.ts
+src/app/api/clubs/[id]/appeal/route.ts
+src/app/api/clubs/[id]/route.ts
+src/app/api/clubs/[id]/transfer/route.ts
+src/app/api/clubs/route.ts
+src/app/api/cron/send-feedback-requests/route.ts
+src/app/api/cron/send-reminders/route.ts
+src/app/api/events/[id]/appeal/route.ts
+src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts
+src/app/api/profile/avatar/route.ts
+src/app/api/profile/banner/route.ts
+src/app/api/recommendations/batch/route.ts
+src/app/api/users/[id]/route.ts
+src/app/api/users/me/suggestions/route.ts
+src/app/auth/callback/route.ts
+src/app/users/[id]/page.tsx
+
+count=24
+dynamic_route_entries=13
+
+## The discrepancy, recorded rather than resolved by preference
+
+03-RESEARCH.md § Code Examples 8 records **23** files as of 2026-09-15. A live
+re-derivation during planning, on the same date, returned **24**. This census,
+re-run at the start of plan 03-03 execution, also returns **24**.
+
+**The live number is authoritative.** The research figure is a measurement taken
+at one moment against one working tree; this census is re-derived from the tree
+being changed, by the command printed above, which anyone can re-run. Where the
+program's own documents disagree, the reproducible measurement wins — and the
+disagreement is recorded here so that a later reader finds it already noticed
+rather than discovering it.
+
+Research's other figures are consistent with 24 and were not adjusted: 13 of
+these entries are dynamic routes (research says "thirteen of the 23"), and the
+unescaped-allow-list leak was measured at 12 errors.
+
+## What this count is FOR
+
+This is the phase's "zero routes" tripwire. Plan 03-03 applies the seam to zero
+routes, so this count must be **identical** at the end of this plan and at the
+end of the phase. It fails in both directions on purpose:
+
+  - a HIGHER count means a new file reached the service-role credential
+  - a LOWER count means a route was quietly migrated to the seam, which this
+    phase forbids (L3 / REFAC-05 / ROADMAP SC3)
+
+`scripts/check-elevated-ratchet.mjs` (task 3) asserts the first direction on
+every run and reports the second.
