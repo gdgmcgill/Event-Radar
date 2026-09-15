@@ -89,7 +89,43 @@ Plans:
   4. Every Validated workflow in PROJECT.md still works: each upgrade batch is one labeled commit followed by lint, type-check, test, build, and a smoke pass, with any major upgrade isolated behind its own migration note.
   5. A Stage 2 completion note evidences the exit gate — no unexplained Critical production vulnerabilities, no reachable High without a dated owner-signed exception against the written vulnerability policy, reproducible install, checks green at or better than the AUDIT-13 baseline, reviewed lockfile — alongside a committed CycloneDX SBOM, Renovate/Dependabot configuration, and before/after bundle size.
 
-**Plans**: TBD
+**Plans**: 11 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Toolchain floor: Node 24 pin across engines/.nvmrc/CI, `npm test` script, CI test step, Vitest and Playwright residue deleted
+- [ ] 02-02-PLAN.md — Wave 0 instruments: rate-limit and matcher characterization suites, zero-dependency baseline comparator, Tier 2 smoke script
+- [ ] 02-03-PLAN.md — Written vulnerability policy (before any scan-driven change) and the npm devdir four-scope probe
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-04-PLAN.md — Batch 1 removals: Vercel CLI, Swagger UI and companions, 8 further dead declarations, dead Radix wrapper, tailwindcss-animate relocated; STAB-16 before capture
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-05-PLAN.md — Batch 2: Next.js to the re-verified patched release alone, react/react-dom untouched, image-optimization config comment
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-06-PLAN.md — Batch 3: atomic `middleware.ts` → `proxy.ts` migration behind before/after characterization and the protected-route smoke
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 02-07-PLAN.md — Batch 4: patch/minor remediation, Redoc patched, Supabase SDK as its own sub-commit with a defer rule, interim clean room
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 02-08-PLAN.md — Batch 5: jsdom and testing-library installed, two-project Jest config, 4 suites un-skipped, 5th dispositioned
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 02-09-PLAN.md — Batch 6a: CI production vulnerability gate added last, final census, exception register filled
+- [ ] 02-10-PLAN.md — Batch 6b: CycloneDX SBOM, Renovate configuration, two-family bundle-size delta
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 02-11-PLAN.md — Batch 6c: clean-room reproducible install, finding register reconciled to the roadmap, stale docs corrected, Stage 2 completion note
 
 ### Phase 3: Refactor Foundations — Schema Truth and the Seam Kit
 
@@ -206,7 +242,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
-| 2. Dependency and Runtime Stabilization | 0/TBD | Not started | - |
+| 2. Dependency and Runtime Stabilization | 0/11 | Planned | - |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 0/TBD | Not started | - |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |
