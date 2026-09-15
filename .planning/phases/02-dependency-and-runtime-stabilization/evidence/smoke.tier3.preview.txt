@@ -1,0 +1,72 @@
+# smoke.sh — Tier 2 anonymous HTTP smoke pass
+# host        : https://event-radar-p16f0ng94-adyan-ullahs-projects.vercel.app
+# label       : tier3.preview
+# started_at  : 2026-09-15T19:19:37Z
+# curl        : curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1
+# ring rows   : 5 6 8 10 (request path only — independent of Supabase data)
+# data rows   : 1 2 3 4 7 9 (need a reachable Supabase with content)
+
+FAIL 1 GET / :: expected 200 with marker 'Happening Now' got 200 marker=absent
+FAIL 2 GET /api/events :: expected 200 and >=1 event got 200 and 0 events
+PASS 3 GET /api/events?search=test&tags=academic :: expected 200 got 200
+PASS 4 GET /clubs :: expected 200 got 200
+PASS 5 GET /profile :: expected 307 -> signin=required&next=/profile got 307 /?signin=required&next=/profile
+PASS 6 GET /my-events :: expected 307 -> signin=required got 307 /?signin=required&next=/my-events
+PASS 7 GET /docs :: expected 200 got 200
+PASS 8 POST(x31) /api/events :: expected 429 + Retry-After got 429 Retry-After=12
+PASS 9 GET /api/health :: expected 200 got 200
+PASS 10 GET /_next/static/immutable/chunks/2f3bfck01x25e.js :: expected 200 no redirect got 200 no-location
+
+--- ring rows (5 6 8 10): 4/4 passed
+--- data rows (1 2 3 4 7 9): 4/6 passed
+--- total: 8/10 passed, 2 failed
+--- NOTE: a failing data row may be environment-limited (unreachable or
+---       empty Supabase). The expectation is NOT lowered; name the row
+---       and the reason in the run record instead.
+# finished_at : 2026-09-15T19:19:45Z
+
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the output of
+# the command below, untrimmed and unsummarised.
+# ==============================================================================
+# purpose         : Tier 3 — the rename exercised against a DEPLOYED platform
+#                   function, not a local dev server (threat T-02-06-07; plan
+#                   02-06 § human-check; STAGE-2-COMPLETION § 11)
+# target          : Vercel PREVIEW deployment (not production)
+#                   https://event-radar-p16f0ng94-adyan-ullahs-projects.vercel.app
+#                   deployment id  event-radar-p16f0ng94, environment Preview
+# tree deployed   : main @ d14456b (7e797af = the pushed Phase 2 tree + the
+#                   public/brand symlink → directory fix, see README there)
+# ci run for tree : https://github.com/gdgmcgill/Event-Radar/actions/runs/35011042332 (7e797af)
+# run_at          : 2026-09-15T19:19:37Z
+# command         : PATH="<shim>:$PATH" SMOKE_HOST="https://event-radar-p16f0ng94-adyan-ullahs-projects.vercel.app" SMOKE_LABEL=tier3.preview SMOKE_TIMEOUT=60 bash scripts/smoke.sh
+# deployment      : Vercel Deployment Protection (Vercel Authentication) is ON
+#   protection      for this project's previews; anonymous requests receive a
+#                   302 to vercel.com/sso-api. The run therefore used a curl
+#                   shim that adds the project's protection-bypass header (the
+#                   same header `vercel curl` sends) to every request. The
+#                   value was held in shell memory for the run, never written
+#                   to disk, and this capture was grepped for it afterwards:
+#                   0 matches. The header is a request header; smoke.sh
+#                   captures response headers only. Protection was NOT
+#                   disabled. Nothing else about the requests was changed.
+# ring rows       : 4/4 PASS through the real platform function —
+#                   row 5  /profile    307 → /?signin=required&next=/profile
+#                   row 6  /my-events  307 → /?signin=required&next=/my-events
+#                   row 8  31 × POST /api/events → 429 + Retry-After
+#                   row 10 built chunk served 200 with no redirect (matcher
+#                          exclusion holds on the CDN path)
+# data rows       : 4/6. Rows 1 and 2 FAIL for the same environment reason the
+#                   local batch-6 run recorded (smoke.b6.txt row 2: 0 events):
+#                   the Supabase project the preview points at holds no
+#                   approved upcoming events, so /api/events returns [] and the
+#                   home page renders no "Happening Now" section. The
+#                   expectation is not lowered; the rows are named here.
+# retry-after     : 12 on the preview vs 60 locally. The limiter's window is
+#                   per-instance in-memory (src/middlewareRateLimit.ts); the
+#                   value is the seconds left in the instance's current window
+#                   at the 31st request, so it varies with when the window
+#                   opened. The assertion is 429 + header present, which held.
+# not covered     : steps 1–5 of proxy-migration-note.md § 9 (signed-in McGill
+#                   flows) — they need a real McGill account and remain the
+#                   human UAT item (02-UAT.md test 1).

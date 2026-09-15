@@ -1,8 +1,8 @@
 ---
 phase: 2
 slug: dependency-and-runtime-stabilization
-status: draft
-threats_open: 2
+status: verified
+threats_open: 0
 asvs_level: 1
 created: 2026-09-15
 ---
@@ -114,7 +114,7 @@ Status legend: **closed** · **open**. Superscript notes follow the table.
 | T-02-06-04 | Denial of Service | Both convention files present | mitigate | `src/middleware.ts` absent; `batch-03-build.txt` has no two-files error, `deprecation_warning_lines_after=0` | closed |
 | T-02-06-05 | Tampering | Behaviour fix smuggled into the rename | mitigate | `proxy.rename-diff.txt` — similarity 98%, 2 insertions / 2 deletions across both files | closed |
 | T-02-06-06 | Spoofing | Codemod package identity | mitigate | `@next/codemod@16.3.5`, pinned to the installed framework, one-shot, absent from `package.json` | closed |
-| T-02-06-07 | Repudiation | Green local run standing in for deployed behaviour | mitigate | **Tier 3 preview-deployment run not executed** — `STAGE-2-COMPLETION.md:11` and `proxy-migration-note.md § 9` carry an empty URL and date. Tracked as UAT in `02-VERIFICATION.md` | **open** |
+| T-02-06-07 | Repudiation | Green local run standing in for deployed behaviour | mitigate | **Closed 2026-09-15**: `evidence/smoke.tier3.preview.txt` — the ten-row smoke pass against Vercel preview `event-radar-p16f0ng94` (tree `d14456b`), ring rows 4/4 through the regenerated platform function: rows 5–6 `307 → /?signin=required`, row 8 `429` + `Retry-After`, row 10 chunk served with no redirect. `proxy-migration-note.md` § 9 carries the URL and date. The five signed-in Tier 3 steps remain `02-UAT.md` test 1 (see Residuals) | closed |
 | T-02-06-SC | Tampering | npm installs | mitigate | `git show --stat 0d66a1d` — manifests not in the rename commit | closed |
 | T-02-07-01 | Tampering | React moved by a bare update command | mitigate | `check-baseline.mjs` react / react-dom ranges byte-identical PASS | closed |
 | T-02-07-02 | Tampering | Supabase SDK behaviour change across 35 minors | mitigate | Sub-commit reverted; lock `@supabase/supabase-js` 2.81.1; `supabase-js-decision.md`; `STAGE-2-COMPLETION.md § 12.4` | closed |
@@ -131,7 +131,7 @@ Status legend: **closed** · **open**. Superscript notes follow the table.
 | T-02-08-05 | Denial of Service | Jest matching nothing while CI reports green | mitigate | `passWithNoTests` absent; executing-suites-not-below-baseline 22 of 23 vs 16 of 21 PASS | closed |
 | T-02-08-06 | Repudiation | Pass count up, skip count hidden | mitigate | Both asserted independently: 278 vs 220 and 5 skipped vs 36 | closed |
 | T-02-08-SC | Tampering | Four new package names | mitigate | All four present at declared ranges; legitimacy audit 0 SLOP / 0 genuine SUS | closed |
-| T-02-09-01 | Repudiation | Gate configured but never observed green | mitigate | **Local half met** (`audit-gate-local.txt` exit_code=0, identical command); **the run identifier is unobserved** — `ci-green-run.md:109-118` records UNOBSERVED for all six steps because nothing has been pushed. Tracked as UAT in `02-VERIFICATION.md` | **open** |
+| T-02-09-01 | Repudiation | Gate configured but never observed green | mitigate | **Closed 2026-09-15**: `evidence/ci-green-run.md` §§ 1, 5 — run `35011042332` on `7e797af`, `conclusion: success`, all six steps green including `Production vulnerability gate`; conclusions read from `gh run view --json jobs`. § 6 settles `ci_npm_unknown_config=absent` from the install log | closed |
 | T-02-09-02 | Tampering | Gate defeated by a suppressed exit code | mitigate | `ci.yml` grep for `continue-on-error`, `\|\| true`, `set +e`, `exit 0` → no match | closed |
 | T-02-09-03 | Repudiation | Exception register laundering a High | mitigate | Four mandatory attributes at `VULNERABILITY-POLICY.md:100-103`; register examined and empty (0 High) | closed |
 | T-02-09-04 | Elevation of Privilege | Surviving production Critical papered over | mitigate | `audit.after.json` → 0 critical, 0 high; policy line 51: a Critical may not be risk-accepted | closed |
@@ -190,8 +190,10 @@ Recorded so that silence is not read as closure. None is a Phase 2 code gap; eac
 
 | Item | Threat Ref | State | Owner |
 |---|---|---|---|
-| Real GitHub Actions run of the test step and the production audit gate | T-02-09-01 | **Open.** The workflow is correctly wired and every command was rehearsed green locally, but `main` is ahead of `origin/main` and no run object exists. `ci-green-run.md` records UNOBSERVED honestly | Phase owner: push, observe, fill `ci-green-run.md` § 1 and § 5, re-run `/gsd-secure-phase 2` |
-| Tier 3 preview-deployment pass for the proxy rename (five steps) | T-02-06-07 | **Open.** Blocked on the same push. The platform function is regenerated only at deploy time, so `npm run dev` cannot exercise the CDN path | Phase owner: run the checklist in `proxy-migration-note.md` § 9 against a Vercel preview, re-run `/gsd-secure-phase 2` |
+| Real GitHub Actions run of the test step and the production audit gate | T-02-09-01 | **Closed 2026-09-15.** `main` pushed (`6f9c3b7..7e797af`); run `35011042332` green on all six steps; recorded in `ci-green-run.md` | — |
+| Tier 3 deployed-path run for the proxy rename | T-02-06-07 | **Closed 2026-09-15.** `smoke.tier3.preview.txt`: ring rows 4/4 on preview `event-radar-p16f0ng94`. The preview sits behind Vercel Deployment Protection, satisfied for the run with the project's protection-bypass request header (never by disabling protection; the capture is grepped clean of the value) | — |
+| Tier 3 signed-in steps 1–5 (McGill sign-in, non-McGill rejection, mid-onboarding redirect, non-banned user, save/RSVP) | T-02-06-07 residual | **Open as UAT, not as a threat.** They need a real McGill Google account, which no automation here can supply. The deployed-path concern the threat names is evidenced; these steps test the auth callback and onboarding flows, which are characterized in Phase 3 (SC5) and asserted per persona in CERT-05 | Phase owner (`02-UAT.md` test 1); CERT-05, Phase 7 |
+| `public/brand` symlink made every Vercel deploy fail since `6f9c3b7` (May 2026) | out-of-register, found while deploying | **Fixed in `d14456b`**: the symlink is replaced by the real directory; served paths `/brand/*` unchanged; no `src/` file touched (`git show --stat d14456b`). The Vercel project is not git-linked to this repository, so pushes do not deploy — a preview needs an explicit `vercel deploy` | Phase 3 planning should register the deploy path (git link or explicit deploy) as a boundary |
 | RSC cache-poisoning exposure | T-02-05-03 | Advisories closed by version at 16.3.5; the precondition (F-025, personalized responses under a session-independent CDN key) is **live and Open at Critical** | REFAC-19, Phase 6 |
 | Ban-check positive case (a banned user IS redirected) | T-02-06-03 | Byte-identity proven; behavioural assertion needs a banned session from the Phase 3 seed | CERT-05, Phase 7 |
 | Two Moderate production advisories (`dompurify` via redoc, `yaml`) | policy clause 4 | Below the `--audit-level=high` gate; tracked, not blocking | Renovate once the app is installed; REFAC-19 review |
@@ -208,10 +210,11 @@ Recorded so that silence is not read as closure. None is a Phase 2 code gap; eac
 |------------|---------------|--------|------|--------|
 | 2026-09-15 | 78 | 75 | 3 | gsd-security-auditor |
 | 2026-09-15 | 78 | 76 | 2 | /gsd-secure-phase — T-02-09-SC ratified as AR-07 from the phase owner's recorded decision; T-02-09-01 and T-02-06-07 left open pending the push |
+| 2026-09-15 | 78 | 78 | 0 | /gsd-secure-phase (continued on the phase owner's instruction to push and proceed) — `main` pushed, CI run `35011042332` observed green, preview `event-radar-p16f0ng94` deployed and smoke-tested through the platform function; T-02-09-01 and T-02-06-07 closed on that evidence |
 
-Breakdown after ratification: 69 `mitigate` (67 closed, 2 open) · 7 `accept` (7 closed via the Accepted Risks Log) · 1 `mitigate (partial, stated)` (closed, residual recorded) · 1 `mitigate + carry-forward` (closed, residual recorded) · 0 `transfer`.
+Breakdown after the push: 69 `mitigate` (69 closed, 0 open) · 7 `accept` (7 closed via the Accepted Risks Log) · 1 `mitigate (partial, stated)` (closed, residual recorded) · 1 `mitigate + carry-forward` (closed, residual recorded) · 0 `transfer`.
 
-**Disposition against `security_block_on: high`.** Neither open item is a High-severity threat and neither is an exploitable code gap; both are Repudiation-category evidence gaps that the phase's own `02-VERIFICATION.md` already routes to `human_needed`. The auditor's recommendation: not a ship-blocker for the tree as it stands, but both must close before the Stage 3 gate is treated as evidenced.
+**Disposition against `security_block_on: high`.** No open items remain. The two that were open after the first audit were Repudiation-category evidence gaps, not code gaps, and both closed on observed evidence the same day.
 
 ---
 
@@ -219,7 +222,9 @@ Breakdown after ratification: 69 `mitigate` (67 closed, 2 open) · 7 `accept` (7
 
 - [x] All threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [ ] `threats_open: 0` confirmed — **2 open** (T-02-09-01, T-02-06-07), both blocked on pushing the branch
-- [ ] `status: verified` set in frontmatter
+- [x] `threats_open: 0` confirmed — T-02-09-01 closed on CI run `35011042332`; T-02-06-07 closed on `smoke.tier3.preview.txt`
+- [x] `status: verified` set in frontmatter
 
-**Approval:** pending — close the two open items by (a) pushing and observing a green CI run plus running the Tier 3 preview checklist, then re-running `/gsd-secure-phase 2`, or (b) recording both as accepted risks here with a rationale and an owner, then re-running.
+**Approval:** verified 2026-09-15
+
+**Note for Phase 3 planning.** Two obligations carry forward from this file: (1) the Phase 1 AR-12 registration of the Supabase MCP transport and the laptop service-role write path in the Phase 3 threat models, and (2) the deploy path — the Vercel project is not git-linked, previews are behind Deployment Protection, and the `public/brand` symlink had made every deploy fail since May; Phase 3 should treat "how a tree reaches Vercel" as a boundary. The five signed-in Tier 3 steps stay in `02-UAT.md` for the phase owner.

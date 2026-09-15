@@ -5,7 +5,29 @@
 
 ---
 
-## 1. The headline, stated first because it is the uncomfortable half
+## 1. The headline — OBSERVED GREEN on 2026-09-15
+
+> **THE CI RUN IS OBSERVED AND GREEN.** Run `35011042332` of `.github/workflows/ci.yml`, job `ci`,
+> on commit `7e797af` (the push of the whole Phase 2 tree plus `02-SECURITY.md`), completed with
+> `conclusion: success` and **all six workflow steps green**, in the workflow's declared order,
+> including **`Production vulnerability gate`** and **`Run tests`**.
+>
+> https://github.com/gdgmcgill/Event-Radar/actions/runs/35011042332
+
+STAB-14's evidence clause — a gate that has been seen to pass — is now met by an observed run,
+recorded in § 5 with per-step conclusions read from the run object (`gh run view --json jobs`),
+not inferred. §§ 1a–4 below are kept verbatim as the record of how the phase stood before the
+push, because the honesty of that record is the reason the first observed run could be trusted
+to be green rather than suppressed.
+
+**What changed between the rehearsal tree (`445f7dc`, § 4) and the run's tree (`7e797af`):**
+plans 02-10 and 02-11 (Renovate config, SBOM, bundle-size evidence, clean-room proof, the
+completion note, the finding-register reconciliation), the code-review report, and the security
+verification file. None of those commits touches `src/`, `package.json` or `package-lock.json`
+(`check-baseline.mjs` `lockfile-discipline` and `react-untouched` still PASS on `7e797af`), so
+the gate's input — the lockfile — is byte-identical to the one rehearsed in § 4.
+
+## 1a. What the pre-push record said (preserved)
 
 > **THE CI RUN IS UNOBSERVED. There is no green run to point at, and this file does not
 > imply one.**
@@ -102,31 +124,50 @@ High with a postcss override`).
   on both machines. Of all six steps, the gate is the one whose local result transfers most
   cleanly. That is a reason for confidence, not a substitute for the run.
 
-## 5. The run record — to be filled in after the push
+## 5. The run record — filled in after the push, 2026-09-15
 
 | Field | Value |
 |---|---|
-| Run URL | **UNOBSERVED** — no run exists; see § 2 |
-| Run identifier | **UNOBSERVED** |
-| Commit SHA the run ran against | **UNOBSERVED**. The tree it *would* run against is `445f7dc` plus the task-2 commit that adds the step |
-| Date | **UNOBSERVED** |
-| `Install dependencies` | **UNOBSERVED** (local rehearsal: exit 0) |
-| `Run linter` | **UNOBSERVED** (local rehearsal: exit 0) |
-| `TypeScript type-check` | **UNOBSERVED** (local rehearsal: exit 0) |
-| `Run tests` | **UNOBSERVED** (local rehearsal: exit 0) |
-| `Production vulnerability gate` | **UNOBSERVED** (local rehearsal: exit 0) |
-| `Run build` | **UNOBSERVED** (local rehearsal: exit 0) |
+| Run URL | https://github.com/gdgmcgill/Event-Radar/actions/runs/35011042332 |
+| Run identifier | `35011042332` (workflow `CI`, job `ci`, trigger `push` to `main`) |
+| Commit SHA the run ran against | `7e797af3ab01caf6d1be56b6e147f980a5a4076f` — `docs(phase-02): add security threat verification` |
+| Date | 2026-09-15 · created 19:00:53Z · completed 19:02:02Z (69 s) |
+| Runner | `ubuntu-latest`, Node **v24.20.0** resolved from `.nvmrc` via `node-version-file` (`Found in cache @ /opt/hostedtoolcache/node/24.20.0/x64`) |
+| `Install dependencies` | **success** |
+| `Run linter` | **success** |
+| `TypeScript type-check` | **success** |
+| `Run tests` | **success** — `Test Suites: 1 skipped, 22 passed, 22 of 23 total` · `Tests: 5 skipped, 278 passed, 283 total` — identical to the local rehearsal and to the `check-baseline.mjs` figures |
+| `Production vulnerability gate` | **success** — `npm audit --audit-level=high --omit=dev` exit 0 on the runner |
+| `Run build` | **success** |
 
-**STAB-14 is therefore delivered in part and not in whole, and plan 02-11 must record it
-that way.** The step exists, it is unsuppressed, it is positioned correctly, and it is green
-against this tree — but the requirement's evidence clause asks for a passing run, and a
-passing run does not exist yet. Claiming it here would be the same category of error as a
-gate that is configured and never runs.
+Conclusions were read with
+`gh run view 35011042332 --json status,conclusion,jobs` and are quoted as step name and
+conclusion only, per § 7. The run's Node (v24.20.0) differs in patch from the local rehearsal's
+(v24.16.0); both are the pinned major and the `engines` field admits both.
+
+**STAB-14 is therefore delivered in whole**: the step exists, is unsuppressed, is positioned
+after the tests and before the build, was green locally first (§ 4), and has now been observed
+green on a real runner. Plan 02-11's completion note (`STAGE-2-COMPLETION.md` § 13) is amended
+to record STAB-14 and STAB-02 as met, citing this section.
 
 ## 6. The CI half of STAB-02 — the npm unknown-config warning
 
-**Still unobservable, re-checked rather than carried forward on faith. The answer is
-unchanged: ABSENT locally, UNKNOWN on CI.**
+**SETTLED on 2026-09-15 from the `Install dependencies` step log of run `35011042332`:
+`ci_npm_unknown_config=absent`.** The grep below was run over the step's log
+(`gh run view 35011042332 --log`, filtered to the `Install dependencies` step):
+
+```
+grep -ciE 'unknown .* config'     # -> 0
+grep -ci  'npm warn'              # -> 12  (6 × "deprecated", 6 × "install-scripts"; no config scope word)
+```
+
+The twelve `npm warn` lines are the registry's deprecation notices for transitive packages and
+npm 11's install-scripts notices; none carries the `Unknown <scope> config` shape, so no scope
+word is recorded. STAB-02's CI clause closes on this observation. The paragraphs below are the
+pre-push record, preserved.
+
+**As it stood before the push:** still unobservable, re-checked rather than carried forward on
+faith. The answer was: ABSENT locally, UNKNOWN on CI.
 
 `evidence/devdir-investigation.md` § 6 named this as the one residual unknown of STAB-02 and
 recorded `ci_npm_unknown_config=unobserved` (the value plan 02-01 wrote into
@@ -162,13 +203,12 @@ a fresh image with no user `.npmrc` and no npm config environment variables, so 
 is not recorded as one.** No work is scheduled against it; it closes for free the first time a
 run's install log is readable.
 
-**Current value: `ci_npm_unknown_config=unobserved`.**
+**Current value: `ci_npm_unknown_config=absent`** (was `unobserved` until run `35011042332`).
 
 ## 7. What this file deliberately does not contain
 
-No CI log content is quoted, because there is no CI log to quote. When § 5 is filled in, only
-step names, conclusions, run identifiers, and the single npm warning line from § 6 may be
-copied in. The workflow's only environment values are two literal placeholder strings already
+Only step names, conclusions, run identifiers, the two Jest summary lines, the runner's Node
+version line and the § 6 grep counts are quoted from the run; no other log content is copied in. The workflow's only environment values are two literal placeholder strings already
 committed in `ci.yml` (`https://placeholder.supabase.co` and `placeholder-key`); no real
 credential appears in the workflow, and none may be pasted into this file (threat T-02-09-06).
 

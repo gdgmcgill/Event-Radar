@@ -248,7 +248,7 @@ claimed here.
 The same limitation, in the phase's own terms: threat `T-02-06-03` is dispositioned
 *mitigate (partial, stated)*, not *mitigate*.
 
-## 9. Tier 3 — human verification (OUTSTANDING)
+## 9. Tier 3 — the deployed-path run is DONE (2026-09-15); the signed-in steps remain human
 
 This is the only human step in Phase 2 and it is needed exactly once, on the one change that
 touches the request path. It is **outstanding as of this note** and is deferred to the
@@ -268,8 +268,23 @@ the repudiation failure that `T-02-06-07` names.
 | 4 | As a signed-in **non-banned** user, navigate to any page | **Not** redirected to `/banned` (see § 8 — negative case only) | ☐ not yet run |
 | 5 | Save and unsave an event; RSVP to an event | Both work exactly as before | ☐ not yet run |
 
-**Preview deployment URL:** _to be recorded when Tier 3 runs_
-**Date run:** _to be recorded when Tier 3 runs_
+**Preview deployment URL:** https://event-radar-p16f0ng94-adyan-ullahs-projects.vercel.app (Vercel preview `event-radar-p16f0ng94`, tree `d14456b`)
+**Date run:** 2026-09-15T19:19:37Z — `evidence/smoke.tier3.preview.txt`
+
+**What ran on the preview, through the regenerated platform function:** the full ten-row
+`scripts/smoke.sh` pass. Ring rows **4/4 PASS**: row 5 and row 6 (the protected-route ring,
+`307 → /?signin=required&next=…`), row 8 (the rate limiter, 31 POSTs → `429` + `Retry-After`),
+row 10 (a built chunk served with no redirect — the matcher's negative lookahead holds on the
+CDN path). Data rows 4/6, the two failures being the empty-Supabase rows the local batch-6 run
+also recorded. The preview is behind Vercel Deployment Protection; the run satisfied it with
+the project's protection-bypass request header, never by disabling protection — the capture's
+provenance block records how, and the capture was grepped clean of the value.
+
+This is the evidence threat `T-02-06-07` asked for: the rename observed on a deployment, not a
+dev server. **Steps 1–5 above are still ☐** — they need a real McGill Google account and a
+mid-onboarding session, which no automation in this program can supply. They stay open as
+`02-UAT.md` test 1, and step 4's positive counterpart (a banned user IS redirected) lands in
+`CERT-05` against the Phase 3 seed, as § 8 says.
 
 **If any step fails, the rename is reverted, not patched.** `0d66a1d` is a two-line commit with
 rename detection on both files; `git revert 0d66a1d` restores the previous request boundary

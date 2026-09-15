@@ -7,7 +7,7 @@
 >
 > Zero unexplained Critical production vulnerabilities. Zero reachable High, closed by fixing rather than by excepting, so the exception register is examined-and-empty rather than unfilled. A reproducible install proven from a fresh clone on the pinned runtime. Checks green and strictly better than the AUDIT-13 baseline on both of the numbers that matter. A lockfile reviewed as diffs on every batch, never regenerated wholesale, with no forced remediation anywhere in the commit range.
 >
-> **Four requirements are partially met and are NOT claimed as complete: STAB-02, STAB-06, STAB-09 and STAB-14.** None of them is a clause of the exit gate. Each is named in § 13 with exactly what is missing and the single act that closes it. Three of the four are waiting on one thing: **a push.**
+> **As first recorded, four requirements were partially met: STAB-02, STAB-06, STAB-09 and STAB-14.** None is a clause of the exit gate. *Amended 2026-09-15, after the push:* STAB-02 and STAB-14 are now **complete** on observed CI run `35011042332` (`evidence/ci-green-run.md`); STAB-06 and STAB-09 remain as § 13 records them.
 
 ---
 
@@ -191,14 +191,14 @@ Two batches produced standalone reviews because their diffs needed argument rath
 
 ---
 
-## 9. The npm configuration warning — MET as documentation; the CI side is unobserved
+## 9. The npm configuration warning — MET; the CI side observed ABSENT on 2026-09-15
 
 `evidence/devdir-investigation.md`.
 
 - **Four-scope probe: `devdir` is unset in all four of npm's configuration scopes** — project, user, global, env — and no npm command on this tree emits an unknown-config warning.
 - **Emitter identified:** `devdir` is a **node-gyp** configuration key that npm removed from its schema. npm 11 emits it as an *unknown config* warning naming the scope it came from. It is **machine state, not repository state.** No repository file was edited to chase it, and that is the deliberate outcome rather than an omission.
 - The probe deliberately captures only the `userconfig` / `globalconfig` path lines and the single `devdir` result. A full `npm config ls -l` dump is **not** committed: it can contain `//registry.npmjs.org/:_authToken`, and `.planning/` is the wrong place for a credential.
-- **CI side: `ci_npm_unknown_config = unobserved`**, for two verified reasons rather than for lack of trying — no pushed batch-0 run exists, and the most recent completed run's logs return **HTTP 410**, GitHub having expired them. What would close it is one readable CI `Install dependencies` log, grepped for `Unknown .* config`.
+- **CI side: `ci_npm_unknown_config = absent`** — settled after the push. The `Install dependencies` step log of run `35011042332` (`evidence/ci-green-run.md` § 6) contains 0 lines matching `Unknown .* config`; its 12 `npm warn` lines are 6 registry deprecation notices and 6 npm 11 install-scripts notices, none carrying a config scope word. Before the push this value was `unobserved`, for two verified reasons — no pushed run existed, and the most recent historical run's logs returned HTTP 410 — and the note said so rather than implying a result.
 
 ---
 
@@ -212,7 +212,7 @@ The CLI was a production dependency at `^32.3.0`, is invoked by nothing in this 
 
 ---
 
-## 11. The file-convention migration, before and after — the rename is evidenced; TWO CLAUSES ARE NOT
+## 11. The file-convention migration, before and after — the rename is evidenced on a deployment; the ban-check clause and the signed-in Tier 3 steps are not
 
 `evidence/proxy-migration-note.md` is the record. `src/middleware.ts` → `src/proxy.ts` landed as one atomic commit (`0d66a1d`) touching nothing else.
 
@@ -225,7 +225,7 @@ The CLI was a production dependency at `^32.3.0`, is invoked by nothing in this 
 **NOT delivered, and stated plainly rather than glossed:**
 
 - **The ban-check clause is not covered by automated evidence in this phase.** STAB-06 asks for the rate limiter *and* the ban-check behaviour smoke-tested before and after. Exercising the ban check requires a session belonging to a banned user; that requires the deterministic seed, which is **Phase 3**. Tier 2 is anonymous by contract and no tier available in this phase can produce it. The honest evidence for the ban check after this rename is two things, neither of which is a behavioural test: the rename diff showing the block moved byte-identically, and Tier 3 step 4 once run. **The assertion that a banned user is redirected and a non-banned user is not lands in `CERT-05`, the Phase 7 persona matrix, against the Phase 3 seed.** Threat `T-02-06-03` is dispositioned against that, not against this phase.
-- **Tier 3 human verification against a preview deployment is OUTSTANDING.** The note's § 9 carries an empty preview-deployment URL and an empty date, awaiting the run. It is blocked on the same thing three other items are blocked on: nothing has been pushed.
+- **Tier 3 against a preview deployment — the deployed-path run is DONE, the signed-in steps are not.** *Amended 2026-09-15:* `evidence/smoke.tier3.preview.txt` records the ten-row smoke pass against Vercel preview `event-radar-p16f0ng94` (tree `d14456b`), ring rows 4/4 through the regenerated platform function — the protected-route 307s, the 429, the matcher exclusion. `proxy-migration-note.md` § 9 now carries the URL and date. The five signed-in steps (real McGill sign-in, non-McGill rejection, mid-onboarding redirect, non-banned user, save/RSVP) still need a human with a McGill account and remain `02-UAT.md` test 1.
 
 Rollback, if it is ever wanted, is `git revert 0d66a1d`.
 
@@ -254,11 +254,11 @@ Four items, each stated so that nothing downstream reads a silence as a pass.
 | ID | Status | Evidence | Plan |
 |---|---|---|---|
 | **STAB-01** | **Complete** | Node 24 and npm >=11 in `engines`, `.nvmrc` = 24, CI reads `node-version-file: '.nvmrc'` with no competing literal. `check-baseline.mjs --check node-pin` → `one-declared-node-major :: engines=24 nvmrc=24 ci=24` | 02-01 |
-| **STAB-02** | **Partially met** | Local half closed conclusively: `evidence/devdir-investigation.md`, four scopes empty, emitter identified as a node-gyp key npm dropped, machine state not repository state. **CI half `unobserved`** — no pushed batch-0 run, last run's logs HTTP 410. *Closes on: one readable CI install log.* | 02-01, 02-03 |
+| **STAB-02** | **Complete** | Local half: `evidence/devdir-investigation.md`, four scopes empty, emitter identified as a node-gyp key npm dropped, machine state not repository state. CI half: `evidence/ci-green-run.md` § 6 — run `35011042332`'s install log grepped, `ci_npm_unknown_config=absent`. Closed 2026-09-15 by the push | 02-01, 02-03, 02-09 |
 | **STAB-03** | **Complete** | `evidence/VULNERABILITY-POLICY.md`, eight clauses, subordinate to `.planning/audit/SEVERITY_SLA.md`, written **before** the first scan-driven change — a git-ancestry fact, not a claim | 02-03 |
 | **STAB-04** | **Complete** | `evidence/vercel-removal-decision.md` — removed outright, devDependency alternative recorded and rejected, three negative checks re-run | 02-04 |
 | **STAB-05** | **Complete** | `evidence/next-upgrade-note.md` — 16.2.1 → **16.3.5** in its own commit `cf6b3c9`, `react`/`react-dom` byte-identical on all four values. **The requirement text named 16.2.11 and was amended by this plan:** 16.2.11 predates the 2026-08-25 security release and would have satisfied the requirement's letter while leaving two unauthenticated-RCE criticals open | 02-05 |
-| **STAB-06** | **Partially met** | `evidence/proxy-migration-note.md` + `evidence/proxy.before.txt` / `evidence/proxy.after.txt` / `evidence/proxy.rename-diff.txt` / `evidence/smoke.b3.before.txt` / `evidence/smoke.b3.after.txt`. Rename atomic and gated; rate limiter smoked both sides. **The ban-check clause is not smoke-tested and cannot be until the Phase 3 seed; Tier 3 human verification is outstanding.** *Closes on: the seed (`CERT-05` owns the assertion) plus one Tier 3 run against a preview deployment.* | 02-06 |
+| **STAB-06** | **Partially met** | `evidence/proxy-migration-note.md` + `evidence/proxy.before.txt` / `evidence/proxy.after.txt` / `evidence/proxy.rename-diff.txt` / `evidence/smoke.b3.before.txt` / `evidence/smoke.b3.after.txt`. Rename atomic and gated; rate limiter smoked both sides. **The ban-check clause is not smoke-tested and cannot be until the Phase 3 seed; Tier 3's deployed-path run is done (`evidence/smoke.tier3.preview.txt`, ring rows 4/4 on Vercel preview `event-radar-p16f0ng94`); its five signed-in steps remain the human UAT item.** *Closes on: the seed (`CERT-05` owns the assertion) plus one Tier 3 run against a preview deployment.* | 02-06 |
 | **STAB-07** | **Complete** | Both halves, both driven by the AUDIT-12 reachability answer: `swagger-ui-react` **removed** (nothing imports it); `redoc` **upgraded** 2.5.2 → 2.5.4 (reachable from public `/docs`), with smoke row 7 proving the route still renders the same 82,679 bytes | 02-04, 02-07 |
 | **STAB-08** | **Complete** | Vitest files deleted, `jest-environment-jsdom` + testing-library installed, four `.tsx`/hook suites now execute, `"test": "jest"` exists, CI runs it. `evidence/skipped-suite-disposition.md` records the fifth suite, which was never an installable skip | 02-01, 02-08 |
 | **STAB-09** | **Partially met** | Every **upgrade** batch is one labeled commit followed by lint + type-check + test + build + a captured smoke: b1 (`evidence/smoke.b1.txt`), b2 (`evidence/smoke.b2.txt`), b4a (`evidence/smoke.b4.txt`), b6a (`evidence/smoke.b6.txt`), with b0 and b3 likewise. **Batch 5 ran the four-command gate and no smoke pass, and said so.** Batch 5 is a dev-only test-harness install rather than a patch/minor upgrade, so a literal reading puts it outside the clause — the phase's own stricter precedent is applied instead and the requirement is not claimed. *Closes on: one smoke run attributable to the batch-5 tree, or an explicit scope ruling.* | 02-04 → 02-09 |
@@ -266,12 +266,12 @@ Four items, each stated so that nothing downstream reads a silence as a pass.
 | **STAB-11** | **Complete** | `evidence/lockfile-review-log.md` — per-batch diff line counts with structural entry deltas, plus three attestations each backed by a command and its output: never regenerated (`lockfileVersion` 3 → 3, and b6a's zero-insertion diff), no forced remediation (discriminating search returns 0), every diff read before installation (six `lock.b*.before.sha256` hashes, two standalone reviews) | 02-11 |
 | **STAB-12** | **Complete** | `evidence/cleanroom-npm-ci.txt` — fresh clone at `01c7394`, runtime asserted against `engines` before installing, lockfile hash matched, `npm ci` + build + suite, twenty exit codes all 0. The requirement's parenthetical *"ideally in CI"* is an ideal, not a clause; the CI-side run is `STAB-14`'s unobserved-run problem, not a second gap | 02-11 |
 | **STAB-13** | **Complete** | `evidence/tools/check-baseline.mjs` exits 0 on the final tree — 22 passed, 0 failed, 0 skipped — with every baseline figure parsed from `.planning/audit/baseline/jest.txt` and `lint.txt` rather than inlined. Better than baseline on both numbers: **278 vs 220** passing, **5 vs 36** skipped | 02-11 |
-| **STAB-14** | **Partially met** | The step exists, is correctly positioned **after** the remediation batches, is unsuppressed (no `continue-on-error`, no `|| true`), and is green against this tree — `evidence/audit-gate-local.txt`, exit 0. **The requirement's evidence clause asks for a passing RUN and none has been observed:** every Phase 2 commit is local and unpushed. `evidence/ci-green-run.md` states that in its first line rather than implying a pass, and carries the full local rehearsal in the workflow's own step order. *Closes on: a push.* | 02-09 |
+| **STAB-14** | **Complete** | The step exists, is positioned **after** the remediation batches, is unsuppressed (no `continue-on-error`, no `\|\| true`), was green locally first (`evidence/audit-gate-local.txt`, exit 0) and **has been observed green on a real runner**: `evidence/ci-green-run.md` § 5 — run `35011042332` on `7e797af`, `Production vulnerability gate :: success`, all six steps green, 2026-09-15 | 02-09 |
 | **STAB-15** | **Complete** | `sbom.cyclonedx.json` (320 components, spec 1.6, schema-validated, byte-stable, from the lockfile) + `renovate.json` (three groups, one patch-only auto-merge rule), both validated: `evidence/sbom-generation.txt`, `evidence/renovate-validation.txt`. **Carried caveat, not a withholding:** the requirement says *configured*, and it is — but the GitHub App is **not installed** (§ 7), so nothing will act on the configuration until a human installs it | 02-10 |
 | **STAB-16** | **Complete** | `evidence/bundle-size.md` with `evidence/bundle-size.before.txt` and `evidence/bundle-size.after.txt`, two metric families, every delta attributed to the batch that moved it, including the honest zero | 02-04, 02-10 |
 | **STAB-17** | **Complete** | This note. All five gate clauses evidenced from committed artifacts, with the four partial requirements and the four unclosed items named rather than omitted | 02-11 |
 
-**Twelve complete, five partially met, zero withheld without a reason. Three of the five partials — STAB-02, STAB-14, and half of STAB-06 — are blocked on the same single act: a push.**
+**Fourteen complete, three partially met, zero withheld without a reason.** *(Amended 2026-09-15: STAB-02 and STAB-14 moved to Complete when the push produced observed CI run `35011042332`; see `evidence/ci-green-run.md`. STAB-06's Tier 3 clause is recorded in `evidence/proxy-migration-note.md` § 9. STAB-09 is unchanged.)*
 
 ---
 
