@@ -141,7 +141,7 @@ Plans:
   4. A Playwright persona harness runs against local Supabase with one storage state per persona from a setup project and at least six happy-path specs covering Validated workflows, backed by a deterministic seed (fixed UUIDs, fixed timestamps against a pinned now, fixed PRNG seed) covering every user role, ban state, club status, and event status — whose loader hard-refuses any Supabase URL outside local and staging.
   5. The auth callback route has passing characterization tests (OAuth exchange, McGill enforcement, user upsert, admin auto-assignment, onboarding routing) written before anything modifies it.
 
-**Plans**: 3/8 plans executed
+**Plans**: 4/8 plans executed
 
 Plans:
 **Wave 1** *(three independent tributaries — none touches a database)*
@@ -152,7 +152,7 @@ Plans:
 
 **Wave 2** *(the critical path, alone — blocked on 03-01)*
 
-- [ ] 03-04-PLAN.md — Migration reconciliation: 44 files archived as 44 pure renames, baseline pulled from production, policy census cross-checked by name, `db reset` green and `db diff` empty
+- [x] 03-04-PLAN.md — Migration reconciliation: 44 files archived as 44 pure renames, baseline pulled from production, policy census cross-checked by name, `db reset` green and `db diff` empty
 
 **Wave 3** *(blocked on 03-04)*
 
@@ -270,7 +270,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 |-------|----------------|--------|-----------|
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
-| 3. Refactor Foundations — Schema Truth and the Seam Kit | 3/8 | In Progress|  |
+| 3. Refactor Foundations — Schema Truth and the Seam Kit | 4/8 | In Progress|  |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |

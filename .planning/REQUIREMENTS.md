@@ -60,7 +60,7 @@ Constraint for every REFAC requirement: characterize current behavior with a tes
 
 **Foundations (before any vertical slice)**
 
-- [ ] **REFAC-01**: Migration history is reconciled with production (baseline + `migration repair`, never renaming existing files) so `supabase db reset` from the migrations folder produces a schema that diffs clean against production
+- [x] **REFAC-01**: Migration history is reconciled with production (baseline + `migration repair`, never renaming existing files) so `supabase db reset` from the migrations folder produces a schema that diffs clean against production
 - [ ] **REFAC-02**: Missing FK indexes and RLS policy gaps identified in the audit are fixed via new migrations, each with a pgTAP allow/deny test
 - [ ] **REFAC-03**: The `compute_user_scores` pg_cron schedule is codified as an idempotent migration so local and staging match production
 - [ ] **REFAC-04**: Supabase types are generated from the reconciled schema via `supabase gen types`, a CI step fails on type drift, and `(supabase as any)` casts in `src/` are reduced to zero
@@ -199,7 +199,7 @@ No phase crosses a stage boundary.
 | STAB-15 | Phase 2 | Complete |
 | STAB-16 | Phase 2 | Complete |
 | STAB-17 | Phase 2 | Complete |
-| REFAC-01 | Phase 3 | Pending |
+| REFAC-01 | Phase 3 | Complete |
 | REFAC-02 | Phase 3 | Pending |
 | REFAC-03 | Phase 3 | Pending |
 | REFAC-04 | Phase 3 | Pending |

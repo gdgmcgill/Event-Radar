@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 3
 current_phase_name: Refactor Foundations — Schema Truth and the Seam Kit
 status: executing
-stopped_at: "Completed 02-11-PLAN.md (batch 6c: clean-room install at 01c7394 with 20 exit codes all 0; finding register reconciled to the roadmap and regenerated through its generator; CLAUDE.md and README.md corrected against the tree; STAGE-2-COMPLETION.md written). Phase 2 plans 1-11 complete. STAGE 2 EXIT GATE MET. STAB-11, STAB-12, STAB-13, STAB-17 complete; STAB-02, STAB-06, STAB-09, STAB-14 held Pending."
-last_updated: "2026-09-15T21:25:03.179Z"
+stopped_at: Completed 03-04-PLAN.md — REFAC-01 done. All 44 migrations archived as 44 R100 renames with 0 changed lines; one generated baseline at the top level; `supabase db reset --local` exit 0 with nothing passed over; `supabase db diff --linked --schema public,storage` ZERO BYTES with no drop statements; all 101 live RLS policies verified present by set difference (symmetric difference 0); the 18 remote-only versions recovered as documentation; the migration-filename check green and wired into CI. Phase 3 plans 1-4 complete. Production untouched — its history repair stays D-02's gated decision for plan 03-08.
+last_updated: "2026-09-15T22:09:09.013Z"
 last_activity: 2026-09-15
-last_activity_desc: Phase 3 execution started
+last_activity_desc: "03-04 complete: the migrations folder replays and the diff against production is empty"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 32
-  completed_plans: 27
+  completed_plans: 28
   percent: 25
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 3 (Refactor Foundations — Schema Truth and the Seam Kit) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 3
-Last activity: 2026-09-15 — Phase 3 execution started
+Plan: 5 of 8
+Status: Ready to execute — 03-04 complete, wave 2 critical path cleared
+Last activity: 2026-09-15 — 03-04 complete: the migrations folder replays and the diff against production is empty
 
 Progress: [██░░░░░░░░] 25%
 
@@ -79,6 +79,7 @@ Progress: [██░░░░░░░░] 25%
 | Phase 02 P09 | 14min | 2 tasks | 15 files |
 | Phase 02 P10 | 25min | 3 tasks | 7 files |
 | Phase 02 P11 | 38 min | 3 tasks | 10 files |
+| Phase 03 P04 | 45 min | 3 tasks | 34 files |
 
 ## Accumulated Context
 
@@ -161,6 +162,11 @@ Recent decisions affecting current work:
 - [Phase 02]: .claude/CLAUDE.md corrected on disk but deliberately NOT force-added to git — .claude/ is gitignored at .gitignore:43 and the file has never been tracked. Overriding a deliberate gitignore is not the executor's call. The correction is live for agents and absent from history; the split is recorded in the commit body, STAGE-2-COMPLETION.md section 12 and the plan summary rather than left to be discovered.
 - [Phase 02]: Twelve STAB requirements marked complete; five held Pending with named unblock conditions — STAB-02, STAB-06, STAB-09 and STAB-14 each have at least one clause the artifacts do not support. Three of them — STAB-02's CI half, STAB-14's observed run, STAB-06's Tier 3 — are blocked on one act: a push.
 - [Phase 02]: The Stage 2 exit gate is MET on all five clauses — 0 Critical and 0 High in the production tree; the exception register is examined-and-empty because the Highs were fixed rather than excepted; the clean room at 01c7394 records 20 exit codes all 0; 278 passing against a baseline of 220 AND 5 skipped against 36; the lockfile was reviewed as diffs on every batch and never regenerated.
+- [Phase 03 / 03-04] D-15: the baseline is produced by `supabase db dump --linked`, NEVER `supabase db pull --linked`. The CLI documents that `db pull` may record the pulled migration in the REMOTE history table — the exact production write D-02 gates to plan 03-08 and T-03-04-04 prohibits by name. 03-RESEARCH.md § Assumptions Log A1 already named the dump as producing equivalent DDL by a different route, so A1 closes as routed-around rather than verified, and production's `schema_migrations` is provably untouched.
+- [Phase 03 / 03-04] D-16: a migration declares storage POLICIES, never storage STRUCTURE. The plan's `--schema public,storage` baseline cannot replay — measured, not assumed: `has_schema_privilege('postgres','storage','CREATE')` is false, `storage.objects` is owned by `supabase_storage_admin`, and `CREATE TYPE storage.…` is denied while `CREATE POLICY … ON storage.objects` is permitted. Storage structure is service-created identically in every environment; the 15 `storage.objects` policies are application-owned. The `db diff` still covers both schemas, so the empty result is what PROVES the split safe rather than assuming it.
+- [Phase 03 / 03-04] D-17: `supabase db dump` filters `CREATE EXTENSION` out of its output. The dumped baseline silently lacked `pg_trgm`, which `public.search_events_fuzzy` needs at CALL time — a reset cannot catch this because `CREATE FUNCTION` does not validate a GUC inside a function body. Only the `db diff` caught it. migra's own emitted DDL was pasted verbatim: a generated baseline gets a generated fix, so it stays a copy of production rather than a claim about it.
+- [Phase 03 / 03-04] Fidelity is established by set difference, never by eye. 41 of production's 101 RLS policies are declared by no migration, so there is nothing local to read the baseline against. Both sides are reduced to `schema.table :: policyname` pairs and diffed programmatically — live 101, baseline 101, symmetric difference 0.
+- [Phase 03 / 03-04] An evidence file cites its assertion patterns by reference rather than inlining them. `baseline-review.md` and `db-reset.txt` each first matched the very grep whose result they reported as zero; inlining a token whose absence you are asserting is how a tripwire starts lying about itself.
 
 ### Pending Todos
 
@@ -184,7 +190,10 @@ None yet.
 - Renovate is inert until two human steps are done: install the Renovate GitHub App on gdgmcgill/Event-Radar (four indirect probes found no evidence it ever has been), and mark the CI checks REQUIRED in branch protection on main — without the second, 'checks passed' is vacuous and patch auto-merge merges on a green tick that guarantees nothing
 - STAB-02 / STAB-14 / STAB-06 Tier 3 are blocked on ONE act: a git push. No Phase 2 commit has been pushed (~123 local commits ahead of origin/main), so no CI run exists to observe, the last completed run's logs return HTTP 410, and the proxy migration's Tier 3 human verification has no preview deployment to run against. Unblocks three requirement clauses at once.
 - Renovate GitHub App is NOT installed. renovate.json is committed and strict-validated in both modes but inert — zero PRs or issues ever authored by app/renovate. Install at https://github.com/apps/renovate on the owning org, grant this repository, confirm the Dependency Dashboard issue appears. Evidence: evidence/renovate-validation.txt, STAGE-2-COMPLETION.md section 7.
-- 03-04 Task 2 BLOCKED on SUPABASE_DB_PASSWORD — the baseline pull (supabase db pull --linked) and its documented fallback (supabase db dump --linked) both require the production database password, which is not exported and exists nowhere reachable. The archive (44 pure renames) is landed; tasks 2 and 3 await the password. Also flagged: supabase db pull --linked updates the REMOTE migration history, a production write that D-02 gates to plan 03-08 — prefer db dump.
+- ~~03-04 Task 2 BLOCKED on SUPABASE_DB_PASSWORD~~ **RESOLVED 2026-09-15.** The password was supplied via the macOS keychain, read only in the command that used it and written to no file. Tasks 2 and 3 completed. The flagged concern was upheld as decision D-15: `supabase db pull --linked` may write the REMOTE migration history, so the baseline was produced with `supabase db dump --linked` instead — a pure pg_dump read. Production's `schema_migrations` is provably untouched.
+- OUTSTANDING, and it is the only production write left in Phase 3: production's history table has no row for baseline version `20260915214553`. Until `supabase migration repair --status applied 20260915214553 --linked` is run, **`supabase db push` must not be run against production** — it would try to re-apply a schema production already has. Deferring the repair is safe; deferring it and then pushing is not. D-02 gates the decision to plan 03-08; declining it defers to Phase 8. Under no option may the 45 historical versions be marked `reverted`. Full position: 03-.../evidence/reconciliation-note.md § 4.
+- NEW, found by the baseline and worth acting on in 03-05: production runs `public.search_events_fuzzy` (which calls `similarity()` and sets `pg_trgm.similarity_threshold`) with **no trigram index on `public.events` at all** — its five indexes are all btree. Every fuzzy search is a sequential scan computing trigram similarity per row, degrading with every event added. `20260308000001_fuzzy_search.sql` declares the two missing GIN indexes and is REFAC-02's strongest candidate.
+- Local `supabase db reset` now depends on the storage schema being service-created (D-16). The baseline deliberately carries storage POLICIES only; the storage schema's structure is owned by `supabase_storage_admin` and the migration role cannot create in it. A local stack whose storage container has not initialised will fail differently from a schema problem — check `information_schema.tables where table_schema='storage'` before suspecting the baseline.
 
 ## Deferred Items
 
@@ -197,6 +206,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T21:24:59.709Z
-Stopped at: Completed 02-11-PLAN.md (batch 6c: clean-room install at 01c7394 with 20 exit codes all 0; finding register reconciled to the roadmap and regenerated through its generator; CLAUDE.md and README.md corrected against the tree; STAGE-2-COMPLETION.md written). Phase 2 plans 1-11 complete. STAGE 2 EXIT GATE MET. STAB-11, STAB-12, STAB-13, STAB-17 complete; STAB-02, STAB-06, STAB-09, STAB-14 held Pending.
+Last session: 2026-09-15T22:09:09.008Z
+Stopped at: Completed 03-04-PLAN.md — REFAC-01 delivered. The migrations folder replays for the first time in this repository's history and the schema it builds has no difference against production. 44 files archived as 44 R100 renames with 0 changed lines; one generated baseline (`20260915214553_baseline.sql`); `supabase db reset --local` exit 0 with nothing passed over; `supabase db diff --linked --schema public,storage` ZERO BYTES, no files, no drop statements; 101/101 live RLS policies verified by set difference; 18 remote-only versions recovered as documentation; the filename check green and wired into CI. Decisions D-15/D-16/D-17 recorded above. Production untouched — the history repair remains D-02's gated decision for plan 03-08, and `supabase db push` must not run against production until it is resolved.
+Next: plan 03-05 (REFAC-02). It inherits two MEASURED re-issue targets — the two missing trigram indexes on `public.events`, and the three absent invitee policies (F-016) — plus one confirmed no-op to skip: `fk_indexes_and_cleanup`.
 Resume file: None
