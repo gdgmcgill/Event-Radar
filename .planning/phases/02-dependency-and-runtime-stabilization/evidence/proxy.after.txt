@@ -1,0 +1,72 @@
+PASS src/proxy.test.ts
+  middleware matcher (PRESERVE — must be identical after the proxy rename)
+    ✓ runs on /my-events (1 ms)
+    ✓ runs on /create-event
+    ✓ runs on /notifications (1 ms)
+    ✓ runs on /profile
+    ✓ runs on /settings
+    ✓ runs on /my-clubs
+    ✓ runs on /invites
+    ✓ runs on /friends
+    ✓ runs on /
+    ✓ runs on /api/events
+    ✓ runs on /docs
+    ✓ runs on /banned
+    ✓ runs on /onboarding
+    ✓ skips /_next/static/chunks/main-app.js
+    ✓ skips /_next/image
+    ✓ skips /favicon.ico
+    ✓ skips /auth/callback
+    ✓ skips /logo.png
+    ✓ skips /icon.svg (1 ms)
+    ✓ exports exactly one matcher entry
+
+PASS src/middlewareRateLimit.test.ts
+  applyApiRateLimit (PRESERVE — must behave identically after the proxy rename)
+    ✓ returns 429 with a Retry-After header once the POST budget is exceeded (3 ms)
+    ✓ exempts /api/admin/* from the public budget entirely (2 ms)
+    ✓ gives /api/interactions the larger high-frequency write budget (1 ms)
+    ✓ gives /api/recommendations/feedback the larger high-frequency write budget
+    ✓ never rate-limits a non-/api path (GET /profile) (2 ms)
+    ✓ never rate-limits a non-/api path (POST /profile) (1 ms)
+    ✓ allows exactly POST_BUDGET requests and blocks the next one (1 ms)
+
+Test Suites: 2 passed, 2 total
+Tests:       27 passed, 27 total
+Snapshots:   0 total
+Time:        0.308 s, estimated 1 s
+Ran all test suites matching src/middlewareRateLimit.test.ts|src/proxy.test.ts.
+
+# ==============================================================================
+# PROVENANCE — this block was appended after the capture. Everything above it is
+# the command below, untrimmed and unsummarised. Nothing below it is command output.
+#   command     : npx jest --ci --verbose src/middlewareRateLimit.test.ts src/proxy.test.ts
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T05:36:18Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.3.5
+#   subject     : POST-RENAME tree at commit 0d66a1d. src/proxy.ts exists;
+#                 src/middleware.ts does not. This is the AFTER side of STAB-06.
+#   suites      : src/middlewareRateLimit.test.ts (unmoved, unedited) and
+#                 src/proxy.test.ts (renamed from src/middleware.test.ts; one
+#                 line changed, the import specifier). 27 passed, 0 failed —
+#                 the same 27 as evidence/proxy.before.txt.
+#
+# ASSERTION-SET COMPARISON, before vs after
+#   method : diff <(grep -E '✓|✕' <capture> | sed -E 's/ \([0-9]+ ms\)$//') for
+#            both sides. The timing suffix is stripped because per-test wall
+#            clock is nondeterministic at the millisecond scale and varies run to
+#            run on an unchanged tree; six lines differ by nothing but a "(1 ms)".
+#            02-RESEARCH § Code Examples 3 step 3 shows the raw grep without the
+#            strip; that comparison reports six spurious differences and would
+#            have to be eyeballed, which is exactly the judgement call this
+#            evidence exists to remove. Stripping is applied identically to both
+#            sides and cannot hide a renamed, added or removed assertion.
+#   result : IDENTICAL — 0 differences across 27 assertion lines.
+#            27 ✓ / 0 ✕ before, 27 ✓ / 0 ✕ after.
+#   meaning: every assertion that held on src/middleware.ts holds on src/proxy.ts.
+#            The matcher's include set (8 protected routes + 5 public paths), its
+#            exclude set (6 paths incl. /_next/static and /auth/callback), its
+#            single-entry length, and all 7 rate-limiter behaviours are unchanged.
+# ==============================================================================
+exit_code=0

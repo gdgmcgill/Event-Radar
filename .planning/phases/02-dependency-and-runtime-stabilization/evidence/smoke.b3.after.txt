@@ -1,0 +1,77 @@
+# smoke.sh — Tier 2 anonymous HTTP smoke pass
+# host        : http://localhost:3000
+# label       : b3.after
+# started_at  : 2026-09-15T05:37:55Z
+# curl        : curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1
+# ring rows   : 5 6 8 10 (request path only — independent of Supabase data)
+# data rows   : 1 2 3 4 7 9 (need a reachable Supabase with content)
+
+PASS 1 GET / :: expected 200+marker got 200+marker
+FAIL 2 GET /api/events :: expected 200 and >=1 event got 200 and 0 events
+PASS 3 GET /api/events?search=test&tags=academic :: expected 200 got 200
+PASS 4 GET /clubs :: expected 200 got 200
+PASS 5 GET /profile :: expected 307 -> signin=required&next=/profile got 307 /?signin=required&next=/profile
+PASS 6 GET /my-events :: expected 307 -> signin=required got 307 /?signin=required&next=/my-events
+PASS 7 GET /docs :: expected 200 got 200
+PASS 8 POST(x31) /api/events :: expected 429 + Retry-After got 429 Retry-After=60
+PASS 9 GET /api/health :: expected 200 got 200
+PASS 10 GET /_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js :: expected 200 no redirect got 200 no-location
+
+--- ring rows (5 6 8 10): 4/4 passed
+--- data rows (1 2 3 4 7 9): 5/6 passed
+--- total: 9/10 passed, 1 failed
+--- NOTE: a failing data row may be environment-limited (unreachable or
+---       empty Supabase). The expectation is NOT lowered; name the row
+---       and the reason in the run record instead.
+# finished_at : 2026-09-15T05:38:00Z
+
+# ==============================================================================
+# RUN RECORD — appended after the capture. Everything above is script output.
+#   command     : SMOKE_HOST=http://localhost:3000 SMOKE_LABEL=b3.after bash scripts/smoke.sh
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T05:38:22Z
+#   target      : a FRESHLY RESTARTED `npm run dev` (Next.js 16.3.5, Turbopack) on
+#                 the POST-RENAME tree at commit 0d66a1d — src/proxy.ts present,
+#                 src/middleware.ts absent. The server was stopped before the
+#                 codemod ran and started again afterwards, so this reading cannot
+#                 be served by a process that still had the old file compiled in.
+#   toolchain   : node v24.16.0 | npm 11.13.0 | next 16.3.5 | curl 8.7.1
+#   exit_code   : 1 (one failing row; the exit code is the failure count by contract)
+#   dev banner  : the dev server no longer prints the file-convention deprecation
+#                 warning it printed on the before run. Same signal as the build.
+#
+# ROW-BY-ROW COMPARISON AGAINST evidence/smoke.b3.before.txt
+#   method : diff <(grep -E '^(PASS|FAIL) ' before) <(grep -E '^(PASS|FAIL) ' after)
+#   result : ZERO DIFFERENCES. All ten rows are byte-identical, down to row 10's
+#            run-time-discovered chunk filename. 9/10 passed, ring 4/4, row 2 the
+#            only failure, exactly as before the rename.
+#
+# THE RING ROWS — THE POINT OF THIS CAPTURE
+#   row 5  GET /profile     307 -> /?signin=required&next=/profile
+#          The application's only page-level authentication ring survived the
+#          rename. A 200 here would have meant every protected page is public,
+#          and the plan's instruction in that case is to revert, not to patch.
+#   row 6  GET /my-events   307 -> /?signin=required&next=/my-events
+#   row 8  POST x31 /api/events  429 with Retry-After: 60 — the limiter still
+#          runs FIRST in the request path, before routing (the route has no POST
+#          handler; the first 30 return 405, which is what makes this row prove
+#          the limiter rather than the handler)
+#   row 10 GET /_next/static/...  200, no Location header — the matcher's
+#          negative lookahead still excludes static assets
+#
+# ROW 2 STILL FAILS, FOR THE SAME PRE-EXISTING REASON
+#   expected : 200 and >=1 event
+#   got      : 200 and 0 events        <- actual value printed, not suppressed
+#   reason   : the local Supabase reachable from this machine holds no approved
+#              events. Identical in smoke.b0, b1, b2 and b3.before. The
+#              expectation is NOT lowered and the row is NOT removed.
+#
+# WHAT THIS CAPTURE DOES NOT COVER
+#   The ban check. It needs a banned user's session, which needs the Phase 3
+#   deterministic seed. See evidence/proxy-migration-note.md § Coverage
+#   limitation; the assertion lands in Phase 7's CERT-05 persona matrix.
+#   Also not covered: the deployed CDN path. Next compiles the file convention
+#   into a platform function at build time, so the first post-rename deploy is
+#   the only place the rename is exercised against the CDN. Tier 3 therefore
+#   runs against a preview deployment, not only against this local server.
+# ==============================================================================
