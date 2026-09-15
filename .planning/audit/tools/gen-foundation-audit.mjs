@@ -22,6 +22,13 @@
  * Usage:
  *   node .planning/audit/tools/gen-foundation-audit.mjs           # write the document
  *   node .planning/audit/tools/gen-foundation-audit.mjs --check   # exit 1 if stale
+ *
+ * `resolution` (added by plan 02-11, Phase 2). An OPTIONAL per-finding string rendered
+ * as a Resolution paragraph under the validation criterion. It exists because the
+ * register could record THAT a finding closed — via `status` and `closes_in_phase` —
+ * and had nowhere to record HOW, in which commit, or which clause did not close. A
+ * finding untouched since Phase 1 has no `resolution` and renders exactly as before,
+ * so this addition is byte-neutral on every row it is absent from.
  */
 
 import fs from 'node:fs';
@@ -216,6 +223,10 @@ function render(rows) {
     w(`**Recommended fix.** ${row.recommended_fix}`);
     w();
     w(`**Validation criterion.** ${row.validation_criterion}`);
+    if (row.resolution) {
+      w();
+      w(`**Resolution.** ${row.resolution}`);
+    }
     if (row.risk_acceptance) {
       const ra = row.risk_acceptance;
       w();

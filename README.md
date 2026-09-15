@@ -14,19 +14,22 @@ A campus event discovery platform for McGill University. Discover and explore ca
 
 ## 🛠️ Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS + shadcn/ui
 - **Database & Auth**: Supabase
-- **State Management**: React Hooks
+- **State Management**: Zustand for global auth state (`src/store/useAuthStore.ts`), SWR for client-side data fetching, React state for component-local UI
+- **Testing**: Jest with ts-jest
 - **Icons**: Lucide React
 - **Date Formatting**: date-fns
+
+Re-derive the framework major rather than trusting this list: `node -p "require('./package.json').dependencies.next"`.
 
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js** 18+ and npm
+- **Node.js** 24 and npm 11+ — pinned in `package.json` `engines` and `.nvmrc`, and read by CI from `.nvmrc`. Run `nvm use` in the project root. (`node -p "require('./package.json').engines"`)
 - A Supabase account and project
 - Git
 
@@ -146,7 +149,8 @@ Each file contains TODO comments indicating what needs to be implemented.
 - `npm run build`: Build for production
 - `npm run start`: Start production server
 - `npm run lint`: Run ESLint
-- `npm run test`: Run unit tests
+- `npm test`: Run the Jest suite (two projects — `node` and `jsdom`)
+- `npm run test:ci`: Run the Jest suite in CI mode (`jest --ci`)
 
 ## 🎨 Styling & brand
 

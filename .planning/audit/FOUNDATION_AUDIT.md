@@ -45,7 +45,8 @@
 
 | Status | Count |
 |---|---:|
-| Open | 70 |
+| Open | 63 |
+| Fixed | 7 |
 
 ---
 
@@ -216,7 +217,7 @@
 
 ### F-025 — Personalized API responses are stored by the shared CDN cache under a key that ignores the session
 
-**Severity:** Critical · **Category:** cache-exposure · **Status:** Open · **Closes in phase:** 05
+**Severity:** Critical · **Category:** cache-exposure · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Credential-equivalent cross-tenant disclosure with no compensating control, and the mechanism is proven by measurement rather than inferred. Eight personalized routes returned x-vercel-cache HIT or STALE with non-zero age under the blanket s-maxage=60 directive, and not one response in the entire run varied on Cookie or Authorization — every vary read accept-encoding and nothing else. A cache entry is therefore keyed by URL alone and served to every caller of that URL. The verdict is held at latent-hazard rather than leak-confirmed because the cross-session retrieval step was not observed (blocked on a second account's cookies); the severity is not softened, because the missing step is the victim, not the mechanism.
 
@@ -238,6 +239,8 @@
 **Recommended fix.** Remove the blanket /api/(.*) cache rule from vercel.json and set Cache-Control per handler. Personalized responses get `private, no-store` (48 routes per the cache_policy_target column); genuinely public ones keep a shared directive and add `Vary: Cookie` as a defence in depth. Never attach a caching header by path, because the header then applies to the 401 as well as the 200.
 
 **Validation criterion.** Re-run the two-session probe with COOKIE_A and COOKIE_B supplied and assert that no personalized route returns x-vercel-cache HIT for session B after session A populated it, and that every personalized route's Cache-Control contains `private` or `no-store`.
+
+**Resolution.** **NOT CLOSED BY PHASE 2, and the distinction matters enough to record here.** `closes_in_phase` corrected 05 -> **06** to agree with the roadmap, whose Phase 6 success criterion 3 is the one that deletes the blanket `s-maxage=60` from `vercel.json`, returns `private, no-store` on personalized routes, and adds the cross-user cache regression test (REFAC-19). Phase 2 closed the `next` cache-poisoning **advisories** by version (F-051). It did not touch the **precondition** those advisories need, which Phase 1 measured live on this deployment: eight personalized routes returned `x-vercel-cache` HIT or STALE with non-zero age, and not one response in the run varied on `Cookie` or `Authorization`. A closed advisory is not a removed precondition. Severity stays **Critical** and status stays **Open**. Phase 2 is a dependency phase and the fix is a behaviour change; making it here would have broken the one property the phase exists to preserve.
 
 **Related.** [F-026](#f-026), [F-027](#f-027), [F-028](#f-028)
 
@@ -655,7 +658,7 @@
 
 ### F-051 — next 16.2.1 carries 25 advisories, two of them critical, reachable on every request, with a fix inside the declared range
 
-**Severity:** High · **Category:** dependency · **Status:** Open · **Closes in phase:** 03
+**Severity:** High · **Category:** dependency · **Status:** Fixed · **Closes in phase:** 02
 
 **Exposure rationale.** A reachable set of advisories in the single most-executed production dependency. Ten of the 25 are ruled out by verified configuration or unused features (images.unoptimized, no use server, no rewrites, no i18n, no CSP nonces) and five cache-poisoning records were held open pending the cache matrix — which has since proven the shared cache does store personalized responses (F-025), so those five cannot be closed by configuration. The fix is available inside the declared ^16.0.3 range, so the remediation cost is a lockfile update rather than a migration.
 
@@ -675,13 +678,15 @@
 
 **Validation criterion.** npm audit --omit=dev reports zero High or Critical advisories rooted at next, and the five cache-poisoning records are either resolved by version or individually re-dispositioned with the cache-matrix evidence cited.
 
+**Resolution.** **Closed in Phase 2, by version.** `next` moved `^16.0.3` (installed 16.2.1) -> `^16.3.5` in its own commit `cf6b3c9` (plan 02-05, batch 2), with `react` and `react-dom` byte-identical on all four values — declared range and resolved version, both packages. The shipped version is **16.3.5, not the 16.2.11 the STAB-05 requirement text named**: 16.2.11 predates the 2026-08-25 security release and would have satisfied the requirement's letter while leaving two unauthenticated-RCE criticals open; the re-verification is in `.planning/phases/02-dependency-and-runtime-stabilization/evidence/next-upgrade-note.md` and the requirement text was amended by plan 02-11. `evidence/audit.after.json` reports **zero High and zero Critical** advisories rooted at `next` across 298 production dependencies. **Read the five cache-poisoning records precisely: they are closed BY VERSION, and the precondition they needed is NOT removed.** Phase 1 measured the shared cache storing personalized responses on this deployment (F-025), that measurement still stands, and a closed advisory is not the same fact as a removed precondition. F-025 closes in Phase 6.
+
 **Related.** [F-025](#f-025), [F-052](#f-052)
 
 ---
 
 ### F-052 — The vercel CLI is declared in dependencies rather than devDependencies and is imported by nothing
 
-**Severity:** High · **Category:** dependency · **Status:** Open · **Closes in phase:** 03
+**Severity:** High · **Category:** dependency · **Status:** Fixed · **Closes in phase:** 02
 
 **Exposure rationale.** Packaging defect with a large advisory footprint: it roots 7 of the 24 High/Critical rows in the production tree, including a critical in tar, for a package no source file imports. The severity is attack surface, not a specific exploit — a CLI in the production dependency tree ships its entire transitive closure to the runtime. It is also the highest-leverage single fix in the audit: one line retires seven rows, against npm's own advice of a 27-major-version upgrade.
 
@@ -701,6 +706,8 @@
 **Recommended fix.** Remove vercel from dependencies entirely — the deployment platform provides its own CLI and nothing in the repository imports it. If it is wanted for local scripting, move it to devDependencies.
 
 **Validation criterion.** npm audit --omit=dev reports no advisory path rooted at vercel, and knip reports it is no longer an unused production dependency because it is no longer a production dependency.
+
+**Resolution.** **Closed in Phase 2, by removal rather than relocation.** `vercel` `^32.3.0` was deleted from `dependencies` outright in `5fd6745` (plan 02-04, batch 1) and was **not** moved to `devDependencies`: relocating it would have preserved its entire subtree, `tar` Critical included, in the dev tree in exchange for no capability this repository uses. The decision, the rejected alternative and the three negative checks are recorded in `.planning/phases/02-dependency-and-runtime-stabilization/evidence/vercel-removal-decision.md` (STAB-04). `evidence/audit.after.json` contains no advisory path rooted at `vercel`. This single line retired 7 of the 24 High/Critical rows in the Phase 1 census.
 
 **Related.** [F-051](#f-051), [F-053](#f-053), [F-056](#f-056)
 
@@ -1234,7 +1241,7 @@
 
 ### F-053 — swagger-ui-react and two companion packages are installed, vulnerable and imported by nothing
 
-**Severity:** Medium · **Category:** dependency · **Status:** Open · **Closes in phase:** 03
+**Severity:** Medium · **Category:** dependency · **Status:** Fixed · **Closes in phase:** 02
 
 **Exposure rationale.** Dead weight carrying 6 High advisory rows. The reachability question is closed with a citable module path: the module graph cruises exactly five modules from /docs, and swagger-ui-react appears in none of them — the page reaches redoc and next-swagger-doc instead. Unreachable code cannot be exploited, which is the compensating control holding this below the reachable redoc path.
 
@@ -1253,6 +1260,8 @@
 **Recommended fix.** Remove swagger-ui-react, @types/swagger-ui-react and @swagger-api/apidom-ns-openapi-3-1 from package.json, and delete the stale version claim in .claude/CLAUDE.md:79 in the same change rather than correcting it.
 
 **Validation criterion.** npm audit --omit=dev reports no advisory path rooted at swagger-ui-react, and knip reports no unused production dependency.
+
+**Resolution.** **Closed in Phase 2, by removal.** `swagger-ui-react`, `@types/swagger-ui-react` and `@swagger-api/apidom-ns-openapi-3-1` were deleted in `5fd6745` (plan 02-04, batch 1), on the AUDIT-12 reachability answer rather than on a hunch: the `/docs` module closure reaches `redoc` and `next-swagger-doc` and never reaches `swagger-ui-react`. The companion instruction in this finding's recommended fix — delete the stale `.claude/CLAUDE.md` version line rather than correct it — was carried out by plan 02-11 in the same reconciliation that wrote this note. `redoc` was **upgraded** 2.5.2 -> 2.5.4 rather than removed, because unlike `swagger-ui-react` it IS reachable from the public route; gating `/docs` behind authentication is F-054 and belongs to Phase 5, which Phase 2 deliberately did not pre-empt (STAB-07).
 
 **Related.** [F-052](#f-052), [F-054](#f-054), [F-063](#f-063)
 
@@ -1699,7 +1708,7 @@
 
 ### F-056 — tailwindcss-animate in dependencies drags the Tailwind build toolchain into the production tree
 
-**Severity:** Low · **Category:** dependency · **Status:** Open
+**Severity:** Low · **Category:** dependency · **Status:** Fixed · **Closes in phase:** 02
 
 **Exposure rationale.** Packaging hygiene with no exposure — a build-time package in the runtime dependency set inflates the installed tree and the advisory surface without adding a reachable code path. Same class as F-052 at much smaller scale.
 
@@ -1718,13 +1727,15 @@
 
 **Validation criterion.** npm ls --omit=dev shows no tailwindcss packages in the production tree.
 
+**Resolution.** **Closed in Phase 2, by relocation.** `tailwindcss-animate` `^1.0.7` moved from `dependencies` to `devDependencies` in `5fd6745` (plan 02-04, batch 1). Verified two ways rather than one, because a version bump that leaves a build-time package in the runtime tree fixes an advisory and not a packaging defect: every `picomatch` copy in the lockfile now carries `dev: true`, so the Tailwind build chain is absent from the production tree entirely, and `evidence/audit.after.json` records 298 production dependencies with no tailwind path among them.
+
 **Related.** [F-052](#f-052)
 
 ---
 
 ### F-057 — A Windows remote-code-execution critical is dispositioned 'not applicable' on an unverified assumption about the host OS
 
-**Severity:** Low · **Category:** dependency · **Status:** Open
+**Severity:** Low · **Category:** dependency · **Status:** Fixed · **Closes in phase:** 02
 
 **Exposure rationale.** An evidence gap rather than a vulnerability. GHSA-p293-qw3h-jr36 was ruled out on the assumption that the production runtime is Linux — which is almost certainly correct and was not confirmed by any capture in this phase. Recorded so the assumption is visible and cheap to close, rather than silently inherited by the next reviewer.
 
@@ -1741,6 +1752,8 @@
 **Recommended fix.** Confirm the production runtime OS from the deployment platform and record it, then either close the advisory with evidence or reopen it at its published severity.
 
 **Validation criterion.** The dependency report's GHSA-p293 row cites a captured runtime-OS fact rather than an assumption.
+
+**Resolution.** **Closed in Phase 2, by version — which is what retires the evidence gap this finding was actually about.** GHSA-p293-qw3h-jr36 was dispositioned 'not applicable' on an unverified assumption that the production runtime is Linux. `next` moved to 16.3.5 (`cf6b3c9`, plan 02-05) and `evidence/audit.after.json` reports zero advisories of any severity rooted at `next` across the production tree, so **the advisory no longer applies on any operating system** and the assumption is no longer load-bearing. Note precisely what closed: the *dependency on the assumption* was removed, not the assumption confirmed. The production runtime OS was never captured and this register no longer needs it.
 
 **Related.** [F-051](#f-051)
 
@@ -1773,7 +1786,7 @@
 
 ### F-063 — Seven documented facts about the codebase are contradicted by the working tree
 
-**Severity:** Low · **Category:** dead-code · **Status:** Open · **Closes in phase:** 02
+**Severity:** Low · **Category:** dead-code · **Status:** Fixed · **Closes in phase:** 02
 
 **Exposure rationale.** Documentation drift with one dangerous instance and six benign ones. The dangerous one is CLAUDE.md:50 documenting six protected routes where src/middleware.ts:114 has eight — the drift runs in the direction where an auditor trusting the document marks two genuinely protected routes as public, which is exactly the mistake this phase was built to avoid. The rest (92 vs 94 handlers, 45 vs 44 migrations, Next.js 14 vs 16, React Hooks vs Zustand, a Vitest suite that does not exist, a swagger-ui-react version that is wrong twice over) are onboarding noise. None is exploitable, hence Low.
 
@@ -1795,13 +1808,15 @@
 
 **Validation criterion.** A CI check comparing every count claim in CLAUDE.md, PROJECT.md and README.md against baseline/versions.txt, run green.
 
+**Resolution.** **Closed in Phase 2, plan 02-11 (batch 6c).** Each stale claim was corrected against the working tree, never against a planning document, per the Phase 1 rule that counts are re-derived rather than transcribed. `CLAUDE.md`: six protected routes -> all **eight** read from `src/proxy.ts:114` (`/my-events`, `/create-event`, `/notifications`, `/profile`, `/settings`, `/my-clubs`, `/invites`, `/friends`), and every `src/middleware.ts` reference replaced, that file having been renamed in `0d66a1d`. `.claude/CLAUDE.md`: the Vitest entries — a runner that is not installed and never ran — replaced by the real Jest harness, the Node 20 runtime claim corrected to 24, the `swagger-ui-react` line deleted rather than corrected per F-053, and the 'no test step in CI pipeline' claim corrected. `README.md`: Next.js 14 -> 16, and 'React Hooks' -> Zustand plus SWR. `.planning/PROJECT.md:41` needed no edit — it already read 94 handlers and 43 pages. Row 8 of `quality/dead-code.md` § 4 (45 vs 44 migrations) is untouched by design: the in-repo documents already agree with the tree at 44 and only the out-of-repo brief is stale.
+
 **Related.** [F-045](#f-045), [F-053](#f-053), [F-064](#f-064), [F-069](#f-069)
 
 ---
 
 ### F-064 — Four tracked files and one npm script are residue of tooling that is not installed
 
-**Severity:** Low · **Category:** dead-code · **Status:** Open · **Closes in phase:** 02
+**Severity:** Low · **Category:** dead-code · **Status:** Fixed · **Closes in phase:** 02
 
 **Exposure rationale.** Dead configuration with no exposure. vitest.config.ts and vitest.setup.ts are tracked and referenced by nothing; test-results/.last-run.json is a tracked Playwright marker asserting status 'failed' from a framework that is not installed; and package.json's check:feedback script points at scripts/check-feedback-loop.mjs, which does not exist, so the command fails immediately. Each teaches a future reader something false about the project.
 
@@ -1823,6 +1838,8 @@
 **Recommended fix.** Delete both vitest files and test-results/.last-run.json, add test-results/ to .gitignore, and either delete the check:feedback script entry or restore the missing file if the feedback-loop check is still wanted.
 
 **Validation criterion.** A check asserting every npm script's entry point exists on disk, and that no tracked file references a package absent from package.json.
+
+**Resolution.** **Closed in Phase 2, batch 0 (`1e2647e`, plan 02-01).** `vitest.config.ts`, `vitest.setup.ts` and `test-results/.last-run.json` are deleted from the tree and from git, `test-results/` is gitignored, the `check:feedback` script entry pointing at a file that does not exist is gone, and the dangling `tsconfig.json` exclude entry that existed only to keep `tsc` green over an orphan went with it. **One clause of the validation criterion is not delivered and is stated rather than glossed:** the criterion also asks for a *standing check* asserting every npm script's entry point exists on disk and that no tracked file references an absent package. No such check was built. The defect is gone; the regression guard against its return is not, and belongs with the Stage 4 certification tooling.
 
 **Related.** [F-063](#f-063), [F-065](#f-065)
 
@@ -1851,13 +1868,15 @@
 
 **Validation criterion.** A CI run that executes the Jest suite and fails the build on a test failure, plus a successful CI-hosted run of the audit tooling.
 
+**Resolution.** **HELD OPEN at the end of Phase 2, deliberately — the work is done and the evidence the criterion names does not exist yet.** Delivered in the tree: `.github/workflows/ci.yml` now runs `npm test` and `npm audit --audit-level=high --omit=dev`, and `Setup Node.js` reads `node-version-file: '.nvmrc'` so the Node split is resolved at 24 with no competing literal (`1e2647e`, plan 02-01; the vulnerability gate added last by plan 02-09 so it could not red-light five consecutive batches). **The criterion asks for a CI RUN, and no run has been observed:** every Phase 2 commit is local and unpushed, and the last completed run's logs are expired by GitHub (HTTP 410). The full local rehearsal, in the workflow's own step order with exit codes, is in `.planning/phases/02-dependency-and-runtime-stabilization/evidence/ci-green-run.md`, whose first line states the run is unobserved rather than implying a pass. **Unblocked by exactly one act: a push.** No further work is scheduled.
+
 **Related.** [F-066](#f-066), [F-064](#f-064)
 
 ---
 
 ### F-066 — Five of twenty-one Jest suites are skipped, for two different reasons needing two different fixes
 
-**Severity:** Low · **Category:** config · **Status:** Open · **Closes in phase:** 02
+**Severity:** Low · **Category:** config · **Status:** Open · **Closes in phase:** 03
 
 **Exposure rationale.** Test-coverage gap with no exposure. Four suites are blocked by an uninstalled @testing-library/react and would revive on an install; the fifth, src/app/api/events/route.test.ts, is blocked by contract drift — the route it tests no longer implements cursor pagination, so no install will revive it. Conflating the two is why the skip count has stayed constant. Compounded by tsconfig.json excluding all 21 test files, which is what made F-050's excess-property error invisible.
 
@@ -1876,6 +1895,8 @@
 **Recommended fix.** Install @testing-library/react to revive four suites; rewrite or delete the fifth against the route's current contract. Stop excluding test files from tsconfig.json so fixture type errors surface.
 
 **Validation criterion.** npx jest --ci reports zero skipped suites, and npx tsc --noEmit type-checks the test files with zero diagnostics.
+
+**Resolution.** **PARTIALLY CLOSED in Phase 2; `closes_in_phase` moved 02 -> 03 for the remainder.** Closed: the four suites blocked by an uninstalled `@testing-library/react` now execute. `jest-environment-jsdom` and the three testing-library packages were installed and Jest split into two projects with an explicit routing rule — `src/hooks/useEvents.test.ts` is a `.ts` file that needs a DOM, so the rule is not 'by file extension' (`0556444`, plan 02-08). The suite count went 16 of 21 executing to 22 of 23, and tests went 220 passed / 36 skipped to **278 passed / 5 skipped**. NOT closed, and both halves were correctly predicted by this finding: (1) `src/app/api/events/route.test.ts` remains skipped — no install revives it, because it asserts a cursor-pagination contract the handler has no cursor concept for; reviving it against current behaviour would freeze a possible defect as the specification, so the contract question is handed to REFAC-10 in Phase 4 (`evidence/skipped-suite-disposition.md`). (2) `tsconfig.json` still excludes every test file, so the whole-program type-check hole that made F-050 invisible is still open; that belongs with the generated types and the type-drift check in Phase 3.
 
 **Related.** [F-050](#f-050), [F-065](#f-065)
 

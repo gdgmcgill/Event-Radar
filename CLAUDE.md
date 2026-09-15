@@ -43,11 +43,17 @@ All three are typed with `Database` from `lib/supabase/types.ts`.
 
 ### Auth Flow
 
-- **Middleware** (`src/middleware.ts`) handles session refresh, protected route redirects, onboarding guard, and rate limiting
+- **Proxy** (`src/proxy.ts`) handles session refresh, protected route redirects, onboarding guard, ban checks, and rate limiting. The file is named `proxy.ts`, not `middleware.ts` — Next.js 16 renamed the convention and the file was migrated in its own commit (`0d66a1d`). The old `middleware.ts` file no longer exists anywhere under `src/`; do not re-create it.
 - **AuthProvider** wraps the app and calls `useAuthStore.initialize()` once
 - **useAuthStore** (Zustand) is the single source of truth for current user state client-side — it listens to `onAuthStateChange` and enriches with profile data from the `users` table
 - Sign-out goes through `/auth/signout` (server route) to properly clear cookies
-- Protected routes: `/my-events`, `/create-event`, `/notifications`, `/profile`, `/my-clubs`, `/invites`
+- Protected routes — all **eight**, read from the `PROTECTED_ROUTES` array at `src/proxy.ts:114`, which is the only authority: `/my-events`, `/create-event`, `/notifications`, `/profile`, `/settings`, `/my-clubs`, `/invites`, `/friends`. Re-derive rather than trust this list:
+
+  ```bash
+  node -e "const s=require('fs').readFileSync('src/proxy.ts','utf8');console.log(s.match(/PROTECTED_ROUTES\s*=\s*\[([^\]]*)\]/)[1])"
+  ```
+
+  A guard is matched on exact path or `path + '/'` prefix, so `/profile/edit` is protected and `/profiles` is not.
 
 ### Layout Architecture
 

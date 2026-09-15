@@ -96,6 +96,10 @@
       }
     },
     "closes_in_phase": { "type": ["string", "integer", "null"] },
+    "resolution": {
+      "type": "string",
+      "description": "OPTIONAL. Added in Phase 2 (plan 02-11) because the register had nowhere to say HOW a finding closed. When a later phase changes status or closes_in_phase, the note says what was done, in which commit, and what evidence proves it — and, when the closure is partial, exactly which clause did NOT close. gen-foundation-audit.mjs renders it as a Resolution paragraph; absent on a finding that has never been touched since Phase 1."
+    },
     "related": {
       "type": "array",
       "items": { "type": "string", "pattern": "^F-\\d{3}$" }

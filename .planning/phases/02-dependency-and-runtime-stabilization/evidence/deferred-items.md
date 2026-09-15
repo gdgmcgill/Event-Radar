@@ -72,5 +72,54 @@ it is visible rather than silently settled by a default.
 
 ---
 
+## Three cache findings carry the same roadmap disagreement F-025 had
+
+**Found by:** plan 02-11 (batch 6c), task 2, while reconciling `closes_in_phase`
+against the roadmap.
+
+Task 2 corrected `F-025` from `closes_in_phase: 05` to `06`, because the roadmap
+puts the deletion of the blanket `s-maxage=60` rule in **Phase 6** success
+criterion 3, not Phase 5. **`F-026`, `F-027` and `F-028` are the same rule seen
+from three other angles and all three still read `05`:**
+
+- `F-026` — thirty-seven auth-gated routes, all fifteen admin handlers included,
+  carry the blanket shared-cache directive
+- `F-027` — `/api/auth-debug` echoes the caller's own id and email with no gate
+- `F-028` — eight personalized routes answer anonymous callers with 200 and a
+  degraded body
+
+**Not changed, deliberately.** Plan 02-11 names five findings to reassign plus
+`F-025` to leave open; these three are outside that list and outside this plan's
+scope. Whether each belongs to Phase 5 (the authorization slice) or Phase 6 (the
+caching close-out) is a real judgment — `F-027` in particular is an authorization
+defect that the cache rule makes worse, so 05 may well be correct for it. Filed
+here so the next reader finds a recorded decision rather than an inconsistency.
+
+**Owner:** whoever plans Phase 5. One `closes_in_phase` read per finding.
+
+---
+
+## `.claude/CLAUDE.md` says Zustand has "no stores directory found"
+
+**Found by:** plan 02-11 (batch 6c), task 2.
+
+`.claude/CLAUDE.md` § Key Dependencies reads:
+
+> `zustand` ^5.0.9 - Client-side state management (no stores directory found; may
+> be used inline)
+
+`src/store/useAuthStore.ts` exists and is the single source of truth for auth
+state, as the project's own root `CLAUDE.md` documents. The parenthetical is
+false.
+
+**Not changed, deliberately.** It is not a claim **this phase** falsified — it
+was equally false at the Phase 1 baseline — and it is not one of the seven facts
+`F-063` enumerates. Plan 02-11's instruction is explicit: *"Do not rewrite these
+documents beyond the false claims"*, and the phase's scope boundary says only
+issues caused by the current change are in scope. A one-clause fix, filed rather
+than taken.
+
+---
+
 *Phase: 02-dependency-and-runtime-stabilization*
-*Plan: 02-05*
+*Plans: 02-05, 02-11*
