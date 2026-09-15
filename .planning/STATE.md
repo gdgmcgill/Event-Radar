@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Dependency and Runtime Stabilization
 status: executing
-stopped_at: "Completed 02-09-PLAN.md (batch 6a: production census 0 critical / 0 high across 298 prod deps; CI vulnerability gate added unsuppressed between test and build; exception register closed empty). BLOCKED on the 02-09 docs commit — git binary refuses to run pending 'sudo xcodebuild -license'"
-last_updated: "2026-09-15T15:29:20.539Z"
+stopped_at: "Completed 02-10-PLAN.md (batch 6b: CycloneDX SBOM, 320 components, byte-identical across regenerations; renovate.json with 6 described rules, 1 patch-only auto-merge, React majors disabled at the PR level; STAB-16 after side with two-family attribution). STAB-15 and STAB-16 complete."
+last_updated: "2026-09-15T15:48:26.427Z"
 last_activity: 2026-09-15
-last_activity_desc: "Completed 02-08 (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)"
+last_activity_desc: "Completed 02-10 (batch 6b: SBOM committed and proven reproducible, Renovate configured but inert until the GitHub App is installed, bundle delta recorded in two families with per-batch attribution; STAB-15 and STAB-16 complete)"
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 23
   percent: 13
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 02 (Dependency and Runtime Stabilization) — EXECUTING
-Plan: 10 of 11
-Status: Executing — 02-01..02-08 complete (batches 0-5 done), wave 7 next: 02-09 (batch 6a: CI audit gate, exception register) and 02-10 (batch 6b: SBOM, Renovate, bundle delta)
-Last activity: 2026-09-15 — Completed 02-08 (batch 5: jsdom + testing-library installed, Jest split into node/jsdom projects, four suites revived; skipped 36 -> 5, passing 220 -> 278; STAB-08 complete)
+Plan: 11 of 11
+Status: Executing — 02-01..02-10 complete (batches 0-6b done). Wave 8 next: 02-11 (exit gate: clean-room install, final baseline comparison, phase completion note). Two human steps outstanding from 02-10 — install the Renovate GitHub App, and mark the CI checks REQUIRED in branch protection on main
+Last activity: 2026-09-15 — Completed 02-10 (batch 6b: SBOM committed and proven reproducible, Renovate configured but inert until the GitHub App is installed, bundle delta recorded in two families with per-batch attribution; STAB-15 and STAB-16 complete)
 
 Progress: [█░░░░░░░░░] 9%
 
@@ -77,6 +77,7 @@ Progress: [█░░░░░░░░░] 9%
 | Phase 02 P07 | 20min | 3 tasks | 14 files |
 | Phase 02 P08 | 13min | 3 tasks | 12 files |
 | Phase 02 P09 | 14min | 2 tasks | 15 files |
+| Phase 02 P10 | 25min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Batch 6 (02-09): final production census is 0 critical / 0 high / 2 moderate / 0 low across 298 prod deps (phase start: 2/22/13/1 across 680). The exception register closes EMPTY because the last High was fixed, not excepted
 - [Phase 02]: Batch 6 (02-09): STAB-14 is delivered IN PART and 02-11 must record it as partial — the CI gate step exists unsuppressed between the test and build steps and is green locally, but all 113 Phase 2 commits are unpushed so no run has been observed. evidence/ci-green-run.md says UNOBSERVED in its first line
 - [Phase 02]: Batch 6 (02-09): the postcss override collapses next's exact 8.5.23 pin into the single root 8.5.28 copy — 02-07 declined exactly this. Plans 02-10 and 02-11 now measure a tree with an overrides entry: the clean-room install and the bundle-size after side both moved (299 -> 298 prod deps)
+- [Phase 02]: Batch 6b (02-10): the SBOM is generated with --package-lock-only, added to the research command, because the installed-tree variant is platform-dependent (288 components on macOS vs 320 from the lockfile) and omits @next/swc-linux-x64-gnu and the sharp Linux binaries that actually run on Vercel iad1 — and because byte-stability across regenerations, which the plan requires, is false across machines without it
+- [Phase 02]: Batch 6b (02-10): renovate.json package rules are ordered general -> specific so the blanket major rule precedes the React rule; both match exactly [major], and in the research order the React rule shadows the blanket protection and makes it look absent
+- [Phase 02]: Batch 6b (02-10): the -6.32% route-bundle reduction is attributed to batch 2 on 02-04's MEASURED 0-byte batch-1 delta, not on Pitfall 9's prediction; batch 1's removals had zero importers and were already tree-shaken, and the +1,109 B that batches 3-6 added is reported rather than rounded away
 
 ### Pending Todos
 
@@ -171,6 +175,7 @@ None yet.
 - AUDIT-08 two-session cache probe BLOCKED: COOKIE_A/COOKIE_B not supplied. Retry: export PROD_HOST=https://universeapp.ca plus COOKIE_A/COOKIE_B, then bash .planning/audit/tools/cache-probe.sh && node .planning/audit/tools/gen-cache-matrix.mjs
 - ENVIRONMENT, not repository: the git binary stopped running partway through plan 02-09 — /usr/bin/git now exits 69 with 'You have not agreed to the Xcode license agreements'. Both 02-09 task commits landed first (refs/heads/main = b554d8f66eccc856a0cd3c69df3161bb0ac961ed, confirmed in .git/logs/HEAD). The 02-09 docs commit (SUMMARY.md, STATE.md, ROADMAP.md) is UNCOMMITTED on disk. Unblock: run 'sudo xcodebuild -license' in a Terminal, accept, then commit those files. Plan 02-10 cannot commit until this is cleared
 - STAB-14 is partial: the CI production vulnerability gate is in .github/workflows/ci.yml and exits 0 locally, but no CI run has been observed — all 113 Phase 2 commits are unpushed and the one run on the remote (26121379844) has GitHub-expired logs (HTTP 410). Unblock: push, then confirm six step conclusions and grep the Install step log for 'Unknown <scope> config' to also close STAB-02's CI half. Procedure in evidence/ci-green-run.md sections 3 and 6
+- Renovate is inert until two human steps are done: install the Renovate GitHub App on gdgmcgill/Event-Radar (four indirect probes found no evidence it ever has been), and mark the CI checks REQUIRED in branch protection on main — without the second, 'checks passed' is vacuous and patch auto-merge merges on a green tick that guarantees nothing
 
 ## Deferred Items
 
@@ -183,6 +188,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T15:29:20.535Z
-Stopped at: Completed 02-09-PLAN.md (batch 6a: production census 0 critical / 0 high across 298 prod deps; CI vulnerability gate added unsuppressed between test and build; exception register closed empty). BLOCKED on the 02-09 docs commit — git binary refuses to run pending 'sudo xcodebuild -license'
+Last session: 2026-09-15T15:48:26.423Z
+Stopped at: Completed 02-10-PLAN.md (batch 6b: CycloneDX SBOM, 320 components, byte-identical across regenerations; renovate.json with 6 described rules, 1 patch-only auto-merge, React majors disabled at the PR level; STAB-16 after side with two-family attribution). STAB-15 and STAB-16 complete.
 Resume file: None

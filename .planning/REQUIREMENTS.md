@@ -50,8 +50,8 @@ Constraint for every AUDIT requirement: no source, config, dependency, or databa
 - [ ] **STAB-12**: A clean-room install (`rm -rf node_modules && npm ci` in a fresh checkout, ideally in CI) succeeds and builds, with output captured as evidence
 - [ ] **STAB-13**: Build, lint, type-check, and tests are green at the same or better state than the AUDIT-13 baseline
 - [ ] **STAB-14**: CI runs `npm audit --audit-level=high --omit=dev` on every pull request
-- [ ] **STAB-15**: A CycloneDX SBOM is generated and committed, and Renovate (or Dependabot) is configured with grouping and patch-only auto-merge after the batch upgrades land
-- [ ] **STAB-16**: Bundle size is recorded before and after the dependency removals
+- [x] **STAB-15**: A CycloneDX SBOM is generated and committed, and Renovate (or Dependabot) is configured with grouping and patch-only auto-merge after the batch upgrades land
+- [x] **STAB-16**: Bundle size is recorded before and after the dependency removals
 - [ ] **STAB-17**: Exit gate: no unexplained Critical production vulnerabilities, no reachable High without a documented exception, reproducible install, green checks, reviewed lockfile — all evidenced in a Stage 2 completion note
 
 ### Stage 3 — Targeted Foundation Refactor (REFAC)
@@ -196,8 +196,8 @@ No phase crosses a stage boundary.
 | STAB-12 | Phase 2 | Pending |
 | STAB-13 | Phase 2 | Pending |
 | STAB-14 | Phase 2 | Pending |
-| STAB-15 | Phase 2 | Pending |
-| STAB-16 | Phase 2 | Pending |
+| STAB-15 | Phase 2 | Complete |
+| STAB-16 | Phase 2 | Complete |
 | STAB-17 | Phase 2 | Pending |
 | REFAC-01 | Phase 3 | Pending |
 | REFAC-02 | Phase 3 | Pending |
