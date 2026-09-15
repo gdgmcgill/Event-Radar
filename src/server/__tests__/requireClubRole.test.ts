@@ -8,8 +8,7 @@
  * and a privilege escalation.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/types";
+import type { ServerSupabaseClient } from "../context";
 import { requireClubRole } from "../authz/requireClubRole";
 
 type QueryResult = { data: { role: string } | null; error: unknown };
@@ -17,7 +16,7 @@ type QueryResult = { data: { role: string } | null; error: unknown };
 const mockFrom = jest.fn();
 let lastChain: Record<string, jest.Mock>;
 
-function makeSupabase(result: QueryResult): SupabaseClient<Database> {
+function makeSupabase(result: QueryResult): ServerSupabaseClient {
   mockFrom.mockImplementation(() => {
     const chain: Record<string, jest.Mock> = {};
     chain.select = jest.fn(() => chain);
@@ -27,7 +26,7 @@ function makeSupabase(result: QueryResult): SupabaseClient<Database> {
     lastChain = chain;
     return chain;
   });
-  return { from: mockFrom } as unknown as SupabaseClient<Database>;
+  return { from: mockFrom } as unknown as ServerSupabaseClient;
 }
 
 beforeEach(() => {

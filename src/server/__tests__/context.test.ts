@@ -149,8 +149,20 @@ describe("createRequestContext", () => {
 });
 
 describe("getRequestContext", () => {
-  it("is exported for the render-pass path and is not the handler entry point", () => {
-    expect(typeof getRequestContext).toBe("function");
-    expect(getRequestContext).not.toBe(createRequestContext);
+  it("is callable and produces the same context shape", async () => {
+    const ctx = await getRequestContext();
+
+    expect(ctx.user).toEqual(AUTHENTICATED_USER);
+    expect(ctx.profile).toEqual(PROFILE_ROW);
+    expect(typeof ctx.requestId).toBe("string");
+  });
+
+  it("falls back to the un-memoized function on a React without `cache`", () => {
+    // React is pinned to 18.3.x, which exports `cache` from neither build. The
+    // alias must therefore BE `createRequestContext` here — and the fallback is
+    // correct, just un-memoized. Asserting the identity pins the fallback in
+    // place so it cannot silently become a module-level cache, which would be
+    // scoped to the process rather than the request.
+    expect(getRequestContext).toBe(createRequestContext);
   });
 });
