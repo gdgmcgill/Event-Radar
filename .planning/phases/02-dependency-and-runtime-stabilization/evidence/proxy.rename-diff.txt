@@ -1,0 +1,91 @@
+ src/{middleware.test.ts => proxy.test.ts} | 2 +-
+ src/{middleware.ts => proxy.ts}           | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+--- full diff, rename detection on (-M) ---
+
+diff --git a/src/middleware.test.ts b/src/proxy.test.ts
+similarity index 98%
+rename from src/middleware.test.ts
+rename to src/proxy.test.ts
+index 374ce49..6117624 100644
+--- a/src/middleware.test.ts
++++ b/src/proxy.test.ts
+@@ -28,7 +28,7 @@
+  */
+ 
+ import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
+-import { config } from "./middleware";
++import { config } from "./proxy";
+ 
+ // ─── Paths under test ────────────────────────────────────────────────────────
+ // PROTECTED_ROUTES is src/middleware.ts:114, read from the source array literal.
+diff --git a/src/middleware.ts b/src/proxy.ts
+similarity index 98%
+rename from src/middleware.ts
+rename to src/proxy.ts
+index ab2532a..e006e42 100644
+--- a/src/middleware.ts
++++ b/src/proxy.ts
+@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
+ import { NextResponse, type NextRequest } from "next/server";
+ import { applyApiRateLimit } from "./middlewareRateLimit";
+ 
+-export async function middleware(request: NextRequest) {
++export async function proxy(request: NextRequest) {
+   // Apply public API rate limits before any auth work
+   const rateLimitResponse = applyApiRateLimit(request);
+   if (rateLimitResponse) return rateLimitResponse;
+
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above is command output.
+#   commands    : git --no-pager diff --cached -M --stat
+#                 git --no-pager diff --cached -M
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T05:36:00Z
+#   base commit : ad884e1 (the before-capture commit; HEAD when the codemod ran)
+#   producer    : npx --yes @next/codemod@16.3.5 middleware-to-proxy . --force
+#                 pinned to the installed framework version, one-shot, never added
+#                 to package.json. Result line: 0 errors, 319 unmodified, 1 skipped.
+#                 "1 skipped" is the rename itself — the transform writeFileSync's
+#                 the new path and unlinkSync's the old one inside handleMiddleware-
+#                 FileRename and then returns null, which jscodeshift tallies as a
+#                 skip rather than an ok. A both-files-present state is never staged.
+#   --force     : required and deliberate. The codemod's safety check calls the tree
+#                 dirty when ANY untracked file exists, and 47 pre-existing untracked
+#                 files (.agents/, .mcp.json, five research-cache blobs,
+#                 docs/product-master-plan.md, skills-lock.json) predate this plan.
+#                 `git status --porcelain --untracked-files=no` was EMPTY and
+#                 `git status --porcelain -u all -- src/` was EMPTY immediately
+#                 before the run, both recorded. Nothing was stashed or discarded.
+#   staging     : by explicit path, NOT `git add -A`. The plan's own step 2 says
+#                 `git add -A`, which here would have swept 47 unrelated untracked
+#                 files into the STAB-06 evidence artifact and destroyed the very
+#                 property the artifact exists to show. See SUMMARY deviation 1.
+#
+# WHAT THIS PROVES
+#   Two rename-detection headers, both at similarity index 98%, and a total of
+#   2 insertions / 2 deletions across both files:
+#     src/middleware.ts      -> src/proxy.ts       1 line: the function name
+#     src/middleware.test.ts -> src/proxy.test.ts  1 line: the import specifier
+#   Nothing else in either file moved. In particular, byte-identical across the
+#   rename: the three imports, the rate-limit-first ordering, the env-missing
+#   pass-through guard, the cookie getAll/setAll block, the ban check, the
+#   eight-entry PROTECTED_ROUTES array and its redirect construction, the
+#   onboarding guard, the catch block INCLUDING its "[Middleware]" log prefix,
+#   and the exported matcher with its comment.
+#
+# CODEMOD NO-OPS, EACH ASSERTED RATHER THAN ASSUMED
+#   next.config renamed keys   grep -E 'skipMiddlewareUrlNormalize|middlewarePrefetch|
+#                              middlewareClientMaxBodySize|externalMiddlewareRewrites
+#                              Resolve' next.config.js  -> no matches
+#   type-import renames        src/proxy.ts:2 imports NextResponse and type NextRequest
+#                              only; grep -E 'NextMiddleware|MiddlewareConfig' -> none
+#   runtime strip              grep -E 'export const runtime|runtime:' -> none
+#   collision aliasing         grep '_proxy1' -> none
+#   rate-limit import          src/proxy.ts:3 from "./middlewareRateLimit", unchanged
+#   log prefix                 src/proxy.ts:142 console.error("[Middleware] Error:", e)
+#                              DELIBERATELY NOT RENAMED — project logging convention
+#   stale importers            grep -rn 'from "@/middleware"|from "./middleware"' src/
+#                              -> no matches
+# ==============================================================================

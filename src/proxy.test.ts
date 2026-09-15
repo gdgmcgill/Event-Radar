@@ -28,7 +28,7 @@
  */
 
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
-import { config } from "./middleware";
+import { config } from "./proxy";
 
 // ─── Paths under test ────────────────────────────────────────────────────────
 // PROTECTED_ROUTES is src/middleware.ts:114, read from the source array literal.
