@@ -1,0 +1,128 @@
+REFAC-08 — auth callback characterization suite, passing run
+============================================================
+
+Plan:     03-02
+Phase:    03-refactor-foundations-schema-truth-and-the-seam-kit
+Recorded: 2026-09-15
+Subject:  src/app/auth/callback/route.ts  (UNMODIFIED — see callback-unmodified.txt)
+Suite:    src/app/auth/callback/route.test.ts
+
+
+------------------------------------------------------------------------------
+READ THIS FIRST — why two commands appear below
+------------------------------------------------------------------------------
+
+The canonical command for this suite, and the one a reader should run from a
+normal checkout, is:
+
+    npx jest --ci --selectProjects node --testPathPatterns "auth/callback"
+
+This plan executed inside a parallel-execution git worktree rooted at
+`<repo>/.claude/worktrees/agent-aa53fcb9550c81688`. `jest.config.js` carries
+`testPathIgnorePatterns: ['/node_modules/', '/.claude/', ...]`, so EVERY path in
+that worktree contains `/.claude/` and Jest discovers zero test files there —
+not this suite, and not the 20 pre-existing ones either. That is a property of
+where the worktree sits, not of this suite: the committed file lives at
+`src/app/auth/callback/route.test.ts`, which contains no `/.claude/` segment in
+a normal checkout and is matched by the node project's
+`testMatch: ['<rootDir>/src/**/*.test.ts']` with no config change.
+
+Command A below records the canonical invocation and its worktree-local result
+verbatim, so the discovery failure is on the record rather than quietly worked
+around. Command B is the same invocation with `/.claude/` dropped from the
+ignore list — the minimum adaptation that lets the worktree see its own files —
+and it is the run that proves the suite green. `jest.config.js` itself was NOT
+modified (`git status --porcelain jest.config.js` is empty).
+
+
+------------------------------------------------------------------------------
+COMMAND A — the canonical invocation, run inside the worktree
+------------------------------------------------------------------------------
+
+$ npx jest --ci --selectProjects node --testPathPatterns "auth/callback"
+
+Running one project: node
+No tests found, exiting with code 1
+Run with `--passWithNoTests` to exit with code 0
+In /Users/adyan/Documents/GitHub/Event-Radar/.claude/worktrees/agent-aa53fcb9550c81688
+  429 files checked.
+  testMatch: /Users/adyan/Documents/GitHub/Event-Radar/.claude/worktrees/agent-aa53fcb9550c81688/src/**/*.test.ts - 21 matches
+  testPathIgnorePatterns: /node_modules/, /.claude/, /supabase/functions/tests/, /Users/adyan/Documents/GitHub/Event-Radar/.claude/worktrees/agent-aa53fcb9550c81688/src/hooks/ - 0 matches
+  testRegex:  - 0 matches
+Pattern: auth/callback - 0 matches
+
+EXIT CODE: 1
+
+Corroborating probe — the same worktree, the same config, ignore list untouched
+versus `/.claude/` removed:
+
+$ npx jest --listTests 2>/dev/null | wc -l
+       1          <- one blank line; zero test files discovered
+
+$ npx jest --listTests --testPathIgnorePatterns "/node_modules/" "/supabase/functions/tests/" 2>/dev/null | wc -l
+      24          <- all 24 suites in the tree, including this one
+
+The 21-versus-0 line above is Jest's own accounting of the same fact: `testMatch`
+resolves 21 node-project candidates and the `/.claude/` entry removes every one.
+
+
+------------------------------------------------------------------------------
+COMMAND B — the worktree-local adaptation, the run that proves the suite green
+------------------------------------------------------------------------------
+
+$ npx jest --ci --selectProjects node --testPathPatterns "auth/callback" \
+      --testPathIgnorePatterns "/node_modules/" "/supabase/functions/tests/" "src/hooks/"
+
+Running one project: node
+PASS node src/app/auth/callback/route.test.ts
+  GET /auth/callback (PRESERVE — REFAC-08)
+    ✓ passes an inbound provider error through without attempting an exchange (71 ms)
+    ✓ redirects with error=no_code when the code parameter is absent (12 ms)
+    ✓ redirects with error=auth_failed and the provider message when the exchange fails (12 ms)
+    ✓ rejects a non-McGill address, signs it out, and deletes the orphaned auth user (13 ms)
+    ✓ upserts the profile and routes a new McGill user to /onboarding (14 ms)
+    ✓ routes an already-onboarded McGill user to the next destination, with no onboarding cookie (12 ms)
+    ✓ appends admin to the existing roles for an address in ADMIN_EMAILS (10 ms)
+    ✓ skips profile sync entirely and still admits the user when the service key is absent (10 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        0.366 s
+Ran all test suites matching auth/callback.
+
+EXIT CODE: 0
+
+
+------------------------------------------------------------------------------
+The eight characterized behaviours, against their source lines
+------------------------------------------------------------------------------
+
+  1. provider-error passthrough, before any exchange      route.ts:42-47
+  2. absent `code` -> ?error=no_code                      route.ts:49-54
+  3. exchange failure -> ?error=auth_failed&message=      route.ts:89-94
+  4. non-McGill -> signOut + deleteUser + ?error=not_mcgill  route.ts:113-134
+  5. new McGill user -> upsert + /onboarding + cookie     route.ts:148-154, 165-183, 203-231
+  6. onboarded user -> `next` destination, no cookie      route.ts:183, 203-205
+  7. ADMIN_EMAILS address -> roles gains "admin"          route.ts:22-29, 186-193
+  8. service key absent -> sync skipped, user admitted    route.ts:162, 197-199
+
+Each has a recorded red in callback-mutation-check.txt.
+
+
+------------------------------------------------------------------------------
+Environment
+------------------------------------------------------------------------------
+
+Node:     v24.16.0
+Jest:     30.2.0  (node_modules/jest; declared ^30.2.0. `npx jest --version`
+                   prints 30.1.3, which is jest-cli's own version string, not
+                   the runner's — both recorded so neither looks like a typo.)
+                  Selector flag is --testPathPatterns, PLURAL; the singular
+                   form was removed in Jest 30 and matches nothing.
+ts-jest:  29.4.6
+Install:  `npm ci` from the committed lockfile;
+          `git status --short -- package.json package-lock.json` is empty.
+
+No database, no network, no Supabase stack, no `.env.local` read. Every
+credential-shaped value in the suite is a literal placeholder.
