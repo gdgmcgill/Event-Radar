@@ -1,0 +1,161 @@
+PASS node src/app/api/events/export/route.test.ts
+PASS node src/lib/classifier.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+  ● Console
+
+    console.error
+      Error looking up event: { message: 'DB error' }
+
+      82 |
+      83 |     if (eventError) {
+    > 84 |       console.error("Error looking up event:", eventError);
+         |               ^
+      85 |       return NextResponse.json({ error: "Failed to verify event" }, { status: 500 });
+      86 |     }
+      87 |
+
+      at GET (src/app/api/events/[id]/rsvp/route.ts:84:15)
+      at Object.<anonymous> (src/__tests__/api/events/rsvp.test.ts:128:17)
+
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/proxy.test.ts
+PASS node src/lib/__tests__/ban.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+  ● Console
+
+    console.error
+      Fuzzy search RPC error: { message: 'RPC unavailable' }
+
+      221 |
+      222 |       if (searchError) {
+    > 223 |         console.error('Fuzzy search RPC error:', searchError);
+          |                 ^
+      224 |         // Fallback to basic ILIKE search if RPC fails
+      225 |         eventsQuery = eventsQuery.or(
+      226 |           `title.ilike.%${search}%,description.ilike.%${search}%`
+
+      at GET (src/app/api/events/route.ts:223:17)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:287:5)
+
+    console.error
+      Supabase error fetching events: {"message":"Database connection failed"}
+
+      295 |       }
+      296 |
+    > 297 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      298 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      299 |         ? errorMessage
+      300 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:297:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:383:17)
+
+    console.error
+      Supabase error fetching events: {"message":"relation \"events\" does not exist"}
+
+      295 |       }
+      296 |
+    > 297 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      298 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      299 |         ? errorMessage
+      300 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:297:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:398:17)
+
+    console.error
+      Error fetching events: Error: Unexpected crash
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:406:13)
+          at /Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:305:39
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:312:13)
+          at Object.mockConstructor [as from] (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:102:19)
+          at GET (/Users/adyan/Documents/GitHub/Event-Radar/src/app/api/events/route.ts:194:8)
+          at processTicksAndRejections (node:internal/process/task_queues:104:5)
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:409:17)
+
+      334 |     );
+      335 |   } catch (error) {
+    > 336 |     console.error("Error fetching events:", error);
+          |             ^
+      337 |     return NextResponse.json(
+      338 |       { error: "Failed to fetch events" },
+      339 |       { status: 500 }
+
+      at GET (src/app/api/events/route.ts:336:13)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:409:17)
+
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/lib/sanitize.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/lib/__tests__/recommendations.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS node src/lib/experiments.test.ts
+PASS node src/lib/dateValidation.test.ts
+PASS node src/lib/diversity.test.ts
+PASS node src/lib/exportUtils.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS jsdom src/components/events/FilterSidebar.test.tsx
+PASS jsdom src/components/ErrorBoundary.test.tsx
+PASS jsdom src/components/events/EventFilters.test.tsx
+PASS jsdom src/hooks/useEvents.test.ts
+
+Test Suites: 1 skipped, 22 passed, 22 of 23 total
+Tests:       5 skipped, 278 passed, 283 total
+Snapshots:   0 total
+Time:        2.094 s
+Ran all test suites in 2 projects.
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the output of
+# the command below, untrimmed and unsummarised.
+#   command     : npx jest --ci
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T06:21:19Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.3.5
+#                 jest-environment-jsdom 30.5.1 | \@testing-library/react 16.3.3
+#                 \@testing-library/dom 10.4.2 | \@testing-library/jest-dom 7.0.1
+#
+# STAB-13 measured position, both sides quoted. The baseline figures are the
+# AUDIT-13 capture in .planning/audit/baseline/jest.txt, whose summary lines read
+# "Test Suites: 5 skipped, 16 passed, 16 of 21 total" and
+# "Tests:       36 skipped, 220 passed, 256 total".
+#
+stab13_passed_measured=278
+stab13_passed_baseline=220
+stab13_skipped_measured=5
+stab13_skipped_baseline=36
+stab13_suites_measured=22
+stab13_suites_baseline=16
+stab13_suites_total_measured=23
+stab13_suites_total_baseline=21
+stab13_failing_measured=0
+#
+#   note        : BOTH numbers are quoted on purpose. "Tests pass" is not the gate.
+#                 The baseline's 220 passing was already satisfied by a tree in
+#                 which five suites never ran at all — which is exactly why the
+#                 requirement names a pass count and a skip count separately. The
+#                 skip count is the number this batch exists to move: 36 -> 5.
+#   note        : the 58-test gain is 31 revived tests plus the 27 added by earlier
+#                 batches in this phase (the batch-4 gate measured 247 passing).
+#                 The 31 are the per-suite Phase 1 counts exactly: 2 + 5 + 4 + 20.
+#   note        : the residual 5 skipped tests are the 4 in
+#                 src/app/api/events/route.test.ts, left skipped by decision, plus
+#                 the single it.skip at src/__tests__/api/events/get-events.test.ts
+#                 line 420. Neither is an install problem. See
+#                 evidence/skipped-suite-disposition.md.
+#   note        : suite total moved 21 -> 23 because plans 02-02 and 02-06 added
+#                 src/middlewareRateLimit.test.ts and src/proxy.test.ts. Nothing
+#                 was dropped: npx jest --ci --listTests reports 23 files, and the
+#                 21 baseline paths are all present.
+#   note        : every PASS line is now tagged with the project it ran under —
+#                 18 "PASS node" and 4 "PASS jsdom". That tagging is a side effect
+#                 of the two-project split and is itself useful: a suite silently
+#                 routed to the wrong environment is visible in this log.
+#   note        : the SIGSEGV on src/app/api/events/export/route.test.ts that
+#                 batch 4 recorded as a one-off did NOT return in this batch,
+#                 across roughly a dozen runs including this capture.
+# ==============================================================================
+exit_code=0

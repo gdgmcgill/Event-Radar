@@ -1,0 +1,21 @@
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the output of
+# the command below, untrimmed and unsummarised.
+#   command     : npx tsc --noEmit
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T06:21:03Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.3.5
+#   note        : zero bytes of output. The file was empty before this block was
+#                 appended; that emptiness IS the capture.
+#   note        : 87 lockfile entries entered the tree in this batch — the whole
+#                 jsdom / testing-library subtree, including @types/jsdom and
+#                 @types/aria-query — and produced zero new diagnostics.
+#   note        : tsconfig.json STILL excludes **/*.test.ts and **/*.test.tsx, so
+#                 this run does not type-check the test suite. That exclusion was
+#                 deliberately retained; the reasoning, the 68-error measurement
+#                 and the 86 -> 68 improvement this batch produced are recorded in
+#                 evidence/skipped-suite-disposition.md section 4. F-066 is
+#                 PARTIALLY closed by Phase 2 and plan 02-11 must say so.
+# ==============================================================================
+exit_code=0
