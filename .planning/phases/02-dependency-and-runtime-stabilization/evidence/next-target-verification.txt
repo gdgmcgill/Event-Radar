@@ -1,0 +1,157 @@
+# Batch 2 target re-verification — next / eslint-config-next
+
+recorded_utc=2026-09-15T05:06:00Z
+host_node=v24.16.0
+host_npm=11.13.0
+git_head=fbca9ce2b7ecdaa179db8892a3005e82cb37efd6
+installed_next_before=16.2.1
+installed_react_before=18.3.1
+installed_react_dom_before=18.3.1
+manifest_react_before=^18.3.0
+manifest_react_dom_before=^18.3.0
+
+Why this file exists: 02-RESEARCH.md § Metadata sets a deliberately short 14-day
+validity window (research date 2026-09-14, valid until 2026-09-28) and instructs
+that the version and advisory queries be re-run immediately before batch 2, because
+Next.js ships security releases monthly. The plan can be stale; the registry cannot.
+
+================================================================
+$ npm view next version
+================================================================
+16.3.5
+
+================================================================
+$ npm view next time --json   # 16.3.x stable releases only
+================================================================
+16.3.0 2026-08-03T20:34:17.082Z
+16.3.1 2026-08-13T22:45:02.025Z
+16.3.2 2026-08-21T09:54:02.099Z
+16.3.3 2026-08-25T15:32:19.558Z
+16.3.4 2026-08-31T20:00:51.381Z
+16.3.5 2026-09-11T17:26:46.049Z
+
+================================================================
+$ npm view eslint-config-next version
+================================================================
+16.3.5
+
+================================================================
+$ npm view next@16.3.5 peerDependencies --json
+================================================================
+{
+  "sass": "^1.3.0",
+  "react": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0",
+  "react-dom": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0",
+  "@playwright/test": "^1.51.1",
+  "@opentelemetry/api": "^1.1.0",
+  "babel-plugin-react-compiler": "*"
+}
+
+peer_react_range_at_target=^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
+  -> The React peer at the target still admits the installed React 18 line.
+  -> react-dom carries the identical range. Neither package needs to move.
+
+================================================================
+$ gh api "/advisories?ecosystem=npm&affects=next&sort=published&direction=desc&per_page=12"
+    --jq '.[] | "\(.published_at[0:10])  \(.ghsa_id)  \(.severity)  \(.summary)"'
+================================================================
+2026-09-08  GHSA-2xp9-vwfh-vxw4  critical  Next.js: Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used
+2026-09-08  GHSA-p293-qw3h-jr36  critical  Next.js: Unauthenticated Remote Code Execution on windows-hosted servers
+2026-07-22  GHSA-89xv-2m56-2m9x  high  Next.js: Server-Side Request Forgery in Server Actions on custom servers
+2026-07-22  GHSA-68g3-v927-f742  medium  Next.js: Cache confusion of response bodies for requests with bodies
+2026-07-22  GHSA-4633-3j49-mh5q  medium  Next.js: Cache confusion of response bodies for requests with bodies containing invalid UTF-8 byte sequences
+2026-07-22  GHSA-4c39-4ccg-62r3  medium  Next.js: Unbounded Server Action payload in Edge runtime
+2026-07-22  GHSA-p9j2-gv94-2wf4  high  Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname
+2026-07-22  GHSA-q8wf-6r8g-63ch  medium  Next.js: Denial of Service in the Image Optimization API using SVGs
+2026-07-22  GHSA-955p-x3mx-jcvp  medium  Next.js: Unauthenticated disclosure of internal Server Function endpoints
+2026-07-22  GHSA-6gpp-xcg3-4w24  high  Next.js: Middleware / Proxy bypass in App Router applications using Turbopack and single locale
+2026-07-22  GHSA-m99w-x7hq-7vfj  high  Next.js: Denial of Service in App Router using Server Actions
+2026-05-11  GHSA-26hh-7cqf-hhc6  high  Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - Incomplete Fix Follow-Up
+
+================================================================
+$ gh api "/advisories?...&per_page=30" --jq  # every 16.x-affecting row with its first_patched
+================================================================
+GHSA-2xp9-vwfh-vxw4  range=>= 16.0.0, < 16.3.3  first_patched=16.3.3
+GHSA-p293-qw3h-jr36  range=>= 16.0.0, < 16.3.3  first_patched=16.3.3
+GHSA-89xv-2m56-2m9x  range=>= 16.0.0, < 16.2.11  first_patched=16.2.11
+GHSA-68g3-v927-f742  range=>= 16.0.0, < 16.2.11  first_patched=16.2.11
+GHSA-4633-3j49-mh5q  range=>= 16.0.0, < 16.2.11  first_patched=16.2.11
+GHSA-4c39-4ccg-62r3  range=>= 16.0.0, < 16.2.11  first_patched=16.2.11
+GHSA-p9j2-gv94-2wf4  range=>= 16.0.0, < 16.2.11  first_patched=16.2.11
+GHSA-q8wf-6r8g-63ch  range=>= 16.0.0, < 16.2.11  first_patched=16.2.11
+GHSA-955p-x3mx-jcvp  range=>= 16.0.0, < 16.2.11  first_patched=16.2.11
+GHSA-6gpp-xcg3-4w24  range=>= 16.0.0, < 16.2.11  first_patched=16.2.11
+GHSA-m99w-x7hq-7vfj  range=>= 16.0.0, < 16.2.11  first_patched=16.2.11
+GHSA-26hh-7cqf-hhc6  range=>= 16.0.0, < 16.2.6  first_patched=16.2.6
+GHSA-3g8h-86w9-wvmq  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-ffhc-5mcf-pf4q  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-vfv6-92ff-j949  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-gx5p-jg67-6x7h  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-mg66-mrh9-m8jx  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-h64f-5h5j-jqjh  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-c4j6-fc7j-m34r  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-wfc6-r584-vfw7  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-267c-6grr-h53f  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-492v-c6pp-mqqv  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-36qx-fr4f-26g5  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-8h8q-6873-q5fj  range=>= 16.0.0, < 16.2.5  first_patched=16.2.5
+GHSA-q4gf-8mx6-v5v3  range=>= 16.0.0-beta.0, < 16.2.3  first_patched=16.2.3
+GHSA-ggv3-7p47-pfv8  range=>= 16.0.0-beta.0, < 16.1.7  first_patched=16.1.7
+GHSA-3x4c-7xq6-9pq8  range=>= 16.0.0-beta.0, < 16.1.7  first_patched=16.1.7
+GHSA-h27x-g6w4-24gq  range=>= 16.0.1, < 16.1.7  first_patched=16.1.7
+GHSA-mq59-m269-xvcx  range=>= 16.0.1, < 16.1.7  first_patched=16.1.7
+GHSA-jcc7-9wpm-mj36  range=>= 16.0.1, < 16.1.7  first_patched=16.1.7
+
+================================================================
+$ npm audit --omit=dev --json --package-lock-only  > audit.b2.before.json
+================================================================
+metadata.vulnerabilities = {"info":0,"low":0,"moderate":6,"high":8,"critical":1,"total":15}
+vulnerable modules (15): baseline-browser-mapping, brace-expansion, dompurify, fast-uri, fast-xml-builder, fast-xml-parser, js-yaml, nanoid, next, postcss, sanitize-html, sharp, styled-components, ws, yaml
+next: severity=critical range=9.3.4-canary.0 - 16.3.2 via=["1116375:Next.js has a Denial of Service with Server Components","1117930:Next.js Vulnerable to Denial of Service with Server Components","1118938:Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - Incomplete Fix Follow-Up","1118941:Next.js's Middleware / Proxy redirects can be cache-poisoned","1118943:Next.js vulnerable to cross-site scripting in App Router applications using CSP nonces","1118945:Next.js vulnerable to cache poisoning via collisions in React Server Component cache-busting","1118947:Next.js has cross-site scripting in beforeInteractive scripts with untrusted input","1118949:Next.js vulnerable to Denial of Service via connection exhaustion in applications using Cache Components","1118951:Next.js has a Denial of Service in the Image Optimization API","1118953:Next.js vulnerable to server-side request forgery in applications using WebSocket upgrades","1118955:Next.js has a Middleware / Proxy bypass through dynamic route parameter injection","1118957:Next.js vulnerable to cache poisoning in React Server Component responses","1118959:Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes","1118961:Next.js has a Middleware / Proxy bypass in Pages Router applications using i18n","1124170:Next.js: Middleware / Proxy bypass in App Router applications using Turbopack and single locale","1124171:Next.js: Denial of Service in App Router using Server Actions","1124184:Next.js: Server-Side Request Forgery in Server Actions on custom servers","1124186:Next.js: Cache confusion of response bodies for requests with bodies","1124188:Next.js: Cache confusion of response bodies for requests with bodies containing invalid UTF-8 byte sequences","1124190:Next.js: Unbounded Server Action payload in Edge runtime","1124192:Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname","1124194:Next.js: Denial of Service in the Image Optimization API using SVGs","1124196:Next.js: Unauthenticated disclosure of internal Server Function endpoints","1193676:Next.js: Unauthenticated Remote Code Execution on windows-hosted servers","1193732:Next.js: Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used","postcss","sharp"]
+
+================================================================
+DECISION
+================================================================
+
+Decision rule: the target is the newest PUBLISHED STABLE release on the 16.x line
+that is at or above the highest first_patched version across every advisory
+affecting a 16.x range. If a newer patched 16.3.x had been published since the
+research document was written, THAT would be the target, not the number the plan
+names. The plan can be stale; the registry cannot.
+
+Applying the rule to the captures above:
+  highest_first_patched_across_16x_advisories=16.3.3   (GHSA-2xp9-vwfh-vxw4, GHSA-p293-qw3h-jr36)
+  newest_published_stable_16x=16.3.5                   (published 2026-09-11T17:26:46.049Z)
+  registry_latest_dist_tag=16.3.5                      (not a 17.x — major-line hard stop not triggered)
+  eslint_config_next_latest=16.3.5                     (lockstep: same version as next)
+  16.3.5 >= 16.3.3                                     -> the target closes both criticals
+
+target_next_version=16.3.5
+
+Hard stop 1 — major line. NOT TRIGGERED. The registry 'latest' dist-tag is 16.3.5,
+a 16.x. Had it been 17.x, the target would have stayed on the newest 16.x line: a
+framework major is out of this phase's scope and would need its own change with a
+migration note (STAB-10).
+
+Hard stop 2 — unclosable advisory. NOT TRIGGERED. Every advisory with a 16.x
+vulnerable range reports a first_patched at or below 16.3.3, and 16.3.5 is published.
+No advisory requires a version that does not exist on the 16.x line, so there is no
+blocking finding and no upgrade into a version that fails to close its own advisory.
+
+Corroboration from this tree's own audit: npm reports the vulnerable range as
+'9.3.4-canary.0 - 16.3.2', which is consistent with 16.3.3 being the first patched
+release and therefore with 16.3.5 clearing it.
+
+Requirement-text note: STAB-05 names 'the patched release closing the July-2026 CVE
+batch' = 16.2.11. The captures above show eleven July-2026 advisories patched at
+16.2.11 AND two 2026-09-08 criticals patched only at 16.3.3. 16.2.11 would leave both
+criticals open. The requirement text is stale; the correction is recorded in
+evidence/next-upgrade-note.md rather than applied silently.
+
+================================================================
+$ shasum -a 256 package-lock.json  > lock.b2.before.sha256
+================================================================
+9ce82d2b6138c8a82be50f7eebed0175d19ab3c6e30b5913ab0b5910577dd4a5  package-lock.json
+
+$ git status --porcelain -- package.json package-lock.json
+(empty above = no manifest file was changed by this task)
