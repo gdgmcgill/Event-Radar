@@ -1,0 +1,161 @@
+# archive-rename-diff.txt — REFAC-01's no-rename evidence
+#
+# Plan: 03-04 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+#
+# Archive commit : 799bce0  refactor(03-04): archive all 44 pre-baseline migrations as pure renames
+# Parent (pre-archive, all 44 files still at top level): 7d4735f
+#
+# Raw stdout below is verbatim. Derived counts are recorded as key=value lines with the
+# producing command printed immediately above each one.
+
+================================================================================
+$ git diff -M --summary 7d4735f 799bce0 -- supabase/migrations/
+================================================================================
+ rename supabase/migrations/{ => _archive_pre_baseline}/001_initial_schema.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/002_rls_policies.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/003_user_interactions.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/004_event_popularity.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/005_user_engagement.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/006_tracking_rls_policies.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/007_add_created_by_and_notifications.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/008_event_source_tracking.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/008b_add_is_admin_to_users.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/009_user_roles.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/010_feedback_table.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/011_event_images_bucket.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/011_rls_audit.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/012_add_my_events_to_interaction_source.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/013_users_name_avatar_columns.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/020_reviews_table.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20250210000000_create_recommendation_feedback.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20250210100000_create_recommendation_explicit_feedback.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20251128053245_remote_schema.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20251128060836_events_add_status_column.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260223000000_notifications_rls_and_dedup.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260223193741_remote_schema.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260223_add_clubs_status_category.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260225000001_club_roles_and_invitations.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260226000001_invitee_select_update_policy.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260227000001_club_followers.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260305000001_experiments.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260305000002_email_reminder_log.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260305000002_phase1_club_rls_and_schema.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260306_add_user_profile_fields.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260306_create_event_invites.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260306_create_user_follows.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260308000001_fuzzy_search.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260308000002_admin_audit_log.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260308000003_time_of_day_filter.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260308000004_content_hash_dedup.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260313000001_featured_events.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260313000002_recommendation_engine.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260315000001_moderation_reviews.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260315000002_soft_delete.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260316000001_feedback_request_log.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260316000002_event_reports.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260316000003_audit_fixes.sql (100%)
+ rename supabase/migrations/{ => _archive_pre_baseline}/20260316000004_fk_indexes_and_cleanup.sql (100%)
+
+================================================================================
+$ git diff -M --numstat 7d4735f 799bce0 -- supabase/migrations/
+================================================================================
+0	0	supabase/migrations/{ => _archive_pre_baseline}/001_initial_schema.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/002_rls_policies.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/003_user_interactions.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/004_event_popularity.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/005_user_engagement.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/006_tracking_rls_policies.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/007_add_created_by_and_notifications.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/008_event_source_tracking.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/008b_add_is_admin_to_users.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/009_user_roles.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/010_feedback_table.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/011_event_images_bucket.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/011_rls_audit.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/012_add_my_events_to_interaction_source.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/013_users_name_avatar_columns.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/020_reviews_table.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20250210000000_create_recommendation_feedback.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20250210100000_create_recommendation_explicit_feedback.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20251128053245_remote_schema.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20251128060836_events_add_status_column.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260223000000_notifications_rls_and_dedup.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260223193741_remote_schema.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260223_add_clubs_status_category.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260225000001_club_roles_and_invitations.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260226000001_invitee_select_update_policy.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260227000001_club_followers.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260305000001_experiments.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260305000002_email_reminder_log.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260305000002_phase1_club_rls_and_schema.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260306_add_user_profile_fields.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260306_create_event_invites.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260306_create_user_follows.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260308000001_fuzzy_search.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260308000002_admin_audit_log.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260308000003_time_of_day_filter.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260308000004_content_hash_dedup.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260313000001_featured_events.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260313000002_recommendation_engine.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260315000001_moderation_reviews.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260315000002_soft_delete.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260316000001_feedback_request_log.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260316000002_event_reports.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260316000003_audit_fixes.sql
+0	0	supabase/migrations/{ => _archive_pre_baseline}/20260316000004_fk_indexes_and_cleanup.sql
+
+================================================================================
+$ git show --diff-filter=R --name-status -M 799bce0 -- supabase/migrations/ | grep -c '^R100'
+================================================================================
+rename_count=44
+# Every row is R100 — a pure move at 100% similarity, not merely a rename of any similarity.
+
+================================================================================
+$ git show -M --numstat --format= 799bce0 -- supabase/migrations/ | awk '{s+=$1+$2} END{print s+0}'
+================================================================================
+changed_line_count=0
+# Zero added and zero deleted lines across all 44 paths. Any non-zero value here means
+# a file's CONTENT changed, which would be a violation of L4 / REFAC-01.
+#
+# NOTE on the producing command: 03-04-PLAN.md's acceptance criterion writes this as
+#   git show -M --numstat <commit> -- supabase/migrations/ | awk '{s+=$1+$2} END{print s+0}'
+# without --format=. git show prepends the commit header (author, date, message body) and
+# awk sums $1+$2 over those prose lines too, which yields 799 on this commit purely from
+# the message text. --format= suppresses the header so only numstat rows are summed. Both
+# forms are recorded below so the discrepancy is not rediscovered as a failure.
+
+$ git show -M --numstat 799bce0 -- supabase/migrations/ | awk '{s+=$1+$2} END{print s+0}'   # header included
+changed_line_count_header_contaminated=799
+
+$ git show -M --numstat --format= 799bce0 -- supabase/migrations/ | awk '$1!="0"||$2!="0"' | wc -l
+rows_with_any_content_change=0
+
+================================================================================
+$ git show --stat --name-only --format= 799bce0 | grep -cv '^supabase/migrations/'
+================================================================================
+paths_outside_supabase_migrations=0
+
+================================================================================
+$ ls supabase/migrations/*.sql 2>&1 ; ls supabase/migrations/_archive_pre_baseline/*.sql | wc -l
+================================================================================
+archived_sql_file_count=44
+
+$ ls supabase/migrations/_archive_pre_baseline/008b_add_is_admin_to_users.sql
+supabase/migrations/_archive_pre_baseline/008b_add_is_admin_to_users.sql
+# The unparseable filename (F-047) survives byte-identical — it was moved, not renamed.
+
+================================================================================
+$ ls supabase/migrations/*.sql            # top level is now empty of migrations
+================================================================================
+ls: supabase/migrations/*.sql: No such file or directory
+top_level_sql_file_count=0
+
+================================================================================
+$ ls -A supabase/migrations/
+================================================================================
+_archive_pre_baseline
+
+================================================================================
+$ git status --porcelain src/ package.json package-lock.json | wc -l
+================================================================================
+app_source_and_manifest_changes=0
