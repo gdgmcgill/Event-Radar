@@ -7,26 +7,28 @@
  *
  *     node scripts/check-elevated-ratchet.mjs --write
  *
- * which is exactly this primitive, in committed form:
+ * which is the committed form of this primitive:
  *
  *     grep -rl "supabase/service\\|@supabase/supabase-js" src/app/ \\
  *       | sed 's|\\[|\\\\[|g; s|\\]|\\\\]|g' | sort
  *
  * THIS LIST MAY ONLY SHRINK. Every entry is a file that reaches the
  * RLS-bypassing service-role credential without going through
- * src/server/db/elevated/. Phases 4-6 delete rows from it as each route is
- * migrated to the seam; nothing may ever add one.
+ * src/server/db/elevated/. Phases 4-6 delete rows as each route moves to the
+ * seam; nothing may ever add one.
  * scripts/check-elevated-ratchet.mjs asserts that direction on every run.
  *
  * BRACKETS MUST BE ESCAPED. ESLint `files` entries are globs, and a Next.js
  * dynamic segment like [id] is read as a CHARACTER CLASS matching one of 'i'
  * or 'd' — so an unescaped entry matches NOTHING and the file silently stays
  * under the rule. Measured on this tree: unescaped -> 12 errors leak through;
- * escaped -> 0. 13 of the 24 entries below are dynamic routes, so
- * this is the majority case, not an edge case.
+ * escaped -> 0. 13 of the 24 entries below are dynamic routes, so this is
+ * the majority case, not an edge case.
  *
- * Generated: 2026-09-15T21:07:41Z
- * Count at generation: 24
+ * The header carries no timestamp on purpose: a generated file that
+ * regenerates byte-for-byte is one a reviewer can verify. The date this census
+ * was taken is recorded in
+ * .planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/elevated-callsite-census.txt
  */
 export const LEGACY_ELEVATED_CALLSITES = [
   "src/app/api/admin/calculate-popularity/route.ts",
