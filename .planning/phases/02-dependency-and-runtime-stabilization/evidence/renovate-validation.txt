@@ -1,0 +1,220 @@
+# renovate-validation.txt — STAB-15, dependency update automation
+# Phase 02-dependency-and-runtime-stabilization, plan 02-10 (batch 6b), task 3
+#
+# PROVENANCE
+#   validated_at      = 2026-09-15T15:42:00Z
+#   validated_by      = plan 02-10, task 3
+#   git_head          = 4b6ad03   (task 2's commit; renovate.json is committed on top of it)
+#   host              = darwin arm64 (macOS 25.6.0)
+#   node_version      = 24.16.0
+#   npm_version       = 11.13.0
+#   config_file       = renovate.json (repository ROOT — first match in Renovate's
+#                       configuration search order wins, so root placement is deliberate)
+#   validator         = renovate-config-validator, shipped inside renovate@44.93.2
+#   package_json_sha256      = 2fe97c11a76042294d9664332fc6029f028b35ef2ef909085a95ceb87ab9c905
+#   package_lock_json_sha256 = 842ed8a7ea336d74e3dd4966467743df7aaf886a62aa191a7209b78ec9af3812
+#
+# The two manifest hashes were taken BEFORE and AFTER the validator ran and are identical
+# on both sides. The validator is a one-shot pinned npx invocation; renovate is NOT added
+# to package.json, for the same reason the SBOM generator is not.
+
+# ===========================================================================
+# THE VALIDATION RUN
+# ===========================================================================
+
+$ npx --yes --package renovate@44.93.2 -- renovate-config-validator --strict renovate.json
+
+exit_code=0
+ INFO: Validating renovate.json as global config
+ INFO: Config validated successfully against 1 file(s)
+
+# The phrase "as global config" is an artifact of passing an explicit path argument, and
+# global-config validation is the LOOSER of the two modes — it permits keys a repository
+# config may not use. So the run was repeated in auto-discovery mode, where the validator
+# finds renovate.json itself and validates it as a REPOSITORY config, which is the mode
+# that actually matters here:
+
+$ npx --yes --package renovate@44.93.2 -- renovate-config-validator --strict
+
+exit_code=0
+ INFO: Validating renovate.json
+ INFO: Config validated successfully against 1 file(s)
+
+# Note the absent "as global config" on the second run. Both modes pass.
+
+# ===========================================================================
+# NEGATIVE CONTROLS — because "the validator exited 0" is worth nothing if the
+# validator exits 0 on everything
+# ===========================================================================
+
+# CONTROL 1 — a bogus top-level key. The validator DOES reject.
+$ cp renovate.json /tmp/neg/renovate.json   # then add "notARealRenovateOption": true
+$ npx --yes --package renovate@44.93.2 -- renovate-config-validator --strict renovate.json
+exit_code=1
+ERROR: Found errors in configuration
+       "file": "renovate.json",
+       "errors": [
+         {
+           "topic": "Configuration Error",
+           "message": "Invalid configuration option: notARealRenovateOption"
+         }
+       ]
+
+# CONTROL 2 — a TYPO inside the auto-merge rule's matchUpdateTypes. The validator
+# DOES NOT reject, and this is worth knowing.
+$ # same config, only change: packageRules[0].matchUpdateTypes = ["patchh"]
+$ npx --yes --package renovate@44.93.2 -- renovate-config-validator --strict renovate.json
+exit_code=0
+ INFO: Config validated successfully against 1 file(s)
+#
+# CONSEQUENCE, STATED PLAINLY: schema validation proves the file is well-formed Renovate
+# configuration. It does NOT prove the auto-merge rule matches what you think it matches.
+# `"patchh"` sails through. In this particular direction the failure is fail-safe — a
+# typo'd update type matches nothing, so nothing auto-merges — but the validator is not
+# the control that keeps `"major"` out of the auto-merge rule. The control that does that
+# is 02-10-PLAN.md task 3's own verifier, which asserts structurally that exactly one rule
+# sets automerge:true and that its matchUpdateTypes contains neither "major" nor "minor".
+# That verifier passes. Do not read exit_code=0 above as more than it is.
+
+# ===========================================================================
+# RULE ORDER — CHANGED FROM 02-RESEARCH.md § Code Examples 9, AND WHY
+# ===========================================================================
+#
+# The research config lists the React-major rule FIFTH and the blanket
+# "majors are never auto-merged" rule SIXTH. Here they are swapped: blanket fifth,
+# React sixth. The rules are now ordered general -> specific.
+#
+# FUNCTIONALLY the two orderings are equivalent. Renovate applies packageRules in order
+# and later matches override earlier ones, so a React major ends up `enabled: false`
+# either way — in the research order it is disabled and then has automerge:false applied
+# to an already-disabled update; in this order it has automerge:false applied and is then
+# disabled outright.
+#
+# IT WAS CHANGED FOR A READER, NOT FOR RENOVATE. Both rules match exactly
+# `"matchUpdateTypes": ["major"]`. In the research order, the FIRST rule matching that
+# shape is the React-specific one, which carries `enabled: false` and no `automerge` key
+# at all. Anything scanning the file for "the rule that stops majors auto-merging" —
+# including 02-10-PLAN.md task 3's own verifier — finds the React rule, sees no
+# `automerge: false` on it, and concludes the blanket protection is missing. It is not
+# missing; it is shadowed. Putting the general rule first makes the file say what it
+# means on a linear read, which is the whole reason every rule here carries a description.
+#
+# The reordered file was re-validated in both modes; both still exit 0. The output shown
+# above is from the final, reordered file.
+
+# ===========================================================================
+# WHAT THE CONFIGURATION SAYS
+# ===========================================================================
+
+extends                      = config:recommended, :automergePatch, :semanticCommits,
+                               :maintainLockFilesWeekly
+timezone                     = America/Toronto   (the project's own; the certification
+                               datasets in a later phase use the same one)
+schedule                     = before 6am on monday
+prConcurrentLimit            = 3                 (the queue stays reviewable; an
+                               unreviewable queue gets rubber-stamped)
+minimumReleaseAge            = 3 days            (cooling-off against a compromised
+                               publish — the window in which a hijacked version is
+                               typically unpublished)
+packageRules                 = 6, every one carrying a description string
+automerge_rules              = exactly 1, matching ["patch","pin","digest"]
+vulnerabilityAlerts          = labels ["security"], minimumReleaseAge null
+
+# THE ORDERING PROPERTY, which is the actual safety mechanism:
+#
+# Patch auto-merge merges when the required status checks pass. Before batch 0 of this
+# phase those checks were lint + type-check + build, WITH NO TEST STEP AT ALL (F-065).
+# This rule landing before batch 0 would have been a machine merging untested code into
+# main every Monday morning. It lands in batch 6 because batch 0 added `npm test` to CI
+# and batch 6a added the production vulnerability gate. The rule is not safe because it
+# is restricted to patches; it is safe because of what "CI is green" now means.
+#
+# THE REACT RULE IS `enabled: false`, NOT `automerge: false`, AND THAT IS THE POINT:
+#
+# React 19 is deferred by project constraint and react/react-dom are phase-locked at
+# ^18.3.0. `automerge: false` would still open a React 19 PR every week for a human to
+# close. A bot that repeatedly proposes something the project has already decided against
+# trains the team to close bot PRs unread — and the next unread bot PR is a security fix.
+# So the PR is never opened. Threat T-02-10-02.
+#
+# SECURITY FIXES ARE EXEMPT FROM THE COOLING-OFF PERIOD:
+#
+# vulnerabilityAlerts.minimumReleaseAge = null deliberately overrides the global 3 days.
+# The cooling-off exists to let a compromised publish be caught before it is merged; that
+# reasoning does not apply to a fix for a vulnerability already public and already in the
+# tree, where waiting three days is pure exposure.
+
+# ===========================================================================
+# GITHUB APP INSTALLATION STATUS — AN OUTSTANDING HUMAN STEP
+#
+#   >>> A CONFIGURATION FILE WITH NO BOT BEHIND IT CONFIGURES NOTHING. <<<
+# ===========================================================================
+
+renovate_github_app_installed = NO EVIDENCE OF INSTALLATION — treat as NOT INSTALLED
+status                        = OUTSTANDING HUMAN STEP, not performed by this plan
+repository                    = https://github.com/gdgmcgill/Event-Radar  (public)
+
+# WHAT WAS ACTUALLY CHECKED, and what each check can and cannot prove.
+#
+# The authoritative endpoint requires a GitHub App JWT, which a user token cannot mint:
+#
+#   $ gh api repos/gdgmcgill/Event-Radar/installation
+#   {"message":"A JSON web token could not be decoded", "status":"401"}
+#
+#   $ gh api /user/installations
+#   {"message":"You must authenticate with an access token authorized to a GitHub App
+#     in order to list installations", "status":"403"}
+#
+# So installation could not be confirmed or refuted directly. Four indirect probes were
+# run instead, all from an account with repository admin (`gh api repos/... --jq
+# '.permissions'` -> admin:true), and all came back empty:
+#
+#   PRs or issues ever authored by app/renovate ........ 0
+#     $ gh api "search/issues?q=repo:gdgmcgill/Event-Radar+author:app/renovate" --jq .total_count
+#   Any issue or PR mentioning renovate ................ 0
+#     $ gh api "search/issues?q=repo:gdgmcgill/Event-Radar+renovate" --jq .total_count
+#   An issue titled "Dependency Dashboard" ............. 0
+#   Branches matching /renovate/i on origin ............ []
+#     $ gh api "repos/gdgmcgill/Event-Radar/branches?per_page=100" --jq '[.[].name]|map(select(test("renovate";"i")))'
+#
+# INTERPRETATION, held to what the evidence supports. Renovate opens a "Configure
+# Renovate" onboarding PR within minutes of installation and thereafter maintains a
+# "Dependency Dashboard" issue and renovate/* branches. None of those has ever existed in
+# this repository. That is strong evidence the app has never been installed. It is NOT
+# proof — an installation made minutes ago, or one scoped to exclude this repository,
+# would also look like this. The status above is therefore recorded as NO EVIDENCE rather
+# than as a confirmed negative.
+#
+# THE HUMAN STEP, in full, so nobody has to go looking:
+#
+#   1. Visit https://github.com/apps/renovate and install the app on the gdgmcgill
+#      organisation, granting it access to the Event-Radar repository.
+#      Requires organisation owner or repository admin rights.
+#   2. Renovate opens a "Configure Renovate" onboarding PR. Because renovate.json is
+#      ALREADY COMMITTED at the repository root, that PR should be near-empty — Renovate
+#      detects the existing configuration and skips onboarding. If it instead proposes a
+#      configuration, something is wrong with file discovery; do not merge it blindly.
+#   3. Confirm the Dependency Dashboard issue appears.
+#   4. Auto-merge additionally requires that branch protection on `main` lists the CI
+#      checks as REQUIRED. Renovate merges when required checks pass; if no check is
+#      marked required, "passing" is vacuous and patch auto-merge merges on a green
+#      checkmark that guarantees nothing. This is a second human step and it is the one
+#      that is easy to forget, because the config file cannot express it.
+#
+# Plan 02-11 carries both steps into the phase completion note. Until step 1 is done,
+# everything in renovate.json is inert — correct, validated, and doing nothing.
+
+# ===========================================================================
+# NOTHING WAS INSTALLED
+# ===========================================================================
+
+$ git status --porcelain -- package.json package-lock.json src/
+(empty)
+
+$ grep -c renovate package-lock.json
+0
+
+# renovate@44.93.2 ran from the npx cache and left no trace in the project. The npm
+# deprecation warnings visible in the raw validator output (inflight, node-domexception,
+# glob, boolean, rimraf) belong to the VALIDATOR'S OWN transitive tree in that cache, not
+# to this project's dependency tree, and they do not appear in npm audit here.

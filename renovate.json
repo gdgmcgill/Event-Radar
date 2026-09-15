@@ -1,0 +1,85 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":automergePatch",
+    ":semanticCommits",
+    ":maintainLockFilesWeekly"
+  ],
+  "timezone": "America/Toronto",
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "prConcurrentLimit": 3,
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "description": "STAB-15 — patch-only auto-merge, and only meaningful because batch 0 made CI run the tests. Renovate merges when the required checks pass; before batch 0 those checks were lint, type-check and build with no test step at all, so this rule would have been merging untested code. Ordering is the safety property here, not the rule.",
+      "matchUpdateTypes": [
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Group the Supabase SDK — @supabase/supabase-js and @supabase/ssr move in lockstep and a split upgrade produces a cookie/session mismatch. Never auto-merged: this is the authentication path.",
+      "matchPackageNames": [
+        "@supabase/supabase-js",
+        "@supabase/ssr"
+      ],
+      "groupName": "supabase",
+      "automerge": false
+    },
+    {
+      "description": "Group the test harness — runner, TypeScript transformer, jsdom environment, type definitions and the three testing-library packages. They are version-coupled, and a human reads the result because a broken harness is how a green CI stops meaning anything.",
+      "matchPackageNames": [
+        "jest",
+        "ts-jest",
+        "jest-environment-jsdom",
+        "@types/jest",
+        "@testing-library/react",
+        "@testing-library/dom",
+        "@testing-library/jest-dom"
+      ],
+      "groupName": "test harness",
+      "automerge": false
+    },
+    {
+      "description": "Group Next with its ESLint config — eslint-config-next tracks the framework version. NEVER auto-merge the framework: batch 2 of this phase needed a smoke pass and a migration note for a single patch-level bump of it.",
+      "matchPackageNames": [
+        "next",
+        "eslint-config-next"
+      ],
+      "groupName": "next",
+      "automerge": false
+    },
+    {
+      "description": "Majors are never auto-merged. STAB-10 requires a major to arrive as an isolated change carrying a migration note, and a bot cannot write one.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "PROJECT.md defers React 19 — do not open the PR at all. This is `enabled: false`, not `automerge: false`, deliberately: a bot that keeps reopening a PR the project has already decided against is noise that trains people to close bot PRs unread, which is how a real security PR gets closed unread too.",
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": [
+      "security"
+    ],
+    "minimumReleaseAge": null
+  }
+}
