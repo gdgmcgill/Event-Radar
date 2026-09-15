@@ -1,0 +1,225 @@
+# Policy census crosscheck — live production vs. the baseline
+#
+# T-03-04-05: 41 of production's 101 RLS policies are declared by no migration, so an
+# eye check is structurally insufficient. Policy (schema.table, name) pairs are extracted
+# from both sides and diffed programmatically. This file is that diff, verbatim.
+#
+# Live census authority : .planning/audit/rls/pg_policies.json (captured 2026-09-14)
+# Baseline              : supabase/migrations/20260915214553_baseline.sql
+
+$ node -e 'JSON.parse(fs.readFileSync(".planning/audit/rls/pg_policies.json")).map(p => `${p.schemaname}.${p.tablename} :: ${p.policyname}`).sort()'
+--- LIVE POLICY SET (sorted) ---
+public.admin_audit_log :: Admins can insert audit log
+public.admin_audit_log :: Admins can read audit log
+public.admin_audit_log :: Service role can insert audit log
+public.club_followers :: Anyone can view follower data
+public.club_followers :: Authenticated users can follow clubs
+public.club_followers :: Authenticated users can unfollow clubs
+public.club_invitations :: Club owners can create club invitations
+public.club_invitations :: Club owners can view club invitations
+public.club_members :: Admins manage memberships
+public.club_members :: Club owners can remove members
+public.club_members :: Club owners can view all club members
+public.club_members :: Users see own memberships
+public.clubs :: Admins can insert clubs
+public.clubs :: Admins can update clubs
+public.clubs :: Anyone can read clubs
+public.email_reminder_log :: Service role can manage reminder log
+public.email_reminder_log :: Users can view their own reminder log
+public.event_invites :: Users can delete invites sent to them
+public.event_invites :: Users can delete own sent invites
+public.event_invites :: Users can send invites
+public.event_invites :: Users can view own invites
+public.event_popularity_scores :: Allow public read access to event_popularity_scores
+public.event_popularity_scores :: Anyone can view popularity scores
+public.event_popularity_scores :: Authenticated users can update popularity scores
+public.event_reports :: Admins can read all reports
+public.event_reports :: Admins can update reports
+public.event_reports :: Users can insert own reports
+public.event_reports :: Users can read own reports
+public.events :: Admins can delete events
+public.events :: Admins can update any event
+public.events :: Admins can view all events
+public.events :: Approved events are viewable by everyone
+public.events :: Authenticated users can insert events
+public.events :: Organizers can update own events
+public.events :: Organizers can view own events
+public.experiment_assignments :: Admins can manage experiment assignments
+public.experiment_assignments :: Users can read own assignments
+public.experiment_variants :: Admins can manage experiment variants
+public.experiments :: Admins can manage experiments
+public.featured_clubs :: Admins can manage featured clubs
+public.featured_clubs :: Anyone can view featured clubs
+public.featured_events :: Admins can manage featured events
+public.featured_events :: Public can read active featured events
+public.feedback :: Admins can read feedback
+public.feedback :: Service role full access
+public.feedback :: Users can insert feedback
+public.feedback_request_log :: Service role can manage feedback request log
+public.feedback_request_log :: Users can view their own feedback request log
+public.moderation_reviews :: Admins full access
+public.moderation_reviews :: Creators can appeal their items
+public.moderation_reviews :: Creators can view reviews of their items
+public.notifications :: Service role can insert notifications
+public.notifications :: Users can mark own notifications read
+public.notifications :: Users can view own notifications
+public.organizer_requests :: Admins manage requests
+public.organizer_requests :: Users create own requests
+public.organizer_requests :: Users see own requests
+public.recommendation_explicit_feedback :: Users can insert own explicit feedback
+public.recommendation_explicit_feedback :: Users can read own explicit feedback
+public.recommendation_explicit_feedback :: Users can update own explicit feedback
+public.recommendation_feedback :: Users can insert own feedback
+public.recommendation_feedback :: Users can read own feedback
+public.reviews :: Anyone can read reviews
+public.reviews :: Users can delete own review
+public.reviews :: Users can insert own review
+public.reviews :: Users can update own review
+public.rsvps :: Anyone can view rsvps
+public.rsvps :: Users can create own rsvps
+public.rsvps :: Users can delete own rsvps
+public.rsvps :: Users can update own rsvps
+public.saved_events :: Users can delete their own saved events
+public.saved_events :: Users can insert their own saved events
+public.saved_events :: Users can view their own saved events
+public.tag_interaction_counts :: Service role can manage all tag counts
+public.tag_interaction_counts :: Users can read their own tag counts
+public.user_event_scores :: Service role can manage all scores
+public.user_event_scores :: Users can read their own scores
+public.user_follows :: Anyone can view follows
+public.user_follows :: Users can follow others
+public.user_follows :: Users can unfollow
+public.user_interactions :: Anyone can insert interactions
+public.user_interactions :: Users can view their own interactions
+public.users :: Admins can view all profiles
+public.users :: Users can insert own profile
+public.users :: Users can read own profile
+public.users :: Users can update own profile
+storage.objects :: Allow authenticated delete from own folder
+storage.objects :: Allow authenticated update in own folder
+storage.objects :: Allow authenticated upload to own folder
+storage.objects :: Allow public read access 1oj01fe_0
+storage.objects :: Anyone can view banners
+storage.objects :: Anyone can view club logos
+storage.objects :: Anyone can view event images
+storage.objects :: Authenticated users can update club logos
+storage.objects :: Authenticated users can upload banners
+storage.objects :: Authenticated users can upload club logos
+storage.objects :: Authenticated users can upload event images
+storage.objects :: Public read access for event images
+storage.objects :: Service role upload for event images
+storage.objects :: Users can delete their own banners
+storage.objects :: Users can update their own banners
+
+$ grep -E '^CREATE POLICY "…" ON "…"."…"' supabase/migrations/20260915214553_baseline.sql   # parsed with /^CREATE POLICY "((?:[^"]|"")+)" ON "([^"]+)"\."([^"]+)"/gm
+--- BASELINE POLICY SET (sorted) ---
+public.admin_audit_log :: Admins can insert audit log
+public.admin_audit_log :: Admins can read audit log
+public.admin_audit_log :: Service role can insert audit log
+public.club_followers :: Anyone can view follower data
+public.club_followers :: Authenticated users can follow clubs
+public.club_followers :: Authenticated users can unfollow clubs
+public.club_invitations :: Club owners can create club invitations
+public.club_invitations :: Club owners can view club invitations
+public.club_members :: Admins manage memberships
+public.club_members :: Club owners can remove members
+public.club_members :: Club owners can view all club members
+public.club_members :: Users see own memberships
+public.clubs :: Admins can insert clubs
+public.clubs :: Admins can update clubs
+public.clubs :: Anyone can read clubs
+public.email_reminder_log :: Service role can manage reminder log
+public.email_reminder_log :: Users can view their own reminder log
+public.event_invites :: Users can delete invites sent to them
+public.event_invites :: Users can delete own sent invites
+public.event_invites :: Users can send invites
+public.event_invites :: Users can view own invites
+public.event_popularity_scores :: Allow public read access to event_popularity_scores
+public.event_popularity_scores :: Anyone can view popularity scores
+public.event_popularity_scores :: Authenticated users can update popularity scores
+public.event_reports :: Admins can read all reports
+public.event_reports :: Admins can update reports
+public.event_reports :: Users can insert own reports
+public.event_reports :: Users can read own reports
+public.events :: Admins can delete events
+public.events :: Admins can update any event
+public.events :: Admins can view all events
+public.events :: Approved events are viewable by everyone
+public.events :: Authenticated users can insert events
+public.events :: Organizers can update own events
+public.events :: Organizers can view own events
+public.experiment_assignments :: Admins can manage experiment assignments
+public.experiment_assignments :: Users can read own assignments
+public.experiment_variants :: Admins can manage experiment variants
+public.experiments :: Admins can manage experiments
+public.featured_clubs :: Admins can manage featured clubs
+public.featured_clubs :: Anyone can view featured clubs
+public.featured_events :: Admins can manage featured events
+public.featured_events :: Public can read active featured events
+public.feedback :: Admins can read feedback
+public.feedback :: Service role full access
+public.feedback :: Users can insert feedback
+public.feedback_request_log :: Service role can manage feedback request log
+public.feedback_request_log :: Users can view their own feedback request log
+public.moderation_reviews :: Admins full access
+public.moderation_reviews :: Creators can appeal their items
+public.moderation_reviews :: Creators can view reviews of their items
+public.notifications :: Service role can insert notifications
+public.notifications :: Users can mark own notifications read
+public.notifications :: Users can view own notifications
+public.organizer_requests :: Admins manage requests
+public.organizer_requests :: Users create own requests
+public.organizer_requests :: Users see own requests
+public.recommendation_explicit_feedback :: Users can insert own explicit feedback
+public.recommendation_explicit_feedback :: Users can read own explicit feedback
+public.recommendation_explicit_feedback :: Users can update own explicit feedback
+public.recommendation_feedback :: Users can insert own feedback
+public.recommendation_feedback :: Users can read own feedback
+public.reviews :: Anyone can read reviews
+public.reviews :: Users can delete own review
+public.reviews :: Users can insert own review
+public.reviews :: Users can update own review
+public.rsvps :: Anyone can view rsvps
+public.rsvps :: Users can create own rsvps
+public.rsvps :: Users can delete own rsvps
+public.rsvps :: Users can update own rsvps
+public.saved_events :: Users can delete their own saved events
+public.saved_events :: Users can insert their own saved events
+public.saved_events :: Users can view their own saved events
+public.tag_interaction_counts :: Service role can manage all tag counts
+public.tag_interaction_counts :: Users can read their own tag counts
+public.user_event_scores :: Service role can manage all scores
+public.user_event_scores :: Users can read their own scores
+public.user_follows :: Anyone can view follows
+public.user_follows :: Users can follow others
+public.user_follows :: Users can unfollow
+public.user_interactions :: Anyone can insert interactions
+public.user_interactions :: Users can view their own interactions
+public.users :: Admins can view all profiles
+public.users :: Users can insert own profile
+public.users :: Users can read own profile
+public.users :: Users can update own profile
+storage.objects :: Allow authenticated delete from own folder
+storage.objects :: Allow authenticated update in own folder
+storage.objects :: Allow authenticated upload to own folder
+storage.objects :: Allow public read access 1oj01fe_0
+storage.objects :: Anyone can view banners
+storage.objects :: Anyone can view club logos
+storage.objects :: Anyone can view event images
+storage.objects :: Authenticated users can update club logos
+storage.objects :: Authenticated users can upload banners
+storage.objects :: Authenticated users can upload club logos
+storage.objects :: Authenticated users can upload event images
+storage.objects :: Public read access for event images
+storage.objects :: Service role upload for event images
+storage.objects :: Users can delete their own banners
+storage.objects :: Users can update their own banners
+
+$ comm -3 <(sort live) <(sort baseline)   # computed as a set symmetric difference
+--- SYMMETRIC DIFFERENCE ---
+(empty — the two sets are identical)
+
+--- DERIVED COUNTS ---
+live_policy_count=101
+baseline_policy_count=101
+symmetric_difference_count=0

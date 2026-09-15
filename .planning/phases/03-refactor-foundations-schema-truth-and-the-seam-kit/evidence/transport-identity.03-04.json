@@ -1,0 +1,22 @@
+{
+  "artifact": "transport-identity.03-04.json",
+  "provides": "AR-12 clause 2 — the read-only transport envelope captured immediately BEFORE this plan's production read (the baseline dump). A fresh capture, not a reuse of 03-01's: AR-12's clause is per-read and a stale envelope proves nothing about a later connection.",
+  "plan": "03-04",
+  "phase": "03-refactor-foundations-schema-truth-and-the-seam-kit",
+  "transport": "node .planning/audit/tools/sql-readonly.mjs — Supabase Management API POST /v1/projects/<PROD-PROJECT-REF>/database/query with read_only: true, enforced SERVER-SIDE and outside the client’s reach (AR-12 clause 2 by construction)",
+  "credential_handling": "The Management API token is the Supabase CLI’s own stored token (macOS keychain, service \"Supabase CLI\"), passed through process.env by an uncommitted scratchpad shim. The database password is read from the macOS keychain at the moment of use into SUPABASE_DB_PASSWORD, is never passed on a command line, and is never written to any file. .env.local was not opened.",
+  "query": "transport-identity",
+  "requirement": "AR-12 — the read-only envelope every Phase 3 production read must carry",
+  "sql": "SELECT current_user AS role, current_setting('transaction_read_only') AS txn_read_only, now() AS captured_at",
+  "project_ref": "<PROD-PROJECT-REF>",
+  "captured_at_utc": "2026-09-15T21:45:25.280Z",
+  "captured_before": "supabase db dump --linked --schema public,storage (the baseline read) — this file’s mtime precedes the baseline file’s mtime",
+  "row_count": 1,
+  "rows": [
+    {
+      "role": "supabase_read_only_user",
+      "txn_read_only": "on",
+      "captured_at": "2026-09-15 21:45:25.283907+00"
+    }
+  ]
+}
