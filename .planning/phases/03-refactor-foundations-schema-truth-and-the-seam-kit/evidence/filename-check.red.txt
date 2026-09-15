@@ -1,0 +1,127 @@
+RED CAPTURE — scripts/check-migration-filenames.mjs observed FAILING on today's tree.
+
+A checker that has never been observed failing is an assertion, not a control. This is the
+red half of the red-then-green pair D-04 requires of the type-drift gate and D-05 of the
+ESLint boundary. The green half is plan 03-04's, after the archive removes the offending
+filename from the top level; 03-04's acceptance criteria assert that transition. Until then
+this check has NO CI step — on today's tree it exits 1, and wiring it into
+.github/workflows/ci.yml now would turn the default branch red for reasons unrelated to any
+change under review.
+
+Plan: 03-01 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit
+Recorded: 2026-09-15T21:04:10Z
+Tree state: unmodified. `git status --porcelain supabase/migrations/` is empty.
+Node: 24.16.0 · Supabase CLI: 2.115.0
+
+================================================================================
+1. THE RED RUN — today's tree, 44 files, one offender
+================================================================================
+
+$ node scripts/check-migration-filenames.mjs
+
+FAIL: 1 of 44 migration filename(s) do not match <version>_<name>.sql and would be SKIPPED SILENTLY by the Supabase CLI:
+  supabase/migrations/008b_add_is_admin_to_users.sql
+
+The CLI prints "Skipping migration <name>..." and continues with exit status 0.
+Rename the file to <version>_<name>.sql, or move it out of the top level.
+
+EXIT CODE: 1
+
+The named file is the one F-047 is about, and the count 1-of-44 matches
+03-RESEARCH.md § Migration State Table exactly: 44 files, one the CLI silently skips.
+
+================================================================================
+2. THE DEFECT, OBSERVED INDEPENDENTLY IN THE CLI'S OWN OUTPUT THE SAME DAY
+================================================================================
+
+This is not the check agreeing with a document. The Supabase CLI itself emitted the skip
+during this plan's first `supabase start` (see evidence/ports-preflight.txt § 5):
+
+    Skipping migration 008b_add_is_admin_to_users.sql... (file name must match pattern "<timestamp>_name.sql")
+    Applying migration 001_initial_schema.sql...
+    Applying migration 002_rls_policies.sql...
+
+Note the ordering: the skip is printed FIRST, before any migration is applied, and the run
+then proceeds through eleven files without error. Nothing in that transcript raises the
+status. That is exactly the silence this check converts into exit 1.
+
+================================================================================
+3. MUTATION CHECKS — proving the check DISCRIMINATES, not merely that it fails
+================================================================================
+
+A check that fails is not yet a control; it has to be shown failing for the right reason and
+passing when that reason is removed. All three mutations were run against COPIES under the
+session scratchpad. `supabase/migrations/` was not renamed, moved, edited or deleted — this
+plan is forbidden from touching it, and did not.
+
+--- 3a. Offender removed -> GREEN -----------------------------------------------
+
+44 files copied to a scratch tree; 008b_add_is_admin_to_users.sql deleted from the copy.
+
+$ cd <scratch>/mut-green && node <worktree>/scripts/check-migration-filenames.mjs
+
+PASS: 43 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql
+
+EXIT CODE: 0
+
+44 -> 43 and RED -> GREEN on the removal of exactly one file. The check is keyed to that
+filename and to nothing else.
+
+--- 3b. Empty directory -> FAIL (deliberately NOT a pass) ------------------------
+
+$ cd <scratch>/mut-empty && node <worktree>/scripts/check-migration-filenames.mjs
+
+FAIL: no .sql files at the top level of supabase/migrations/
+      An empty migrations directory is reported as a failure, not a pass:
+      a check that passes on zero inputs is the silent skip it exists to catch.
+
+EXIT CODE: 1
+
+This is the second design point from the script header, exercised. A check that reports
+success for work it did not do is the same class of defect as the CLI skip.
+
+--- 3c. Offender moved into a nested archive -> still GREEN ----------------------
+
+The 43-file green tree, plus 008b_add_is_admin_to_users.sql placed inside
+supabase/migrations/_archive_pre_baseline/ — the exact layout plan 03-04 will create.
+
+$ cd <scratch>/mut-green && node <worktree>/scripts/check-migration-filenames.mjs
+
+PASS: 43 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql
+
+EXIT CODE: 0
+
+The nested copy is not scanned. This is the first design point exercised, and it is what
+makes the check survive the baseline: after 03-04 archives the 44 files, their names are
+historical record the CLI never reads, and a recursive check would fail forever on files
+that have correctly stopped being migrations. The check scans exactly what the CLI scans.
+
+================================================================================
+4. STATE TABLE — every branch of the script observed
+================================================================================
+
+  input state                                   exit   observed in
+  --------------------------------------------- ----   -----------
+  44 files, one unparseable name (today's tree)    1    § 1
+  43 files, all parse                              0    § 3a
+  0 .sql files at top level                        1    § 3b
+  43 parse + offender nested in an archive         0    § 3c
+
+No branch of the script is unexercised except the unreadable-directory guard.
+
+================================================================================
+5. SCOPE HELD — what this plan deliberately did NOT do
+================================================================================
+
+$ grep -c "check-migration-filenames" package.json
+0
+
+$ grep -c "check-migration-filenames" .github/workflows/ci.yml
+0
+
+$ git status --porcelain supabase/migrations/
+(no output)
+
+No npm script, no dependency, no CI step, no migration touched. The script is invoked by
+path and imports only `node:fs` and `node:path`. The CI step is plan 03-04's to add, once
+the archive makes this check green.
