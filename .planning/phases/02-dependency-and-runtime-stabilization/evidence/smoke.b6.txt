@@ -1,0 +1,58 @@
+# smoke.sh — Tier 2 anonymous HTTP smoke pass
+# host        : http://localhost:3000
+# label       : b6
+# started_at  : 2026-09-15T15:17:35Z
+# curl        : curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1
+# ring rows   : 5 6 8 10 (request path only — independent of Supabase data)
+# data rows   : 1 2 3 4 7 9 (need a reachable Supabase with content)
+
+PASS 1 GET / :: expected 200+marker got 200+marker
+FAIL 2 GET /api/events :: expected 200 and >=1 event got 200 and 0 events
+PASS 3 GET /api/events?search=test&tags=academic :: expected 200 got 200
+PASS 4 GET /clubs :: expected 200 got 200
+PASS 5 GET /profile :: expected 307 -> signin=required&next=/profile got 307 /?signin=required&next=/profile
+PASS 6 GET /my-events :: expected 307 -> signin=required got 307 /?signin=required&next=/my-events
+PASS 7 GET /docs :: expected 200 got 200
+PASS 8 POST(x31) /api/events :: expected 429 + Retry-After got 429 Retry-After=60
+PASS 9 GET /api/health :: expected 200 got 200
+PASS 10 GET /_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js :: expected 200 no redirect got 200 no-location
+
+--- ring rows (5 6 8 10): 4/4 passed
+--- data rows (1 2 3 4 7 9): 5/6 passed
+--- total: 9/10 passed, 1 failed
+--- NOTE: a failing data row may be environment-limited (unreachable or
+---       empty Supabase). The expectation is NOT lowered; name the row
+---       and the reason in the run record instead.
+# finished_at : 2026-09-15T15:17:40Z
+
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the output of
+# the command below, untrimmed and unsummarised.
+#   command     : SMOKE_HOST=http://localhost:3000 SMOKE_LABEL=b6 bash scripts/smoke.sh
+#   target      : local `npm run dev` (Next 16.3.5, Turbopack) on the batch-6 tree
+#                 — parent commit 83ab1e7 plus the postcss overrides entry
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   exit_code   : 1  (one failing row — row 2, see below)
+#   note        : ROW 7 IS THE LOAD-BEARING ROW IN THIS BATCH. GET /docs mounts
+#                 redoc, and redoc renders through styled-components, which is the
+#                 package whose postcss copy this batch removed. If the override
+#                 broke that subtree, row 7 is where it shows.
+#                 Supplementary checks beyond the status code, run against the
+#                 same response body:
+#                   bytes                 = 82679
+#                   'API Documentation'   = 1 occurrence
+#                   'redoc' references    = 16
+#                 ALL THREE ARE IDENTICAL TO THE batch-4 CAPTURE (smoke.b4.txt),
+#                 which measured 82,679 bytes and 16 redoc references on the
+#                 pre-override tree. The page did not merely 200; it rendered the
+#                 same bytes.
+#   note        : ROW 2 IS THE KNOWN ENVIRONMENT-LIMITED ROW, not a regression.
+#                 It failed identically in smoke.b4.txt and for the same reason:
+#                 the local Supabase has no event rows, so GET /api/events
+#                 correctly returns 200 with an empty array. The expectation is
+#                 NOT lowered — the row still demands >=1 event. The ring rows
+#                 (5, 6, 8, 10) are the signal for a dependency change, and they
+#                 are 4/4.
+#   note        : anonymous only. No credential was read or sent. .env.local was
+#                 not read by this script.
+# ==============================================================================

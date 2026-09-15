@@ -1,0 +1,67 @@
+# npm audit report
+
+dompurify  <=3.4.12
+Severity: moderate
+DOMPurify: FORBID_TAGS bypassed by function-based ADD_TAGS predicate (asymmetry with FORBID_ATTR fix) - https://github.com/advisories/GHSA-h7mw-gpvr-xq4m
+DOMPurify has a SAFE_FOR_TEMPLATES bypass in RETURN_DOM mode - https://github.com/advisories/GHSA-crv5-9vww-q3g8
+DOMPurify: Prototype Pollution to XSS Bypass via CUSTOM_ELEMENT_HANDLING Fallback - https://github.com/advisories/GHSA-v9jr-rg53-9pgp
+DOMPurify: Cross-realm IN_PLACE sanitization leaves executable markup intact via realm-bound `instanceof` checks - https://github.com/advisories/GHSA-hpcv-96wg-7vj8
+DOMPurify: IN_PLACE mode preserves attributes of a clobbered root element, allowing XSS via attacker-controlled root DOM - https://github.com/advisories/GHSA-r47g-fvhr-h676
+DOMPurify IN_PLACE Sanitization Bypass via Attached Shadow Root Inside <template>.content - https://github.com/advisories/GHSA-rp9w-3fw7-7cwq
+DOMPurify: `CUSTOM_ELEMENT_HANDLING` bypasses `afterSanitizeElements` for allowed custom elements. - https://github.com/advisories/GHSA-c2j3-45gr-mqc4
+DOMPurify: Permanent `ALLOWED_ATTR` pollution via `setConfig()` bypassing the hook clone-guard (incomplete fix of the 3.4.7 hook-pollution patch) - https://github.com/advisories/GHSA-cmwh-pvxp-8882
+DOMPurify: Trusted Types policy survives `clearConfig()` and can poison later `RETURN_TRUSTED_TYPE` output - https://github.com/advisories/GHSA-vxr8-fq34-vvx9
+DOMPurify: SAFE_FOR_TEMPLATES bypass - template expressions survive sanitization inside <template> content when using DOM output modes - https://github.com/advisories/GHSA-gvmj-g25r-r7wr
+DOMPurify: `IN_PLACE` mode trusts attacker-controlled `nodeName` on live non-form nodes, allowing script retention and XSS via attacker-supplied DOM objects - https://github.com/advisories/GHSA-x4vx-rjvf-j5p4
+DOMPurify: Hook mutation of `data.allowedTags` / `data.allowedAttributes` permanently pollutes `DEFAULT_ALLOWED_TAGS` / `DEFAULT_ALLOWED_ATTR` - https://github.com/advisories/GHSA-76mc-f452-cxcm
+DOMPurify's ADD_TAGS function form bypasses FORBID_TAGS due to short-circuit evaluation - https://github.com/advisories/GHSA-39q2-94rc-95cp
+DOMPurify: IN_PLACE hook removal leaves a detached subtree executable, causing XSS - https://github.com/advisories/GHSA-55q2-fjhq-7xh7
+fix available via `npm audit fix`
+node_modules/dompurify
+
+yaml  1.0.0 - 1.10.2 || 2.0.0 - 2.8.2
+Severity: moderate
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+fix available via `npm audit fix`
+node_modules/oas-linter/node_modules/yaml
+node_modules/oas-resolver/node_modules/yaml
+node_modules/oas-validator/node_modules/yaml
+node_modules/swagger2openapi/node_modules/yaml
+node_modules/yaml
+
+2 moderate severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the combined
+# stdout+stderr of the command below, untrimmed and unsummarised.
+#   command     : npm audit --audit-level=high --omit=dev
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T15:18:04Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | eslint 9.39.1 | next 16.3.5
+#   tree        : batch-6 tree, parent commit 83ab1e7 plus the postcss overrides
+#                 entry landed by plan 02-09 task 1
+#   lock_sha256 : 842ed8a7ea336d74e3dd4966467743df7aaf886a62aa191a7209b78ec9af3812
+#
+#   THIS IS THE EXACT COMMAND THE CI STEP RUNS. Not a --package-lock-only
+#   variant, not a --json variant. It was run against the node_modules that
+#   `npm ci` installed from this lockfile, which is the same sequence CI uses:
+#   npm ci, then this. A rehearsal against a different command would not be a
+#   rehearsal.
+#
+#   note        : the two surviving advisories are BOTH moderate and therefore
+#                 BELOW the --audit-level=high threshold. They are reported in
+#                 the output and do not affect the exit code. They are tracked,
+#                 not blocking, under VULNERABILITY-POLICY.md clause 4, and
+#                 plan 02-11's completion note quotes both counts.
+#   note        : `npm audit fix` is printed by npm itself in the output above.
+#                 It was NOT run, here or anywhere in this phase. Forced
+#                 remediation is forbidden by phase-locked constraint 2, and
+#                 check-baseline.mjs asserts its absence across the whole
+#                 commit range (`no-forced-remediation-in-commit-range`).
+# ==============================================================================
+exit_code=0

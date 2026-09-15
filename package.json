@@ -65,6 +65,9 @@
     "tsx": "^4.21.0",
     "typescript": "^5.4.0"
   },
+  "overrides": {
+    "postcss": "^8.5.28"
+  },
   "engines": {
     "node": "24.x",
     "npm": ">=11"

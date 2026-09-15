@@ -1,0 +1,20 @@
+# ==============================================================================
+# PROVENANCE — appended after the capture. Everything above it is the output of
+# the command below, untrimmed and unsummarised.
+#   command     : npx tsc --noEmit
+#   cwd         : /Users/adyan/Documents/GitHub/Event-Radar
+#   captured_at : 2026-09-15T15:18:04Z
+#   toolchain   : node v24.16.0 | npm 11.13.0 | typescript 5.9.3
+#                 jest 30.2.0 | ts-jest 29.4.6 | eslint 9.39.1 | next 16.3.5
+#   note        : zero bytes of output. The file was empty before this block was
+#                 appended; that emptiness IS the capture.
+#   note        : the postcss override moves next's own postcss copy from an
+#                 exact 8.5.23 to 8.5.28. postcss ships its own types and is
+#                 reachable from postcss.config.js, so a type break here was a
+#                 real possibility rather than a formality. There was none.
+#   note        : tsconfig.json STILL excludes **/*.test.ts and **/*.test.tsx.
+#                 Unchanged by this batch. F-066 remains PARTIALLY closed and
+#                 plan 02-11 must say so — see evidence/skipped-suite-
+#                 disposition.md section 4.
+# ==============================================================================
+exit_code=0
