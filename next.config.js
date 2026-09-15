@@ -1,6 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // SECURITY CONTROL, NOT A PERFORMANCE SETTING. This disables the Next.js Image
+    // Optimization endpoint (/_next/image) — the endpoint that carried GHSA-2xp9-vwfh-vxw4,
+    // the unauthenticated remote-code-execution via AVIF patched upstream in next 16.3.3 and
+    // closed on this project by the 16.3.5 upgrade (see .planning/phases/
+    // 02-dependency-and-runtime-stabilization/evidence/next-upgrade-note.md).
+    // Flipping this to false re-arms a request-reachable attack surface, so it requires a
+    // security review and not just a performance conversation.
     unoptimized: true,
     remotePatterns: [
       {
