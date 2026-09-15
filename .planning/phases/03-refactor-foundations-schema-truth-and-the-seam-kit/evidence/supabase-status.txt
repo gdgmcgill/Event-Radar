@@ -1,0 +1,143 @@
+REDACTION HEADER — READ BEFORE THE CAPTURE
+
+Every credential-shaped value below has been replaced with a placeholder. These are the
+Supabase CLI's **fixed local demo keys**: the same anon JWT, service-role JWT, JWT secret,
+`sb_publishable_`/`sb_secret_` pair and S3 key pair ship with every `supabase start` on
+every machine in the world, they authenticate against 127.0.0.1 only, and they are printed
+in Supabase's public documentation. They are therefore NOT secrets.
+
+They are redacted anyway, for uniformity. `.planning/` is committed and lives in git history
+permanently, and a reviewer who has to decide per-file whether a JWT-shaped string is "the
+harmless one" will eventually decide wrong. The rule that survives contact is mechanical:
+no committed artifact in this repository carries a credential SHAPE, regardless of whether
+the particular value is dangerous. This is the discipline `.planning/audit/REDACTION.md`
+records for Phase 1 and `scrub()` in `.planning/audit/tools/sql-readonly.mjs` enforces in
+code; this file applies the same five patterns by hand, plus the S3 pair and the local
+JWT secret, which are not credential-shaped but are key material by role.
+
+Placeholders used: <REDACTED-JWT> · <REDACTED-SECRET-KEY> · <REDACTED-PUBLISHABLE-KEY>
+<REDACTED-JWT-SECRET> · <REDACTED-S3-KEY-ID> · <REDACTED-S3-SECRET> · postgres://<REDACTED>@
+
+Plan: 03-01 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit
+Recorded: 2026-09-15T20:56:43Z
+Supabase CLI: 2.115.0 · Docker: 29.4.0 (OrbStack) · project_id: Event-Radar
+
+================================================================================
+DERIVED SUMMARY — the two lines 03-01-PLAN.md's acceptance criteria ask for
+================================================================================
+
+  API URL: http://127.0.0.1:54321
+  DB URL:  postgres://<REDACTED>@127.0.0.1:54322/postgres
+
+LABEL DRIFT, RECORDED RATHER THAN PAPERED OVER. The plan's acceptance criterion asks the
+capture to contain an "API URL" line and a "DB URL" line. Supabase CLI 2.115.0 no longer
+emits those literal labels: `-o pretty` renders them as **"Project URL"** (under the APIs
+panel) and **"URL"** (under the Database panel), and `-o env`/JSON emits them as the keys
+**API_URL** and **DB_URL**. The two lines above are a DERIVED restatement in the plan's
+vocabulary, not CLI output — the verbatim captures they were derived from follow below,
+and the values are byte-identical to them. Any later plan matching on these labels should
+match `API_URL`/`DB_URL` from `supabase status -o env`, which is the stable machine
+contract; the pretty panel headings are presentation and have already moved once.
+
+================================================================================
+1. VERBATIM — supabase status -o pretty
+================================================================================
+
+$ supabase status -o pretty
+
+Not linked.
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Stopped services: [supabase_imgproxy_Event-Radar supabase_pooler_Event-Radar]
+supabase local development setup is running.
+
+╭──────────────────────────────────────╮
+│ 🔧 Development Tools                 │
+├─────────┬────────────────────────────┤
+│ Studio  │ http://127.0.0.1:54323     │
+│ Mailpit │ http://127.0.0.1:54324     │
+│ MCP     │ http://127.0.0.1:54321/mcp │
+╰─────────┴────────────────────────────╯
+
+╭──────────────────────────────────────────────────────╮
+│ 🌐 APIs                                              │
+├────────────────┬─────────────────────────────────────┤
+│ Project URL    │ http://127.0.0.1:54321              │
+│ REST           │ http://127.0.0.1:54321/rest/v1      │
+│ GraphQL        │ http://127.0.0.1:54321/graphql/v1   │
+│ Edge Functions │ http://127.0.0.1:54321/functions/v1 │
+╰────────────────┴─────────────────────────────────────╯
+
+╭───────────────────────────────────────────────────────────────╮
+│ ⛁ Database                                                    │
+├─────┬─────────────────────────────────────────────────────────┤
+│ URL │ postgres://<REDACTED>@127.0.0.1:54322/postgres          │
+╰─────┴─────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────╮
+│ 🔑 Authentication Keys                                       │
+├─────────────┬────────────────────────────────────────────────┤
+│ Publishable │ <REDACTED-PUBLISHABLE-KEY>                     │
+│ Secret      │ <REDACTED-SECRET-KEY>                          │
+╰─────────────┴────────────────────────────────────────────────╯
+
+╭───────────────────────────────────────────────────────────────────────────────╮
+│ 📦 Storage (S3)                                                               │
+├────────────┬──────────────────────────────────────────────────────────────────┤
+│ URL        │ http://127.0.0.1:54321/storage/v1/s3                             │
+│ Access Key │ <REDACTED-S3-KEY-ID>                                             │
+│ Secret Key │ <REDACTED-S3-SECRET>                                             │
+│ Region     │ local                                                            │
+╰────────────┴──────────────────────────────────────────────────────────────────╯
+
+Trailing CLI upgrade notice ("v2.117.0 is available") omitted — it is not status output.
+
+================================================================================
+2. VERBATIM — supabase status  (default JSON form, the machine contract)
+================================================================================
+
+$ supabase status
+
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Stopped services: [supabase_imgproxy_Event-Radar supabase_pooler_Event-Radar]
+{"linked_project":null,
+ "DB_URL":"postgres://<REDACTED>@127.0.0.1:54322/postgres",
+ "API_URL":"http://127.0.0.1:54321",
+ "REST_URL":"http://127.0.0.1:54321/rest/v1",
+ "GRAPHQL_URL":"http://127.0.0.1:54321/graphql/v1",
+ "FUNCTIONS_URL":"http://127.0.0.1:54321/functions/v1",
+ "MCP_URL":"http://127.0.0.1:54321/mcp",
+ "STUDIO_URL":"http://127.0.0.1:54323",
+ "PUBLISHABLE_KEY":"<REDACTED-PUBLISHABLE-KEY>",
+ "SECRET_KEY":"<REDACTED-SECRET-KEY>",
+ "JWT_SECRET":"<REDACTED-JWT-SECRET>",
+ "ANON_KEY":"<REDACTED-JWT>",
+ "SERVICE_ROLE_KEY":"<REDACTED-JWT>",
+ "MAILPIT_URL":"http://127.0.0.1:54324",
+ "INBUCKET_URL":"http://127.0.0.1:54324",
+ "STORAGE_S3_URL":"http://127.0.0.1:54321/storage/v1/s3",
+ "S3_PROTOCOL_ACCESS_KEY_ID":"<REDACTED-S3-KEY-ID>",
+ "S3_PROTOCOL_ACCESS_KEY_SECRET":"<REDACTED-S3-SECRET>",
+ "S3_PROTOCOL_REGION":"local",
+ "message":""}
+
+Reformatted onto one key per line for readability; the CLI emits this as a single line.
+No key was added, removed or reordered. Every value except the seven redacted ones is byte
+identical to the CLI's output.
+
+================================================================================
+3. WHAT THIS STACK DOES AND DOES NOT CONTAIN
+================================================================================
+
+`"linked_project": null` — this stack is NOT linked to the production project. Nothing in
+this plan ran `supabase link`, and no `supabase/.temp/` directory was created (03-RESEARCH.md
+§ Pitfall 10). Every value above addresses 127.0.0.1.
+
+The `public` schema is EMPTY and `supabase_migrations.schema_migrations` has no rows. The
+migration replay was deliberately skipped — see `evidence/ports-preflight.txt` § 5 and § 6
+for the failed first attempt (F-043's duplicate `(version)=(011)` abort, plus F-047's silent
+`008b` skip) and for exactly how the stack was brought up without touching a migration file.
+Plan 03-04 populates `public` from the baseline via `supabase db reset`.
+
+`supabase_imgproxy_Event-Radar` and `supabase_pooler_Event-Radar` are stopped. Neither binds
+a port declared in `config.toml`; no Phase 3 requirement uses Storage image transforms or
+the transaction pooler.
