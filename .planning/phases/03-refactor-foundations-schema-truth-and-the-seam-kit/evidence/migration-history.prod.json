@@ -1,0 +1,501 @@
+{
+  "artifact": "migration-history.prod.json",
+  "provides": "The production supabase_migrations.schema_migrations census that answers Q1",
+  "plan": "03-01",
+  "phase": "03-refactor-foundations-schema-truth-and-the-seam-kit",
+  "transport": "node .planning/audit/tools/sql-readonly.mjs — Supabase Management API POST /v1/projects/<PROD-PROJECT-REF>/database/query with read_only: true, enforced SERVER-SIDE and outside the client's reach (AR-12 clause 2 by construction)",
+  "mcp_scoping": "The Supabase MCP endpoint is scoped to https://mcp.supabase.com/mcp?project_ref=<PROD-PROJECT-REF>&read_only=true — read_only=true applies to execute_sql AND apply_migration; project_ref disables account-level management tools. .mcp.json is untracked and is not committed.",
+  "query": "migration-history",
+  "requirement": "REFAC-01 — recover the 18 remote-only versions (Q1)",
+  "sql": "SELECT version, name, statements FROM supabase_migrations.schema_migrations ORDER BY version",
+  "project_ref": "<PROD-PROJECT-REF>",
+  "captured_at_utc": "2026-09-15T21:04:10.196Z",
+  "row_count": 45,
+  "rows": [
+    {
+      "version": "001",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "002",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "003",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "004",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "005",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "006",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "007",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "008",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "009",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "010",
+      "name": null,
+      "statements": null
+    },
+    {
+      "version": "011",
+      "name": "event_images_bucket",
+      "statements": [
+        "-- Create the event-images storage bucket (public, for scraped event images)\nINSERT INTO storage.buckets (id, name, public)\nVALUES ('event-images', 'event-images', true)\nON CONFLICT (id) DO NOTHING",
+        "-- Allow public read access to event images\nCREATE POLICY \"Public read access for event images\"\nON storage.objects FOR SELECT\nTO public\nUSING (bucket_id = 'event-images')",
+        "-- Allow service role to upload event images\nCREATE POLICY \"Service role upload for event images\"\nON storage.objects FOR INSERT\nTO service_role\nWITH CHECK (bucket_id = 'event-images')"
+      ]
+    },
+    {
+      "version": "012",
+      "name": "add_my_events_to_interaction_source",
+      "statements": [
+        "-- Add 'my-events' to user_interactions.source CHECK constraint\n-- Types and API support this source; DB constraint was missing it\nALTER TABLE public.user_interactions\n  DROP CONSTRAINT IF EXISTS user_interactions_source_check",
+        "ALTER TABLE public.user_interactions\n  ADD CONSTRAINT user_interactions_source_check\n  CHECK (\n    source IS NULL\n    OR source IN (\n      'home', 'search', 'recommendation', 'calendar',\n      'direct', 'modal', 'my-events'\n    )\n  )"
+      ]
+    },
+    {
+      "version": "013",
+      "name": "users_name_avatar_columns",
+      "statements": [
+        "-- Ensure users table has name and avatar_url columns (used by auth callback and profile)\n-- Handles schema drift: 001 used full_name; code expects name\n-- Safe to run idempotently\n\n-- Add name column if missing (migrate from full_name if it exists)\nDO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM information_schema.columns\n    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'name'\n  ) THEN\n    IF EXISTS (\n      SELECT 1 FROM information_schema.columns\n      WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'full_name'\n    ) THEN\n      ALTER TABLE public.users ADD COLUMN name TEXT;\n      UPDATE public.users SET name = full_name WHERE full_name IS NOT NULL;\n      -- Optionally drop full_name later; keeping for now to avoid breaking any reads\n    ELSE\n      ALTER TABLE public.users ADD COLUMN name TEXT;\n    END IF;\n  END IF;\nEND $$",
+        "-- Add avatar_url if missing\nALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_url TEXT"
+      ]
+    },
+    {
+      "version": "020",
+      "name": "reviews_table",
+      "statements": [
+        "-- Reviews table migration\n-- NOTE: This migration is a SQL file for reference. The actual table must be\n-- created via the Supabase SQL editor by the user. Copy and paste this SQL\n-- into the Supabase dashboard > SQL Editor and run it.\n\n-- Create reviews table\nCREATE TABLE IF NOT EXISTS reviews (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,\n  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),\n  comment TEXT,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),\n  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),\n  UNIQUE (user_id, event_id)\n)",
+        "-- Indexes\nCREATE INDEX IF NOT EXISTS idx_reviews_event_id ON reviews(event_id)",
+        "CREATE INDEX IF NOT EXISTS idx_reviews_user_event ON reviews(user_id, event_id)",
+        "-- Enable RLS\nALTER TABLE reviews ENABLE ROW LEVEL SECURITY",
+        "-- RLS Policies\nDO $$ BEGIN\n  -- Users can insert their own reviews\n  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'reviews_insert_own' AND tablename = 'reviews') THEN\n    CREATE POLICY reviews_insert_own ON reviews\n      FOR INSERT\n      WITH CHECK (auth.uid() = user_id);\n  END IF;\n\n  -- Users can select their own reviews\n  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'reviews_select_own' AND tablename = 'reviews') THEN\n    CREATE POLICY reviews_select_own ON reviews\n      FOR SELECT\n      USING (auth.uid() = user_id);\n  END IF;\n\n  -- Club organizers can select reviews for their club's events\n  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'reviews_select_organizer' AND tablename = 'reviews') THEN\n    CREATE POLICY reviews_select_organizer ON reviews\n      FOR SELECT\n      USING (\n        EXISTS (\n          SELECT 1 FROM events e\n          JOIN club_members cm ON cm.club_id = e.club_id\n          WHERE e.id = reviews.event_id\n            AND cm.user_id = auth.uid()\n        )\n      );\n  END IF;\nEND $$"
+      ]
+    },
+    {
+      "version": "20250210000000",
+      "name": "create_recommendation_feedback",
+      "statements": [
+        "-- Recommendation feedback table for tracking impressions, clicks, saves, and dismissals\n-- Run this migration in Supabase SQL editor or via Supabase CLI\n\nCREATE TABLE IF NOT EXISTS recommendation_feedback (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n  event_id UUID NOT NULL,\n  recommendation_rank INTEGER NOT NULL CHECK (recommendation_rank >= 1),\n  action TEXT NOT NULL CHECK (action IN ('impression', 'click', 'save', 'dismiss')),\n  session_id TEXT,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT now()\n)",
+        "-- Index for analytics queries (by time and action)\nCREATE INDEX IF NOT EXISTS idx_recommendation_feedback_created_at ON recommendation_feedback(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_recommendation_feedback_action ON recommendation_feedback(action)",
+        "CREATE INDEX IF NOT EXISTS idx_recommendation_feedback_user_created ON recommendation_feedback(user_id, created_at)",
+        "-- RLS: users can insert their own feedback; service role can read all for analytics\nALTER TABLE recommendation_feedback ENABLE ROW LEVEL SECURITY",
+        "CREATE POLICY \"Users can insert own feedback\"\n  ON recommendation_feedback FOR INSERT\n  WITH CHECK (auth.uid() = user_id)",
+        "CREATE POLICY \"Users can read own feedback\"\n  ON recommendation_feedback FOR SELECT\n  USING (auth.uid() = user_id)",
+        "-- Admin/analytics: use service role key or a separate policy for admin users\n-- For now, analytics API uses server-side createClient() which may use service role\nCOMMENT ON TABLE recommendation_feedback IS 'Tracks recommendation impressions, clicks, saves, and dismissals for model quality metrics'"
+      ]
+    },
+    {
+      "version": "20250210100000",
+      "name": "create_recommendation_explicit_feedback",
+      "statements": [
+        "-- Thumbs up/down feedback: one row per user per event (feedback_type = positive | negative)\n-- Run in Supabase SQL Editor if not using CLI\n\nCREATE TABLE IF NOT EXISTS recommendation_explicit_feedback (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n  event_id UUID NOT NULL,\n  feedback_type TEXT NOT NULL CHECK (feedback_type IN ('positive', 'negative')),\n  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),\n  UNIQUE(user_id, event_id)\n)",
+        "CREATE INDEX IF NOT EXISTS idx_recommendation_explicit_feedback_user_id\n  ON recommendation_explicit_feedback(user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_recommendation_explicit_feedback_event_id\n  ON recommendation_explicit_feedback(event_id)",
+        "ALTER TABLE recommendation_explicit_feedback ENABLE ROW LEVEL SECURITY",
+        "CREATE POLICY \"Users can insert own explicit feedback\"\n  ON recommendation_explicit_feedback FOR INSERT\n  WITH CHECK (auth.uid() = user_id)",
+        "CREATE POLICY \"Users can update own explicit feedback\"\n  ON recommendation_explicit_feedback FOR UPDATE\n  USING (auth.uid() = user_id)\n  WITH CHECK (auth.uid() = user_id)",
+        "CREATE POLICY \"Users can read own explicit feedback\"\n  ON recommendation_explicit_feedback FOR SELECT\n  USING (auth.uid() = user_id)",
+        "COMMENT ON TABLE recommendation_explicit_feedback IS 'Thumbs up/down per user per event; one row per (user_id, event_id)'"
+      ]
+    },
+    {
+      "version": "20251128053245",
+      "name": "remote_schema",
+      "statements": [
+        "SET statement_timeout = 0",
+        "SET lock_timeout = 0",
+        "SET idle_in_transaction_session_timeout = 0",
+        "SET client_encoding = 'UTF8'",
+        "SET standard_conforming_strings = on",
+        "SELECT pg_catalog.set_config('search_path', '', false)",
+        "SET check_function_bodies = false",
+        "SET xmloption = content",
+        "SET client_min_messages = warning",
+        "SET row_security = off",
+        "COMMENT ON SCHEMA \"public\" IS 'standard public schema'",
+        "CREATE EXTENSION IF NOT EXISTS \"pg_graphql\" WITH SCHEMA \"graphql\"",
+        "CREATE EXTENSION IF NOT EXISTS \"pg_stat_statements\" WITH SCHEMA \"extensions\"",
+        "CREATE EXTENSION IF NOT EXISTS \"pgcrypto\" WITH SCHEMA \"extensions\"",
+        "CREATE EXTENSION IF NOT EXISTS \"supabase_vault\" WITH SCHEMA \"vault\"",
+        "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\" WITH SCHEMA \"extensions\"",
+        "CREATE OR REPLACE FUNCTION \"public\".\"update_updated_at_column\"() RETURNS \"trigger\"\r\n    LANGUAGE \"plpgsql\"\r\n    AS $$\r\nBEGIN\r\n    NEW.updated_at = NOW();\r\n    RETURN NEW;\r\nEND;\r\n$$",
+        "ALTER FUNCTION \"public\".\"update_updated_at_column\"() OWNER TO \"postgres\"",
+        "SET default_tablespace = ''",
+        "SET default_table_access_method = \"heap\"",
+        "CREATE TABLE IF NOT EXISTS \"public\".\"events\" (\r\n    \"id\" \"uuid\" DEFAULT \"extensions\".\"uuid_generate_v4\"() NOT NULL,\r\n    \"title\" \"text\" NOT NULL,\r\n    \"description\" \"text\",\r\n    \"start_date\" timestamp with time zone NOT NULL,\r\n    \"end_date\" timestamp with time zone NOT NULL,\r\n    \"location\" \"text\",\r\n    \"category\" \"text\",\r\n    \"tags\" \"text\"[],\r\n    \"image_url\" \"text\",\r\n    \"organizer\" \"text\",\r\n    \"rsvp_count\" integer DEFAULT 0,\r\n    \"created_at\" timestamp with time zone DEFAULT \"now\"(),\r\n    \"updated_at\" timestamp with time zone DEFAULT \"now\"()\r\n)",
+        "ALTER TABLE \"public\".\"events\" OWNER TO \"postgres\"",
+        "CREATE TABLE IF NOT EXISTS \"public\".\"rsvps\" (\r\n    \"id\" \"uuid\" DEFAULT \"extensions\".\"uuid_generate_v4\"() NOT NULL,\r\n    \"user_id\" \"uuid\",\r\n    \"event_id\" \"uuid\",\r\n    \"status\" \"text\" DEFAULT 'going'::\"text\",\r\n    \"created_at\" timestamp with time zone DEFAULT \"now\"(),\r\n    \"updated_at\" timestamp with time zone DEFAULT \"now\"()\r\n)",
+        "ALTER TABLE \"public\".\"rsvps\" OWNER TO \"postgres\"",
+        "CREATE TABLE IF NOT EXISTS \"public\".\"saved_events\" (\r\n    \"id\" \"uuid\" DEFAULT \"extensions\".\"uuid_generate_v4\"() NOT NULL,\r\n    \"user_id\" \"uuid\",\r\n    \"event_id\" \"uuid\",\r\n    \"created_at\" timestamp with time zone DEFAULT \"now\"()\r\n)",
+        "ALTER TABLE \"public\".\"saved_events\" OWNER TO \"postgres\"",
+        "CREATE TABLE IF NOT EXISTS \"public\".\"users\" (\r\n    \"id\" \"uuid\" DEFAULT \"extensions\".\"uuid_generate_v4\"() NOT NULL,\r\n    \"email\" \"text\" NOT NULL,\r\n    \"name\" \"text\",\r\n    \"avatar_url\" \"text\",\r\n    \"preferences\" \"jsonb\" DEFAULT '{}'::\"jsonb\",\r\n    \"created_at\" timestamp with time zone DEFAULT \"now\"(),\r\n    \"updated_at\" timestamp with time zone DEFAULT \"now\"()\r\n)",
+        "ALTER TABLE \"public\".\"users\" OWNER TO \"postgres\"",
+        "ALTER TABLE ONLY \"public\".\"events\"\r\n    ADD CONSTRAINT \"events_pkey\" PRIMARY KEY (\"id\")",
+        "ALTER TABLE ONLY \"public\".\"rsvps\"\r\n    ADD CONSTRAINT \"rsvps_pkey\" PRIMARY KEY (\"id\")",
+        "ALTER TABLE ONLY \"public\".\"rsvps\"\r\n    ADD CONSTRAINT \"rsvps_user_id_event_id_key\" UNIQUE (\"user_id\", \"event_id\")",
+        "ALTER TABLE ONLY \"public\".\"saved_events\"\r\n    ADD CONSTRAINT \"saved_events_pkey\" PRIMARY KEY (\"id\")",
+        "ALTER TABLE ONLY \"public\".\"saved_events\"\r\n    ADD CONSTRAINT \"saved_events_user_id_event_id_key\" UNIQUE (\"user_id\", \"event_id\")",
+        "ALTER TABLE ONLY \"public\".\"users\"\r\n    ADD CONSTRAINT \"users_email_key\" UNIQUE (\"email\")",
+        "ALTER TABLE ONLY \"public\".\"users\"\r\n    ADD CONSTRAINT \"users_pkey\" PRIMARY KEY (\"id\")",
+        "CREATE INDEX \"idx_events_category\" ON \"public\".\"events\" USING \"btree\" (\"category\")",
+        "CREATE INDEX \"idx_events_start_date\" ON \"public\".\"events\" USING \"btree\" (\"start_date\")",
+        "CREATE INDEX \"idx_rsvps_event_id\" ON \"public\".\"rsvps\" USING \"btree\" (\"event_id\")",
+        "CREATE INDEX \"idx_rsvps_user_id\" ON \"public\".\"rsvps\" USING \"btree\" (\"user_id\")",
+        "CREATE INDEX \"idx_saved_events_event_id\" ON \"public\".\"saved_events\" USING \"btree\" (\"event_id\")",
+        "CREATE INDEX \"idx_saved_events_user_id\" ON \"public\".\"saved_events\" USING \"btree\" (\"user_id\")",
+        "CREATE OR REPLACE TRIGGER \"update_events_updated_at\" BEFORE UPDATE ON \"public\".\"events\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"update_updated_at_column\"()",
+        "CREATE OR REPLACE TRIGGER \"update_rsvps_updated_at\" BEFORE UPDATE ON \"public\".\"rsvps\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"update_updated_at_column\"()",
+        "CREATE OR REPLACE TRIGGER \"update_users_updated_at\" BEFORE UPDATE ON \"public\".\"users\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"update_updated_at_column\"()",
+        "ALTER TABLE ONLY \"public\".\"rsvps\"\r\n    ADD CONSTRAINT \"rsvps_event_id_fkey\" FOREIGN KEY (\"event_id\") REFERENCES \"public\".\"events\"(\"id\") ON DELETE CASCADE",
+        "ALTER TABLE ONLY \"public\".\"rsvps\"\r\n    ADD CONSTRAINT \"rsvps_user_id_fkey\" FOREIGN KEY (\"user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE CASCADE",
+        "ALTER TABLE ONLY \"public\".\"saved_events\"\r\n    ADD CONSTRAINT \"saved_events_event_id_fkey\" FOREIGN KEY (\"event_id\") REFERENCES \"public\".\"events\"(\"id\") ON DELETE CASCADE",
+        "ALTER TABLE ONLY \"public\".\"saved_events\"\r\n    ADD CONSTRAINT \"saved_events_user_id_fkey\" FOREIGN KEY (\"user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE CASCADE",
+        "CREATE POLICY \"Authenticated users can insert events\" ON \"public\".\"events\" FOR INSERT WITH CHECK ((\"auth\".\"role\"() = 'authenticated'::\"text\"))",
+        "CREATE POLICY \"Authenticated users can update events\" ON \"public\".\"events\" FOR UPDATE USING ((\"auth\".\"role\"() = 'authenticated'::\"text\"))",
+        "CREATE POLICY \"Events are viewable by everyone\" ON \"public\".\"events\" FOR SELECT USING (true)",
+        "CREATE POLICY \"Users can delete their own RSVPs\" ON \"public\".\"rsvps\" FOR DELETE USING ((\"auth\".\"uid\"() = \"user_id\"))",
+        "CREATE POLICY \"Users can delete their own saved events\" ON \"public\".\"saved_events\" FOR DELETE USING ((\"auth\".\"uid\"() = \"user_id\"))",
+        "CREATE POLICY \"Users can insert their own RSVPs\" ON \"public\".\"rsvps\" FOR INSERT WITH CHECK ((\"auth\".\"uid\"() = \"user_id\"))",
+        "CREATE POLICY \"Users can insert their own saved events\" ON \"public\".\"saved_events\" FOR INSERT WITH CHECK ((\"auth\".\"uid\"() = \"user_id\"))",
+        "CREATE POLICY \"Users can update their own RSVPs\" ON \"public\".\"rsvps\" FOR UPDATE USING ((\"auth\".\"uid\"() = \"user_id\"))",
+        "CREATE POLICY \"Users can update their own profile\" ON \"public\".\"users\" FOR UPDATE USING ((\"auth\".\"uid\"() = \"id\"))",
+        "CREATE POLICY \"Users can view all profiles\" ON \"public\".\"users\" FOR SELECT USING (true)",
+        "CREATE POLICY \"Users can view their own RSVPs\" ON \"public\".\"rsvps\" FOR SELECT USING ((\"auth\".\"uid\"() = \"user_id\"))",
+        "CREATE POLICY \"Users can view their own saved events\" ON \"public\".\"saved_events\" FOR SELECT USING ((\"auth\".\"uid\"() = \"user_id\"))",
+        "ALTER TABLE \"public\".\"events\" ENABLE ROW LEVEL SECURITY",
+        "ALTER TABLE \"public\".\"rsvps\" ENABLE ROW LEVEL SECURITY",
+        "ALTER TABLE \"public\".\"saved_events\" ENABLE ROW LEVEL SECURITY",
+        "ALTER TABLE \"public\".\"users\" ENABLE ROW LEVEL SECURITY",
+        "ALTER PUBLICATION \"supabase_realtime\" OWNER TO \"postgres\"",
+        "GRANT USAGE ON SCHEMA \"public\" TO \"postgres\"",
+        "GRANT USAGE ON SCHEMA \"public\" TO \"anon\"",
+        "GRANT USAGE ON SCHEMA \"public\" TO \"authenticated\"",
+        "GRANT USAGE ON SCHEMA \"public\" TO \"service_role\"",
+        "GRANT ALL ON FUNCTION \"public\".\"update_updated_at_column\"() TO \"anon\"",
+        "GRANT ALL ON FUNCTION \"public\".\"update_updated_at_column\"() TO \"authenticated\"",
+        "GRANT ALL ON FUNCTION \"public\".\"update_updated_at_column\"() TO \"service_role\"",
+        "GRANT ALL ON TABLE \"public\".\"events\" TO \"anon\"",
+        "GRANT ALL ON TABLE \"public\".\"events\" TO \"authenticated\"",
+        "GRANT ALL ON TABLE \"public\".\"events\" TO \"service_role\"",
+        "GRANT ALL ON TABLE \"public\".\"rsvps\" TO \"anon\"",
+        "GRANT ALL ON TABLE \"public\".\"rsvps\" TO \"authenticated\"",
+        "GRANT ALL ON TABLE \"public\".\"rsvps\" TO \"service_role\"",
+        "GRANT ALL ON TABLE \"public\".\"saved_events\" TO \"anon\"",
+        "GRANT ALL ON TABLE \"public\".\"saved_events\" TO \"authenticated\"",
+        "GRANT ALL ON TABLE \"public\".\"saved_events\" TO \"service_role\"",
+        "GRANT ALL ON TABLE \"public\".\"users\" TO \"anon\"",
+        "GRANT ALL ON TABLE \"public\".\"users\" TO \"authenticated\"",
+        "GRANT ALL ON TABLE \"public\".\"users\" TO \"service_role\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON SEQUENCES TO \"postgres\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON SEQUENCES TO \"anon\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON SEQUENCES TO \"authenticated\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON SEQUENCES TO \"service_role\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON FUNCTIONS TO \"postgres\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON FUNCTIONS TO \"anon\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON FUNCTIONS TO \"authenticated\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON FUNCTIONS TO \"service_role\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON TABLES TO \"postgres\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON TABLES TO \"anon\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON TABLES TO \"authenticated\"",
+        "ALTER DEFAULT PRIVILEGES FOR ROLE \"postgres\" IN SCHEMA \"public\" GRANT ALL ON TABLES TO \"service_role\"",
+        "drop extension if exists \"pg_net\""
+      ]
+    },
+    {
+      "version": "20251128060836",
+      "name": "events_add_status_column",
+      "statements": [
+        "-- statsus column for marking events that are not approved yet by the admins\r\nALTER TABLE \"public\".\"events\" ADD COLUMN \"status\" text NOT NULL DEFAULT 'pending'"
+      ]
+    },
+    {
+      "version": "20260223",
+      "name": "add_clubs_status_category",
+      "statements": [
+        "-- Add status column (default 'approved' so existing clubs remain visible)\nALTER TABLE clubs ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'approved'",
+        "-- Add category column (nullable)\nALTER TABLE clubs ADD COLUMN IF NOT EXISTS category text",
+        "-- Add created_by column to track who created the club (for granting organizer on approval)\nALTER TABLE clubs ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES auth.users(id)",
+        "-- Index for filtering by status\nCREATE INDEX IF NOT EXISTS idx_clubs_status ON clubs(status)"
+      ]
+    },
+    {
+      "version": "20260223000000",
+      "name": "notifications_rls_and_dedup",
+      "statements": [
+        "-- Migration: notifications_rls_and_dedup\n-- Adds RLS policies, UNIQUE dedup index, and performance indexes\n-- to the notifications table (created in 007_add_created_by_and_notifications.sql).\n--\n-- Safe to run idempotently: uses IF NOT EXISTS and DO blocks to skip\n-- already-existing objects.\n\n-- Enable RLS (idempotent: safe to call if already enabled)\nALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY",
+        "-- Policy 1: Users can SELECT only their own notifications\nDO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM pg_policies\n    WHERE tablename = 'notifications'\n      AND policyname = 'Users can view own notifications'\n  ) THEN\n    EXECUTE $policy$\n      CREATE POLICY \"Users can view own notifications\"\n        ON public.notifications FOR SELECT\n        USING (auth.uid() = user_id)\n    $policy$;\n  END IF;\nEND $$",
+        "-- Policy 2: Users can UPDATE only their own rows (to mark read)\n-- Column-level restriction enforced in API route by only updating the `read` column.\nDO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM pg_policies\n    WHERE tablename = 'notifications'\n      AND policyname = 'Users can mark own notifications read'\n  ) THEN\n    EXECUTE $policy$\n      CREATE POLICY \"Users can mark own notifications read\"\n        ON public.notifications FOR UPDATE\n        USING (auth.uid() = user_id)\n        WITH CHECK (auth.uid() = user_id)\n    $policy$;\n  END IF;\nEND $$",
+        "-- No INSERT policy for authenticated role.\n-- Service role (used by cron and admin routes via createServiceClient()) bypasses\n-- RLS entirely. Omitting an INSERT policy blocks any direct browser client INSERT.\n\n-- UNIQUE dedup index: prevent duplicate notifications from cron retries.\n-- Covers event_reminder_24h, event_reminder_1h, event_approved, event_rejected.\n-- Uses partial index (WHERE event_id IS NOT NULL) because standard UNIQUE constraints\n-- treat multiple NULLs as distinct values in PostgreSQL.\nCREATE UNIQUE INDEX IF NOT EXISTS notifications_dedup_idx\n  ON public.notifications (user_id, event_id, type)\n  WHERE event_id IS NOT NULL",
+        "-- Performance indexes (naming convention: {table}_{column(s)}_idx)\nCREATE INDEX IF NOT EXISTS notifications_user_id_idx\n  ON public.notifications (user_id)",
+        "CREATE INDEX IF NOT EXISTS notifications_user_unread_idx\n  ON public.notifications (user_id, read)\n  WHERE read = FALSE"
+      ]
+    },
+    {
+      "version": "20260223193741",
+      "name": "notifications_rls_and_dedup",
+      "statements": [
+        "-- Enable RLS (idempotent: safe to call if already enabled)\nALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;\n\n-- Policy 1: Users can SELECT only their own notifications\nDO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM pg_policies\n    WHERE tablename = 'notifications'\n      AND policyname = 'Users can view own notifications'\n  ) THEN\n    EXECUTE $policy$\n      CREATE POLICY \"Users can view own notifications\"\n        ON public.notifications FOR SELECT\n        USING (auth.uid() = user_id)\n    $policy$;\n  END IF;\nEND $$;\n\n-- Policy 2: Users can UPDATE only their own rows (to mark read)\nDO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM pg_policies\n    WHERE tablename = 'notifications'\n      AND policyname = 'Users can mark own notifications read'\n  ) THEN\n    EXECUTE $policy$\n      CREATE POLICY \"Users can mark own notifications read\"\n        ON public.notifications FOR UPDATE\n        USING (auth.uid() = user_id)\n        WITH CHECK (auth.uid() = user_id)\n    $policy$;\n  END IF;\nEND $$;\n\n-- UNIQUE dedup index\nCREATE UNIQUE INDEX IF NOT EXISTS notifications_dedup_idx\n  ON public.notifications (user_id, event_id, type)\n  WHERE event_id IS NOT NULL;\n\n-- Performance indexes\nCREATE INDEX IF NOT EXISTS notifications_user_id_idx\n  ON public.notifications (user_id);\n\nCREATE INDEX IF NOT EXISTS notifications_user_unread_idx\n  ON public.notifications (user_id, read)\n  WHERE read = FALSE;"
+      ]
+    },
+    {
+      "version": "20260225000001",
+      "name": "club_roles_and_invitations",
+      "statements": [
+        "-- =============================================\n-- Migration: club_roles_and_invitations\n-- Phase: 05-database-foundation\n-- Requirements: DBROLE-01, DBROLE-02, DBROLE-03, DBROLE-04, DBROLE-05, DBROLE-07\n-- (DBROLE-06 is handled in src/app/api/admin/clubs/[id]/route.ts)\n--\n-- Purpose: Add owner/organizer role distinction to club_members,\n--          a SECURITY DEFINER helper function, owner-scoped RLS policies,\n--          performance index, and the club_invitations table.\n-- Idempotent: safe to re-run.\n-- =============================================\n\n\n-- =============================================\n-- SECTION 1 — Backfill existing club creators to owner role (DBROLE-01 prerequisite)\n-- Runs BEFORE the CHECK constraint so the UPDATE normalises any 'organizer' rows\n-- that belong to the club creator. Running again is a no-op (owner → owner).\n-- =============================================\n\nUPDATE public.club_members\nSET role = 'owner'\nWHERE (user_id, club_id) IN (\n  SELECT created_by, id FROM public.clubs\n  WHERE status = 'approved' AND created_by IS NOT NULL\n)",
+        "-- =============================================\n-- SECTION 2 — DBROLE-01: CHECK constraint on club_members.role\n-- Allows only 'owner' and 'organizer'. Uses a DO block so it is idempotent.\n-- =============================================\n\nDO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM information_schema.table_constraints\n    WHERE table_schema = 'public'\n      AND table_name   = 'club_members'\n      AND constraint_name = 'club_members_role_check'\n  ) THEN\n    ALTER TABLE public.club_members\n      ADD CONSTRAINT club_members_role_check\n      CHECK (role IN ('owner', 'organizer'));\n  END IF;\nEND $$",
+        "-- =============================================\n-- SECTION 3 — DBROLE-02: is_club_owner() SECURITY DEFINER function\n-- Checks whether the calling user is an 'owner' of the given club.\n-- SECURITY DEFINER + SET search_path prevent RLS infinite recursion.\n-- Pattern mirrors is_admin() from 011_rls_audit.sql.\n-- =============================================\n\nCREATE OR REPLACE FUNCTION public.is_club_owner(p_club_id UUID)\nRETURNS boolean\nLANGUAGE sql\nSTABLE\nSECURITY DEFINER\nSET search_path = public\nAS $$\n  SELECT EXISTS (\n    SELECT 1 FROM public.club_members\n    WHERE club_id = p_club_id\n      AND user_id = auth.uid()\n      AND role = 'owner'\n  );\n$$",
+        "-- =============================================\n-- SECTION 4 — DBROLE-05: Composite index on club_members(club_id, role)\n-- Speeds up is_club_owner() lookups and owner-filtered queries.\n-- =============================================\n\nCREATE INDEX IF NOT EXISTS idx_club_members_club_role\n  ON public.club_members(club_id, role)",
+        "-- =============================================\n-- SECTION 5 — DBROLE-03: Owner cross-row SELECT policy on club_members\n-- Lets the club owner see ALL members of their club (not just themselves).\n-- Does NOT modify or drop existing \"Users see own memberships\" or\n-- \"Admins manage memberships\" policies.\n-- =============================================\n\nDROP POLICY IF EXISTS \"Club owners can view all club members\" ON public.club_members",
+        "CREATE POLICY \"Club owners can view all club members\"\n  ON public.club_members\n  FOR SELECT\n  TO authenticated\n  USING (is_club_owner(club_id))",
+        "-- =============================================\n-- SECTION 6 — DBROLE-04: Owner DELETE policy with self-removal guard\n-- Club owner can remove any member except themselves.\n-- The (select auth.uid()) wrapper is required for initPlan caching.\n-- =============================================\n\nDROP POLICY IF EXISTS \"Club owners can remove members\" ON public.club_members",
+        "CREATE POLICY \"Club owners can remove members\"\n  ON public.club_members\n  FOR DELETE\n  TO authenticated\n  USING (is_club_owner(club_id) AND user_id != (select auth.uid()))",
+        "-- =============================================\n-- SECTION 7 — DBROLE-07: club_invitations table\n-- Stores pending/accepted/expired/revoked invite tokens sent by club owners.\n-- =============================================\n\nCREATE TABLE IF NOT EXISTS public.club_invitations (\n  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),\n  club_id      UUID        NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,\n  inviter_id   UUID        NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,\n  invitee_email TEXT       NOT NULL,\n  token        UUID        NOT NULL DEFAULT gen_random_uuid() UNIQUE,\n  status       TEXT        NOT NULL DEFAULT 'pending'\n                           CHECK (status IN ('pending', 'accepted', 'expired', 'revoked')),\n  expires_at   TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '7 days'),\n  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()\n)",
+        "ALTER TABLE public.club_invitations ENABLE ROW LEVEL SECURITY",
+        "-- Indexes\nCREATE INDEX IF NOT EXISTS idx_club_invitations_club_id\n  ON public.club_invitations(club_id)",
+        "CREATE INDEX IF NOT EXISTS idx_club_invitations_token\n  ON public.club_invitations(token)",
+        "CREATE INDEX IF NOT EXISTS idx_club_invitations_email\n  ON public.club_invitations(invitee_email)",
+        "-- RLS Policies\nDROP POLICY IF EXISTS \"Club owners can view club invitations\" ON public.club_invitations",
+        "CREATE POLICY \"Club owners can view club invitations\"\n  ON public.club_invitations\n  FOR SELECT\n  TO authenticated\n  USING (is_club_owner(club_id))",
+        "DROP POLICY IF EXISTS \"Club owners can create club invitations\" ON public.club_invitations",
+        "CREATE POLICY \"Club owners can create club invitations\"\n  ON public.club_invitations\n  FOR INSERT\n  TO authenticated\n  WITH CHECK (is_club_owner(club_id))",
+        "-- Comments\nCOMMENT ON TABLE public.club_invitations IS\n  'Pending and historical invitations sent by club owners to prospective members. Tokens expire after 7 days.'",
+        "COMMENT ON COLUMN public.club_invitations.token IS\n  'Unique UUID token included in the invite link. Used for accept/revoke flows.'"
+      ]
+    },
+    {
+      "version": "20260226000001",
+      "name": "invitee_select_update_policy",
+      "statements": [
+        "-- Phase 7: Add invitee-access SELECT and UPDATE policies on club_invitations\n-- Allows invitation recipients to read and accept their own invitations\n-- Deferred from Phase 5 per STATE.md decision\n\n-- SELECT: invitees can view their own invitations (by email match)\nDROP POLICY IF EXISTS \"Invitees can view their own invitations\" ON public.club_invitations",
+        "CREATE POLICY \"Invitees can view their own invitations\"\n  ON public.club_invitations\n  FOR SELECT\n  TO authenticated\n  USING (\n    invitee_email = (SELECT email FROM public.users WHERE id = (SELECT auth.uid()))\n  )",
+        "-- UPDATE: invitees can accept their own pending invitations (status transition only)\nDROP POLICY IF EXISTS \"Invitees can accept their own invitations\" ON public.club_invitations",
+        "CREATE POLICY \"Invitees can accept their own invitations\"\n  ON public.club_invitations\n  FOR UPDATE\n  TO authenticated\n  USING (\n    invitee_email = (SELECT email FROM public.users WHERE id = (SELECT auth.uid()))\n    AND status = 'pending'\n  )\n  WITH CHECK (\n    status = 'accepted'\n  )",
+        "-- UPDATE: owners can revoke pending invitations for their club (MEM-08)\nDROP POLICY IF EXISTS \"Club owners can update club invitations\" ON public.club_invitations",
+        "CREATE POLICY \"Club owners can update club invitations\"\n  ON public.club_invitations\n  FOR UPDATE\n  TO authenticated\n  USING (is_club_owner(club_id) AND status = 'pending')\n  WITH CHECK (status = 'revoked')"
+      ]
+    },
+    {
+      "version": "20260227000001",
+      "name": "club_followers",
+      "statements": [
+        "-- Phase 9: Follow System — club_followers table + RLS policies\n-- Idempotent: safe to re-run\n\nCREATE TABLE IF NOT EXISTS public.club_followers (\n  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),\n  user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n  club_id     UUID        NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,\n  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),\n  CONSTRAINT club_followers_unique UNIQUE (user_id, club_id)\n)",
+        "ALTER TABLE public.club_followers ENABLE ROW LEVEL SECURITY",
+        "-- Indexes for query performance\nCREATE INDEX IF NOT EXISTS idx_club_followers_club_id ON public.club_followers(club_id)",
+        "CREATE INDEX IF NOT EXISTS idx_club_followers_user_id ON public.club_followers(user_id)",
+        "-- RLS Policies:\n\n-- 1. Public SELECT — anyone (including anon) can read follower rows\n-- This enables public follower count. API routes control what data is exposed.\nDROP POLICY IF EXISTS \"Anyone can view follower data\" ON public.club_followers",
+        "CREATE POLICY \"Anyone can view follower data\"\n  ON public.club_followers\n  FOR SELECT\n  USING (true)",
+        "-- 2. Authenticated users can follow (INSERT their own rows)\nDROP POLICY IF EXISTS \"Authenticated users can follow clubs\" ON public.club_followers",
+        "CREATE POLICY \"Authenticated users can follow clubs\"\n  ON public.club_followers\n  FOR INSERT\n  TO authenticated\n  WITH CHECK (user_id = auth.uid())",
+        "-- 3. Authenticated users can unfollow (DELETE their own rows)\nDROP POLICY IF EXISTS \"Authenticated users can unfollow clubs\" ON public.club_followers",
+        "CREATE POLICY \"Authenticated users can unfollow clubs\"\n  ON public.club_followers\n  FOR DELETE\n  TO authenticated\n  USING (user_id = auth.uid())"
+      ]
+    },
+    {
+      "version": "20260305000001",
+      "name": "experiments",
+      "statements": [
+        "-- A/B Testing Framework tables\n\nCREATE TABLE IF NOT EXISTS experiments (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  name text UNIQUE NOT NULL,\n  description text NOT NULL DEFAULT '',\n  status text NOT NULL DEFAULT 'draft'\n    CHECK (status IN ('draft', 'running', 'paused', 'completed')),\n  target_metric text NOT NULL DEFAULT 'ctr'\n    CHECK (target_metric IN ('ctr', 'save_rate', 'dismiss_rate')),\n  start_date timestamptz,\n  end_date timestamptz,\n  created_by uuid REFERENCES users(id),\n  created_at timestamptz NOT NULL DEFAULT now(),\n  updated_at timestamptz NOT NULL DEFAULT now()\n)",
+        "CREATE TABLE IF NOT EXISTS experiment_variants (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  experiment_id uuid NOT NULL REFERENCES experiments(id) ON DELETE CASCADE,\n  name text NOT NULL,\n  config jsonb NOT NULL DEFAULT '{}',\n  weight integer NOT NULL DEFAULT 1 CHECK (weight > 0),\n  UNIQUE (experiment_id, name)\n)",
+        "CREATE TABLE IF NOT EXISTS experiment_assignments (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  experiment_id uuid NOT NULL REFERENCES experiments(id) ON DELETE CASCADE,\n  variant_id uuid NOT NULL REFERENCES experiment_variants(id) ON DELETE CASCADE,\n  user_id uuid NOT NULL REFERENCES users(id),\n  assigned_at timestamptz NOT NULL DEFAULT now(),\n  UNIQUE (experiment_id, user_id)\n)",
+        "-- Add experiment_variant_id to recommendation_feedback\nALTER TABLE recommendation_feedback\n  ADD COLUMN IF NOT EXISTS experiment_variant_id uuid REFERENCES experiment_variants(id)",
+        "-- Indexes\nCREATE INDEX IF NOT EXISTS idx_experiments_status ON experiments(status)",
+        "CREATE INDEX IF NOT EXISTS idx_experiment_variants_experiment ON experiment_variants(experiment_id)",
+        "CREATE INDEX IF NOT EXISTS idx_experiment_assignments_experiment ON experiment_assignments(experiment_id)",
+        "CREATE INDEX IF NOT EXISTS idx_experiment_assignments_user ON experiment_assignments(user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_recommendation_feedback_variant ON recommendation_feedback(experiment_variant_id)",
+        "-- RLS\nALTER TABLE experiments ENABLE ROW LEVEL SECURITY",
+        "ALTER TABLE experiment_variants ENABLE ROW LEVEL SECURITY",
+        "ALTER TABLE experiment_assignments ENABLE ROW LEVEL SECURITY",
+        "CREATE POLICY \"Admins can manage experiments\" ON experiments\n  FOR ALL USING (\n    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND 'admin' = ANY(users.roles))\n  )",
+        "CREATE POLICY \"Anyone can read running experiments\" ON experiments\n  FOR SELECT USING (status = 'running')",
+        "CREATE POLICY \"Admins can manage variants\" ON experiment_variants\n  FOR ALL USING (\n    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND 'admin' = ANY(users.roles))\n  )",
+        "CREATE POLICY \"Anyone can read variants of running experiments\" ON experiment_variants\n  FOR SELECT USING (\n    EXISTS (SELECT 1 FROM experiments WHERE experiments.id = experiment_id AND experiments.status = 'running')\n  )",
+        "CREATE POLICY \"Users can read own assignments\" ON experiment_assignments\n  FOR SELECT USING (user_id = auth.uid())",
+        "CREATE POLICY \"Service can insert assignments\" ON experiment_assignments\n  FOR INSERT WITH CHECK (true)",
+        "CREATE POLICY \"Admins can read all assignments\" ON experiment_assignments\n  FOR SELECT USING (\n    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND 'admin' = ANY(users.roles))\n  )"
+      ]
+    },
+    {
+      "version": "20260305000002",
+      "name": "email_reminder_log",
+      "statements": [
+        "-- Migration: email_reminder_log\n-- Prevents duplicate reminder notifications when the cron misfires or runs twice.\n-- The UNIQUE constraint on (user_id, event_id, reminder_type) is the hard guard;\n-- the cron also does a pre-send lookup to skip already-logged rows.\n\nCREATE TABLE email_reminder_log (\n  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),\n  user_id       UUID        REFERENCES auth.users(id) ON DELETE CASCADE,\n  event_id      UUID        REFERENCES events(id) ON DELETE CASCADE,\n  reminder_type TEXT        NOT NULL CHECK (reminder_type IN ('reminder_24h', 'reminder_1h')),\n  sent_at       TIMESTAMPTZ DEFAULT now() NOT NULL,\n  UNIQUE (user_id, event_id, reminder_type)\n)",
+        "-- Index to speed up the pre-send dedup lookup (filter by reminder_type + event_id)\nCREATE INDEX email_reminder_log_type_event_idx\n  ON email_reminder_log (reminder_type, event_id)",
+        "-- RLS: internal log — service role handles all writes (bypasses RLS).\n-- Users can only read their own entries; no direct write access.\nALTER TABLE email_reminder_log ENABLE ROW LEVEL SECURITY",
+        "CREATE POLICY \"Users can view their own reminder log\"\n  ON email_reminder_log\n  FOR SELECT\n  USING (auth.uid() = user_id)",
+        "CREATE POLICY \"Service role can manage reminder log\"\n  ON email_reminder_log\n  FOR ALL\n  TO service_role\n  USING (true)\n  WITH CHECK (true)"
+      ]
+    },
+    {
+      "version": "20260306",
+      "name": "add_user_profile_fields",
+      "statements": [
+        "-- Add profile enrichment columns\nALTER TABLE public.users\n  ADD COLUMN IF NOT EXISTS pronouns text DEFAULT NULL,\n  ADD COLUMN IF NOT EXISTS year text DEFAULT NULL,\n  ADD COLUMN IF NOT EXISTS faculty text DEFAULT NULL,\n  ADD COLUMN IF NOT EXISTS visibility text DEFAULT 'public',\n  ADD COLUMN IF NOT EXISTS onboarding_completed boolean DEFAULT false",
+        "-- Backfill: existing users have already \"onboarded\"\nUPDATE public.users SET onboarding_completed = true WHERE onboarding_completed = false"
+      ]
+    },
+    {
+      "version": "20260307000001",
+      "name": "events_query_performance_indexes",
+      "statements": [
+        "-- Migration: events_query_performance_indexes\n-- Adds composite and partial indexes on the events table to eliminate\n-- sequential scans from the most frequent query patterns.\n--\n-- Existing single-column indexes (from 001_initial_schema):\n--   idx_events_start_date  (start_date)\n--   idx_events_status      (status)\n--   idx_events_club_id     (club_id)\n--   idx_events_tags        GIN(tags)\n\n-- ─── 1. Composite: status + start_date ─────────────────────────────────────\n-- Covers the dominant access pattern: WHERE status = 'approved' … ORDER BY start_date\n-- Used by: /api/events, /api/events/popular, /api/events/happening-now,\n--          /api/events/export, /api/clubs/[id]/events, /sitemap, etc.\nCREATE INDEX IF NOT EXISTS idx_events_status_start_date\n  ON public.events (status, start_date)",
+        "-- ─── 2. Partial index: approved events by start_date ────────────────────────\n-- Narrower than #1 — skips non-approved rows entirely so the planner can use\n-- a smaller, denser index for the most common public-facing queries.\nCREATE INDEX IF NOT EXISTS idx_events_approved_start_date\n  ON public.events (start_date)\n  WHERE status = 'approved'",
+        "-- ─── 3. Composite: club_id + status + start_date ───────────────────────────\n-- Covers club event listings: WHERE club_id = ? AND status = 'approved'\n-- ORDER BY start_date.  Replaces the need to merge idx_events_club_id + idx_events_status.\nCREATE INDEX IF NOT EXISTS idx_events_club_id_status_start_date\n  ON public.events (club_id, status, start_date)",
+        "-- ─── 4. Index on created_by ────────────────────────────────────────────────\n-- User profile pages count events: WHERE created_by = ? AND status = 'approved'.\n-- No index on created_by existed before this migration.\nCREATE INDEX IF NOT EXISTS idx_events_created_by\n  ON public.events (created_by)\n  WHERE created_by IS NOT NULL",
+        "-- ─── 5. Composite: created_by + status ─────────────────────────────────────\n-- Tighter fit for the profile count query.\nCREATE INDEX IF NOT EXISTS idx_events_created_by_status\n  ON public.events (created_by, status)\n  WHERE created_by IS NOT NULL",
+        "-- ─── 6. Index on created_at ────────────────────────────────────────────────\n-- Admin analytics filters: WHERE created_at >= ? ORDER BY created_at.\nCREATE INDEX IF NOT EXISTS idx_events_created_at\n  ON public.events (created_at)",
+        "-- ─── 7. Trigram indexes for ILIKE text search ──────────────────────────────\n-- Multiple endpoints search: title ILIKE '%term%' / description ILIKE '%term%'.\n-- Without trigram indexes these are full sequential scans.\nCREATE EXTENSION IF NOT EXISTS pg_trgm",
+        "CREATE INDEX IF NOT EXISTS idx_events_title_trgm\n  ON public.events USING GIN (title gin_trgm_ops)",
+        "CREATE INDEX IF NOT EXISTS idx_events_description_trgm\n  ON public.events USING GIN (description gin_trgm_ops)",
+        "-- ─── 8. Composite: status + created_at ─────────────────────────────────────\n-- Admin dashboard: WHERE status = ? ORDER BY created_at DESC (pending queue).\n-- Moderation page: WHERE status = 'pending' ORDER BY created_at DESC.\nCREATE INDEX IF NOT EXISTS idx_events_status_created_at\n  ON public.events (status, created_at)"
+      ]
+    },
+    {
+      "version": "20260315041343",
+      "name": "add_club_social_links_and_featured_clubs",
+      "statements": [
+        "-- Add social link columns to clubs table\nALTER TABLE clubs\n  ADD COLUMN IF NOT EXISTS website_url text,\n  ADD COLUMN IF NOT EXISTS discord_url text,\n  ADD COLUMN IF NOT EXISTS twitter_url text,\n  ADD COLUMN IF NOT EXISTS linkedin_url text;\n\n-- Create featured_clubs table (mirrors featured_events pattern)\nCREATE TABLE IF NOT EXISTS featured_clubs (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  club_id uuid NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,\n  sponsor_name text,\n  priority integer NOT NULL DEFAULT 0,\n  starts_at timestamptz NOT NULL,\n  ends_at timestamptz NOT NULL,\n  created_by uuid NOT NULL REFERENCES auth.users(id),\n  created_at timestamptz NOT NULL DEFAULT now()\n);\n\n-- Index for the common query: active featured clubs ordered by priority\nCREATE INDEX IF NOT EXISTS idx_featured_clubs_active\n  ON featured_clubs (starts_at, ends_at, priority DESC);"
+      ]
+    },
+    {
+      "version": "20260315045155",
+      "name": "add_club_banner_url",
+      "statements": [
+        "ALTER TABLE clubs ADD COLUMN IF NOT EXISTS banner_url text;"
+      ]
+    },
+    {
+      "version": "20260315103436",
+      "name": "add_contact_email_to_clubs",
+      "statements": [
+        "ALTER TABLE clubs ADD COLUMN IF NOT EXISTS contact_email TEXT;"
+      ]
+    },
+    {
+      "version": "20260315231016",
+      "name": "moderation_reviews",
+      "statements": [
+        "-- Add appeal_count to events\nALTER TABLE events ADD COLUMN IF NOT EXISTS appeal_count integer NOT NULL DEFAULT 0;\n\n-- Add appeal_count to clubs\nALTER TABLE clubs ADD COLUMN IF NOT EXISTS appeal_count integer NOT NULL DEFAULT 0;\n\n-- Add club_id to notifications\nALTER TABLE notifications ADD COLUMN IF NOT EXISTS club_id uuid REFERENCES clubs(id) ON DELETE CASCADE;\n\n-- Create moderation_reviews table\nCREATE TABLE moderation_reviews (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  target_type text NOT NULL CHECK (target_type IN ('event', 'club')),\n  target_id uuid NOT NULL,\n  action text NOT NULL CHECK (action IN ('rejection', 'appeal', 'approval')),\n  category text CHECK (\n    category IN ('inappropriate_content', 'missing_information', 'duplicate', 'policy_violation', 'incorrect_details', 'other')\n  ),\n  message text NOT NULL,\n  author_id uuid NOT NULL,\n  created_at timestamptz DEFAULT now(),\n  CONSTRAINT category_required_for_rejection CHECK (\n    (action = 'rejection' AND category IS NOT NULL) OR\n    (action IN ('appeal', 'approval') AND category IS NULL)\n  )\n);\n\nCREATE INDEX idx_moderation_reviews_target ON moderation_reviews (target_type, target_id, created_at);\n\nALTER TABLE moderation_reviews ENABLE ROW LEVEL SECURITY;\n\nCREATE POLICY \"Admins full access\" ON moderation_reviews\n  FOR ALL USING (\n    EXISTS (\n      SELECT 1 FROM users\n      WHERE users.id = auth.uid()\n      AND 'admin' = ANY(users.roles)\n    )\n  );\n\nCREATE POLICY \"Creators can view reviews of their items\" ON moderation_reviews\n  FOR SELECT USING (\n    (target_type = 'event' AND EXISTS (\n      SELECT 1 FROM events WHERE id = target_id AND created_by = auth.uid()\n    ))\n    OR\n    (target_type = 'club' AND EXISTS (\n      SELECT 1 FROM clubs WHERE id = target_id AND created_by = auth.uid()\n    ))\n  );\n\nCREATE POLICY \"Creators can appeal their items\" ON moderation_reviews\n  FOR INSERT WITH CHECK (\n    action = 'appeal'\n    AND author_id = auth.uid()\n    AND (\n      (target_type = 'event' AND EXISTS (\n        SELECT 1 FROM events WHERE id = target_id AND created_by = auth.uid()\n      ))\n      OR\n      (target_type = 'club' AND EXISTS (\n        SELECT 1 FROM clubs WHERE id = target_id AND created_by = auth.uid()\n      ))\n    )\n  );"
+      ]
+    },
+    {
+      "version": "20260316002951",
+      "name": "soft_delete",
+      "statements": [
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;\nCREATE INDEX IF NOT EXISTS idx_events_not_deleted ON events (id) WHERE deleted_at IS NULL;"
+      ]
+    },
+    {
+      "version": "20260316034955",
+      "name": "add_banner_url_to_users",
+      "statements": [
+        "ALTER TABLE public.users ADD COLUMN banner_url text;"
+      ]
+    },
+    {
+      "version": "20260316042746",
+      "name": "add_event_pricing_and_rsvp_link",
+      "statements": [
+        "\nALTER TABLE events\n  ADD COLUMN IF NOT EXISTS is_free BOOLEAN NOT NULL DEFAULT true,\n  ADD COLUMN IF NOT EXISTS price TEXT,\n  ADD COLUMN IF NOT EXISTS rsvp_link TEXT;\n\nCOMMENT ON COLUMN events.is_free IS 'Whether the event is free to attend';\nCOMMENT ON COLUMN events.price IS 'Display price text (e.g. \"$5\", \"$10-20\")';\nCOMMENT ON COLUMN events.rsvp_link IS 'External registration/RSVP URL';\n"
+      ]
+    },
+    {
+      "version": "20260316050743",
+      "name": "add_pending_edits_to_events",
+      "statements": [
+        "ALTER TABLE events ADD COLUMN pending_edits JSONB DEFAULT NULL;\n\nCOMMENT ON COLUMN events.pending_edits IS 'Stores proposed title/image_url changes awaiting admin approval. Shape: {title?: string, image_url?: string, submitted_at: string}. NULL = no pending edits.';"
+      ]
+    },
+    {
+      "version": "20260316051022",
+      "name": "create_event_reports",
+      "statements": [
+        "-- Create event_reports table\nCREATE TABLE event_reports (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  event_id uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,\n  reporter_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n  category text NOT NULL,\n  message text,\n  status text NOT NULL DEFAULT 'pending',\n  reviewed_by uuid REFERENCES auth.users(id),\n  reviewed_at timestamptz,\n  created_at timestamptz NOT NULL DEFAULT now(),\n  CONSTRAINT event_reports_unique_per_user UNIQUE (event_id, reporter_id),\n  CONSTRAINT event_reports_status_check CHECK (status IN ('pending', 'reviewed', 'dismissed'))\n);\n\n-- Index for admin queries (filter by status, order by created_at)\nCREATE INDEX idx_event_reports_status_created ON event_reports(status, created_at DESC);\n\n-- RLS policies\nALTER TABLE event_reports ENABLE ROW LEVEL SECURITY;\n\n-- Authenticated users can insert their own reports\nCREATE POLICY \"Users can insert own reports\"\n  ON event_reports FOR INSERT\n  TO authenticated\n  WITH CHECK (auth.uid() = reporter_id);\n\n-- Users can read their own reports (to show \"Reported\" state)\nCREATE POLICY \"Users can read own reports\"\n  ON event_reports FOR SELECT\n  TO authenticated\n  USING (auth.uid() = reporter_id);\n\n-- Admins can read all reports\nCREATE POLICY \"Admins can read all reports\"\n  ON event_reports FOR SELECT\n  TO authenticated\n  USING (\n    EXISTS (\n      SELECT 1 FROM users\n      WHERE users.id = auth.uid()\n      AND 'admin' = ANY(users.roles)\n    )\n  );\n\n-- Admins can update reports (review/dismiss)\nCREATE POLICY \"Admins can update reports\"\n  ON event_reports FOR UPDATE\n  TO authenticated\n  USING (\n    EXISTS (\n      SELECT 1 FROM users\n      WHERE users.id = auth.uid()\n      AND 'admin' = ANY(users.roles)\n    )\n  );"
+      ]
+    },
+    {
+      "version": "20260316061922",
+      "name": "admin_enforcement_ban_fields",
+      "statements": [
+        "-- Add ban fields to users table\nALTER TABLE users\n  ADD COLUMN IF NOT EXISTS banned_at timestamptz DEFAULT NULL,\n  ADD COLUMN IF NOT EXISTS ban_expires_at timestamptz DEFAULT NULL,\n  ADD COLUMN IF NOT EXISTS ban_reason text DEFAULT NULL,\n  ADD COLUMN IF NOT EXISTS banned_by uuid DEFAULT NULL REFERENCES auth.users(id);\n\n-- Index for middleware ban checks (used on every authenticated request via cookie refresh)\nCREATE INDEX IF NOT EXISTS idx_users_banned_at ON users (banned_at) WHERE banned_at IS NOT NULL;"
+      ]
+    },
+    {
+      "version": "20260316090343",
+      "name": "pre_release_fixes",
+      "statements": [
+        "\n-- 1. Create experiments table (A/B testing framework)\nCREATE TABLE IF NOT EXISTS public.experiments (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  name text NOT NULL,\n  description text,\n  status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'running', 'paused', 'completed')),\n  target_metric text,\n  start_date timestamptz,\n  end_date timestamptz,\n  created_at timestamptz NOT NULL DEFAULT now(),\n  updated_at timestamptz NOT NULL DEFAULT now()\n);\n\nCREATE TABLE IF NOT EXISTS public.experiment_variants (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  experiment_id uuid NOT NULL REFERENCES public.experiments(id) ON DELETE CASCADE,\n  name text NOT NULL,\n  config jsonb NOT NULL DEFAULT '{}',\n  weight integer NOT NULL DEFAULT 1,\n  created_at timestamptz NOT NULL DEFAULT now()\n);\n\nCREATE TABLE IF NOT EXISTS public.experiment_assignments (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  experiment_id uuid NOT NULL REFERENCES public.experiments(id) ON DELETE CASCADE,\n  variant_id uuid NOT NULL REFERENCES public.experiment_variants(id) ON DELETE CASCADE,\n  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n  assigned_at timestamptz NOT NULL DEFAULT now(),\n  UNIQUE(experiment_id, user_id)\n);\n\n-- Indexes for experiment tables\nCREATE INDEX IF NOT EXISTS idx_experiment_variants_experiment_id ON public.experiment_variants(experiment_id);\nCREATE INDEX IF NOT EXISTS idx_experiment_assignments_variant_id ON public.experiment_assignments(variant_id);\nCREATE INDEX IF NOT EXISTS idx_experiment_assignments_experiment_id ON public.experiment_assignments(experiment_id);\n\n-- RLS for experiment tables (admin-only)\nALTER TABLE public.experiments ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.experiment_variants ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.experiment_assignments ENABLE ROW LEVEL SECURITY;\n\nCREATE POLICY \"Admins can manage experiments\" ON public.experiments\n  FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND 'admin' = ANY(roles)));\n\nCREATE POLICY \"Admins can manage experiment variants\" ON public.experiment_variants\n  FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND 'admin' = ANY(roles)));\n\nCREATE POLICY \"Admins can manage experiment assignments\" ON public.experiment_assignments\n  FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND 'admin' = ANY(roles)));\n\n-- Users can read their own assignments\nCREATE POLICY \"Users can read own assignments\" ON public.experiment_assignments\n  FOR SELECT USING (auth.uid() = user_id);\n\n-- 2. Update events status CHECK to include 'suspended'\nALTER TABLE public.events DROP CONSTRAINT events_status_check;\nALTER TABLE public.events ADD CONSTRAINT events_status_check\n  CHECK (status IN ('pending', 'approved', 'rejected', 'suspended'));\n\n-- 3. Update moderation_reviews action CHECK to include 'suspension'\nALTER TABLE public.moderation_reviews DROP CONSTRAINT moderation_reviews_action_check;\nALTER TABLE public.moderation_reviews ADD CONSTRAINT moderation_reviews_action_check\n  CHECK (action IN ('rejection', 'appeal', 'approval', 'suspension'));\n\n-- Update category_required_for_rejection to allow suspension without category\nALTER TABLE public.moderation_reviews DROP CONSTRAINT category_required_for_rejection;\nALTER TABLE public.moderation_reviews ADD CONSTRAINT category_required_for_rejection\n  CHECK (\n    ((action = 'rejection') AND (category IS NOT NULL)) OR\n    ((action IN ('appeal', 'approval', 'suspension')) AND (category IS NULL))\n  );\n\n-- 4. Enable RLS on featured_clubs\nALTER TABLE public.featured_clubs ENABLE ROW LEVEL SECURITY;\n\nCREATE POLICY \"Anyone can view featured clubs\" ON public.featured_clubs\n  FOR SELECT USING (true);\n\nCREATE POLICY \"Admins can manage featured clubs\" ON public.featured_clubs\n  FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND 'admin' = ANY(roles)));\n\n-- 5. Add missing indexes for performance\nCREATE INDEX IF NOT EXISTS idx_events_created_by ON public.events(created_by);\nCREATE INDEX IF NOT EXISTS idx_clubs_created_by ON public.clubs(created_by);\nCREATE INDEX IF NOT EXISTS idx_event_reports_reporter_id ON public.event_reports(reporter_id);\n\n-- 6. Add DELETE policy for event_invites\nCREATE POLICY \"Users can delete own sent invites\" ON public.event_invites\n  FOR DELETE USING (auth.uid() = inviter_id);\n\nCREATE POLICY \"Users can delete invites sent to them\" ON public.event_invites\n  FOR DELETE USING (auth.uid() = invitee_id);\n\n-- 7. Add appeal_count non-negative constraints\nDO $$ BEGIN\n  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'events_appeal_count_non_negative') THEN\n    ALTER TABLE public.events ADD CONSTRAINT events_appeal_count_non_negative CHECK (appeal_count >= 0);\n  END IF;\nEND $$;\n"
+      ]
+    },
+    {
+      "version": "20260316091121",
+      "name": "add_experiment_variant_id_to_feedback",
+      "statements": [
+        "\nALTER TABLE public.recommendation_feedback\n  ADD COLUMN IF NOT EXISTS experiment_variant_id uuid REFERENCES public.experiment_variants(id) ON DELETE SET NULL;\n\nCREATE INDEX IF NOT EXISTS idx_recommendation_feedback_variant ON public.recommendation_feedback(experiment_variant_id) WHERE experiment_variant_id IS NOT NULL;\n"
+      ]
+    },
+    {
+      "version": "20260316091643",
+      "name": "feedback_request_log",
+      "statements": [
+        "\nCREATE TABLE IF NOT EXISTS feedback_request_log (\n  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),\n  user_id       UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n  event_id      UUID        NOT NULL REFERENCES events(id) ON DELETE CASCADE,\n  request_type  TEXT        NOT NULL DEFAULT 'post_event' CHECK (request_type IN ('post_event', 'post_event_reminder')),\n  sent_at       TIMESTAMPTZ NOT NULL DEFAULT now(),\n  UNIQUE (user_id, event_id, request_type)\n);\n\nCREATE INDEX IF NOT EXISTS feedback_request_log_type_event_idx\n  ON feedback_request_log (request_type, event_id);\n\nCREATE INDEX IF NOT EXISTS feedback_request_log_event_idx\n  ON feedback_request_log (event_id);\n\nALTER TABLE feedback_request_log ENABLE ROW LEVEL SECURITY;\n\nCREATE POLICY \"Users can view their own feedback request log\"\n  ON feedback_request_log\n  FOR SELECT\n  USING (auth.uid() = user_id);\n\nCREATE POLICY \"Service role can manage feedback request log\"\n  ON feedback_request_log\n  FOR ALL\n  TO service_role\n  USING (true)\n  WITH CHECK (true);\n"
+      ]
+    },
+    {
+      "version": "20260316093431",
+      "name": "create_feedback_table",
+      "statements": [
+        "\n-- Feedback table for beta testers to report bugs and suggestions\nCREATE TABLE IF NOT EXISTS public.feedback (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,\n  user_email TEXT,\n  type TEXT NOT NULL DEFAULT 'general' CHECK (type IN ('bug', 'feature', 'general')),\n  subject TEXT,\n  message TEXT NOT NULL,\n  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'reviewed', 'resolved')),\n  created_at TIMESTAMPTZ NOT NULL DEFAULT now()\n);\n\n-- Index for querying feedback\nCREATE INDEX IF NOT EXISTS idx_feedback_status ON public.feedback(status);\nCREATE INDEX IF NOT EXISTS idx_feedback_created_at ON public.feedback(created_at DESC);\n\n-- RLS policies\nALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;\n\n-- Anyone authenticated can submit feedback\nCREATE POLICY \"Users can insert feedback\"\n  ON public.feedback FOR INSERT\n  TO authenticated\n  WITH CHECK (true);\n\n-- Allow anonymous feedback via service role (API route handles this)\nCREATE POLICY \"Service role full access\"\n  ON public.feedback FOR ALL\n  TO service_role\n  USING (true)\n  WITH CHECK (true);\n\n-- Admins can read all feedback\nCREATE POLICY \"Admins can read feedback\"\n  ON public.feedback FOR SELECT\n  TO authenticated\n  USING (\n    EXISTS (\n      SELECT 1 FROM public.users\n      WHERE users.id = auth.uid()\n      AND 'admin' = ANY(users.roles)\n    )\n  );\n"
+      ]
+    },
+    {
+      "version": "20260316094048",
+      "name": "send_feedback_requests_function",
+      "statements": [
+        "\nCREATE OR REPLACE FUNCTION public.send_feedback_requests()\nRETURNS jsonb\nLANGUAGE plpgsql\nSECURITY DEFINER\nAS $$\ndeclare\n  row record;\n  cnt int;\n  sent int := 0;\n  skipped int := 0;\n  events_processed int := 0;\nbegin\n  -- Find events that ended 1-25 hours ago, approved and not deleted\n  for row in\n    select r.user_id, e.id as event_id, e.title\n    from rsvps r\n    join events e on e.id = r.event_id\n    where e.status = 'approved'\n      and e.deleted_at is null\n      and r.status = 'going'\n      and e.end_date between (now() - interval '25 hours') and (now() - interval '1 hour')\n  loop\n    -- Check if we already sent a feedback request for this user+event\n    select count(*) into cnt\n    from feedback_request_log\n    where user_id = row.user_id\n      and event_id = row.event_id\n      and request_type = 'post_event';\n\n    if cnt > 0 then\n      skipped := skipped + 1;\n      continue;\n    end if;\n\n    -- Create notification\n    insert into notifications (user_id, event_id, type, title, message, read)\n    values (\n      row.user_id,\n      row.event_id,\n      'feedback_request',\n      'How was ' || row.title || '?',\n      'Share your experience — your feedback helps organizers improve future events.',\n      false\n    )\n    on conflict do nothing;\n\n    -- Log to prevent re-sending\n    insert into feedback_request_log (user_id, event_id, request_type)\n    values (row.user_id, row.event_id, 'post_event')\n    on conflict do nothing;\n\n    sent := sent + 1;\n  end loop;\n\n  -- Count distinct events processed\n  select count(distinct e.id) into events_processed\n  from events e\n  where e.status = 'approved'\n    and e.deleted_at is null\n    and e.end_date between (now() - interval '25 hours') and (now() - interval '1 hour');\n\n  return jsonb_build_object(\n    'events_processed', events_processed,\n    'feedback_requests_sent', sent,\n    'feedback_requests_skipped', skipped,\n    'checked_at', now()\n  );\nend;\n$$;\n"
+      ]
+    },
+    {
+      "version": "20260316101601",
+      "name": "fk_indexes_and_cleanup",
+      "statements": [
+        "-- Add missing indexes on foreign key columns for query performance\n-- and clean up orphaned test table.\n\n-- =============================================\n-- FK indexes\n-- =============================================\n\nCREATE INDEX IF NOT EXISTS idx_club_invitations_inviter_id\n  ON public.club_invitations (inviter_id);\n\nCREATE INDEX IF NOT EXISTS idx_event_reports_reviewed_by\n  ON public.event_reports (reviewed_by);\n\nCREATE INDEX IF NOT EXISTS idx_featured_clubs_club_id\n  ON public.featured_clubs (club_id);\n\nCREATE INDEX IF NOT EXISTS idx_featured_clubs_created_by\n  ON public.featured_clubs (created_by);\n\nCREATE INDEX IF NOT EXISTS idx_featured_events_created_by\n  ON public.featured_events (created_by);\n\nCREATE INDEX IF NOT EXISTS idx_feedback_user_id\n  ON public.feedback (user_id);\n\nCREATE INDEX IF NOT EXISTS idx_notifications_club_id\n  ON public.notifications (club_id);\n\nCREATE INDEX IF NOT EXISTS idx_organizer_requests_reviewed_by\n  ON public.organizer_requests (reviewed_by);\n\nCREATE INDEX IF NOT EXISTS idx_users_banned_by\n  ON public.users (banned_by);\n\n-- =============================================\n-- Drop orphaned test table (has RLS enabled but zero policies)\n-- =============================================\n\nDROP TABLE IF EXISTS public.events_tests;"
+      ]
+    },
+    {
+      "version": "20260324061310",
+      "name": "create_reviews_table",
+      "statements": [
+        "\n-- Create the reviews table for event feedback (star ratings + comments)\nCREATE TABLE public.reviews (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n  event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,\n  rating smallint NOT NULL CHECK (rating >= 1 AND rating <= 5),\n  comment text,\n  created_at timestamptz NOT NULL DEFAULT now(),\n  -- Each user can only review an event once\n  UNIQUE (user_id, event_id)\n);\n\n-- Index for fetching all reviews for an event\nCREATE INDEX idx_reviews_event_id ON public.reviews(event_id);\n\n-- Index for checking if a user already reviewed\nCREATE INDEX idx_reviews_user_event ON public.reviews(user_id, event_id);\n\n-- Enable RLS\nALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;\n\n-- Users can read all reviews (needed for aggregate display)\nCREATE POLICY \"Anyone can read reviews\"\n  ON public.reviews FOR SELECT\n  USING (true);\n\n-- Authenticated users can insert their own review\nCREATE POLICY \"Users can insert own review\"\n  ON public.reviews FOR INSERT\n  WITH CHECK (auth.uid() = user_id);\n\n-- Users can update their own review\nCREATE POLICY \"Users can update own review\"\n  ON public.reviews FOR UPDATE\n  USING (auth.uid() = user_id)\n  WITH CHECK (auth.uid() = user_id);\n\n-- Users can delete their own review\nCREATE POLICY \"Users can delete own review\"\n  ON public.reviews FOR DELETE\n  USING (auth.uid() = user_id);\n"
+      ]
+    }
+  ]
+}

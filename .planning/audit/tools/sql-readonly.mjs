@@ -111,6 +111,18 @@ export const QUERIES = {
           WHERE table_schema = 'public' AND table_name = 'events'
           ORDER BY ordinal_position`,
   },
+  'transport-identity': {
+    requirement: 'AR-12 — the read-only envelope every Phase 3 production read must carry',
+    sql: `SELECT current_user AS role,
+                 current_setting('transaction_read_only') AS txn_read_only,
+                 now() AS captured_at`,
+  },
+  'migration-history': {
+    requirement: 'REFAC-01 — recover the 18 remote-only versions (Q1)',
+    sql: `SELECT version, name, statements
+          FROM supabase_migrations.schema_migrations
+          ORDER BY version`,
+  },
 };
 
 /* ------------------------------------------------------------- transport -- */

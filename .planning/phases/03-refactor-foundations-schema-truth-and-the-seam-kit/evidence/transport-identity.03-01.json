@@ -1,0 +1,21 @@
+{
+  "artifact": "transport-identity.03-01.json",
+  "provides": "AR-12 clause 2 — the read-only transport envelope for this phase's first production read",
+  "plan": "03-01",
+  "phase": "03-refactor-foundations-schema-truth-and-the-seam-kit",
+  "transport": "node .planning/audit/tools/sql-readonly.mjs — Supabase Management API POST /v1/projects/<PROD-PROJECT-REF>/database/query with read_only: true, enforced SERVER-SIDE and outside the client's reach (AR-12 clause 2 by construction)",
+  "mcp_scoping": "The Supabase MCP endpoint is scoped to https://mcp.supabase.com/mcp?project_ref=<PROD-PROJECT-REF>&read_only=true — read_only=true applies to execute_sql AND apply_migration; project_ref disables account-level management tools. .mcp.json is untracked and is not committed.",
+  "query": "transport-identity",
+  "requirement": "AR-12 — the read-only envelope every Phase 3 production read must carry",
+  "sql": "SELECT current_user AS role, current_setting('transaction_read_only') AS txn_read_only, now() AS captured_at",
+  "project_ref": "<PROD-PROJECT-REF>",
+  "captured_at_utc": "2026-09-15T21:03:54.875Z",
+  "row_count": 1,
+  "rows": [
+    {
+      "role": "supabase_read_only_user",
+      "txn_read_only": "on",
+      "captured_at": "2026-09-15 21:03:54.863106+00"
+    }
+  ]
+}
