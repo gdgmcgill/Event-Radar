@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Dependency and Runtime Stabilization
 status: executing
-stopped_at: "Completed 02-05-PLAN.md (batch 2: next 16.2.1 -> 16.3.5 alone, production Criticals 1 -> 0)"
-last_updated: "2026-09-15T05:28:58.346Z"
+stopped_at: "Completed 02-06-PLAN.md (batch 3: src/middleware.ts -> src/proxy.ts, one atomic rename; STAB-06 still Pending on the ban-check clause)"
+last_updated: "2026-09-15T05:44:18.395Z"
 last_activity: 2026-09-15
-last_activity_desc: "Completed 02-05 (batch 2: next 16.2.1 -> 16.3.5 alone, production Criticals 1 -> 0, react provably untouched)"
+last_activity_desc: "Completed 02-06 (batch 3: src/middleware.ts -> src/proxy.ts in one atomic rename; the auth ring, matcher and rate limiter provably unchanged; STAB-06 held Pending on its ban-check clause)"
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 24
-  completed_plans: 18
+  completed_plans: 19
   percent: 13
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 02 (Dependency and Runtime Stabilization) — EXECUTING
-Plan: 6 of 11
-Status: Executing — 02-01..02-05 complete (batch 0, batch 1 and batch 2 done), 02-06 next (batch 3: the middleware -> proxy rename)
-Last activity: 2026-09-15 — Completed 02-05 (batch 2: next 16.2.1 -> 16.3.5 alone, production Criticals 1 -> 0, react provably untouched)
+Plan: 7 of 11
+Status: Executing — 02-01..02-06 complete (batches 0-3 done), 02-07 next (batch 4: browserslist/caniuse-lite, the only warning left in the build log)
+Last activity: 2026-09-15 — Completed 02-06 (batch 3: src/middleware.ts -> src/proxy.ts in one atomic rename; 27 assertions and all 10 smoke rows identical either side; deprecation warning 1 -> 0)
 
 Progress: [█░░░░░░░░░] 9%
 
@@ -73,6 +73,7 @@ Progress: [█░░░░░░░░░] 9%
 | Phase 02 P03 | 9min | 2 tasks | 3 files |
 | Phase 02 P04 | 35min | 3 tasks | 15 files |
 | Phase 02 P05 | 21min | 3 tasks | 16 files |
+| Phase 02 P06 | 12min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,10 @@ Recent decisions affecting current work:
 - [Phase 02]: The ~2,000-line lockfile-diff threshold is a proxy, not the property — at 8,842 lines batch 1 passed on a structural check (299 entries removed, 0 added, 0 re-resolved, lockfileVersion unchanged) rather than on the count; method committed as evidence/lock.b1.diff-review.md
 - [Phase 02]: next_static_bytes does not reproduce the Phase 1 baseline (4491132 vs 4490961, +171 B uniform across all 44 routes). Measurement is sound and deterministic; the figure is recorded with the delta named, and 02-11 must compare its after side against evidence/bundle-size.before.txt, never versions.txt
 - [Phase 02]: STAB-07, STAB-09, STAB-11 and STAB-16 left Pending by 02-04 — each has clauses this plan does not deliver (redoc untouched; batches 2-5 outstanding; lockfile discipline is a standing property; the formal after side belongs to 02-11). Only STAB-04 marked complete
+- [Phase 02]: Batch 3 (02-06): STAB-06 stays Pending — the requirement's ban-check clause needs the Phase 3 seed, so the rename shipped but the requirement is not claimed
+- [Phase 02]: Batch 3 (02-06): the proxy rename is one atomic commit of two renames and two changed lines; the [Middleware] log prefix, src/middlewareRateLimit.ts and the three Phase 5 findings in the file were left untouched so 'same behaviour as before' stays provable
+- [Phase 02]: Batch 3 (02-06): 'Proxy (Middleware)' in the build route table is NOT a rename receipt — batch 2's build printed it on the pre-rename tree. The only receipt is deprecation_warning_lines 1 -> 0
+- [Phase 02]: Batch 3 (02-06): 47 pre-existing untracked files mean the codemod needs --force and staging must be by explicit path, never 'git add -A' — the rename diff is the STAB-06 artifact and must read as a rename
 
 ### Pending Todos
 
@@ -168,6 +173,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T05:28:58.342Z
-Stopped at: Completed 02-05-PLAN.md (batch 2: next 16.2.1 -> 16.3.5 alone, production Criticals 1 -> 0)
+Last session: 2026-09-15T05:44:12.434Z
+Stopped at: Completed 02-06-PLAN.md (batch 3: src/middleware.ts -> src/proxy.ts, one atomic rename; STAB-06 still Pending on the ban-check clause)
 Resume file: None
