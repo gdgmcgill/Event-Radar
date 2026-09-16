@@ -1,0 +1,24 @@
+{
+  "artifact": "transport-identity.03-08.json",
+  "provides": "AR-12 clause 2 — the read-only transport envelope captured immediately BEFORE this plan's production read (the `supabase_migrations.schema_migrations` re-census that is the repair preflight's before state). A third, separate capture: AR-12's clause is per-read, and a note that quotes 03-01's or 03-05's envelope is quoting a different connection.",
+  "plan": "03-08",
+  "phase": "03-refactor-foundations-schema-truth-and-the-seam-kit",
+  "transport": "node .planning/audit/tools/sql-readonly.mjs — Supabase Management API POST /v1/projects/<PROD-PROJECT-REF>/database/query with read_only: true, enforced SERVER-SIDE and outside the client's reach (AR-12 clause 2 by construction)",
+  "mcp_scoping": "The Supabase MCP endpoint in this checkout is scoped to https://mcp.supabase.com/mcp?project_ref=<PROD-PROJECT-REF>&read_only=true — read_only=true applies to execute_sql AND apply_migration; project_ref disables account-level management tools. `.mcp.json` is untracked and is not committed. This plan issued no MCP call; the scoping is recorded as the standing control.",
+  "credential_handling": "The Management API token is the Supabase CLI's own stored token (macOS keychain, service \"Supabase CLI\"), read into process.env in the same process that needed it and never written anywhere. The production project ref is read from the gitignored `supabase/.temp/project-ref` and substituted with <PROD-PROJECT-REF> before any byte reaches disk or stdout. `.env.local` was not opened by any step of this plan, and no database password was read — this plan issues no libpq connection. No command in this plan enabled shell tracing.",
+  "query": "transport-identity",
+  "requirement": "AR-12 — the read-only envelope every Phase 3 production read must carry",
+  "sql": "SELECT current_user AS role, current_setting('transaction_read_only') AS txn_read_only, now() AS captured_at",
+  "project_ref": "<PROD-PROJECT-REF>",
+  "captured_at_utc": "2026-09-16T02:54:26.665Z",
+  "captured_before": "A re-read of production's `supabase_migrations.schema_migrations` through the same sanctioned tool, to record the version count and whether the baseline version is present. That is the whole of this plan's production access up to the checkpoint, and it is a read.",
+  "scope_note": "T-03-08-01. This plan is read-only toward production up to and including the checkpoint. The single write it could make — `supabase migration repair --status applied <baseline> --linked` — is D-02's gated human decision and does not run in task 1 under any circumstance. No `db push` is run under either option, and the 45 historical versions are never marked reverted.",
+  "row_count": 1,
+  "rows": [
+    {
+      "role": "supabase_read_only_user",
+      "txn_read_only": "on",
+      "captured_at": "2026-09-16 02:54:26.647779+00"
+    }
+  ]
+}
