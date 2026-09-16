@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 3
 current_phase_name: Refactor Foundations — Schema Truth and the Seam Kit
 status: executing
-stopped_at: Completed 03-04-PLAN.md — REFAC-01 done. All 44 migrations archived as 44 R100 renames with 0 changed lines; one generated baseline at the top level; `supabase db reset --local` exit 0 with nothing passed over; `supabase db diff --linked --schema public,storage` ZERO BYTES with no drop statements; all 101 live RLS policies verified present by set difference (symmetric difference 0); the 18 remote-only versions recovered as documentation; the migration-filename check green and wired into CI. Phase 3 plans 1-4 complete. Production untouched — its history repair stays D-02's gated decision for plan 03-08.
-last_updated: "2026-09-15T22:09:09.013Z"
+stopped_at: Completed 03-05-PLAN.md — REFAC-02 and REFAC-03 done. Two post-baseline migrations: six measured-missing indexes (F-015 events(status,start_date), F-020's two policy-column gaps, the unindexed recommendation_feedback FK column, and the two trigram indexes search_events_fuzzy was written for), the F-049 orphaned-table drop, the three club_invitations policies that unbreak invitation acceptance (F-016), and the compute_user_scores schedule byte-identical to production (F-042, narrowed not closed). The project's first database test suite: 47 pgTAP assertions, zero dependencies, and scripts/pgtap-mutation-check.sh has watched every one of the three new policies turn its test RED BY ASSERTING on removal and green on restore (failures=0). Two consecutive resets each leave exactly one scoring job. The diff against production is nine statements for nine additions, attributed one-to-one. The nine archived FK indexes were NOT re-issued — measured as already live (D-18). Floor held: lint 0 errors/19 warnings, tsc clean, jest 332 passed / 5 skipped, check-baseline 22/0. Production untouched: one read under the AR-12 envelope, no write of any kind. THE NINE NEW OBJECTS EXIST LOCALLY ONLY — club-invitation acceptance is still broken in the running production database until D-02's gate in plan 03-08.
+last_updated: "2026-09-16T01:08:44.783Z"
 last_activity: 2026-09-15
-last_activity_desc: "03-04 complete: the migrations folder replays and the diff against production is empty"
+last_activity_desc: "03-05 complete: the audit-named schema gaps are closed and a committed harness has proven the tests can fail"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 32
-  completed_plans: 28
+  completed_plans: 29
   percent: 25
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 3 (Refactor Foundations — Schema Truth and the Seam Kit) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Ready to execute — 03-04 complete, wave 2 critical path cleared
 Last activity: 2026-09-15 — 03-04 complete: the migrations folder replays and the diff against production is empty
 
@@ -80,6 +80,7 @@ Progress: [██░░░░░░░░] 25%
 | Phase 02 P10 | 25min | 3 tasks | 7 files |
 | Phase 02 P11 | 38 min | 3 tasks | 10 files |
 | Phase 03 P04 | 45 min | 3 tasks | 34 files |
+| Phase 03 P05 | 78min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,10 @@ Recent decisions affecting current work:
 - [Phase 03 / 03-04] D-17: `supabase db dump` filters `CREATE EXTENSION` out of its output. The dumped baseline silently lacked `pg_trgm`, which `public.search_events_fuzzy` needs at CALL time — a reset cannot catch this because `CREATE FUNCTION` does not validate a GUC inside a function body. Only the `db diff` caught it. migra's own emitted DDL was pasted verbatim: a generated baseline gets a generated fix, so it stays a copy of production rather than a claim about it.
 - [Phase 03 / 03-04] Fidelity is established by set difference, never by eye. 41 of production's 101 RLS policies are declared by no migration, so there is nothing local to read the baseline against. Both sides are reduced to `schema.table :: policyname` pairs and diffed programmatically — live 101, baseline 101, symmetric difference 0.
 - [Phase 03 / 03-04] An evidence file cites its assertion patterns by reference rather than inlining them. `baseline-review.md` and `db-reset.txt` each first matched the very grep whose result they reported as zero; inlining a token whose absence you are asserting is how a tripwire starts lying about itself.
+- [Phase 03 / 03-05] D-18: the nine archived FK indexes are NOT re-issued — all nine measured live in production and present in the baseline, so re-issuing would be dead SQL. REFAC-02's index half was re-aimed at six genuinely-missing indexes; the nine are asserted in 010-fk-indexes.test.sql instead, because REFAC-02's truth is about database STATE, not migration provenance.
+- [Phase 03 / 03-05] D-19: both new club_invitations UPDATE policies carry a WITH CHECK stronger than the archived file's — ownership is re-asserted alongside the status transition, so an invitee cannot rewrite invitee_email while accepting and an owner cannot reassign club_id while revoking (T-03-05-07).
+- [Phase 03 / 03-05] D-20: the pgTAP mutation check is AUTOMATED (scripts/pgtap-mutation-check.sh) rather than performed by hand as 03-RESEARCH.md classified it. It also rejects a red that is a parse error rather than an assertion failure.
+- [Phase 03 / 03-05] D-21: no pgTAP test writes into the auth schema. clubs.created_by is a nullable FK into auth.users which GoTrue owns; club ownership is expressed in the club_members row that is_club_owner actually consults.
 
 ### Pending Todos
 
@@ -206,7 +211,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-15T22:09:09.008Z
-Stopped at: Completed 03-04-PLAN.md — REFAC-01 delivered. The migrations folder replays for the first time in this repository's history and the schema it builds has no difference against production. 44 files archived as 44 R100 renames with 0 changed lines; one generated baseline (`20260915214553_baseline.sql`); `supabase db reset --local` exit 0 with nothing passed over; `supabase db diff --linked --schema public,storage` ZERO BYTES, no files, no drop statements; 101/101 live RLS policies verified by set difference; 18 remote-only versions recovered as documentation; the filename check green and wired into CI. Decisions D-15/D-16/D-17 recorded above. Production untouched — the history repair remains D-02's gated decision for plan 03-08, and `supabase db push` must not run against production until it is resolved.
+Last session: 2026-09-16T01:08:38.064Z
+Stopped at: Completed 03-05-PLAN.md (REFAC-02, REFAC-03)
 Next: plan 03-05 (REFAC-02). It inherits two MEASURED re-issue targets — the two missing trigram indexes on `public.events`, and the three absent invitee policies (F-016) — plus one confirmed no-op to skip: `fk_indexes_and_cleanup`.
 Resume file: None

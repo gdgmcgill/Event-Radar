@@ -61,8 +61,8 @@ Constraint for every REFAC requirement: characterize current behavior with a tes
 **Foundations (before any vertical slice)**
 
 - [x] **REFAC-01**: Migration history is reconciled with production (baseline + `migration repair`, never renaming existing files) so `supabase db reset` from the migrations folder produces a schema that diffs clean against production
-- [ ] **REFAC-02**: Missing FK indexes and RLS policy gaps identified in the audit are fixed via new migrations, each with a pgTAP allow/deny test
-- [ ] **REFAC-03**: The `compute_user_scores` pg_cron schedule is codified as an idempotent migration so local and staging match production
+- [x] **REFAC-02**: Missing FK indexes and RLS policy gaps identified in the audit are fixed via new migrations, each with a pgTAP allow/deny test
+- [x] **REFAC-03**: The `compute_user_scores` pg_cron schedule is codified as an idempotent migration so local and staging match production
 - [ ] **REFAC-04**: Supabase types are generated from the reconciled schema via `supabase gen types`, a CI step fails on type drift, and `(supabase as any)` casts in `src/` are reduced to zero
 - [ ] **REFAC-05**: A `src/server/` seam kit exists (request context computed once per request, http/error helpers, `requireUser`/`requireRole`/`requireClubRole` authz guards, `src/server/db/elevated/` as the only door to the service-role client) applied to zero routes yet, with an ESLint import-boundary rule forbidding `src/app/**` from importing the service-role client directly
 - [ ] **REFAC-06**: A Playwright persona harness exists with a setup project producing one storage state per persona and at least six happy-path specs covering Validated workflows, runnable against local Supabase
@@ -200,8 +200,8 @@ No phase crosses a stage boundary.
 | STAB-16 | Phase 2 | Complete |
 | STAB-17 | Phase 2 | Complete |
 | REFAC-01 | Phase 3 | Complete |
-| REFAC-02 | Phase 3 | Pending |
-| REFAC-03 | Phase 3 | Pending |
+| REFAC-02 | Phase 3 | Complete |
+| REFAC-03 | Phase 3 | Complete |
 | REFAC-04 | Phase 3 | Pending |
 | REFAC-05 | Phase 3 | Pending |
 | REFAC-06 | Phase 3 | Pending |
