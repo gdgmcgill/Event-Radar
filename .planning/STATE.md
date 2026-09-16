@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 3
 current_phase_name: Refactor Foundations — Schema Truth and the Seam Kit
 status: executing
-stopped_at: Completed 03-05-PLAN.md — REFAC-02 and REFAC-03 done. Two post-baseline migrations: six measured-missing indexes (F-015 events(status,start_date), F-020's two policy-column gaps, the unindexed recommendation_feedback FK column, and the two trigram indexes search_events_fuzzy was written for), the F-049 orphaned-table drop, the three club_invitations policies that unbreak invitation acceptance (F-016), and the compute_user_scores schedule byte-identical to production (F-042, narrowed not closed). The project's first database test suite: 47 pgTAP assertions, zero dependencies, and scripts/pgtap-mutation-check.sh has watched every one of the three new policies turn its test RED BY ASSERTING on removal and green on restore (failures=0). Two consecutive resets each leave exactly one scoring job. The diff against production is nine statements for nine additions, attributed one-to-one. The nine archived FK indexes were NOT re-issued — measured as already live (D-18). Floor held: lint 0 errors/19 warnings, tsc clean, jest 332 passed / 5 skipped, check-baseline 22/0. Production untouched: one read under the AR-12 envelope, no write of any kind. THE NINE NEW OBJECTS EXIST LOCALLY ONLY — club-invitation acceptance is still broken in the running production database until D-02's gate in plan 03-08.
-last_updated: "2026-09-16T01:08:44.783Z"
+stopped_at: "03-06 PAUSED at a decision, tasks 1-3 committed (a6d8599, aa3a9d9, 6a50ab0). src/lib/supabase/types.ts is now byte-identical to `supabase gen types typescript --local --schema public` off a reset of the three migrations: the F-049 phantom events_tests table is gone, feedback and reviews fall back into generator order (the fingerprints of the hand edits), send_feedback_requests appears (the real drift), and __InternalSupabase goes because the generator emits it only for a remote project — tsc is unaffected. A sibling `types` CI job (never a step in the fast job, no literal node-version, no remote generation, CLI pinned 2.115.0) resets, regenerates, diffs and runs `supabase test db --local`; it was watched going RED on an injected column and GREEN once removed, migration count back to 3. 45 of 47 client casts removed and 8 type errors fixed properly (9 measured + 1 ripple) with nothing silenced. THE CAST COUNT IS 2, NOT 0: both remaining casts sit on registered defects and both are annotated in source. F-071 (Medium, Ph4) a builder passed to .in(); F-072 (Medium, Ph5) and F-073 (High, Ph5) admin_audit_log.admin_email does not exist — measured 42703 on read and PGRST204 on write, so the Recent Activity panel has always been empty and EVERY admin audit row has always been rejected silently, which is the mechanism behind F-007s zero-row observation. Two characterization suites, 11 assertions. Floor held: tsc 0, lint 0 errors/19 warnings, jest 343 passed / 5 skipped, check-baseline 22/0, findings validate 8/8, FOUNDATION_AUDIT regenerated. Production untouched: zero reads, zero writes. D-19 records a PRE-EXISTING elevated-ratchet false positive (live 25 vs committed 24, red at HEAD before this plan)."
+last_updated: "2026-09-16T01:38:59.954Z"
 last_activity: 2026-09-15
-last_activity_desc: "03-05 complete: the audit-named schema gaps are closed and a committed harness has proven the tests can fail"
+last_activity_desc: "03-06 paused at a decision: schema truth and the drift gate landed, 45 of 47 casts gone, three defects registered"
 progress:
   total_phases: 8
   completed_phases: 2
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 Phase: 3 (Refactor Foundations — Schema Truth and the Seam Kit) — EXECUTING
 Plan: 6 of 8
-Status: Ready to execute — 03-04 complete, wave 2 critical path cleared
-Last activity: 2026-09-15 — 03-04 complete: the migrations folder replays and the diff against production is empty
+Status: PAUSED at a decision in 03-06 — tasks 1-3 executed and committed; the last two Supabase client casts need a call (see Blockers)
+Last activity: 2026-09-15 — 03-06 tasks 1-3: types regenerated from the migrations, a drift gate proven red then green, 45 of 47 casts gone, three defects registered
 
 Progress: [██░░░░░░░░] 25%
 
@@ -199,6 +199,7 @@ None yet.
 - OUTSTANDING, and it is the only production write left in Phase 3: production's history table has no row for baseline version `20260915214553`. Until `supabase migration repair --status applied 20260915214553 --linked` is run, **`supabase db push` must not be run against production** — it would try to re-apply a schema production already has. Deferring the repair is safe; deferring it and then pushing is not. D-02 gates the decision to plan 03-08; declining it defers to Phase 8. Under no option may the 45 historical versions be marked `reverted`. Full position: 03-.../evidence/reconciliation-note.md § 4.
 - NEW, found by the baseline and worth acting on in 03-05: production runs `public.search_events_fuzzy` (which calls `similarity()` and sets `pg_trgm.similarity_threshold`) with **no trigram index on `public.events` at all** — its five indexes are all btree. Every fuzzy search is a sequential scan computing trigram similarity per row, degrading with every event added. `20260308000001_fuzzy_search.sql` declares the two missing GIN indexes and is REFAC-02's strongest candidate.
 - Local `supabase db reset` now depends on the storage schema being service-created (D-16). The baseline deliberately carries storage POLICIES only; the storage schema's structure is owned by `supabase_storage_admin` and the migration role cannot create in it. A local stack whose storage container has not initialised will fail differently from a schema problem — check `information_schema.tables where table_schema='storage'` before suspecting the baseline.
+- 03-06 stopped at a decision: REFAC-04 is at 45/47 casts, not 0. The last two (supabase as any) casts sit on registered defects F-071 (a query builder passed to .in() where an array is required) and F-072 (admin_audit_log.admin_email does not exist, so the moderation Recent Activity panel and, via F-073, every admin audit write have always failed silently). Removing either cast makes `npx tsc --noEmit` fail, and every route to a clean type-check is a behaviour change — which the plan prohibits and the characterize-first rule L2 forbids inside a typing plan. Option A: accept 45/47 and let Phases 4-5 close the clause where the findings already point. Option B: authorise the fixes now; for F-072/F-073 the preferred one is a one-line LOCAL migration adding admin_audit_log.admin_email, which plan 03-08 D-02 would then gate to production.
 
 ## Deferred Items
 
@@ -211,7 +212,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-16T01:08:38.064Z
-Stopped at: Completed 03-05-PLAN.md (REFAC-02, REFAC-03)
-Next: plan 03-05 (REFAC-02). It inherits two MEASURED re-issue targets — the two missing trigram indexes on `public.events`, and the three absent invitee policies (F-016) — plus one confirmed no-op to skip: `fk_indexes_and_cleanup`.
-Resume file: None
+Last session: 2026-09-16T01:38:59.950Z
+Stopped at: 03-06 tasks 1-3 executed and committed (a6d8599, aa3a9d9, 6a50ab0). Paused at a decision checkpoint on the last two Supabase client casts.
+Next: answer the 03-06 decision in Blockers (accept 45/47, or authorise the F-071/F-072/F-073 behaviour fixes), then finish 03-06 and write its SUMMARY. Plan 03-07 (Playwright persona harness) is unblocked either way.
+Resume file: .planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/type-fixes-note.md section 1.1
