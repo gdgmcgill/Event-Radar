@@ -24,6 +24,7 @@
 
 import { expect, test } from "@playwright/test";
 
+import { BASE_URL } from "../../playwright.config";
 import { protectedRoutes, signInRedirectFor, storageStateFor } from "../fixtures";
 
 const PROTECTED = protectedRoutes();
@@ -42,7 +43,15 @@ test.describe("an anonymous visitor", () => {
 
     for (const route of PROTECTED) {
       await page.goto(route);
-      const actual = page.url().replace("http://127.0.0.1:3000", "");
+      // IN-02: BASE_URL, not a second copy of the literal. A hardcoded origin
+      // here turns every comparison below into a full-URL-vs-path mismatch the
+      // day the port changes, and the failure would read as "the ring is
+      // broken" rather than "the spec is stale".
+      const landedUrl = new URL(page.url());
+      const actual =
+        page.url().startsWith(BASE_URL)
+          ? landedUrl.pathname + landedUrl.search
+          : page.url();
       const expected = signInRedirectFor(route);
       if (actual !== expected) failures.push(`${route}: expected ${expected}, got ${actual}`);
     }

@@ -94,9 +94,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: process.env.CI
-    ? [["list"], ["html", { open: "never" }]]
-    : [["list"], ["html", { open: "never" }]],
+  // One reporter list, not a ternary with two identical branches (IN-01). The
+  // CI-vs-local condition could not affect the result, which reads as a
+  // deliberate difference that is not there. If CI should differ, add
+  // ["github"] here — do not re-introduce a branch that decides nothing.
+  reporter: [["list"], ["html", { open: "never" }]],
   timeout: 60_000,
   expect: { timeout: 15_000 },
   use: {
@@ -123,7 +125,27 @@ export default defineConfig({
   webServer: {
     command: "npm run build && npm run start",
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    // NEVER REUSE. `reuseExistingServer: !process.env.CI` was 03-REVIEW.md
+    // WR-03: a developer machine with `npm run dev` already on port 3000 — the
+    // normal state — skipped this whole `env` block and ran every spec against
+    // a server Next had booted from `.env.local`, i.e. PRODUCTION. The
+    // `assertSeedTargetAllowed(stack.url)` call above proves the CONFIG's
+    // target is local; it says nothing about the server the harness then talks
+    // to, and the two were free to disagree.
+    //
+    // A health probe was considered and rejected: `/api/health` reports
+    // healthy/degraded per subsystem and does not disclose which Supabase
+    // project it is bound to, so it cannot answer "is this server local?".
+    // Building a signal that it could answer would mean widening an endpoint
+    // that is already a registered finding for disclosing too much (F-029).
+    //
+    // Reuse was never correct here anyway: this harness needs a PRODUCTION
+    // BUILD (`npm run build && npm run start`) because pages do not hydrate
+    // under `next dev` in Playwright's Chromium — see the header — so a reused
+    // dev server was the wrong artifact even when it pointed at the right
+    // database. The cost is a rebuild per local run. That is the price of the
+    // harness driving the server it configured.
+    reuseExistingServer: false,
     timeout: 600_000,
     stdout: "pipe",
     stderr: "pipe",
