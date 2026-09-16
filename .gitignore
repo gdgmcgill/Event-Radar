@@ -8,6 +8,9 @@
 # testing
 /coverage
 test-results/
+playwright-report/
+# persona storage states are LIVE SESSION COOKIES. Never committed.
+playwright/.auth/
 
 # next.js
 /.next/

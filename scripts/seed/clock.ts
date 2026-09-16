@@ -44,6 +44,51 @@ export const at = (n: number, h = 0): Date =>
 export const iso = (d: Date): string => d.toISOString();
 
 /**
+ * ============================================================================
+ * THE HORIZON, AND WHY A PINNED NOW IS NOT ENOUGH ON ITS OWN
+ * ============================================================================
+ *
+ * REFAC-07 wants determinism: the same rows on every load, forever. The
+ * application wants now-relative correctness: `/api/events` filters
+ * `start_date >= now()`, and `src/proxy.ts` treats a suspension as active when
+ * `ban_expires_at > new Date()`. Both compare seeded data to the WALL CLOCK.
+ *
+ * Those two wants pull against each other, and the first run of the persona
+ * harness is where it showed. With every offset taken from `PINNED_NOW`, the
+ * "active suspension" expired the moment real time passed 2026-06-08 — so the
+ * persona whose entire purpose is to be suspended walked straight past the ban
+ * ring, and every "upcoming" event had quietly become a past one and vanished
+ * from the feed. Nothing errored. The seed just started meaning something else.
+ *
+ * There is exactly one way to have both properties: place the rows whose
+ * meaning is wall-clock-relative FAR enough from the pinned instant that the
+ * clock cannot cross them. So the seed has two clocks, both pinned:
+ *
+ *   PINNED_NOW      — stored metadata (`created_at`, `updated_at`, `banned_at`).
+ *                     Nothing compares these to now, so they can sit anywhere.
+ *   HORIZON_FUTURE  — "always still ahead": upcoming events, active suspensions
+ *   HORIZON_PAST    — "always already behind": expired suspensions, past events
+ *
+ * Ten years is not a magic number; it is "longer than this codebase will
+ * plausibly run without the seed being revisited," and the failure mode if it
+ * ever is crossed is loud rather than silent — the suspension spec goes red.
+ */
+
+/** Always still ahead of the wall clock. PINNED_NOW + 10 years. */
+export const HORIZON_FUTURE = new Date("2036-06-01T16:00:00.000Z");
+
+/** Always already behind the wall clock. PINNED_NOW − 10 years. */
+export const HORIZON_PAST = new Date("2016-06-01T16:00:00.000Z");
+
+/** A fixed instant that is always in the future: `HORIZON_FUTURE + n days`. */
+export const upcoming = (n: number, h = 0): Date =>
+  new Date(HORIZON_FUTURE.getTime() + n * DAY + h * HOUR);
+
+/** A fixed instant that is always in the past: `HORIZON_PAST + n days`. */
+export const elapsed = (n: number, h = 0): Date =>
+  new Date(HORIZON_PAST.getTime() + n * DAY + h * HOUR);
+
+/**
  * Toronto's 2026 daylight-saving transitions, as UTC instants.
  * Spring forward: 2026-03-08 02:00 EST → 03:00 EDT (07:00 UTC).
  * Fall back:      2026-11-01 02:00 EDT → 01:00 EST (06:00 UTC).

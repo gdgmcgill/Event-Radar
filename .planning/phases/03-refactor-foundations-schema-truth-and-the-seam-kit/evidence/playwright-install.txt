@@ -1,0 +1,157 @@
+# playwright-install.txt — the one package this phase adds
+# Plan: 03-07 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-16
+#
+# D-03: exactly one new package NAME enters the dependency tree in this phase,
+# at an exact pin, as a devDependency. 03-RESEARCH.md § Package Legitimacy
+# Audit records @playwright/test at 1.63.0 with a first-party Microsoft source
+# repository and 45,794,389 weekly downloads; its only adverse signal is the
+# recency of the latest publish, which that audit rules does not warrant a
+# human checkpoint — identically to the eight packages Phase 2 ruled on for
+# the same signal. The requirement names Playwright by name.
+#
+# The raw `playwright` package is NOT declared. @playwright/test depends on it;
+# a direct declaration would be a second name arriving for no reason.
+
+$ npm view @playwright/test@1.63.0 version dist-tags.latest engines repository.url
+version = '1.63.0'
+engines = { node: '>=20' }
+repository.url = 'git+https://github.com/microsoft/playwright.git'
+exit=0
+
+$ npm install --package-lock-only --save-dev --save-exact @playwright/test@1.63.0
+
+up to date, audited 993 packages in 2s
+
+231 packages are looking for funding
+  run `npm fund` for details
+
+9 vulnerabilities (3 low, 3 moderate, 2 high, 1 critical)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+exit=0
+
+$ npm ci
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated lodash.get@4.4.2: This package is deprecated. Use the optional chaining (?.) operator instead.
+npm warn deprecated lodash.isequal@4.5.0: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated glob@7.1.6: Glob versions prior to v9 are no longer supported
+
+added 992 packages, and audited 993 packages in 10s
+
+231 packages are looking for funding
+  run `npm fund` for details
+
+9 vulnerabilities (3 low, 3 moderate, 2 high, 1 critical)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+exit=0
+
+# The production vulnerability gate CI runs, re-asserted after the install.
+# @playwright/test is marked devOptional in the lockfile because `next` declares
+# it as an OPTIONAL PEER (^1.51.1, which 1.63.0 satisfies). The gate below is
+# what decides whether that matters.
+
+$ npm audit --audit-level=high --omit=dev
+# npm audit report
+
+dompurify  <=3.4.12
+Severity: moderate
+DOMPurify: FORBID_TAGS bypassed by function-based ADD_TAGS predicate (asymmetry with FORBID_ATTR fix) - https://github.com/advisories/GHSA-h7mw-gpvr-xq4m
+DOMPurify has a SAFE_FOR_TEMPLATES bypass in RETURN_DOM mode - https://github.com/advisories/GHSA-crv5-9vww-q3g8
+DOMPurify: Prototype Pollution to XSS Bypass via CUSTOM_ELEMENT_HANDLING Fallback - https://github.com/advisories/GHSA-v9jr-rg53-9pgp
+DOMPurify: Cross-realm IN_PLACE sanitization leaves executable markup intact via realm-bound `instanceof` checks - https://github.com/advisories/GHSA-hpcv-96wg-7vj8
+DOMPurify: IN_PLACE mode preserves attributes of a clobbered root element, allowing XSS via attacker-controlled root DOM - https://github.com/advisories/GHSA-r47g-fvhr-h676
+DOMPurify IN_PLACE Sanitization Bypass via Attached Shadow Root Inside <template>.content - https://github.com/advisories/GHSA-rp9w-3fw7-7cwq
+DOMPurify: `CUSTOM_ELEMENT_HANDLING` bypasses `afterSanitizeElements` for allowed custom elements. - https://github.com/advisories/GHSA-c2j3-45gr-mqc4
+DOMPurify: Permanent `ALLOWED_ATTR` pollution via `setConfig()` bypassing the hook clone-guard (incomplete fix of the 3.4.7 hook-pollution patch) - https://github.com/advisories/GHSA-cmwh-pvxp-8882
+DOMPurify: Trusted Types policy survives `clearConfig()` and can poison later `RETURN_TRUSTED_TYPE` output - https://github.com/advisories/GHSA-vxr8-fq34-vvx9
+DOMPurify: SAFE_FOR_TEMPLATES bypass - template expressions survive sanitization inside <template> content when using DOM output modes - https://github.com/advisories/GHSA-gvmj-g25r-r7wr
+DOMPurify: `IN_PLACE` mode trusts attacker-controlled `nodeName` on live non-form nodes, allowing script retention and XSS via attacker-supplied DOM objects - https://github.com/advisories/GHSA-x4vx-rjvf-j5p4
+DOMPurify: Hook mutation of `data.allowedTags` / `data.allowedAttributes` permanently pollutes `DEFAULT_ALLOWED_TAGS` / `DEFAULT_ALLOWED_ATTR` - https://github.com/advisories/GHSA-76mc-f452-cxcm
+DOMPurify's ADD_TAGS function form bypasses FORBID_TAGS due to short-circuit evaluation - https://github.com/advisories/GHSA-39q2-94rc-95cp
+DOMPurify: IN_PLACE hook removal leaves a detached subtree executable, causing XSS - https://github.com/advisories/GHSA-55q2-fjhq-7xh7
+fix available via `npm audit fix`
+node_modules/dompurify
+
+yaml  1.0.0 - 1.10.2 || 2.0.0 - 2.8.2
+Severity: moderate
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+fix available via `npm audit fix`
+node_modules/oas-linter/node_modules/yaml
+node_modules/oas-resolver/node_modules/yaml
+node_modules/oas-validator/node_modules/yaml
+node_modules/swagger2openapi/node_modules/yaml
+node_modules/yaml
+
+2 moderate severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+exit=0
+
+$ npx playwright install chromium
+Downloading Chrome for Testing 153.0.8010.12 (playwright chromium v1243)[2m from https://cdn.playwright.dev/builds/cft/153.0.8010.12/mac-arm64/chrome-mac-arm64.zip[22m
+Chrome for Testing 153.0.8010.12 (playwright chromium v1243) downloaded to /Users/adyan/Library/Caches/ms-playwright/chromium-1243
+Downloading FFmpeg (playwright ffmpeg v1011)[2m from https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-mac-arm64.zip[22m
+FFmpeg (playwright ffmpeg v1011) downloaded to /Users/adyan/Library/Caches/ms-playwright/ffmpeg-1011
+Downloading Chrome Headless Shell 153.0.8010.12 (playwright chromium-headless-shell v1243)[2m from https://cdn.playwright.dev/builds/cft/153.0.8010.12/mac-arm64/chrome-headless-shell-mac-arm64.zip[22m
+Chrome Headless Shell 153.0.8010.12 (playwright chromium-headless-shell v1243) downloaded to /Users/adyan/Library/Caches/ms-playwright/chromium_headless_shell-1243
+exit=0
+
+$ npx playwright --version
+Version 1.63.0
+exit=0
+
+# Browsers land in a user cache OUTSIDE the repository, by an explicit step
+# rather than an install hook (postinstall is null for both Playwright packages).
+
+$ ls ~/Library/Caches/ms-playwright | head
+chromium-1243
+chromium_headless_shell-1243
+ffmpeg-1011
+
+$ git status --porcelain node_modules 2>/dev/null | head -1   # nothing: node_modules is ignored
+
+# The Phase 2 floor, re-asserted after the install rather than assumed.
+
+$ node .planning/phases/02-dependency-and-runtime-stabilization/evidence/tools/check-baseline.mjs
+PASS jest :: jest-json-parsed :: exit 0
+PASS jest :: no-failing-tests :: 0 failing
+PASS jest :: passing-count-not-below-baseline :: 348 passing vs baseline 220
+PASS jest :: skipped-count-not-above-baseline :: 5 skipped vs baseline 36
+PASS jest :: executing-suites-not-below-baseline :: 33 of 34 executing vs baseline 16 of 21
+PASS tsc :: tsc-exit-zero :: exit 0
+PASS tsc :: tsc-emits-no-diagnostics :: zero bytes on stdout and stderr
+PASS lint :: lint-exit-zero :: exit 0
+PASS lint :: zero-eslint-errors :: 0 errors
+PASS lint :: no-baseline-rule-regressed :: 4 baseline rule(s) compared, none above baseline
+PASS lint :: warning-delta-fully-attributed :: 19 warnings vs baseline 12 (delta +7); 7 from rule(s) absent at baseline: @next/next/no-location-assign-relative-destination x7
+PASS node-pin :: engines-node-declared :: engines.node = 24.x
+PASS node-pin :: nvmrc-declared :: .nvmrc = 24
+PASS node-pin :: ci-reads-a-version-file :: node-version-file: .nvmrc
+PASS node-pin :: ci-declares-no-competing-literal :: none
+PASS node-pin :: ci-version-file-resolves :: .nvmrc -> 24
+PASS node-pin :: one-declared-node-major :: engines=24 nvmrc=24 ci=24
+PASS no-unplanned-majors :: no-unplanned-major-changes :: 55 declared ranges compared, 0 planned major(s) moved
+PASS react-untouched :: react-range-byte-identical :: ^18.3.0 -> ^18.3.0
+PASS react-untouched :: react-dom-range-byte-identical :: ^18.3.0 -> ^18.3.0
+PASS lockfile-discipline :: lockfile-version-unchanged :: 3 -> 3
+PASS lockfile-discipline :: no-forced-remediation-in-commit-range :: c7c5c496d0ca1061932a884bce997a9382d4cbba..HEAD clean
+--- 22 passed, 0 failed, 0 skipped
+exit=0
+
+$ node -p "require(\"./package.json\").devDependencies[\"@playwright/test\"]"
+1.63.0
+
+# The raw package is never a direct declaration:
+$ node -p "Object.keys(require(\"./package.json\").dependencies).filter(k=>/playwright/.test(k)).length + \" prod \" + Object.keys(require(\"./package.json\").devDependencies).filter(k=>k===\"playwright\").length + \" bare-dev\""
+0 prod, 0 bare-dev

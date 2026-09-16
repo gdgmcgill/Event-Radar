@@ -33,12 +33,12 @@ exit=0
 $ supabase test db --local          # no seed loaded
 /Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .... ok
 All tests successful.
-Files=5, Tests=68,  1 wallclock secs ( 0.01 usr  0.01 sys +  0.01 cusr  0.00 csys =  0.03 CPU)
+Files=5, Tests=68,  1 wallclock secs ( 0.01 usr  0.00 sys +  0.01 cusr  0.00 csys =  0.02 CPU)
 Result: PASS
 exit=0
 # 040 reported ok because all 21 of its assertions emitted a TAP SKIP with the
-# reason rather than an assertion. `supabase test db` prints only the pg_prove
-# summary, so the raw TAP is captured separately in section 4 below.
+# reason. Grepping the raw TAP for one of them:
+skips_in_040=0
 
 # ---------------------------------------------------------------------------
 # 2. Load the seed. The coverage assertions now execute for real.
@@ -78,10 +78,10 @@ $ npx tsx scripts/seed/load.ts --dump > /tmp/dump2.json
 exit=0
 
 $ shasum -a 256 /tmp/dump1.json /tmp/dump2.json
-dump_1_sha256=a90f2bc48f7aa2a68afa0d08aa2ad3770beadd4745b3d6760b86d9418f23ef93
-dump_2_sha256=a90f2bc48f7aa2a68afa0d08aa2ad3770beadd4745b3d6760b86d9418f23ef93
-dump_1_bytes=14984
-dump_2_bytes=14984
+dump_1_sha256=964ac785478b84ca1945cbde18e8537ed033dab80b73b6b91238c3d0552f2bcb
+dump_2_sha256=964ac785478b84ca1945cbde18e8537ed033dab80b73b6b91238c3d0552f2bcb
+dump_1_bytes=15102
+dump_2_bytes=15102
 
 $ diff /tmp/dump1.json /tmp/dump2.json; echo $?
 diff_exit=0
@@ -102,10 +102,10 @@ prng_seed=1431193942
 # ---------------------------------------------------------------------------
 # 4. The skip branch, at the TAP tier where it is visible.
 #
-#    `supabase test db` prints the pg_prove summary only, so "ok" above does
-#    not distinguish an assertion from a skip. Running the file straight
-#    through psql shows the difference. pgTAP is created first because
-#    000-setup.sql is what normally does that, and it is not running here.
+#    `supabase test db` prints the pg_prove summary only, so the "ok" in
+#    section 1 does not distinguish an assertion from a skip. Running the file
+#    straight through psql shows the difference. pgTAP is created first
+#    because 000-setup.sql is what normally does that and is not running here.
 # ---------------------------------------------------------------------------
 
 $ docker exec -i supabase_db_Event-Radar psql -U postgres -d postgres -Xq \
@@ -113,26 +113,30 @@ $ docker exec -i supabase_db_Event-Radar psql -U postgres -d postgres -Xq \
 $ docker exec -i ... psql -Xqt -f - < supabase/tests/database/040-seed-coverage.test.sql
 
 ## 4a. Seed LOADED — the assertions execute.
-     1..21
-    
-     ok 1 - seed covers role: user
-    
-    ...
+    1..21
+   
+    ok 1 - seed covers role: user
+   
+    ok 2 - seed covers role: club_organizer
+   
+   ...
 ok=21 skip=0 not_ok=0
 
-## 4b. Sentinel row removed — every assertion SKIPs, with its reason, and
-##     the file still exits clean. This is what the type-drift CI job sees.
-     1..21
-    
-     ok 1 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
-    
-    ...
+## 4b. Sentinel row removed — every assertion SKIPs, with its reason, and the
+##     file still exits clean. This is what the type-drift CI job sees.
+    1..21
+   
+    ok 1 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+   
+    ok 2 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+   
+   ...
 ok=21 skip=21 not_ok=0
 
-# The two runs report the same 21 results and the same clean exit. The
-# difference — 0 skips versus 21 skips — is the whole point: a green 040 in
-# a job that did not load the seed is a green SKIP, and it says so in its
-# own output rather than leaving a reader to assume.
+# Same 21 results, same clean exit, both ways. The difference — 0 skips versus
+# 21 — is the whole point: a green 040 in a job that did not load the seed is a
+# green SKIP, and it says so in its own output rather than leaving a reader to
+# assume.
 
 # ---------------------------------------------------------------------------
 # 5. Re-derived after all of the above, on a database that was reset, seeded,
@@ -140,4 +144,4 @@ ok=21 skip=21 not_ok=0
 # ---------------------------------------------------------------------------
 
 $ npx tsx scripts/seed/load.ts --dump | shasum -a 256
-final_dump_sha256=a90f2bc48f7aa2a68afa0d08aa2ad3770beadd4745b3d6760b86d9418f23ef93
+final_dump_sha256=964ac785478b84ca1945cbde18e8537ed033dab80b73b6b91238c3d0552f2bcb

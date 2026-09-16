@@ -48,7 +48,7 @@
  */
 
 import { EventTag, type UserRole } from "../../src/types";
-import { at, days, iso, PINNED_NOW } from "./clock";
+import { days, elapsed, iso, PINNED_NOW, upcoming } from "./clock";
 
 /** Fixture material. Never a credential for anything that outlives a reset. */
 export const SEED_PASSWORD = "seed-local-only-pw";
@@ -147,10 +147,15 @@ export interface SeedPersona {
  * `ban_expires_at` is null or is still in the future, so the four states below
  * are the complete truth table for that expression:
  *
- *   not banned         banned_at null                        → passes
- *   banned_permanent   banned_at set, expiry null            → redirected
- *   suspended_active   banned_at set, expiry PINNED_NOW + 7d → redirected
- *   suspension_expired banned_at set, expiry PINNED_NOW − 1d → passes
+ *   not banned         banned_at null                           → passes
+ *   banned_permanent   banned_at set, expiry null               → redirected
+ *   suspended_active   banned_at set, expiry on HORIZON_FUTURE  → redirected
+ *   suspension_expired banned_at set, expiry on HORIZON_PAST    → passes
+ *
+ * The two expiries sit on the HORIZONS rather than near the pinned now, because
+ * the proxy compares them to the WALL clock. See the note in `clock.ts`: taken
+ * from the pinned instant, the "active" suspension expired in real time and the
+ * persona walked past the ban ring. That is the bug this row exists to catch.
  *
  * The last row is the interesting one: it is a user who LOOKS banned in the
  * table and must not be treated as banned by the ring.
@@ -288,8 +293,10 @@ export const PERSONAS: readonly SeedPersona[] = [
     onboarding_completed: true,
     interest_tags: [],
     banned_at: iso(days(-3)),
-    ban_expires_at: iso(days(7)),
-    ban_reason: "Seeded active suspension — expires after the pinned now.",
+    ban_expires_at: iso(upcoming(0)),
+    ban_reason:
+      "Seeded active suspension — expiry sits on HORIZON_FUTURE, so it is still " +
+      "active whenever anyone runs this.",
     year: "U1",
     faculty: "Education",
   },
@@ -303,8 +310,10 @@ export const PERSONAS: readonly SeedPersona[] = [
     onboarding_completed: true,
     interest_tags: [EventTag.FOOD],
     banned_at: iso(days(-14)),
-    ban_expires_at: iso(days(-1)),
-    ban_reason: "Seeded expired suspension — must NOT be treated as banned.",
+    ban_expires_at: iso(elapsed(0)),
+    ban_reason:
+      "Seeded expired suspension — expiry sits on HORIZON_PAST. Looks banned in " +
+      "the table; must NOT be treated as banned by the ring.",
     year: "U3",
     faculty: "Science",
   },
@@ -452,7 +461,10 @@ export interface SeedEvent {
  * plan names three statuses, the schema permits four, and seeding the fourth
  * costs one row and closes the gap rather than describing it.
  *
- * Dates are `PINNED_NOW ± offset`, so "upcoming" stays upcoming forever.
+ * Dates come from `upcoming()`, not from `PINNED_NOW ± offset`. That is not a
+ * stylistic choice — see the horizon note in `clock.ts`. `/api/events` filters
+ * `start_date >= now()` against the WALL clock, so an offset taken from a pinned
+ * instant in the past would silently empty the feed the day real time passed it.
  */
 export const EVENTS: readonly SeedEvent[] = [
   {
@@ -462,8 +474,8 @@ export const EVENTS: readonly SeedEvent[] = [
     status: "approved",
     club_id: IDS.approvedClub,
     created_by: IDS.club_owner,
-    start_date: iso(at(7, 2)),
-    end_date: iso(at(7, 5)),
+    start_date: iso(upcoming(7, 2)),
+    end_date: iso(upcoming(7, 5)),
     tags: [EventTag.ACADEMIC, EventTag.TECH],
     location: "Leacock 132",
     description: "The approved event the save and RSVP spec acts on.",
@@ -476,8 +488,8 @@ export const EVENTS: readonly SeedEvent[] = [
     status: "approved",
     club_id: IDS.approvedClub,
     created_by: IDS.club_owner,
-    start_date: iso(at(14, 4)),
-    end_date: iso(at(14, 7)),
+    start_date: iso(upcoming(14, 4)),
+    end_date: iso(upcoming(14, 7)),
     tags: [EventTag.MUSIC, EventTag.SOCIAL],
     location: "Gerts Bar",
     description: "A second approved event, so search and filter have two rows to separate.",
@@ -490,8 +502,8 @@ export const EVENTS: readonly SeedEvent[] = [
     status: "pending",
     club_id: IDS.approvedClub,
     created_by: IDS.club_owner,
-    start_date: iso(at(10, 2)),
-    end_date: iso(at(10, 4)),
+    start_date: iso(upcoming(10, 2)),
+    end_date: iso(upcoming(10, 4)),
     tags: [EventTag.CAREER],
     location: "Bronfman 151",
     description: "Awaiting moderation — the row the admin queue spec looks for.",
@@ -504,8 +516,8 @@ export const EVENTS: readonly SeedEvent[] = [
     status: "rejected",
     club_id: IDS.approvedClub,
     created_by: IDS.club_owner,
-    start_date: iso(at(12, 2)),
-    end_date: iso(at(12, 4)),
+    start_date: iso(upcoming(12, 2)),
+    end_date: iso(upcoming(12, 4)),
     tags: [EventTag.SOCIAL],
     location: "Redpath Hall",
     description: "Rejected by moderation — must never appear in a public feed.",
@@ -518,8 +530,8 @@ export const EVENTS: readonly SeedEvent[] = [
     status: "suspended",
     club_id: IDS.approvedClub,
     created_by: IDS.club_owner,
-    start_date: iso(at(9, 2)),
-    end_date: iso(at(9, 4)),
+    start_date: iso(upcoming(9, 2)),
+    end_date: iso(upcoming(9, 4)),
     tags: [EventTag.WELLNESS],
     location: "Currie Gym",
     description: "The fourth status events_status_check permits.",

@@ -97,3 +97,55 @@ sightings across two sessions make this a real intermittent rather than a one-of
 threshold at which it stops being worth ignoring — a phase that asserts its floor as an exact
 number cannot afford a test that fails one run in eight for reasons unrelated to the change under
 test. Reassigned from unassigned to **plan 03-08**.
+
+---
+
+## D-21 — The Content-Security-Policy has no local-development entry, so the browser client cannot reach the local stack
+
+**Found by:** plan 03-07, the persona harness, on the first run of the cookie-equivalence spec.
+
+**The measurement.** `next.config.js:41-52` sets, unconditionally and for every path:
+
+```
+connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com
+```
+
+The local Supabase stack is `http://127.0.0.1:54321`, which that list does not admit. Every
+client-side Supabase call is therefore refused by the browser **before it leaves**:
+
+```
+Connecting to 'http://127.0.0.1:54321/auth/v1/token?grant_type=password' violates the following
+Content Security Policy directive: "connect-src 'self' https://*.supabase.co …"
+Fetch API cannot load http://127.0.0.1:54321/auth/v1/token?grant_type=password.
+```
+
+In the UI this surfaces as a bare **"Failed to fetch"** on `/admin-login`, with no mention of CSP.
+
+**Why it is not an application bug.** The header is correct for production, where the app really
+does talk to `https://<ref>.supabase.co`. What it lacks is a development branch.
+
+**What it means beyond the harness.** This is not only a test-environment inconvenience. Any
+developer running the app against a local Supabase stack has a **broken client-side sign-in and a
+broken client-side query path**, and the only symptom is "Failed to fetch". The server side is
+unaffected — the proxy and the route handlers talk to the stack from Node, where no CSP applies —
+which is what makes the symptom so misleading: the session cookie works, the pages render, and
+only the browser's own calls fail.
+
+**How plan 03-07 worked around it.** Playwright's `bypassCSP: true`, set in the project `use` block
+and in the setup project's hand-built contexts. That is a harness setting, not an application
+change. **The cost is stated rather than hidden: the harness does not exercise the CSP.** Nothing
+in `e2e/` would notice if that header were weakened or removed.
+
+**Why not fixed here.** Editing `next.config.js` is an application source change, which plan 03-07
+prohibits by name ("no application source change of any kind"), and a header change is a behaviour
+change in the phase whose core value is behaviour preservation. It also wants a decision — whether
+to branch on `NODE_ENV`, on an explicit flag, or to derive the allow-list from
+`NEXT_PUBLIC_SUPABASE_URL` — and decisions of that shape belong in a plan that owns the file.
+
+**Recommended fix.** Derive the `connect-src` entry from `NEXT_PUBLIC_SUPABASE_URL`'s origin rather
+than hard-coding a wildcard, so the policy is correct in every environment by construction and the
+production value is unchanged. Then drop `bypassCSP` from the harness and let the specs exercise
+the real header.
+
+**Owner:** unassigned, recommended for the Stage 3 slice that owns headers and routing. Raise it at
+phase planning; it blocks nothing today.
