@@ -1,0 +1,54 @@
+# supabase test db --local — the pgTAP suite against a freshly reset database
+#
+# Plan: 03-05 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+#
+# $ supabase db reset --local && supabase test db --local
+#
+# tests_run  : 47
+# files       : 4
+# exit_code   : 0
+#
+#   000-setup.sql                    5 assertions — the helpers exist, and the
+#                                    impersonation helper genuinely MOVES the
+#                                    observed subject rather than merely running
+#   010-fk-indexes.test.sql         23 assertions — the nine already-live FK
+#                                    indexes plus this plan's six, each by table
+#                                    and ordered column list; GIN access method
+#                                    for both trigram indexes; three plan
+#                                    assertions proving the indexes are usable by
+#                                    the predicates they exist for; and the
+#                                    absence of the orphaned relation (F-049)
+#   020-rls-policy-gaps.test.sql    15 assertions — allow/deny per new policy
+#                                    (F-016)
+#   030-cron-schedule.test.sql       4 assertions — schedule, command, active,
+#                                    and exactly one job (REFAC-03)
+#
+# GREEN IS NOT THE EVIDENCE. A suite whose assertions cannot fail passes for free.
+# `evidence/pgtap-mutation-check.txt` is what makes this run mean something: it
+# removes each of the three new policies in turn and records the suite going red
+# by ASSERTING — 5, 3 and 1 named failures respectively — and green again on
+# restore.
+#
+# pgTAP is created in the LOCAL test database only. It is not installed in
+# production and this plan does not install it there, so these 47 assertions are
+# a development-time control and make no claim about the running production
+# database.
+#
+# The `--local` flag is explicit: the same subcommand accepts `--linked`, which
+# would run this suite against production.
+#
+# Absolute paths are pg_prove's own output and are left verbatim, as in the
+# phase's other captures. No credential appears below.
+
+$ supabase test db --local
+
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .... ok
+All tests successful.
+Files=4, Tests=47,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.01 cusr  0.00 csys =  0.03 CPU)
+Result: PASS
+PGTAP_EXIT=0

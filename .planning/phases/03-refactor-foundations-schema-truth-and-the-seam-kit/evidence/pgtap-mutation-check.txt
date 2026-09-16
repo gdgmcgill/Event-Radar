@@ -1,0 +1,132 @@
+# pgTAP mutation check — proof that the RLS assertions can fail
+#
+# Plan: 03-05 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+#
+# WHAT PRODUCED THIS FILE
+#
+#   $ bash scripts/pgtap-mutation-check.sh
+#
+#   The harness comments out each CREATE POLICY statement in
+#   supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql in turn,
+#   rebuilds the local database from the folder, runs `supabase test db --local`
+#   and requires a FAILURE; then restores the file with `git checkout --`,
+#   rebuilds again and requires a PASS. Three policies, two rounds each, six
+#   `supabase db reset --local` runs in total. Nothing touches production: every
+#   command carries `--local` explicitly, and the harness reads no credential.
+#
+# WHY IT EXISTS
+#
+#   02-REVIEW.md finding WR-04 caught a Phase 2 suite whose assertions could not
+#   fail when the behaviour they preserved was removed. The pgTAP equivalent is
+#   worse, because RLS denial has two shapes — a raised error and a silent
+#   zero-row filter — and the obvious assertion notices only one of them. A
+#   green suite is therefore not evidence that the policies work. This file is.
+#
+# HOW TO READ THE KEY=VALUE LINES
+#
+#   mutation_lines_commented   how many lines of the policy's CREATE statement
+#                              were commented out — a zero here would mean the
+#                              matcher missed and the round proved nothing
+#   removed_exit_code          `supabase test db --local` with the policy gone
+#   removed_verdict            RED_ASSERTION       the suite failed by asserting
+#                              RED_NOT_AN_ASSERTION  it failed to parse or run,
+#                                                  which proves nothing
+#                              GREEN               the suite passed without the
+#                                                  policy — a decorative test
+#   restore_clean              `git status --porcelain` on the migration after
+#                              the restore; false means a mutation survived
+#   restored_exit_code         the suite with the policy back in place
+#
+#   The run is only a proof when every policy records RED_ASSERTION followed by
+#   restored_verdict=GREEN, and `failures=0` at the end.
+#
+# The reset and pg_prove transcripts are read by the harness but not reproduced
+# here; only the derived verdicts and the named failing assertions are printed,
+# so this file stays readable. The green transcript lives in
+# evidence/pgtap-run.txt and the reset transcript in
+# evidence/db-reset.after-fixes.txt.
+#
+# No credential, token, key or project reference appears below. Absolute paths
+# are pg_prove's own output and are left verbatim, as in the phase's other
+# captures.
+
+=============================================================================
+pgTAP mutation check
+migration : supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql
+policies  : 3
+started   : 2026-09-16T01:03:15Z
+=============================================================================
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can view their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_lines_commented=7
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 5)
+# Failed test 2: "the invitee can read the invitation addressed to them"
+#         have: NULL
+#         want: (pgtap-invitee@mail.mcgill.ca)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Failed test 10: "the invitee still sees their own invitations — the stranger's empty read was a filter"
+# Looks like you failed 5 tests of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=4, Tests=47, 0 wallclock secs ( 0.00 usr 0.00 sys + 0.01 cusr 0.00 csys = 0.01 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can accept their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_lines_commented=12
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 3)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Looks like you failed 3 tests of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=4, Tests=47, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.01 cusr 0.00 csys = 0.03 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Club owners can update club invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_lines_commented=6
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 1)
+# Failed test 15: "the club owner can revoke a pending invitation for their own club"
+#         have: NULL
+#         want: (revoked)
+# Looks like you failed 1 test of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=4, Tests=47, 0 wallclock secs ( 0.01 usr 0.00 sys + 0.01 cusr 0.00 csys = 0.02 CPU)
+Result: PASS
+
+=============================================================================
+migrations_dir_clean=true
+policies_checked=3
+failures=0
+finished=2026-09-16T01:06:00Z
+=============================================================================
+HARNESS_EXIT=0

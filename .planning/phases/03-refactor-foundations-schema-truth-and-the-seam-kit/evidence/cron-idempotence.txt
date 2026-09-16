@@ -1,0 +1,62 @@
+# pg_cron idempotence — the scoring job across two consecutive resets
+#
+# Plan: 03-05 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+#
+# WHAT THIS MEASURES AND WHY TWICE
+#
+#   `20260915230100_cron_compute_user_scores.sql` unschedules the job if the
+#   catalog already holds one, then schedules it. A single reset cannot tell you
+#   whether that guard works — it only tells you the job exists. Two consecutive
+#   resets can: if the guard were wrong the second round would show two jobs, or
+#   a job on a different expression, or a schedule call that raised. The guard is
+#   written against the job catalog rather than as a caught exception precisely
+#   so that "it did nothing" and "it succeeded" cannot look the same.
+#
+#   $ supabase db reset --local        # round 1
+#   $ <census below>
+#   $ supabase db reset --local        # round 2
+#   $ <census below>
+#
+#   census query, run through the local container as the postgres role:
+#     select count(*), schedule, command, active from cron.job
+#      where jobname = 'compute-user-scores'
+#
+# PRODUCTION TRUTH, for comparison — .planning/audit/async/cron-job.json:
+#   jobname   compute-user-scores
+#   schedule  0 */6 * * *
+#   command   SELECT compute_user_scores()
+#   active    true
+#
+#   total_cron_jobs reads 1 locally and 3 in production. That difference is
+#   EXPECTED and is recorded rather than smoothed over: REFAC-03 names the
+#   scoring job only. `send-event-reminders` (*/15 * * * *) and
+#   `send-feedback-requests` (*/30 * * * *) remain production-only, so F-042 is
+#   narrowed by this plan and not closed. Both belong to Phase 5.
+#
+# No credential appears below. The census reaches the LOCAL container only; no
+# production connection was opened by this capture.
+
+--- ROUND 1 (after the first supabase db reset --local) ---
+round=1
+compute_user_scores_job_count=1
+compute_user_scores_schedule=0 */6 * * *
+compute_user_scores_command=SELECT compute_user_scores()
+compute_user_scores_active=t
+total_cron_jobs=1
+
+--- ROUND 2 (after the second supabase db reset --local) ---
+round=2
+compute_user_scores_job_count=1
+compute_user_scores_schedule=0 */6 * * *
+compute_user_scores_command=SELECT compute_user_scores()
+compute_user_scores_active=t
+total_cron_jobs=1
+
+--- VERDICT ---
+rounds_recorded=2
+job_count_round1=1
+job_count_round2=1
+schedule_stable_across_rounds=true
+schedule_matches_production=true
+command_matches_production=true
+idempotent=true

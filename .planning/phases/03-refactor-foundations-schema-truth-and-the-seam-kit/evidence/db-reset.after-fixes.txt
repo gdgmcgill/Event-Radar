@@ -1,0 +1,76 @@
+# supabase db reset — the [BLOCKING] local schema apply, AFTER the REFAC-02/03 fixes
+#
+# Plan: 03-05 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+#
+# SAFETY NOTE, carried forward from plan 03-04 and still load-bearing: `db reset`
+# defaults to the LOCAL database, but this project is LINKED, and `--linked` on this
+# same command resets the REMOTE project. `--local` is passed EXPLICITLY on every run
+# below rather than relied on as a default, because the blast radius of the default
+# being wrong is production.
+#
+# THE EXIT CODE ALONE IS NOT SUFFICIENT EVIDENCE (03-RESEARCH.md Pitfall 3): the CLI
+# passes over an unparseable filename and continues with status 0, so a reset can be
+# green while a migration silently did not run. Two tripwires are therefore recorded
+# at the end of this file — a grep of both transcripts for the skip line, and
+# `supabase migration list --local`, which must show all three versions applied.
+#
+# TWO CONSECUTIVE RUNS are recorded, not one. The second is what makes the
+# idempotence claim in `evidence/cron-idempotence.txt` mean anything: a migration
+# that behaves differently on its second application would show up here first.
+#
+# Docker image-pull progress lines are absent because the images were already local.
+# Nothing is filtered.
+
+================================================================================
+RUN 1 — $ supabase db reset --local
+================================================================================
+
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+ROUND1_RESET_EXIT=0
+
+================================================================================
+RUN 2 — $ supabase db reset --local   (immediately after run 1, same folder)
+================================================================================
+
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+ROUND2_RESET_EXIT=0
+
+================================================================================
+TRIPWIRE 1 — no migration was silently skipped (Pitfall 3)
+================================================================================
+
+$ grep -ci "skipping" <run 1 transcript> <run 2 transcript>
+run1=0
+run2=0
+
+================================================================================
+TRIPWIRE 2 — all three migrations are applied, by version
+================================================================================
+
+$ supabase migration list --local
+
+Connecting to local database...
+{"migrations":[{"local":"20260915214553","remote":"20260915214553","time":"2026-09-15 21:45:53"},{"local":"20260915230000","remote":"20260915230000","time":"2026-09-15 23:00:00"},{"local":"20260915230100","remote":"20260915230100","time":"2026-09-15 23:01:00"}],"message":"Migrations listed"}
+MIGRATION_LIST_EXIT=0

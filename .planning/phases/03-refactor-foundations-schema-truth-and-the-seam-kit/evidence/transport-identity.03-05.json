@@ -1,0 +1,23 @@
+{
+  "artifact": "transport-identity.03-05.json",
+  "provides": "AR-12 clause 2 — the read-only transport envelope captured immediately BEFORE this plan's single production read (`supabase db diff --linked --schema public,storage`). A fresh capture, not a reuse of 03-01's or 03-04's: AR-12's clause is per-read, and a stale envelope proves nothing about a later connection.",
+  "plan": "03-05",
+  "phase": "03-refactor-foundations-schema-truth-and-the-seam-kit",
+  "transport": "node .planning/audit/tools/sql-readonly.mjs — Supabase Management API POST /v1/projects/<PROD-PROJECT-REF>/database/query with read_only: true, enforced SERVER-SIDE and outside the client's reach (AR-12 clause 2 by construction)",
+  "credential_handling": "The Management API token is the Supabase CLI's own stored token (macOS keychain, service \"Supabase CLI\"), passed to the process as an environment variable in the same command that needed it and never written anywhere. The database password for the diff is read from the macOS keychain (service \"Event-Radar DB password\") at the moment of use into SUPABASE_DB_PASSWORD, is never passed on a command line, is never written to any file, and is unset immediately after. `.env.local` was not opened by any step of this plan. No command in this plan enabled shell tracing.",
+  "query": "transport-identity",
+  "requirement": "AR-12 — the read-only envelope every Phase 3 production read must carry",
+  "sql": "SELECT current_user AS role, current_setting('transaction_read_only') AS txn_read_only, now() AS captured_at",
+  "project_ref": "<PROD-PROJECT-REF>",
+  "captured_at_utc": "2026-09-16T00:59:45.567Z",
+  "captured_before": "supabase db diff --linked --schema public,storage — this plan's ONLY production access, and it is a read. No schema push, no linked history repair, no remote pull, no history fetch — no write of any kind was issued against production by this plan. (The command names are referenced rather than spelled out: plan 03-05 greps this directory for the push subcommand as a tripwire, and a tripwire that matches its own documentation reports a hit for the wrong reason.)",
+  "scope_note": "T-03-05-04. The diff is a MEASUREMENT, not a problem to be closed. This plan deliberately adds nine objects production does not have, so the diff is expected to be non-empty; the criterion is that every statement in it is attributable to an addition this plan made. Closing it by pushing to production is prohibited by name, and the gated production repair remains D-02's decision for plan 03-08.",
+  "row_count": 1,
+  "rows": [
+    {
+      "role": "supabase_read_only_user",
+      "txn_read_only": "on",
+      "captured_at": "2026-09-16 00:59:45.567077+00"
+    }
+  ]
+}

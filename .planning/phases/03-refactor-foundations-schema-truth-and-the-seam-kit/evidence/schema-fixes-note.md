@@ -135,4 +135,94 @@ the suite runs against `--local`. These tests prove the policies behave correctl
 built from the repository. They assert nothing about the running production database, and no claim
 in this note should be read as one.
 
-<!-- gsd:write-continue -->
+---
+
+## 5. The diff against production, accounted for line by line
+
+`evidence/db-diff.after-fixes.sql` — `supabase db diff --linked --schema public,storage`, exit 0,
+captured after the fixes and after the AR-12 envelope in
+`evidence/transport-identity.03-05.json` (`supabase_read_only_user`, `transaction_read_only = on`).
+
+Plan 03-04 left this diff at **zero bytes**. It is nine statements now, and that is the intended
+outcome rather than a regression: this plan deliberately adds nine objects production does not
+have. **The criterion is accountability, not emptiness.** Read the direction carefully —
+`db diff --linked` emits the statements that would transform the LOCAL schema INTO the remote one,
+so a `drop` below means *production lacks this*, not *something wants to delete it*.
+
+| # | Statement in the diff | Added by | Closes |
+|---|---|---|---|
+| 1 | `drop policy "Club owners can update club invitations" on "public"."club_invitations"` | `20260915230000` § 4 | F-016 |
+| 2 | `drop policy "Invitees can accept their own invitations" on "public"."club_invitations"` | `20260915230000` § 4 | F-016 |
+| 3 | `drop policy "Invitees can view their own invitations" on "public"."club_invitations"` | `20260915230000` § 4 | F-016 |
+| 4 | `drop index if exists "public"."idx_events_description_trgm"` | `20260915230000` § 2 | measured trigram gap |
+| 5 | `drop index if exists "public"."idx_events_status_start_date"` | `20260915230000` § 1 | F-015 |
+| 6 | `drop index if exists "public"."idx_events_title_trgm"` | `20260915230000` § 2 | measured trigram gap |
+| 7 | `drop index if exists "public"."idx_featured_events_window"` | `20260915230000` § 1 | F-020 |
+| 8 | `drop index if exists "public"."idx_moderation_reviews_author_action"` | `20260915230000` § 1 | F-020 |
+| 9 | `drop index if exists "public"."idx_recommendation_feedback_event_id"` | `20260915230000` § 1 | `rls-review.md` § 5 |
+
+**Nine statements, nine additions, one-to-one.** Nothing appears in the diff that this plan did not
+put there. If anything had, the baseline or the migrations would be wrong and the diff would be the
+evidence — which is why it is captured rather than assumed.
+
+**Two absences that are correct, recorded so they are not read as misses:**
+
+- `DROP TABLE IF EXISTS public.events_tests` produces no diff entry, because the relation exists in
+  neither environment. It is a guarded no-op by design.
+- The `cron.job` row is not in the diff either. `cron` is not one of the two schemas diffed, and
+  pg_cron's job catalog is not schema DDL in any case. That job is proven by
+  `evidence/cron-idempotence.txt` and `030-cron-schedule.test.sql` instead.
+
+**The diff is a measurement, not a problem to be closed.** It is not closed by pushing these
+objects to production. This plan issued exactly one production operation — the read above — and the
+gated production repair remains D-02's decision for plan 03-08.
+
+---
+
+## 6. The proof
+
+| Artifact | What it establishes |
+|---|---|
+| `evidence/db-reset.after-fixes.txt` | Two consecutive `supabase db reset --local` runs, both exit 0. The skip-line tripwire reads 0 on both transcripts and `supabase migration list --local` shows all three versions applied — because a reset can be green while a migration silently did not run |
+| `evidence/pgtap-run.txt` | `supabase test db --local`, exit 0, **47 assertions across 4 files** against a freshly reset database |
+| `evidence/pgtap-mutation-check.txt` | The one that matters. Each of the three new policies commented out in turn: the suite went red by **asserting** — 5, 3 and 1 named failures respectively — and green again on restore. `failures=0`, `migrations_dir_clean=true` |
+| `evidence/cron-idempotence.txt` | Two reset rounds, each with `compute_user_scores_job_count=1` on the same expression. The unschedule-then-schedule guard is doing work, not decorating |
+| `evidence/db-diff.after-fixes.sql` | § 5 above |
+| `evidence/transport-identity.03-05.json` | The AR-12 envelope captured immediately before the single production read |
+
+**Why the mutation check is a deliverable and not a ritual.** `02-REVIEW.md` finding WR-04 caught a
+Phase 2 suite whose assertions could not fail when the behaviour they preserved was removed. Green
+was worthless there, and it would be worthless here for a sharper reason: RLS denial has two
+shapes — a raised error and a silent zero-row filter — and the obvious assertion notices only one.
+`scripts/pgtap-mutation-check.sh` checks **two** failure modes rather than one. A policy whose
+removal leaves the suite green is reported as a decorative test. And a policy whose removal makes
+the suite fail to *parse* rather than to *assert* is reported as proving nothing — the harness
+requires pg_prove to have produced real test results with a real failure count before it will
+accept a red. All three policies recorded `RED_ASSERTION`.
+
+The harness restores by checking the file out of git rather than by re-editing, and refuses to exit
+0 if `supabase/migrations/` is dirty afterwards. A hand-restoration across several rounds is how a
+stray character survives into a committed migration.
+
+---
+
+## 7. A tripwire that matched its own documentation
+
+The plan's acceptance criteria grep this evidence directory for the CLI's schema-push subcommand,
+to prove no push was performed. Three files written by earlier plans — `ports-preflight.txt`
+(03-01), and `baseline-review.md` and `reconciliation-note.md` (03-04) — contain the literal
+**while asserting that the command was not run**. The grep therefore reports hits for prose that
+says the opposite of what the grep is looking for.
+
+This plan's own two new captures are written to reference the subcommand rather than spell it out,
+so they read 0. The three inherited files are left alone: rewriting another plan's committed
+evidence to satisfy a grep would be worse than the grep being imprecise. The underlying fact is
+unambiguous and is stated here instead — **no push, no linked history repair, no remote pull, no
+history fetch, and no write of any kind was issued against production by this plan.** Its only
+production operation was the read in § 5, under the envelope in
+`evidence/transport-identity.03-05.json`.
+
+It is the same class of defect plan 03-04 named when it wrote that evidence files should cite their
+assertion patterns by reference so a tripwire cannot match itself. Worth carrying into Phase 5's
+criteria.
+
