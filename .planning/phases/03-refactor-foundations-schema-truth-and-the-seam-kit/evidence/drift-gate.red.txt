@@ -1,0 +1,80 @@
+Drift gate — RED against an injected schema change (D-04)
+Plan: 03-06 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+
+A gate that has never been observed failing is an assertion about CI, not a
+control over it. This is the same red-then-green discipline plan 03-01 applied
+to the filename checker and plan 03-03 applied to the import boundary.
+
+The injection: one scratch migration adding one throwaway column to public.events.
+The scratch file was deleted immediately after this capture; see drift-gate.green.txt.
+
+Run locally with the pinned CLI (supabase 2.115.0), which is the same sequence
+the `types` job in .github/workflows/ci.yml runs on every pull request.
+
+================================================================================
+$ ls supabase/migrations/*.sql
+supabase/migrations/20260915214553_baseline.sql
+supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql
+supabase/migrations/20260915230100_cron_compute_user_scores.sql
+supabase/migrations/20260915235959_scratch_drift_probe.sql
+
+$ cat supabase/migrations/20260915235959_scratch_drift_probe.sql
+-- SCRATCH — drift-gate probe only. This file is created, observed, and deleted
+-- inside plan 03-06 task 1. It must NOT survive the plan.
+alter table public.events add column if not exists gsd_drift_probe text;
+
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260915235959_scratch_drift_probe.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+
+$ supabase gen types typescript --local --schema public > /tmp/types.gen.ts
+(exit=0)
+
+$ diff -u src/lib/supabase/types.ts /tmp/types.gen.ts
+--- src/lib/supabase/types.ts	2026-09-15 21:14:30
++++ /tmp/types.gen.ts	2026-09-15 21:16:35
+@@ -395,6 +395,7 @@
+           deleted_at: string | null
+           description: string | null
+           end_date: string
++          gsd_drift_probe: string | null
+           id: string
+           image_url: string | null
+           is_free: boolean
+@@ -422,6 +423,7 @@
+           deleted_at?: string | null
+           description?: string | null
+           end_date: string
++          gsd_drift_probe?: string | null
+           id?: string
+           image_url?: string | null
+           is_free?: boolean
+@@ -449,6 +451,7 @@
+           deleted_at?: string | null
+           description?: string | null
+           end_date?: string
++          gsd_drift_probe?: string | null
+           id?: string
+           image_url?: string | null
+           is_free?: boolean
+(exit=1)
+
+================================================================================
+RESULT
+================================================================================
+
+diff_exit=1            (non-zero — the CI step `Fail on type drift` FAILS the job)
+added_lines=3          (one per Row / Insert / Update block)
+drifted_column=gsd_drift_probe
+verdict=RED — the gate bites

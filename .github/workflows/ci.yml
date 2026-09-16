@@ -44,3 +44,48 @@ jobs:
 
       - name: Run build
         run: npm run build
+
+  # REFAC-04 / D-04. A sibling of `ci`, never a step inside it: this job starts a
+  # Docker stack and the fast job must not wait on Docker to report a lint failure.
+  #
+  # The gate generates from the LOCAL database built by the migrations, never from
+  # the linked remote project. A gate reading production would pass on day one and
+  # prove nothing forever; a local gate fails the moment a migration and the committed
+  # types disagree, and it needs no production credential to run.
+  #
+  # The CLI version is pinned because the generator's output is not stable across
+  # versions — postgres-meta v0.99.0 parenthesises generic constraints that v0.98.0
+  # leaves bare. 2.115.0 is the CLI that produced the committed file.
+  types:
+    name: Schema truth — type drift gate and database tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.115.0
+
+      - name: Start local Supabase stack
+        run: supabase start
+
+      - name: Rebuild the local database from the migrations
+        run: supabase db reset --local
+
+      - name: Regenerate types from the reconciled schema
+        run: supabase gen types typescript --local --schema public > /tmp/types.gen.ts
+
+      - name: Fail on type drift
+        run: diff -u src/lib/supabase/types.ts /tmp/types.gen.ts
+
+      - name: RLS and schema tests
+        run: supabase test db --local

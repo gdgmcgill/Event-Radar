@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
   public: {
     Tables: {
       admin_audit_log: {
@@ -481,57 +476,6 @@ export type Database = {
           },
         ]
       }
-      events_tests: {
-        Row: {
-          category: string | null
-          created_at: string | null
-          description: string | null
-          end_date: string | null
-          id: string
-          image_url: string | null
-          location: string | null
-          organizer: string | null
-          rsvp_count: string | null
-          start_date: string | null
-          status: string | null
-          tags: Json | null
-          title: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          end_date?: string | null
-          id: string
-          image_url?: string | null
-          location?: string | null
-          organizer?: string | null
-          rsvp_count?: string | null
-          start_date?: string | null
-          status?: string | null
-          tags?: Json | null
-          title?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          end_date?: string | null
-          id?: string
-          image_url?: string | null
-          location?: string | null
-          organizer?: string | null
-          rsvp_count?: string | null
-          start_date?: string | null
-          status?: string | null
-          tags?: Json | null
-          title?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       experiment_assignments: {
         Row: {
           assigned_at: string
@@ -733,34 +677,34 @@ export type Database = {
       }
       feedback: {
         Row: {
+          created_at: string
           id: string
-          user_id: string | null
-          user_email: string | null
-          type: string
-          subject: string | null
           message: string
           status: string
-          created_at: string
+          subject: string | null
+          type: string
+          user_email: string | null
+          user_id: string | null
         }
         Insert: {
+          created_at?: string
           id?: string
-          user_id?: string | null
-          user_email?: string | null
-          type?: string
-          subject?: string | null
           message: string
           status?: string
-          created_at?: string
+          subject?: string | null
+          type?: string
+          user_email?: string | null
+          user_id?: string | null
         }
         Update: {
+          created_at?: string
           id?: string
-          user_id?: string | null
-          user_email?: string | null
-          type?: string
-          subject?: string | null
           message?: string
           status?: string
-          created_at?: string
+          subject?: string | null
+          type?: string
+          user_email?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1002,28 +946,28 @@ export type Database = {
       }
       reviews: {
         Row: {
-          id: string
-          user_id: string
-          event_id: string
-          rating: number
           comment: string | null
           created_at: string
+          event_id: string
+          id: string
+          rating: number
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          event_id: string
-          rating: number
           comment?: string | null
           created_at?: string
+          event_id: string
+          id?: string
+          rating: number
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          event_id?: string
-          rating?: number
           comment?: string | null
           created_at?: string
+          event_id?: string
+          id?: string
+          rating?: number
+          user_id?: string
         }
         Relationships: [
           {
@@ -1362,6 +1306,7 @@ export type Database = {
         }[]
       }
       send_event_reminders: { Args: never; Returns: Json }
+      send_feedback_requests: { Args: never; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       update_event_popularity: {
@@ -1506,3 +1451,4 @@ export const Constants = {
     },
   },
 } as const
+

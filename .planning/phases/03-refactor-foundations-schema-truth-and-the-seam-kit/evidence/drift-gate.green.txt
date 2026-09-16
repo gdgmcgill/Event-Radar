@@ -1,0 +1,57 @@
+Drift gate — GREEN once the injection is removed (D-04)
+Plan: 03-06 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+
+The companion to drift-gate.red.txt. The scratch migration is deleted, the local
+database is rebuilt from the three real migrations, types are regenerated and the
+diff against the committed file is empty.
+
+The second half of this capture exists to prove the probe left nothing behind: a
+surviving scratch migration would put a phantom column in the schema AND in the
+committed types, which is exactly the failure mode plan 03-04 spent a day undoing.
+
+================================================================================
+$ rm supabase/migrations/20260915235959_scratch_drift_probe.sql
+
+$ ls supabase/migrations/*.sql
+supabase/migrations/20260915214553_baseline.sql
+supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql
+supabase/migrations/20260915230100_cron_compute_user_scores.sql
+
+$ ls supabase/migrations/*.sql | wc -l
+       3
+
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+
+$ supabase gen types typescript --local --schema public > /tmp/types.gen.ts
+(exit=0)
+
+$ diff -u src/lib/supabase/types.ts /tmp/types.gen.ts
+(exit=0)
+
+$ grep -c gsd_drift_probe src/lib/supabase/types.ts
+0
+
+$ git status --porcelain supabase/migrations/
+(no output above = no scratch migration survives)
+
+================================================================================
+RESULT
+================================================================================
+
+diff_exit=0            (empty — the CI step `Fail on type drift` PASSES the job)
+migration_count=3      (baseline + fk_indexes_and_policy_gaps + cron_compute_user_scores)
+scratch_migration_survives=no
+drift_probe_in_committed_types=0
+verdict=GREEN — the gate passes only because the types and the migrations agree

@@ -1,0 +1,129 @@
+Type regeneration from the reconciled local schema — REFAC-04, D-04
+Plan: 03-06 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+
+================================================================================
+COMMANDS
+================================================================================
+
+$ supabase --version
+2.115.0
+
+$ supabase db reset --local
+Resetting local database...
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+
+$ supabase gen types typescript --local --schema public > src/lib/supabase/types.ts
+
+$ git diff --numstat -- src/lib/supabase/types.ts
+29	83	src/lib/supabase/types.ts
+
+================================================================================
+CHANGED-LINE COUNT
+================================================================================
+
+added_lines=29
+removed_lines=83
+changed_lines=112
+committed_lines_before=1508
+committed_lines_after=1454
+hunks=6
+
+================================================================================
+THE SHAPE OF THE DIFF — SIX HUNKS, ACCOUNTED FOR ONE BY ONE
+================================================================================
+
+The audit found ZERO type-mismatch rows across 288 reconciled rows, so a large
+diff here would be a signal rather than a routine outcome. Six hunks, each with
+a cause:
+
+hunk 1 @@ -7,11 +7,6 @@   __InternalSupabase REMOVED (5 lines)
+  The generator does not emit the __InternalSupabase.PostgrestVersion block when
+  it reads a local database. It is emitted only for --linked / --project-id,
+  where the Management API supplies the project's PostgREST version. Verified
+  against two CLI versions (2.115.0 and 2.117.0 via one-shot npx): neither emits
+  it for --local. Recorded as a deviation in 03-06-SUMMARY.md. The block is NOT
+  re-added by hand — hand-editing this file is what created the phantom table in
+  hunk 2, and the prohibition against it outranks the block's presence.
+  Type-check impact: none. `npx tsc --noEmit` exits 0 with the block absent.
+
+hunk 2 @@ -481,57 +476,6 @@   events_tests table REMOVED (51 lines)
+  F-049. The phantom table. It was hand-written into the generated file and no
+  migration ever created it; the 03-05 migration dropped the orphaned table.
+  `grep -c "events_tests" src/lib/supabase/types.ts` is now 0.
+
+hunk 3 @@ -733,34 +677,34 @@   feedback columns REORDERED (0 net lines)
+  Row/Insert/Update keys move to alphabetical order. The generator always emits
+  alphabetically; the committed file carried DDL order. Second fingerprint of a
+  hand edit. No column added, removed or retyped.
+
+hunk 4 @@ -1002,28 +946,28 @@   reviews columns REORDERED (0 net lines)
+  Same cause as hunk 3. No column added, removed or retyped.
+
+hunk 5 @@ -1362,6 +1306,7 @@   send_feedback_requests ADDED (1 line)
+  + send_feedback_requests: { Args: never; Returns: Json }
+  A function that the reconciled migrations create and the committed types did
+  not carry. This is the drift REFAC-04 exists to catch: the committed types
+  were generated before this function entered the schema and nothing has
+  regenerated them since.
+
+hunk 6 @@ -1506,3 +1451,4 @@   trailing newline ADDED (1 line)
+  The generator terminates the file with a newline; the committed file did not.
+
+Zero table-type changes. Zero column-type changes. The three post-baseline
+migrations of plans 03-04/03-05 add indexes, policies and a cron schedule, none
+of which create a table or a column, so none of them move the type surface —
+which is what hunks 2-6 confirm by exclusion.
+
+================================================================================
+BYTE-IDENTITY ASSERTION
+================================================================================
+
+$ supabase gen types typescript --local --schema public > /tmp/recheck.ts
+$ cmp -s src/lib/supabase/types.ts /tmp/recheck.ts && echo BYTE-IDENTICAL
+BYTE-IDENTICAL
+
+$ grep -c "events_tests" src/lib/supabase/types.ts
+0
+
+$ npx tsc --noEmit ; echo "exit=$?"
+exit=0
+
+$ git diff --name-only -- src/types/
+(no output — the hand-written barrel at src/types/index.ts is a different file
+ with a different owner and is NOT in REFAC-04's scope)
+
+================================================================================
+CLI VERSION PINNING — WHY THE CI JOB NAMES A VERSION
+================================================================================
+
+The generator's output is not stable across CLI versions. Measured:
+
+$ npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/types.v2117.ts
+$ diff -q /tmp/types.gen.ts /tmp/types.v2117.ts
+Files /tmp/types.gen.ts and /tmp/types.v2117.ts differ
+
+The difference is cosmetic — postgres-meta v0.99.0 parenthesises four generic
+constraints that v0.98.0 leaves bare:
+
+-  TableName extends DefaultSchemaTableNameOrOptions extends {
++  TableName extends (DefaultSchemaTableNameOrOptions extends {
+     schema: keyof DatabaseWithoutInternals
+   }
+     ? keyof (DatabaseWithoutInternals[...]["Tables"] & ...["Views"])
+-    : never = never,
++    : never) = never,
+
+Cosmetic or not, a drift gate that diffs byte-for-byte would go red on a CLI
+upgrade it did not ask for. The CI job therefore pins `version: 2.115.0` on
+supabase/setup-cli, matching the CLI that produced the committed file. A CLI
+bump becomes a deliberate, reviewable commit that regenerates the file, which
+is the correct shape for this control.
