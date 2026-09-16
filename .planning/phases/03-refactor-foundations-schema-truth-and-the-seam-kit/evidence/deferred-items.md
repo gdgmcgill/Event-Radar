@@ -87,7 +87,9 @@ build.
 
 ---
 
-## DI-20 — `src/hooks/useEvents.test.ts` is intermittently flaky
+## DI-20 — `src/hooks/useEvents.test.ts` is intermittently flaky — **CLOSED 2026-09-16 (quick task 260916-nst)**
+
+> **CLOSED** in `77255af`, before Phase 4 planning, because a one-in-eight flake makes the phase's first CI run unreadable. Diagnosis: the failing `waitFor` is the suite's *first*; the hook cannot hold `loading` true once the mocked fetch resolves, so what expired was `waitFor`'s default 1000 ms budget on a cold worker (ts-jest compile + first React mount) under 34-suite parallel load — consistent with never failing in isolation and never on a later test. Fix: `configure({ asyncUtilTimeout: 10_000 })` from `@testing-library/react`, scoped to the file, with the reason in a comment. It changes when the assertion gives up, not what it asserts. Verified: file green in isolation; full `npx jest --ci` twice at the Phase 3 floor, 358 passed / 5 skipped. Owner was Phase 4; nothing is left for Phase 4 to do here.
 
 **Found by:** plan 03-06, `npm test -- --ci`
 **Symptom:** `useEvents Hook › Initial Fetch › should fetch events on mount` fails with
@@ -333,7 +335,9 @@ per-persona assertions that can be automated against the seed.
 
 ---
 
-## DI-28 — The `.claude/CLAUDE.md` correction is gitignored, so a fresh clone does not carry it
+## DI-28 — The `.claude/CLAUDE.md` correction is gitignored, so a fresh clone does not carry it — **CLOSED 2026-09-16 (quick task 260916-nst)**
+
+> **CLOSED** in `33f5783` by the owner's decision to **track the file**. `.gitignore` now reads `.claude/*` plus `!.claude/CLAUDE.md`, so the directory stays ignored (`settings.local.json` verified still ignored by `git check-ignore`) while the instruction file is versioned; `git ls-files .claude` lists exactly `CLAUDE.md`. The false zustand parenthetical noted below was corrected in the same commit: the line now names `src/store/useAuthStore.ts` as the single auth store. `F-063`'s closure gap is therefore shut.
 
 **Found by:** Phase 2, plan 02-11, self-disclosed at `.../02-.../evidence/STAGE-2-COMPLETION.md` § 12.
 **Assigned to Phase 3. Phase 3 did not resolve it, and says so here rather than letting it lapse.**
