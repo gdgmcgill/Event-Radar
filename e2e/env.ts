@@ -9,8 +9,9 @@
  * read it, and the guard is applied to whatever this module returns.
  *
  * The values come from `supabase status -o env` at run time, or from the
- * environment when CI has already exported them. Nothing is printed and nothing
- * is written to disk.
+ * explicit SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY trio
+ * when all three are exported. Ambient NEXT_PUBLIC_* values are never used.
+ * Nothing is printed and nothing is written to disk.
  */
 
 import { execFileSync } from "node:child_process";
@@ -26,9 +27,16 @@ let cached: LocalStack | null = null;
 export function localStackEnv(): LocalStack {
   if (cached) return cached;
 
+  // Only the explicit SUPABASE_* trio can override the running stack, and only
+  // when all three are present. NEXT_PUBLIC_* is deliberately NOT consulted:
+  // it is ambient (CI exports a placeholder to every job, Next loads it from
+  // .env.local) and describes whatever the app was built against, which is
+  // never the harness's business. Letting it in is how the CI e2e job pointed
+  // itself at "https://placeholder.supabase.co" and was refused by the guard
+  // (03-08 evidence/ci-e2e-red.txt, deferred item DI-32).
   const fromEnv = {
-    url: process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL,
-    anonKey: process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    url: process.env.SUPABASE_URL,
+    anonKey: process.env.SUPABASE_ANON_KEY,
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   };
 
