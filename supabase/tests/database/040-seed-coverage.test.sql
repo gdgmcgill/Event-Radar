@@ -80,6 +80,14 @@ SELECT CASE WHEN pg_temp.seeded() THEN
 
 -- -----------------------------------------------------------------------------
 -- 2. The complete ban truth table (4)
+--
+-- ALL FOUR ARE SCOPED TO `5eed0000-%`. Three of them were not (03-REVIEW.md
+-- WR-10): they asked `public.users` unscoped, so ANY banned row from ANY other
+-- source satisfied them and the file reported "the seed covers this state"
+-- about rows the seed did not create. In the `e2e` job that is a live false
+-- green, not a theoretical one — the harness has been writing to the same
+-- database. The seeded-id prefix is what makes each assertion a statement about
+-- the seed rather than about the database.
 -- -----------------------------------------------------------------------------
 
 SELECT CASE WHEN pg_temp.seeded() THEN
@@ -92,14 +100,16 @@ SELECT CASE WHEN pg_temp.seeded() THEN
 SELECT CASE WHEN pg_temp.seeded() THEN
   isnt_empty(
     $$ SELECT 1 FROM public.users
-        WHERE banned_at IS NOT NULL AND ban_expires_at IS NULL $$,
+        WHERE id::text LIKE '5eed0000-%'
+          AND banned_at IS NOT NULL AND ban_expires_at IS NULL $$,
     'seed covers ban state: permanent ban (no expiry)')
   ELSE skip(pg_temp.why()) END;
 
 SELECT CASE WHEN pg_temp.seeded() THEN
   isnt_empty(
     $$ SELECT 1 FROM public.users
-        WHERE banned_at IS NOT NULL
+        WHERE id::text LIKE '5eed0000-%'
+          AND banned_at IS NOT NULL
           AND ban_expires_at > '2026-06-01T16:00:00.000Z'::timestamptz $$,
     'seed covers ban state: active suspension (expiry after the pinned now)')
   ELSE skip(pg_temp.why()) END;
@@ -107,7 +117,8 @@ SELECT CASE WHEN pg_temp.seeded() THEN
 SELECT CASE WHEN pg_temp.seeded() THEN
   isnt_empty(
     $$ SELECT 1 FROM public.users
-        WHERE banned_at IS NOT NULL
+        WHERE id::text LIKE '5eed0000-%'
+          AND banned_at IS NOT NULL
           AND ban_expires_at < '2026-06-01T16:00:00.000Z'::timestamptz $$,
     'seed covers ban state: EXPIRED suspension — looks banned, must not be treated as banned')
   ELSE skip(pg_temp.why()) END;
