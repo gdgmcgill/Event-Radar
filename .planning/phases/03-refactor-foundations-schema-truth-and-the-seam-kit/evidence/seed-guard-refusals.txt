@@ -1,0 +1,84 @@
+# seed-guard-refusals.txt — the guard, watched refusing
+# Plan: 03-07 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-16
+#
+# REFAC-07 ends '...with a hard guard refusing any other Supabase URL'. A guard
+# nobody watched refuse is a comment. Section 1 is the unit suite — five cases,
+# four of them refusals, each hermetic against a throwaway env fixture in a
+# temp directory. Section 2 is the same control exercised through the actual
+# command line, where a refusal is a non-zero exit rather than a thrown value.
+#
+# REDACTION. Section 2 case (a) targets the REAL production project, because
+# that is the only way to exercise the deny-by-name path against the deny key
+# the guard actually reads. Nothing connected to it: the guard is the loader's
+# first statement and no Supabase client is constructed before it returns. The
+# project ref is substituted INSIDE the pipeline that writes this file, per the
+# Phase 1 redaction ledger, so the unredacted value never reached disk.
+
+# ===========================================================================
+# 1. The unit suite
+# ===========================================================================
+
+$ npx jest --ci --selectProjects node --testPathPatterns "seed/guard"
+Running one project: node
+PASS node src/__tests__/seed/guard.test.ts
+  assertSeedTargetAllowed
+    ✓ allows the local stack — the only target the loader may write to (1 ms)
+    ✓ REFUSES the production project named in the env file, by ref (3 ms)
+    ✓ REFUSES an arbitrary hosted project that is neither local nor acknowledged staging (1 ms)
+    ✓ REFUSES a staging target that has not been explicitly acknowledged
+    ✓ FAILS CLOSED when the deny key cannot be extracted, even with staging fully acknowledged
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        0.161 s, estimated 1 s
+Ran all test suites matching seed/guard.
+exit=0
+
+# ===========================================================================
+# 2. The same control at the command line. Each case is a non-zero exit.
+#
+#    SUPABASE_SERVICE_ROLE_KEY is set to a throwaway literal in every case
+#    below. It is never used: the guard throws before any client exists, which
+#    is the property the ordering exists to give.
+# ===========================================================================
+
+## (a) the real production project, refused BY NAME against the deny key
+$ SUPABASE_URL=https://<PROD-PROJECT-REF>.supabase.co SUPABASE_SERVICE_ROLE_KEY=throwaway npx tsx scripts/seed/load.ts
+REFUSED: https://<PROD-PROJECT-REF>.supabase.co matches the production project ref declared in /Users/adyan/Documents/GitHub/Event-Radar/.env.local. The seed never writes to production.
+exit=1
+
+## (b) an arbitrary hosted project nobody acknowledged
+$ SUPABASE_URL=https://someoneelsesproject.supabase.co SUPABASE_SERVICE_ROLE_KEY=throwaway npx tsx scripts/seed/load.ts
+REFUSED: https://someoneelsesproject.supabase.co is not the staging project. Set SEED_STAGING_PROJECT_REF to this project's ref, and SEED_I_UNDERSTAND_TARGET=staging, to load it.
+exit=1
+
+## (c) a NAMED staging project with the acknowledgement missing
+$ SUPABASE_URL=https://stagingproj.supabase.co SEED_STAGING_PROJECT_REF=stagingproj SUPABASE_SERVICE_ROLE_KEY=throwaway npx tsx scripts/seed/load.ts
+REFUSED: https://stagingproj.supabase.co is the named staging project but the acknowledgement is absent. Set SEED_I_UNDERSTAND_TARGET=staging. Two independent signals are required precisely so one stray export cannot arm a remote write.
+exit=1
+
+## (d) a loopback host on a NON-Supabase port — the dev server, not a database
+$ SUPABASE_URL=http://127.0.0.1:3000 SUPABASE_SERVICE_ROLE_KEY=throwaway npx tsx scripts/seed/load.ts
+REFUSED: http://127.0.0.1:3000 is neither a local Supabase stack (loopback host on a port in 54000-54999) nor a recognisable https://<ref>.supabase.co project.
+exit=1
+
+## (e) something that is not a URL at all
+$ SUPABASE_URL=production SUPABASE_SERVICE_ROLE_KEY=throwaway npx tsx scripts/seed/load.ts
+REFUSED: production is neither a local Supabase stack (loopback host on a port in 54000-54999) nor a recognisable https://<ref>.supabase.co project.
+exit=1
+
+# ===========================================================================
+# 3. What section 2 deliberately does NOT contain
+# ===========================================================================
+#
+# The fail-closed case — a target the guard cannot check because the deny key
+# could not be extracted — cannot be exercised through the command line on a
+# machine that HAS a parseable .env.local, and removing that file to stage the
+# case would be a modification of it, which L6 forbids. It is therefore a unit
+# case only (section 1, case 5), where the env file path is injected. That case
+# sets BOTH staging signals and still expects a throw, so it proves the
+# precedence that matters: fail-closed outranks acknowledgement.
+#
+# The allowed case is not repeated here either — it is section 2 of
+# seed-determinism.txt, where the loader runs green against the local stack.

@@ -1,0 +1,143 @@
+# seed-determinism.txt — REFAC-07 clauses 1-3, proven rather than described
+# Plan: 03-07 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-16
+#
+# METHOD. Reset the local database from the migrations, load the seed, take a
+# canonical dump, load the seed a SECOND time into the same database without
+# resetting in between, take a second dump, and require the two to be byte
+# identical. That proves both things at once: determinism (same inputs, same
+# rows) and idempotence (the loader is re-runnable and the second run leaves
+# the database in the same state as the first).
+#
+# THE DUMP. Produced by the loader's own --dump mode, which selects the seeded
+# rows by their fixed ids, names every column explicitly so the output cannot
+# drift with column order, and sorts by id. It includes the trigger-maintained
+# users.saved_events_count and every created_at/updated_at, because a proof
+# that skipped the columns a trigger can move would not be proving much.
+#
+# WHAT IS NOT DUMPED, AND WHY. The auth schema. GoTrue stamps its own
+# created_at on every account it creates and those instants are not ours to
+# pin. What this seed fixes about auth is the SET of account ids and their
+# addresses, and that set IS in the dump under auth_identities.
+
+# ---------------------------------------------------------------------------
+# 1. A bare reset, and the database tests against an UNSEEDED database.
+#    040-seed-coverage.test.sql must SKIP here, not fail: the type-drift CI
+#    job runs this exact command with no seed loaded.
+# ---------------------------------------------------------------------------
+
+$ supabase db reset --local
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+
+$ supabase test db --local          # no seed loaded
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .... ok
+All tests successful.
+Files=5, Tests=68,  1 wallclock secs ( 0.01 usr  0.01 sys +  0.01 cusr  0.00 csys =  0.03 CPU)
+Result: PASS
+exit=0
+# 040 reported ok because all 21 of its assertions emitted a TAP SKIP with the
+# reason rather than an assertion. `supabase test db` prints only the pg_prove
+# summary, so the raw TAP is captured separately in section 4 below.
+
+# ---------------------------------------------------------------------------
+# 2. Load the seed. The coverage assertions now execute for real.
+# ---------------------------------------------------------------------------
+
+$ npx tsx scripts/seed/load.ts        # first load
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+$ supabase test db --local          # seed loaded
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .... ok
+All tests successful.
+Files=5, Tests=68,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.01 cusr  0.00 csys =  0.02 CPU)
+Result: PASS
+exit=0
+
+$ npx tsx scripts/seed/load.ts --dump > /tmp/dump1.json
+exit=0
+
+# ---------------------------------------------------------------------------
+# 3. Load AGAIN into the same database, with no reset in between.
+# ---------------------------------------------------------------------------
+
+$ npx tsx scripts/seed/load.ts        # second load
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+$ npx tsx scripts/seed/load.ts --dump > /tmp/dump2.json
+exit=0
+
+$ shasum -a 256 /tmp/dump1.json /tmp/dump2.json
+dump_1_sha256=a90f2bc48f7aa2a68afa0d08aa2ad3770beadd4745b3d6760b86d9418f23ef93
+dump_2_sha256=a90f2bc48f7aa2a68afa0d08aa2ad3770beadd4745b3d6760b86d9418f23ef93
+dump_1_bytes=14984
+dump_2_bytes=14984
+
+$ diff /tmp/dump1.json /tmp/dump2.json; echo $?
+diff_exit=0
+byte_identical=yes
+
+# Row counts in the dump, so the hashes above are not hashing an empty set.
+rows_auth_identities=10
+rows_users=10
+rows_clubs=5
+rows_club_members=6
+rows_events=5
+rows_rsvps=2
+rows_saved_events=0
+pinned_now=2026-06-01T16:00:00.000Z
+timezone=America/Toronto
+prng_seed=1431193942
+
+# ---------------------------------------------------------------------------
+# 4. The skip branch, at the TAP tier where it is visible.
+#
+#    `supabase test db` prints the pg_prove summary only, so "ok" above does
+#    not distinguish an assertion from a skip. Running the file straight
+#    through psql shows the difference. pgTAP is created first because
+#    000-setup.sql is what normally does that, and it is not running here.
+# ---------------------------------------------------------------------------
+
+$ docker exec -i supabase_db_Event-Radar psql -U postgres -d postgres -Xq \
+    -c "create extension if not exists pgtap with schema extensions;"
+$ docker exec -i ... psql -Xqt -f - < supabase/tests/database/040-seed-coverage.test.sql
+
+## 4a. Seed LOADED — the assertions execute.
+     1..21
+    
+     ok 1 - seed covers role: user
+    
+    ...
+ok=21 skip=0 not_ok=0
+
+## 4b. Sentinel row removed — every assertion SKIPs, with its reason, and
+##     the file still exits clean. This is what the type-drift CI job sees.
+     1..21
+    
+     ok 1 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+    
+    ...
+ok=21 skip=21 not_ok=0
+
+# The two runs report the same 21 results and the same clean exit. The
+# difference — 0 skips versus 21 skips — is the whole point: a green 040 in
+# a job that did not load the seed is a green SKIP, and it says so in its
+# own output rather than leaving a reader to assume.
+
+# ---------------------------------------------------------------------------
+# 5. Re-derived after all of the above, on a database that was reset, seeded,
+#    poked at by section 4 and re-seeded. Same hash as section 3.
+# ---------------------------------------------------------------------------
+
+$ npx tsx scripts/seed/load.ts --dump | shasum -a 256
+final_dump_sha256=a90f2bc48f7aa2a68afa0d08aa2ad3770beadd4745b3d6760b86d9418f23ef93
