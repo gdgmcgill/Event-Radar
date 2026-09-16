@@ -8,6 +8,13 @@ fixes what its own change broke, and nothing else.
 
 Numbering continues from Phase 2's `deferred-items.md`, which ended at D-18.
 
+> **Two `D-` sequences exist and they collide.** This file's ids continue the *deferred-item*
+> sequence; `STATE.md` and the plan summaries carry a separate *decision* sequence that has reached
+> D-22. So `D-19` here is the ratchet false positive, while `D-19` in `STATE.md` is plan 03-05's
+> stronger `WITH CHECK` clauses — and `D-20` here is a flaky test while `D-20` there is the
+> automated pgTAP mutation check. Always cite the register along with the id. Disambiguating the
+> two sequences is on plan 03-08.
+
 ---
 
 ## D-19 — The elevated-callsite ratchet has a pre-existing false positive
@@ -81,3 +88,12 @@ inside a plan about generated types.
 resolution directly instead of polling `loading`.
 
 **Owner:** unassigned. Raise it if it recurs; it is not blocking.
+
+**Recurrence, 2026-09-15 (plan 03-06 completion run).** Seen a second time, on the first full-suite
+run of the session that wrote `03-06-SUMMARY.md`: `342 passed, 1 failed`, same test, same
+`waitFor` on `loading`. Then green on two isolated runs of `src/hooks/useEvents.test.ts` (20/20
+each) and green on the immediately following full run (`343 passed, 5 skipped`). Two independent
+sightings across two sessions make this a real intermittent rather than a one-off, which is the
+threshold at which it stops being worth ignoring — a phase that asserts its floor as an exact
+number cannot afford a test that fails one run in eight for reasons unrelated to the change under
+test. Reassigned from unassigned to **plan 03-08**.

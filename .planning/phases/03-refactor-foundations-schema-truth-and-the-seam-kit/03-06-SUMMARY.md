@@ -22,10 +22,10 @@ provides:
   - "Three registered findings: F-071 (Medium, closes Phase 4), F-072 (Medium, Phase 5), F-073 (High, Phase 5) — with .planning/audit/quality/cast-removal-defects.md as their measured evidence"
   - "Two DEFECT characterization suites, 11 assertions, pinning today's behaviour at both defect sites so a later fix moves an assertion rather than passing unnoticed"
   - "evidence/type-fixes-note.md — a ten-row per-site triage and the four things this plan deliberately did not do"
-  - ".planning/phases/03-.../deferred-items.md — opened by this plan with D-19 and D-20"
+  - ".planning/phases/03-.../deferred-items.md — opened by this plan with deferred items D-19 (ratchet false positive) and D-20 (flaky hook test). NOTE: the deferred-item D- sequence is separate from the decision D- sequence in STATE.md, and the two collide at D-19/D-20"
 affects:
   - "03-07 (Playwright persona harness): unblocked either way; the types it will compile against are now the migrations' own"
-  - "03-08 (close-out): inherits FOUR written dispositions — the tsconfig test-file exclusion (~86 errors across 10 files), D-19's ratchet false positive, D-20's flaky hook test, and the fact that REFAC-04's cast clause is at 45/47 by decision D-22 rather than by oversight"
+  - "03-08 (close-out): inherits FIVE written dispositions — the tsconfig test-file exclusion (~86 errors across 10 files), deferred-item D-19's ratchet false positive, deferred-item D-20's flaky hook test, the fact that REFAC-04's cast clause is at 45/47 by decision D-22 rather than by oversight, and the collision between the decision and deferred-item D- sequences"
   - "Phase 4 (event read path and friends surface): owns F-071. The characterization suite is the assertion that must move"
   - "Phase 5: owns F-072 and F-073. The preferred fix is a one-line migration adding admin_audit_log.admin_email, whose production application is gated by D-02 in plan 03-08 — a deliberate behaviour change carried through a production gate, which is precisely why it could not happen inside a typing plan"
   - "The deferred supabase-js bump: part of its blocker is retired. Five of its six errors share the Json-versus-unknown shape that fix #9 resolves, and the project now has a worked example. The bump itself is untouched"
@@ -166,11 +166,19 @@ The plan's artifact list requires the generated file to contain `__InternalSupab
 **2. The CI Supabase CLI is pinned at 2.115.0.**
 Not in the plan's text. Generator output is not byte-stable across versions — postgres-meta v0.99.0 parenthesises four generic constraints that v0.98.0 leaves bare — so a byte-for-byte gate on an unpinned generator goes red on an upgrade nobody asked for.
 
-**3. D-19 — the elevated-callsite ratchet has a pre-existing false positive.**
+**3. D-19 (deferred item) — the elevated-callsite ratchet has a pre-existing false positive.**
 `node scripts/check-elevated-ratchet.mjs` reads `committed=24 live=25` and exits 1 — **and did so at `d3f6916`, before this plan's first edit**. `src/app/auth/callback/route.test.ts` carries `@supabase/supabase-js` and `@/lib/supabase/service` inside `jest.mock()` *calls*. ESLint's `no-restricted-imports` correctly ignores those; the ratchet's `text.includes()` census does not. A parallel-wave artifact of plan 03-03 taking its census in a tree that did not yet hold 03-02's test file. **CI is unaffected** — the ratchet is not a CI step and `npm run lint` is green at 0 errors. Not fixed here because the script's own header forbids the one-command fix and the correct fix is a change to a control plan 03-03 owns. **Owner: 03-08**, with the recommended fix in `deferred-items.md` — exclude `*.test.ts`/`*.test.tsx` from the census, keep the allow-list at 24, do not regenerate it.
 
-**4. D-20 — `src/hooks/useEvents.test.ts` is intermittently flaky, and it recurred during this completion run.**
-A `waitFor` on `loading` in "should fetch events on mount". Observed once during task execution, then green on seven re-runs; observed **again** on the first full-suite run of this completion session (`342 passed, 1 failed`), then green on two isolated runs and on the immediately following full run (`343 passed, 5 skipped`). Two independent sightings make it a real intermittent rather than a one-off. Not in this plan's files or subject matter; the failure is in the test's synchronisation, not in `useEvents`. **Owner: 03-08** alongside the other dispositions.
+> **Note on the `D-` ids in items 3 and 4.** Two independent `D-` sequences now exist and they
+> collide. `STATE.md` and the plan summaries carry a *decision* sequence that has reached **D-22**;
+> the phase `deferred-items.md` files carry a *deferred-item* sequence continuing from Phase 2's,
+> which has reached **D-20**. The D-19 and D-20 below are **deferred items**. In `STATE.md`, D-19
+> and D-20 are plan 03-05's stronger `WITH CHECK` clauses and its automated pgTAP mutation check —
+> different things entirely. Cite the register with the id. Disambiguating the sequences is a
+> fifth disposition for plan 03-08.
+
+**4. D-20 (deferred item) — `src/hooks/useEvents.test.ts` is intermittently flaky, and it recurred during this completion run.**
+A `waitFor` on `loading` in "should fetch events on mount". Observed once during task execution, then green on seven re-runs; observed **again** on the first full-suite run of this completion session (`342 passed, 1 failed`), then green on two isolated runs and on the immediately following full run (`343 passed, 5 skipped`). Two independent sightings make it a real intermittent rather than a one-off. Not in this plan's files or subject matter; the failure is in the test's synchronisation, not in `useEvents`. **Owner: 03-08** alongside the other dispositions (reassigned there from unassigned on the second sighting).
 
 **5. The client-cast census grep now over-counts by two — because the characterization tests explain the pattern.**
 `grep -rn "(supabase as any)" src/` returns **4**: two real casts in source, and two occurrences in the file-level JSDoc of the two DEFECT suites, which describe how the casts hid the defects. This is the same defect class 03-04 and 03-05 both named — an evidence tripwire matching its own documentation. The source count is unambiguously 2 (`grep -rn "(supabase as any)" src/ --include='*.ts' --include='*.tsx' | grep -v '__tests__'`). Recorded so a later reader does not chase a phantom third cast.
@@ -241,7 +249,7 @@ None. No package was installed; `package.json` and `package-lock.json` are untou
 
 Carried forward, explicitly:
 
-- **Plan 03-08** takes **four** written dispositions, not one: the tsconfig test-file exclusion (~86 errors across 10 files, mostly mechanical — deliberately not folded into this plan's commits because it would have made the regeneration diff unreviewable), D-19's ratchet false positive with its recommended fix, D-20's flaky hook test, and REFAC-04's partial status with D-22's reasoning.
+- **Plan 03-08** takes **five** written dispositions, not one: the tsconfig test-file exclusion (~86 errors across 10 files, mostly mechanical — deliberately not folded into this plan's commits because it would have made the regeneration diff unreviewable), deferred-item D-19's ratchet false positive with its recommended fix, deferred-item D-20's flaky hook test, REFAC-04's partial status with D-22's reasoning, and the D- sequence collision described above.
 - **Phase 4** owns **F-071**. `src/__tests__/api/events/friends-defect.test.ts` is the assertion that must move — from `Array.isArray(passed) === false` and `{ friends: [], count: 0 }` to a real array of ids and a mutual-follow result. Closing it removes the last `(supabase as any)` under `src/app/api/`. Worth deciding at the same time whether the fallback should exist at all now that `get_friends_going_to_event` is in the reconciled schema; the comment above it is stale.
 - **Phase 5** owns **F-072** and **F-073**, which must go the same way. Preferred: `alter table public.admin_audit_log add column if not exists admin_email text`, matching the archived migration's intent, fixing read and write together, requiring no application change, and letting both the cast and the `as Promise<...>` assertion delete cleanly. Production application is gated by **D-02** in plan 03-08. Independently of the column question, `logAdminAction` should read its insert result — a silent accountability record is worse than none.
 - **The supabase-js bump remains deferred.** Part of its blocker is retired, not the bump.
