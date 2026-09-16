@@ -16,6 +16,8 @@
 
 import { execFileSync } from "node:child_process";
 
+import { readSupabaseOverride } from "../scripts/seed/envOverride";
+
 export interface LocalStack {
   readonly url: string;
   readonly anonKey: string;
@@ -34,18 +36,16 @@ export function localStackEnv(): LocalStack {
   // never the harness's business. Letting it in is how the CI e2e job pointed
   // itself at "https://placeholder.supabase.co" and was refused by the guard
   // (03-08 evidence/ci-e2e-red.txt, deferred item DI-32).
-  const fromEnv = {
-    url: process.env.SUPABASE_URL,
-    anonKey: process.env.SUPABASE_ANON_KEY,
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  };
-
-  if (fromEnv.url && fromEnv.anonKey && fromEnv.serviceRoleKey) {
-    cached = {
-      url: fromEnv.url,
-      anonKey: fromEnv.anonKey,
-      serviceRoleKey: fromEnv.serviceRoleKey,
-    };
+  //
+  // ALL THREE OR NONE. `readSupabaseOverride` throws on a partial trio rather
+  // than letting it fall through field-by-field into the block below, which is
+  // what used to assemble `{url: <remote>, anonKey: <local>, serviceRoleKey:
+  // <local>}` out of a single stray `export SUPABASE_URL=...` (03-REVIEW.md
+  // WR-04). The throw happens before any client, any target check and any
+  // browser exists.
+  const fromEnv = readSupabaseOverride();
+  if (fromEnv) {
+    cached = fromEnv;
     return cached;
   }
 
@@ -66,10 +66,13 @@ export function localStackEnv(): LocalStack {
   const read = (name: string): string =>
     status.match(new RegExp(`^${name}="?([^"\\n]*)"?$`, "m"))?.[1] ?? "";
 
+  // No `?? fromEnv.x` fallbacks here, deliberately: `fromEnv` is null on this
+  // path by construction, so every one of these three values comes from the one
+  // running local stack. Mixing sources is the defect WR-04 named.
   cached = {
-    url: fromEnv.url ?? read("API_URL"),
-    anonKey: fromEnv.anonKey ?? read("ANON_KEY"),
-    serviceRoleKey: fromEnv.serviceRoleKey ?? read("SERVICE_ROLE_KEY"),
+    url: read("API_URL"),
+    anonKey: read("ANON_KEY"),
+    serviceRoleKey: read("SERVICE_ROLE_KEY"),
   };
   return cached;
 }

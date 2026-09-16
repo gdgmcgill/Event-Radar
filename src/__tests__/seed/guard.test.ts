@@ -100,6 +100,39 @@ describe("assertSeedTargetAllowed", () => {
     ).toThrow(/SEED_I_UNDERSTAND_TARGET/);
   });
 
+  // IN-09. Two branches with dedicated code had no case at all: the fully
+  // acknowledged staging ALLOW — the branch the module header admits has "never
+  // been loaded through" — and the LOCAL_PORT_MIN/MAX window, which exists for
+  // exactly one reason and was asserted by nothing.
+  it("ALLOWS the named staging project once BOTH independent signals are present", () => {
+    const envPath = envFixture(`NEXT_PUBLIC_SUPABASE_URL=${PROD_URL}\n`);
+
+    expect(
+      assertSeedTargetAllowed(STAGING_URL, {
+        envFilePath: envPath,
+        env: {
+          SEED_STAGING_PROJECT_REF: STAGING_REF,
+          SEED_I_UNDERSTAND_TARGET: "staging",
+        },
+      })
+    ).toBe(STAGING_URL);
+  });
+
+  it("REFUSES http://localhost:3000 — loopback, but the dev server, not a database", () => {
+    const envPath = envFixture(`NEXT_PUBLIC_SUPABASE_URL=${PROD_URL}\n`);
+
+    // The host passes; the PORT is what refuses. This is the only assertion
+    // that holds the 54000-54999 window in place, and without it the window
+    // could be widened to "any loopback port" and nothing would go red.
+    expect(() =>
+      assertSeedTargetAllowed("http://localhost:3000", { envFilePath: envPath, env: {} })
+    ).toThrow(/REFUSED/);
+
+    expect(
+      assertSeedTargetAllowed("http://localhost:54321", { envFilePath: envPath, env: {} })
+    ).toBe("http://localhost:54321");
+  });
+
   it("FAILS CLOSED when the deny key cannot be extracted, even with staging fully acknowledged", () => {
     // A custom domain in the env file: the file exists, the pattern misses.
     const envPath = envFixture(
