@@ -74,3 +74,6 @@ AI/models/*.pt
 
 # superpowers brainstorm artifacts
 .superpowers/
+
+# MCP server config carries the production project ref; keep it local
+.mcp.json
