@@ -14,17 +14,17 @@
 
 ## Summary
 
-**70 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
+**73 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
 
 ### By severity
 
 | Severity | Count | Must be fixed by |
 |---|---:|---|
 | Critical | 4 | First Stage 3 slice owning the layer. **None may be Open when Phase 5 starts.** |
-| High | 17 | Before Phase 7 begins, or a dated risk acceptance with a reachability argument. |
-| Medium | 27 | Within Stage 3, in the slice that touches the file. |
+| High | 18 | Before Phase 7 begins, or a dated risk acceptance with a reachability argument. |
+| Medium | 29 | Within Stage 3, in the slice that touches the file. |
 | Low | 22 | Opportunistically. No deadline. |
-| **Total** | **70** | |
+| **Total** | **73** | |
 
 ### By category
 
@@ -32,20 +32,20 @@
 |---|---:|
 | authz | 25 |
 | cache-exposure | 4 |
-| schema-drift | 10 |
+| schema-drift | 11 |
 | config | 12 |
 | dependency | 5 |
-| observability | 6 |
-| validation | 2 |
+| observability | 7 |
+| validation | 3 |
 | performance | 3 |
 | dead-code | 3 |
-| **Total** | **70** |
+| **Total** | **73** |
 
 ### By status
 
 | Status | Count |
 |---|---:|
-| Open | 63 |
+| Open | 66 |
 | Fixed | 7 |
 
 ---
@@ -75,6 +75,7 @@
 | [F-044](#f-044) | High | schema-drift | The rsvps table is created by no migration, yet policies are written for it and code reads it |
 | [F-051](#f-051) | High | dependency | next 16.2.1 carries 25 advisories, two of them critical, reachable on every request, with a fix inside the declared range |
 | [F-052](#f-052) | High | dependency | The vercel CLI is declared in dependencies rather than devDependencies and is imported by nothing |
+| [F-073](#f-073) | High | observability | Every admin audit write is rejected by PostgREST and silently discarded, because logAdminAction inserts admin_email and never inspects the result |
 | [F-003](#f-003) | Medium | authz | The entire middleware authentication ring is environment-variable-conditional and passes traffic through unauthenticated when unbound |
 | [F-013](#f-013) | Medium | authz | The complete social graph (user_follows, club_followers) is bulk-readable by anonymous callers |
 | [F-014](#f-014) | Medium | authz | Review text is anonymously readable alongside its author's user_id |
@@ -102,6 +103,8 @@
 | [F-059](#f-059) | Medium | observability | Twenty-two route files return internal error text to the caller across forty sites |
 | [F-061](#f-061) | Medium | validation | Twenty-two admin handlers answer an anonymous caller with 403 where the contract says 401 |
 | [F-062](#f-062) | Medium | validation | The ban ring answers JSON API calls with a 307 redirect to an HTML page, on ninety-two routes |
+| [F-071](#f-071) | Medium | validation | The friends-of-an-event fallback passes a query builder where an array of ids is required, so the fallback always answers with nobody |
+| [F-072](#f-072) | Medium | schema-drift | Both moderation pages select admin_audit_log.admin_email, a column the live schema does not have, so the Recent Activity panel has always rendered empty |
 | [F-004](#f-004) | Low | authz | The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time |
 | [F-018](#f-018) | Low | authz | 61 of 101 policies carry no TO clause; 39 rely on an auth.uid()-bearing predicate rather than role targeting to exclude anon |
 | [F-019](#f-019) | Low | performance | 68 unwrapped auth.uid() occurrences across 59 policies are re-evaluated per row |
@@ -710,6 +713,36 @@
 **Resolution.** **Closed in Phase 2, by removal rather than relocation.** `vercel` `^32.3.0` was deleted from `dependencies` outright in `5fd6745` (plan 02-04, batch 1) and was **not** moved to `devDependencies`: relocating it would have preserved its entire subtree, `tar` Critical included, in the dev tree in exchange for no capability this repository uses. The decision, the rejected alternative and the three negative checks are recorded in `.planning/phases/02-dependency-and-runtime-stabilization/evidence/vercel-removal-decision.md` (STAB-04). `evidence/audit.after.json` contains no advisory path rooted at `vercel`. This single line retired 7 of the 24 High/Critical rows in the Phase 1 census.
 
 **Related.** [F-051](#f-051), [F-053](#f-053), [F-056](#f-056)
+
+---
+
+### F-073 — Every admin audit write is rejected by PostgREST and silently discarded, because logAdminAction inserts admin_email and never inspects the result
+
+**Severity:** High · **Category:** observability · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** Repudiation with no compensating control. logAdminAction is the only accountability record for moderation - approvals, rejections, bans, unbans, featured-event changes, organizer-request decisions - and every one of its inserts is rejected with PGRST204 because the payload names a column the schema does not have. The function does not read the returned error, and all fourteen callsites wrap it in a try/catch that only fires on a throw, so nothing anywhere surfaces the failure. Not Critical because no unauthorized action is enabled and no data is exposed. High because the platform cannot answer who banned this user for any action ever taken, and F-007 independently recorded that the table holds zero rows in production - this finding is why.
+
+**Affected paths.**
+
+- `src/lib/audit.ts` lines 31-39, the insert; admin_email is line 38
+- `src/app/api/admin/users/[id]/ban/route.ts` lines 220 and 308, two of the fourteen callsites
+- `src/lib/supabase/types.ts` lines the admin_audit_log Insert block - no admin_email
+
+**Evidence.** [`quality/cast-removal-defects.md#why-nobody-noticed`](./quality/cast-removal-defects.md#why-nobody-noticed)
+
+**Reproduction.**
+
+1. Against the local stack rebuilt from the reconciled migrations, insert into admin_audit_log with the exact payload logAdminAction builds: 400 / PGRST204 / "Could not find the 'admin_email' column of 'admin_audit_log' in the schema cache". The identical insert without admin_email is accepted and reaches the admin_user_id foreign-key check.
+2. Read src/lib/audit.ts - `await supabase.from("admin_audit_log").insert({ ... })`. The result is discarded; there is no `const { error } =`, no throw, no log.
+3. Run `grep -rn "adminEmail: user.email" src/app/api/admin/` - fourteen callsites, each wrapping logAdminAction in a try/catch that only fires on a throw. A rejected insert does not throw.
+4. Run `npx jest --ci --selectProjects node --testPathPatterns audit-shape` - the suite pins the payload keys, pins that the types have no such column, and pins that logAdminAction resolves to undefined when the insert is rejected.
+5. Cross-check F-007, which recorded that admin_audit_log holds zero rows in production despite moderation having taken place.
+
+**Recommended fix.** Two changes, in this order. First make the failure loud: have logAdminAction read the insert result and at minimum console.error a rejected write - a silent accountability record is worse than none, and this half is independent of the column question. Second, resolve the column the same way F-072 resolves it: preferred, restore admin_email with a one-line migration, which requires no change to logAdminAction or its fourteen callsites; alternative, drop admin_email from the insert and attribute by admin_user_id. Production application is gated behind D-02 in plan 03-08. F-007's own fix, dropping both anon-reachable INSERT policies, is orthogonal and still required.
+
+**Validation criterion.** An integration test asserting that a genuine moderation action through an /api/admin/ route results in exactly one row in admin_audit_log - the test F-007 already asks for, which cannot pass today. Plus a unit assertion that logAdminAction surfaces a rejected insert rather than resolving silently.
+
+**Related.** [F-007](#f-007), [F-072](#f-072), [F-043](#f-043)
 
 ---
 
@@ -1419,6 +1452,63 @@
 **Validation criterion.** A test asserting a banned user's request to an /api/ route returns 403 with a JSON content type, and that the same user's request to a page still redirects.
 
 **Related.** [F-061](#f-061)
+
+---
+
+### F-071 — The friends-of-an-event fallback passes a query builder where an array of ids is required, so the fallback always answers with nobody
+
+**Severity:** Medium · **Category:** validation · **Status:** Open · **Closes in phase:** 04
+
+**Exposure rationale.** A functional defect on a fallback path, exposure-adjusted DOWN from High because the primary path is healthy: get_friends_going_to_event exists in the reconciled schema, so the fallback is only entered when that RPC errors. Adjusted UP from Low because the failure is silent and indistinguishable from a correct answer - the thrown TypeError is caught by the handler's own outer catch and answered with HTTP 200 and an empty list, so neither the caller, the UI, nor any log records that a query was attempted and failed. Nothing is exposed and nothing is written, which is why this is not High.
+
+**Affected paths.**
+
+- `src/app/api/events/[id]/friends/route.ts` lines 36-53, the .in() call; the offending argument is the builder at line 48
+- `src/__tests__/api/events/friends-defect.test.ts` lines the DEFECT characterization of this path
+
+**Evidence.** [`quality/cast-removal-defects.md#1-f-071--a-query-builder-where-an-array-of-ids-is-required`](./quality/cast-removal-defects.md#1-f-071--a-query-builder-where-an-array-of-ids-is-required)
+
+**Reproduction.**
+
+1. Read src/app/api/events/[id]/friends/route.ts lines 36-53: `.in("user_id", supabase.from("user_follows").select("following_id").eq(...))` passes a PostgrestFilterBuilder, not an array.
+2. Read node_modules/@supabase/postgrest-js/dist/cjs/PostgrestFilterBuilder.js - `in(column, values)` begins `Array.from(new Set(values))`. `new Set()` requires an iterable; a builder is not one, so the call throws TypeError.
+3. Run `npx jest --ci --selectProjects node --testPathPatterns friends-defect` - the suite pins the current answer: HTTP 200 with `{ friends: [], count: 0 }`, and only two from() calls, so the mutual-follow reverse query is never issued.
+4. Remove the `(supabase as any)` cast on line 48 and run `npx tsc --noEmit` - TS2345, PostgrestFilterBuilder is not assignable to `readonly (string | null)[]`. The cast is what made this compile.
+
+**Recommended fix.** Await the sub-query and pass its ids: `const { data: following } = await supabase.from("user_follows").select("following_id").eq("follower_id", user.id);` then `.in("user_id", (following ?? []).map(r => r.following_id))`. Then remove the cast on line 48, which is the last `(supabase as any)` under src/app/api/. Separately decide whether the fallback should exist at all now that get_friends_going_to_event is in the reconciled schema - the comment above it, "manual query if RPC doesn't exist yet", is stale.
+
+**Validation criterion.** src/__tests__/api/events/friends-defect.test.ts goes from asserting `Array.isArray(passed) === false` and `{ friends: [], count: 0 }` to asserting an array of ids and the mutual-follow result. The assertions MOVE rather than being deleted, and `grep -rn "(supabase as any)" src/app/api/` returns 0.
+
+---
+
+### F-072 — Both moderation pages select admin_audit_log.admin_email, a column the live schema does not have, so the Recent Activity panel has always rendered empty
+
+**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** An operator-facing correctness defect, exposure-adjusted UP from Low because the failure mode is a silent empty state rather than an error: the dashboard looks healthy and the activity feed looks quiet, so an administrator reading the panel concludes there has been no moderation activity rather than that the query failed. Adjusted DOWN from High because nothing is exposed, nothing is written, and the same information is in principle reachable from the table itself. The write half of the same root cause is registered separately as F-073 and carries the accountability weight.
+
+**Affected paths.**
+
+- `src/app/moderation/page.tsx` lines 66-83, the Promise.all element; the select string is line 80
+- `src/app/moderation/audit-log/page.tsx` lines 17 and 226, the same column declared and rendered
+- `src/lib/supabase/types.ts` lines the admin_audit_log Row block - seven columns, none named admin_email
+- `supabase/migrations/_archive_pre_baseline/20260308000002_admin_audit_log.sql` lines 4, the archived migration that declared the column and never ran against production
+
+**Evidence.** [`quality/cast-removal-defects.md#2-and-3-f-072--f-073--admin_audit_logadmin_email-does-not-exist`](./quality/cast-removal-defects.md#2-and-3-f-072--f-073--admin_audit_logadmin_email-does-not-exist)
+
+**Reproduction.**
+
+1. Against the local stack rebuilt from the reconciled migrations, which plan 03-04 proved matches production: `select id, admin_email, action, target_type, metadata, created_at from admin_audit_log` through PostgREST returns 400 / 42703 / "column admin_audit_log.admin_email does not exist". The same select without admin_email returns 200 and an empty array.
+2. Read src/lib/supabase/types.ts - the generated admin_audit_log Row has action, admin_user_id, created_at, id, metadata, target_id, target_type. No admin_email.
+3. Read supabase/migrations/_archive_pre_baseline/20260308000002_admin_audit_log.sql line 4 - `admin_email TEXT`. That migration is in the pre-baseline archive and never reached production, which is the F-043 divergence this phase exists to close.
+4. Run `npx jest --ci --selectProjects node --testPathPatterns audit-shape` - the suite pins that the page asks for the column, that the types do not have it, and that the panel renders "No recent activity yet" rather than surfacing the failure.
+5. Remove the `as Promise<{ data: AuditEntry[] | null }>` assertion in src/app/moderation/page.tsx and run `npx tsc --noEmit` - eight TS2339 errors, each naming SelectQueryError<"column 'admin_email' does not exist on 'admin_audit_log'.">. The compiler states the defect verbatim once the cast and the assertion are gone.
+
+**Recommended fix.** Decide the direction first, because this finding and F-073 must go the same way. Preferred: restore the column with a one-line migration, `alter table public.admin_audit_log add column if not exists admin_email text`, which matches the archived migration's intent, requires no application change, and fixes the read and write paths together - then regenerate types and both the client cast and the `as Promise<...>` assertion delete cleanly. Alternative: drop admin_email from the two pages, the AuditEntry interface and the insert in src/lib/audit.ts, and attribute entries by admin_user_id instead. Either way the production side is gated behind D-02 in plan 03-08.
+
+**Validation criterion.** The `expect(row).not.toContain("admin_email")` assertion in src/__tests__/moderation/audit-shape.test.ts flips if the column is restored, or the select assertion flips if the column is dropped from the query, and the "No recent activity yet" assertion is replaced by one rendering a real row. Plus a pgTAP assertion that a select naming every column the two pages request succeeds.
+
+**Related.** [F-007](#f-007), [F-043](#f-043), [F-073](#f-073)
 
 ---
 
