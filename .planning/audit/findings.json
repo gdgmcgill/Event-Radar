@@ -1832,5 +1832,37 @@
       "F-004",
       "F-069"
     ]
+  },
+  {
+    "id": "F-078",
+    "title": "search_events_fuzzy is declared STABLE and sets a GUC in its body, so every fuzzy search errors at run time and silently falls back to ILIKE",
+    "severity": "Medium",
+    "severity_rationale": "A Validated user-facing capability that has never worked, plus two indexes added to serve it that can never be used, plus a swallowed error. Postgres refuses a bare SET statement inside a non-VOLATILE function, so `public.search_events_fuzzy` raises SQLSTATE 0A000 'SET is not allowed in a non-volatile function' on EVERY invocation. src/app/api/events/route.ts:222 catches it, console.errors it and falls through to an ILIKE query, so the feature degrades invisibly and the end-to-end search spec passes on the fallback path. Not High because no authorization boundary is crossed and no data is disclosed - the result set is merely worse than intended. Not Low because it makes two of the indexes Phase 3 added (idx_events_title_trgm, idx_events_description_trgm) permanently unreachable, and because the fallback path it forces is the one that interpolates user input into a PostgREST or() filter.",
+    "category": "dead-code",
+    "affected_paths": [
+      { "path": "supabase/migrations/20260915214553_baseline.sql", "lines": "352-356, LANGUAGE plpgsql STABLE with SET pg_trgm.similarity_threshold in the body" },
+      { "path": "src/app/api/events/route.ts", "lines": "216-227, the RPC call, the swallowed error and the ILIKE fallback" },
+      { "path": "supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql", "lines": "the two trigram GIN indexes added for a function that cannot execute" }
+    ],
+    "evidence": "raw/prod/functions.json",
+    "reproduction": [
+      "Read supabase/migrations/20260915214553_baseline.sql:352-356 - LANGUAGE plpgsql STABLE, and the first statement of the body is `SET pg_trgm.similarity_threshold = 0.1;`.",
+      "Confirm production carries the same shape: node -e \"const f=require('./.planning/audit/raw/prod/functions.json'); const r=f.rows.find(x=>x.name==='search_events_fuzzy'); console.log(r.language, r.provolatile, r.definition.includes('SET pg_trgm'))\" -> plpgsql s true. provolatile 's' is STABLE.",
+      "Against the local stack: SELECT * FROM public.search_events_fuzzy('jazz', 10); -> ERROR 0A000: SET is not allowed in a non-volatile function.",
+      "Run the persona harness and watch the server log: every request the anonymous-browse search spec issues prints `Fuzzy search RPC error: { code: '0A000', message: 'SET is not allowed in a non-volatile function' }` and the spec still passes, because src/app/api/events/route.ts falls back to ILIKE.",
+      "Read supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql section 2 - the two trigram GIN indexes were added specifically for this function's similarity() and % operators."
+    ],
+    "recommended_fix": "In a new migration, either declare the function VOLATILE (the honest reading: it mutates session state), or - better - remove the SET from the body and use the three-argument `similarity()` threshold comparison explicitly, or attach the setting to the function with `SET pg_trgm.similarity_threshold = 0.1` as a FUNCTION ATTRIBUTE rather than a body statement, which is permitted on a STABLE function and is scoped to the call. Then remove the ILIKE fallback's silent swallow, or keep the fallback and make it loud. Separately, and independently of this fix: src/app/api/events/route.ts:224 interpolates the raw `search` string into a PostgREST `or()` filter, which is now known to be the only path search ever takes - a comma or a closing parenthesis in the search term rewrites the filter. That belongs with F-058/F-059's validation work.",
+    "validation_criterion": "A pgTAP case asserting that SELECT * FROM public.search_events_fuzzy('<term>', 10) executes without raising and returns the seeded event whose title contains the term, plus an EXPLAIN assertion (with enable_seqscan off, per the 010 file's convention) that the plan names idx_events_title_trgm - so 'the function runs' and 'the indexes it was written for are usable' are two separate reds.",
+    "status": "Open",
+    "risk_acceptance": null,
+    "closes_in_phase": "05",
+    "resolution": "**Found during the Phase 3 code-review fix pass (03-REVIEW-FIX.md), not by 03-REVIEW.md.** It surfaced in the Playwright server log while verifying unrelated fixes: the harness passes, and the reason it passes is the fallback. Registered rather than fixed because changing a function's volatility or its body is production-codified behaviour outside a review-fix pass's remit, and because the right fix is entangled with the fallback's error handling and with the `or()` interpolation on the same lines. Recorded here rather than only in 03-REVIEW-FIX.md so it cannot go quiet. Owner: Phase 5.",
+    "related": [
+      "F-015",
+      "F-020",
+      "F-058",
+      "F-059"
+    ]
   }
 ]

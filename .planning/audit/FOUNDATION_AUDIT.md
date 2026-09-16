@@ -14,7 +14,7 @@
 
 ## Summary
 
-**77 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
+**78 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
 
 ### By severity
 
@@ -22,9 +22,9 @@
 |---|---:|---|
 | Critical | 4 | First Stage 3 slice owning the layer. **None may be Open when Phase 5 starts.** |
 | High | 20 | Before Phase 7 begins, or a dated risk acceptance with a reachability argument. |
-| Medium | 31 | Within Stage 3, in the slice that touches the file. |
+| Medium | 32 | Within Stage 3, in the slice that touches the file. |
 | Low | 22 | Opportunistically. No deadline. |
-| **Total** | **77** | |
+| **Total** | **78** | |
 
 ### By category
 
@@ -38,14 +38,14 @@
 | observability | 7 |
 | validation | 4 |
 | performance | 3 |
-| dead-code | 3 |
-| **Total** | **77** |
+| dead-code | 4 |
+| **Total** | **78** |
 
 ### By status
 
 | Status | Count |
 |---|---:|
-| Open | 65 |
+| Open | 66 |
 | Fixed | 12 |
 
 ---
@@ -109,6 +109,7 @@
 | [F-072](#f-072) | Medium | schema-drift | Both moderation pages select admin_audit_log.admin_email, a column the live schema does not have, so the Recent Activity panel has always rendered empty |
 | [F-076](#f-076) | Medium | authz | Five of the seven SECURITY DEFINER functions in the baseline have a mutable search_path |
 | [F-077](#f-077) | Medium | validation | The auth callback's next parameter reaches NextResponse.redirect unvalidated, and the new PRESERVE suite freezes that behaviour into the Phase 5-6 contract |
+| [F-078](#f-078) | Medium | dead-code | search_events_fuzzy is declared STABLE and sets a GUC in its body, so every fuzzy search errors at run time and silently falls back to ILIKE |
 | [F-004](#f-004) | Low | authz | The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time |
 | [F-018](#f-018) | Low | authz | 61 of 101 policies carry no TO clause; 39 rely on an auth.uid()-bearing predicate rather than role targeting to exclude anon |
 | [F-019](#f-019) | Low | performance | 68 unwrapped auth.uid() occurrences across 59 policies are re-evaluated per row |
@@ -1655,6 +1656,38 @@
 **Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md WR-11) and registered rather than fixed.** The defect is inherited, but Phase 3 is where it was characterized and therefore where it became a frozen expectation - which is the part this record exists to un-freeze. Not fixed in Phase 3's review-fix pass because adding the guard is an application behaviour change on the authentication path, and the PRESERVE suite that pins the current behaviour is itself a Phase 3 deliverable: changing both in a review-fix pass would edit the safety net and the thing it measures in the same commit. Owner: Phase 5. Cross-referenced from the callback characterization note so a reader of that file learns the freeze is known and scheduled.
 
 **Related.** [F-003](#f-003), [F-004](#f-004), [F-069](#f-069)
+
+---
+
+### F-078 — search_events_fuzzy is declared STABLE and sets a GUC in its body, so every fuzzy search errors at run time and silently falls back to ILIKE
+
+**Severity:** Medium · **Category:** dead-code · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** A Validated user-facing capability that has never worked, plus two indexes added to serve it that can never be used, plus a swallowed error. Postgres refuses a bare SET statement inside a non-VOLATILE function, so `public.search_events_fuzzy` raises SQLSTATE 0A000 'SET is not allowed in a non-volatile function' on EVERY invocation. src/app/api/events/route.ts:222 catches it, console.errors it and falls through to an ILIKE query, so the feature degrades invisibly and the end-to-end search spec passes on the fallback path. Not High because no authorization boundary is crossed and no data is disclosed - the result set is merely worse than intended. Not Low because it makes two of the indexes Phase 3 added (idx_events_title_trgm, idx_events_description_trgm) permanently unreachable, and because the fallback path it forces is the one that interpolates user input into a PostgREST or() filter.
+
+**Affected paths.**
+
+- `supabase/migrations/20260915214553_baseline.sql` lines 352-356, LANGUAGE plpgsql STABLE with SET pg_trgm.similarity_threshold in the body
+- `src/app/api/events/route.ts` lines 216-227, the RPC call, the swallowed error and the ILIKE fallback
+- `supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql` lines the two trigram GIN indexes added for a function that cannot execute
+
+**Evidence.** [`raw/prod/functions.json`](./raw/prod/functions.json)
+
+**Reproduction.**
+
+1. Read supabase/migrations/20260915214553_baseline.sql:352-356 - LANGUAGE plpgsql STABLE, and the first statement of the body is `SET pg_trgm.similarity_threshold = 0.1;`.
+2. Confirm production carries the same shape: node -e "const f=require('./.planning/audit/raw/prod/functions.json'); const r=f.rows.find(x=>x.name==='search_events_fuzzy'); console.log(r.language, r.provolatile, r.definition.includes('SET pg_trgm'))" -> plpgsql s true. provolatile 's' is STABLE.
+3. Against the local stack: SELECT * FROM public.search_events_fuzzy('jazz', 10); -> ERROR 0A000: SET is not allowed in a non-volatile function.
+4. Run the persona harness and watch the server log: every request the anonymous-browse search spec issues prints `Fuzzy search RPC error: { code: '0A000', message: 'SET is not allowed in a non-volatile function' }` and the spec still passes, because src/app/api/events/route.ts falls back to ILIKE.
+5. Read supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql section 2 - the two trigram GIN indexes were added specifically for this function's similarity() and % operators.
+
+**Recommended fix.** In a new migration, either declare the function VOLATILE (the honest reading: it mutates session state), or - better - remove the SET from the body and use the three-argument `similarity()` threshold comparison explicitly, or attach the setting to the function with `SET pg_trgm.similarity_threshold = 0.1` as a FUNCTION ATTRIBUTE rather than a body statement, which is permitted on a STABLE function and is scoped to the call. Then remove the ILIKE fallback's silent swallow, or keep the fallback and make it loud. Separately, and independently of this fix: src/app/api/events/route.ts:224 interpolates the raw `search` string into a PostgREST `or()` filter, which is now known to be the only path search ever takes - a comma or a closing parenthesis in the search term rewrites the filter. That belongs with F-058/F-059's validation work.
+
+**Validation criterion.** A pgTAP case asserting that SELECT * FROM public.search_events_fuzzy('<term>', 10) executes without raising and returns the seeded event whose title contains the term, plus an EXPLAIN assertion (with enable_seqscan off, per the 010 file's convention) that the plan names idx_events_title_trgm - so 'the function runs' and 'the indexes it was written for are usable' are two separate reds.
+
+**Resolution.** **Found during the Phase 3 code-review fix pass (03-REVIEW-FIX.md), not by 03-REVIEW.md.** It surfaced in the Playwright server log while verifying unrelated fixes: the harness passes, and the reason it passes is the fallback. Registered rather than fixed because changing a function's volatility or its body is production-codified behaviour outside a review-fix pass's remit, and because the right fix is entangled with the fallback's error handling and with the `or()` interpolation on the same lines. Recorded here rather than only in 03-REVIEW-FIX.md so it cannot go quiet. Owner: Phase 5.
+
+**Related.** [F-015](#f-015), [F-020](#f-020), [F-058](#f-058), [F-059](#f-059)
 
 ---
 
