@@ -160,7 +160,7 @@ Plans:
 
 **Wave 4** *(blocked on 03-05)*
 
-- [x] 03-06-PLAN.md — Generated types and cast retirement: regenerate from the reconciled schema, a CI drift gate proven red-then-green, 47 casts to zero, two latent defects characterized and registered
+- [x] 03-06-PLAN.md — Generated types and cast retirement: regenerated from the reconciled schema, a CI drift gate proven red-then-green, **45 of 47 casts removed (D-22, not zero)**, three latent defects characterized and registered. REFAC-04 is PARTIAL: the cast clause closes in Phase 4 (F-071) and Phase 5 (F-072/F-073)
 
 **Wave 5** *(blocked on 03-05 and 03-06)*
 

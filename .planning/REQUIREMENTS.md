@@ -202,7 +202,7 @@ No phase crosses a stage boundary.
 | REFAC-01 | Phase 3 | Complete |
 | REFAC-02 | Phase 3 | Complete |
 | REFAC-03 | Phase 3 | Complete |
-| REFAC-04 | Phase 3 | Pending |
+| REFAC-04 | Phase 3 | Partial (03-06) — generated-types and CI drift-gate clauses met; cast clause 45/47 by D-22, closing in Phase 4 (F-071) and Phase 5 (F-072/F-073) |
 | REFAC-05 | Phase 3 | Pending |
 | REFAC-06 | Phase 3 | Pending |
 | REFAC-07 | Phase 3 | Pending |
