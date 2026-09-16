@@ -543,6 +543,9 @@ developer's shell does not export that variable. **Consequence stated plainly: t
 never been observed executing outside one machine.** The harness itself is unaffected — 27/27 locally,
 no spec is wrong. **Owner: Phase 4**, the first phase that needs it green as a regression net.
 
+> **CLOSED 2026-09-16 (orchestrator, after the close-out plan).** The recommended Option B was applied in `855da7f` (`e2e/env.ts` no longer consults ambient `NEXT_PUBLIC_*` values; only the explicit `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` trio can override `supabase status`), proven locally red→green with the CI placeholder exported (REFUSED before; 27 tests listed after), pushed, and **observed green on a real runner: GitHub Actions run `35051675626` on `b9f9bcb` — all three jobs (`ci`, `types`, `e2e`) `success`**, checked live by the phase verifier (`03-VERIFICATION.md`). REFAC-06's harness has now been observed outside one machine. `.mcp.json` was also gitignored in `b9f9bcb`.
+
+
 **9.8 — The blanket shared-cache directive, still open at its original severity (`DI-26`).** **`F-025`
 remains `Open` at `Critical`.** Phase 2 closed the cache-poisoning **advisories** by version; neither
 Phase 2 nor Phase 3 touched the **precondition**, which Phase 1 proved live by measurement: eight

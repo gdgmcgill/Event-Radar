@@ -447,6 +447,9 @@ something to shrink toward and the replacement's shape is known.
 
 ## DI-32 — The CI `e2e` job is RED on a real runner; the harness has never been observed outside a laptop
 
+> **CLOSED 2026-09-16 (orchestrator, after the close-out plan).** The recommended Option B was applied in `855da7f` (`e2e/env.ts` no longer consults ambient `NEXT_PUBLIC_*` values; only the explicit `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` trio can override `supabase status`), proven locally red→green with the CI placeholder exported (REFUSED before; 27 tests listed after), pushed, and **observed green on a real runner: GitHub Actions run `35051675626` on `b9f9bcb` — all three jobs (`ci`, `types`, `e2e`) `success`**, checked live by the phase verifier (`03-VERIFICATION.md`). REFAC-06's harness has now been observed outside one machine. `.mcp.json` was also gitignored in `b9f9bcb`.
+
+
 **Found by:** plan 03-08, while reconciling the readiness note's claims against observed runs.
 **Full diagnosis and reproduction:** `evidence/ci-e2e-red.txt`.
 
