@@ -60,13 +60,13 @@ Constraint for every REFAC requirement: characterize current behavior with a tes
 
 **Foundations (before any vertical slice)**
 
-- [ ] **REFAC-01**: Migration history is reconciled with production (baseline + `migration repair`, never renaming existing files) so `supabase db reset` from the migrations folder produces a schema that diffs clean against production
+- [x] **REFAC-01**: Migration history is reconciled with production (baseline + `migration repair`, never renaming existing files) so `supabase db reset` from the migrations folder produces a schema that diffs clean against production
 - [x] **REFAC-02**: Missing FK indexes and RLS policy gaps identified in the audit are fixed via new migrations, each with a pgTAP allow/deny test
 - [x] **REFAC-03**: The `compute_user_scores` pg_cron schedule is codified as an idempotent migration so local and staging match production
-- [ ] **REFAC-04**: Supabase types are generated from the reconciled schema via `supabase gen types`, a CI step fails on type drift, and `(supabase as any)` casts in `src/` are reduced to zero
+- [x] **REFAC-04**: Supabase types are generated from the reconciled schema via `supabase gen types`, a CI step fails on type drift, and `(supabase as any)` casts in `src/` are reduced to zero
 - [x] **REFAC-05**: A `src/server/` seam kit exists (request context computed once per request, http/error helpers, `requireUser`/`requireRole`/`requireClubRole` authz guards, `src/server/db/elevated/` as the only door to the service-role client) applied to zero routes yet, with an ESLint import-boundary rule forbidding `src/app/**` from importing the service-role client directly
 - [x] **REFAC-06**: A Playwright persona harness exists with a setup project producing one storage state per persona and at least six happy-path specs covering Validated workflows, runnable against local Supabase
-- [ ] **REFAC-07**: A minimal deterministic functional seed exists (fixed UUIDs, fixed timestamps relative to a pinned now, fixed PRNG seed) covering every user role, ban state, club status, and event status, loadable into local and staging only with a hard guard refusing any other Supabase URL
+- [x] **REFAC-07**: A minimal deterministic functional seed exists (fixed UUIDs, fixed timestamps relative to a pinned now, fixed PRNG seed) covering every user role, ban state, club status, and event status, loadable into local and staging only with a hard guard refusing any other Supabase URL
 - [x] **REFAC-08**: The auth callback route has characterization tests before it is modified (OAuth exchange, McGill enforcement, user upsert, admin auto-assignment, onboarding routing)
 
 **Vertical slices (in this order)**

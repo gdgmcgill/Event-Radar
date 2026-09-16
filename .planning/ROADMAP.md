@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Read-Only Foundation Audit** - Inventory and assess everything with evidence; change nothing (completed 2026-09-14)
 - [x] **Phase 2: Dependency and Runtime Stabilization** - Pin, patch, and make the tree reproducible; make the test suite gate changes (completed 2026-09-15)
-- [ ] **Phase 3: Refactor Foundations — Schema Truth and the Seam Kit** - Reconcile schema, generate types, build the server seam, the persona harness, and the seed
+- [x] **Phase 3: Refactor Foundations — Schema Truth and the Seam Kit** - Reconcile schema, generate types, build the server seam, the persona harness, and the seed (completed 2026-09-16)
 - [ ] **Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path** - Prove the seam on the two highest-traffic workflows and settle the event data shape
 - [ ] **Phase 5: Slices 3–5 — Auth, Club Authorization, Admin Containment** - One fails-closed authorization ring; cross-tenant and escalation paths denied twice
 - [ ] **Phase 6: Slices 6–7 — Async Edge, Contracts, Caching, Observability** - Credential the edge, validate every input, kill the shared cache on personalized routes, make failures visible
@@ -271,7 +271,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 |-------|----------------|--------|-----------|
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
-| 3. Refactor Foundations — Schema Truth and the Seam Kit | 7/8 | In Progress|  |
+| 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |

@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 3
-current_phase_name: Refactor Foundations — Schema Truth and the Seam Kit
-status: awaiting_verification
-stopped_at: "03-08 complete — Phase 3 is 8/8 plans done and AWAITING VERIFICATION. The blocking checkpoint is CLEARED: the production migration-history repair was resolved to `defer-to-phase-8` because the phase owner was not present and the plan's own rule makes an undecided checkpoint the deferral, recorded in writing (evidence/repair-outcome.md). PRODUCTION IS PROVABLY UNTOUCHED — 45 rows, baseline 20260915214553 absent, version-list sha256 byte-identical to the 03-01 census across eight plans; the 45 historical versions were never marked reverted. CONSEQUENCE, and it is the most misreadable fact in the phase: `supabase db push` MUST NOT be run against production until Phase 8 or an explicit owner decision, and the two post-baseline migrations stay unapplied there — so club-invitation acceptance (F-016), the six indexes and both trigram GIN indexes are FIXED IN THE REPOSITORY AND ABSENT FROM PRODUCTION. evidence/FOUNDATION-READINESS.md certifies the phase: all five success criteria MET clause by clause (4+3+5+4+1 = 17 clauses), verified mechanically at 107 distinct cited paths with 0 missing. Eight requirement states, THREE HELD BACK AS PARTIALS with the clause named — REFAC-01 (its own text says `migration repair`, deferred; the reconciliation itself is complete and evidenced), REFAC-04 (casts 45/47 by DEC-22), REFAC-07 (the "and staging" clause; no staging project exists). None of those three clauses is a clause of a success criterion. evidence/deferred-items.md consolidates every deferral with an owning phase and resolves the D- collision by prefix: DI- deferred items, DEC- decisions. Register: five findings closed (F-043, F-044, F-047, F-048, F-049), two reassigned (F-045 -> 08, F-066 -> 04), and FOUR LEFT OPEN DESPITE THE FIX SHIPPING (F-015, F-016, F-020, F-046) because the criterion did not close even though the change did. TWO THINGS THIS PLAN FOUND RATHER THAN INHERITED: DI-19's ratchet false positive FIXED as a census-only change with the allow-list byte-identical and a red->green proof plus both controls; and DI-32 — THE CI e2e JOB IS RED ON A REAL RUNNER (run 35049602081), diagnosed to the line and reproduced, so the persona harness has never been observed executing outside one machine. The `ci` and `types` jobs ARE green on that runner. Gates: lint 0 errors/19 warnings, tsc zero bytes, 348 passed/5 skipped, check-baseline 22/0, ratchet delta=0."
-last_updated: "2026-09-16T04:05:00.000Z"
+current_phase: 4
+current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
+status: planning
+stopped_at: "03-08 COMPLETE — Phase 3 is 8 of 8 plans done and awaiting verification. The blocking checkpoint is cleared: the production migration-history repair resolved to `defer-to-phase-8`, recorded in writing because the phase owner was not present and the plan's own rule makes an undecided checkpoint the deferral. Production is provably untouched. `evidence/FOUNDATION-READINESS.md` certifies all five success criteria clause by clause at 107 distinct cited paths with 0 missing; five requirements Complete and three PARTIAL with the clause named. `evidence/deferred-items.md` consolidates every deferral with an owning phase and resolves the `D-` collision by prefix (DI- items, DEC- decisions). Register: five findings closed, two reassigned, four deliberately left Open because the criterion did not close even though the fix shipped. Two findings this plan made rather than inherited: DI-19's ratchet false positive fixed with the allow-list byte-identical, and DI-32 — the CI `e2e` job is red on a real runner."
+last_updated: "2026-09-16T04:18:37.453Z"
 last_activity: 2026-09-16
-last_activity_desc: "Phase 3 closed out: the production repair deferred to Phase 8 in writing with production provably unwritten, the Stage 3 readiness note certified from 107 committed citations, every deferral given an owning phase, and a red CI e2e job found and diagnosed"
+last_activity_desc: Phase 3 complete, transitioned to Phase 4
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 32
   completed_plans: 32
-  percent: 31
+  percent: 38
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 ## Current Position
 
-Phase: 3 (Refactor Foundations — Schema Truth and the Seam Kit) — ALL 8 PLANS COMPLETE, AWAITING VERIFICATION
-Plan: 8 of 8 — complete
+Phase: 4 — Slices 1–2 — Saved Events/RSVP and the Event Read Path
+Plan: Not started
 Status: Phase 3 is done and ready for `/gsd-verify-work`. The checkpoint is cleared: the production migration-history repair was **deferred to Phase 8** in writing, and production is provably untouched (45 rows, baseline absent, sha256 identical to the 03-01 census). All five success criteria are MET clause by clause, evidenced at `.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/FOUNDATION-READINESS.md` with 107 distinct cited paths and 0 missing. Five requirements Complete (REFAC-02/03/05/06/08); three PARTIAL with the clause named (REFAC-01 `migration repair`, REFAC-04 casts 45/47, REFAC-07 "and staging").
-Last activity: 2026-09-16 — 03-08 complete; Phase 3 closed out with every deferral owned and two new findings (DI-19 fixed, DI-32 the red CI e2e job)
+Last activity: 2026-09-16 — Phase 3 complete, transitioned to Phase 4
 
 Progress: [███░░░░░░░] 31%
 
@@ -39,7 +39,7 @@ Progress: [███░░░░░░░] 31%
 
 **Velocity:**
 
-- Total plans completed: 17
+- Total plans completed: 25
 - Average duration: —
 - Total execution time: —
 
@@ -48,6 +48,7 @@ Progress: [███░░░░░░░] 31%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 13 | - | - |
+| 3 | 8 | - | - |
 
 **Recent Trend:**
 
