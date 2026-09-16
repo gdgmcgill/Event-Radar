@@ -53,6 +53,38 @@ const ALLOWLIST = join(REPO_ROOT, "eslint.elevated-allowlist.mjs");
  */
 const MARKERS = ["supabase/service", "@supabase/supabase-js"];
 
+/**
+ * TEST FILES ARE EXCLUDED FROM THE CENSUS, AND THIS IS NOT A LOOSENING.
+ *
+ * The rule this ratchet exists to support is core `no-restricted-imports`,
+ * which inspects ImportDeclaration and ExportNamedDeclaration nodes only. A
+ * test file that names a module inside a `jest.mock()` CALL — a function
+ * argument, not an import specifier — is correctly ignored by that rule.
+ *
+ *     jest.mock("@supabase/supabase-js", () => ({ … }));   // not an import
+ *     jest.mock("@/lib/supabase/service", () => ({ … }));  // not an import
+ *
+ * The census below is `text.includes(marker)`, which cannot tell the two apart,
+ * so before this filter it counted `src/app/auth/callback/route.test.ts` as a
+ * live callsite that the allow-list did not hold — `committed=24 live=25
+ * delta=1`, exit 1, with `npm run lint` green at 0 errors beside it. Two
+ * controls disagreeing about what counts as a callsite is the defect; this
+ * filter makes the census read what ESLint reads.
+ *
+ * Registered as deferred item D-19 by plan 03-06 and closed by plan 03-08 as a
+ * census-only change. The committed allow-list was NOT regenerated — it is
+ * byte-identical across the fix, asserted in
+ * .planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/ratchet-d19-fix.txt
+ *
+ * DO NOT "fix" this back. A test file cannot reach the service-role credential
+ * at runtime in production; it can only mock it. The security property the
+ * ratchet defends — that no SHIPPED file under src/app/** newly reaches the
+ * RLS-bypassing client — is unaffected, because a `.test.ts` file is not
+ * shipped. If a test file ever imports the service client for real, ESLint's
+ * boundary rule catches it, which is the control that actually fails a build.
+ */
+const TEST_FILE = /\.test\.[cm]?[jt]sx?$/;
+
 /** Every file under a directory, recursively, in a stable order. */
 function walk(dir) {
   const found = [];
@@ -80,6 +112,7 @@ function escapeGlob(p) {
 /** Re-derive the live census, escaped, sorted — comparable to the committed list. */
 function liveCensus() {
   return walk(APP_DIR)
+    .filter((file) => !TEST_FILE.test(file))
     .filter((file) => {
       const text = readFileSync(file, "utf8");
       return MARKERS.some((marker) => text.includes(marker));

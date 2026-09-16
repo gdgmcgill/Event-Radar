@@ -1,0 +1,88 @@
+# D-19 — the elevated-callsite ratchet false positive, fixed as a census-only change
+#
+# Plan: 03-08 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-16
+#
+# The fix is to scripts/check-elevated-ratchet.mjs ONLY. The committed allow-list
+# eslint.elevated-allowlist.mjs is NOT regenerated and is asserted byte-identical
+# below, because the script's own header forbids regenerating it to make the check
+# pass and that prohibition is the whole value of a shrink-only ratchet.
+
+=== 1. ALLOW-LIST SHA-256, BEFORE ===
+3df51af2db88909e5092ed7cf2d760fd5e20dec8f639b3b94d7936bfb5214ca6  eslint.elevated-allowlist.mjs
+
+=== 2. RED — the check at HEAD (2f0c060), before the fix ===
+$ node scripts/check-elevated-ratchet.mjs
+committed=24 live=25 delta=1
+
+FAIL: 1 callsite(s) are NOT in the committed allow-list:
+  + src/app/auth/callback/route.test.ts
+
+A new file under src/app/** reaches the service-role client.
+Route it through src/server/db/elevated/ and add a row to
+src/server/db/elevated/REGISTRY.md. The allow-list may only shrink,
+so do NOT regenerate it to make this pass.
+RATCHET_EXIT=1
+
+=== 3. The disagreement this fixes ===
+$ grep -n 'jest.mock' src/app/auth/callback/route.test.ts
+100:jest.mock("@supabase/ssr", () => ({
+112:jest.mock("@supabase/supabase-js", () => ({
+118:jest.mock("@/lib/supabase/service", () => ({
+
+# Those are function ARGUMENTS, not import specifiers. ESLint's core
+# no-restricted-imports — the rule this ratchet exists to support — inspects
+# ImportDeclaration and ExportNamedDeclaration nodes only, so it does not flag
+# the file. That is why npm run lint is green at 0 errors while the ratchet is red:
+# the two controls disagreed about what counts as a callsite.
+
+$ npm run lint  (error count only)
+✖ 19 problems (0 errors, 19 warnings)
+
+=== 4. The fix — census-only, in liveCensus() ===
+$ git diff --stat -- scripts/check-elevated-ratchet.mjs
+ scripts/check-elevated-ratchet.mjs | 33 +++++++++++++++++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+# Files changed by this fix, in full:
+ M scripts/check-elevated-ratchet.mjs
+# (eslint.elevated-allowlist.mjs is absent from that list — it was not regenerated.)
+
+=== 5. GREEN — the check after the fix ===
+$ node scripts/check-elevated-ratchet.mjs
+committed=24 live=24 delta=0
+PASS: the live census is a subset of the committed allow-list
+RATCHET_EXIT=0
+
+=== 6. ALLOW-LIST SHA-256, AFTER — must equal section 1 ===
+3df51af2db88909e5092ed7cf2d760fd5e20dec8f639b3b94d7936bfb5214ca6  eslint.elevated-allowlist.mjs
+
+=== 7. REGENERATION IS STILL BYTE-IDENTICAL ===
+# --write is run into a COPY of the tree's file and diffed, then the original restored,
+# so the shrink-only prohibition is honoured while still proving the generator agrees.
+wrote 24 entries to eslint.elevated-allowlist.mjs
+$ diff /tmp/allowlist.orig.mjs eslint.elevated-allowlist.mjs
+IDENTICAL (diff exit 0, zero bytes of output)
+3df51af2db88909e5092ed7cf2d760fd5e20dec8f639b3b94d7936bfb5214ca6  eslint.elevated-allowlist.mjs
+
+=== 8. THE RATCHET STILL BITES — a violating NON-TEST fixture is still caught ===
+$ node scripts/check-elevated-ratchet.mjs   # with src/app/api/__d19_fixture__/route.ts present
+committed=24 live=25 delta=1
+
+FAIL: 1 callsite(s) are NOT in the committed allow-list:
+  + src/app/api/__d19_fixture__/route.ts
+
+A new file under src/app/** reaches the service-role client.
+Route it through src/server/db/elevated/ and add a row to
+src/server/db/elevated/REGISTRY.md. The allow-list may only shrink,
+so do NOT regenerate it to make this pass.
+RATCHET_EXIT=1
+
+=== 9. AND A VIOLATING TEST FIXTURE IS CORRECTLY IGNORED (the negative control) ===
+$ node scripts/check-elevated-ratchet.mjs   # with a jest.mock-only .test.ts present
+committed=24 live=24 delta=0
+PASS: the live census is a subset of the committed allow-list
+RATCHET_EXIT=0
+
+=== 10. THE TREE IS RESTORED ===
+$ git status --porcelain src/ eslint.elevated-allowlist.mjs
+# (empty above = both fixtures removed and the allow-list untouched)
