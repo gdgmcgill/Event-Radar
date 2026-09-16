@@ -89,3 +89,76 @@ jobs:
 
       - name: RLS and schema tests
         run: supabase test db --local
+
+  # REFAC-06 / plan 03-07. A THIRD sibling, never a step inside `ci`: this job
+  # starts Docker, resets a database, loads a seed and downloads a browser, and
+  # the fast job must not wait on any of that to report a lint failure. The same
+  # reasoning plan 03-06 gave for the `types` job applies here unchanged, and
+  # neither of those two jobs is touched by this one.
+  #
+  # ORDER IS LOAD-BEARING. `supabase db reset` wipes the database, so the seed is
+  # loaded AFTER it and never before. The seed cannot live in `supabase/seed.sql`
+  # — that file executes INSIDE the reset, before any process can call the admin
+  # API to create the persona accounts the public rows reference — which is why
+  # `supabase/seed.sql` does not exist and must stay that way.
+  #
+  # `supabase test db` runs here too, and it is a different run from the one in
+  # the `types` job: there the database is unseeded and 040-seed-coverage.test.sql
+  # emits 21 TAP SKIPs with their reason; here the seed is loaded and the same 21
+  # assertions execute for real.
+  #
+  # The application is served from a PRODUCTION BUILD. Under `next dev` the pages
+  # never finish hydrating in Playwright's Chromium — the Turbopack HMR handshake
+  # fails and the auth store never initializes — so `playwright.config.ts` runs
+  # `npm run build && npm run start`. NEXT_PUBLIC_SUPABASE_URL is taken from the
+  # local stack and passed explicitly; the config hands it to the seed loader's
+  # own guard, which refuses any non-local target.
+  #
+  # No `continue-on-error` anywhere. A red end-to-end suite is a red build.
+  e2e:
+    name: Persona harness — end-to-end specs against the seeded local stack
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.115.0
+
+      - name: Start local Supabase stack
+        run: supabase start
+
+      - name: Rebuild the local database from the migrations
+        run: supabase db reset --local
+
+      - name: Load the deterministic seed
+        run: npx tsx scripts/seed/load.ts
+
+      - name: Seed coverage and RLS assertions
+        run: supabase test db --local
+
+      - name: Install the browser engine
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the persona harness
+        run: npx playwright test
+
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

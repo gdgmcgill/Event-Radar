@@ -149,3 +149,40 @@ the real header.
 
 **Owner:** unassigned, recommended for the Stage 3 slice that owns headers and routing. Raise it at
 phase planning; it blocks nothing today.
+
+---
+
+## D-22 — `/moderation` deep-links to `?status=pending`, and the events queue ignores it
+
+**Found by:** plan 03-07, writing `e2e/specs/admin-moderation-queue.spec.ts`.
+
+**The measurement.** `src/app/moderation/page.tsx:275` renders the queue link as
+
+```tsx
+href="/moderation/events?status=pending"
+```
+
+and `src/app/moderation/events/page.tsx:58` opens with
+
+```ts
+const [statusFilter, setStatusFilter] = useState("all");
+```
+
+Nothing reads `searchParams`. So an admin who clicks "Pending Review" on the dashboard lands on a
+queue showing **every** event at all five statuses, with the status `<select>` reading
+"All Statuses". Confirmed against the seeded data: the page listed all five seeded events
+(approved, approved, pending, rejected, suspended) at a URL that asks for pending.
+
+**Severity: low.** Nothing is exposed that the admin may not see, and the `<select>` works — it is
+one extra interaction, and a dashboard link whose intent is silently dropped.
+
+**Why not fixed here.** `src/app/moderation/events/page.tsx` is not in this plan's `files_modified`,
+and this plan's acceptance criteria assert `git status --porcelain src/` is empty. Fixing it is a
+one-line `useState(searchParams.get("status") ?? "all")`, but it belongs to a plan that owns the
+file.
+
+**What the spec does instead.** It drives the control the user actually has — selects "Pending" from
+the `<select>` and asserts the queue narrows — rather than asserting the deep link, which would
+freeze the current behaviour in a test and make the eventual fix look like a regression.
+
+**Owner:** unassigned. Recommended for the Stage 3 slice that owns the moderation surfaces.

@@ -1,0 +1,105 @@
+# playwright-run.txt — the persona harness, run from a clean database
+# Plan: 03-07 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-16
+#
+# The sequence below is exactly the CI job's, in the same order: rebuild the
+# database from the migrations, load the seed AFTER the reset, assert the
+# seed's coverage at the database tier, then run the harness. The storage
+# state directory and the report directory were deleted first, so the ten
+# sessions below were produced by this run and not inherited from an earlier
+# one.
+#
+# The application is served by playwright.config.ts's webServer as a
+# PRODUCTION BUILD (npm run build && npm run start) bound to the LOCAL stack.
+# See the config for why the dev server is not used.
+
+$ rm -rf playwright/.auth playwright-report test-results
+$ supabase db reset --local
+exit=0
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+$ supabase test db --local
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .... ok
+All tests successful.
+Files=5, Tests=68,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.01 cusr  0.00 csys =  0.02 CPU)
+Result: PASS
+exit=0
+
+$ npx playwright test --list
+exit=0
+Listing tests:
+  [setup] › auth.setup.ts:59:8 › authenticate as onboarded_student
+  [setup] › auth.setup.ts:59:8 › authenticate as mid_onboarding_student
+  [setup] › auth.setup.ts:59:8 › authenticate as club_member
+  [setup] › auth.setup.ts:59:8 › authenticate as club_owner
+  [setup] › auth.setup.ts:59:8 › authenticate as multi_club_organizer
+  [setup] › auth.setup.ts:59:8 › authenticate as cross_club_attacker
+  [setup] › auth.setup.ts:59:8 › authenticate as admin
+  [setup] › auth.setup.ts:59:8 › authenticate as banned_permanent
+  [setup] › auth.setup.ts:59:8 › authenticate as suspended_active
+  [setup] › auth.setup.ts:59:8 › authenticate as suspension_expired
+  [chromium] › specs/admin-login-cookie-equivalence.spec.ts:40:5 › the cookie shim emits the same cookie names the real sign-in page does
+  [chromium] › specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club
+  [chromium] › specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it
+  [chromium] › specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue
+  [chromium] › specs/anonymous-browse.spec.ts:31:5 › an anonymous visitor browses the event feed and sees only approved events
+  [chromium] › specs/anonymous-browse.spec.ts:50:5 › an anonymous visitor searches, and the search narrows the feed
+  [chromium] › specs/anonymous-browse.spec.ts:63:5 › an anonymous visitor browses public club content
+  [chromium] › specs/banned-redirect.spec.ts:37:7 › a permanently banned user › is redirected away from a protected path, to the ban page
+  [chromium] › specs/banned-redirect.spec.ts:50:7 › a user whose suspension is still running › is redirected away from a protected path, to the ban page
+  [chromium] › specs/banned-redirect.spec.ts:63:7 › a user whose suspension has expired › reaches the protected path, because banned_at alone is not a ban
+  [chromium] › specs/club-owner-surfaces.spec.ts:40:7 › the club owner › is routed from /my-clubs to the multi-club surface and sees the approved club
+  [chromium] › specs/club-owner-surfaces.spec.ts:54:7 › the club owner › opens the club dashboard and sees the club's own events
+  [chromium] › specs/club-owner-surfaces.spec.ts:68:7 › a member of a different club › does not see the approved club on their own surface
+  [chromium] › specs/protected-route-redirect.spec.ts:34:7 › an anonymous visitor › is redirected from every protected path to the sign-in prompt, carrying the destination
+  [chromium] › specs/protected-route-redirect.spec.ts:57:7 › a signed-in student › reaches every protected path without a redirect
+  [chromium] › specs/save-and-rsvp.spec.ts:37:5 › a student saves an event and it appears on their profile
+  [chromium] › specs/save-and-rsvp.spec.ts:63:5 › a student RSVPs going to an event
+Total: 27 tests in 8 files
+
+$ npx playwright test
+Running 27 tests using 1 worker
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (345ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (256ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (224ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (231ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (235ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (227ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (239ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (196ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (229ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (224ms)
+  ✓  11 [chromium] › e2e/specs/admin-login-cookie-equivalence.spec.ts:40:5 › the cookie shim emits the same cookie names the real sign-in page does (414ms)
+  ✓  12 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (473ms)
+  ✓  13 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.0s)
+  ✓  14 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (224ms)
+  ✓  15 [chromium] › e2e/specs/anonymous-browse.spec.ts:31:5 › an anonymous visitor browses the event feed and sees only approved events (387ms)
+  ✓  16 [chromium] › e2e/specs/anonymous-browse.spec.ts:50:5 › an anonymous visitor searches, and the search narrows the feed (606ms)
+  ✓  17 [chromium] › e2e/specs/anonymous-browse.spec.ts:63:5 › an anonymous visitor browses public club content (225ms)
+  ✓  18 [chromium] › e2e/specs/banned-redirect.spec.ts:37:7 › a permanently banned user › is redirected away from a protected path, to the ban page (124ms)
+  ✓  19 [chromium] › e2e/specs/banned-redirect.spec.ts:50:7 › a user whose suspension is still running › is redirected away from a protected path, to the ban page (119ms)
+  ✓  20 [chromium] › e2e/specs/banned-redirect.spec.ts:63:7 › a user whose suspension has expired › reaches the protected path, because banned_at alone is not a ban (145ms)
+  ✓  21 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:40:7 › the club owner › is routed from /my-clubs to the multi-club surface and sees the approved club (1.2s)
+  ✓  22 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:54:7 › the club owner › opens the club dashboard and sees the club's own events (388ms)
+  ✓  23 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:68:7 › a member of a different club › does not see the approved club on their own surface (303ms)
+  ✓  24 [chromium] › e2e/specs/protected-route-redirect.spec.ts:34:7 › an anonymous visitor › is redirected from every protected path to the sign-in prompt, carrying the destination (225ms)
+  ✓  25 [chromium] › e2e/specs/protected-route-redirect.spec.ts:57:7 › a signed-in student › reaches every protected path without a redirect (1.7s)
+  ✓  26 [chromium] › e2e/specs/save-and-rsvp.spec.ts:37:5 › a student saves an event and it appears on their profile (932ms)
+  ✓  27 [chromium] › e2e/specs/save-and-rsvp.spec.ts:63:5 › a student RSVPs going to an event (819ms)
+  27 passed (20.1s)
+exit=0
+
+$ ls playwright/.auth | wc -l ; git ls-files playwright/.auth | wc -l
+storage_states_written=10
+storage_states_tracked_by_git=0
