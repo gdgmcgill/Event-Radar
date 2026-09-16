@@ -133,6 +133,7 @@ Plans:
 **Mode:** mvp
 **Depends on**: Phase 2 (Stage 2 exit gate STAB-17 must be evidenced before any refactor begins)
 **Requirements**: REFAC-01, REFAC-02, REFAC-03, REFAC-04, REFAC-05, REFAC-06, REFAC-07, REFAC-08
+**Requirement states** *(recorded 2026-09-16 by plan 03-08; these must agree with `.planning/REQUIREMENTS.md` and they do)*: **REFAC-02, REFAC-03, REFAC-05, REFAC-06 and REFAC-08 are Complete.** **REFAC-01, REFAC-04 and REFAC-07 are PARTIAL**, each naming its unmet clause — REFAC-01's `migration repair` against production (deferred, Phase 8), REFAC-04's cast count at 45 of 47 (Phase 4 / Phase 5), and REFAC-07's "and staging" clause (no staging project exists). **None of those three clauses is a clause of the five success criteria below, all of which are MET** — see `evidence/FOUNDATION-READINESS.md` section 11 for why a met criterion does not round a requirement up.
 **Success Criteria** (what must be TRUE):
 
   1. `supabase db reset` from the migrations folder produces a schema that diffs clean against production (reconciled by baseline plus `migration repair`, never by renaming existing files), with audit-identified missing FK indexes and RLS policy gaps fixed by new migrations that each carry a pgTAP allow/deny test, and the `compute_user_scores` pg_cron schedule codified as an idempotent migration so local and staging match production instead of silently falling back to popularity.
@@ -141,7 +142,7 @@ Plans:
   4. A Playwright persona harness runs against local Supabase with one storage state per persona from a setup project and at least six happy-path specs covering Validated workflows, backed by a deterministic seed (fixed UUIDs, fixed timestamps against a pinned now, fixed PRNG seed) covering every user role, ban state, club status, and event status — whose loader hard-refuses any Supabase URL outside local and staging.
   5. The auth callback route has passing characterization tests (OAuth exchange, McGill enforcement, user upsert, admin auto-assignment, onboarding routing) written before anything modifies it.
 
-**Plans**: 7/8 plans executed
+**Plans**: 8/8 plans complete
 
 Plans:
 **Wave 1** *(three independent tributaries — none touches a database)*
@@ -168,7 +169,7 @@ Plans:
 
 **Wave 6** *(blocked on all)*
 
-- [ ] 03-08-PLAN.md — The gated production-repair decision and the Stage 3 foundation readiness note, with every deferral written down and its owning phase named
+- [x] 03-08-PLAN.md — The gated production-repair decision, resolved to **`defer-to-phase-8`** with production provably unwritten (45 rows, baseline absent, sha256 identical to the 03-01 census), and the Stage 3 readiness note: all five success criteria answered clause by clause across **107 distinct committed citations, 0 missing**, all eight requirement states with every partial naming its unmet clause, a consolidated deferred register disambiguating the two colliding `D-` sequences (`DI-` items, `DEC-` decisions), five findings closed and two reassigned. Two things it found rather than inherited: `DI-19`'s ratchet false positive **fixed** as a census-only change with the allow-list byte-identical, and `DI-32` — **the CI `e2e` job is RED on a real runner**, diagnosed to the line and reproduced, so the persona harness has never been observed outside one machine
 
 ### Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 

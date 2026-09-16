@@ -1,5 +1,20 @@
 # Deferred Items — Phase 03
 
+> **SUPERSEDED — read `evidence/deferred-items.md` instead.**
+>
+> Plan 03-08 consolidated every Phase 3 deferral, the phase-state carried list and the five Phase 2
+> carry-forwards into
+> `.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/deferred-items.md`,
+> which is the **authoritative** register from 2026-09-16 onward.
+>
+> **This file is left unmodified below** (apart from this banner) because five committed notes cite
+> its ids as written. Its four items map one-to-one onto the consolidated register's `DI-` prefix:
+> `D-19` → `DI-19` (**now closed** — the ratchet census fix, `evidence/ratchet-d19-fix.txt`),
+> `D-20` → `DI-20`, `D-21` → `DI-21`, `D-22` → `DI-22`.
+>
+> The `D-` collision this file's own warning describes is resolved there: **`DI-` is a deferred item,
+> `DEC-` is a decision.**
+
 **Phase:** 03-refactor-foundations-schema-truth-and-the-seam-kit · **Opened:** 2026-09-15 by plan 03-06
 
 Out-of-scope discoveries made while executing a plan. Each was found by a gate, recorded here, and

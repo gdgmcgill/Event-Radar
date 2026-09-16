@@ -1,0 +1,130 @@
+# The e2e CI job is RED on a real runner, and this is why
+#
+# Plan: 03-08 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-16
+#
+# Recorded by the close-out plan rather than fixed by it. The fix is a change to
+# .github/workflows/ci.yml or e2e/env.ts, neither of which is in this plan's
+# files_modified, and the choice between the two layers is a real decision.
+# Registered as deferred item DI-34.
+
+=== 1. THE OBSERVED RUN ===
+run=35049602081 sha=7c1ca29 conclusion=failure at=2026-09-16T02:51:43Z
+run=35045579512 sha=da91a81 conclusion=success at=2026-09-16T01:49:25Z
+run=35043040504 sha=d3f6916 conclusion=success at=2026-09-16T01:10:40Z
+
+# Per-job conclusions for run 35049602081 (head 7c1ca29, the 03-07 completion commit):
+  success	ci
+  success	Schema truth — type drift gate and database tests
+  failure	Persona harness — end-to-end specs against the seeded local stack
+
+# TWO OF THE THREE JOBS ARE GREEN ON A REAL RUNNER. That is the first observation
+# of the type-drift gate and the database tests executing outside a laptop.
+
+=== 2. THE FAILING STEP AND ITS STACK (credential-shaped lines filtered) ===
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	﻿2026-09-16T02:54:32.2212917Z ##[group]Run npx playwright test
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:32.2213136Z ^[[36;1mnpx playwright test^[[0m
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:32.2244171Z shell: /usr/bin/bash -e {0}
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:32.2244329Z env:
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:32.2244509Z   NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:32.2244733Z   NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-key
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:32.2244921Z   SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:32.2245087Z ##[endgroup]
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:33.5974956Z Error: REFUSED (fail-closed): the production deny key could not be extracted — no readable env file at /home/runner/work/Event-Radar/Event-Radar/.env.local. The seed refuses every non-local target it cannot check against production. This is deliberate; see scripts/seed/guard.ts.
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:33.5976683Z     at assertSeedTargetAllowed (/home/runner/work/Event-Radar/Event-Radar/scripts/seed/guard.ts:179:11)
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:33.5977653Z     at Object.<anonymous> (/home/runner/work/Event-Radar/Event-Radar/playwright.config.ts:89:24)
+Persona harness — end-to-end specs against the seeded local stack	Run the persona harness	2026-09-16T02:54:33.5978276Z     at Module._compile (node:internal/modules/cjs/loader:1929:14)
+
+=== 3. THE MECHANISM, PINNED TO LINES ===
+
+--- .github/workflows/ci.yml:9-11 — a WORKFLOW-LEVEL env block, inherited by EVERY job ---
+env:
+  NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder-key"
+
+--- e2e/env.ts:29-32 — the placeholder is truthy, so it wins ---
+  const fromEnv = {
+    url: process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL,
+    anonKey: process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+
+--- e2e/env.ts:61-65 — and `??` only falls through on null/undefined ---
+  cached = {
+    url: fromEnv.url ?? read("API_URL"),
+    anonKey: fromEnv.anonKey ?? read("ANON_KEY"),
+    serviceRoleKey: fromEnv.serviceRoleKey ?? read("SERVICE_ROLE_KEY"),
+  };
+
+# On the runner NEXT_PUBLIC_SUPABASE_URL is 'https://placeholder.supabase.co',
+# so fromEnv.url is TRUTHY and read("API_URL") — the real local stack URL from
+# `supabase status -o env` — is never consulted. playwright.config.ts:89 then
+# hands the placeholder to assertSeedTargetAllowed, which refuses it.
+#
+# THE GUARD IS CORRECT. It is doing exactly what scripts/seed/guard.ts was built
+# to do: refuse a target that is neither local nor an acknowledged staging project.
+# The defect is the job's environment, not the control that caught it.
+#
+# It passes locally because a developer's shell does NOT export
+# NEXT_PUBLIC_SUPABASE_URL — .env.local is a file, not an export — so fromEnv.url
+# is undefined and the API_URL branch is taken. That asymmetry is the whole bug.
+
+=== 4. REPRODUCED LOCALLY — the runner's environment, on this machine ===
+$ NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key SUPABASE_SERVICE_ROLE_KEY=placeholder-service npx tsx -e '...assertSeedTargetAllowed(localStackEnv().url)'
+resolved url: https://placeholder.supabase.co
+GUARD: REFUSED — REFUSED: https://placeholder.supabase.co is not the staging project. Set SEED_STAGING_PROJECT_REF to this project's ref, and SEED_I_UNDERSTAND_TARGET=staging, to load it.
+
+=== 5. WHAT IS AND IS NOT AFFECTED ===
+# NOT affected: the harness itself. From a clean local database it is 27/27 —
+#   evidence/playwright-run.txt. REFAC-06's text says 'runnable against local
+#   Supabase' and that clause is met and evidenced. No spec is wrong.
+# NOT affected: the ci job (lint, tsc, filename check, tests, audit gate, build)
+#   and the types job (db reset, type drift diff, supabase test db) — both GREEN
+#   on the runner at 7c1ca29, per section 1.
+# AFFECTED: the e2e job never reaches a single spec. It dies loading the config.
+#   So the persona harness has NEVER been observed executing outside a laptop.
+
+=== 6. THE FIX, WORKED OUT — and why this plan did not apply it ===
+
+# Two layers could own it, and the choice is a real decision rather than a typo fix.
+
+# OPTION A — the workflow. Give the e2e job the local stack's real values after
+#   `supabase start`, so nothing downstream has to guess:
+#
+#     - name: Export the local stack credentials to the job environment
+#       run: |
+#         supabase status -o env | sed -n \
+#           -e 's/^API_URL="\?\(.*[^"]\)"\?$/NEXT_PUBLIC_SUPABASE_URL=\1/p' \
+#           -e 's/^ANON_KEY="\?\(.*[^"]\)"\?$/NEXT_PUBLIC_SUPABASE_ANON_KEY=\1/p' \
+#           -e 's/^SERVICE_ROLE_KEY="\?\(.*[^"]\)"\?$/SUPABASE_SERVICE_ROLE_KEY=\1/p' \
+#           >> "$GITHUB_ENV"
+#
+#   Placed after 'Start local Supabase stack'. It overrides the inherited
+#   placeholder with the truth, and the guard then allows 127.0.0.1 as designed.
+#   NOTE: this writes a service-role key into $GITHUB_ENV. It is the LOCAL
+#   stack's throwaway key, not production's — but it will appear in the job's
+#   environment, so whoever takes this should confirm that is acceptable or use
+#   Option B instead.
+
+# OPTION B — e2e/env.ts. Stop letting an ambient variable outrank the running
+#   stack. Prefer `supabase status -o env` and treat the process environment as
+#   the fallback, not the override — the inverse of the current precedence at
+#   e2e/env.ts:29-32 and :61-65. Strictly safer, because no credential crosses a
+#   step boundary, and it makes the harness impossible to aim at a non-local
+#   target by an inherited variable. It is an application-adjacent source change.
+
+# RECOMMENDED: Option B, with Option A's export step as a belt-and-braces addition
+#   only if the build step also needs the real values.
+
+# WHY NOT HERE. Neither .github/workflows/ci.yml nor e2e/env.ts is in plan 03-08's
+#   files_modified, and this plan's own prohibition is that it 'changes no source,
+#   no migration and no test — its outputs are records'. More to the point: a fix
+#   to a CI job cannot be VERIFIED from this laptop. It needs a push and an
+#   observed run, and shipping an unverified fix inside the note whose entire
+#   standard is 'every claim cites a committed artifact' would be the one kind of
+#   change this document must not contain. The diagnosis is complete and
+#   reproducible; applying it is one commit and one observed run.
+
+=== 7. OWNER ===
+# Deferred item DI-34, owned by PHASE 4 — the first phase to run the harness as a
+# regression net for a real refactor, which is the phase that actually needs it
+# green. Until then the harness is a local-only control and the readiness note
+# says so in those words.

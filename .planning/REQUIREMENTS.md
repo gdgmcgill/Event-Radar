@@ -60,14 +60,14 @@ Constraint for every REFAC requirement: characterize current behavior with a tes
 
 **Foundations (before any vertical slice)**
 
-- [x] **REFAC-01**: Migration history is reconciled with production (baseline + `migration repair`, never renaming existing files) so `supabase db reset` from the migrations folder produces a schema that diffs clean against production
+- [ ] **REFAC-01**: Migration history is reconciled with production (baseline + `migration repair`, never renaming existing files) so `supabase db reset` from the migrations folder produces a schema that diffs clean against production
 - [x] **REFAC-02**: Missing FK indexes and RLS policy gaps identified in the audit are fixed via new migrations, each with a pgTAP allow/deny test
 - [x] **REFAC-03**: The `compute_user_scores` pg_cron schedule is codified as an idempotent migration so local and staging match production
 - [ ] **REFAC-04**: Supabase types are generated from the reconciled schema via `supabase gen types`, a CI step fails on type drift, and `(supabase as any)` casts in `src/` are reduced to zero
-- [ ] **REFAC-05**: A `src/server/` seam kit exists (request context computed once per request, http/error helpers, `requireUser`/`requireRole`/`requireClubRole` authz guards, `src/server/db/elevated/` as the only door to the service-role client) applied to zero routes yet, with an ESLint import-boundary rule forbidding `src/app/**` from importing the service-role client directly
+- [x] **REFAC-05**: A `src/server/` seam kit exists (request context computed once per request, http/error helpers, `requireUser`/`requireRole`/`requireClubRole` authz guards, `src/server/db/elevated/` as the only door to the service-role client) applied to zero routes yet, with an ESLint import-boundary rule forbidding `src/app/**` from importing the service-role client directly
 - [x] **REFAC-06**: A Playwright persona harness exists with a setup project producing one storage state per persona and at least six happy-path specs covering Validated workflows, runnable against local Supabase
 - [ ] **REFAC-07**: A minimal deterministic functional seed exists (fixed UUIDs, fixed timestamps relative to a pinned now, fixed PRNG seed) covering every user role, ban state, club status, and event status, loadable into local and staging only with a hard guard refusing any other Supabase URL
-- [ ] **REFAC-08**: The auth callback route has characterization tests before it is modified (OAuth exchange, McGill enforcement, user upsert, admin auto-assignment, onboarding routing)
+- [x] **REFAC-08**: The auth callback route has characterization tests before it is modified (OAuth exchange, McGill enforcement, user upsert, admin auto-assignment, onboarding routing)
 
 **Vertical slices (in this order)**
 
@@ -199,14 +199,14 @@ No phase crosses a stage boundary.
 | STAB-15 | Phase 2 | Complete |
 | STAB-16 | Phase 2 | Complete |
 | STAB-17 | Phase 2 | Complete |
-| REFAC-01 | Phase 3 | Complete |
-| REFAC-02 | Phase 3 | Complete |
-| REFAC-03 | Phase 3 | Complete |
-| REFAC-04 | Phase 3 | Partial (03-06) — generated-types and CI drift-gate clauses met; cast clause 45/47 by D-22, closing in Phase 4 (F-071) and Phase 5 (F-072/F-073) |
-| REFAC-05 | Phase 3 | Pending |
-| REFAC-06 | Phase 3 | Complete |
-| REFAC-07 | Phase 3 | Partial (03-07) — determinism, idempotence, the four coverage axes and the guard's refusals all met and evidenced; the "and staging" clause is outstanding because no staging project exists. The branch is implemented, double-gated and unit-tested including refusals; enabling it is exporting two variables. See evidence/harness-note.md § 3 |
-| REFAC-08 | Phase 3 | Pending |
+| REFAC-01 | Phase 3 | Partial (03-01, 03-04) — the reconciliation itself is complete and evidenced: `db reset` exit 0, `db diff --linked` **zero bytes**, 44 files archived as 44 `R100` renames with zero changed lines, policy fidelity by set difference (live 101, baseline 101, symmetric difference 0). The unmet clause is the requirement's own `migration repair`: the production history repair was put to the phase owner at a blocking checkpoint and **deferred**. Closes on `supabase migration repair --status applied 20260915214553 --linked` in Phase 8. See evidence/FOUNDATION-READINESS.md section 11 and evidence/repair-outcome.md |
+| REFAC-02 | Phase 3 | Complete (03-05) — six indexes, one drop and three `club_invitations` policies in `20260915230000_fk_indexes_and_policy_gaps.sql`, each object carrying a database test (23 + 15 assertions), and the tests proven to bite: each policy removed in turn produced 5, 3 and 1 named failures and green on restore. Carried caveat: fixed in the repository, **not in production** until the Phase 8 repair — see evidence/FOUNDATION-READINESS.md section 12 |
+| REFAC-03 | Phase 3 | Complete (03-05) — `20260915230100_cron_compute_user_scores.sql`, idempotence proven by running it twice and comparing the `cron.job` catalog rather than by asserting a guard was written, plus 4 pgTAP assertions. Carried caveat: the codified schedule has never been applied *to* production, which runs its own out of band. Its "and staging" is a rationale clause, not a deliverable clause — unlike REFAC-07's |
+| REFAC-04 | Phase 3 | Partial (03-06) — generated-types and CI drift-gate clauses met and the gate observed green on a real runner; cast clause **45 of 47** by decision D-22, because at both remaining sites the cast is the only thing making the file compile and every route to a clean `tsc` is a behaviour change the characterize-first rule forbids. Both retained casts are annotated in source with their finding id and pinning test. Closes in Phase 4 (F-071) and Phase 5 (F-072/F-073) |
+| REFAC-05 | Phase 3 | Complete (03-03) — `src/server/` context, http/errors, the three authz guards and `src/server/db/elevated/` as the single door with its register shipping deliberately empty; applied to **zero routes**, held by two independent checks (empty `src/app/` diff and an unmoved census of 24); the ESLint boundary proven to fail the build with a fixture (exit 1, two `no-restricted-imports` errors) and green after deletion. Carried caveat: the rule's reach is bounded and the ratchet is not yet wired into CI — see evidence/FOUNDATION-READINESS.md section 9.6 |
+| REFAC-06 | Phase 3 | Complete (03-07) — 10 setup projects, 7 spec files, **27 tests, 27 passed** from a clean database; one storage state per persona from the SSR package's own serializer, verified through the running application. The requirement's clause is "runnable against local Supabase" and it is met. Carried caveat, and a loud one: the CI `e2e` job is **RED on a real runner** for an environment-precedence reason unrelated to any spec, so the harness has never been observed outside one machine — see evidence/FOUNDATION-READINESS.md section 9.7 and evidence/ci-e2e-red.txt |
+| REFAC-07 | Phase 3 | Partial (03-07) — determinism (two loads byte-identical, `sha256 964ac785…`, re-derived a third time), 21 database-tier coverage assertions over all four named axes, and the guard's five command-line refusals each exiting 1 while failing closed, are all met and evidenced. The unmet clause is **"and staging"**: no staging project exists to load into. The branch is implemented, double-gated and unit-tested including its refusals, and the guard was **not** widened to make an untestable path look tested. Closes on a provisioned staging project, then CERT-01 in Phase 7. See evidence/harness-note.md section 3 |
+| REFAC-08 | Phase 3 | Complete (03-02) — eight behaviours covering all five named areas, written against source proven byte-identical to the plan's start, which is what "before" asks for and is a git-ancestry fact rather than a claim. Every assertion proven to bite: **nine mutation cycles, nine reds, zero greens**, each naming the expected test. The three things the suite does not prove are written down — see evidence/callback-characterization-note.md section 4 |
 | REFAC-09 | Phase 4 | Pending |
 | REFAC-10 | Phase 4 | Pending |
 | REFAC-11 | Phase 5 | Pending |

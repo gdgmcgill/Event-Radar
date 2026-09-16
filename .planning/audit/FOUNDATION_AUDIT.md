@@ -45,8 +45,8 @@
 
 | Status | Count |
 |---|---:|
-| Open | 66 |
-| Fixed | 7 |
+| Open | 61 |
+| Fixed | 12 |
 
 ---
 
@@ -605,7 +605,7 @@
 
 ### F-043 — The migration history does not replay from zero — the reset aborts at the 12th of 44 files
 
-**Severity:** High · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 03
+**Severity:** High · **Category:** schema-drift · **Status:** Fixed · **Closes in phase:** 03
 
 **Exposure rationale.** Blocking defect for every downstream phase that needs a reproducible environment, and the root cause of several other findings being unfixable in isolation (F-012, F-016, F-035, F-042 all sequence behind it). This is not 'input not supplied': Docker was up and all 44 migration files are present and tracked. The repository's own history is the blocker. Two distinct causes compound — one file is silently skipped because its name does not parse, and two files derive the same version and collide on the primary key of supabase_migrations.schema_migrations.
 
@@ -628,13 +628,15 @@
 
 **Validation criterion.** `supabase db reset` completes with exit status 0 applying every migration file, and a schema census of the resulting local database matches the production catalog.
 
+**Resolution.** **Closed in Phase 3, by plan 03-04.** Validation criterion met in full. `supabase db reset` exits 0 applying the single baseline migration with nothing passed over (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/db-reset.txt`), and `supabase db diff --linked --schema public,storage` returns **zero bytes** — "No schema changes found" (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/db-diff.prod.sql`). That zero-byte diff **is** the schema census matching the production catalog: it is the question asked of the live database by the CLI, not inferred from a static parse. Reconciled **by baseline, never by renaming** — all 44 pre-existing files were archived into `supabase/migrations/_archive_pre_baseline/` byte-identical and name-identical, recorded by git as **44 `R100` renames with zero changed lines** (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/archive-rename-diff.txt`). **One thing this closure does NOT assert:** production's `supabase_migrations.schema_migrations` is unchanged at 45 rows — the `migration repair` was deferred to Phase 8 (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/repair-outcome.md`) — and this criterion does not depend on it. See F-045, which does.
+
 **Related.** [F-012](#f-012), [F-016](#f-016), [F-035](#f-035), [F-042](#f-042), [F-044](#f-044), [F-045](#f-045), [F-047](#f-047)
 
 ---
 
 ### F-044 — The rsvps table is created by no migration, yet policies are written for it and code reads it
 
-**Severity:** High · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 03
+**Severity:** High · **Category:** schema-drift · **Status:** Fixed · **Closes in phase:** 03
 
 **Exposure rationale.** A table holding user-linked attendance state has no schema-as-code anywhere: all six of its columns are classified prod-only. 011_rls_audit.sql writes RLS policies for it and 20260313000002_recommendation_engine.sql reads it; neither creates it. 011_rls_audit.sql is also one half of the duplicate-011 pair that aborts the replay (F-043). Graded High because it makes rsvps invisible to repository review — which is how F-011, its anonymous world-read policy, survived.
 
@@ -654,6 +656,8 @@
 **Recommended fix.** Add a migration creating rsvps with its production column definitions and the corrected policies from F-011, sequenced with the F-043 renumbering so the file lands in a replayable history.
 
 **Validation criterion.** A fresh `supabase db reset` produces an rsvps table whose columns and policies match the production catalog.
+
+**Resolution.** **Closed in Phase 3, by plan 03-04.** Validation criterion met in full. `rsvps` is declared by `supabase/migrations/20260915214553_baseline.sql`, which was produced by `supabase db dump --linked` and therefore **is** the production catalog rather than a reconstruction of it; a fresh `supabase db reset` applies it (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/db-reset.txt`) and the resulting schema diffs to **zero bytes** against production (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/db-diff.prod.sql`), so its columns match by construction. The policy half is confirmed independently by set difference rather than by eye — live 101, baseline 101, **symmetric difference 0** (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/policy-census-crosscheck.txt`) — which matters because 41 of production's 101 policies were declared by no migration at all and there was nothing local to read them against.
 
 **Related.** [F-011](#f-011), [F-043](#f-043), [F-046](#f-046)
 
@@ -1170,7 +1174,7 @@
 
 ### F-045 — Production reports 45 applied migration versions against 44 files in the repository
 
-**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 03
+**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** The counts disagree and the direction matters: production has applied something the repository does not contain, or has recorded a version the repository names differently. Held at Medium because it is a bookkeeping discrepancy with no direct exposure, but it is a hard blocker on the F-043 renumbering, which cannot be done safely against a migration table whose contents are not understood.
 
@@ -1190,6 +1194,8 @@
 **Recommended fix.** Diff the applied set against the file set, identify the orphan version, and either recover the file from history or record a deliberate reconciliation entry. Do this before F-043's renumbering, not after.
 
 **Validation criterion.** The applied version set and the repository file version set are identical, asserted by a CI check.
+
+**Resolution.** **Reassigned `03` -> `08` by plan 03-08. STILL OPEN — Phase 3 did not close it and does not claim to.** The criterion is that the applied version set and the repository file version set are identical, asserted by a CI check. Production's `supabase_migrations.schema_migrations` holds **45 rows** and has **no row** for baseline version `20260915214553`; the repository holds three files at the replayed level. The single command that would reconcile them was put to the phase owner at a blocking checkpoint with the exact version derived from the filename, the exact flags verified against the installed CLI, and both risks stated without a recommendation (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/repair-preflight.md`) — and the outcome was **`defer-to-phase-8`** (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/repair-outcome.md`). Phase 8's deployment certification owns it because that is the only place the repair's sufficiency can be **verified** by an actual deploy rather than assumed, which 03-RESEARCH.md rates at Medium confidence. **Two consequences that hold until then:** `supabase db push` must not be run against production, and the two post-baseline migrations stay unapplied there — so F-016's club-invitation fix and the two trigram indexes are in the repository and absent from the running database. Under no option are the 45 historical versions marked `reverted`; eighteen of them are the only surviving record of the March 2026 out-of-band burst. Registered as `DI-23` in `.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/deferred-items.md`.
 
 **Related.** [F-043](#f-043), [F-063](#f-063)
 
@@ -1222,7 +1228,7 @@
 
 ### F-047 — users.is_admin is declared only by the one migration file the CLI silently skips
 
-**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 03
+**Severity:** Medium · **Category:** schema-drift · **Status:** Fixed · **Closes in phase:** 03
 
 **Exposure rationale.** 008b_add_is_admin_to_users.sql does not parse as <version>_<name>.sql, so the CLI prints 'Skipping' and continues with exit status 0 — a failure that reports success. On a fresh replay the column is absent, and 009_user_roles.sql guards its DROP COLUMN is_admin behind a DO $$ ... IF EXISTS block precisely because of this. Medium because production has the column; the defect is that no rebuilt environment does, and the skip is silent.
 
@@ -1242,13 +1248,15 @@
 
 **Validation criterion.** A CI check asserting every migration filename parses, run green, plus a fresh reset producing a users table whose columns match production.
 
+**Resolution.** **Closed in Phase 3, by plans 03-01 and 03-04.** Validation criterion met in full, on both halves. **CI check:** `scripts/check-migration-filenames.mjs` is a step in `.github/workflows/ci.yml`, captured **RED first** against the unreconciled tree (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/filename-check.red.txt`) and green after (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/filename-check.green.txt`), and observed green on a real runner in GitHub Actions run `35049602081`. A checker that was never seen failing proves nothing, which is why the red capture precedes the green one. **Users table:** the fresh reset diffs to zero bytes against production (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/db-diff.prod.sql`). `008b_add_is_admin_to_users.sql` — the file the CLI silently passed over, and the file F-043 and F-047 both point at — is archived byte-identical rather than renamed, so the CLI no longer skips it while the historical record survives intact.
+
 **Related.** [F-043](#f-043), [F-046](#f-046)
 
 ---
 
 ### F-048 — user_engagement_summary is created by a migration and does not exist in production
 
-**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 03
+**Severity:** Medium · **Category:** schema-drift · **Status:** Fixed · **Closes in phase:** 03
 
 **Exposure rationale.** 005_user_engagement.sql creates the table; production has no such relation, and eleven of the 22 migrations-only rows are its columns. Medium because nothing reads it in production — but a rebuilt environment has a table the live system lacks, which is the opposite direction of drift from F-044 and just as invalidating for a certification run.
 
@@ -1267,6 +1275,8 @@
 **Recommended fix.** Decide whether the table is wanted. If yes, apply it; if no, delete the migration as part of the F-043 squash rather than leaving a creation statement that has never taken effect.
 
 **Validation criterion.** The drift report shows no migrations-only rows for user_engagement_summary — either because it exists in production or because the migration is gone.
+
+**Resolution.** **Closed in Phase 3, by plan 03-04, on the criterion's SECOND disjunct — "because the migration is gone".** The migration that created `user_engagement_summary` was archived out of the CLI's scan path into `supabase/migrations/_archive_pre_baseline/`, and `grep -c "user_engagement_summary" supabase/migrations/20260915214553_baseline.sql` returns **0**, so no migration at the replayed level declares it. The migrations side of the drift question therefore has no rows left to be out of sync, and the live confirmation is the zero-byte `supabase db diff --linked` (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/db-diff.prod.sql`) — production does not have the view and neither does a rebuilt local database. **Stated precisely:** this closed because the declaration was retired, not because the object was created.
 
 **Related.** [F-046](#f-046)
 
@@ -1743,7 +1753,7 @@
 
 ### F-049 — events_tests exists only in types.ts — created out of band, dropped out of band, its cleanup migration never applied
 
-**Severity:** Low · **Category:** schema-drift · **Status:** Open
+**Severity:** Low · **Category:** schema-drift · **Status:** Fixed
 
 **Exposure rationale.** Dead schema surface with no exposure: the relation does not exist in production and is not created by any migration. All fifteen types-only rows are its columns plus its table row. The only migration mentioning it is a DROP TABLE IF EXISTS in a file whose version was never applied. Hygiene, but a clear record of a table that was created and dropped entirely outside the migration system.
 
@@ -1762,6 +1772,8 @@
 **Recommended fix.** Regenerate types.ts from the live schema; the entry disappears. Handle the never-applied cleanup migration as part of F-046.
 
 **Validation criterion.** A regenerated types.ts contains no events_tests entry, asserted by a CI diff check.
+
+**Resolution.** **Closed in Phase 3, by plans 03-05 and 03-06.** Validation criterion met in full. `grep -c "events_tests" src/lib/supabase/types.ts` returns **0** after regeneration from the reconciled local schema (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/types-regenerated.txt`), and the CI diff check the criterion asks for is the `types` job in `.github/workflows/ci.yml` — proven **RED** on an injected schema change (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/drift-gate.red.txt`), green once it was removed (`.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/drift-gate.green.txt`), and observed green on a real runner in run `35049602081`. `supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql` additionally re-issues `DROP TABLE IF EXISTS public.events_tests` as a guarded no-op, so a rebuilt environment cannot inherit the out-of-band relation from anywhere. The entry existed only because this generated file had been hand-edited once; the prohibition against hand-editing it was upheld in plan 03-06 even at the cost of losing the `__InternalSupabase.PostgrestVersion` block.
 
 **Related.** [F-046](#f-046)
 
@@ -1966,7 +1978,7 @@
 
 ### F-066 — Five of twenty-one Jest suites are skipped, for two different reasons needing two different fixes
 
-**Severity:** Low · **Category:** config · **Status:** Open · **Closes in phase:** 03
+**Severity:** Low · **Category:** config · **Status:** Open · **Closes in phase:** 04
 
 **Exposure rationale.** Test-coverage gap with no exposure. Four suites are blocked by an uninstalled @testing-library/react and would revive on an install; the fifth, src/app/api/events/route.test.ts, is blocked by contract drift — the route it tests no longer implements cursor pagination, so no install will revive it. Conflating the two is why the skip count has stayed constant. Compounded by tsconfig.json excluding all 21 test files, which is what made F-050's excess-property error invisible.
 
