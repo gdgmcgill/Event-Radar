@@ -1,6 +1,16 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, configure, renderHook, waitFor } from "@testing-library/react";
 import { useEvents } from "./useEvents";
 import { EventTag, type Event, type EventFilter } from "@/types";
+
+// DI-20: this suite's first `waitFor` was intermittently timing out under a
+// full parallel `jest --ci` run (roughly one run in eight, never in isolation,
+// never on a later test). Nothing in `useEvents` can hold `loading` true once
+// the mocked fetch resolves; what ran out was `waitFor`'s default 1000 ms
+// budget, spent on a cold worker compiling the suite and mounting React while
+// 33 other suites compete for CPU. A longer budget changes when the assertion
+// gives up, not what it asserts — a hook that never clears `loading` still
+// fails, only later. Scoped to this file.
+configure({ asyncUtilTimeout: 10_000 });
 
 // Mock fetch globally
 const mockFetch = jest.fn();
