@@ -1,0 +1,110 @@
+=============================================================================
+pgTAP mutation check
+migrations: 2
+          : supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql
+          : supabase/migrations/20260916000000_invitation_policy_fixes.sql
+policies  : 4 distinct (de-duplicated across the files above)
+started   : 2026-09-16T04:00:11Z
+=============================================================================
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can view their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=15
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=<repo>/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 5)
+# Failed test 2: "the invitee can read the invitation addressed to them"
+#         have: NULL
+#         want: (pgtap-invitee@mail.mcgill.ca)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Failed test 10: "the invitee still sees their own invitations — the stranger's empty read was a filter"
+# Looks like you failed 5 tests of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=6, Tests=86, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.01 cusr 0.00 csys = 0.03 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can accept their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=29
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=<repo>/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 3)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Looks like you failed 3 tests of 15
+# Failed test 3: "the invitee cannot repoint an invitation at another club while accepting it"
+#       wanted: 42501
+# Failed test 4: "the invitee cannot extend their own invitation while accepting it"
+#       wanted: 42501
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=6, Tests=86, 0 wallclock secs ( 0.01 usr 0.02 sys + 0.01 cusr 0.00 csys = 0.04 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Club owners can update club invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=17
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=<repo>/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 1)
+# Failed test 15: "the club owner can revoke a pending invitation for their own club"
+#         have: NULL
+#         want: (revoked)
+# Looks like you failed 1 test of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=6, Tests=86, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.01 cusr 0.00 csys = 0.03 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can join the club they were invited to
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=9
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=<repo>/supabase/tests/database/025-invitation-acceptance.test.sql (Wstat: 0 Tests: 18 Failed: 2)
+# Failed test 17: "and can then insert the membership row — the accept path completes, which it could not before (F-016 / WR-01)"
+#         have: DENIED: row-level security refused the membership insert (42501)
+#         want: 00000000-0000-4000-8000-0000000000d1
+# Failed test 18: "the membership row exists with role organizer — not owner"
+#         have: NULL
+#         want: (organizer)
+# Looks like you failed 2 tests of 18
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=6, Tests=86, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.01 cusr 0.00 csys = 0.03 CPU)
+Result: PASS
+
+=============================================================================
+migrations_dir_clean=true
+policies_checked=4
+failures=0
+finished=2026-09-16T04:03:45Z
+=============================================================================

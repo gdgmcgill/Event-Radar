@@ -1,0 +1,12 @@
+Connecting to local database...
+psql:<repo>/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:<repo>/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+<repo>/supabase/tests/database/000-setup.sql ....................... ok
+<repo>/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+<repo>/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+<repo>/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+<repo>/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+<repo>/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+All tests successful.
+Files=6, Tests=86,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.01 cusr  0.00 csys =  0.03 CPU)
+Result: PASS

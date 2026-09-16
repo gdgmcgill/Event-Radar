@@ -86,6 +86,44 @@ INSERT INTO public.club_invitations
    'pending', now() - interval '1 day');
 
 
+-- -----------------------------------------------------------------------------
+-- pg_temp.try_join — the ALLOW half of the membership insert, made ASSERTABLE.
+--
+-- WHY THIS EXISTS, AND WHY A BARE `results_eq(INSERT ... RETURNING ...)` DOES NOT
+--   An RLS-denied INSERT RAISES. Inside a pgTAP file that means the surrounding
+--   transaction aborts and every remaining assertion is skipped, so the run ends
+--   as `Bad plan. You planned 18 tests but ran 16` — a red, but a red that
+--   `scripts/pgtap-mutation-check.sh` correctly refuses to accept as proof,
+--   because a plan error and a broken fixture look identical to it. The harness
+--   caught precisely that when the club_members policy was first mutated out.
+--
+--   So the insert runs inside a plpgsql block with an EXCEPTION handler, which
+--   is a subtransaction: the denial is caught, the outer transaction survives,
+--   and the ALLOW becomes an assertion that can FAIL AND BE COUNTED.
+--
+--   It is still proven by what came back — the club_id the database returned,
+--   not the statement completing. The denial returns a distinguishable literal
+--   rather than NULL so a failure message says which of the two happened.
+--
+--   SECURITY INVOKER (the default). It must run with the caller's RLS.
+-- -----------------------------------------------------------------------------
+
+CREATE FUNCTION pg_temp.try_join(p_user uuid, p_club uuid, p_role text)
+  RETURNS text LANGUAGE plpgsql AS $fn$
+DECLARE
+  v_club uuid;
+BEGIN
+  INSERT INTO public.club_members (user_id, club_id, role)
+  VALUES (p_user, p_club, p_role)
+  RETURNING club_id INTO v_club;
+  RETURN v_club::text;
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RETURN 'DENIED: row-level security refused the membership insert (42501)';
+END
+$fn$;
+
+
 -- =============================================================================
 -- A. Impersonation is real, and the case-insensitive match works — WR-02
 -- =============================================================================
@@ -264,12 +302,10 @@ SELECT results_eq(
   ARRAY['accepted'],
   'the invitee can accept their own live invitation');
 
-SELECT results_eq(
-  $q$INSERT INTO public.club_members (user_id, club_id, role)
-     VALUES ('00000000-0000-4000-8000-000000000012',
-             '00000000-0000-4000-8000-0000000000d1', 'organizer')
-     RETURNING club_id::text$q$,
-  ARRAY['00000000-0000-4000-8000-0000000000d1'],
+SELECT is(
+  pg_temp.try_join('00000000-0000-4000-8000-000000000012',
+                   '00000000-0000-4000-8000-0000000000d1', 'organizer'),
+  '00000000-0000-4000-8000-0000000000d1',
   'and can then insert the membership row — the accept path completes, which '
   'it could not before (F-016 / WR-01)');
 
