@@ -48,6 +48,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "../../src/lib/supabase/types";
 import { PINNED_NOW, SEED_TIMEZONE, iso } from "./clock";
+import { readSupabaseOverride } from "./envOverride";
 import { assertSeedTargetAllowed } from "./guard";
 import { prng, SEED } from "./prng";
 import {
@@ -73,9 +74,14 @@ type Admin = SupabaseClient<Database>;
  * `.env.local` is never consulted here: that file describes production.
  */
 function resolveLocalCredentials(): { url: string | undefined; key: string } {
-  const fromEnv = process.env.SUPABASE_URL;
-  const keyFromEnv = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (fromEnv && keyFromEnv) return { url: fromEnv, key: keyFromEnv };
+  // ALL THREE OR NONE — see scripts/seed/envOverride.ts. This loader consumes
+  // only the URL and the service-role key, but it validates the whole trio: a
+  // loader that tolerated a stray SUPABASE_ANON_KEY would re-open the partial
+  // override door one name narrower (03-REVIEW.md WR-04). A partial trio throws
+  // here, which is before `assertSeedTargetAllowed` and therefore before any
+  // client exists.
+  const fromEnv = readSupabaseOverride();
+  if (fromEnv) return { url: fromEnv.url, key: fromEnv.serviceRoleKey };
 
   let status: string;
   try {
@@ -93,9 +99,11 @@ function resolveLocalCredentials(): { url: string | undefined; key: string } {
   const read = (name: string): string | undefined =>
     status.match(new RegExp(`^${name}="?([^"\\n]*)"?$`, "m"))?.[1];
 
+  // `fromEnv` is null on this path by construction, so both values come from
+  // the one running local stack rather than from two different environments.
   return {
-    url: fromEnv ?? read("API_URL"),
-    key: keyFromEnv ?? read("SERVICE_ROLE_KEY") ?? "",
+    url: read("API_URL"),
+    key: read("SERVICE_ROLE_KEY") ?? "",
   };
 }
 
@@ -184,14 +192,45 @@ async function purge(admin: Admin): Promise<void> {
     // club would make the account undeletable and the error message ("Database
     // error deleting user") would say nothing about why. Clear what points at
     // it first, children before parents, exactly as above.
-    await admin.from("saved_events").delete().in("user_id", staleIds);
-    await admin.from("rsvps").delete().in("user_id", staleIds);
-    await admin.from("club_members").delete().in("user_id", staleIds);
-    await admin.from("club_followers").delete().in("user_id", staleIds);
-    await admin.from("notifications").delete().in("user_id", staleIds);
-    await admin.from("events").delete().in("created_by", staleIds);
-    await admin.from("clubs").delete().in("created_by", staleIds);
-    await admin.from("users").delete().in("id", staleIds);
+    //
+    // Each of these goes through `must()` for the same reason the block above
+    // does. Discarding these eight results was 03-REVIEW.md WR-08: a failure
+    // here produces no message of its own and then re-surfaces four lines later
+    // as GoTrue's "Database error deleting user" — which is precisely the
+    // message the comment above says "would say nothing about why". Checking
+    // them is what makes the loader name the table that actually refused.
+    must(
+      "purge stale saved_events",
+      (await admin.from("saved_events").delete().in("user_id", staleIds)).error
+    );
+    must(
+      "purge stale rsvps",
+      (await admin.from("rsvps").delete().in("user_id", staleIds)).error
+    );
+    must(
+      "purge stale club_members",
+      (await admin.from("club_members").delete().in("user_id", staleIds)).error
+    );
+    must(
+      "purge stale club_followers",
+      (await admin.from("club_followers").delete().in("user_id", staleIds)).error
+    );
+    must(
+      "purge stale notifications",
+      (await admin.from("notifications").delete().in("user_id", staleIds)).error
+    );
+    must(
+      "purge stale events (by author)",
+      (await admin.from("events").delete().in("created_by", staleIds)).error
+    );
+    must(
+      "purge stale clubs (by author)",
+      (await admin.from("clubs").delete().in("created_by", staleIds)).error
+    );
+    must(
+      "purge stale public.users",
+      (await admin.from("users").delete().in("id", staleIds)).error
+    );
 
     for (const u of stale) {
       const { error } = await admin.auth.admin.deleteUser(u.id);
