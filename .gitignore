@@ -42,8 +42,11 @@ next-env.d.ts
 # vscode
 .vscode
 
-# claude code (local project config)
-.claude
+# claude code (local project config). The directory stays ignored — settings,
+# local overrides and caches are machine-specific — but the agent instruction
+# file is versioned so a fresh clone carries the same guidance (DI-28).
+.claude/*
+!.claude/CLAUDE.md
 
 # python virtual environment
 .venv
@@ -68,6 +71,8 @@ AI/models/*.pt
 
 # planning artifacts
 # .planning/
+# content-addressed research cache; regenerated on demand
+.planning/research/.cache/
 
 # git worktrees
 .worktrees/
