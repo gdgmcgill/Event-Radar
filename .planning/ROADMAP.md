@@ -141,7 +141,7 @@ Plans:
   4. A Playwright persona harness runs against local Supabase with one storage state per persona from a setup project and at least six happy-path specs covering Validated workflows, backed by a deterministic seed (fixed UUIDs, fixed timestamps against a pinned now, fixed PRNG seed) covering every user role, ban state, club status, and event status — whose loader hard-refuses any Supabase URL outside local and staging.
   5. The auth callback route has passing characterization tests (OAuth exchange, McGill enforcement, user upsert, admin auto-assignment, onboarding routing) written before anything modifies it.
 
-**Plans**: 6/8 plans executed
+**Plans**: 7/8 plans executed
 
 Plans:
 **Wave 1** *(three independent tributaries — none touches a database)*
@@ -164,7 +164,7 @@ Plans:
 
 **Wave 5** *(blocked on 03-05 and 03-06)*
 
-- [ ] 03-07-PLAN.md — Deterministic seed and persona harness: fail-closed target guard with four refusal tests, ten storage states, six happy-path specs, the cookie-equivalence cross-check
+- [x] 03-07-PLAN.md — Deterministic seed and persona harness: two loads byte-identical (sha256 `964ac785…`, re-derived three times), a fail-closed guard watched refusing five wrong targets, 21 pgTAP coverage assertions that SKIP honestly when unseeded, ten storage states verified **through the running application**, and 27 end-to-end tests green from a clean database. **REFAC-06 met; REFAC-07 is PARTIAL** — only its "and staging" clause is outstanding, because no staging project exists to load into. Two application-source defects registered rather than fixed: D-21 (the CSP has no local-development entry, so client-side sign-in is broken against a local stack for every developer) and D-22 (the moderation deep-link is ignored)
 
 **Wave 6** *(blocked on all)*
 
@@ -270,7 +270,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 |-------|----------------|--------|-----------|
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
-| 3. Refactor Foundations — Schema Truth and the Seam Kit | 6/8 | In Progress|  |
+| 3. Refactor Foundations — Schema Truth and the Seam Kit | 7/8 | In Progress|  |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 0/TBD | Not started | - |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |
