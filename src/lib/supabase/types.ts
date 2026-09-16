@@ -1273,6 +1273,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      club_invitation_unchanged_except_status: {
+        Args: {
+          p_club_id: string
+          p_created_at: string
+          p_expires_at: string
+          p_id: string
+          p_invitee_email: string
+          p_inviter_id: string
+          p_token: string
+        }
+        Returns: boolean
+      }
       compute_user_scores: { Args: never; Returns: undefined }
       get_event_ids_by_time_filter: {
         Args: { day_type?: string; time_of_day?: string }
@@ -1295,6 +1307,10 @@ export type Database = {
           id: string
           name: string
         }[]
+      }
+      has_open_club_invitation: {
+        Args: { p_club_id: string }
+        Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
       is_club_owner: { Args: { p_club_id: string }; Returns: boolean }
