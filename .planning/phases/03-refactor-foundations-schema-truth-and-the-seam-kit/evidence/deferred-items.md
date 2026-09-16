@@ -523,6 +523,112 @@ redundant `/api/cron/*` handlers.
 
 ---
 
+# Part 1b — What the Phase 3 CODE REVIEW added, after plan 03-08 closed
+
+`03-REVIEW.md` (2026-09-16) reviewed the 74 files Phase 3 touched and raised 26 findings. Most were
+fixed in the review-fix pass and are in the git log; the ones below were **registered instead**,
+because each is either production-codified behaviour or a control-scope decision outside this phase's
+charter. `03-REVIEW-FIX.md` carries the per-finding table with commit hashes.
+
+## Four new audit-register findings
+
+Appended to `.planning/audit/findings.json`, `FOUNDATION_AUDIT.md` regenerated through
+`.planning/audit/tools/gen-foundation-audit.mjs`, and
+`node .planning/audit/tools/validate.mjs --check findings` passes 8/8 at 77 findings.
+
+| Id | Severity | What | Why not fixed in the review-fix pass | Owner |
+|---|---|---|---|---|
+| **`F-074`** | **High** | `get_friends` / `get_friends_going_to_event` are `SECURITY DEFINER`, take the subject **as a parameter**, and are `GRANT ALL … TO anon` — any unauthenticated caller reads any user's friend graph with the public anon key | Changing an RPC's signature and grants is production-codified behaviour with five live callsites; behaviour preservation is the charter. No characterization test was written either: an assertion documenting that `anon` **can** call this would have to be deleted by the fix | **Phase 5** |
+| **`F-075`** | **High** | `compute_user_scores`, `send_event_reminders`, `send_feedback_requests` are `SECURITY DEFINER` privileged writes granted to `anon` — an unauthenticated full recompute, and notification writes on behalf of other users | Revoking `EXECUTE` changes who may invoke three live functions and the cron HTTP routes that call them have not been traced to a role. Doing it blind is how a scheduled job stops running silently | **Phase 5** |
+| **`F-076`** | Medium | Five of the seven baseline `SECURITY DEFINER` functions have a mutable `search_path` — the amplifier for `F-074`/`F-075` | Pinning the path **requires** rewriting five function bodies to schema-qualify their relations; setting it without qualifying breaks them | **Phase 5**, same migration as `F-075` |
+| **`F-077`** | Medium | The auth callback's `next` parameter reaches `NextResponse.redirect` unvalidated — and Phase 3's own PRESERVE suite now freezes that behaviour into the contract Phases 5–6 are told to keep | Adding the guard is an application behaviour change on the authentication path, and the suite pinning the current behaviour is itself a Phase 3 deliverable. Changing the safety net and the thing it measures in one commit is not a review fix | **Phase 5** |
+
+## Two findings that already existed and gained a note rather than a duplicate
+
+| Id | What the review added | Status change |
+|---|---|---|
+| `F-072`, `F-073` | **Why** the phantom `admin_email` key survives a strict build: supabase-js infers the insert generic **from the object literal**, so `Row extends Insert` is satisfied by a superset and an excess key is not an error — which is what makes Phase 3's cast removal on that exact statement look type-checked while it is not. And **why** the failure is invisible at run time: the discarded result hides the `PGRST204`. The reviewer's judgement that deferring the *column* is defensible while deferring the *error check* is not, is recorded verbatim in `F-073` | **None** — `DEC-22` stands. Both stay `Open` at Phase 5 |
+| `F-024`, `F-034` | `03-REVIEW.md` WR-06 was **not** filed as a new finding, because `F-034` already describes the same policy at the same severity for the same phase. What changed is its **reach**: `supabase/migrations/20260915214553_baseline.sql:2772` now carries `FOR SELECT TO authenticated USING (true)` verbatim, so this is no longer a production-only hazard that a dashboard edit could fix — every rebuilt environment is created with it | **None** — still Medium / Low, still Phase 5, now with the migration line ref |
+
+---
+
+## DI-34 — The elevated-client boundary is scoped to `src/app/**` only, and is already walked around
+
+**Found by:** the Phase 3 code review, `03-REVIEW.md` CR-03.
+
+**What it is.** Threat `T-03-03-05` — "a new route reaching the service-role client without review" — is
+mitigated by an ESLint rule whose `files` glob is `["src/app/**/*.ts", "src/app/**/*.tsx"]`
+(`eslint.config.mjs`) and by a census that walks `src/app` and nothing else
+(`scripts/check-elevated-ratchet.mjs`, `APP_DIR`). Neither control can see an **indirect** reach, and
+the indirect reach is live in the tree today:
+
+```
+src/lib/audit.ts:1   import { createServiceClient } from "@/lib/supabase/service";
+```
+
+`logAdminAction` is a service-role write. **Ten** route files under `src/app/api/admin/**` import it,
+across **fourteen** callsites (the same fourteen `F-073` counts). None appears in
+`eslint.elevated-allowlist.mjs`, because none imports the service module directly — so the ratchet
+reports `committed=24 live=24 delta=0` and `REGISTRY.md` declared itself empty while an RLS-bypassing
+operation was reachable from admin routes and counted nowhere.
+
+**Why it is not merely cosmetic.** The same hole is a one-move bypass for any future contributor: put
+`createServiceClient()` in a new `src/lib/foo.ts`, import `foo` from a route. Lint passes, the ratchet
+reports `delta=0`, and the credential is in the request path. A boundary that can be stepped around by
+adding one indirection is not a boundary.
+
+**What Phase 3's review-fix pass DID do.** The **documentation** half only:
+`src/server/db/elevated/REGISTRY.md` now carries a named section recording `src/lib/audit.ts` as a
+known out-of-scope elevated caller, with the file and callsite counts and why neither control sees it.
+That is a doc edit, not a control change — "empty" without that paragraph is a claim the file could
+not support.
+
+**What it did NOT do, and why.** Widening the ESLint `files` glob to `src/**` and `APP_DIR` to
+`join(REPO_ROOT, "src")` changes what two **controls** measure, and it requires a **one-time
+regeneration** of `eslint.elevated-allowlist.mjs` to absorb `src/lib/audit.ts` as a pre-existing
+elevated caller. Regenerating the allow-list is the single operation the ratchet's own header forbids,
+because the list may only shrink; doing it inside a review-fix pass — where it would be one line in a
+diff of twelve other things — is exactly how a ratchet gets quietly reset. It needs its own plan, its
+own before/after capture, and its own red/green fixture proving the widened rule bites on an indirect
+import.
+
+**Owner: Phase 4 (seam application).** The slice that migrates the first callsites to
+`getElevatedClient()` is the slice that should widen the fence around them, and it will be
+regenerating the allow-list anyway as callsites retire.
+
+---
+
+## DI-35 — The seam reads ban state that no guard consumes
+
+**Found by:** the Phase 3 code review, `03-REVIEW.md` WR-12.
+
+**What it is.** `RequestProfile` (`src/server/context.ts:35-48`) selects `banned_at` and
+`ban_expires_at`, and its docblock says the five columns "are exactly what the ban check, the
+onboarding guard and the role guards between them need". Re-derived against the tree: `grep -rn
+'banned_at\|ban_expires_at' src/server/` returns **two** hits, both in `context.ts` itself. No guard
+in `src/server/authz/` reads either column and there is no `requireNotBanned`.
+
+**Why it is not merely cosmetic.** A Phase 4–6 handler that adopts `requireUser` / `requireRole` gets
+authentication and role membership and **no ban enforcement from the seam**, while the docblock
+invites it to assume otherwise. The proxy does cover `/api/**` today, but it fails open by design —
+`src/proxy.ts`'s outer `catch` returns `NextResponse.next({ request })` — so the ring is the only ban
+check and it is a best-effort one.
+
+**Why Phase 3's review-fix pass did not resolve it.** Both available answers are design decisions with
+behaviour consequences, not defect repairs. Adding `requireNotBanned` creates a **second** ban ring
+whose interaction with the first is unspecified — two rings that disagree about an expired suspension
+is a worse failure than one ring that fails open, and `F-062` already records that the existing ring
+answers JSON calls with a 307 to an HTML page. Narrowing `RequestProfile` to the three columns
+something reads means re-taking the per-request read the moment the guard is written. Picking between
+them belongs to the phase that adopts the seam.
+
+**Owner: Phase 4 (seam application).** Decide whether `requireUser` enforces the ban or the proxy stays
+the only ring, then either add the guard or narrow the type and the docblock together. Cross-reference
+`F-062` and `F-003` when deciding: the proxy ring is already known to be env-conditional and
+fail-open.
+
+---
+
 # Part 2 — The five Phase 2 carry-forwards, each with its Phase 3 disposition
 
 `.../02-.../evidence/STAGE-2-COMPLETION.md` § 12 named four items plus the gitignored instruction

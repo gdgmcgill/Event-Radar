@@ -118,10 +118,39 @@ before the first mutation and after the last restoration.
 
 ---
 
-## 4. Three things this suite does **not** prove
+## 4. Four things this suite does **not** prove
 
 These are the facts a later reader is most likely to get wrong, so they are
 stated plainly rather than left to inference.
+
+### 4.0 Behaviour 6 pins an OPEN REDIRECT — **`F-077`**, added after this note was written
+
+Raised by the Phase 3 code review (`03-REVIEW.md` WR-11) and registered, not fixed.
+
+`route.ts:37` reads `next` straight from the query string with no shape check, and `route.ts:205`
+does `new URL(next, requestUrl.origin)` — where an **absolute** value wins over the base. So
+`?next=https://evil.example/` sends the freshly-authenticated user off-origin **with the session
+cookies already set on the response**.
+
+Test 6 above is tagged **PRESERVE**, under a header stating these expectations "must pass
+byte-for-byte identically afterwards". That is the part that makes this belong in *this* file rather
+than only in the register: **the characterization freezes the missing validation into the contract
+Phases 5-6 are instructed to keep.** A later phase reading only the tag would conclude, correctly by
+the tag and wrongly in fact, that the current `next` handling is the behaviour to protect.
+
+It is **not** a Phase 3 fix because adding the guard is an application behaviour change on the
+authentication path, and the suite that pins the current behaviour is itself a Phase 3 deliverable —
+editing the safety net and the thing it measures in one commit is not a review fix.
+
+**When Phase 5 fixes it, test 6 is expected to change**, and that change is sanctioned here in
+advance so nobody reads it as a PRESERVE violation. The fix and its test are specified in `F-077`;
+the `!raw.startsWith("//")` half is load-bearing, because `//evil.example` is protocol-relative and
+passes a naive leading-slash check.
+
+Exploitation is not direct — `src/components/auth/SignInButton.tsx:30` only ever sets a pathname, so
+an attacker needs their value in the OAuth `redirect_to`, which is governed by the Supabase redirect
+allow-list this repository neither controls nor captures. That is why `F-077` is Medium and not High,
+and it is also a second thing for Phase 5 to check.
 
 ### 4.1 The admin-assignment path does not fire in production today
 

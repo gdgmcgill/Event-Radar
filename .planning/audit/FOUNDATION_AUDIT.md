@@ -14,38 +14,38 @@
 
 ## Summary
 
-**73 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
+**77 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
 
 ### By severity
 
 | Severity | Count | Must be fixed by |
 |---|---:|---|
 | Critical | 4 | First Stage 3 slice owning the layer. **None may be Open when Phase 5 starts.** |
-| High | 18 | Before Phase 7 begins, or a dated risk acceptance with a reachability argument. |
-| Medium | 29 | Within Stage 3, in the slice that touches the file. |
+| High | 20 | Before Phase 7 begins, or a dated risk acceptance with a reachability argument. |
+| Medium | 31 | Within Stage 3, in the slice that touches the file. |
 | Low | 22 | Opportunistically. No deadline. |
-| **Total** | **73** | |
+| **Total** | **77** | |
 
 ### By category
 
 | Category | Count |
 |---|---:|
-| authz | 25 |
+| authz | 28 |
 | cache-exposure | 4 |
 | schema-drift | 11 |
 | config | 12 |
 | dependency | 5 |
 | observability | 7 |
-| validation | 3 |
+| validation | 4 |
 | performance | 3 |
 | dead-code | 3 |
-| **Total** | **73** |
+| **Total** | **77** |
 
 ### By status
 
 | Status | Count |
 |---|---:|
-| Open | 61 |
+| Open | 65 |
 | Fixed | 12 |
 
 ---
@@ -76,6 +76,8 @@
 | [F-051](#f-051) | High | dependency | next 16.2.1 carries 25 advisories, two of them critical, reachable on every request, with a fix inside the declared range |
 | [F-052](#f-052) | High | dependency | The vercel CLI is declared in dependencies rather than devDependencies and is imported by nothing |
 | [F-073](#f-073) | High | observability | Every admin audit write is rejected by PostgREST and silently discarded, because logAdminAction inserts admin_email and never inspects the result |
+| [F-074](#f-074) | High | authz | get_friends and get_friends_going_to_event are anon-executable SECURITY DEFINER functions that take the subject as a parameter, so any unauthenticated caller can read any user's friend graph |
+| [F-075](#f-075) | High | authz | compute_user_scores, send_event_reminders and send_feedback_requests are SECURITY DEFINER privileged writes granted to anon |
 | [F-003](#f-003) | Medium | authz | The entire middleware authentication ring is environment-variable-conditional and passes traffic through unauthenticated when unbound |
 | [F-013](#f-013) | Medium | authz | The complete social graph (user_follows, club_followers) is bulk-readable by anonymous callers |
 | [F-014](#f-014) | Medium | authz | Review text is anonymously readable alongside its author's user_id |
@@ -105,6 +107,8 @@
 | [F-062](#f-062) | Medium | validation | The ban ring answers JSON API calls with a 307 redirect to an HTML page, on ninety-two routes |
 | [F-071](#f-071) | Medium | validation | The friends-of-an-event fallback passes a query builder where an array of ids is required, so the fallback always answers with nobody |
 | [F-072](#f-072) | Medium | schema-drift | Both moderation pages select admin_audit_log.admin_email, a column the live schema does not have, so the Recent Activity panel has always rendered empty |
+| [F-076](#f-076) | Medium | authz | Five of the seven SECURITY DEFINER functions in the baseline have a mutable search_path |
+| [F-077](#f-077) | Medium | validation | The auth callback's next parameter reaches NextResponse.redirect unvalidated, and the new PRESERVE suite freezes that behaviour into the Phase 5-6 contract |
 | [F-004](#f-004) | Low | authz | The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time |
 | [F-018](#f-018) | Low | authz | 61 of 101 policies carry no TO clause; 39 rely on an auth.uid()-bearing predicate rather than role targeting to exclude anon |
 | [F-019](#f-019) | Low | performance | 68 unwrapped auth.uid() occurrences across 59 policies are re-evaluated per row |
@@ -746,7 +750,74 @@
 
 **Validation criterion.** An integration test asserting that a genuine moderation action through an /api/admin/ route results in exactly one row in admin_audit_log - the test F-007 already asks for, which cannot pass today. Plus a unit assertion that logAdminAction surfaces a rejected insert rather than resolving silently.
 
+**Resolution.** **Phase 3 code review (03-REVIEW.md CR-02) added two mechanism notes; no status change (DEC-22).** First, why the type system does not catch it: supabase-js infers the insert generic from the object literal, so an excess key type-checks, and Phase 3's removal of the `(supabase as any)` cast from this statement makes the call look type-checked without making it so. Second, why the failure is invisible at run time: the discarded result hides the PGRST204 that PostgREST actually returns, so the seventeen callers' try/catch blocks observe success on every failure. The reviewer judged that deferring the COLUMN decision is defensible while deferring the ERROR CHECK is not — surfacing the rejected write is a pure observability change with no wire-format impact. That half was in scope for Phase 3's type-only remit and was not taken; it is not taken here either, because `src/lib/audit.ts` is production-codified behaviour whose change belongs to the owning slice. Phase 5 owns both halves; the error check is the one to do first and it is independent of the column question.
+
 **Related.** [F-007](#f-007), [F-072](#f-072), [F-043](#f-043)
+
+---
+
+### F-074 — get_friends and get_friends_going_to_event are anon-executable SECURITY DEFINER functions that take the subject as a parameter, so any unauthenticated caller can read any user's friend graph
+
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** Anonymous-reachable IDOR against the social graph with no compensating control. Both functions are SECURITY DEFINER, so they run as postgres and bypass every RLS policy on users and user_follows; both take the subject as an ARGUMENT rather than reading it from the session, so there is nothing to bypass in the first place; and both are GRANT ALL ... TO anon, so the public anon key that ships in the client bundle is sufficient. get_friends_going_to_event additionally discloses who saved a given event. Not Critical because what is disclosed is id, name and avatar_url plus a mutual-follow edge rather than credentials or contact details, and user ids must first be harvested (which /api/users/search and /users/[id] make trivial). High because the boundary crossed is anonymous-to-authenticated and the disclosure is of every user, not one.
+
+**Affected paths.**
+
+- `supabase/migrations/20260915214553_baseline.sql` lines 282-294, the get_friends definition
+- `supabase/migrations/20260915214553_baseline.sql` lines 295-308, the get_friends_going_to_event definition
+- `supabase/migrations/20260915214553_baseline.sql` lines 2454-2456 and 2460-2462, the GRANT ALL ... TO anon statements
+- `src/app/profile/page.tsx` lines 55, a live callsite passing user.id as target_user_id
+
+**Evidence.** [`raw/prod/functions.json`](./raw/prod/functions.json)
+
+**Reproduction.**
+
+1. Read the two definitions at supabase/migrations/20260915214553_baseline.sql:282 and :295 - LANGUAGE sql STABLE SECURITY DEFINER, no SET search_path, and no auth.uid() anywhere in either body.
+2. Read the grants at :2454 and :2460 - GRANT ALL ON FUNCTION ... TO "anon" for both.
+3. Cross-check the production capture: node -e "const f=require('./.planning/audit/raw/prod/functions.json'); console.log(f.rows.filter(r=>r.name.startsWith('get_friends')).map(r=>[r.name,r.security_definer]))" - both present, both security_definer true.
+4. POST /rest/v1/rpc/get_friends with only the public anon key as apikey and {"target_user_id":"<any user uuid>"} returns that user's mutual-follow list with no session at all.
+5. Confirm nothing asserts on this: grep -rn "has_function_privilege\|get_friends" supabase/tests/database/ returns nothing - the pgTAP suite added in Phase 3 looks at policies and never at RPC reachability.
+
+**Recommended fix.** Derive the subject from the session and revoke the public grants, in a new migration - never by editing the baseline. Preferred: CREATE OR REPLACE FUNCTION public.get_friends() with no argument, SET search_path = '', a fully schema-qualified body, and (SELECT auth.uid()) as the join key, then REVOKE EXECUTE ... FROM PUBLIC, anon. If the parameterised signature must be kept for callsite compatibility, add `WHERE target_user_id = (SELECT auth.uid())` as the first predicate and revoke anon regardless. supabase/migrations/20260916000000_invitation_policy_fixes.sql is the worked example of the shape wanted: subject from the session, search_path pinned, EXECUTE revoked from PUBLIC and anon, granted to authenticated only.
+
+**Validation criterion.** A pgTAP assertion that ok(NOT has_function_privilege('anon', 'public.get_friends(uuid)', 'EXECUTE')) for both functions, plus a case that impersonates user A with tests.act_as and asserts the function returns A's friends and not B's when asked for B - an assertion that fails if the subject is ever taken from a parameter again.
+
+**Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md CR-01) and registered rather than fixed.** Inherited from production, not authored by Phase 3 - but supabase/migrations/20260915214553_baseline.sql is what creates it in every environment built from this repository from now on, which is why it is a repository finding and not only a production one. Not fixed in Phase 3's review-fix pass because changing an RPC's signature and its grants is production-codified behaviour: five live callsites pass the subject explicitly, and Phase 3's charter is behaviour preservation. No characterization test was written either - an assertion documenting that anon CAN call this would have to be deleted by the fix, and the one worth writing is the assertion that it cannot, which belongs with the fix. Owner: Phase 5 (authz/RLS hardening).
+
+**Related.** [F-013](#f-013), [F-075](#f-075), [F-076](#f-076), [F-005](#f-005)
+
+---
+
+### F-075 — compute_user_scores, send_event_reminders and send_feedback_requests are SECURITY DEFINER privileged writes granted to anon
+
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** Three unauthenticated write/compute primitives, each reachable with the public anon key alone. compute_user_scores() is a full recompute of user_event_scores across every user - the job Phase 3 put on a six-hour pg_cron schedule precisely because it is expensive - callable on demand and unthrottled, which is a denial-of-service primitive against the database the whole application shares. send_event_reminders() and send_feedback_requests() write notifications rows on behalf of OTHER users. Not Critical because the notification writes de-duplicate on (user_id, event_id, type) so the spam ceiling is bounded, and because no data is disclosed to the caller. High because an anonymous caller triggering privileged writes for other users is an authorization failure regardless of the ceiling, and because the compute path has no ceiling at all.
+
+**Affected paths.**
+
+- `supabase/migrations/20260915214553_baseline.sql` lines 72, compute_user_scores; 379, send_event_reminders; 448, send_feedback_requests
+- `supabase/migrations/20260915214553_baseline.sql` lines 2442, 2490, 2496, the three GRANT ALL ... TO anon statements
+- `supabase/migrations/20260915230100_cron_compute_user_scores.sql` lines the six-hour schedule that exists because the recompute is expensive
+
+**Evidence.** [`raw/prod/functions.json`](./raw/prod/functions.json)
+
+**Reproduction.**
+
+1. Read the three definitions at supabase/migrations/20260915214553_baseline.sql:72, :379 and :448 - all three are SECURITY DEFINER and none reads auth.uid() or checks a caller in any other way.
+2. Read the grants at :2442, :2490 and :2496 - GRANT ALL ON FUNCTION ... TO "anon" for all three.
+3. POST /rest/v1/rpc/compute_user_scores with only the public anon key triggers a full cross-user recompute.
+4. Read supabase/tests/database/030-cron-schedule.test.sql - it asserts the pg_cron schedule ROW exists and asserts nothing about who may invoke the function it schedules.
+5. Confirm the threat models: grep -rn "compute_user_scores\|send_event_reminders" .planning/phases/03-*/03-0*-PLAN.md returns the schedule work and no threat entry for the grant.
+
+**Recommended fix.** In a new migration: REVOKE EXECUTE ON FUNCTION public.compute_user_scores(), public.send_event_reminders() and public.send_feedback_requests() FROM PUBLIC, anon, authenticated. pg_cron runs the scheduled job as the job owner and is unaffected; service_role retains EXECUTE for the cron routes that call them over HTTP. Add SET search_path = '' at the same time (F-076) since all three are being altered anyway.
+
+**Validation criterion.** A pgTAP assertion per function that ok(NOT has_function_privilege('anon', '<signature>', 'EXECUTE')) AND NOT has_function_privilege('authenticated', ...), plus a re-run of supabase/tests/database/030-cron-schedule.test.sql proving the scheduled job still runs after the revoke.
+
+**Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md CR-05) and registered rather than fixed.** Inherited from production; codified for every rebuilt environment by the baseline migration. Not fixed in Phase 3's review-fix pass because revoking EXECUTE changes who can invoke three live functions, and the cron HTTP routes that call them have not been traced to a role - doing this blind is how a scheduled job stops running silently, which is the failure mode this program exists to end rather than create. Owner: Phase 5 (authz/RLS hardening), together with F-076.
+
+**Related.** [F-074](#f-074), [F-076](#f-076), [F-037](#f-037), [F-041](#f-041), [F-042](#f-042)
 
 ---
 
@@ -1058,6 +1129,8 @@
 **Recommended fix.** Add a bucket_id IN (...) predicate naming the buckets intended to be publicly readable, so the policy's scope is declared rather than unbounded.
 
 **Validation criterion.** A test creating a private bucket and asserting an authenticated non-owner cannot read its objects.
+
+**Resolution.** **Phase 3 code review (03-REVIEW.md WR-06) changed this finding's REACH, not its severity.** When this was written the policy existed in production and in no declarative source (see F-035), so it was a production-only hazard. `supabase/migrations/20260915214553_baseline.sql:2772` now carries it verbatim in the hand-added storage section, which means EVERY environment built from this repository — local, CI, staging, any future rebuild — is created with `FOR SELECT TO authenticated USING (true)` across all buckets from its first second. The eleven bucket-scoped policies beside it are decorative for any authenticated caller. The reviewer also noted that the baseline's section header correctly explains why storage POLICIES were included and storage STRUCTURE was not, but the policies were carried without being read. Still Medium, still Phase 5; the fix now has to be a follow-up migration (drop, or scope to `bucket_id IN ('event-images','club-logos','banners')`) rather than a dashboard edit, and nothing in `supabase/tests/database/` looks at the `storage` schema at all.
 
 **Related.** [F-024](#f-024)
 
@@ -1518,7 +1591,70 @@
 
 **Validation criterion.** The `expect(row).not.toContain("admin_email")` assertion in src/__tests__/moderation/audit-shape.test.ts flips if the column is restored, or the select assertion flips if the column is dropped from the query, and the "No recent activity yet" assertion is replaced by one rendering a real row. Plus a pgTAP assertion that a select naming every column the two pages request succeeds.
 
+**Resolution.** **Phase 3 code review (03-REVIEW.md CR-02) added one mechanism note; no status change (DEC-22).** The reviewer established WHY the phantom `admin_email` key survives a strict TypeScript build, which this record previously did not say: supabase-js infers the insert generic FROM THE OBJECT LITERAL, so `Row extends Insert` is satisfied by a superset and an EXCESS key is not an error. Phase 3 removed the `(supabase as any)` cast from this exact statement (REFAC-04), which makes the call LOOK type-checked while the generated types still cannot catch the excess key — `npx tsc --noEmit` is clean with the phantom column present. Confirmed against the tree at commit ea417cf. The column decision remains this finding's, for Phase 5.
+
 **Related.** [F-007](#f-007), [F-043](#f-043), [F-073](#f-073)
+
+---
+
+### F-076 — Five of the seven SECURITY DEFINER functions in the baseline have a mutable search_path
+
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** The standard function_search_path_mutable advisory. Only is_admin and is_club_owner carry SET search_path TO 'public'; compute_user_scores, get_friends, get_friends_going_to_event, send_event_reminders and send_feedback_requests do not, and every one of their bodies references unqualified relations (users, user_follows, saved_events, notifications). Medium rather than High because exploitation requires a CREATE privilege on some schema in the cluster, which no application role currently holds - it is the SEVERITY_SLA.md latent clause. It is recorded as its own finding rather than folded into F-074/F-075 because it is the AMPLIFIER for both: a definer function with a mutable path plus a public EXECUTE grant is the shape that turns a schema-creation privilege anywhere in the cluster into arbitrary execution as postgres.
+
+**Affected paths.**
+
+- `supabase/migrations/20260915214553_baseline.sql` lines 72, 282, 295, 379, 448 - the five definitions with no SET search_path
+- `supabase/migrations/20260915214553_baseline.sql` lines 311 and 325 - is_admin and is_club_owner, the two that DO set it, shown as the in-tree counter-example
+
+**Evidence.** [`raw/prod/functions.json`](./raw/prod/functions.json)
+
+**Reproduction.**
+
+1. grep -n 'SET "search_path"' supabase/migrations/20260915214553_baseline.sql returns exactly two lines, 311 and 325.
+2. grep -n 'SECURITY DEFINER' on the same file returns seven. Five of the seven therefore have a mutable path.
+3. Read any of the five bodies - for example :282 - and note the unqualified `users` and `user_follows` references.
+4. Ask the catalog directly: SELECT proname, proconfig FROM pg_proc WHERE prosecdef AND pronamespace = 'public'::regnamespace - five rows return proconfig NULL.
+
+**Recommended fix.** In a new migration, for each of the five: ALTER FUNCTION public.<name>(<args>) SET search_path = '', and schema-qualify every relation reference in the body in the same change - setting the path without qualifying the bodies breaks them. Doing it while F-075's revokes are being written is cheaper than doing it twice. supabase/migrations/20260916000000_invitation_policy_fixes.sql is the in-tree worked example of the target shape.
+
+**Validation criterion.** A pgTAP assertion that iterates pg_proc WHERE prosecdef AND pronamespace = 'public'::regnamespace and requires proconfig to contain a search_path entry for EVERY row - one assertion that a future definer function cannot satisfy by forgetting, rather than five assertions naming the five functions that exist today.
+
+**Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md WR-05) and registered rather than fixed.** Inherited from production; codified for every rebuilt environment by the baseline migration. Not fixed in Phase 3's review-fix pass because pinning the path REQUIRES rewriting five function bodies to schema-qualify their relations, which is a behaviour-affecting change to production-codified SQL and is exactly the kind of work Stage 2's charter excludes. Owner: Phase 5, in the same migration as F-075.
+
+**Related.** [F-074](#f-074), [F-075](#f-075)
+
+---
+
+### F-077 — The auth callback's next parameter reaches NextResponse.redirect unvalidated, and the new PRESERVE suite freezes that behaviour into the Phase 5-6 contract
+
+**Severity:** Medium · **Category:** validation · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** An open redirect on the one route that has just set session cookies. `new URL(next, requestUrl.origin)` lets an ABSOLUTE value win over the base, so ?next=https://evil.example/ sends the freshly-authenticated user off-origin with the cookies already attached to the response. Medium rather than High because exploitation is not direct: src/components/auth/SignInButton.tsx only ever sets a pathname, so an attacker must get their value into the OAuth redirect_to, and whether that is reachable depends on how permissive the Supabase redirect allow-list is - which this repository neither controls nor asserts. The reason it is registered at all is the second half: Phase 3's PRESERVE suite now asserts the next behaviour (test 6) under a header saying these expectations must pass byte-for-byte identically afterwards, which converts a missing validation into a contract later phases are instructed to preserve.
+
+**Affected paths.**
+
+- `src/app/auth/callback/route.ts` lines 37, the unvalidated read
+- `src/app/auth/callback/route.ts` lines 205, new URL(next, requestUrl.origin) reaching NextResponse.redirect
+- `src/app/auth/callback/route.test.ts` lines 311-325, the characterization that pins it
+
+**Evidence.** [`inventory/endpoints.json#auth.callback`](./inventory/endpoints.json#auth.callback)
+
+**Reproduction.**
+
+1. Read src/app/auth/callback/route.ts:37 - const next = requestUrl.searchParams.get("next") ?? "/" - with no shape check of any kind.
+2. Read :205 - new URL(next, requestUrl.origin). An absolute URL as the first argument ignores the base, which is standard WHATWG URL behaviour: node -e "console.log(new URL('https://evil.example/','http://localhost:3000').href)".
+3. Read src/app/auth/callback/route.test.ts:311-325 - test 6 asserts the pathname for ?next=%2Fmy-events and asserts nothing about an off-origin value, under a file header stating these expectations must pass byte-for-byte identically in later phases.
+4. Confirm the in-app caller is benign: src/components/auth/SignInButton.tsx:30 sets a pathname only - so the reachable attack path is through the OAuth redirect_to and the Supabase redirect allow-list, which is configuration this repository does not capture.
+
+**Recommended fix.** Two lines in the route, and a test BEFORE the freeze takes effect. In the route: const raw = requestUrl.searchParams.get("next") ?? "/"; const next = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/"; - the !startsWith("//") half is load-bearing, since //evil.example is protocol-relative and passes a naive leading-slash check. In the suite, add a case asserting that ?next=https%3A%2F%2Fevil.test lands on "/", so the characterization pins the SAFE behaviour rather than the current one. Separately, audit the Supabase redirect allow-list for this project, which is the control that decides whether the route-level defect is reachable at all.
+
+**Validation criterion.** A unit case in src/app/auth/callback/route.test.ts asserting that an absolute and a protocol-relative next value both redirect to "/" on the same origin, plus the existing test 6 still asserting that a relative path is honoured - so the fix cannot be implemented by dropping next support altogether.
+
+**Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md WR-11) and registered rather than fixed.** The defect is inherited, but Phase 3 is where it was characterized and therefore where it became a frozen expectation - which is the part this record exists to un-freeze. Not fixed in Phase 3's review-fix pass because adding the guard is an application behaviour change on the authentication path, and the PRESERVE suite that pins the current behaviour is itself a Phase 3 deliverable: changing both in a review-fix pass would edit the safety net and the thing it measures in the same commit. Owner: Phase 5. Cross-referenced from the callback characterization note so a reader of that file learns the freeze is known and scheduled.
+
+**Related.** [F-003](#f-003), [F-004](#f-004), [F-069](#f-069)
 
 ---
 
@@ -1721,6 +1857,8 @@
 **Recommended fix.** Scope the policy to the buckets that are intended public by adding a bucket_id predicate, so creating a private bucket does not silently inherit universal authenticated read.
 
 **Validation criterion.** A test creating a private bucket and asserting that an authenticated caller who does not own an object in it cannot read that object.
+
+**Resolution.** **Phase 3 code review (03-REVIEW.md WR-06): the enabling policy is now codified by a migration.** This finding's cause is F-034's policy, which `supabase/migrations/20260915214553_baseline.sql:2772` now creates in every rebuilt environment rather than only in production. No severity change — it is still Low because all four live buckets are public today — but the exposure is no longer confined to the one database somebody could fix by hand. See F-034 for the full note.
 
 **Related.** [F-030](#f-030), [F-034](#f-034)
 
