@@ -42,10 +42,23 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /* --------------------------------------------------------------- the rule -- */
 
 const MIGRATIONS_DIR = 'supabase/migrations';
+
+/**
+ * Resolved against THIS FILE, not against `process.cwd()` (IN-07).
+ *
+ * `process.cwd()` made the check cwd-dependent: run from any subdirectory it
+ * reported "the directory is missing or unreadable" and exited 1. That fails
+ * closed, which is the right direction — but for the wrong reason, and a gate
+ * whose red means two different things is a gate nobody reads carefully. Its
+ * sibling `scripts/check-elevated-ratchet.mjs` already resolves this way; the
+ * two zero-dependency checkers now agree.
+ */
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * The CLI derives the version from the LEADING DIGITS and requires the whole name to
@@ -58,7 +71,7 @@ const MIGRATION_FILENAME = /^\d+_.+\.sql$/;
 /* ------------------------------------------------------------------- main -- */
 
 function main() {
-  const dir = path.resolve(process.cwd(), MIGRATIONS_DIR);
+  const dir = path.resolve(REPO_ROOT, MIGRATIONS_DIR);
 
   let entries;
   try {

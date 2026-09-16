@@ -50,7 +50,7 @@ import type { Database } from "../../src/lib/supabase/types";
 import { PINNED_NOW, SEED_TIMEZONE, iso } from "./clock";
 import { readSupabaseOverride } from "./envOverride";
 import { assertSeedTargetAllowed } from "./guard";
-import { prng, SEED } from "./prng";
+import { pick, prng, SEED } from "./prng";
 import {
   CLUBS,
   EVENTS,
@@ -342,7 +342,11 @@ async function seedEvents(admin: Admin): Promise<void> {
           location: e.location,
           is_free: e.is_free,
           source: "manual",
-          organizer: organizers[Math.floor(next() * organizers.length)],
+          // pick(), not an inlined copy of its body (IN-03). The helper carries
+          // an empty-list guard this expression did not, and a 20-line module
+          // whose whole justification is that it is small and auditable should
+          // not contain an exported function nothing calls.
+          organizer: pick(next, organizers),
           created_at: SEED_STAMP,
           updated_at: SEED_STAMP,
         }))

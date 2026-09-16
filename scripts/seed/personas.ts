@@ -113,11 +113,16 @@ export const IDS = {
   suspendedEvent: "5eed0000-0000-4000-8000-0000000000e5",
 
   // — join rows —————————————————————————————————————————————————————————————
+  // These five names say the ROLE each row assigns, not the persona's label.
+  // Three of them used to say "organizer" while assigning 'owner' (IN-04), so
+  // "the approved club has exactly one owner" read as true from the key names
+  // and was false in the data. The uuids are unchanged by the rename — the seed
+  // is byte-identical — and the reader is no longer misled.
   memberOfApproved: "5eed0000-0000-4000-8000-0000000000b1",
   ownerOfApproved: "5eed0000-0000-4000-8000-0000000000b2",
-  organizerOfApproved: "5eed0000-0000-4000-8000-0000000000b3",
-  organizerOfSecond: "5eed0000-0000-4000-8000-0000000000b4",
-  attackerOfOther: "5eed0000-0000-4000-8000-0000000000b5",
+  secondOwnerOfApproved: "5eed0000-0000-4000-8000-0000000000b3",
+  ownerOfSecondApproved: "5eed0000-0000-4000-8000-0000000000b4",
+  ownerOfOther: "5eed0000-0000-4000-8000-0000000000b5",
   ownerOfPending: "5eed0000-0000-4000-8000-0000000000b6",
   rsvpGoing: "5eed0000-0000-4000-8000-0000000000d1",
   rsvpCancelled: "5eed0000-0000-4000-8000-0000000000d2",
@@ -408,25 +413,32 @@ export const MEMBERSHIPS: readonly SeedMembership[] = [
     role: "owner",
   },
   {
+    // `club_member`'s row. 'organizer' IS the non-owning member role in this
+    // schema — see SeedMembership above — so the key and the value agree.
     id: IDS.memberOfApproved,
     club_id: IDS.approvedClub,
     user_id: IDS.club_member,
     role: "organizer",
   },
   {
-    id: IDS.organizerOfApproved,
+    // DELIBERATELY A SECOND OWNER of `approvedClub`, alongside `club_owner`.
+    // `multi_club_organizer` exists to prove that owning more than one club
+    // works, and co-ownership of an already-owned club is the sharper case.
+    // Any future assertion of the form "the approved club has one owner" is
+    // therefore false, and this name now says so (IN-04).
+    id: IDS.secondOwnerOfApproved,
     club_id: IDS.approvedClub,
     user_id: IDS.multi_club_organizer,
     role: "owner",
   },
   {
-    id: IDS.organizerOfSecond,
+    id: IDS.ownerOfSecondApproved,
     club_id: IDS.secondApprovedClub,
     user_id: IDS.multi_club_organizer,
     role: "owner",
   },
   {
-    id: IDS.attackerOfOther,
+    id: IDS.ownerOfOther,
     club_id: IDS.otherClub,
     user_id: IDS.cross_club_attacker,
     role: "owner",
