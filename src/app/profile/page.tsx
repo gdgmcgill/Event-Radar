@@ -67,13 +67,19 @@ export default async function ProfilePage() {
     email: user.email ?? "",
     name: profile?.name ?? (user.user_metadata?.name as string) ?? (user.user_metadata?.full_name as string) ?? null,
     avatar_url: profile?.avatar_url ?? (user.user_metadata?.avatar_url as string) ?? null,
-    banner_url: (profile as Record<string, unknown>)?.banner_url as string | null ?? null,
+    // No casts here. `banner_url`, `pronouns`, `year`, `faculty` and
+    // `visibility` are all columns of `users.Row` in the generated types, so
+    // reading them directly is what lets the `types` CI drift gate bite: if one
+    // of them is dropped from the schema tomorrow, this file stops compiling.
+    // A `Record<string, unknown>` escape here would keep compiling and hide it
+    // (03-REVIEW.md WR-09).
+    banner_url: profile?.banner_url ?? null,
     interest_tags: ((profile?.interest_tags ?? []) as string[]),
     inferred_tags: ((profile?.inferred_tags ?? []) as string[]),
-    pronouns: ((profile as Record<string, unknown>)?.pronouns as string) ?? null,
-    year: ((profile as Record<string, unknown>)?.year as string) ?? null,
-    faculty: ((profile as Record<string, unknown>)?.faculty as string) ?? null,
-    visibility: ((profile as Record<string, unknown>)?.visibility as string) ?? "public",
+    pronouns: profile?.pronouns ?? null,
+    year: profile?.year ?? null,
+    faculty: profile?.faculty ?? null,
+    visibility: profile?.visibility ?? "public",
     created_at: user.created_at,
   };
 
