@@ -4,11 +4,26 @@
 # Phase 03-refactor-foundations-schema-truth-and-the-seam-kit, plan 03-05
 #
 # WHAT THIS DOES
-#   For every policy created by supabase/migrations/*_fk_indexes_and_policy_gaps.sql
-#   it comments that policy's CREATE statement out, rebuilds the local database,
-#   runs the pgTAP suite and REQUIRES A FAILURE; then restores the file from git,
+#   For every policy created by any POLICY-BEARING MIGRATION (the list is in
+#   POLICY_MIGRATION_GLOBS below) it comments that policy's CREATE statement out
+#   — in EVERY file that creates it — rebuilds the local database, runs the
+#   pgTAP suite and REQUIRES A FAILURE; then restores the files from git,
 #   rebuilds again and requires a pass. It prints one block per policy and exits
 #   with the number of policies whose round-trip did not behave that way.
+#
+# BY POLICY NAME, ACROSS FILES — AND THAT IS NOT AN OPTIMISATION
+#   This script used to walk ONE file. That silently stopped working the moment
+#   a fix-forward migration re-created a policy an earlier migration had already
+#   created, which is the correct way to change a policy (never edit an applied
+#   migration in place). Commenting out the EARLIER file's CREATE leaves the
+#   LATER file's CREATE standing, the policy exists anyway, the suite stays
+#   GREEN — and the harness reports "this assertion is decorative" about an
+#   assertion that is fine. A false red on the control that exists to prevent
+#   false greens is the worst failure this script could have.
+#
+#   So the unit of mutation is the POLICY NAME, not the line. Every occurrence
+#   across every listed migration is commented out together, which is what
+#   "remove this policy" actually means in a folder that is replayed in order.
 #
 #   It exists because 02-REVIEW.md finding WR-04 caught a Phase 2 suite whose
 #   assertions could not fail when the behaviour they preserved was removed. The
@@ -39,7 +54,8 @@
 #     survives into a committed migration, and an explicit clean check at the
 #     end refuses to exit 0 with a mutation still on disk.
 #   * NEVER `git clean`, `git stash`, `git reset --hard`, or any other blanket
-#     working-tree operation. Exactly one file is touched and it is named.
+#     working-tree operation. Only the files matched by POLICY_MIGRATION_GLOBS
+#     are touched, and each one is named in the output before it is written.
 #   * ACCUMULATES, DOES NOT ABORT. A first failing policy must not hide the
 #     second. Failures are counted in $fail and the exit code is that count —
 #     the convention scripts/smoke.sh established.
@@ -76,17 +92,40 @@ cd "$REPO_ROOT" || exit 1
 # carry the CLI on PATH.
 SUPABASE_CMD=${SUPABASE_CMD:-"npx supabase"}
 
-MIGRATION="$(ls supabase/migrations/*_fk_indexes_and_policy_gaps.sql 2>/dev/null | head -1)"
-if [ -z "$MIGRATION" ]; then
-  echo "FATAL: no *_fk_indexes_and_policy_gaps.sql migration found" >&2
-  exit 1
-fi
+# EVERY migration that creates a policy this suite asserts on. Add a glob here
+# when a new one lands — a policy created by a file that is not listed cannot be
+# mutated, and the harness would report nothing at all about it rather than
+# reporting a problem, which is the quiet kind of gap this whole script exists
+# to refuse.
+POLICY_MIGRATION_GLOBS="supabase/migrations/*_fk_indexes_and_policy_gaps.sql
+supabase/migrations/*_invitation_policy_fixes.sql"
 
-if [ -n "$(git status --porcelain "$MIGRATION")" ]; then
-  echo "FATAL: $MIGRATION has uncommitted changes." >&2
-  echo "       The restore path is 'git checkout --', so it would discard them." >&2
-  exit 1
-fi
+MIGRATIONS=()
+while IFS= read -r glob; do
+  [ -z "$glob" ] && continue
+  matched=0
+  for f in $glob; do
+    [ -f "$f" ] || continue
+    MIGRATIONS+=("$f")
+    matched=1
+  done
+  if [ "$matched" -eq 0 ]; then
+    echo "FATAL: no migration matched '$glob'" >&2
+    echo "       Either the file was renamed or the glob is stale. Both are" >&2
+    echo "       failures: an unmatched glob means a policy nobody is mutating." >&2
+    exit 1
+  fi
+done <<EOF
+$POLICY_MIGRATION_GLOBS
+EOF
+
+for m in "${MIGRATIONS[@]}"; do
+  if [ -n "$(git status --porcelain "$m")" ]; then
+    echo "FATAL: $m has uncommitted changes." >&2
+    echo "       The restore path is 'git checkout --', so it would discard them." >&2
+    exit 1
+  fi
+done
 
 fail=0
 
@@ -146,22 +185,32 @@ comment_out_policy() {
   ' "$file" > "$tmp" && mv "$tmp" "$file"
 }
 
-# `mapfile` is bash 4; macOS ships bash 3.2 and this script must run there.
+# `mapfile` is bash 4; macOS ships bash 3.2 and this script must run there, and
+# an associative array for the de-duplication would be bash 4 as well — hence
+# the newline-delimited string and the fixed-string grep.
 POLICIES=()
+seen=""
 while IFS= read -r policy_name; do
+  [ -z "$policy_name" ] && continue
+  # De-duplicate: a policy re-created by a later fix-forward migration appears
+  # once here and is mutated in every file that creates it.
+  if printf '%s' "$seen" | grep -qxF "$policy_name"; then continue; fi
+  seen="$seen$policy_name
+"
   POLICIES+=("$policy_name")
-done < <(grep -oE '^CREATE POLICY "[^"]+"' "$MIGRATION" \
+done < <(grep -hoE '^CREATE POLICY "[^"]+"' "${MIGRATIONS[@]}" \
            | sed -E 's/^CREATE POLICY "//; s/"$//')
 
 if [ "${#POLICIES[@]}" -eq 0 ]; then
-  echo "FATAL: no CREATE POLICY statements found in $MIGRATION" >&2
+  echo "FATAL: no CREATE POLICY statements found in ${MIGRATIONS[*]}" >&2
   exit 1
 fi
 
 echo "============================================================================="
 echo "pgTAP mutation check"
-echo "migration : $MIGRATION"
-echo "policies  : ${#POLICIES[@]}"
+echo "migrations: ${#MIGRATIONS[@]}"
+for m in "${MIGRATIONS[@]}"; do echo "          : $m"; done
+echo "policies  : ${#POLICIES[@]} distinct (de-duplicated across the files above)"
 echo "started   : $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "============================================================================="
 echo
@@ -172,10 +221,28 @@ for policy in "${POLICIES[@]}"; do
   echo "-----------------------------------------------------------------------------"
 
   # --- round 1: removed, the suite must go red for the right reason -----------
-  comment_out_policy "$MIGRATION" "$policy"
-  mutated_lines="$(grep -c '^-- MUTATION: ' "$MIGRATION")"
+  #
+  # EVERY file that creates this policy is mutated, not just the first. A policy
+  # re-created by a fix-forward migration survives the removal of its earlier
+  # definition, and a half-applied mutation would report a decorative assertion
+  # where there is none.
+  mutated_lines=0
+  mutated_files=0
+  for m in "${MIGRATIONS[@]}"; do
+    if grep -qF "CREATE POLICY \"${policy}\"" "$m"; then
+      comment_out_policy "$m" "$policy"
+      mutated_files=$((mutated_files + 1))
+      mutated_lines=$((mutated_lines + $(grep -c '^-- MUTATION: ' "$m")))
+    fi
+  done
   echo "mutation_applied=true"
+  echo "mutation_files=$mutated_files"
   echo "mutation_lines_commented=$mutated_lines"
+
+  if [ "$mutated_files" -eq 0 ]; then
+    echo "RESULT: FAIL — the policy name was collected but no file could be mutated."
+    fail=$((fail + 1))
+  fi
 
   red_out="$(reset_and_test)"
   red_status=$?
@@ -200,10 +267,16 @@ for policy in "${POLICIES[@]}"; do
   fi
 
   # --- restore from git, never by re-editing ----------------------------------
-  git checkout -- "$MIGRATION"
-  if [ -n "$(git status --porcelain "$MIGRATION")" ]; then
-    echo "restore_clean=false"
-    echo "RESULT: FAIL — restore left the migration dirty."
+  git checkout -- "${MIGRATIONS[@]}"
+  restore_dirty=0
+  for m in "${MIGRATIONS[@]}"; do
+    if [ -n "$(git status --porcelain "$m")" ]; then
+      echo "restore_clean=false ($m)"
+      restore_dirty=$((restore_dirty + 1))
+    fi
+  done
+  if [ "$restore_dirty" -ne 0 ]; then
+    echo "RESULT: FAIL — restore left $restore_dirty migration(s) dirty."
     fail=$((fail + 1))
   else
     echo "restore_clean=true"
