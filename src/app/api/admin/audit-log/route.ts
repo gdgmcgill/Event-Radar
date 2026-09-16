@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const limit = 20;
   const offset = (page - 1) * limit;
 
-  let query = (supabase as any)
+  let query = supabase
     .from("admin_audit_log")
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false })

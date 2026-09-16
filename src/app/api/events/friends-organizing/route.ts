@@ -17,7 +17,7 @@ export async function GET() {
     }
 
     // Get friend IDs (mutual follows)
-    const { data: friends, error: friendsError } = await (supabase as any).rpc(
+    const { data: friends, error: friendsError } = await supabase.rpc(
       "get_friends",
       { target_user_id: user.id }
     );

@@ -11,7 +11,7 @@ export default async function OnboardingPage() {
 
   if (error || !user) redirect("/");
 
-  const { data: profile } = await (supabase as any)
+  const { data: profile } = await supabase
     .from("users")
     .select("onboarding_completed, name, avatar_url")
     .eq("id", user.id)

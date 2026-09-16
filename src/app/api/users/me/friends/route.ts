@@ -15,7 +15,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: friends, error } = await (supabase as any).rpc("get_friends", {
+    const { data: friends, error } = await supabase.rpc("get_friends", {
       target_user_id: user.id,
     });
 

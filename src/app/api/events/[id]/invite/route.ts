@@ -33,7 +33,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify each invitee is a friend (mutual follow)
-    const { data: friends } = await (supabase as any).rpc("get_friends", {
+    const { data: friends } = await supabase.rpc("get_friends", {
       target_user_id: user.id,
     });
 
@@ -45,14 +45,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get event title for notification
-    const { data: event } = await (supabase as any)
+    const { data: event } = await supabase
       .from("events")
       .select("title")
       .eq("id", eventId)
       .single();
 
     // Get inviter name
-    const { data: inviter } = await (supabase as any)
+    const { data: inviter } = await supabase
       .from("users")
       .select("name")
       .eq("id", user.id)
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       event_id: eventId,
     }));
 
-    await (supabase as any)
+    await supabase
       .from("event_invites")
       .upsert(inviteRows, {
         onConflict: "inviter_id,invitee_id,event_id",

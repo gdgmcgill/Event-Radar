@@ -50,7 +50,7 @@ export async function PUT(request: NextRequest) {
       updated_at: new Date().toISOString(),
     };
      
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("users")
       .update(updatePayload)
       .eq("id", user.id)

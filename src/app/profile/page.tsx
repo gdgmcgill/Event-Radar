@@ -35,25 +35,25 @@ export default async function ProfilePage() {
       .select("id, created_at, clubs (id, name, logo_url, description, category)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
-    (supabase as any)
+    supabase
       .from("saved_events")
       .select("id, events!inner(start_date)", { count: "exact", head: true })
       .eq("user_id", user.id)
       .lt("events.start_date", new Date().toISOString()),
-    (supabase as any)
+    supabase
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("created_by", user.id)
       .eq("status", "approved"),
-    (supabase as any)
+    supabase
       .from("saved_events")
       .select("id, events!inner(id, title, start_date, location, image_url)")
       .eq("user_id", user.id)
       .lt("events.start_date", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(10),
-    (supabase as any).rpc("get_friends", { target_user_id: user.id }).limit(20),
-    (supabase as any)
+    supabase.rpc("get_friends", { target_user_id: user.id }).limit(20),
+    supabase
       .from("saved_events")
       .select("id, events!inner(id, title, start_date, location, image_url)")
       .eq("user_id", user.id)

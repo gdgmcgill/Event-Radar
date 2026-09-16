@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { verifyAdmin } from "@/lib/admin";
 import { sanitizeText } from "@/lib/sanitize";
 import { logAdminAction } from "@/lib/audit";
+import type { Json } from "@/lib/supabase/types";
 
 export async function PATCH(
   request: NextRequest,
@@ -16,7 +17,10 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const updates: Record<string, unknown> = {};
+    // Narrowed from `Record<string, unknown>` to the generated JSON type: this
+    // object is both the PATCH body for `featured_events` and the audit-log
+    // metadata, and `unknown` admits values neither column can hold.
+    const updates: Record<string, Json> = {};
 
     if (body.sponsor_name !== undefined) {
       updates.sponsor_name = body.sponsor_name
@@ -34,7 +38,7 @@ export async function PATCH(
       );
     }
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("featured_events")
       .update(updates)
       .eq("id", id)
@@ -79,7 +83,7 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("featured_events")
       .delete()
       .eq("id", id);

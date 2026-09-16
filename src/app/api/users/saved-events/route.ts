@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     // Step 1: Get saved event rows for this user
      
-    const { data: savedRows, error: savedError } = await (supabase as any)
+    const { data: savedRows, error: savedError } = await supabase
       .from("saved_events")
       .select("event_id, created_at")
       .eq("user_id", user.id)
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     // Step 2: Fetch full event details (only approved, non-past events)
     const includePast = request.nextUrl.searchParams.get("include_past") === "true";
 
-    let eventsQuery = (supabase as any)
+    let eventsQuery = supabase
       .from("events")
       .select("*")
       .in("id", eventIds)

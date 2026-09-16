@@ -17,13 +17,13 @@ export async function GET() {
     }
 
     // Get people who follow the current user
-    const { data: inbound } = await (supabase as any)
+    const { data: inbound } = await supabase
       .from("user_follows")
       .select("follower_id")
       .eq("following_id", user.id);
 
     // Get people the current user follows
-    const { data: outbound } = await (supabase as any)
+    const { data: outbound } = await supabase
       .from("user_follows")
       .select("following_id")
       .eq("follower_id", user.id);
@@ -42,7 +42,7 @@ export async function GET() {
     }
 
     // Fetch their profiles
-    const { data: profiles } = await (supabase as any)
+    const { data: profiles } = await supabase
       .from("users")
       .select("id, name, avatar_url, faculty, year")
       .in("id", requestIds)

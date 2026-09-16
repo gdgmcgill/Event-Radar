@@ -38,7 +38,7 @@ export async function DELETE(request: NextRequest) {
     const currentTags: string[] = (profile as any).inferred_tags ?? [];
     const updatedTags = currentTags.filter((t) => t !== tag);
 
-    const { error: updateError } = await (supabase as any)
+    const { error: updateError } = await supabase
       .from("users")
       .update({ inferred_tags: updatedTags, updated_at: new Date().toISOString() })
       .eq("id", user.id);

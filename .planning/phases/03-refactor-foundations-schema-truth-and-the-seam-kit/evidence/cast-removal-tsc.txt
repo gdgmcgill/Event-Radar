@@ -1,0 +1,149 @@
+Cast removal — the type-check transcript, before and after the fixes
+Plan: 03-06 · Phase: 03-refactor-foundations-schema-truth-and-the-seam-kit · Recorded: 2026-09-15
+
+Four runs, in the order they happened:
+
+  RUN 1  all 47 client casts removed, nothing fixed     -> 9 errors, 5 files
+  RUN 2  2 casts restored at the two defect sites        -> 7 errors, 3 files
+  RUN 3  the audit-log metadata fix applied              -> 1 NEW error, a ripple
+  RUN 4  every fix applied                               -> exit 0, no output
+
+RUN 1 is the measurement 03-RESEARCH.md § Code Examples 7 predicted. It was taken
+on this tree BEFORE touching any of the nine, because the research's warning was
+that a tenth could appear halfway through a fix. One did — see RUN 3.
+
+================================================================================
+RUN 1 — all 47 removed, nothing fixed
+================================================================================
+
+$ grep -rl "(supabase as any)" src/ --include='*.ts' --include='*.tsx' \
+    | while read -r f; do perl -pi -e 's/\(supabase as any\)/supabase/g' "$f"; done
+$ grep -rn "(supabase as any)" src/ --include='*.ts' --include='*.tsx' | wc -l
+0
+
+$ npx tsc --noEmit
+src/app/api/events/[id]/friends/route.ts(38,11): error TS2345: Argument of type 'PostgrestFilterBuilder<{ PostgrestVersion: "12"; }, { Tables: { admin_audit_log: { Row: { action: string; admin_user_id: string; created_at: string | null; id: string; metadata: Json; target_id: string; target_type: string; }; Insert: { ...; }; Update: { ...; }; Relationships: []; }; ... 28 more ...; users: { ...; }...' is not assignable to parameter of type 'readonly (string | null)[]'.
+  Type 'PostgrestFilterBuilder<{ PostgrestVersion: "12"; }, { Tables: { admin_audit_log: { Row: { action: string; admin_user_id: string; created_at: string | null; id: string; metadata: Json; target_id: string; target_type: string; }; Insert: { ...; }; Update: { ...; }; Relationships: []; }; ... 28 more ...; users: { ...; }...' is missing the following properties from type 'readonly (string | null)[]': length, concat, join, slice, and 25 more.
+src/app/api/events/friends-activity/route.ts(51,25): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/api/events/friends-activity/route.ts(52,22): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/api/events/friends-activity/route.ts(57,34): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/api/events/friends-activity/route.ts(60,9): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/api/events/route.ts(255,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/app/api/events/route.ts(256,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/app/moderation/page.tsx(67,7): error TS2352: Conversion of type 'PostgrestFilterBuilder<{ PostgrestVersion: "12"; }, { Tables: { admin_audit_log: { Row: { action: string; admin_user_id: string; created_at: string | null; id: string; metadata: Json; target_id: string; target_type: string; }; Insert: { ...; }; Update: { ...; }; Relationships: []; }; ... 28 more ...; users: { ...; }...' to type 'Promise<{ data: AuditEntry[] | null; }>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'PostgrestFilterBuilder<{ PostgrestVersion: "12"; }, { Tables: { admin_audit_log: { Row: { action: string; admin_user_id: string; created_at: string | null; id: string; metadata: Json; target_id: string; target_type: string; }; Insert: { ...; }; Update: { ...; }; Relationships: []; }; ... 28 more ...; users: { ...; }...' is missing the following properties from type 'Promise<{ data: AuditEntry[] | null; }>': catch, finally, [Symbol.toStringTag]
+src/lib/audit.ts(31,42): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { action: string; admin_user_id: string; created_at?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; target_id: string; target_type: string; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Type 'Record<string, unknown>' is not assignable to type 'Json | undefined'.
+      Type 'Record<string, unknown>' is missing the following properties from type 'Json[]': length, pop, push, concat, and 35 more.
+  Overload 2 of 2, '(values: { action: string; admin_user_id: string; created_at?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; target_id: string; target_type: string; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'admin_user_id' does not exist in type '{ action: string; admin_user_id: string; created_at?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; target_id: string; target_type: string; }[]'.
+exit=2
+
+NINE errors. FIVE files. Exactly the file set, the line numbers and the error
+codes the research measured on 2026-09-15 against a scratch copy of src/ — so
+the prediction held on the real tree, and it held against the REGENERATED types
+this plan produced in task 1 rather than the ones the research measured against.
+
+One detail worth recording, because it could have gone the other way: the
+regenerated types no longer carry the __InternalSupabase.PostgrestVersion block
+(see types-regenerated.txt), so the client type instantiates at its default
+PostgrestVersion "12" — visible in the error text above. The error SET is
+unchanged from the research's measurement, which was taken with "13.0.5" in
+place. The block's absence costs nothing here.
+
+================================================================================
+RUN 2 — the two defect sites restored, so the other seven can be isolated
+================================================================================
+
+The two defects are NOT fixed in this plan (L2, characterize first). Their
+`(supabase as any)` casts were restored so that the seven genuine type errors
+could be fixed against a tree that fails for seven reasons instead of nine.
+
+In src/app/api/events/[id]/friends/route.ts three of the four casts were removed
+and the fourth — the one sitting on the `.in()` ARGUMENT at the defect — was
+kept. In src/app/moderation/page.tsx the single cast is itself the defect site.
+
+$ grep -rn "(supabase as any)" src/ --include='*.ts' --include='*.tsx' | wc -l
+2
+
+$ npx tsc --noEmit
+src/app/api/events/friends-activity/route.ts(51,25): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/api/events/friends-activity/route.ts(52,22): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/api/events/friends-activity/route.ts(57,34): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/api/events/friends-activity/route.ts(60,9): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/api/events/route.ts(255,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/app/api/events/route.ts(256,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/audit.ts(31,42): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { action: string; admin_user_id: string; created_at?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; target_id: string; target_type: string; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Type 'Record<string, unknown>' is not assignable to type 'Json | undefined'.
+      Type 'Record<string, unknown>' is missing the following properties from type 'Json[]': length, pop, push, concat, and 35 more.
+  Overload 2 of 2, '(values: { action: string; admin_user_id: string; created_at?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; target_id: string; target_type: string; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'admin_user_id' does not exist in type '{ action: string; admin_user_id: string; created_at?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; target_id: string; target_type: string; }[]'.
+exit=2
+
+Seven errors, three files. The two defect sites are gone from the list — which
+is the point: the casts that remain are exactly the two the plan says not to
+touch, and nothing else is hiding behind them.
+
+================================================================================
+RUN 3 — the audit-log metadata fix exposes a ripple
+================================================================================
+
+`logAdminAction`'s `metadata` parameter was narrowed from `Record<string,
+unknown>` to the generated `Json`. That fixed src/lib/audit.ts(31,42) and
+immediately produced an error that RUN 1 could not have shown, because a caller
+was passing the widened type in:
+
+src/app/api/admin/featured/[id]/route.ts(55,9): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'Json | undefined'.
+  Type 'Record<string, unknown>' is missing the following properties from type 'Json[]': length, pop, push, concat, and 35 more.
+
+This is the TENTH error, and it is a genuine one rather than a regression: the
+`updates` object is both the PATCH body for `featured_events` and the audit-log
+metadata, and `unknown` admits values neither column can hold. Fixed by
+narrowing the declaration to `Record<string, Json>` — narrowing, not widening.
+
+================================================================================
+RUN 4 — every fix applied
+================================================================================
+
+$ npx tsc --noEmit
+exit=0
+
+$ npm run lint
+✖ 19 problems (0 errors, 19 warnings)
+exit=0
+
+$ grep -rn "(supabase as any)" src/ --include='*.ts' --include='*.tsx'
+src/app/api/events/[id]/friends/route.ts:48:          (supabase as any)
+src/app/moderation/page.tsx:78:      (supabase as any)
+
+$ git diff -- src/ | grep -cE "^\+.*as unknown as|^\+.*Record<string, *any>"
+0
+
+================================================================================
+COUNTS
+================================================================================
+
+casts_before=47
+casts_removed=45
+casts_retained=2                  (one per registered defect, each annotated in source)
+errors_after_full_removal=9
+errors_after_defect_isolation=7
+ripple_errors_exposed_by_fixes=1
+errors_fixed=8
+tsc_exit=0
+lint_errors=0
+lint_warnings=19

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Search by name (case-insensitive partial match)
-    const { data: users, error } = await (supabase as any)
+    const { data: users, error } = await supabase
       .from("users")
       .select("id, name, avatar_url, faculty, year")
       .ilike("name", `%${q}%`)
@@ -33,12 +33,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Check follow status for each result
-    const { data: following } = await (supabase as any)
+    const { data: following } = await supabase
       .from("user_follows")
       .select("following_id")
       .eq("follower_id", user.id);
 
-    const { data: followers } = await (supabase as any)
+    const { data: followers } = await supabase
       .from("user_follows")
       .select("follower_id")
       .eq("following_id", user.id);

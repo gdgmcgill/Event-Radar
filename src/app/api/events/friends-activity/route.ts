@@ -16,7 +16,7 @@ export async function GET() {
     }
 
     // Get friend IDs (mutual follows)
-    const { data: friends, error: friendsError } = await (supabase as any).rpc(
+    const { data: friends, error: friendsError } = await supabase.rpc(
       "get_friends",
       { target_user_id: user.id }
     );
@@ -30,7 +30,7 @@ export async function GET() {
     // Get saved events by friends for upcoming events
     const today = new Date().toISOString().split("T")[0];
 
-    const { data: savedByFriends, error: savedError } = await (supabase as any)
+    const { data: savedByFriends, error: savedError } = await supabase
       .from("saved_events")
       .select("event_id, user_id, users!inner(id, name, avatar_url), events!inner(id, title, start_date, location, image_url)")
       .in("user_id", friendIds)
@@ -43,11 +43,21 @@ export async function GET() {
     // Group by event_id and count friends
     const eventMap = new Map<string, {
       event: any;
-      friends: { id: string; name: string; avatar_url: string | null }[];
+      // `users.name` is nullable in the schema. The response has always carried
+      // whatever the column held, null included; the declared type said `string`
+      // and the client cast kept that lie compiling. Widening the declaration
+      // changes no payload — it stops the local type from contradicting the row.
+      friends: { id: string; name: string | null; avatar_url: string | null }[];
     }>();
 
     for (const row of savedByFriends) {
       const eventId = row.event_id;
+      // `saved_events.event_id` is nullable in the schema. The select uses
+      // `events!inner`, so PostgREST cannot return a row whose event_id is null
+      // and this guard is unreachable in practice — it is here because the map
+      // is keyed by event id and a null key would silently merge unrelated rows
+      // if the join were ever loosened.
+      if (eventId === null) continue;
       if (!eventMap.has(eventId)) {
         eventMap.set(eventId, {
           event: row.events,

@@ -29,7 +29,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     }
 
     // Insert follow
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("user_follows")
       .upsert(
         { follower_id: user.id, following_id: targetId },
@@ -41,7 +41,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if mutual follow (friendship)
-    const { data: reverseFollow } = await (supabase as any)
+    const { data: reverseFollow } = await supabase
       .from("user_follows")
       .select("id")
       .eq("follower_id", targetId)
@@ -51,13 +51,13 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     const isFriend = !!reverseFollow;
 
     // Fetch target user name for notification
-    const { data: targetUser } = await (supabase as any)
+    const { data: targetUser } = await supabase
       .from("users")
       .select("name")
       .eq("id", targetId)
       .single();
 
-    const { data: currentUser } = await (supabase as any)
+    const { data: currentUser } = await supabase
       .from("users")
       .select("name")
       .eq("id", user.id)
@@ -112,7 +112,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("user_follows")
       .delete()
       .eq("follower_id", user.id)

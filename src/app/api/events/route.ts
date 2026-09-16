@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
     // Fuzzy search: use pg_trgm RPC to get ranked event IDs, then filter
     let fuzzyRankedIds: string[] | null = null;
     if (search) {
-      const { data: searchResults, error: searchError } = await (supabase as any).rpc(
+      const { data: searchResults, error: searchError } = await supabase.rpc(
         'search_events_fuzzy',
         { search_term: search, result_limit: limit }
       );
@@ -251,9 +251,14 @@ export async function GET(request: NextRequest) {
 
     // Time-based filtering (requires RPC since Supabase JS can't do EXTRACT)
     if (timeOfDay || dayType) {
-      const { data: timeFilteredIds } = await (supabase as any).rpc('get_event_ids_by_time_filter', {
-        time_of_day: timeOfDay,
-        day_type: dayType,
+      // `searchParams.get()` yields `string | null`; the RPC's two arguments are
+      // both optional `text DEFAULT NULL`. Omitting an argument and passing SQL
+      // NULL select the same branch of the function body
+      // (`time_of_day IS NULL OR …`), so `?? undefined` preserves the query
+      // exactly while telling the truth about the argument type.
+      const { data: timeFilteredIds } = await supabase.rpc('get_event_ids_by_time_filter', {
+        time_of_day: timeOfDay ?? undefined,
+        day_type: dayType ?? undefined,
       });
 
       if (timeFilteredIds && timeFilteredIds.length > 0) {

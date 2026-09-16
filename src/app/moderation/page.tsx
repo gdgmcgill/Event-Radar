@@ -63,6 +63,17 @@ export default async function ModerationDashboardPage() {
         .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(5),
+      // DEFECT F-072 — this select asks for `admin_audit_log.admin_email`, a
+      // column that does not exist in the live schema (PostgREST 42703). The
+      // request fails, `.data` is null, and the Recent Activity panel below has
+      // always rendered empty. The `as Promise<…>` assertion on the last line
+      // hid it, and the client cast hid the assertion. Both are retained
+      // deliberately: removing either makes the tree fail to type-check, and the
+      // only ways to make it compile are to drop the column from the query or to
+      // add it to the schema — both behaviour changes that belong to the slice
+      // that owns this path, not to a typing plan.
+      // Characterized by src/__tests__/moderation/audit-shape.test.ts.
+      // See evidence/type-fixes-note.md.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (supabase as any)
         .from("admin_audit_log")

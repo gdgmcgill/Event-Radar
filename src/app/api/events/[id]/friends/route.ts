@@ -22,19 +22,29 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     }
 
     // Get friends (mutual follows) who saved this event
-    const { data: friends, error } = await (supabase as any).rpc(
+    const { data: friends, error } = await supabase.rpc(
       "get_friends_going_to_event",
       { current_user_id: user.id, target_event_id: eventId }
     );
 
     if (error) {
       // Fallback: manual query if RPC doesn't exist yet
-      const { data: manualFriends } = await (supabase as any)
+      const { data: manualFriends } = await supabase
         .from("saved_events")
         .select("user_id, users!inner(id, name, avatar_url)")
         .eq("event_id", eventId)
         .in(
           "user_id",
+          // DEFECT F-071 — a query builder is passed where an array of ids is
+          // required. `.in()` calls `Array.from(new Set(values))` on this
+          // argument and a builder is not iterable, so this throws and the
+          // handler's outer catch returns an empty friends list. The client
+          // cast below is one of only two left under src/ and it is retained
+          // deliberately: removing it makes the tree fail to type-check, and the
+          // only way to make it compile is to change the behaviour — which
+          // belongs to the slice that owns this path, not to a typing plan.
+          // Characterized by src/__tests__/api/events/friends-defect.test.ts.
+          // Closes in Phase 4. See evidence/type-fixes-note.md.
           (supabase as any)
             .from("user_follows")
             .select("following_id")
@@ -43,7 +53,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
       // Filter to mutual follows manually
       if (manualFriends) {
-        const { data: reverseFollows } = await (supabase as any)
+        const { data: reverseFollows } = await supabase
           .from("user_follows")
           .select("follower_id")
           .eq("following_id", user.id);

@@ -83,7 +83,7 @@ export default async function UserProfilePage({ params }: PageProps) {
   ] = await Promise.all([
     // Follow status queries use authenticated client (RLS applies)
     authUser
-      ? (supabase as any)
+      ? supabase
           .from("user_follows")
           .select("id")
           .eq("follower_id", authUser.id)
@@ -91,7 +91,7 @@ export default async function UserProfilePage({ params }: PageProps) {
           .maybeSingle()
       : { data: null },
     authUser
-      ? (supabase as any)
+      ? supabase
           .from("user_follows")
           .select("id")
           .eq("follower_id", targetId)

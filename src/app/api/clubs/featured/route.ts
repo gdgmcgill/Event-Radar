@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const supabase = await createClient();
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("featured_clubs")
       .select("*, club:clubs(*)")
       .lte("starts_at", new Date().toISOString())
