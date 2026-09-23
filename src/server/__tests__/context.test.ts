@@ -39,8 +39,6 @@ const AUTHENTICATED_USER = { id: "user-1", email: "someone@mail.mcgill.ca" };
 const PROFILE_ROW = {
   id: "user-1",
   roles: ["user"],
-  banned_at: null,
-  ban_expires_at: null,
   onboarding_completed: true,
 };
 
@@ -88,20 +86,16 @@ describe("createRequestContext", () => {
     expect(ctx.user).toEqual(AUTHENTICATED_USER);
   });
 
-  it("reads the five-column profile slice from the users table", async () => {
+  it("reads the three-column profile slice from the users table", async () => {
     const ctx = await createRequestContext();
 
     expect(lastTable).toBe("users");
     const selected = String(lastChain?.select.mock.calls[0][0]);
-    for (const column of [
+    expect(selected.split(",").map((column) => column.trim())).toEqual([
       "id",
       "roles",
-      "banned_at",
-      "ban_expires_at",
       "onboarding_completed",
-    ]) {
-      expect(selected).toContain(column);
-    }
+    ]);
     expect(ctx.profile).toEqual(PROFILE_ROW);
   });
 

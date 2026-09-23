@@ -27,8 +27,6 @@ function contextWithRoles(roles: string[]): RequestContext {
     profile: {
       id: "user-1",
       roles,
-      banned_at: null,
-      ban_expires_at: null,
       onboarding_completed: true,
     },
   } as unknown as Partial<RequestContext>);
