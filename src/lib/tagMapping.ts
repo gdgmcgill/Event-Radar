@@ -3,7 +3,7 @@
  */
 
 import type { Event, Club } from "@/types";
-import { mapTags } from "@/lib/eventTags";
+import { mapTags, partitionTags } from "@/lib/eventTags";
 
 // The tag mapping lives in src/lib/eventTags.ts (REFAC-10). mapTags is
 // re-exported so this module's public surface is unchanged.
@@ -56,10 +56,24 @@ interface DBClub {
 /**
  * Transform a database event to the frontend Event type
  * Passes the authoritative start_date and end_date columns through unchanged
+ *
+ * Tags the mapping does not know still render as Social, but are no longer
+ * silent: one tags-prefixed console.warn per transformed event names the
+ * event id and its unmapped tags (DEC-26, F-081). It fires per event, so a
+ * list page can log up to its page size; that volume is accepted until
+ * Phase 6 replaces console with structured logging.
  * @param dbEvent - Event row from database
  * @returns Transformed Event object
  */
 export function transformEventFromDB(dbEvent: DBEvent): Event {
+  const { mapped: tags, unmapped } = partitionTags(dbEvent.tags);
+  if (unmapped.length > 0) {
+    console.warn("[tags] Unmapped tags rendered as Social", {
+      eventId: dbEvent.id,
+      unmapped,
+    });
+  }
+
   // Build club object from relation or legacy organizer field
   let club: Club | undefined = undefined;
   if (dbEvent.club) {
@@ -112,7 +126,7 @@ export function transformEventFromDB(dbEvent: DBEvent): Event {
     location: dbEvent.location,
     organizer: dbEvent.organizer ?? null,
     club_id: dbEvent.club_id ?? null,
-    tags: mapTags(dbEvent.tags),
+    tags,
     image_url: dbEvent.image_url || null,
     category: dbEvent.category ?? null,
     source: dbEvent.source ?? "manual",

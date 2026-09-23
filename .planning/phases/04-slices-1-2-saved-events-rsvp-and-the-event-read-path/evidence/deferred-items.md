@@ -121,5 +121,21 @@ not fixed in the plan that found it, why it is not merely cosmetic, and its owne
   PATCH, which writes the column). Note for 04-10/04-11: they edit this file's GET. They must not "fix" this in
   passing, because it is a visibility change.
 
+## DI-37 — A database tag named after an `Object.prototype` key maps to a function, not an `EventTag`
+
+- **Found by:** 04-07, Task 2, while re-implementing `mapTags` as `partitionTags(...).mapped`.
+- **What it is.** The lookup is `TAG_ALIASES[lowerTag]` on a plain object literal, so the lower-cased
+  tag `constructor` resolves to `Object` and `__proto__` to `Object.prototype`, both truthy. Measured:
+  `mapTags(["constructor"])` returns `[Object]` (`typeof` `function`), which JSON-serializes as `null`
+  in a response's `tags` array, and `partitionTags` does not list it as unmapped. The pre-move line
+  (`src/lib/tagMapping.ts:45` at `caf122c`, `tagMapping[lowerTag] || EventTag.SOCIAL`) behaves the same.
+- **Why not fixed in 04-07.** 04-07 is "no mapped output changed" by construction (DEC-26, orchestrator
+  decision 1), proved by a golden table and the unmodified F-081 DEFECT suite. An own-property lookup
+  (`Object.hasOwn(TAG_ALIASES, lowerTag)`) changes the output for these inputs from `null` to `social`.
+- **Why not cosmetic.** A scraped or organizer-typed tag is free text; one such tag puts a non-`EventTag`
+  value into `Event.tags`, which the category theming keys on, and the new unmapped-tag warning misses it.
+- **Owner:** 04-11, beside the F-081 identity-mapping decision, since both are one-place changes in
+  `src/lib/eventTags.ts` that alter mapped output; if 04-11 defers, it travels with F-081.
+
 *Phase: 04-slices-1-2-saved-events-rsvp-and-the-event-read-path*
 *Plan: 04-01*

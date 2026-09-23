@@ -15,10 +15,24 @@
  * `volunteer` and `arts` fall to Social, `music` maps to Cultural, and
  * `networking` to Social. Those rows move only if the 04-11 checkpoint ships
  * the identity mappings (DEC-26).
+ *
+ * The later describes cover what DEC-26 adds without changing any output:
+ * `partitionTags` (the mapped output plus the tags that hit the Social
+ * default), the completeness test over `Object.values(EventTag)` guarded by
+ * `KNOWN_NON_ROUNDTRIP_TAGS`, and the one `[tags]` warning that
+ * `transformEventFromDB` logs per event with unmapped tags. `mapTags` itself
+ * stays silent (tag-coercion-defect.test.ts asserts that).
  */
 
-import { mapTags } from "@/lib/eventTags";
-import { mapTags as mapTagsViaTagMapping } from "@/lib/tagMapping";
+import {
+  KNOWN_NON_ROUNDTRIP_TAGS,
+  mapTags,
+  partitionTags,
+} from "@/lib/eventTags";
+import {
+  mapTags as mapTagsViaTagMapping,
+  transformEventFromDB,
+} from "@/lib/tagMapping";
 import { EventTag } from "@/types";
 
 // ─── Golden table ───
@@ -101,4 +115,129 @@ describe("mapTags — the @/lib/tagMapping re-export", () => {
       expect(mapTagsViaTagMapping([key])).toEqual([expected]);
     }
   );
+});
+
+// ─── partitionTags ───
+
+describe("partitionTags", () => {
+  it("returns today's mapped output and the normalized tags that hit the Social default", () => {
+    expect(partitionTags(["academic", "tech", "quidditch"])).toEqual({
+      mapped: [EventTag.ACADEMIC, EventTag.SOCIAL],
+      unmapped: ["tech", "quidditch"],
+    });
+  });
+
+  it("normalizes and de-duplicates the unmapped tags", () => {
+    expect(partitionTags([" Tech ", "tech", "QUIDDITCH", "coding"])).toEqual({
+      mapped: [EventTag.SOCIAL, EventTag.ACADEMIC],
+      unmapped: ["tech", "quidditch"],
+    });
+  });
+
+  it("reports nothing unmapped when every tag is in the table", () => {
+    expect(partitionTags(["Music", "social"]).unmapped).toEqual([]);
+  });
+
+  const inputs: Array<[string[] | null]> = [
+    ...GOLDEN_ALIASES.map(([key]): [string[]] => [[key]]),
+    ...GOLDEN_MEMBERS.map(([member]): [string[]] => [[member]]),
+    ...GOLDEN_EDGES.map(([, input]): [string[] | null] => [input]),
+    [["academic", "tech", "quidditch"]],
+  ];
+
+  it.each(inputs)("mapTags(%j) equals partitionTags(...).mapped", (input) => {
+    expect(mapTags(input as string[])).toEqual(
+      partitionTags(input as string[]).mapped
+    );
+  });
+});
+
+// ─── Completeness over every EventTag member ───
+
+/**
+ * Members that break the rule "round-trips to itself, or is listed as a known
+ * non-round-tripper that does not": an unlisted member that falls to another
+ * tag, or a listed member that has started to round-trip.
+ */
+function unaccountedMembers(members: readonly string[]): string[] {
+  const known: readonly string[] = KNOWN_NON_ROUNDTRIP_TAGS;
+  return members.filter((member) => {
+    const mapped = mapTags([member]);
+    const roundTrips = mapped.length === 1 && mapped[0] === member;
+    return roundTrips === known.includes(member);
+  });
+}
+
+describe("KNOWN_NON_ROUNDTRIP_TAGS and completeness", () => {
+  it("lists exactly the six F-081 members", () => {
+    expect([...KNOWN_NON_ROUNDTRIP_TAGS].sort()).toEqual(
+      [
+        EventTag.ARTS,
+        EventTag.FOOD,
+        EventTag.MUSIC,
+        EventTag.NETWORKING,
+        EventTag.TECH,
+        EventTag.VOLUNTEER,
+      ].sort()
+    );
+  });
+
+  it("every member of Object.values(EventTag) round-trips or is listed as known not to", () => {
+    expect(unaccountedMembers(Object.values(EventTag))).toEqual([]);
+  });
+
+  it("a thirteenth member added with neither a mapping nor a listing is caught", () => {
+    expect(
+      unaccountedMembers([...Object.values(EventTag), "quidditch"])
+    ).toEqual(["quidditch"]);
+  });
+});
+
+// ─── The unmapped-tag warning in transformEventFromDB ───
+
+type DBRow = Parameters<typeof transformEventFromDB>[0];
+
+function dbRow(id: string, tags: string[]): DBRow {
+  return {
+    id,
+    title: "Tagged Event",
+    description: null,
+    start_date: "2026-10-05T18:00:00+00:00",
+    location: null,
+    tags,
+    created_at: "2026-09-01T00:00:00+00:00",
+    updated_at: null,
+  };
+}
+
+describe("transformEventFromDB — unmapped tags are surfaced by one [tags] warning", () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it("keeps the rendered tags and warns once naming the event id and the unmapped tags", () => {
+    const event = transformEventFromDB(dbRow("evt-tech", ["academic", "tech"]));
+
+    expect(event.tags).toEqual([EventTag.ACADEMIC, EventTag.SOCIAL]);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/^\[tags\] /),
+      { eventId: "evt-tech", unmapped: ["tech"] }
+    );
+  });
+
+  it("logs nothing when every tag maps", () => {
+    const event = transformEventFromDB(
+      dbRow("evt-stable", ["academic", "Music", "coding"])
+    );
+
+    expect(event.tags).toEqual([EventTag.ACADEMIC, EventTag.CULTURAL]);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
 });

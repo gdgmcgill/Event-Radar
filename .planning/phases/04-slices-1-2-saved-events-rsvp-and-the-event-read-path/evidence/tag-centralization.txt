@@ -85,3 +85,112 @@ $ npm run lint -> ✖ 19 problems (0 errors, 19 warnings)
 $ node scripts/check-characterization-tags.mjs --all -> ok 17 files
 stale-date census (event_date|event_time in src/ supabase/, excluding _archive_pre_baseline): 0 lines
 grep -c 'Record<string, EventTag>': tagMapping.ts=0 eventTags.ts=1
+
+## 3. Task 2 RED — partition, completeness and warning tests written before partitionTags / KNOWN_NON_ROUNDTRIP_TAGS / the warning existed
+HEAD: 2db5d2a; src/lib/eventTags.ts exports: TAG_ALIASES,mapTags
+$ npx jest --ci --selectProjects node --testPathPatterns "src/lib/eventTags"
+    ✕ returns today's mapped output and the normalized tags that hit the Social default
+    ✕ normalizes and de-duplicates the unmapped tags
+    ✕ reports nothing unmapped when every tag is in the table
+    ✕ mapTags(["academic"]) equals partitionTags(...).mapped (1 ms)
+    ✕ mapTags(["social"]) equals partitionTags(...).mapped
+    ✕ mapTags(["sports"]) equals partitionTags(...).mapped
+    ✕ mapTags(["career"]) equals partitionTags(...).mapped
+    ✕ mapTags(["cultural"]) equals partitionTags(...).mapped
+    ✕ mapTags(["wellness"]) equals partitionTags(...).mapped
+    ✕ mapTags(["coding"]) equals partitionTags(...).mapped
+    ✕ mapTags(["technology"]) equals partitionTags(...).mapped
+    ✕ mapTags(["hackathon"]) equals partitionTags(...).mapped
+    ✕ mapTags(["workshop"]) equals partitionTags(...).mapped
+    ✕ mapTags(["networking"]) equals partitionTags(...).mapped
+    ✕ mapTags(["party"]) equals partitionTags(...).mapped
+    ✕ mapTags(["fitness"]) equals partitionTags(...).mapped
+    ✕ mapTags(["health"]) equals partitionTags(...).mapped
+    ✕ mapTags(["art"]) equals partitionTags(...).mapped
+    ✕ mapTags(["music"]) equals partitionTags(...).mapped
+    ✕ mapTags(["dance"]) equals partitionTags(...).mapped
+    ✕ mapTags(["professional"]) equals partitionTags(...).mapped
+    ✕ mapTags(["internship"]) equals partitionTags(...).mapped
+    ✕ mapTags(["job"]) equals partitionTags(...).mapped
+    ✕ mapTags(["game"]) equals partitionTags(...).mapped
+    ✕ mapTags(["competition"]) equals partitionTags(...).mapped
+    ✕ mapTags(["academic"]) equals partitionTags(...).mapped
+    ✕ mapTags(["social"]) equals partitionTags(...).mapped
+    ✕ mapTags(["sports"]) equals partitionTags(...).mapped
+    ✕ mapTags(["career"]) equals partitionTags(...).mapped
+    ✕ mapTags(["cultural"]) equals partitionTags(...).mapped (1 ms)
+    ✕ mapTags(["wellness"]) equals partitionTags(...).mapped
+    ✕ mapTags(["music"]) equals partitionTags(...).mapped
+    ✕ mapTags(["tech"]) equals partitionTags(...).mapped
+    ✕ mapTags(["food"]) equals partitionTags(...).mapped
+    ✕ mapTags(["volunteer"]) equals partitionTags(...).mapped
+    ✕ mapTags(["arts"]) equals partitionTags(...).mapped
+    ✕ mapTags(["networking"]) equals partitionTags(...).mapped
+    ✕ mapTags(["quidditch"]) equals partitionTags(...).mapped
+    ✕ mapTags([" Music "]) equals partitionTags(...).mapped
+    ✕ mapTags(["academic","Academic","coding"]) equals partitionTags(...).mapped
+    ✕ mapTags(null) equals partitionTags(...).mapped
+    ✕ mapTags([]) equals partitionTags(...).mapped
+    ✕ mapTags(["academic","tech","quidditch"]) equals partitionTags(...).mapped
+    ✕ lists exactly the six F-081 members (1 ms)
+    ✕ every member of Object.values(EventTag) round-trips or is listed as known not to
+    ✕ a thirteenth member added with neither a mapping nor a listing is caught
+    ✕ keeps the rendered tags and warns once naming the event id and the unmapped tags
+Test Suites: 1 failed, 1 total
+Tests:       47 failed, 76 passed, 123 total
+exit=1 (jest exit code, re-measured)
+
+## 4. Task 2 GREEN
+$ npx jest --ci --selectProjects node --testPathPatterns "eventTags|tag-coercion-defect"
+PASS node src/lib/eventTags.test.ts
+PASS node src/__tests__/lib/tag-coercion-defect.test.ts
+Test Suites: 2 passed, 2 total
+Tests:       134 passed, 134 total
+tag-coercion-defect.test.ts diff vs caf122c: ''
+
+## 5. Completeness mutation cycle
+Mutation: delete the line '  EventTag.NETWORKING,' from KNOWN_NON_ROUNDTRIP_TAGS in src/lib/eventTags.ts
+green sha1 before mutation: fc5565c37f00e2eb396ba6fd7212d5fa85cbcdb1
+mutated diff:
+67d66
+<   EventTag.NETWORKING,
+$ npx jest --ci --selectProjects node --testPathPatterns "src/lib/eventTags"   (RED expected)
+    ✕ lists exactly the six F-081 members (1 ms)
+    ✕ every member of Object.values(EventTag) round-trips or is listed as known not to
+    ✕ a thirteenth member added with neither a mapping nor a listing is caught
+    - Expected  - 1
+    + Received  + 0
+    -   "networking",
+    - Expected  - 1
+    + Received  + 3
+    - Array []
+    + Array [
+    +   "networking",
+    + ]
+    - Expected  - 0
+    + Received  + 1
+    +   "networking",
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 120 passed, 123 total
+exit=1
+Restore: the file is not yet committed (the mutation runs before the Task 2 commit), so git checkout -- would restore the Task 1 version; restored instead from the pre-mutation copy and proved by sha1
+restored sha1: fc5565c37f00e2eb396ba6fd7212d5fa85cbcdb1 (match: yes)
+$ npx jest --ci --selectProjects node --testPathPatterns "src/lib/eventTags"   (GREEN expected)
+Test Suites: 1 passed, 1 total
+Tests:       123 passed, 123 total
+exit=0
+
+## 6. Task 2 full verification
+$ npx jest --ci  (full)
+exit=0
+Test Suites: 1 skipped, 47 passed, 47 of 48 total
+Tests:       5 skipped, 635 passed, 640 total
+[tags] warnings emitted anywhere in the full run outside eventTags.test.ts (all other suites silence or do not spy console.warn; the PRESERVE list/detail/calendar/saved-events suites use only mapped tags): 0 lines printed
+$ npx tsc --noEmit -> exit 0
+$ npm run lint -> ✖ 19 problems (0 errors, 19 warnings)
+$ node scripts/check-characterization-tags.mjs --all -> ok 17 files
+stale-date census: 0 lines
+git diff --stat caf122c -- src/app src/components src/lib/constants.ts src/lib/classifier.ts supabase/migrations: ''
+git diff --stat caf122c -- tag-coercion-defect, events-list-characterization, events-detail-characterization: ''
+grep counts: 'export function partitionTags' eventTags.ts=1; KNOWN_NON_ROUNDTRIP_TAGS eventTags.ts=1; 'Object.values(EventTag)' eventTags.test.ts=5; '[tags]' tagMapping.ts=2
+(JSDoc reworded so the [tags] literal appears once, in the console.warn call: '[tags]' tagMapping.ts=1; eventTags|tag-coercion-defect re-run green, tsc exit 0)

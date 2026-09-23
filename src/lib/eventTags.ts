@@ -48,16 +48,64 @@ export const TAG_ALIASES: Record<string, EventTag> = {
 };
 
 /**
- * Map an array of database tags to EventTag enum values
+ * The six `EventTag` members that do not map to themselves (F-081): `tech`,
+ * `food`, `volunteer` and `arts` are absent from `TAG_ALIASES` and render as
+ * Social; `music` is aliased to Cultural and `networking` to Social.
+ *
+ * This is the one place their fix lands. Mapping them to themselves changes
+ * seeded badges, so under orchestrator decision 1 it is gated behind the
+ * 04-11 owner checkpoint (DEC-26), with deferral as the default. If it ships,
+ * add the six identity entries to `TAG_ALIASES` and empty this list; the
+ * completeness test in `eventTags.test.ts` fails until both are done.
+ */
+export const KNOWN_NON_ROUNDTRIP_TAGS: readonly EventTag[] = [
+  EventTag.MUSIC,
+  EventTag.TECH,
+  EventTag.FOOD,
+  EventTag.VOLUNTEER,
+  EventTag.ARTS,
+  EventTag.NETWORKING,
+];
+
+/** The result of mapping database tags, with the ones the table did not know. */
+export interface PartitionedTags {
+  /** Unique rendered tags, exactly as `mapTags` returns them. */
+  mapped: EventTag[];
+  /** Unique normalized (lower-cased, trimmed) tags that fell to Social. */
+  unmapped: string[];
+}
+
+/**
+ * Map database tags and report the ones that hit the Social default.
+ * Unmapped tags still render as `EventTag.SOCIAL`, so the display does not
+ * change; the caller decides how to surface `unmapped` (DEC-26).
+ * @param dbTags - Array of tag strings from database
+ * @returns The unique mapped tags and the unique unmapped normalized tags
+ */
+export function partitionTags(dbTags: string[]): PartitionedTags {
+  const mapped = new Set<EventTag>();
+  const unmapped = new Set<string>();
+
+  for (const tag of dbTags || []) {
+    const lowerTag = tag.toLowerCase().trim();
+    const alias = TAG_ALIASES[lowerTag];
+    if (alias) {
+      mapped.add(alias);
+    } else {
+      mapped.add(EventTag.SOCIAL); // Default to SOCIAL if no mapping
+      unmapped.add(lowerTag);
+    }
+  }
+
+  return { mapped: [...mapped], unmapped: [...unmapped] };
+}
+
+/**
+ * Map an array of database tags to EventTag enum values. Silent by design:
+ * unmapped tags are surfaced by `transformEventFromDB`, which knows the event.
  * @param dbTags - Array of tag strings from database
  * @returns Array of unique EventTag values
  */
 export function mapTags(dbTags: string[]): EventTag[] {
-  const mappedTags = (dbTags || []).map((tag: string) => {
-    const lowerTag = tag.toLowerCase().trim();
-    return TAG_ALIASES[lowerTag] || EventTag.SOCIAL; // Default to SOCIAL if no mapping
-  });
-
-  // Remove duplicates
-  return [...new Set(mappedTags)];
+  return partitionTags(dbTags).mapped;
 }
