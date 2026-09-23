@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 04
 current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 status: executing
-stopped_at: "Completed 04-06-PLAN.md — Slice 1 closed: F-050 fixtures (a037d95), tests type-checked 71->0 (9530d35), after-floor + Playwright 37/37 + F-079/F-071 Fixed (ba425f2); REFAC-09 complete; next: 04-07/04-08"
-last_updated: "2026-09-23T06:06:12.108Z"
+stopped_at: "Completed 04-07-PLAN.md — tag mapping centralized in src/lib/eventTags.ts (2db5d2a, no mapped output changed), [tags] warning + completeness test (46731e6, no rendered output changed); F-050 census 0; DI-37 to 04-11; next: 04-08"
+last_updated: "2026-09-23T06:12:54.869Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 43
-  completed_plans: 38
+  completed_plans: 39
   percent: 38
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 04 (Slices 1–2 — Saved Events/RSVP and the Event Read Path) — EXECUTING
-Plan: 7 of 11
+Plan: 8 of 11
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 04 execution started
 
@@ -91,6 +91,7 @@ Progress: [███░░░░░░░] 31%
 | Phase 04 P04 | 15min | 3 tasks | 13 files |
 | Phase 04 P05 | 7min | 3 tasks | 9 files |
 | Phase 04 P06 | 12min | 3 tasks | 17 files |
+| Phase 04 P07 | 5min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -220,6 +221,9 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-05: RSVP counts are two parallel select('id', {count:'exact', head:true}) reads (F-079, d40dee4); friends fallback passes an id array (F-071, 1351480); zero (supabase as any) under src/app/api/
 - [Phase 04]: 04-06: test files are type-checked (tsconfig exclude globs removed); handler refs in tests are typed as the handler's own type, never widened in src
 - [Phase 04]: 04-06: F-079 and F-071 Fixed; F-066 type-check clause met (stays Open for 04-09); its duplicate resolution keys merged; REFAC-09 complete
+- [Phase 04]: 04-07: the DEC-26 unmapped-tag warning lives in transformEventFromDB (payload eventId + unmapped), not mapTags, so the F-081 DEFECT suite's silence assertion passes unmodified
+- [Phase 04]: 04-07: KNOWN_NON_ROUNDTRIP_TAGS in src/lib/eventTags.ts is the one place the six F-081 identity mappings land; the completeness test fails until TAG_ALIASES and the list change together
+- [Phase 04]: 04-07: prototype-key tags (constructor, __proto__) registered as DI-37 for 04-11, since the Object.hasOwn fix changes mapped output
 
 ### Pending Todos
 
@@ -271,7 +275,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T06:06:12.104Z
-Stopped at: Completed 04-06-PLAN.md — Slice 1 closed: F-050 fixtures (a037d95), tests type-checked 71->0 (9530d35), after-floor + Playwright 37/37 + F-079/F-071 Fixed (ba425f2); REFAC-09 complete; next: 04-07/04-08
+Last session: 2026-09-23T06:12:50.211Z
+Stopped at: Completed 04-07-PLAN.md — tag mapping centralized in src/lib/eventTags.ts (2db5d2a, no mapped output changed), [tags] warning + completeness test (46731e6, no rendered output changed); F-050 census 0; DI-37 to 04-11; next: 04-08
 Next: run `/gsd-verify-work` for Phase 3, then plan Phase 4. **Phase 4 inherits, all with written owners:** DI-32 (the red `e2e` CI job — fix it first, it is the regression net Phase 4 depends on), DI-24 (the tsconfig test-file exclusion, ~86 errors across 10 files, plus the cursor-pagination contract that is REFAC-10 itself), DI-25 (the Supabase SDK minor, whose blocking shape plan 03-06 already worked an example of, and the separate `ssr` major), DI-31 (the boundary's two evasions and the ratchet's missing CI wiring — both land with the first real shrink), DI-20 (the flaky `useEvents` hook test) and F-071. **Before any deploy, in this order:** rotate the production DB password, then decide the repair. Do not run `supabase db push` against production before Phase 8 or an explicit owner decision.
 Resume file: None
