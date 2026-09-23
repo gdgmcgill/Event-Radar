@@ -1,0 +1,88 @@
+Slice 2 subjects unmodified, and older than their suites — plan 04-04
+**Plan:** 04-04 · **Phase:** 04 · **Recorded:** 2026-09-23T05:38:31Z
+base=b632f62127fa4fa7dcb2d19f9a45b0cabef36ab9 (HEAD when 04-04 started)   HEAD at capture=5efe9ce54c9f5abf584323e1f8ab074832cc21d3
+
+For each subject: an empty diff against the base and against HEAD (working tree), its last commit,
+and `git merge-base --is-ancestor` of that commit against HEAD and against the commit that added
+the suite(s) pinning it (72baa0c = Task 1 list suites; 5efe9ce = Task 2 detail/club/tag suites).
+
+--- src/app/api/events/route.ts ---
+$ git diff --stat b632f62127fa4fa7dcb2d19f9a45b0cabef36ab9 -- 'src/app/api/events/route.ts'   # vs the base: empty
+exit=0
+
+$ git diff --stat -- 'src/app/api/events/route.ts'   # working tree vs HEAD: empty
+exit=0
+
+$ git log -1 --format='%H %cI' -- 'src/app/api/events/route.ts'
+aa3a9d99a16af33119989afaa15a9bc51bb3161e 2026-09-15T21:28:57-04:00
+exit=0
+
+$ git merge-base --is-ancestor aa3a9d99a16af33119989afaa15a9bc51bb3161e HEAD
+exit=0
+
+$ git merge-base --is-ancestor aa3a9d99a16af33119989afaa15a9bc51bb3161e 72baa0c   # the subject's last commit is an ancestor of the commit that added its suite
+exit=0
+
+--- src/app/api/events/[id]/route.ts ---
+$ git diff --stat b632f62127fa4fa7dcb2d19f9a45b0cabef36ab9 -- 'src/app/api/events/[id]/route.ts'   # vs the base: empty
+exit=0
+
+$ git diff --stat -- 'src/app/api/events/[id]/route.ts'   # working tree vs HEAD: empty
+exit=0
+
+$ git log -1 --format='%H %cI' -- 'src/app/api/events/[id]/route.ts'
+5c61573a049c2035952a6768759b38d9a3aea43a 2026-03-16T05:25:12-04:00
+exit=0
+
+$ git merge-base --is-ancestor 5c61573a049c2035952a6768759b38d9a3aea43a HEAD
+exit=0
+
+$ git merge-base --is-ancestor 5c61573a049c2035952a6768759b38d9a3aea43a 5efe9ce   # the subject's last commit is an ancestor of the commit that added its suite
+exit=0
+
+--- src/lib/tagMapping.ts ---
+$ git diff --stat b632f62127fa4fa7dcb2d19f9a45b0cabef36ab9 -- 'src/lib/tagMapping.ts'   # vs the base: empty
+exit=0
+
+$ git diff --stat -- 'src/lib/tagMapping.ts'   # working tree vs HEAD: empty
+exit=0
+
+$ git log -1 --format='%H %cI' -- 'src/lib/tagMapping.ts'
+5c61573a049c2035952a6768759b38d9a3aea43a 2026-03-16T05:25:12-04:00
+exit=0
+
+$ git merge-base --is-ancestor 5c61573a049c2035952a6768759b38d9a3aea43a HEAD
+exit=0
+
+$ git merge-base --is-ancestor 5c61573a049c2035952a6768759b38d9a3aea43a 5efe9ce   # the subject's last commit is an ancestor of the commit that added its suite
+exit=0
+
+--- src/app/api/users/saved-events/route.ts ---
+$ git diff --stat b632f62127fa4fa7dcb2d19f9a45b0cabef36ab9 -- 'src/app/api/users/saved-events/route.ts'   # vs the base: empty
+exit=0
+
+$ git diff --stat -- 'src/app/api/users/saved-events/route.ts'   # working tree vs HEAD: empty
+exit=0
+
+$ git log -1 --format='%H %cI' -- 'src/app/api/users/saved-events/route.ts'
+aa3a9d99a16af33119989afaa15a9bc51bb3161e 2026-09-15T21:28:57-04:00
+exit=0
+
+$ git merge-base --is-ancestor aa3a9d99a16af33119989afaa15a9bc51bb3161e HEAD
+exit=0
+
+$ git merge-base --is-ancestor aa3a9d99a16af33119989afaa15a9bc51bb3161e 5efe9ce   # the subject's last commit is an ancestor of the commit that added its suite
+exit=0
+
+$ git log -1 --format='%H %cI' 72baa0c
+72baa0c07ea7a2b28114f1fc3056daef745d6412 2026-09-23T01:28:58-04:00
+exit=0
+
+$ git log -1 --format='%H %cI' 5efe9ce
+5efe9ce54c9f5abf584323e1f8ab074832cc21d3 2026-09-23T01:32:58-04:00
+exit=0
+
+--- whole-tree check ---
+$ git diff --name-only b632f62127fa4fa7dcb2d19f9a45b0cabef36ab9 -- src/app src/lib src/server supabase   # the production subjects and the schema: empty
+exit=0
+

@@ -1,0 +1,920 @@
+Slice 2 mutation cycles — plan 04-04
+**Plan:** 04-04 · **Phase:** 04 · **Recorded:** 2026-09-23T05:38:19Z
+HEAD at capture=5efe9ce54c9f5abf584323e1f8ab074832cc21d3 (Tasks 1-2 committed; the Task 3 fixture correction to search-escaping-defect is in the working tree, committed with this file)
+
+Format follows evidence/slice-1-mutation-check.txt. Each cycle: the mutation (first occurrence of
+the exact text, asserted present — the driver aborts rather than guess), `git diff` of the mutated
+subject, the pinned suite run under the mutation (✕ lines name the failing tests), the restore with
+`git checkout --`, `git diff --quiet` (exit=0 = byte-identical), and the green re-run. jest_exit is
+jest's own exit code. NOTE: each "$ npx jest … | grep -E "✕|✓|…"" line quotes the grep pattern, so
+it contains one ✕ glyph itself; the failing tests are the indented ✕ lines below it.
+
+Cycles 1, 2, 3, 4, 5 and 6 are the plan's six named mutations. Suffixed cycles strengthen coverage:
+  1b-1d  list PRESERVE: tag trimming, fuzzy rank re-sort, the Cache-Control header
+  4b-4c  detail PRESERVE: the deleted_at filter, the admin role check
+  5b     club pin C: saved-events gaining an embed, 04-10's direction
+Three CONTROLS apply a DEFECT-moving mutation to a PRESERVE suite and expect it to stay GREEN:
+  2b  04-08's quoted or() shape leaves events-list-characterization green
+  3b  04-09's added cursor key leaves events-list-characterization green (toMatchObject)
+  6b  a changed tag default leaves both PRESERVE suites green (stable-tag fixtures)
+That is the "no Slice 2 fix can move a PRESERVE assertion" claim, observed rather than asserted.
+
+CYCLE 4 IS ALSO THE DI-36 MEASUREMENT. Removing the stripping branch turns only layer (b) red — the
+tests that route through a transform carrying pending_edits. Every layer (a) test (the real
+transform) stays green: with the real transform, the branch changes no response, because
+transformEventFromDB never copies pending_edits. See evidence/deferred-items.md § DI-36.
+
+Driver (scratchpad, not committed): /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/mutate.cjs
+$ node …/scratchpad/mutate.cjs
+
+==============================================================================
+CYCLE 1 — events-list-characterization — list: the approved status filter becomes pending
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/route.ts'
+diff --git a/src/app/api/events/route.ts b/src/app/api/events/route.ts
+index 397a283..d97b1a1 100644
+--- a/src/app/api/events/route.ts
++++ b/src/app/api/events/route.ts
+@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
+       .from('events')
+       .select('*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)', { count: 'exact' })
+       .order('start_date', { ascending: true })
+-      .eq('status', 'approved')
++      .eq('status', 'pending')
+       .is('deleted_at', null);
+ 
+     // Filter by IDs (e.g. for recommendation list)
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ returns only approved, non-deleted, upcoming events, in start_date order (4 ms)
+    ✕ never returns a pending, rejected or soft-deleted event, whatever else is asked (1 ms)
+    ✕ returns each event transformed, with its stored title, start_date and stable tags (1 ms)
+    ✕ with no dateFrom, floors start_date at getESTNowISO(): one minute before is dropped, one minute after is kept
+    ✕ an explicit dateFrom earlier than the floor replaces it (1 ms)
+    ✕ an explicit dateFrom later than the floor replaces it
+    ✕ dateTo adds an inclusive upper bound on start_date
+    ✓ the floor constant this file assumes is the one the mock returns (1 ms)
+    ✕ tags=academic, social returns events whose tags overlap either value
+    ✕ tag values are trimmed: 'sports, social' matches the social event too (1 ms)
+    ✓ a tag no event carries returns an empty list with total 0
+    ✕ ids=a,b restricts the result to those ids
+    ✕ blank and space-padded elements of ids are ignored
+    ✓ an invalid timeOfDay is 400 with the exact message, and nothing is queried
+    ✓ an invalid dayType is 400 with the exact message, and nothing is queried
+    ✕ a valid timeOfDay restricts the list to the RPC's ids (still approved and upcoming only) (1 ms)
+    ✓ an empty time-filter RPC result is an early 200 with an empty list, and no events query
+    ✓ a null time-filter RPC result (the RPC errored) is the same early empty 200
+    ✓ the early return echoes the requested page and limit
+    ✕ page=2&limit=10 over 25 rows returns the 11th to 20th rows with total 25 and totalPages 3
+    ✕ the last partial page holds the remainder
+    ✕ with no page or limit, page 1 of up to 50 rows is returned
+    ✕ total counts every matching row, not the rows on the page (1 ms)
+    ✕ a successful fuzzy RPC restricts to its ids and orders by rank, not by start_date
+    ✓ a fuzzy RPC with no matches is an early 200 with an empty list and total 0, and no events query
+    ✓ when the fuzzy RPC errors, exactly one or() filter mentioning title.ilike., description.ilike. and the term is applied (1 ms)
+    ✓ with no search term, no search RPC is called and no or() filter is applied
+    ✓ PGRST103 (range not satisfiable) is benign: 200 with an empty list
+    ✓ PGRST116 is benign: 200 with an empty list
+    ✓ an error whose message starts with '{' is benign: 200 with an empty list (1 ms)
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+    ✓ a successful response carries Cache-Control: public, s-maxage=30, stale-while-revalidate=60
+Test Suites: 1 failed, 1 total
+Tests:       17 failed, 16 passed, 33 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/events/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       33 passed, 33 total
+jest_exit=0
+
+==============================================================================
+CYCLE 1b — events-list-characterization — list: tag values are no longer trimmed
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/route.ts'
+diff --git a/src/app/api/events/route.ts b/src/app/api/events/route.ts
+index 397a283..c0a8785 100644
+--- a/src/app/api/events/route.ts
++++ b/src/app/api/events/route.ts
+@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
+ 
+     // Apply filters
+     if (tags) {
+-      const tagArray = tags.split(',').map(tag => tag.trim());
++      const tagArray = tags.split(',');
+       eventsQuery = eventsQuery.overlaps('tags', tagArray);
+     }
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns only approved, non-deleted, upcoming events, in start_date order (3 ms)
+    ✓ never returns a pending, rejected or soft-deleted event, whatever else is asked (1 ms)
+    ✓ returns each event transformed, with its stored title, start_date and stable tags
+    ✓ with no dateFrom, floors start_date at getESTNowISO(): one minute before is dropped, one minute after is kept (1 ms)
+    ✓ an explicit dateFrom earlier than the floor replaces it
+    ✓ an explicit dateFrom later than the floor replaces it
+    ✓ dateTo adds an inclusive upper bound on start_date (1 ms)
+    ✓ the floor constant this file assumes is the one the mock returns
+    ✕ tags=academic, social returns events whose tags overlap either value (1 ms)
+    ✕ tag values are trimmed: 'sports, social' matches the social event too
+    ✓ a tag no event carries returns an empty list with total 0 (1 ms)
+    ✓ ids=a,b restricts the result to those ids
+    ✓ blank and space-padded elements of ids are ignored
+    ✓ an invalid timeOfDay is 400 with the exact message, and nothing is queried
+    ✓ an invalid dayType is 400 with the exact message, and nothing is queried
+    ✓ a valid timeOfDay restricts the list to the RPC's ids (still approved and upcoming only)
+    ✓ an empty time-filter RPC result is an early 200 with an empty list, and no events query
+    ✓ a null time-filter RPC result (the RPC errored) is the same early empty 200
+    ✓ the early return echoes the requested page and limit
+    ✓ page=2&limit=10 over 25 rows returns the 11th to 20th rows with total 25 and totalPages 3 (1 ms)
+    ✓ the last partial page holds the remainder
+    ✓ with no page or limit, page 1 of up to 50 rows is returned
+    ✓ total counts every matching row, not the rows on the page (1 ms)
+    ✓ a successful fuzzy RPC restricts to its ids and orders by rank, not by start_date
+    ✓ a fuzzy RPC with no matches is an early 200 with an empty list and total 0, and no events query
+    ✓ when the fuzzy RPC errors, exactly one or() filter mentioning title.ilike., description.ilike. and the term is applied
+    ✓ with no search term, no search RPC is called and no or() filter is applied
+    ✓ PGRST103 (range not satisfiable) is benign: 200 with an empty list
+    ✓ PGRST116 is benign: 200 with an empty list
+    ✓ an error whose message starts with '{' is benign: 200 with an empty list
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+    ✓ a successful response carries Cache-Control: public, s-maxage=30, stale-while-revalidate=60 (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 31 passed, 33 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/events/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       33 passed, 33 total
+jest_exit=0
+
+==============================================================================
+CYCLE 1c — events-list-characterization — list: the fuzzy re-sort by rank is skipped
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/route.ts'
+diff --git a/src/app/api/events/route.ts b/src/app/api/events/route.ts
+index 397a283..95d684c 100644
+--- a/src/app/api/events/route.ts
++++ b/src/app/api/events/route.ts
+@@ -310,7 +310,7 @@ export async function GET(request: NextRequest) {
+     let rows = (eventsData || []) as EventRow[];
+ 
+     // Re-sort by fuzzy rank order when fuzzy search was used
+-    if (fuzzyRankedIds) {
++    if (false && fuzzyRankedIds) {
+       const orderMap = new Map(fuzzyRankedIds.map((id, idx) => [id, idx]));
+       rows = rows.slice().sort((a, b) => {
+         const aIdx = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns only approved, non-deleted, upcoming events, in start_date order (3 ms)
+    ✓ never returns a pending, rejected or soft-deleted event, whatever else is asked (1 ms)
+    ✓ returns each event transformed, with its stored title, start_date and stable tags
+    ✓ with no dateFrom, floors start_date at getESTNowISO(): one minute before is dropped, one minute after is kept (1 ms)
+    ✓ an explicit dateFrom earlier than the floor replaces it
+    ✓ an explicit dateFrom later than the floor replaces it (1 ms)
+    ✓ dateTo adds an inclusive upper bound on start_date
+    ✓ the floor constant this file assumes is the one the mock returns
+    ✓ tags=academic, social returns events whose tags overlap either value
+    ✓ tag values are trimmed: 'sports, social' matches the social event too
+    ✓ a tag no event carries returns an empty list with total 0
+    ✓ ids=a,b restricts the result to those ids
+    ✓ blank and space-padded elements of ids are ignored
+    ✓ an invalid timeOfDay is 400 with the exact message, and nothing is queried (1 ms)
+    ✓ an invalid dayType is 400 with the exact message, and nothing is queried
+    ✓ a valid timeOfDay restricts the list to the RPC's ids (still approved and upcoming only)
+    ✓ an empty time-filter RPC result is an early 200 with an empty list, and no events query
+    ✓ a null time-filter RPC result (the RPC errored) is the same early empty 200
+    ✓ the early return echoes the requested page and limit (1 ms)
+    ✓ page=2&limit=10 over 25 rows returns the 11th to 20th rows with total 25 and totalPages 3
+    ✓ the last partial page holds the remainder
+    ✓ with no page or limit, page 1 of up to 50 rows is returned (1 ms)
+    ✓ total counts every matching row, not the rows on the page
+    ✕ a successful fuzzy RPC restricts to its ids and orders by rank, not by start_date (1 ms)
+    ✓ a fuzzy RPC with no matches is an early 200 with an empty list and total 0, and no events query (1 ms)
+    ✓ when the fuzzy RPC errors, exactly one or() filter mentioning title.ilike., description.ilike. and the term is applied
+    ✓ with no search term, no search RPC is called and no or() filter is applied
+    ✓ PGRST103 (range not satisfiable) is benign: 200 with an empty list
+    ✓ PGRST116 is benign: 200 with an empty list
+    ✓ an error whose message starts with '{' is benign: 200 with an empty list (1 ms)
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+    ✓ a successful response carries Cache-Control: public, s-maxage=30, stale-while-revalidate=60
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 32 passed, 33 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/events/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       33 passed, 33 total
+jest_exit=0
+
+==============================================================================
+CYCLE 1d — events-list-characterization — list: the Cache-Control s-maxage changes
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/route.ts'
+diff --git a/src/app/api/events/route.ts b/src/app/api/events/route.ts
+index 397a283..3697756 100644
+--- a/src/app/api/events/route.ts
++++ b/src/app/api/events/route.ts
+@@ -333,7 +333,7 @@ export async function GET(request: NextRequest) {
+       },
+       {
+         headers: {
+-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
++          "Cache-Control": "public, s-maxage=31, stale-while-revalidate=60",
+         },
+       }
+     );
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns only approved, non-deleted, upcoming events, in start_date order (4 ms)
+    ✓ never returns a pending, rejected or soft-deleted event, whatever else is asked (1 ms)
+    ✓ returns each event transformed, with its stored title, start_date and stable tags
+    ✓ with no dateFrom, floors start_date at getESTNowISO(): one minute before is dropped, one minute after is kept (1 ms)
+    ✓ an explicit dateFrom earlier than the floor replaces it
+    ✓ an explicit dateFrom later than the floor replaces it
+    ✓ dateTo adds an inclusive upper bound on start_date (1 ms)
+    ✓ the floor constant this file assumes is the one the mock returns
+    ✓ tags=academic, social returns events whose tags overlap either value
+    ✓ tag values are trimmed: 'sports, social' matches the social event too
+    ✓ a tag no event carries returns an empty list with total 0 (1 ms)
+    ✓ ids=a,b restricts the result to those ids
+    ✓ blank and space-padded elements of ids are ignored
+    ✓ an invalid timeOfDay is 400 with the exact message, and nothing is queried
+    ✓ an invalid dayType is 400 with the exact message, and nothing is queried (1 ms)
+    ✓ a valid timeOfDay restricts the list to the RPC's ids (still approved and upcoming only)
+    ✓ an empty time-filter RPC result is an early 200 with an empty list, and no events query
+    ✓ a null time-filter RPC result (the RPC errored) is the same early empty 200
+    ✓ the early return echoes the requested page and limit
+    ✓ page=2&limit=10 over 25 rows returns the 11th to 20th rows with total 25 and totalPages 3 (1 ms)
+    ✓ the last partial page holds the remainder
+    ✓ with no page or limit, page 1 of up to 50 rows is returned (1 ms)
+    ✓ total counts every matching row, not the rows on the page
+    ✓ a successful fuzzy RPC restricts to its ids and orders by rank, not by start_date
+    ✓ a fuzzy RPC with no matches is an early 200 with an empty list and total 0, and no events query
+    ✓ when the fuzzy RPC errors, exactly one or() filter mentioning title.ilike., description.ilike. and the term is applied (1 ms)
+    ✓ with no search term, no search RPC is called and no or() filter is applied
+    ✓ PGRST103 (range not satisfiable) is benign: 200 with an empty list
+    ✓ PGRST116 is benign: 200 with an empty list
+    ✓ an error whose message starts with '{' is benign: 200 with an empty list
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500 (1 ms)
+    ✕ a successful response carries Cache-Control: public, s-maxage=30, stale-while-revalidate=60
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 32 passed, 33 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/events/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       33 passed, 33 total
+jest_exit=0
+
+==============================================================================
+CYCLE 2 — search-escaping-defect — search: the interpolated or() values are wrapped in double quotes (04-08's shape)
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/route.ts'
+diff --git a/src/app/api/events/route.ts b/src/app/api/events/route.ts
+index 397a283..4a4b4fe 100644
+--- a/src/app/api/events/route.ts
++++ b/src/app/api/events/route.ts
+@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
+         console.error('Fuzzy search RPC error:', searchError);
+         // Fallback to basic ILIKE search if RPC fails
+         eventsQuery = eventsQuery.or(
+-          `title.ilike.%${search}%,description.ilike.%${search}%`
++          `title.ilike."%${search}%",description.ilike."%${search}%"`
+         );
+       } else if (searchResults && (searchResults as { event_id: string }[]).length > 0) {
+         fuzzyRankedIds = (searchResults as { event_id: string; rank: number }[]).map(
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "search-escaping-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ search=a,b hands .or() exactly the raw string title.ilike.%a,b%,description.ilike.%a,b% (4 ms)
+    ✕ search=% hands .or() exactly the raw string title.ilike.%%%,description.ilike.%%% (1 ms)
+    ✕ search=_ hands .or() exactly the raw string title.ilike.%_%,description.ilike.%_%
+    ✕ a comma in the term is not quoted, so it lands at the logic tree's top level (1 ms)
+    ✓ returns 500 whose error is the PostgREST message, internal logic tree included
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 1 passed, 5 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/events/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "search-escaping-defect" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+jest_exit=0
+
+==============================================================================
+CYCLE 2b — events-list-characterization — CONTROL — the cycle-2 mutation against the list PRESERVE suite
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/route.ts'
+diff --git a/src/app/api/events/route.ts b/src/app/api/events/route.ts
+index 397a283..4a4b4fe 100644
+--- a/src/app/api/events/route.ts
++++ b/src/app/api/events/route.ts
+@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
+         console.error('Fuzzy search RPC error:', searchError);
+         // Fallback to basic ILIKE search if RPC fails
+         eventsQuery = eventsQuery.or(
+-          `title.ilike.%${search}%,description.ilike.%${search}%`
++          `title.ilike."%${search}%",description.ilike."%${search}%"`
+         );
+       } else if (searchResults && (searchResults as { event_id: string }[]).length > 0) {
+         fuzzyRankedIds = (searchResults as { event_id: string; rank: number }[]).map(
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns only approved, non-deleted, upcoming events, in start_date order (3 ms)
+    ✓ never returns a pending, rejected or soft-deleted event, whatever else is asked
+    ✓ returns each event transformed, with its stored title, start_date and stable tags (1 ms)
+    ✓ with no dateFrom, floors start_date at getESTNowISO(): one minute before is dropped, one minute after is kept
+    ✓ an explicit dateFrom earlier than the floor replaces it
+    ✓ an explicit dateFrom later than the floor replaces it (1 ms)
+    ✓ dateTo adds an inclusive upper bound on start_date
+    ✓ the floor constant this file assumes is the one the mock returns
+    ✓ tags=academic, social returns events whose tags overlap either value
+    ✓ tag values are trimmed: 'sports, social' matches the social event too (1 ms)
+    ✓ a tag no event carries returns an empty list with total 0
+    ✓ ids=a,b restricts the result to those ids
+    ✓ blank and space-padded elements of ids are ignored (1 ms)
+    ✓ an invalid timeOfDay is 400 with the exact message, and nothing is queried
+    ✓ an invalid dayType is 400 with the exact message, and nothing is queried
+    ✓ a valid timeOfDay restricts the list to the RPC's ids (still approved and upcoming only) (1 ms)
+    ✓ an empty time-filter RPC result is an early 200 with an empty list, and no events query
+    ✓ a null time-filter RPC result (the RPC errored) is the same early empty 200
+    ✓ the early return echoes the requested page and limit
+    ✓ page=2&limit=10 over 25 rows returns the 11th to 20th rows with total 25 and totalPages 3 (1 ms)
+    ✓ the last partial page holds the remainder
+    ✓ with no page or limit, page 1 of up to 50 rows is returned
+    ✓ total counts every matching row, not the rows on the page (1 ms)
+    ✓ a successful fuzzy RPC restricts to its ids and orders by rank, not by start_date
+    ✓ a fuzzy RPC with no matches is an early 200 with an empty list and total 0, and no events query
+    ✓ when the fuzzy RPC errors, exactly one or() filter mentioning title.ilike., description.ilike. and the term is applied (1 ms)
+    ✓ with no search term, no search RPC is called and no or() filter is applied
+    ✓ PGRST103 (range not satisfiable) is benign: 200 with an empty list
+    ✓ PGRST116 is benign: 200 with an empty list
+    ✓ an error whose message starts with '{' is benign: 200 with an empty list
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500 (1 ms)
+    ✓ a successful response carries Cache-Control: public, s-maxage=30, stale-while-revalidate=60
+Test Suites: 1 passed, 1 total
+Tests:       33 passed, 33 total
+jest_exit=0   (expected: 0, green — control)
+
+$ git checkout -- 'src/app/api/events/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       33 passed, 33 total
+jest_exit=0
+
+==============================================================================
+CYCLE 3 — pagination-contract-defect — pagination: a null nextCursor key is added to the success body
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/route.ts'
+diff --git a/src/app/api/events/route.ts b/src/app/api/events/route.ts
+index 397a283..171fa88 100644
+--- a/src/app/api/events/route.ts
++++ b/src/app/api/events/route.ts
+@@ -329,7 +329,8 @@ export async function GET(request: NextRequest) {
+         total: count || 0,
+         page,
+         limit,
+-        totalPages: Math.ceil((count || 0) / limit)
++        totalPages: Math.ceil((count || 0) / limit),
++        nextCursor: null,
+       },
+       {
+         headers: {
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "pagination-contract-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ a well-formed cursor is ignored: the first rows come back, not the rows after the cursor (3 ms)
+    ✓ with a cursor, the handler still asks for rows 0 through limit-1
+    ✕ the body has neither a nextCursor nor a prevCursor property (1 ms)
+    ✕ with more rows than the limit, still no next cursor is emitted — the body is exactly the five page-mode keys (1 ms)
+    ✓ cursor=not-a-valid-cursor is accepted with a 200, not rejected with a 400
+    ✓ ordering is start_date ascending alone — no id tie-break for a keyset to rely on (1 ms)
+    ✓ the early returns carry exactly the five page-mode keys, and no cursor keys
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 5 passed, 7 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/events/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "pagination-contract-defect" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+jest_exit=0
+
+==============================================================================
+CYCLE 3b — events-list-characterization — CONTROL — the cycle-3 mutation against the list PRESERVE suite
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/route.ts'
+diff --git a/src/app/api/events/route.ts b/src/app/api/events/route.ts
+index 397a283..171fa88 100644
+--- a/src/app/api/events/route.ts
++++ b/src/app/api/events/route.ts
+@@ -329,7 +329,8 @@ export async function GET(request: NextRequest) {
+         total: count || 0,
+         page,
+         limit,
+-        totalPages: Math.ceil((count || 0) / limit)
++        totalPages: Math.ceil((count || 0) / limit),
++        nextCursor: null,
+       },
+       {
+         headers: {
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns only approved, non-deleted, upcoming events, in start_date order (3 ms)
+    ✓ never returns a pending, rejected or soft-deleted event, whatever else is asked
+    ✓ returns each event transformed, with its stored title, start_date and stable tags (1 ms)
+    ✓ with no dateFrom, floors start_date at getESTNowISO(): one minute before is dropped, one minute after is kept
+    ✓ an explicit dateFrom earlier than the floor replaces it
+    ✓ an explicit dateFrom later than the floor replaces it (1 ms)
+    ✓ dateTo adds an inclusive upper bound on start_date
+    ✓ the floor constant this file assumes is the one the mock returns
+    ✓ tags=academic, social returns events whose tags overlap either value
+    ✓ tag values are trimmed: 'sports, social' matches the social event too (1 ms)
+    ✓ a tag no event carries returns an empty list with total 0
+    ✓ ids=a,b restricts the result to those ids
+    ✓ blank and space-padded elements of ids are ignored (1 ms)
+    ✓ an invalid timeOfDay is 400 with the exact message, and nothing is queried
+    ✓ an invalid dayType is 400 with the exact message, and nothing is queried
+    ✓ a valid timeOfDay restricts the list to the RPC's ids (still approved and upcoming only)
+    ✓ an empty time-filter RPC result is an early 200 with an empty list, and no events query
+    ✓ a null time-filter RPC result (the RPC errored) is the same early empty 200 (1 ms)
+    ✓ the early return echoes the requested page and limit
+    ✓ page=2&limit=10 over 25 rows returns the 11th to 20th rows with total 25 and totalPages 3
+    ✓ the last partial page holds the remainder
+    ✓ with no page or limit, page 1 of up to 50 rows is returned (1 ms)
+    ✓ total counts every matching row, not the rows on the page
+    ✓ a successful fuzzy RPC restricts to its ids and orders by rank, not by start_date
+    ✓ a fuzzy RPC with no matches is an early 200 with an empty list and total 0, and no events query
+    ✓ when the fuzzy RPC errors, exactly one or() filter mentioning title.ilike., description.ilike. and the term is applied (1 ms)
+    ✓ with no search term, no search RPC is called and no or() filter is applied
+    ✓ PGRST103 (range not satisfiable) is benign: 200 with an empty list
+    ✓ PGRST116 is benign: 200 with an empty list
+    ✓ an error whose message starts with '{' is benign: 200 with an empty list
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500 (1 ms)
+    ✓ a successful response carries Cache-Control: public, s-maxage=30, stale-while-revalidate=60
+Test Suites: 1 passed, 1 total
+Tests:       33 passed, 33 total
+jest_exit=0   (expected: 0, green — control)
+
+$ git checkout -- 'src/app/api/events/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       33 passed, 33 total
+jest_exit=0
+
+==============================================================================
+CYCLE 4 — events-detail-characterization — detail: the pending_edits stripping branch is removed
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/route.ts'
+diff --git a/src/app/api/events/[id]/route.ts b/src/app/api/events/[id]/route.ts
+index 5164044..8271336 100644
+--- a/src/app/api/events/[id]/route.ts
++++ b/src/app/api/events/[id]/route.ts
+@@ -117,7 +117,7 @@ export async function GET(
+           .single();
+         isAdmin = (profile?.roles ?? []).includes("admin");
+       }
+-      if (!isAdmin) {
++      if (false && !isAdmin) {
+         const { pending_edits: _, ...eventWithoutPending } = event as unknown as Record<string, unknown>;
+         return NextResponse.json({ event: eventWithoutPending });
+       }
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-detail-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ an id with no row is 404 Event not found (3 ms)
+    ✓ a soft-deleted row is 404 Event not found (1 ms)
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+    ✓ returns 200 with exactly one key, event, holding the stored id, title, start_date and tags (1 ms)
+    ✓ an anonymous caller gets no pending_edits key, though the row holds one
+    ✓ a signed-in stranger gets no pending_edits key, though the row holds one (1 ms)
+    ✓ a club organizer who did not create the event gets no pending_edits key, though the row holds one
+    ✓ a signed-in caller with no users row gets no pending_edits key, though the row holds one
+    ✓ the creator receives pending_edits (1 ms)
+    ✓ a caller whose users row has the admin role receives pending_edits
+    ✕ an anonymous caller has pending_edits stripped (1 ms)
+    ✕ a signed-in stranger has pending_edits stripped (1 ms)
+    ✕ a club organizer who did not create the event has pending_edits stripped
+    ✕ a signed-in caller with no users row has pending_edits stripped
+    ✕ the stripped event is otherwise identical to the creator's (2 ms)
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 11 passed, 16 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/events/[id]/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-detail-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+jest_exit=0
+
+==============================================================================
+CYCLE 4b — events-detail-characterization — detail: the GET's deleted_at filter is removed
+==============================================================================
+# mutation applied by the scratchpad driver: first of 3 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/route.ts'
+diff --git a/src/app/api/events/[id]/route.ts b/src/app/api/events/[id]/route.ts
+index 5164044..4a40859 100644
+--- a/src/app/api/events/[id]/route.ts
++++ b/src/app/api/events/[id]/route.ts
+@@ -81,7 +81,6 @@ export async function GET(
+       .from("events")
+       .select("*")
+       .eq("id", id)
+-      .is("deleted_at", null)
+       .single();
+ 
+     if (error) {
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-detail-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ an id with no row is 404 Event not found (3 ms)
+    ✕ a soft-deleted row is 404 Event not found (1 ms)
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+    ✓ returns 200 with exactly one key, event, holding the stored id, title, start_date and tags (1 ms)
+    ✓ an anonymous caller gets no pending_edits key, though the row holds one
+    ✓ a signed-in stranger gets no pending_edits key, though the row holds one
+    ✓ a club organizer who did not create the event gets no pending_edits key, though the row holds one (1 ms)
+    ✓ a signed-in caller with no users row gets no pending_edits key, though the row holds one
+    ✓ the creator receives pending_edits
+    ✓ a caller whose users row has the admin role receives pending_edits (1 ms)
+    ✓ an anonymous caller has pending_edits stripped
+    ✓ a signed-in stranger has pending_edits stripped
+    ✓ a club organizer who did not create the event has pending_edits stripped
+    ✓ a signed-in caller with no users row has pending_edits stripped
+    ✓ the stripped event is otherwise identical to the creator's (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 15 passed, 16 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/events/[id]/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-detail-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+jest_exit=0
+
+==============================================================================
+CYCLE 4c — events-detail-characterization — detail: the admin role check looks for a role nobody has
+==============================================================================
+# mutation applied by the scratchpad driver: first of 3 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/route.ts'
+diff --git a/src/app/api/events/[id]/route.ts b/src/app/api/events/[id]/route.ts
+index 5164044..70b7873 100644
+--- a/src/app/api/events/[id]/route.ts
++++ b/src/app/api/events/[id]/route.ts
+@@ -115,7 +115,7 @@ export async function GET(
+           .select("roles")
+           .eq("id", currentUser.id)
+           .single();
+-        isAdmin = (profile?.roles ?? []).includes("admin");
++        isAdmin = (profile?.roles ?? []).includes("administrator");
+       }
+       if (!isAdmin) {
+         const { pending_edits: _, ...eventWithoutPending } = event as unknown as Record<string, unknown>;
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-detail-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ an id with no row is 404 Event not found (3 ms)
+    ✓ a soft-deleted row is 404 Event not found (1 ms)
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+    ✓ returns 200 with exactly one key, event, holding the stored id, title, start_date and tags (1 ms)
+    ✓ an anonymous caller gets no pending_edits key, though the row holds one
+    ✓ a signed-in stranger gets no pending_edits key, though the row holds one (1 ms)
+    ✓ a club organizer who did not create the event gets no pending_edits key, though the row holds one
+    ✓ a signed-in caller with no users row gets no pending_edits key, though the row holds one
+    ✓ the creator receives pending_edits (1 ms)
+    ✕ a caller whose users row has the admin role receives pending_edits (1 ms)
+    ✓ an anonymous caller has pending_edits stripped
+    ✓ a signed-in stranger has pending_edits stripped (1 ms)
+    ✓ a club organizer who did not create the event has pending_edits stripped
+    ✓ a signed-in caller with no users row has pending_edits stripped
+    ✓ the stripped event is otherwise identical to the creator's
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 15 passed, 16 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/events/[id]/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-detail-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+jest_exit=0
+
+==============================================================================
+CYCLE 5 — club-fabrication-defect — club: the organizer fallback sets the id to null
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/lib/tagMapping.ts'
+diff --git a/src/lib/tagMapping.ts b/src/lib/tagMapping.ts
+index 0a11993..e8c07f1 100644
+--- a/src/lib/tagMapping.ts
++++ b/src/lib/tagMapping.ts
+@@ -124,7 +124,7 @@ export function transformEventFromDB(dbEvent: DBEvent): Event {
+   } else if (dbEvent.organizer) {
+     // Legacy support: create minimal club from organizer string
+     club = {
+-      id: dbEvent.organizer,
++      id: null as unknown as string,
+       name: dbEvent.organizer,
+       instagram_handle: null,
+       logo_url: null,
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "club-fabrication-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ a row with no club and organizer 'Seed Organizer A' gets a club whose id and name are both that string, status approved (3 ms)
+    ✕ with a real club_id present, the fabricated club still ignores it: its id is the label, not the club_id (1 ms)
+    ✓ an embed carrying website_url, banner_url, discord_url, twitter_url and linkedin_url comes out with all five null
+    ✓ the events read selects exactly '*' (3 ms)
+    ✓ the events read selects exactly '*' (1 ms)
+    ✕ so a seeded-shape event's detail response names the organizer label as its club, not the real club
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 3 passed, 6 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/lib/tagMapping.ts'
+exit=0
+
+$ git diff --quiet -- 'src/lib/tagMapping.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "club-fabrication-defect" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+jest_exit=0
+
+==============================================================================
+CYCLE 5b — club-fabrication-defect — club: saved-events gains a club embed (04-10's direction)
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/users/saved-events/route.ts'
+diff --git a/src/app/api/users/saved-events/route.ts b/src/app/api/users/saved-events/route.ts
+index 6265bc8..7fe3847 100644
+--- a/src/app/api/users/saved-events/route.ts
++++ b/src/app/api/users/saved-events/route.ts
+@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
+ 
+     let eventsQuery = supabase
+       .from("events")
+-      .select("*")
++      .select("*, club:clubs(id, name)")
+       .in("id", eventIds)
+       .eq("status", "approved")
+       .is("deleted_at", null);
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "club-fabrication-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ a row with no club and organizer 'Seed Organizer A' gets a club whose id and name are both that string, status approved (2 ms)
+    ✓ with a real club_id present, the fabricated club still ignores it: its id is the label, not the club_id
+    ✓ an embed carrying website_url, banner_url, discord_url, twitter_url and linkedin_url comes out with all five null
+    ✕ the events read selects exactly '*' (4 ms)
+    ✓ the events read selects exactly '*' (1 ms)
+    ✓ so a seeded-shape event's detail response names the organizer label as its club, not the real club (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 5 passed, 6 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/app/api/users/saved-events/route.ts'
+exit=0
+
+$ git diff --quiet -- 'src/app/api/users/saved-events/route.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "club-fabrication-defect" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+jest_exit=0
+
+==============================================================================
+CYCLE 6 — tag-coercion-defect — tags: the default changes from Social to Academic
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/lib/tagMapping.ts'
+diff --git a/src/lib/tagMapping.ts b/src/lib/tagMapping.ts
+index 0a11993..8936f7f 100644
+--- a/src/lib/tagMapping.ts
++++ b/src/lib/tagMapping.ts
+@@ -42,7 +42,7 @@ export const tagMapping: Record<string, EventTag> = {
+ export function mapTags(dbTags: string[]): EventTag[] {
+   const mappedTags = (dbTags || []).map((tag: string) => {
+     const lowerTag = tag.toLowerCase().trim();
+-    return tagMapping[lowerTag] || EventTag.SOCIAL; // Default to SOCIAL if no mapping
++    return tagMapping[lowerTag] || EventTag.ACADEMIC; // Default to SOCIAL if no mapping
+   });
+ 
+   // Remove duplicates
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "tag-coercion-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ exactly six members map to something other than themselves: music, tech, food, volunteer, arts, networking (1 ms)
+    ✕ tech, absent from the alias table, is coerced to [social] (1 ms)
+    ✕ food, absent from the alias table, is coerced to [social]
+    ✕ volunteer, absent from the alias table, is coerced to [social]
+    ✕ arts, absent from the alias table, is coerced to [social]
+    ✓ music is aliased to [cultural] (1 ms)
+    ✓ networking is aliased to [social]
+    ✕ two coerced tags collapse into a single social badge
+    ✕ the seeded pairs: [academic, tech] reads as [academic, social]; [music, social] as [cultural, social]
+    ✕ quidditch maps to [social]
+    ✓ mapping unknown and coerced tags neither throws nor writes to any console method
+Test Suites: 1 failed, 1 total
+Tests:       7 failed, 4 passed, 11 total
+jest_exit=1   (expected: non-zero, red)
+
+$ git checkout -- 'src/lib/tagMapping.ts'
+exit=0
+
+$ git diff --quiet -- 'src/lib/tagMapping.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "tag-coercion-defect" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+jest_exit=0
+
+==============================================================================
+CYCLE 6b — events-list-characterization|events-detail-characterization — CONTROL — the cycle-6 mutation against both PRESERVE suites (stable-tag fixtures)
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/lib/tagMapping.ts'
+diff --git a/src/lib/tagMapping.ts b/src/lib/tagMapping.ts
+index 0a11993..8936f7f 100644
+--- a/src/lib/tagMapping.ts
++++ b/src/lib/tagMapping.ts
+@@ -42,7 +42,7 @@ export const tagMapping: Record<string, EventTag> = {
+ export function mapTags(dbTags: string[]): EventTag[] {
+   const mappedTags = (dbTags || []).map((tag: string) => {
+     const lowerTag = tag.toLowerCase().trim();
+-    return tagMapping[lowerTag] || EventTag.SOCIAL; // Default to SOCIAL if no mapping
++    return tagMapping[lowerTag] || EventTag.ACADEMIC; // Default to SOCIAL if no mapping
+   });
+ 
+   // Remove duplicates
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization|events-detail-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ an id with no row is 404 Event not found (3 ms)
+    ✓ a soft-deleted row is 404 Event not found
+    ✓ any other query error is a 500 (1 ms)
+    ✓ a thrown error is a 500
+    ✓ returns 200 with exactly one key, event, holding the stored id, title, start_date and tags (1 ms)
+    ✓ an anonymous caller gets no pending_edits key, though the row holds one
+    ✓ a signed-in stranger gets no pending_edits key, though the row holds one
+    ✓ a club organizer who did not create the event gets no pending_edits key, though the row holds one
+    ✓ a signed-in caller with no users row gets no pending_edits key, though the row holds one
+    ✓ the creator receives pending_edits
+    ✓ a caller whose users row has the admin role receives pending_edits
+    ✓ an anonymous caller has pending_edits stripped
+    ✓ a signed-in stranger has pending_edits stripped
+    ✓ a club organizer who did not create the event has pending_edits stripped
+    ✓ a signed-in caller with no users row has pending_edits stripped (1 ms)
+    ✓ the stripped event is otherwise identical to the creator's
+    ✓ returns only approved, non-deleted, upcoming events, in start_date order (1 ms)
+    ✓ never returns a pending, rejected or soft-deleted event, whatever else is asked
+    ✓ returns each event transformed, with its stored title, start_date and stable tags
+    ✓ with no dateFrom, floors start_date at getESTNowISO(): one minute before is dropped, one minute after is kept (1 ms)
+    ✓ an explicit dateFrom earlier than the floor replaces it
+    ✓ an explicit dateFrom later than the floor replaces it
+    ✓ dateTo adds an inclusive upper bound on start_date
+    ✓ the floor constant this file assumes is the one the mock returns
+    ✓ tags=academic, social returns events whose tags overlap either value
+    ✓ tag values are trimmed: 'sports, social' matches the social event too
+    ✓ a tag no event carries returns an empty list with total 0
+    ✓ ids=a,b restricts the result to those ids
+    ✓ blank and space-padded elements of ids are ignored (1 ms)
+    ✓ an invalid timeOfDay is 400 with the exact message, and nothing is queried
+    ✓ an invalid dayType is 400 with the exact message, and nothing is queried
+    ✓ a valid timeOfDay restricts the list to the RPC's ids (still approved and upcoming only)
+    ✓ an empty time-filter RPC result is an early 200 with an empty list, and no events query
+    ✓ a null time-filter RPC result (the RPC errored) is the same early empty 200 (1 ms)
+    ✓ the early return echoes the requested page and limit
+    ✓ page=2&limit=10 over 25 rows returns the 11th to 20th rows with total 25 and totalPages 3
+    ✓ the last partial page holds the remainder
+    ✓ with no page or limit, page 1 of up to 50 rows is returned (1 ms)
+    ✓ total counts every matching row, not the rows on the page
+    ✓ a successful fuzzy RPC restricts to its ids and orders by rank, not by start_date
+    ✓ a fuzzy RPC with no matches is an early 200 with an empty list and total 0, and no events query
+    ✓ when the fuzzy RPC errors, exactly one or() filter mentioning title.ilike., description.ilike. and the term is applied (1 ms)
+    ✓ with no search term, no search RPC is called and no or() filter is applied
+    ✓ PGRST103 (range not satisfiable) is benign: 200 with an empty list
+    ✓ PGRST116 is benign: 200 with an empty list
+    ✓ an error whose message starts with '{' is benign: 200 with an empty list
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+    ✓ a successful response carries Cache-Control: public, s-maxage=30, stale-while-revalidate=60 (1 ms)
+Test Suites: 2 passed, 2 total
+Tests:       49 passed, 49 total
+jest_exit=0   (expected: 0, green — control)
+
+$ git checkout -- 'src/lib/tagMapping.ts'
+exit=0
+
+$ git diff --quiet -- 'src/lib/tagMapping.ts'   # exit=0 = byte-identical to HEAD
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization|events-detail-characterization" 2>&1 | grep -E "Tests:|Test Suites:"   # RESTORED
+Test Suites: 2 passed, 2 total
+Tests:       49 passed, 49 total
+jest_exit=0
+
+SUMMARY: 0 cycle check(s) did not behave as expected
+exit=0   (the driver exits 1 if any red cycle stays green, any control goes red, any restore is not byte-identical, or any re-run is not green)
+
+$ git diff --stat -- src/app src/lib src/server   # empty after all 15 cycles = every subject restored
+exit=0
+

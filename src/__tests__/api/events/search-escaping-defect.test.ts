@@ -83,13 +83,16 @@ const FUZZY_ERROR = {
   },
 };
 
-/** The PostgREST error the handler builds for `a,b`, as measured in § F-082. */
+/**
+ * The PostgREST error the running app logs for `search=a,b`, verbatim from the
+ * persona-harness run in `evidence/playwright.slice-2-before.txt`.
+ */
 const PGRST100 = {
   code: "PGRST100",
   details: "unexpected \"%\" expecting letter, digit, \"-\", \"->>\", \"->\" or delimiter (.)",
   hint: null,
   message:
-    "\"failed to parse logic tree ((title.ilike.%a,b%,description.ilike.%a,b%))\" (line 1, column 2)",
+    "\"failed to parse logic tree ((title.ilike.%a,b%,description.ilike.%a,b%))\" (line 1, column 20)",
 };
 
 async function get(search: string, init: Partial<FakeSupabaseInit> = {}) {

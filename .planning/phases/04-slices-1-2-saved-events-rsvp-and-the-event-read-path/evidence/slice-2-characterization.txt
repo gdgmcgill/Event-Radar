@@ -336,3 +336,67 @@ exit=0
 $ git diff --stat -- src/app src/lib src/server   # empty = subjects untouched
 exit=0
 
+=== TASK 3 / PLAN VERIFICATION ===
+Recorded: 2026-09-23T05:38:57Z   HEAD at capture=5efe9ce54c9f5abf584323e1f8ab074832cc21d3
+Task 3 fixture correction: search-escaping-defect.test.ts PGRST100 message "(line 1, column 2)" -> "(line 1, column 20)",
+the text the running app logged in evidence/playwright.slice-2-before.txt (the register quotes it truncated at "column 2…").
+
+$ npx jest --ci --selectProjects node --testPathPatterns search-escaping-defect 2>&1 | tail -5
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        0.132 s, estimated 1 s
+Ran all test suites matching search-escaping-defect.
+exit=0
+
+$ npx jest --ci 2>&1 | tail -6   # before-floor 433 passed / 5 skipped; +78 new; skipped unchanged
+
+Test Suites: 1 skipped, 46 passed, 46 of 47 total
+Tests:       5 skipped, 511 passed, 516 total
+Snapshots:   0 total
+Time:        2.092 s
+Ran all test suites in 2 projects.
+exit=0
+
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   DEFECT   src/__tests__/api/events/pagination-contract-defect.test.ts (F-083)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+ok 17 files
+exit=0
+
+$ grep -cE 'test\("(PRESERVE|DEFECT F-0[0-9]{2}):' e2e/specs/event-read-path.spec.ts
+9
+exit=0
+
+$ npm run lint 2>&1 | tail -3   # floor 0 errors / 19 warnings
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ node scripts/check-elevated-ratchet.mjs 2>&1 | tail -3
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+$ git diff --name-only b632f62127fa4fa7dcb2d19f9a45b0cabef36ab9 -- src/app src/lib src/server   # empty
+exit=0
+
