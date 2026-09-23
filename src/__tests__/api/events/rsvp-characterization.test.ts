@@ -58,9 +58,14 @@
  *   handler returns given the rows the client can see.
  *
  * Every assertion invokes an exported handler and asserts on the returned
- * response and, for writes, the fake's resulting table state. Each behaviour
- * group has been observed turning this suite red under a mutation of the
- * route; see `evidence/slice-1-mutation-check.txt`.
+ * response and, for writes, the fake's resulting table state. It has been
+ * observed turning red under mutations of the route — cycles 4, 4b and 4c: the
+ * total, the user_rsvp cancelled filter, and the DELETE's cancelled write —
+ * each recorded with its failing test names in
+ * `evidence/slice-1-mutation-check.txt`. Cycle 5c in the same file is the
+ * control for the count property above: the 04-05 head-count shape applied to
+ * the route leaves this suite GREEN while cycle 5b turns
+ * `rsvp-count-defect.test.ts` red.
  */
 
 import { NextRequest } from "next/server";

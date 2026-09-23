@@ -1,0 +1,103 @@
+Slice 1 subjects are unmodified and predate their suites — plan 04-02
+**Plan:** 04-02 · **Phase:** 04 · **Recorded:** 2026-09-23T05:05:15Z
+base=794556af090ad39f55bb792143b1d2c880615ace (line 1 of evidence/floor.before.txt)   HEAD at capture=1338aeed4774ff82b6693df6b57c533873b08774
+Suite commits: f16a7ad (save, saved-events, F-085, calendar, fake) and 1338aee (rsvp, F-079).
+For each subject: an empty diff against the base, the subject's last commit, and that commit's ancestry of HEAD and of the suite commit (exit=0 = ancestor).
+
+--- src/app/api/events/[id]/save/route.ts ---
+$ git diff --stat 794556af090ad39f55bb792143b1d2c880615ace -- 'src/app/api/events/[id]/save/route.ts'
+exit=0
+
+$ git diff --stat -- 'src/app/api/events/[id]/save/route.ts'   # working tree vs HEAD
+exit=0
+
+$ git log -1 --format='%H %cI' -- 'src/app/api/events/[id]/save/route.ts'
+ba76ed9aab8d3fc58f2dfc17840267eebb2b5f51 2026-03-16T05:38:19-04:00
+exit=0
+
+$ git merge-base --is-ancestor ba76ed9aab8d3fc58f2dfc17840267eebb2b5f51 HEAD
+exit=0
+
+$ git merge-base --is-ancestor ba76ed9aab8d3fc58f2dfc17840267eebb2b5f51 f16a7ad   # subject's last commit is an ancestor of the commit that added its suite
+exit=0
+
+$ git log -1 --format='%H %cI' f16a7ad
+f16a7adfc6c5480f709d460e35d7ae0aff467c6e 2026-09-23T00:59:18-04:00
+exit=0
+
+--- src/app/api/events/[id]/rsvp/route.ts ---
+$ git diff --stat 794556af090ad39f55bb792143b1d2c880615ace -- 'src/app/api/events/[id]/rsvp/route.ts'
+exit=0
+
+$ git diff --stat -- 'src/app/api/events/[id]/rsvp/route.ts'   # working tree vs HEAD
+exit=0
+
+$ git log -1 --format='%H %cI' -- 'src/app/api/events/[id]/rsvp/route.ts'
+cfc104203516b740c2a942c6e263edb7df99eb8c 2026-03-17T16:30:07-04:00
+exit=0
+
+$ git merge-base --is-ancestor cfc104203516b740c2a942c6e263edb7df99eb8c HEAD
+exit=0
+
+$ git merge-base --is-ancestor cfc104203516b740c2a942c6e263edb7df99eb8c 1338aee   # subject's last commit is an ancestor of the commit that added its suite
+exit=0
+
+$ git log -1 --format='%H %cI' 1338aee
+1338aeed4774ff82b6693df6b57c533873b08774 2026-09-23T01:01:31-04:00
+exit=0
+
+--- src/app/api/users/saved-events/route.ts ---
+$ git diff --stat 794556af090ad39f55bb792143b1d2c880615ace -- 'src/app/api/users/saved-events/route.ts'
+exit=0
+
+$ git diff --stat -- 'src/app/api/users/saved-events/route.ts'   # working tree vs HEAD
+exit=0
+
+$ git log -1 --format='%H %cI' -- 'src/app/api/users/saved-events/route.ts'
+aa3a9d99a16af33119989afaa15a9bc51bb3161e 2026-09-15T21:28:57-04:00
+exit=0
+
+$ git merge-base --is-ancestor aa3a9d99a16af33119989afaa15a9bc51bb3161e HEAD
+exit=0
+
+$ git merge-base --is-ancestor aa3a9d99a16af33119989afaa15a9bc51bb3161e f16a7ad   # subject's last commit is an ancestor of the commit that added its suite
+exit=0
+
+$ git log -1 --format='%H %cI' f16a7ad
+f16a7adfc6c5480f709d460e35d7ae0aff467c6e 2026-09-23T00:59:18-04:00
+exit=0
+
+--- src/app/api/calendar/events/route.ts ---
+$ git diff --stat 794556af090ad39f55bb792143b1d2c880615ace -- 'src/app/api/calendar/events/route.ts'
+exit=0
+
+$ git diff --stat -- 'src/app/api/calendar/events/route.ts'   # working tree vs HEAD
+exit=0
+
+$ git log -1 --format='%H %cI' -- 'src/app/api/calendar/events/route.ts'
+5c61573a049c2035952a6768759b38d9a3aea43a 2026-03-16T05:25:12-04:00
+exit=0
+
+$ git merge-base --is-ancestor 5c61573a049c2035952a6768759b38d9a3aea43a HEAD
+exit=0
+
+$ git merge-base --is-ancestor 5c61573a049c2035952a6768759b38d9a3aea43a f16a7ad   # subject's last commit is an ancestor of the commit that added its suite
+exit=0
+
+$ git log -1 --format='%H %cI' f16a7ad
+f16a7adfc6c5480f709d460e35d7ae0aff467c6e 2026-09-23T00:59:18-04:00
+exit=0
+
+--- whole-tree check ---
+$ git diff --name-only 794556af090ad39f55bb792143b1d2c880615ace -- src/app src/lib src/server supabase scripts
+scripts/check-characterization-tags.mjs
+exit=0
+
+Note: the one path above is plan 04-01's tag gate, created after the base was measured. It is not a subject and this plan does not touch it:
+$ git log --format='%h %s' 794556af090ad39f55bb792143b1d2c880615ace..HEAD -- scripts/check-characterization-tags.mjs
+27472b6 feat(04-01): register F-079..F-085, move F-050 to Phase 4, add the PRESERVE/DEFECT tag gate
+exit=0
+
+$ git diff --name-only 794556af090ad39f55bb792143b1d2c880615ace -- src/app src/lib src/server supabase   # the production subjects and the schema: empty
+exit=0
+

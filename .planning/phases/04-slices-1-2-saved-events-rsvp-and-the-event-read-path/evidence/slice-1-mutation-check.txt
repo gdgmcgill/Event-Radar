@@ -1,0 +1,1210 @@
+Slice 1 mutation cycles — plan 04-02
+**Plan:** 04-02 · **Phase:** 04 · **Recorded:** 2026-09-23T05:04:46Z
+HEAD at capture=1338aeed4774ff82b6693df6b57c533873b08774 (all six new suites committed or staged-identical in the tree)
+
+Format follows 03-.../evidence/callback-mutation-check.txt. Each cycle: the mutation
+(first occurrence of the exact text, asserted present), `git diff` of the mutated route,
+the pinned suite run under the mutation (✕ lines name the failing tests), the restore
+with `git checkout --`, `git diff --quiet` (exit=0 = byte-identical), and the green re-run.
+The jest runs are piped through a grep that keeps the ✓/✕ test lines and the summary;
+`jest_exit` is jest's own exit code (PIPESTATUS[0]), not grep's.
+Cycles 1-6 are the plan's six named mutations. Suffixed cycles (b, c) strengthen
+coverage of further behaviour groups. 5b/5c are a CONTROL: the 04-05 head-count shape
+turns the F-079 DEFECT suite red while the RSVP PRESERVE suite stays green — the
+implementation-blindness the PRESERVE header claims, observed rather than asserted.
+
+==============================================================================
+CYCLE 1 — save-characterization — save POST: the saved-true literal becomes false
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/save/route.ts'
+diff --git a/src/app/api/events/[id]/save/route.ts b/src/app/api/events/[id]/save/route.ts
+index 9110875..af33b25 100644
+--- a/src/app/api/events/[id]/save/route.ts
++++ b/src/app/api/events/[id]/save/route.ts
+@@ -123,7 +123,7 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
+       return NextResponse.json({ error: "Failed to save event" }, { status: 500 });
+     }
+ 
+-    return NextResponse.json({ saved: true });
++    return NextResponse.json({ saved: false });
+   } catch (error) {
+     console.error("Unexpected error saving event:", error);
+     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "save-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns { saved: false } and removes only the caller's row for this event
+    ✓ returns { saved: false } when nothing was saved (1 ms)
+    ✓ returns 500 Failed to unsave event when the delete errors, and removes nothing
+    ✓ returns 500 Internal server error when the client throws
+    ✓ returns 403 Account suspended for a permanently banned caller, before any event is read (1 ms)
+    ✓ returns 403 Account suspended while a temporary suspension is still running
+    ✕ does not block a caller whose suspension has expired (1 ms)
+    ✓ returns 401 Unauthorized for an anonymous caller
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 404 Event not found for an id that does not exist (1 ms)
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to check saved event when the existing-row read errors
+    ✕ saves an unsaved event: { saved: true } and exactly one row inserted with the caller's id
+    ✓ unsaves an already-saved event: { saved: false } and the caller's row removed (1 ms)
+    ✓ returns 500 Failed to save event when the insert errors
+    ✓ returns 500 Failed to unsave event when the toggle's delete errors
+    ✓ returns 500 Internal server error when the client throws
+    ✓ honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 19 passed, 21 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/events/[id]/save/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/save/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "save-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns { saved: false } and removes only the caller's row for this event
+    ✓ returns { saved: false } when nothing was saved (1 ms)
+    ✓ returns 500 Failed to unsave event when the delete errors, and removes nothing
+    ✓ returns 500 Internal server error when the client throws
+    ✓ returns 403 Account suspended for a permanently banned caller, before any event is read (1 ms)
+    ✓ returns 403 Account suspended while a temporary suspension is still running
+    ✓ does not block a caller whose suspension has expired
+    ✓ returns 401 Unauthorized for an anonymous caller (1 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event (1 ms)
+    ✓ returns 500 Failed to check saved event when the existing-row read errors
+    ✓ saves an unsaved event: { saved: true } and exactly one row inserted with the caller's id
+    ✓ unsaves an already-saved event: { saved: false } and the caller's row removed
+    ✓ returns 500 Failed to save event when the insert errors
+    ✓ returns 500 Failed to unsave event when the toggle's delete errors
+    ✓ returns 500 Internal server error when the client throws (1 ms)
+    ✓ honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 1: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 1b — save-characterization — save POST: the ban check's early return is removed
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/save/route.ts'
+diff --git a/src/app/api/events/[id]/save/route.ts b/src/app/api/events/[id]/save/route.ts
+index 9110875..b36f4df 100644
+--- a/src/app/api/events/[id]/save/route.ts
++++ b/src/app/api/events/[id]/save/route.ts
+@@ -53,7 +53,6 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+ export async function POST(_request: NextRequest, { params }: RouteContext) {
+   try {
+     const banResponse = await checkBanStatus();
+-    if (banResponse) return banResponse;
+ 
+     const { id: eventId } = await params;
+     const supabase = await createClient();
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "save-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns { saved: false } and removes only the caller's row for this event (1 ms)
+    ✓ returns { saved: false } when nothing was saved
+    ✓ returns 500 Failed to unsave event when the delete errors, and removes nothing (1 ms)
+    ✓ returns 500 Internal server error when the client throws
+    ✕ returns 403 Account suspended for a permanently banned caller, before any event is read (1 ms)
+    ✕ returns 403 Account suspended while a temporary suspension is still running (1 ms)
+    ✓ does not block a caller whose suspension has expired
+    ✓ returns 401 Unauthorized for an anonymous caller
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to check saved event when the existing-row read errors
+    ✓ saves an unsaved event: { saved: true } and exactly one row inserted with the caller's id (1 ms)
+    ✓ unsaves an already-saved event: { saved: false } and the caller's row removed
+    ✓ returns 500 Failed to save event when the insert errors
+    ✓ returns 500 Failed to unsave event when the toggle's delete errors
+    ✓ returns 500 Internal server error when the client throws
+    ✓ honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 19 passed, 21 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/events/[id]/save/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/save/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "save-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns { saved: false } and removes only the caller's row for this event (1 ms)
+    ✓ returns { saved: false } when nothing was saved
+    ✓ returns 500 Failed to unsave event when the delete errors, and removes nothing (1 ms)
+    ✓ returns 500 Internal server error when the client throws
+    ✓ returns 403 Account suspended for a permanently banned caller, before any event is read
+    ✓ returns 403 Account suspended while a temporary suspension is still running (1 ms)
+    ✓ does not block a caller whose suspension has expired
+    ✓ returns 401 Unauthorized for an anonymous caller
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to check saved event when the existing-row read errors
+    ✓ saves an unsaved event: { saved: true } and exactly one row inserted with the caller's id
+    ✓ unsaves an already-saved event: { saved: false } and the caller's row removed
+    ✓ returns 500 Failed to save event when the insert errors
+    ✓ returns 500 Failed to unsave event when the toggle's delete errors
+    ✓ returns 500 Internal server error when the client throws
+    ✓ honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed (1 ms)
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 1b: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 1c — save-characterization — save DELETE: the delete is no longer scoped by user_id
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/save/route.ts'
+diff --git a/src/app/api/events/[id]/save/route.ts b/src/app/api/events/[id]/save/route.ts
+index 9110875..bf957d4 100644
+--- a/src/app/api/events/[id]/save/route.ts
++++ b/src/app/api/events/[id]/save/route.ts
+@@ -35,7 +35,6 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+     const { error: deleteError } = await supabase
+       .from("saved_events")
+       .delete()
+-      .eq("user_id", user.id)
+       .eq("event_id", eventId);
+ 
+     if (deleteError) {
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "save-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✕ returns { saved: false } and removes only the caller's row for this event (2 ms)
+    ✓ returns { saved: false } when nothing was saved
+    ✓ returns 500 Failed to unsave event when the delete errors, and removes nothing
+    ✓ returns 500 Internal server error when the client throws (1 ms)
+    ✓ returns 403 Account suspended for a permanently banned caller, before any event is read
+    ✓ returns 403 Account suspended while a temporary suspension is still running
+    ✓ does not block a caller whose suspension has expired (1 ms)
+    ✓ returns 401 Unauthorized for an anonymous caller
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns 500 Failed to verify event when the event read errors (1 ms)
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to check saved event when the existing-row read errors
+    ✓ saves an unsaved event: { saved: true } and exactly one row inserted with the caller's id
+    ✓ unsaves an already-saved event: { saved: false } and the caller's row removed (1 ms)
+    ✓ returns 500 Failed to save event when the insert errors
+    ✓ returns 500 Failed to unsave event when the toggle's delete errors
+    ✓ returns 500 Internal server error when the client throws
+    ✓ honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 20 passed, 21 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/events/[id]/save/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/save/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "save-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ returns 401 Unauthorized for an anonymous caller (2 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns { saved: false } and removes only the caller's row for this event
+    ✓ returns { saved: false } when nothing was saved (1 ms)
+    ✓ returns 500 Failed to unsave event when the delete errors, and removes nothing
+    ✓ returns 500 Internal server error when the client throws
+    ✓ returns 403 Account suspended for a permanently banned caller, before any event is read
+    ✓ returns 403 Account suspended while a temporary suspension is still running
+    ✓ does not block a caller whose suspension has expired (1 ms)
+    ✓ returns 401 Unauthorized for an anonymous caller
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 404 Event not found for an id that does not exist (1 ms)
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to check saved event when the existing-row read errors
+    ✓ saves an unsaved event: { saved: true } and exactly one row inserted with the caller's id
+    ✓ unsaves an already-saved event: { saved: false } and the caller's row removed (1 ms)
+    ✓ returns 500 Failed to save event when the insert errors
+    ✓ returns 500 Failed to unsave event when the toggle's delete errors
+    ✓ returns 500 Internal server error when the client throws
+    ✓ honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 1c: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 2 — saved-events-characterization — saved-events: the recent (saved_at) sort comparator is inverted
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/users/saved-events/route.ts'
+diff --git a/src/app/api/users/saved-events/route.ts b/src/app/api/users/saved-events/route.ts
+index 6265bc8..e7bfc7b 100644
+--- a/src/app/api/users/saved-events/route.ts
++++ b/src/app/api/users/saved-events/route.ts
+@@ -129,8 +129,8 @@ export async function GET(request: NextRequest) {
+       // "recent" — sort by saved_at descending (most recently saved first)
+       events.sort(
+         (a, b) =>
+-          new Date(b.saved_at || 0).getTime() -
+-          new Date(a.saved_at || 0).getTime()
++          new Date(a.saved_at || 0).getTime() -
++          new Date(b.saved_at || 0).getTime()
+       );
+     }
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "saved-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns { events: [], savedEventIds: [] } when the caller has saved nothing (1 ms)
+    ✕ returns the caller's approved, non-deleted, upcoming saved events by saved_at descending, each with saved_at (4 ms)
+    ✕ treats an unknown sort value as the default saved_at-descending order
+    ✓ carries the caller's own saved_at, not another user's, on an event both saved
+    ✓ sort=date orders by start_date ascending (1 ms)
+    ✓ sort=title orders by title (4 ms)
+    ✕ include_past=true applies no start_date floor: the past saved event comes back (3 ms)
+    ✕ include_past with any other value keeps the floor
+    ✓ include_past=true with sort=date still excludes pending, rejected and deleted events
+    ✓ returns 500 Failed to fetch saved events when the saved-rows read errors
+    ✓ returns 500 Failed to fetch event details when the events read errors
+    ✓ returns 500 Internal server error when the client throws (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 10 passed, 14 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/users/saved-events/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/users/saved-events/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "saved-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns { events: [], savedEventIds: [] } when the caller has saved nothing (1 ms)
+    ✓ returns the caller's approved, non-deleted, upcoming saved events by saved_at descending, each with saved_at (1 ms)
+    ✓ treats an unknown sort value as the default saved_at-descending order
+    ✓ carries the caller's own saved_at, not another user's, on an event both saved (1 ms)
+    ✓ sort=date orders by start_date ascending
+    ✓ sort=title orders by title (5 ms)
+    ✓ include_past=true applies no start_date floor: the past saved event comes back
+    ✓ include_past with any other value keeps the floor (1 ms)
+    ✓ include_past=true with sort=date still excludes pending, rejected and deleted events
+    ✓ returns 500 Failed to fetch saved events when the saved-rows read errors
+    ✓ returns 500 Failed to fetch event details when the events read errors (1 ms)
+    ✓ returns 500 Internal server error when the client throws
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 2: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 2b — saved-events-characterization — saved-events: the approved-status filter is dropped
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/users/saved-events/route.ts'
+diff --git a/src/app/api/users/saved-events/route.ts b/src/app/api/users/saved-events/route.ts
+index 6265bc8..fcddd46 100644
+--- a/src/app/api/users/saved-events/route.ts
++++ b/src/app/api/users/saved-events/route.ts
+@@ -93,7 +93,6 @@ export async function GET(request: NextRequest) {
+       .from("events")
+       .select("*")
+       .in("id", eventIds)
+-      .eq("status", "approved")
+       .is("deleted_at", null);
+ 
+     if (!includePast) {
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "saved-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns { events: [], savedEventIds: [] } when the caller has saved nothing (1 ms)
+    ✕ returns the caller's approved, non-deleted, upcoming saved events by saved_at descending, each with saved_at (4 ms)
+    ✕ treats an unknown sort value as the default saved_at-descending order
+    ✓ carries the caller's own saved_at, not another user's, on an event both saved (1 ms)
+    ✕ sort=date orders by start_date ascending (2 ms)
+    ✕ sort=title orders by title (7 ms)
+    ✕ include_past=true applies no start_date floor: the past saved event comes back (3 ms)
+    ✕ include_past with any other value keeps the floor (1 ms)
+    ✕ include_past=true with sort=date still excludes pending, rejected and deleted events
+    ✓ returns 500 Failed to fetch saved events when the saved-rows read errors (1 ms)
+    ✓ returns 500 Failed to fetch event details when the events read errors
+    ✓ returns 500 Internal server error when the client throws
+Test Suites: 1 failed, 1 total
+Tests:       7 failed, 7 passed, 14 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/users/saved-events/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/users/saved-events/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "saved-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns { events: [], savedEventIds: [] } when the caller has saved nothing
+    ✓ returns the caller's approved, non-deleted, upcoming saved events by saved_at descending, each with saved_at (1 ms)
+    ✓ treats an unknown sort value as the default saved_at-descending order (1 ms)
+    ✓ carries the caller's own saved_at, not another user's, on an event both saved
+    ✓ sort=date orders by start_date ascending (1 ms)
+    ✓ sort=title orders by title (4 ms)
+    ✓ include_past=true applies no start_date floor: the past saved event comes back (1 ms)
+    ✓ include_past with any other value keeps the floor
+    ✓ include_past=true with sort=date still excludes pending, rejected and deleted events (1 ms)
+    ✓ returns 500 Failed to fetch saved events when the saved-rows read errors
+    ✓ returns 500 Failed to fetch event details when the events read errors
+    ✓ returns 500 Internal server error when the client throws
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 2b: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 2c — saved-events-characterization — saved-events: include_past is ignored (the floor always applies)
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/users/saved-events/route.ts'
+diff --git a/src/app/api/users/saved-events/route.ts b/src/app/api/users/saved-events/route.ts
+index 6265bc8..9512444 100644
+--- a/src/app/api/users/saved-events/route.ts
++++ b/src/app/api/users/saved-events/route.ts
+@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
+       .eq("status", "approved")
+       .is("deleted_at", null);
+ 
+-    if (!includePast) {
++    if (!includePast || includePast) {
+       eventsQuery = eventsQuery.gte("start_date", new Date().toISOString());
+     }
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "saved-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns 401 Unauthorized for an anonymous caller (5 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns { events: [], savedEventIds: [] } when the caller has saved nothing
+    ✓ returns the caller's approved, non-deleted, upcoming saved events by saved_at descending, each with saved_at (2 ms)
+    ✓ treats an unknown sort value as the default saved_at-descending order
+    ✓ carries the caller's own saved_at, not another user's, on an event both saved (1 ms)
+    ✓ sort=date orders by start_date ascending
+    ✓ sort=title orders by title (6 ms)
+    ✕ include_past=true applies no start_date floor: the past saved event comes back (10 ms)
+    ✓ include_past with any other value keeps the floor (1 ms)
+    ✕ include_past=true with sort=date still excludes pending, rejected and deleted events (1 ms)
+    ✓ returns 500 Failed to fetch saved events when the saved-rows read errors (1 ms)
+    ✓ returns 500 Failed to fetch event details when the events read errors
+    ✓ returns 500 Internal server error when the client throws (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 12 passed, 14 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/users/saved-events/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/users/saved-events/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "saved-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns { events: [], savedEventIds: [] } when the caller has saved nothing
+    ✓ returns the caller's approved, non-deleted, upcoming saved events by saved_at descending, each with saved_at (2 ms)
+    ✓ treats an unknown sort value as the default saved_at-descending order
+    ✓ carries the caller's own saved_at, not another user's, on an event both saved (1 ms)
+    ✓ sort=date orders by start_date ascending
+    ✓ sort=title orders by title (5 ms)
+    ✓ include_past=true applies no start_date floor: the past saved event comes back
+    ✓ include_past with any other value keeps the floor (1 ms)
+    ✓ include_past=true with sort=date still excludes pending, rejected and deleted events
+    ✓ returns 500 Failed to fetch saved events when the saved-rows read errors
+    ✓ returns 500 Failed to fetch event details when the events read errors
+    ✓ returns 500 Internal server error when the client throws (1 ms)
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 2c: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 3 — calendar-events-characterization — calendar: is_saved is no longer annotated
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/calendar/events/route.ts'
+diff --git a/src/app/api/calendar/events/route.ts b/src/app/api/calendar/events/route.ts
+index a53f409..955f1be 100644
+--- a/src/app/api/calendar/events/route.ts
++++ b/src/app/api/calendar/events/route.ts
+@@ -79,7 +79,6 @@ export async function GET(request: NextRequest) {
+     // Annotate with user's save/RSVP status
+     const annotated = transformed.map((e) => ({
+       ...e,
+-      is_saved: savedIds.has(e.id),
+       rsvp_status: rsvpMap.get(e.id) || null,
+     }));
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "calendar-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns 401 Unauthorized for an anonymous caller (2 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns { events: [] } when the caller has nothing saved and no RSVP
+    ✓ returns { events: [] } when the caller's only RSVP is cancelled and nothing is saved (1 ms)
+    ✕ returns saved ∪ going/interested events by start_date ascending, annotated with is_saved and rsvp_status (4 ms)
+    ✕ returns an event reached only through a going RSVP, with is_saved false (1 ms)
+    ✓ from bounds start_date inclusively from below (1 ms)
+    ✓ to bounds start_date inclusively from above
+    ✕ from and to together keep only the window (1 ms)
+    ✓ passes the ten embedded club columns through with their values
+    ✓ returns status 500 when the events query errors
+    ✓ returns 500 Failed to fetch calendar events when the client throws (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 9 passed, 12 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/calendar/events/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/calendar/events/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "calendar-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ returns 401 Unauthorized for an anonymous caller (2 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns { events: [] } when the caller has nothing saved and no RSVP
+    ✓ returns { events: [] } when the caller's only RSVP is cancelled and nothing is saved (1 ms)
+    ✓ returns saved ∪ going/interested events by start_date ascending, annotated with is_saved and rsvp_status (1 ms)
+    ✓ returns an event reached only through a going RSVP, with is_saved false
+    ✓ from bounds start_date inclusively from below
+    ✓ to bounds start_date inclusively from above (1 ms)
+    ✓ from and to together keep only the window
+    ✓ passes the ten embedded club columns through with their values
+    ✓ returns status 500 when the events query errors (1 ms)
+    ✓ returns 500 Failed to fetch calendar events when the client throws
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 3: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 3b — calendar-events-characterization — calendar: the RSVP read no longer excludes cancelled (status filter dropped)
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/calendar/events/route.ts'
+diff --git a/src/app/api/calendar/events/route.ts b/src/app/api/calendar/events/route.ts
+index a53f409..4fee347 100644
+--- a/src/app/api/calendar/events/route.ts
++++ b/src/app/api/calendar/events/route.ts
+@@ -35,8 +35,7 @@ export async function GET(request: NextRequest) {
+     const { data: rsvpRows } = await supabase
+       .from("rsvps")
+       .select("event_id, status")
+-      .eq("user_id", user.id)
+-      .in("status", ["going", "interested"]);
++      .eq("user_id", user.id);
+ 
+     const savedIds = new Set((savedRows || []).map((r) => r.event_id).filter((id): id is string => id !== null));
+     const rsvpMap = new Map(
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "calendar-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns 401 Unauthorized for an anonymous caller (2 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns { events: [] } when the caller has nothing saved and no RSVP (1 ms)
+    ✕ returns { events: [] } when the caller's only RSVP is cancelled and nothing is saved (1 ms)
+    ✕ returns saved ∪ going/interested events by start_date ascending, annotated with is_saved and rsvp_status (3 ms)
+    ✓ returns an event reached only through a going RSVP, with is_saved false (1 ms)
+    ✓ from bounds start_date inclusively from below
+    ✕ to bounds start_date inclusively from above
+    ✕ from and to together keep only the window (2 ms)
+    ✓ passes the ten embedded club columns through with their values (1 ms)
+    ✓ returns status 500 when the events query errors
+    ✓ returns 500 Failed to fetch calendar events when the client throws
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 8 passed, 12 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/calendar/events/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/calendar/events/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "calendar-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns { events: [] } when the caller has nothing saved and no RSVP
+    ✓ returns { events: [] } when the caller's only RSVP is cancelled and nothing is saved (1 ms)
+    ✓ returns saved ∪ going/interested events by start_date ascending, annotated with is_saved and rsvp_status
+    ✓ returns an event reached only through a going RSVP, with is_saved false
+    ✓ from bounds start_date inclusively from below
+    ✓ to bounds start_date inclusively from above (1 ms)
+    ✓ from and to together keep only the window
+    ✓ passes the ten embedded club columns through with their values
+    ✓ returns status 500 when the events query errors
+    ✓ returns 500 Failed to fetch calendar events when the client throws
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 3b: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 3c — calendar-events-characterization — calendar: the `to` bound is dropped
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/calendar/events/route.ts'
+diff --git a/src/app/api/calendar/events/route.ts b/src/app/api/calendar/events/route.ts
+index a53f409..c801741 100644
+--- a/src/app/api/calendar/events/route.ts
++++ b/src/app/api/calendar/events/route.ts
+@@ -61,9 +61,7 @@ export async function GET(request: NextRequest) {
+     if (from) {
+       query = query.gte("start_date", from);
+     }
+-    if (to) {
+-      query = query.lte("start_date", to);
+-    }
++
+ 
+     const { data: events, error } = await query;
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "calendar-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ returns 401 Unauthorized for an anonymous caller (2 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+    ✓ returns { events: [] } when the caller has nothing saved and no RSVP
+    ✓ returns { events: [] } when the caller's only RSVP is cancelled and nothing is saved (1 ms)
+    ✓ returns saved ∪ going/interested events by start_date ascending, annotated with is_saved and rsvp_status (1 ms)
+    ✓ returns an event reached only through a going RSVP, with is_saved false
+    ✓ from bounds start_date inclusively from below
+    ✕ to bounds start_date inclusively from above (2 ms)
+    ✕ from and to together keep only the window (2 ms)
+    ✓ passes the ten embedded club columns through with their values (1 ms)
+    ✓ returns status 500 when the events query errors
+    ✓ returns 500 Failed to fetch calendar events when the client throws
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 10 passed, 12 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/calendar/events/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/calendar/events/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "calendar-events-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+    ✓ returns { events: [] } when the caller has nothing saved and no RSVP (1 ms)
+    ✓ returns { events: [] } when the caller's only RSVP is cancelled and nothing is saved
+    ✓ returns saved ∪ going/interested events by start_date ascending, annotated with is_saved and rsvp_status (1 ms)
+    ✓ returns an event reached only through a going RSVP, with is_saved false (1 ms)
+    ✓ from bounds start_date inclusively from below
+    ✓ to bounds start_date inclusively from above
+    ✓ from and to together keep only the window (1 ms)
+    ✓ passes the ten embedded club columns through with their values
+    ✓ returns status 500 when the events query errors
+    ✓ returns 500 Failed to fetch calendar events when the client throws (1 ms)
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 3c: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 4 — rsvp-characterization — rsvp GET: total is computed from the going count alone
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/rsvp/route.ts'
+diff --git a/src/app/api/events/[id]/rsvp/route.ts b/src/app/api/events/[id]/rsvp/route.ts
+index 6888a76..b63e1b3 100644
+--- a/src/app/api/events/[id]/rsvp/route.ts
++++ b/src/app/api/events/[id]/rsvp/route.ts
+@@ -126,7 +126,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
+       counts: {
+         going: goingCount,
+         interested: interestedCount,
+-        total: goingCount + interestedCount,
++        total: goingCount,
+       },
+       user_rsvp: userRsvp,
+     });
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ counts 3 going and 2 interested for an anonymous caller, excluding cancelled rows and other events (5 ms)
+    ✕ counts the other event's rows for that event only (1 ms)
+    ✓ returns zero counts for an event with only cancelled RSVPs
+    ✕ returns the caller's non-cancelled row with id, status, created_at and updated_at, and counts it
+    ✕ returns user_rsvp null for a signed-in caller whose only row is cancelled (1 ms)
+    ✕ returns user_rsvp null for a signed-in caller whose RSVP is on a different event
+    ✓ returns 404 Event not found for an id that does not exist (1 ms)
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 500 Failed to fetch RSVPs when the rsvps read errors
+    ✓ creates an RSVP: 201 with the new row, and exactly one row for the caller
+    ✓ updates an existing RSVP to a different status: 200 'RSVP updated to interested'
+    ✓ returns 200 'Already RSVP'd as going' with the existing row when the status is unchanged
+    ✓ re-activates a cancelled RSVP as an update: 200 'RSVP updated to going', no second row
+    ✓ returns 403 Account suspended for a banned caller, before any RSVP read or write
+    ✓ returns 403 and writes nothing when the body user_id is not the caller's
+    ✓ soft-cancels the caller's active row: 200 'RSVP cancelled', status becomes cancelled, others untouched (1 ms)
+    ✓ returns 404 No active RSVP found for this event when the caller's only row is already cancelled
+    ✓ returns 403 and cancels nothing when the body user_id is not the caller's
+    ✓ honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 15 passed, 20 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ counts 3 going and 2 interested for an anonymous caller, excluding cancelled rows and other events (3 ms)
+    ✓ counts the other event's rows for that event only
+    ✓ returns zero counts for an event with only cancelled RSVPs (1 ms)
+    ✓ returns the caller's non-cancelled row with id, status, created_at and updated_at, and counts it
+    ✓ returns user_rsvp null for a signed-in caller whose only row is cancelled
+    ✓ returns user_rsvp null for a signed-in caller whose RSVP is on a different event (1 ms)
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to verify event when the event read errors (1 ms)
+    ✓ returns 500 Failed to fetch RSVPs when the rsvps read errors
+    ✓ creates an RSVP: 201 with the new row, and exactly one row for the caller (1 ms)
+    ✓ updates an existing RSVP to a different status: 200 'RSVP updated to interested'
+    ✓ returns 200 'Already RSVP'd as going' with the existing row when the status is unchanged
+    ✓ re-activates a cancelled RSVP as an update: 200 'RSVP updated to going', no second row
+    ✓ returns 403 Account suspended for a banned caller, before any RSVP read or write
+    ✓ returns 403 and writes nothing when the body user_id is not the caller's
+    ✓ soft-cancels the caller's active row: 200 'RSVP cancelled', status becomes cancelled, others untouched
+    ✓ returns 404 No active RSVP found for this event when the caller's only row is already cancelled
+    ✓ returns 403 and cancels nothing when the body user_id is not the caller's (1 ms)
+    ✓ honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled
+Test Suites: 1 passed, 1 total
+Tests:       20 passed, 20 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 4: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 4b — rsvp-characterization — rsvp GET: the caller's user_rsvp read no longer excludes cancelled
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/rsvp/route.ts'
+diff --git a/src/app/api/events/[id]/rsvp/route.ts b/src/app/api/events/[id]/rsvp/route.ts
+index 6888a76..15b2d93 100644
+--- a/src/app/api/events/[id]/rsvp/route.ts
++++ b/src/app/api/events/[id]/rsvp/route.ts
+@@ -116,7 +116,6 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
+         .select("id, status, created_at, updated_at")
+         .eq("user_id", user.id)
+         .eq("event_id", eventId)
+-        .neq("status", "cancelled")
+         .maybeSingle();
+ 
+       userRsvp = existingRsvp ?? null;
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ counts 3 going and 2 interested for an anonymous caller, excluding cancelled rows and other events (3 ms)
+    ✓ counts the other event's rows for that event only (1 ms)
+    ✓ returns zero counts for an event with only cancelled RSVPs
+    ✓ returns the caller's non-cancelled row with id, status, created_at and updated_at, and counts it (1 ms)
+    ✕ returns user_rsvp null for a signed-in caller whose only row is cancelled (1 ms)
+    ✓ returns user_rsvp null for a signed-in caller whose RSVP is on a different event
+    ✓ returns 404 Event not found for an id that does not exist (1 ms)
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 500 Failed to fetch RSVPs when the rsvps read errors (1 ms)
+    ✓ creates an RSVP: 201 with the new row, and exactly one row for the caller
+    ✓ updates an existing RSVP to a different status: 200 'RSVP updated to interested' (1 ms)
+    ✓ returns 200 'Already RSVP'd as going' with the existing row when the status is unchanged
+    ✓ re-activates a cancelled RSVP as an update: 200 'RSVP updated to going', no second row
+    ✓ returns 403 Account suspended for a banned caller, before any RSVP read or write
+    ✓ returns 403 and writes nothing when the body user_id is not the caller's (1 ms)
+    ✓ soft-cancels the caller's active row: 200 'RSVP cancelled', status becomes cancelled, others untouched
+    ✓ returns 404 No active RSVP found for this event when the caller's only row is already cancelled
+    ✓ returns 403 and cancels nothing when the body user_id is not the caller's
+    ✓ honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 19 passed, 20 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ counts 3 going and 2 interested for an anonymous caller, excluding cancelled rows and other events (3 ms)
+    ✓ counts the other event's rows for that event only (1 ms)
+    ✓ returns zero counts for an event with only cancelled RSVPs
+    ✓ returns the caller's non-cancelled row with id, status, created_at and updated_at, and counts it (1 ms)
+    ✓ returns user_rsvp null for a signed-in caller whose only row is cancelled
+    ✓ returns user_rsvp null for a signed-in caller whose RSVP is on a different event
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event (1 ms)
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 500 Failed to fetch RSVPs when the rsvps read errors
+    ✓ creates an RSVP: 201 with the new row, and exactly one row for the caller (1 ms)
+    ✓ updates an existing RSVP to a different status: 200 'RSVP updated to interested'
+    ✓ returns 200 'Already RSVP'd as going' with the existing row when the status is unchanged
+    ✓ re-activates a cancelled RSVP as an update: 200 'RSVP updated to going', no second row (1 ms)
+    ✓ returns 403 Account suspended for a banned caller, before any RSVP read or write
+    ✓ returns 403 and writes nothing when the body user_id is not the caller's
+    ✓ soft-cancels the caller's active row: 200 'RSVP cancelled', status becomes cancelled, others untouched
+    ✓ returns 404 No active RSVP found for this event when the caller's only row is already cancelled (1 ms)
+    ✓ returns 403 and cancels nothing when the body user_id is not the caller's
+    ✓ honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled
+Test Suites: 1 passed, 1 total
+Tests:       20 passed, 20 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 4b: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 4c — rsvp-characterization — rsvp DELETE: the soft-cancel writes 'interested' instead of 'cancelled'
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/rsvp/route.ts'
+diff --git a/src/app/api/events/[id]/rsvp/route.ts b/src/app/api/events/[id]/rsvp/route.ts
+index 6888a76..64681d9 100644
+--- a/src/app/api/events/[id]/rsvp/route.ts
++++ b/src/app/api/events/[id]/rsvp/route.ts
+@@ -430,7 +430,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
+ 
+     const { error: updateError } = await supabase
+       .from("rsvps")
+-      .update({ status: "cancelled" })
++      .update({ status: "interested" })
+       .eq("id", existingRsvp.id);
+ 
+     if (updateError) {
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ counts 3 going and 2 interested for an anonymous caller, excluding cancelled rows and other events (4 ms)
+    ✓ counts the other event's rows for that event only
+    ✓ returns zero counts for an event with only cancelled RSVPs (1 ms)
+    ✓ returns the caller's non-cancelled row with id, status, created_at and updated_at, and counts it
+    ✓ returns user_rsvp null for a signed-in caller whose only row is cancelled
+    ✓ returns user_rsvp null for a signed-in caller whose RSVP is on a different event (1 ms)
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to verify event when the event read errors (1 ms)
+    ✓ returns 500 Failed to fetch RSVPs when the rsvps read errors
+    ✓ creates an RSVP: 201 with the new row, and exactly one row for the caller (1 ms)
+    ✓ updates an existing RSVP to a different status: 200 'RSVP updated to interested'
+    ✓ returns 200 'Already RSVP'd as going' with the existing row when the status is unchanged
+    ✓ re-activates a cancelled RSVP as an update: 200 'RSVP updated to going', no second row
+    ✓ returns 403 Account suspended for a banned caller, before any RSVP read or write (1 ms)
+    ✓ returns 403 and writes nothing when the body user_id is not the caller's
+    ✕ soft-cancels the caller's active row: 200 'RSVP cancelled', status becomes cancelled, others untouched (1 ms)
+    ✓ returns 404 No active RSVP found for this event when the caller's only row is already cancelled
+    ✓ returns 403 and cancels nothing when the body user_id is not the caller's (1 ms)
+    ✕ honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 18 passed, 20 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ counts 3 going and 2 interested for an anonymous caller, excluding cancelled rows and other events (3 ms)
+    ✓ counts the other event's rows for that event only
+    ✓ returns zero counts for an event with only cancelled RSVPs
+    ✓ returns the caller's non-cancelled row with id, status, created_at and updated_at, and counts it (1 ms)
+    ✓ returns user_rsvp null for a signed-in caller whose only row is cancelled
+    ✓ returns user_rsvp null for a signed-in caller whose RSVP is on a different event
+    ✓ returns 404 Event not found for an id that does not exist (1 ms)
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 500 Failed to fetch RSVPs when the rsvps read errors
+    ✓ creates an RSVP: 201 with the new row, and exactly one row for the caller
+    ✓ updates an existing RSVP to a different status: 200 'RSVP updated to interested'
+    ✓ returns 200 'Already RSVP'd as going' with the existing row when the status is unchanged (1 ms)
+    ✓ re-activates a cancelled RSVP as an update: 200 'RSVP updated to going', no second row
+    ✓ returns 403 Account suspended for a banned caller, before any RSVP read or write
+    ✓ returns 403 and writes nothing when the body user_id is not the caller's
+    ✓ soft-cancels the caller's active row: 200 'RSVP cancelled', status becomes cancelled, others untouched (1 ms)
+    ✓ returns 404 No active RSVP found for this event when the caller's only row is already cancelled
+    ✓ returns 403 and cancels nothing when the body user_id is not the caller's
+    ✓ honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled
+Test Suites: 1 passed, 1 total
+Tests:       20 passed, 20 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 4c: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 5 — rsvp-count-defect — rsvp GET: the count read gains { count: "exact" }
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/rsvp/route.ts'
+diff --git a/src/app/api/events/[id]/rsvp/route.ts b/src/app/api/events/[id]/rsvp/route.ts
+index 6888a76..3ca59f5 100644
+--- a/src/app/api/events/[id]/rsvp/route.ts
++++ b/src/app/api/events/[id]/rsvp/route.ts
+@@ -92,7 +92,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
+     // Get RSVP counts (exclude cancelled)
+     const { data: rsvps, error: rsvpError } = await supabase
+       .from("rsvps")
+-      .select("id, status")
++      .select("id, status", { count: "exact" })
+       .eq("event_id", eventId)
+       .neq("status", "cancelled");
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-count-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ anonymous GET issues exactly one rsvps read, and it is the count read (2 ms)
+    ✕ the count read selects id, status with no count option and no head option (1 ms)
+    ✓ the count read is filtered by event_id and by status not equal to cancelled — and nothing else (1 ms)
+    ✕ a signed-in GET still counts through exactly one unscoped row-returning read
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 passed, 4 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-count-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ anonymous GET issues exactly one rsvps read, and it is the count read (3 ms)
+    ✓ the count read selects id, status with no count option and no head option (1 ms)
+    ✓ the count read is filtered by event_id and by status not equal to cancelled — and nothing else
+    ✓ a signed-in GET still counts through exactly one unscoped row-returning read
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 5: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 5b — rsvp-count-defect — CONTROL, the 04-05 F-079 fix shape: two head-count reads replace the row load — the DEFECT suite must go red
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/rsvp/route.ts'
+diff --git a/src/app/api/events/[id]/rsvp/route.ts b/src/app/api/events/[id]/rsvp/route.ts
+index 6888a76..19fb0ad 100644
+--- a/src/app/api/events/[id]/rsvp/route.ts
++++ b/src/app/api/events/[id]/rsvp/route.ts
+@@ -90,19 +90,21 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
+     }
+ 
+     // Get RSVP counts (exclude cancelled)
+-    const { data: rsvps, error: rsvpError } = await supabase
+-      .from("rsvps")
+-      .select("id, status")
+-      .eq("event_id", eventId)
+-      .neq("status", "cancelled");
++    const [goingRes, interestedRes] = await Promise.all([
++      supabase.from("rsvps").select("id", { count: "exact", head: true })
++        .eq("event_id", eventId).eq("status", "going"),
++      supabase.from("rsvps").select("id", { count: "exact", head: true })
++        .eq("event_id", eventId).eq("status", "interested"),
++    ]);
++    const rsvpError = goingRes.error ?? interestedRes.error;
+ 
+     if (rsvpError) {
+       console.error("Error fetching RSVPs:", rsvpError);
+       return NextResponse.json({ error: "Failed to fetch RSVPs" }, { status: 500 });
+     }
+ 
+-    const goingCount = rsvps?.filter((r) => r.status === "going").length ?? 0;
+-    const interestedCount = rsvps?.filter((r) => r.status === "interested").length ?? 0;
++    const goingCount = goingRes.count ?? 0;
++    const interestedCount = interestedRes.count ?? 0;
+ 
+     // Check current user's RSVP (if authenticated)
+     let userRsvp = null;
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-count-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ anonymous GET issues exactly one rsvps read, and it is the count read (3 ms)
+    ✕ the count read selects id, status with no count option and no head option (1 ms)
+    ✕ the count read is filtered by event_id and by status not equal to cancelled — and nothing else (1 ms)
+    ✕ a signed-in GET still counts through exactly one unscoped row-returning read (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 4 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-count-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ anonymous GET issues exactly one rsvps read, and it is the count read (2 ms)
+    ✓ the count read selects id, status with no count option and no head option
+    ✓ the count read is filtered by event_id and by status not equal to cancelled — and nothing else (1 ms)
+    ✓ a signed-in GET still counts through exactly one unscoped row-returning read
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 5b: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+CYCLE 5c — rsvp-characterization — CONTROL, the same 04-05 F-079 fix shape — the implementation-blind PRESERVE suite must STAY GREEN
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/events/[id]/rsvp/route.ts'
+diff --git a/src/app/api/events/[id]/rsvp/route.ts b/src/app/api/events/[id]/rsvp/route.ts
+index 6888a76..19fb0ad 100644
+--- a/src/app/api/events/[id]/rsvp/route.ts
++++ b/src/app/api/events/[id]/rsvp/route.ts
+@@ -90,19 +90,21 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
+     }
+ 
+     // Get RSVP counts (exclude cancelled)
+-    const { data: rsvps, error: rsvpError } = await supabase
+-      .from("rsvps")
+-      .select("id, status")
+-      .eq("event_id", eventId)
+-      .neq("status", "cancelled");
++    const [goingRes, interestedRes] = await Promise.all([
++      supabase.from("rsvps").select("id", { count: "exact", head: true })
++        .eq("event_id", eventId).eq("status", "going"),
++      supabase.from("rsvps").select("id", { count: "exact", head: true })
++        .eq("event_id", eventId).eq("status", "interested"),
++    ]);
++    const rsvpError = goingRes.error ?? interestedRes.error;
+ 
+     if (rsvpError) {
+       console.error("Error fetching RSVPs:", rsvpError);
+       return NextResponse.json({ error: "Failed to fetch RSVPs" }, { status: 500 });
+     }
+ 
+-    const goingCount = rsvps?.filter((r) => r.status === "going").length ?? 0;
+-    const interestedCount = rsvps?.filter((r) => r.status === "interested").length ?? 0;
++    const goingCount = goingRes.count ?? 0;
++    const interestedCount = interestedRes.count ?? 0;
+ 
+     // Check current user's RSVP (if authenticated)
+     let userRsvp = null;
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✓ counts 3 going and 2 interested for an anonymous caller, excluding cancelled rows and other events (3 ms)
+    ✓ counts the other event's rows for that event only (1 ms)
+    ✓ returns zero counts for an event with only cancelled RSVPs
+    ✓ returns the caller's non-cancelled row with id, status, created_at and updated_at, and counts it
+    ✓ returns user_rsvp null for a signed-in caller whose only row is cancelled (1 ms)
+    ✓ returns user_rsvp null for a signed-in caller whose RSVP is on a different event
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event (1 ms)
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 500 Failed to fetch RSVPs when the rsvps read errors
+    ✓ creates an RSVP: 201 with the new row, and exactly one row for the caller (1 ms)
+    ✓ updates an existing RSVP to a different status: 200 'RSVP updated to interested'
+    ✓ returns 200 'Already RSVP'd as going' with the existing row when the status is unchanged
+    ✓ re-activates a cancelled RSVP as an update: 200 'RSVP updated to going', no second row (1 ms)
+    ✓ returns 403 Account suspended for a banned caller, before any RSVP read or write
+    ✓ returns 403 and writes nothing when the body user_id is not the caller's
+    ✓ soft-cancels the caller's active row: 200 'RSVP cancelled', status becomes cancelled, others untouched
+    ✓ returns 404 No active RSVP found for this event when the caller's only row is already cancelled (1 ms)
+    ✓ returns 403 and cancels nothing when the body user_id is not the caller's
+    ✓ honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled
+Test Suites: 1 passed, 1 total
+Tests:       20 passed, 20 total
+jest_exit=0
+exit=0
+
+$ git checkout -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/events/[id]/rsvp/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-characterization" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ counts 3 going and 2 interested for an anonymous caller, excluding cancelled rows and other events (3 ms)
+    ✓ counts the other event's rows for that event only
+    ✓ returns zero counts for an event with only cancelled RSVPs
+    ✓ returns the caller's non-cancelled row with id, status, created_at and updated_at, and counts it (1 ms)
+    ✓ returns user_rsvp null for a signed-in caller whose only row is cancelled
+    ✓ returns user_rsvp null for a signed-in caller whose RSVP is on a different event
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 500 Failed to fetch RSVPs when the rsvps read errors (1 ms)
+    ✓ creates an RSVP: 201 with the new row, and exactly one row for the caller
+    ✓ updates an existing RSVP to a different status: 200 'RSVP updated to interested' (1 ms)
+    ✓ returns 200 'Already RSVP'd as going' with the existing row when the status is unchanged
+    ✓ re-activates a cancelled RSVP as an update: 200 'RSVP updated to going', no second row
+    ✓ returns 403 Account suspended for a banned caller, before any RSVP read or write
+    ✓ returns 403 and writes nothing when the body user_id is not the caller's (1 ms)
+    ✓ soft-cancels the caller's active row: 200 'RSVP cancelled', status becomes cancelled, others untouched
+    ✓ returns 404 No active RSVP found for this event when the caller's only row is already cancelled
+    ✓ returns 403 and cancels nothing when the body user_id is not the caller's
+    ✓ honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled (1 ms)
+Test Suites: 1 passed, 1 total
+Tests:       20 passed, 20 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 5c: PASS — expected GREEN under mutation (control); restored=True; green after restore=True
+
+==============================================================================
+CYCLE 6 — saved-events-time-floor-defect — saved-events: the true-UTC floor is replaced with a fixed ISO string
+==============================================================================
+# mutation applied by the scratchpad driver: first of 1 occurrence(s) replaced
+
+$ git diff -- 'src/app/api/users/saved-events/route.ts'
+diff --git a/src/app/api/users/saved-events/route.ts b/src/app/api/users/saved-events/route.ts
+index 6265bc8..1b56c09 100644
+--- a/src/app/api/users/saved-events/route.ts
++++ b/src/app/api/users/saved-events/route.ts
+@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
+       .is("deleted_at", null);
+ 
+     if (!includePast) {
+-      eventsQuery = eventsQuery.gte("start_date", new Date().toISOString());
++      eventsQuery = eventsQuery.gte("start_date", "2026-01-01T00:00:00.000Z");
+     }
+ 
+     const { data: eventsData, error: eventsError } = await eventsQuery;
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "saved-events-time-floor-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ at 14:30 EDT (18:30Z) the floor is 2026-09-23T18:30:00.000Z, not the Eastern 2026-09-23T14:30:00.000Z (4 ms)
+    ✕ at 14:30 EST (19:30Z in January) the floor is the true-UTC 2026-01-15T19:30:00.000Z — five hours ahead (1 ms)
+    ✕ drops an event ninety minutes away in Eastern time from the upcoming saved list
+    ✓ sends no floor at all when include_past=true (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 1 passed, 4 total
+jest_exit=1
+exit=0
+
+$ git checkout -- 'src/app/api/users/saved-events/route.ts'
+
+exit=0
+
+$ git diff --quiet -- 'src/app/api/users/saved-events/route.ts'
+
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "saved-events-time-floor-defect" --verbose 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"   # AFTER RESTORE
+    ✓ at 14:30 EDT (18:30Z) the floor is 2026-09-23T18:30:00.000Z, not the Eastern 2026-09-23T14:30:00.000Z (3 ms)
+    ✓ at 14:30 EST (19:30Z in January) the floor is the true-UTC 2026-01-15T19:30:00.000Z — five hours ahead
+    ✓ drops an event ninety minutes away in Eastern time from the upcoming saved list (1 ms)
+    ✓ sends no floor at all when include_past=true
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+jest_exit=0
+exit=0
+
+VERDICT cycle 6: PASS — expected RED under mutation; restored=True; green after restore=True
+
+==============================================================================
+$ git status --short -- src/app src/lib src/server   # empty = every mutation reverted
+
+exit=0
+
+SUMMARY: 16 cycles, 0 failed

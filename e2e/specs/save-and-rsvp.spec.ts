@@ -24,9 +24,25 @@
  * while the request was still in flight, and failed. Both tests below wait on the
  * RESPONSE. Optimistic UI is a correct thing for the product to do and a trap for
  * a test that does not know about it.
+ *
+ * PHASE 4 ADDITIONS (plan 04-02, all PRESERVE — they assert current behaviour):
+ *   1. The save test reloads the event page after the write lands and waits for
+ *      GET /api/users/saved-events. After a reload `EventDetailClient` derives
+ *      the saved state from THAT route, so the Unsave control is now proof the
+ *      API path agrees — the profile assertion only ever exercised the RSC
+ *      path (research Pitfall 1). The response's `savedEventIds` is checked too.
+ *   2. The RSVP test asserts the going count after its existing reload. The
+ *      count is only trustworthy after a reload: `RsvpButton` adjusts it with
+ *      optimistic arithmetic on click (research Pitfall 2). It must read 2 — the
+ *      seeded club_member going row plus this persona's — and, being an end
+ *      state, still reads 2 on a re-run against an already-RSVP'd event.
+ *   3. A new test on the second seeded event, whose only RSVP is club_member's
+ *      CANCELLED row, asserts the going count reads 0: a cancelled RSVP is not
+ *      counted. Plan 04-05 replaces how the counts are computed (F-079); these
+ *      two count assertions are the end-to-end half of proving it unchanged.
  */
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { IDS, storageStateFor } from "../fixtures";
 
@@ -52,6 +68,25 @@ test("a student saves an event and it appears on their profile", async ({ page }
 
   // The control's own accessible name flips, AND the write has landed.
   await expect(unsave, "the save control must report the saved state").toBeVisible();
+
+  // After a reload the saved state is no longer React state: EventDetailClient
+  // re-derives it from GET /api/users/saved-events. Wait for that response,
+  // check it carries this event, then check the control agrees with it.
+  const [savedList] = await Promise.all([
+    page.waitForResponse(
+      (r) => r.url().includes("/api/users/saved-events") && r.request().method() === "GET"
+    ),
+    page.reload(),
+  ]);
+  expect(savedList.status(), "GET /api/users/saved-events must succeed").toBe(200);
+  expect(
+    ((await savedList.json()) as { savedEventIds: string[] }).savedEventIds,
+    "the saved-events API must list the event just saved"
+  ).toContain(IDS.approvedEvent);
+  await expect(
+    page.getByRole("button", { name: "Unsave", exact: true }),
+    "after a reload the saved state comes from the API route, and it must still say saved"
+  ).toBeVisible();
 
   await page.goto("/profile");
   await expect(
@@ -85,4 +120,37 @@ test("a student RSVPs going to an event", async ({ page }) => {
     page.getByRole("button", { name: "Cancel", exact: true }),
     "the RSVP must survive a reload, which means it was written rather than held in state"
   ).toBeVisible();
+
+  // After the reload the count is the server's, not optimistic arithmetic: the
+  // seeded club_member going row plus this persona's.
+  await expect(
+    goingCount(page),
+    "the going count after a reload must be the seeded going RSVP plus this persona's"
+  ).toHaveText("2");
 });
+
+test("a cancelled RSVP is not counted as going", async ({ page }) => {
+  // The second seeded event's only RSVP is club_member's CANCELLED row, and
+  // this persona never RSVPs to it.
+  const [counts] = await Promise.all([
+    page.waitForResponse(
+      (r) =>
+        r.url().includes(`/api/events/${IDS.secondApprovedEvent}/rsvp`) && r.request().method() === "GET"
+    ),
+    page.goto(`/events/${IDS.secondApprovedEvent}`),
+  ]);
+  expect(counts.status(), "the RSVP counts request must succeed").toBe(200);
+
+  await expect(
+    goingCount(page),
+    "a cancelled RSVP must not be counted as going"
+  ).toHaveText("0");
+});
+
+/**
+ * The going count as `RsvpButton` renders it: a `strong` number followed by the
+ * word "going" inside one span. Anchored, so "3 friends going" cannot match.
+ */
+function goingCount(page: Page) {
+  return page.locator("span", { hasText: /^\s*\d+\s+going\s*$/ }).locator("strong");
+}

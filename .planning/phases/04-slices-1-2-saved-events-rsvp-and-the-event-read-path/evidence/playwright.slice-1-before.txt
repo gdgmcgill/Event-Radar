@@ -1,0 +1,257 @@
+Playwright persona harness — Slice 1 before-state with the 04-02 additions
+**Plan:** 04-02 · **Phase:** 04 · **Recorded:** 2026-09-23T05:02:27Z
+HEAD at capture=1338aeed4774ff82b6693df6b57c533873b08774 (the spec edit is in the working tree, committed with this file)
+Before-floor (evidence/floor.before.txt row 13): 27 passed. Expected here: 28 passed (27 + the new cancelled-RSVP test).
+
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   # exit=1 and no output = port 3000 free before the run
+exit=1
+
+$ supabase db reset --local 2>&1 | command grep -v -i "key\|secret\|token"
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+(Note: the reset block above pipes through a key/secret/token filter, so its exit is the filter's; the reset's own success is the 'Finished supabase db reset' line.)
+
+$ npx playwright test
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 build
+[WebServer] > next build
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5 (Turbopack)
+[WebServer] - Environments: .env.local, .env
+[WebServer] ✓ Running next.config.js took 5ms
+[WebServer] 
+[WebServer]   Creating an optimized production build ...
+[WebServer] ✓ Compiled successfully in 1664ms
+[WebServer]   Running TypeScript ...
+[WebServer]   Finished TypeScript in 1124ms ...
+[WebServer]   Collecting page data using 9 workers ...
+[WebServer]   Generating static pages using 9 workers (0/101) ...
+[WebServer]   Generating static pages using 9 workers (25/101) 
+[WebServer]   Generating static pages using 9 workers (50/101) 
+[WebServer]   Generating static pages using 9 workers (75/101) 
+[WebServer] (node:41840) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+[WebServer] (Use `node --trace-deprecation ...` to show where the warning was created)
+[WebServer] ✓ Generating static pages using 9 workers (101/101) in 319ms
+[WebServer]   Finalizing page optimization ...
+[WebServer] 
+[WebServer] Route (app)
+[WebServer] ┌ ○ /
+[WebServer] ├ ○ /_not-found
+[WebServer] ├ ○ /about
+[WebServer] ├ ○ /admin-login
+[WebServer] ├ ƒ /admin/experiments
+[WebServer] ├ ƒ /admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/analytics/events
+[WebServer] ├ ƒ /api/admin/analytics/users
+[WebServer] ├ ƒ /api/admin/audit-log
+[WebServer] ├ ƒ /api/admin/calculate-popularity
+[WebServer] ├ ƒ /api/admin/clubs
+[WebServer] ├ ƒ /api/admin/clubs/[id]
+[WebServer] ├ ƒ /api/admin/events
+[WebServer] ├ ƒ /api/admin/events/[id]
+[WebServer] ├ ƒ /api/admin/events/[id]/edits
+[WebServer] ├ ƒ /api/admin/events/[id]/status
+[WebServer] ├ ƒ /api/admin/experiments
+[WebServer] ├ ƒ /api/admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/experiments/[id]/results
+[WebServer] ├ ƒ /api/admin/featured
+[WebServer] ├ ƒ /api/admin/featured/[id]
+[WebServer] ├ ƒ /api/admin/organizer-requests
+[WebServer] ├ ƒ /api/admin/organizer-requests/[id]
+[WebServer] ├ ƒ /api/admin/organizers
+[WebServer] ├ ƒ /api/admin/reports
+[WebServer] ├ ƒ /api/admin/reports/[id]
+[WebServer] ├ ƒ /api/admin/stats
+[WebServer] ├ ƒ /api/admin/users
+[WebServer] ├ ƒ /api/admin/users/[id]
+[WebServer] ├ ƒ /api/admin/users/[id]/ban
+[WebServer] ├ ƒ /api/auth-debug
+[WebServer] ├ ƒ /api/calendar/events
+[WebServer] ├ ƒ /api/clubs
+[WebServer] ├ ƒ /api/clubs/[id]
+[WebServer] ├ ƒ /api/clubs/[id]/analytics
+[WebServer] ├ ƒ /api/clubs/[id]/appeal
+[WebServer] ├ ƒ /api/clubs/[id]/events
+[WebServer] ├ ƒ /api/clubs/[id]/follow
+[WebServer] ├ ƒ /api/clubs/[id]/invites
+[WebServer] ├ ƒ /api/clubs/[id]/members
+[WebServer] ├ ƒ /api/clubs/[id]/members/role
+[WebServer] ├ ƒ /api/clubs/[id]/transfer
+[WebServer] ├ ƒ /api/clubs/banner
+[WebServer] ├ ƒ /api/clubs/featured
+[WebServer] ├ ƒ /api/clubs/friends
+[WebServer] ├ ƒ /api/clubs/logo
+[WebServer] ├ ƒ /api/clubs/new
+[WebServer] ├ ƒ /api/clubs/trending
+[WebServer] ├ ƒ /api/cron/send-feedback-requests
+[WebServer] ├ ƒ /api/cron/send-reminders
+[WebServer] ├ ƒ /api/events
+[WebServer] ├ ƒ /api/events/[id]
+[WebServer] ├ ƒ /api/events/[id]/analytics
+[WebServer] ├ ƒ /api/events/[id]/appeal
+[WebServer] ├ ƒ /api/events/[id]/friends
+[WebServer] ├ ƒ /api/events/[id]/invite
+[WebServer] ├ ƒ /api/events/[id]/report
+[WebServer] ├ ƒ /api/events/[id]/reviews
+[WebServer] ├ ƒ /api/events/[id]/rsvp
+[WebServer] ├ ƒ /api/events/[id]/save
+[WebServer] ├ ƒ /api/events/create
+[WebServer] ├ ƒ /api/events/export
+[WebServer] ├ ƒ /api/events/featured
+[WebServer] ├ ƒ /api/events/following
+[WebServer] ├ ƒ /api/events/friends-activity
+[WebServer] ├ ƒ /api/events/friends-organizing
+[WebServer] ├ ƒ /api/events/happening-now
+[WebServer] ├ ƒ /api/events/my-events
+[WebServer] ├ ƒ /api/events/new
+[WebServer] ├ ƒ /api/events/popular
+[WebServer] ├ ƒ /api/events/upload-image
+[WebServer] ├ ƒ /api/feedback
+[WebServer] ├ ƒ /api/health
+[WebServer] ├ ƒ /api/interactions
+[WebServer] ├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+[WebServer] ├ ƒ /api/my-clubs
+[WebServer] ├ ƒ /api/notifications
+[WebServer] ├ ƒ /api/notifications/[id]
+[WebServer] ├ ƒ /api/notifications/count
+[WebServer] ├ ƒ /api/onboarding/complete
+[WebServer] ├ ƒ /api/organizer-requests
+[WebServer] ├ ƒ /api/profile/avatar
+[WebServer] ├ ƒ /api/profile/banner
+[WebServer] ├ ƒ /api/profile/inferred-tags
+[WebServer] ├ ƒ /api/profile/interests
+[WebServer] ├ ƒ /api/recommendations
+[WebServer] ├ ƒ /api/recommendations/analytics
+[WebServer] ├ ƒ /api/recommendations/batch
+[WebServer] ├ ƒ /api/recommendations/feedback
+[WebServer] ├ ƒ /api/user/engagement
+[WebServer] ├ ƒ /api/user/following
+[WebServer] ├ ƒ /api/users/[id]
+[WebServer] ├ ƒ /api/users/[id]/follow
+[WebServer] ├ ƒ /api/users/me/friends
+[WebServer] ├ ƒ /api/users/me/requests
+[WebServer] ├ ƒ /api/users/me/suggestions
+[WebServer] ├ ƒ /api/users/saved-events
+[WebServer] ├ ƒ /api/users/search
+[WebServer] ├ ƒ /auth/callback
+[WebServer] ├ ƒ /auth/signout
+[WebServer] ├ ƒ /banned
+[WebServer] ├ ○ /calendar
+[WebServer] ├ ƒ /clubs
+[WebServer] ├ ƒ /clubs/[id]
+[WebServer] ├ ○ /clubs/create
+[WebServer] ├ ○ /contributors
+[WebServer] ├ ○ /create-event
+[WebServer] ├ ○ /docs
+[WebServer] ├ ƒ /events/[id]
+[WebServer] ├ ○ /feedback
+[WebServer] ├ ○ /friends
+[WebServer] ├ ○ /health
+[WebServer] ├ ○ /help
+[WebServer] ├ ƒ /invites/[token]
+[WebServer] ├ ○ /landing
+[WebServer] ├ ƒ /moderation
+[WebServer] ├ ƒ /moderation/appeals
+[WebServer] ├ ƒ /moderation/audit-log
+[WebServer] ├ ƒ /moderation/clubs
+[WebServer] ├ ƒ /moderation/events
+[WebServer] ├ ƒ /moderation/featured
+[WebServer] ├ ƒ /moderation/organizer-requests
+[WebServer] ├ ƒ /moderation/organizers
+[WebServer] ├ ƒ /moderation/pending
+[WebServer] ├ ƒ /moderation/reports
+[WebServer] ├ ƒ /moderation/stats
+[WebServer] ├ ƒ /moderation/users
+[WebServer] ├ ƒ /my-clubs
+[WebServer] ├ ƒ /my-clubs/[id]
+[WebServer] ├ ○ /my-events
+[WebServer] ├ ○ /notifications
+[WebServer] ├ ƒ /onboarding
+[WebServer] ├ ○ /people
+[WebServer] ├ ○ /privacy
+[WebServer] ├ ƒ /profile
+[WebServer] ├ ○ /robots.txt
+[WebServer] ├ ○ /settings
+[WebServer] ├ ƒ /sitemap.xml
+[WebServer] ├ ○ /terms
+[WebServer] └ ƒ /users/[id]
+[WebServer] 
+[WebServer] 
+[WebServer] ƒ Proxy (Middleware)
+[WebServer] 
+[WebServer] ○  (Static)   prerendered as static content
+[WebServer] ƒ  (Dynamic)  server-rendered on demand
+[WebServer] 
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 start
+[WebServer] > next start
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5
+[WebServer] - Local:         http://localhost:3000
+[WebServer] - Network:       http://192.168.2.209:3000
+[WebServer] ✓ Ready in 46ms
+[WebServer] ✓ Running next.config.js took 5ms
+Running 28 tests using 1 worker
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (382ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (253ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (221ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (463ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (244ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (228ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (243ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (202ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (196ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (225ms)
+  ✓  11 [chromium] › e2e/specs/admin-login-cookie-equivalence.spec.ts:40:5 › the cookie shim emits the same cookie names the real sign-in page does (466ms)
+  ✓  12 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (472ms)
+  ✓  13 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  14 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (159ms)
+  ✓  15 [chromium] › e2e/specs/anonymous-browse.spec.ts:31:5 › an anonymous visitor browses the event feed and sees only approved events (326ms)
+[WebServer] Fuzzy search RPC error: {
+[WebServer]   code: '0A000',
+[WebServer]   details: null,
+[WebServer]   hint: null,
+[WebServer]   message: 'SET is not allowed in a non-volatile function'
+[WebServer] }
+[WebServer] Fuzzy search RPC error: {
+[WebServer]   code: '0A000',
+[WebServer]   details: null,
+[WebServer]   hint: null,
+[WebServer]   message: 'SET is not allowed in a non-volatile function'
+[WebServer] }
+  ✓  16 [chromium] › e2e/specs/anonymous-browse.spec.ts:50:5 › an anonymous visitor searches, and the search narrows the feed (605ms)
+  ✓  17 [chromium] › e2e/specs/anonymous-browse.spec.ts:63:5 › an anonymous visitor browses public club content (1.0s)
+  ✓  18 [chromium] › e2e/specs/banned-redirect.spec.ts:37:7 › a permanently banned user › is redirected away from a protected path, to the ban page (155ms)
+  ✓  19 [chromium] › e2e/specs/banned-redirect.spec.ts:50:7 › a user whose suspension is still running › is redirected away from a protected path, to the ban page (121ms)
+  ✓  20 [chromium] › e2e/specs/banned-redirect.spec.ts:63:7 › a user whose suspension has expired › reaches the protected path, because banned_at alone is not a ban (145ms)
+  ✓  21 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:40:7 › the club owner › is routed from /my-clubs to the multi-club surface and sees the approved club (1.1s)
+  ✓  22 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:54:7 › the club owner › opens the club dashboard and sees the club's own events (409ms)
+  ✓  23 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:68:7 › a member of a different club › does not see the approved club on their own surface (331ms)
+  ✓  24 [chromium] › e2e/specs/protected-route-redirect.spec.ts:35:7 › an anonymous visitor › is redirected from every protected path to the sign-in prompt, carrying the destination (289ms)
+  ✓  25 [chromium] › e2e/specs/protected-route-redirect.spec.ts:66:7 › a signed-in student › reaches every protected path without a redirect (1.8s)
+  ✓  26 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (1.1s)
+  ✓  27 [chromium] › e2e/specs/save-and-rsvp.spec.ts:98:5 › a student RSVPs going to an event (810ms)
+  ✓  28 [chromium] › e2e/specs/save-and-rsvp.spec.ts:132:5 › a cancelled RSVP is not counted as going (407ms)
+  28 passed (21.7s)
+exit=0

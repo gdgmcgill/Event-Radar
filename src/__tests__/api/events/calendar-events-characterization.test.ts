@@ -44,8 +44,10 @@
  *     that is not a contract worth freezing).
  *
  * Every assertion invokes the exported `GET` and asserts on the returned
- * response. Each behaviour group has been observed turning this suite red
- * under a mutation of the route; see `evidence/slice-1-mutation-check.txt`.
+ * response. It has been observed turning red under mutations of the route —
+ * cycles 3, 3b and 3c: the is_saved annotation, the
+ * RSVP status filter, and the `to` bound — each
+ * recorded with its failing test names in `evidence/slice-1-mutation-check.txt`.
  */
 
 import { NextRequest } from "next/server";

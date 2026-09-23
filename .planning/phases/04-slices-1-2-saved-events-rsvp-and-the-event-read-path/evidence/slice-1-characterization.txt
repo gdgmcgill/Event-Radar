@@ -246,3 +246,52 @@ exit=0
 $ git diff --stat -- src/app src/lib src/server src/__tests__/api/events/rsvp.test.ts   # empty = subjects and rsvp.test.ts untouched
 exit=0
 
+=== PLAN VERIFICATION (Task 3) — full suite, gate, lint, types ===
+Recorded: 2026-09-23T05:06:12Z   HEAD at capture=1338aeed4774ff82b6693df6b57c533873b08774 (Task 3's header rewording and spec edit in the working tree)
+Before-floor (floor.before.txt row 1): 358 passed, 5 skipped, 363 total; 34 passed, 1 skipped, 35 suites. New tests this plan: 21 + 14 + 4 + 12 + 20 + 4 = 75.
+
+$ npx jest --ci 2>&1 | tail -6
+
+Test Suites: 1 skipped, 40 passed, 40 of 41 total
+Tests:       5 skipped, 433 passed, 438 total
+Snapshots:   0 total
+Time:        1.986 s, estimated 2 s
+Ran all test suites in 2 projects.
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "(save|saved-events|calendar-events|rsvp)-(characterization|count-defect|time-floor-defect)" 2>&1 | tail -6
+
+Test Suites: 6 passed, 6 total
+Tests:       75 passed, 75 total
+Snapshots:   0 total
+Time:        0.212 s, estimated 1 s
+Ran all test suites matching (save|saved-events|calendar-events|rsvp)-(characterization|count-defect|time-floor-defect).
+exit=0
+
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+ok 11 files
+exit=0
+
+$ npm run lint 2>&1 | tail -3
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ git diff --stat -- src/app src/lib src/server src/__tests__/api/events/rsvp.test.ts
+exit=0
+

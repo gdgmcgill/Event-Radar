@@ -39,9 +39,11 @@
  *   upcoming floor (F-085) — this route returns neither.
  *
  * Every assertion invokes an exported handler and asserts on the returned
- * response and, for writes, the fake's resulting table state or call log. Each
- * behaviour group has been observed turning this suite red under a mutation of
- * the route; see `evidence/slice-1-mutation-check.txt`.
+ * response and, for writes, the fake's resulting table state or call log. It
+ * has been observed turning red under mutations of the route — cycles 1, 1b
+ * and 1c: the saved-true literal, the ban check's early return, and the
+ * DELETE's user_id scope — each recorded with its failing test names in
+ * `evidence/slice-1-mutation-check.txt`.
  */
 
 import { NextRequest } from "next/server";

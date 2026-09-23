@@ -44,8 +44,10 @@
  * past/upcoming split of the fixtures is the same on every run.
  *
  * Every assertion invokes the exported `GET` and asserts on the returned
- * response. Each behaviour group has been observed turning this suite red
- * under a mutation of the route; see `evidence/slice-1-mutation-check.txt`.
+ * response. It has been observed turning red under mutations of the route —
+ * cycles 2, 2b and 2c: the recent-sort comparator, the
+ * approved-status filter, and the include_past switch — each
+ * recorded with its failing test names in `evidence/slice-1-mutation-check.txt`.
  */
 
 import { NextRequest } from "next/server";
