@@ -1,6 +1,10 @@
 /**
  * DEFECT characterization — F-080 (and F-050's false comment)
  *
+ * pin B FIXED in 04-10: the shared EVENT_CLUB_EMBED (src/lib/tagMapping.ts)
+ * asks for the five link columns and the real-club branch reads them; pin B
+ * now asserts the fixed behaviour (contact_email stays null, DEC-27).
+ *
  * Subject: `src/lib/tagMapping.ts:102-144`, `transformEventFromDB`, and the two
  * routes that reach its fabricating branch because they select `*` with no
  * club embed: `src/app/api/events/[id]/route.ts:79-86` and
@@ -68,7 +72,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { EVENT_CLUB_EMBED, EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import {
   createFakeSupabase,
   type FakeCall,
@@ -171,18 +175,47 @@ describe("F-080 pin A — the organizer fallback fabricates a club (moves only i
 
 // ─── Pin B ──────────────────────────────────────────────────────────────────
 
-describe("F-080 pin B — the real-club branch blanks five URL columns (moves in 04-10)", () => {
-  it("an embed carrying website_url, banner_url, discord_url, twitter_url and linkedin_url comes out with all five null", () => {
+describe("F-080 pin B — FIXED in 04-10: the real-club branch carries the five URL columns from the embed", () => {
+  it("an embed carrying website_url, banner_url, discord_url, twitter_url and linkedin_url comes out with all five values", () => {
     const { club } = transformEventFromDB({ ...SEEDED_SHAPE, club: CLUB_EMBED } as unknown as DBRow);
     expect(club).toMatchObject({
       id: CLUB_ID,
       name: "Seed Approved Club",
+      website_url: CLUB_EMBED.website_url,
+      banner_url: CLUB_EMBED.banner_url,
+      discord_url: CLUB_EMBED.discord_url,
+      twitter_url: CLUB_EMBED.twitter_url,
+      linkedin_url: CLUB_EMBED.linkedin_url,
+    });
+  });
+
+  it("contact_email stays null even when the embed row carries one (DEC-27: not embedded, not copied)", () => {
+    const { club } = transformEventFromDB({
+      ...SEEDED_SHAPE,
+      club: { ...CLUB_EMBED, contact_email: "board@seedclub.example" },
+    } as unknown as DBRow);
+    expect(club?.contact_email).toBeNull();
+  });
+
+  it("an embed without the five columns (an older select) still yields null for each, not undefined", () => {
+    const { website_url, banner_url, discord_url, twitter_url, linkedin_url, ...tenColumns } = CLUB_EMBED;
+    void [website_url, banner_url, discord_url, twitter_url, linkedin_url];
+    const { club } = transformEventFromDB({ ...SEEDED_SHAPE, club: tenColumns } as unknown as DBRow);
+    expect(club).toMatchObject({
       website_url: null,
       banner_url: null,
       discord_url: null,
       twitter_url: null,
       linkedin_url: null,
     });
+  });
+
+  it("the shared embed asks for the five link columns and not contact_email", () => {
+    for (const column of ["banner_url", "website_url", "discord_url", "twitter_url", "linkedin_url"]) {
+      expect(EVENT_CLUB_EMBED).toContain(column);
+    }
+    expect(EVENT_CLUB_EMBED).not.toContain("contact_email");
+    expect(EVENT_WITH_CLUB_SELECT).toBe(`*, ${EVENT_CLUB_EMBED}`);
   });
 });
 

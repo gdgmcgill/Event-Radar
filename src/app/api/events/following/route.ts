@@ -5,7 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { getESTToday } from "@/lib/timezone";
 
 export async function GET() {
@@ -36,7 +36,7 @@ export async function GET() {
     const today = getESTToday();
     const { data: eventsData, error } = await supabase
       .from("events")
-      .select("*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)")
+      .select(EVENT_WITH_CLUB_SELECT)
       .in("club_id", clubIds)
       .eq("status", "approved")
       .is("deleted_at", null)

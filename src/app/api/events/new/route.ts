@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 
 /**
  * GET /api/events/new
@@ -13,7 +13,7 @@ export async function GET() {
 
     const { data: eventsData, error } = await supabase
       .from("events")
-      .select("*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)")
+      .select(EVENT_WITH_CLUB_SELECT)
       .eq("status", "approved")
       .is("deleted_at", null)
       .gte("start_date", today)

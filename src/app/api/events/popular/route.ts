@@ -6,8 +6,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { getESTNowISO } from "@/lib/timezone";
+
+/** The shared event-with-club select plus this route's popularity embed. */
+const POPULAR_EVENTS_SELECT =
+  `${EVENT_WITH_CLUB_SELECT}, popularity:event_popularity_scores(*)` as const;
 
 /**
  * @swagger
@@ -96,11 +100,7 @@ export async function GET(request: NextRequest) {
     // Query events with their popularity scores
     const { data: eventsData, error: eventsError } = await supabase
       .from("events")
-      .select(`
-        *,
-        club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at),
-        popularity:event_popularity_scores(*)
-      `)
+      .select(POPULAR_EVENTS_SELECT)
       .eq("status", "approved")
       .is("deleted_at", null)
       .gte("start_date", getESTNowISO())

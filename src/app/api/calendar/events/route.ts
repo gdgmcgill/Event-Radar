@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { ok } from "@/server/http";
@@ -48,9 +48,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("events")
-      .select(
-        "*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)"
-      )
+      .select(EVENT_WITH_CLUB_SELECT)
       .in("id", allIds)
       .eq("status", "approved")
       .is("deleted_at", null)

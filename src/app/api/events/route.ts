@@ -6,7 +6,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { getESTNowISO } from "@/lib/timezone";
 import { ilikeContainsFilter, postgrestQuotedValue } from "@/lib/searchFilter";
 import {
@@ -304,7 +304,7 @@ export async function GET(request: NextRequest) {
     // ties between equal start dates, so a keyset never skips or repeats.
     let eventsQuery = supabase
       .from('events')
-      .select('*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)', { count: 'exact' })
+      .select(EVENT_WITH_CLUB_SELECT, { count: 'exact' })
       .order('start_date', { ascending: true })
       .order('id', { ascending: true });
 

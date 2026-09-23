@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { getESTNow } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export async function GET() {
     // We use an OR filter: (start_date <= now AND end_date >= now) OR (start_date > now AND start_date <= now+30m)
     const { data: eventsData, error } = await supabase
       .from("events")
-      .select("*, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)")
+      .select(EVENT_WITH_CLUB_SELECT)
       .eq("status", "approved")
       .is("deleted_at", null)
       .gte("start_date", cutoffISO)

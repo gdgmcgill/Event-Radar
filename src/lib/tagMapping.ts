@@ -9,6 +9,27 @@ import { mapTags, partitionTags } from "@/lib/eventTags";
 // re-exported so this module's public surface is unchanged.
 export { mapTags };
 
+// ─── The shared club embed (F-080, DEC-27) ──────────────────────────────────
+
+/**
+ * The club embed every list-shaped event read selects: the ten columns the
+ * routes always asked for, plus the five link columns the `Club` type
+ * promises (banner_url, website_url, discord_url, twitter_url, linkedin_url),
+ * which the transform used to hard-code to null because nobody asked for them.
+ *
+ * `contact_email` is deliberately NOT embedded (DEC-27, data minimisation):
+ * event payloads are anonymous and cacheable, and a club's contact email is
+ * read with the club, on the club's own surfaces.
+ *
+ * Kept a string literal (`as const`) so supabase-js can infer the embed's row
+ * type from it; compose it only from literals.
+ */
+export const EVENT_CLUB_EMBED =
+  "club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at, banner_url, website_url, discord_url, twitter_url, linkedin_url)" as const;
+
+/** Every event column plus the shared club embed. */
+export const EVENT_WITH_CLUB_SELECT = `*, ${EVENT_CLUB_EMBED}` as const;
+
 /**
  * Database event row type (matches what Supabase returns)
  */
@@ -51,6 +72,11 @@ interface DBClub {
   created_by?: string | null;
   created_at: string;
   updated_at: string;
+  banner_url?: string | null;
+  website_url?: string | null;
+  discord_url?: string | null;
+  twitter_url?: string | null;
+  linkedin_url?: string | null;
 }
 
 /**
@@ -82,13 +108,14 @@ export function transformEventFromDB(dbEvent: DBEvent): Event {
       name: dbEvent.club.name,
       instagram_handle: dbEvent.club.instagram_handle || null,
       logo_url: dbEvent.club.logo_url || null,
-      banner_url: null,
+      banner_url: dbEvent.club.banner_url ?? null,
       description: dbEvent.club.description || null,
       category: dbEvent.club.category ?? null,
-      website_url: null,
-      discord_url: null,
-      twitter_url: null,
-      linkedin_url: null,
+      website_url: dbEvent.club.website_url ?? null,
+      discord_url: dbEvent.club.discord_url ?? null,
+      twitter_url: dbEvent.club.twitter_url ?? null,
+      linkedin_url: dbEvent.club.linkedin_url ?? null,
+      // Not embedded on purpose (DEC-27, data minimisation): see EVENT_CLUB_EMBED.
       contact_email: null,
       status: (dbEvent.club.status ?? "approved") as Club["status"],
       created_by: dbEvent.club.created_by ?? null,
