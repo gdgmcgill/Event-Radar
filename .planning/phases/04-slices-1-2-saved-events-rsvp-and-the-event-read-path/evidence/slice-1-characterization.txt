@@ -1,0 +1,150 @@
+Slice 1 characterization runs — plan 04-02
+**Plan:** 04-02 · **Phase:** 04 · **Recorded:** 2026-09-23T04:59:09Z
+base=794556af090ad39f55bb792143b1d2c880615ace   HEAD at capture=8b181ba68ac407ef5335ad1aeef0eba3a06b4ff8
+
+Raw output below, verbatim: the command after '$', the exit code after it.
+The subjects under src/app, src/lib and src/server are unmodified (git diff block at the end of each task).
+
+=== TASK 1 — save, saved-events, saved-events floor (F-085), calendar ===
+
+$ npx jest --ci --selectProjects node --testPathPatterns "(save|saved-events|calendar-events)-characterization|saved-events-time-floor-defect" --verbose
+Running one project: node
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+  GET /api/calendar/events — authentication
+    ✓ returns 401 Unauthorized for an anonymous caller (3 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+  GET /api/calendar/events — empty
+    ✓ returns { events: [] } when the caller has nothing saved and no RSVP (1 ms)
+    ✓ returns { events: [] } when the caller's only RSVP is cancelled and nothing is saved
+  GET /api/calendar/events — union and annotation
+    ✓ returns saved ∪ going/interested events by start_date ascending, annotated with is_saved and rsvp_status (1 ms)
+    ✓ returns an event reached only through a going RSVP, with is_saved false
+  GET /api/calendar/events — from/to
+    ✓ from bounds start_date inclusively from below (1 ms)
+    ✓ to bounds start_date inclusively from above
+    ✓ from and to together keep only the window
+  GET /api/calendar/events — embedded club
+    ✓ passes the ten embedded club columns through with their values
+  GET /api/calendar/events — errors
+    ✓ returns status 500 when the events query errors
+    ✓ returns 500 Failed to fetch calendar events when the client throws
+
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+  F-085 — the saved-events upcoming floor is true UTC
+    ✓ at 14:30 EDT (18:30Z) the floor is 2026-09-23T18:30:00.000Z, not the Eastern 2026-09-23T14:30:00.000Z (2 ms)
+    ✓ at 14:30 EST (19:30Z in January) the floor is the true-UTC 2026-01-15T19:30:00.000Z — five hours ahead
+    ✓ drops an event ninety minutes away in Eastern time from the upcoming saved list (1 ms)
+    ✓ sends no floor at all when include_past=true
+
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+  GET /api/users/saved-events — authentication
+    ✓ returns 401 Unauthorized for an anonymous caller (1 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+  GET /api/users/saved-events — empty
+    ✓ returns { events: [], savedEventIds: [] } when the caller has saved nothing (1 ms)
+  GET /api/users/saved-events — default request
+    ✓ returns the caller's approved, non-deleted, upcoming saved events by saved_at descending, each with saved_at
+    ✓ treats an unknown sort value as the default saved_at-descending order
+    ✓ carries the caller's own saved_at, not another user's, on an event both saved (1 ms)
+  GET /api/users/saved-events — sort orders
+    ✓ sort=date orders by start_date ascending
+    ✓ sort=title orders by title (4 ms)
+  GET /api/users/saved-events — include_past
+    ✓ include_past=true applies no start_date floor: the past saved event comes back (1 ms)
+    ✓ include_past with any other value keeps the floor
+    ✓ include_past=true with sort=date still excludes pending, rejected and deleted events
+  GET /api/users/saved-events — errors
+    ✓ returns 500 Failed to fetch saved events when the saved-rows read errors (1 ms)
+    ✓ returns 500 Failed to fetch event details when the events read errors
+    ✓ returns 500 Internal server error when the client throws
+
+PASS node src/__tests__/api/events/save-characterization.test.ts
+  DELETE /api/events/[id]/save — authentication
+    ✓ returns 401 Unauthorized for an anonymous caller (1 ms)
+    ✓ returns 401 Unauthorized when auth reports an error and no user
+  DELETE /api/events/[id]/save — unsave
+    ✓ returns { saved: false } and removes only the caller's row for this event
+    ✓ returns { saved: false } when nothing was saved
+    ✓ returns 500 Failed to unsave event when the delete errors, and removes nothing (1 ms)
+    ✓ returns 500 Internal server error when the client throws
+  POST /api/events/[id]/save — ban check runs first
+    ✓ returns 403 Account suspended for a permanently banned caller, before any event is read
+    ✓ returns 403 Account suspended while a temporary suspension is still running
+    ✓ does not block a caller whose suspension has expired
+  POST /api/events/[id]/save — authentication
+    ✓ returns 401 Unauthorized for an anonymous caller
+    ✓ returns 401 Unauthorized when auth reports an error and no user (1 ms)
+  POST /api/events/[id]/save — event lookup
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 404 Event not found for an id that does not exist
+    ✓ returns 404 Event not found for a soft-deleted event
+  POST /api/events/[id]/save — toggle
+    ✓ returns 500 Failed to check saved event when the existing-row read errors
+    ✓ saves an unsaved event: { saved: true } and exactly one row inserted with the caller's id
+    ✓ unsaves an already-saved event: { saved: false } and the caller's row removed
+    ✓ returns 500 Failed to save event when the insert errors
+    ✓ returns 500 Failed to unsave event when the toggle's delete errors
+    ✓ returns 500 Internal server error when the client throws
+  ban asymmetry — pinned for Phase 5 (DEC-24)
+    ✓ honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed
+
+Test Suites: 4 passed, 4 total
+Tests:       51 passed, 51 total
+Snapshots:   0 total
+Time:        0.178 s, estimated 1 s
+Ran all test suites matching (save|saved-events|calendar-events)-characterization|saved-events-time-floor-defect.
+exit=0
+
+$ node scripts/check-characterization-tags.mjs src/__tests__/api/events/save-characterization.test.ts src/__tests__/api/events/saved-events-characterization.test.ts src/__tests__/api/events/calendar-events-characterization.test.ts src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok 4 files
+exit=0
+
+$ grep -c "DEFECT characterization — F-085" src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+1
+exit=0
+
+$ grep -c "export function createFakeSupabase" src/__tests__/helpers/fakeSupabase.ts
+1
+exit=0
+
+$ command grep -lE "\bjest\." src/__tests__/helpers/fakeSupabase.ts   # exit=1 and no output = no jest global in the helper
+exit=1
+
+$ npx tsc --noEmit   # the helper is inside the main program (not a *.test.ts) and type-checks now
+exit=0
+
+--- DI-24 throwaway tsconfig (outside the repository, in the session scratchpad) ---
+$ cat /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice1/tsconfig.json
+{
+  "extends": "/Users/adyan/Documents/GitHub/Event-Radar/tsconfig.json",
+  "compilerOptions": { "typeRoots": ["/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@types"], "incremental": false },
+  "include": [
+    "/Users/adyan/Documents/GitHub/Event-Radar/next-env.d.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/save-characterization.test.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/saved-events-characterization.test.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/saved-events-time-floor-defect.test.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/calendar-events-characterization.test.ts"
+  ],
+  "exclude": []
+}
+exit=0
+
+$ npx tsc --noEmit -p /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice1/tsconfig.json --listFilesOnly | command grep -E 'src/__tests__|next-env'   # proves the four suites and the helper are in the program
+/Users/adyan/Documents/GitHub/Event-Radar/next-env.d.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/helpers/fakeSupabase.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/save-characterization.test.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/saved-events-characterization.test.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/calendar-events-characterization.test.ts
+exit=0
+
+$ npx tsc --noEmit -p /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice1/tsconfig.json
+exit=0
+
+$ git diff --stat -- src/app src/lib src/server   # empty = subjects untouched
+exit=0
+
