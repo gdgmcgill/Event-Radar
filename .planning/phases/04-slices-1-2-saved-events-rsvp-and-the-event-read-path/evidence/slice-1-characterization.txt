@@ -148,3 +148,101 @@ exit=0
 $ git diff --stat -- src/app src/lib src/server   # empty = subjects untouched
 exit=0
 
+=== TASK 2 — RSVP PRESERVE (implementation-blind counts) and F-079 DEFECT ===
+Recorded: 2026-09-23T05:01:29Z   HEAD at capture=f16a7adfc6c5480f709d460e35d7ae0aff467c6e
+
+$ npx jest --ci --selectProjects node --testPathPatterns "rsvp-(characterization|count-defect)" --verbose
+Running one project: node
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+  F-079 — RSVP counts are a row-returning select counted in JavaScript
+    ✓ anonymous GET issues exactly one rsvps read, and it is the count read (3 ms)
+    ✓ the count read selects id, status with no count option and no head option (1 ms)
+    ✓ the count read is filtered by event_id and by status not equal to cancelled — and nothing else
+    ✓ a signed-in GET still counts through exactly one unscoped row-returning read (1 ms)
+
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+  GET /api/events/[id]/rsvp — counts (implementation-blind)
+    ✓ counts 3 going and 2 interested for an anonymous caller, excluding cancelled rows and other events (1 ms)
+    ✓ counts the other event's rows for that event only
+    ✓ returns zero counts for an event with only cancelled RSVPs
+  GET /api/events/[id]/rsvp — user_rsvp
+    ✓ returns the caller's non-cancelled row with id, status, created_at and updated_at, and counts it (1 ms)
+    ✓ returns user_rsvp null for a signed-in caller whose only row is cancelled
+    ✓ returns user_rsvp null for a signed-in caller whose RSVP is on a different event
+  GET /api/events/[id]/rsvp — errors
+    ✓ returns 404 Event not found for an id that does not exist (1 ms)
+    ✓ returns 404 Event not found for a soft-deleted event
+    ✓ returns 500 Failed to verify event when the event read errors
+    ✓ returns 500 Failed to fetch RSVPs when the rsvps read errors
+  POST /api/events/[id]/rsvp — create and update
+    ✓ creates an RSVP: 201 with the new row, and exactly one row for the caller (1 ms)
+    ✓ updates an existing RSVP to a different status: 200 'RSVP updated to interested'
+    ✓ returns 200 'Already RSVP'd as going' with the existing row when the status is unchanged (1 ms)
+    ✓ re-activates a cancelled RSVP as an update: 200 'RSVP updated to going', no second row
+  POST /api/events/[id]/rsvp — refusals
+    ✓ returns 403 Account suspended for a banned caller, before any RSVP read or write
+    ✓ returns 403 and writes nothing when the body user_id is not the caller's
+  DELETE /api/events/[id]/rsvp — cancel
+    ✓ soft-cancels the caller's active row: 200 'RSVP cancelled', status becomes cancelled, others untouched (1 ms)
+    ✓ returns 404 No active RSVP found for this event when the caller's only row is already cancelled
+    ✓ returns 403 and cancels nothing when the body user_id is not the caller's
+  ban asymmetry — pinned for Phase 5 (DEC-24)
+    ✓ honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled
+
+Test Suites: 2 passed, 2 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        0.172 s, estimated 1 s
+Ran all test suites matching rsvp-(characterization|count-defect).
+exit=0
+
+$ grep -c "DEFECT characterization — F-079" src/__tests__/api/events/rsvp-count-defect.test.ts
+1
+exit=0
+
+$ grep -c "PRESERVE characterization" src/__tests__/api/events/rsvp-characterization.test.ts
+1
+exit=0
+
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+ok 11 files
+exit=0
+
+--- DI-24 throwaway tsconfig for the two RSVP suites ---
+$ cat /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice1-rsvp/tsconfig.json
+{
+  "extends": "/Users/adyan/Documents/GitHub/Event-Radar/tsconfig.json",
+  "compilerOptions": { "typeRoots": ["/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@types"], "incremental": false },
+  "include": [
+    "/Users/adyan/Documents/GitHub/Event-Radar/next-env.d.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/rsvp-characterization.test.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/rsvp-count-defect.test.ts"
+  ],
+  "exclude": []
+}
+exit=0
+
+$ npx tsc --noEmit -p /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice1-rsvp/tsconfig.json --listFilesOnly | command grep -E 'src/__tests__|next-env'
+/Users/adyan/Documents/GitHub/Event-Radar/next-env.d.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/helpers/fakeSupabase.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/rsvp-characterization.test.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/rsvp-count-defect.test.ts
+exit=0
+
+$ npx tsc --noEmit -p /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice1-rsvp/tsconfig.json
+exit=0
+
+$ git diff --stat -- src/app src/lib src/server src/__tests__/api/events/rsvp.test.ts   # empty = subjects and rsvp.test.ts untouched
+exit=0
+
