@@ -184,7 +184,43 @@ Plans:
   3. Tag mapping is centralized with unknown tags surfaced rather than silently coerced to SOCIAL, and `%` and `_` are escaped in search input.
   4. After each slice the Playwright happy-path specs pass and the Validated workflow list in PROJECT.md is re-confirmed — browse, search, filter, save, and RSVP behave exactly as before, with no intentional visual change shipped alongside either slice.
 
-**Plans**: TBD
+**Plans**: 11 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Re-measured floor, F-079..F-085 registered (F-050 moved to Phase 4), PRESERVE/DEFECT tag gate, DEC-23..DEC-31 decision record, DI-25 sites enumerated
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-02-PLAN.md — Slice 1 characterization: in-memory Supabase fake, save/saved-events/calendar/RSVP PRESERVE suites, F-079 and F-085 DEFECT pins, harness additions for the API path and reload-time counts
+- [ ] 04-03-PLAN.md — Seam controls: elevated boundary and ratchet widened to src/ (DI-34), dynamic-import and bare-key evasions closed plus CI wiring (DI-31), request profile narrowed (DI-35)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 04-04-PLAN.md — Slice 2 characterization: list and detail PRESERVE suites, F-080/F-081/F-082/F-083 DEFECT pins, read-path Playwright spec against the real PostgREST
+- [ ] 04-05-PLAN.md — Slice 1 refactor: seam adoption in five handlers (byte-preserving), head-count RSVP queries (F-079), friends fallback fixed and uncast (F-071) — three commits
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 04-06-PLAN.md — Slice 1 close: stale date fixtures (F-050), test files type-checked (DI-24, F-066), after-floor, harness, Validated-list re-confirmation
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 04-07-PLAN.md — Tag mapping centralized in src/lib/eventTags.ts, unknown tags surfaced non-visually, completeness test
+- [ ] 04-08-PLAN.md — Search input escaped via src/lib/searchFilter.ts (F-082), proven by a local-only live probe (A2)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 04-09-PLAN.md — Cursor pagination contract in the route (F-083), skipped suite rewritten and running (F-066), Playwright traversal
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 04-10-PLAN.md — Club fabrication, non-visual half: shared club embed with real link columns, saved-events real join, join latency measured (A4)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 04-11-PLAN.md — Owner checkpoint on the two seeded-visible fixes (F-080 detail host, F-081 badges; default defer), then phase close-out and the completion note
 **UI hint**: yes
 
 ### Phase 5: Slices 3–5 — Auth, Club Authorization, Admin Containment
