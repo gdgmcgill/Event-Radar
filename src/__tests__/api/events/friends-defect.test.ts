@@ -68,6 +68,10 @@ function createMockBuilder(resolved: { data: unknown; error: unknown }) {
     postgrestIn(values);
     return builder;
   });
+  // Terminal read used by createRequestContext()'s profile lookup (added in
+  // 04-05 when the handler adopted the seam). It resolves to the table's
+  // result like every other read here; no assertion depends on the profile.
+  builder.single = jest.fn(() => Promise.resolve(resolved));
   builder.then = (resolve: (value: unknown) => unknown) => Promise.resolve(resolved).then(resolve);
   return builder;
 }
@@ -171,11 +175,13 @@ describe("DEFECT F-071 — the builder passed where an array is required", () =>
     expect(res.status).toBe(200);
     expect(body).toEqual({ friends: [], count: 0 });
 
-    // Exactly two `from()` calls, in this order: the saved_events query, then
-    // the user_follows builder that becomes the bad `.in()` argument. The THIRD
-    // call the handler would make — the reverse-follow query that computes
-    // mutuality — never happens, because `.in()` throws before it.
+    // After the request context's profile read (`users`, added by the 04-05
+    // seam adoption), exactly two `from()` calls, in this order: the
+    // saved_events query, then the user_follows builder that becomes the bad
+    // `.in()` argument. The call after those — the reverse-follow query that
+    // computes mutuality — never happens, because `.in()` throws before it.
     expect(mockSupabase.from.mock.calls.map((c) => c[0])).toEqual([
+      "users",
       "saved_events",
       "user_follows",
     ]);

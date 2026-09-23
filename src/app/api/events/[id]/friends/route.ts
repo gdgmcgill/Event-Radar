@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext } from "@/server/context";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -11,15 +11,14 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id: eventId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    // Anonymous-tolerant: no requireUser. An anonymous caller gets an empty list.
+    if (!ctx.user) {
       return NextResponse.json({ friends: [], count: 0 });
     }
+    const user = ctx.user;
+    const supabase = ctx.supabase;
 
     // Get friends (mutual follows) who saved this event
     const { data: friends, error } = await supabase.rpc(
