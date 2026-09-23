@@ -1,6 +1,16 @@
 /**
  * DEFECT characterization — F-082 (and the F-059 echo it triggers)
  *
+ * Status: FIXED in 04-08 (shipped under DEC-32). The route now builds the
+ * fallback's or() argument from `ilikeContainsFilter` in
+ * `src/lib/searchFilter.ts`, which escapes `%`, `_` and backslash for LIKE and
+ * double-quotes the pattern for PostgREST. In the fixing commit the four
+ * raw-interpolation assertions in the first describe moved, deliberately, to
+ * the escaped, double-quoted form. The F-059 echo describe did NOT move: the
+ * echo branch is F-059's and Phase 5's; 04-08 only removed its trigger (a
+ * comma can no longer break the tree). The history below describes the
+ * defect as it was pinned by 04-04.
+ *
  * Subject: `src/app/api/events/route.ts` GET, lines 214-243 (the fuzzy RPC and
  * its ILIKE fallback) and lines 280-307 (the error path).
  *
@@ -124,31 +134,41 @@ afterEach(() => {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe("F-082 — the search term is interpolated raw into the or() logic tree (moves in 04-08)", () => {
+describe("F-082 — FIXED in 04-08: the search term reaches the or() logic tree escaped and double-quoted", () => {
+  // Moved in 04-08. Before: the exact raw strings
+  //   a,b → title.ilike.%a,b%,description.ilike.%a,b%
+  //   %   → title.ilike.%%%,description.ilike.%%%
+  //   _   → title.ilike.%_%,description.ilike.%_%
+  // After: each pattern is LIKE-escaped (one backslash for LIKE, one more
+  // consumed by PostgREST's quoted-value layer) and wrapped in double quotes.
   it.each([
-    ["a,b", "title.ilike.%a,b%,description.ilike.%a,b%"],
-    ["%", "title.ilike.%%%,description.ilike.%%%"],
-    ["_", "title.ilike.%_%,description.ilike.%_%"],
-  ])("search=%s hands .or() exactly the raw string %s", async (term, expected) => {
+    ["a,b", 'title.ilike."%a,b%",description.ilike."%a,b%"'],
+    ["%", 'title.ilike."%\\\\%%",description.ilike."%\\\\%%"'],
+    ["_", 'title.ilike."%\\\\_%",description.ilike."%\\\\_%"'],
+  ])("search=%s hands .or() exactly the escaped, quoted string %s", async (term, expected) => {
     const { fake } = await get(term);
     expect(orFilters(fake.calls)).toEqual([expected]);
   });
 
-  it("a comma in the term is not quoted, so it lands at the logic tree's top level", async () => {
+  it("a comma in the term is quoted, so it stays inside the value instead of splitting the tree", async () => {
     const { fake } = await get("a,b");
     const [expression] = orFilters(fake.calls) as string[];
-    // Four comma-separated pieces instead of two conditions.
-    expect(expression.split(",")).toEqual([
-      "title.ilike.%a",
-      "b%",
-      "description.ilike.%a",
-      "b%",
+    // Before 04-08: four comma-separated pieces ("title.ilike.%a", "b%", …)
+    // and no double quote. After: two quoted conditions.
+    expect(expression).toBe('title.ilike."%a,b%",description.ilike."%a,b%"');
+    expect(expression.split('",')).toEqual([
+      'title.ilike."%a,b%',
+      'description.ilike."%a,b%"',
     ]);
-    expect(expression).not.toContain("\"");
+    expect(expression).toContain("\"");
   });
 });
 
 describe("F-059 echo — a PGRST100 from the events query is returned to the caller verbatim (stays after 04-08; Phase 5)", () => {
+  // Not moved by 04-08. The echo branch is F-059 (Phase 5). 04-08 removed its
+  // trigger — a comma can no longer produce PGRST100 — so the error below is
+  // injected through the fake; the fixture is the message measured before
+  // the fix, which is why it still quotes the unquoted tree.
   it("returns 500 whose error is the PostgREST message, internal logic tree included", async () => {
     const { res } = await get("a,b", { errors: { events: PGRST100 } });
     expect(res.status).toBe(500);

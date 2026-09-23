@@ -288,7 +288,8 @@ describe("GET /api/events — filters", () => {
 
     expect(capturedBuilder).not.toBeNull();
     expect((capturedBuilder as ReturnType<typeof createChainableBuilder>).or).toHaveBeenCalledWith(
-      "title.ilike.%hackathon%,description.ilike.%hackathon%"
+      // Quoted since 04-08 (F-082): ilikeContainsFilter double-quotes the pattern.
+      'title.ilike."%hackathon%",description.ilike."%hackathon%"'
     );
   });
 

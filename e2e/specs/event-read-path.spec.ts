@@ -2,6 +2,7 @@
  * event-read-path.spec.ts — the Slice 2 read path, against the real PostgREST.
  *
  * Phase 04-slices-1-2-saved-events-rsvp-and-the-event-read-path · plan 04-04
+ * (tests 6 and 7, F-082, flipped from DEFECT to FIXED by plan 04-08, under DEC-32)
  *
  * Re-confirms two Validated workflows from PROJECT.md:
  *   "Anonymous visitors can browse public event and club content without an
@@ -20,7 +21,8 @@
  *
  * Each title starts with its tag. PRESERVE tests hold before and after every
  * Slice 2 commit. A DEFECT test pins today's wrong behaviour under its F-nnn
- * and moves, deliberately, in the plan named beside it:
+ * and moves, deliberately, in the plan named beside it; once moved it is
+ * retitled FIXED and asserts the corrected behaviour:
  *
  *   1. PRESERVE           GET /api/events?limit=1 → 200, first id is the approved event, total 2
  *   2. PRESERVE           GET /api/events?search=Music Night → exactly the second approved event
@@ -28,9 +30,10 @@
  *                         the page ignores the 500; after 04-08 because nothing matches)
  *   4. PRESERVE           /events/<approved id> renders "Seed Approved Event"
  *   5. DEFECT F-083       the limit=1 body has no `nextCursor` although total is 2  — moves in 04-09
- *   6. DEFECT F-082       search=a,b → 500 whose error contains "failed to parse logic tree"
- *                         (the F-059 echo)                                          — moves in 04-08
- *   7. DEFECT F-082       search=% → total 2: a percent sign matches every event    — moves in 04-08
+ *   6. FIXED (F-082)      search=a,b → 200 with an empty events list. Before 04-08: a 500
+ *                         echoing "failed to parse logic tree" (the F-059 echo)     — moved in 04-08
+ *   7. FIXED (F-082)      search=% → total 0: a percent sign matches only a literal percent.
+ *                         Before 04-08: total 2, every event                         — moved in 04-08
  *   8. DEFECT F-080       the detail page says "Hosted by" the organizer label, not the club
  *                         — moves only if the 04-11 decision ships the visual fix
  *   9. DEFECT F-081       the feed files "Seed Approved Event" (stored academic + tech) under a
@@ -120,25 +123,6 @@ test("DEFECT F-083: the list body has no nextCursor although more rows remain (m
   expect(body).not.toHaveProperty("nextCursor");
 });
 
-test("DEFECT F-082: search=a,b is a 500 that echoes PostgREST's logic-tree parse error (moves in 04-08)", async ({
-  request,
-}) => {
-  const res = await request.get("/api/events?search=a,b");
-  expect(res.status()).toBe(500);
-  const body = (await res.json()) as { error: string };
-  expect(body.error).toContain("failed to parse logic tree");
-});
-
-test("DEFECT F-082: search=% matches every approved event (moves in 04-08)", async ({ request }) => {
-  const res = await request.get("/api/events?search=%25");
-  expect(res.status()).toBe(200);
-  const body = (await res.json()) as ListBody;
-  expect(body.total).toBe(2);
-  expect(body.events.map((e) => e.id).sort()).toEqual(
-    [IDS.approvedEvent, IDS.secondApprovedEvent].sort()
-  );
-});
-
 test("DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix)", async ({
   page,
   request,
@@ -177,4 +161,30 @@ test("DEFECT F-081: the feed files the academic+tech event under a Social row, a
   // Asserted only after the rows above have rendered, so a count of 0 is a
   // measurement and not a page that has not loaded yet.
   await expect(rowHeading("Tech")).toHaveCount(0);
+});
+
+// ─── FIXED ──────────────────────────────────────────────────────────────────
+
+// Moved in 04-08 (DEC-32). Before: 500 whose error contained "failed to parse
+// logic tree" — the F-059 echo. The comma is now inside a quoted value.
+test("FIXED F-082: search=a,b is a 200 with an empty events list (moved in 04-08)", async ({
+  request,
+}) => {
+  const res = await request.get("/api/events?search=a,b");
+  expect(res.status()).toBe(200);
+  const body = (await res.json()) as ListBody;
+  expect(body.events).toEqual([]);
+  expect(body.total).toBe(0);
+});
+
+// Moved in 04-08 (DEC-32). Before: total 2, both approved events. `%` is now
+// LIKE-literal, and no seeded title or description contains one.
+test("FIXED F-082: search=% matches only a literal percent, so no seeded event (moved in 04-08)", async ({
+  request,
+}) => {
+  const res = await request.get("/api/events?search=%25");
+  expect(res.status()).toBe(200);
+  const body = (await res.json()) as ListBody;
+  expect(body.total).toBe(0);
+  expect(body.events).toEqual([]);
 });

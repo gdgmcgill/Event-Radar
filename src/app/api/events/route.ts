@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import { transformEventFromDB } from "@/lib/tagMapping";
 import { getESTNowISO } from "@/lib/timezone";
+import { ilikeContainsFilter } from "@/lib/searchFilter";
 
 /** Shape of event row from DB */
 type EventRow = {
@@ -221,9 +222,13 @@ export async function GET(request: NextRequest) {
 
       if (searchError) {
         console.error('Fuzzy search RPC error:', searchError);
-        // Fallback to basic ILIKE search if RPC fails
+        // Fallback to basic ILIKE search if RPC fails. The term is escaped for
+        // LIKE and double-quoted for PostgREST (F-082, see searchFilter.ts).
         eventsQuery = eventsQuery.or(
-          `title.ilike.%${search}%,description.ilike.%${search}%`
+          [
+            ilikeContainsFilter('title', search),
+            ilikeContainsFilter('description', search),
+          ].join(',')
         );
       } else if (searchResults && (searchResults as { event_id: string }[]).length > 0) {
         fuzzyRankedIds = (searchResults as { event_id: string; rank: number }[]).map(
