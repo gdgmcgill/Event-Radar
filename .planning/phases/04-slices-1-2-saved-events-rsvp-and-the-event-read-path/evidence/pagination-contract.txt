@@ -1,0 +1,73 @@
+# pagination-contract.txt — plan 04-09 (REFAC-10, F-083, F-066, DEC-25)
+Recorded: 2026-09-23T22:31:17Z · HEAD: ea71bb6 (Tasks 1-2 committed: 38a7091, ea71bb6; Task 3's spec and evidence uncommitted at capture) · local stack only, production never read
+
+## 1. The contract as implemented (GET /api/events, DEC-25)
+
+- Cursor: base64 of JSON { sortValue, id } (src/lib/eventCursor.ts). sortValue is the row's
+  start_date as PostgREST returns it. id is the row's UUID. The encoding is byte-compatible with the
+  old skipped suite's helpers.
+- Validation: decodeEventCursor returns null unless id is a canonical UUID and sortValue is an
+  ISO date/timestamp that Date.parse accepts, with no comma, parenthesis, double quote or backslash,
+  and the token is standard base64 of at most 512 characters. The route answers null with
+  400 { "error": "Invalid cursor" } before any query or RPC. An empty `cursor=` is treated as absent.
+- Order: start_date asc, then id asc, on every request.
+- Page mode (no cursor): unchanged. range((page-1)*limit, page*limit-1); total, page, limit and
+  totalPages come from the one query's exact count. nextCursor names the last returned row when
+  (page-1)*limit + rows < total, else null. prevCursor is null.
+- Cursor mode: the main query adds
+    or=(start_date.gt."<sortValue>",and(start_date.eq."<sortValue>",id.gt."<id>"))
+  with both values wrapped by postgrestQuotedValue, and asks for range(0, limit-1).
+  nextCursor names the last row when the main query's count (the rows after the cursor) exceeds the
+  rows returned. prevCursor names the first returned row. total comes from a parallel
+  select("id", { count: "exact", head: true }) carrying every filter except the keyset, so it is the
+  count of all matching events regardless of cursor. If that count errors, the result is
+  500 { "error": "Failed to fetch events" }.
+- Filters: one function (applyEventListFilters) applies approved status, deleted_at is null,
+  ids, tags, the escaped search fallback or() (04-08) or the fuzzy ids, the date floor and
+  ceiling, and the time-filter ids, to both queries, in the handler's historical order.
+- Null cursors: the fuzzy-rank path (dead today, F-078; a cursor is ignored there), both early
+  returns (empty fuzzy result, empty time filter) and the benign-error branch (PGRST103/PGRST116/"{").
+- Not implemented (DEC-25): before, sort, direction, clubId. The only caller sends start_date/asc
+  and no clubId.
+- Unchanged: Cache-Control "public, s-maxage=30, stale-while-revalidate=60" (Phase 6, REFAC-19),
+  the fuzzy re-sort, every error body, src/hooks/useEvents.ts and src/app/page.tsx.
+- Seeded rendering: two approved events never exceed the feed's limit of 30, so "Load More" still
+  does not render on /. In production it renders for any filtered result larger than 30.
+
+## 2. Composition with search, measured against the real PostgREST
+
+PostgREST ANDs repeated `or` parameters. Playwright PRESERVE test 11 traverses both seeded
+approved events by cursor with search=Seed. The fuzzy RPC fails locally (F-078), so the request
+carries the escaped search or() and the keyset or(), and it returns the same two pages as the
+unsearched traversal (test 10), total 2 on each. Result: evidence/playwright.pagination.txt,
+40 passed / 0 failed, exit=0.
+
+## 3. Full jest run — zero skipped suites, zero skipped tests (F-066 first clause)
+
+$ npx jest --ci
+Test Suites: 50 passed, 50 total
+Tests:       717 passed, 717 total
+Snapshots:   0 total
+Time:        2.597 s
+exit=0
+
+$ npx jest --ci 2>&1 | grep -E "Tests:.*skipped|Suites:.*skipped"   # prints nothing
+grep exit=1 (1 = no match)
+Before this plan (04-08 floor): Test Suites: 48 passed, 1 skipped, 49 total / Tests: 664 passed, 5 skipped, 669 total
+
+## 4. Follow-up for F-083 — composite index (outside Phase 4)
+
+Keyset efficiency at scale wants a composite index on the approved-status, start_date and id
+columns. The keyset predicate is (start_date, id) > (v, id) under status = 'approved' and
+deleted_at IS NULL, ordered by start_date, id. A partial index such as
+  create index concurrently events_approved_start_id_idx
+    on public.events (start_date, id) where status = 'approved' and deleted_at is null;
+would serve both the order and the keyset without a sort. Today the baseline migration has only
+single-column btree idx_events_start_date (start_date) and partial idx_events_not_deleted (id)
+where deleted_at is null (supabase/migrations/20260915214553_baseline.sql). A tie on start_date
+therefore falls back to filtering. That is a migration, and orchestrator
+decision 2 keeps migrations out of Phase 4, so none was added (threat T-04-09-02, accept). With
+two seeded approved events locally, there is nothing to measure. Owner: Phase 8 (k6 load
+certification, the first phase that measures production-scale query plans), or whichever phase
+next ships a migration touching events. 04-11 should carry this note into F-083's resolution
+when it flips the finding.

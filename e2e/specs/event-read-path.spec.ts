@@ -41,6 +41,12 @@
  *   9. DEFECT F-081       the feed files "Seed Approved Event" (stored academic + tech) under a
  *                         Social row, and there is no Tech row at all
  *                         — moves only if the 04-11 decision ships the identity mappings
+ *  10. PRESERVE           limit=1, then its nextCursor: approved event, then the second approved
+ *                         event; total 2 on both pages; page 2 has a prevCursor and a null
+ *                         nextCursor                                                  — added in 04-09
+ *  11. PRESERVE           the same traversal with search=Seed: the same two pages, so the
+ *                         search or() and the keyset or() AND together                — added in 04-09
+ *  12. PRESERVE           cursor=not-a-valid-cursor → 400 { error: "Invalid cursor" } — added in 04-09
  *
  * Test 9 is about the ROWS, not a badge on the card. On `/` every card is a
  * `DiscoveryCard`, which renders the club name and no tag labels. The tags
@@ -58,7 +64,7 @@
  * is public.
  */
 
-import { expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, test } from "@playwright/test";
 
 import { IDS } from "../fixtures";
 
@@ -111,6 +117,64 @@ test("PRESERVE: typing a,b into the search box shows the No events found state",
 test("PRESERVE: the approved event's detail page renders its title", async ({ page }) => {
   await page.goto(`/events/${IDS.approvedEvent}`);
   await expect(page.getByRole("heading", { name: APPROVED }).first()).toBeVisible();
+});
+
+// Added by 04-09 (DEC-25, F-083). The cursor contract, pinned from here on
+// against the real PostgREST: the fake behind the Jest suites records the
+// keyset or() but cannot evaluate it.
+
+interface CursorBody extends ListBody {
+  nextCursor: string | null;
+  prevCursor: string | null;
+}
+
+/** Page 1 at limit=1, then page 2 via the nextCursor page 1 returned. */
+async function traverseByCursor(
+  request: APIRequestContext,
+  extra: Record<string, string> = {}
+) {
+  const firstRes = await request.get("/api/events", { params: { limit: "1", ...extra } });
+  expect(firstRes.status()).toBe(200);
+  const first = (await firstRes.json()) as CursorBody;
+  expect(typeof first.nextCursor).toBe("string");
+
+  const secondRes = await request.get("/api/events", {
+    params: { limit: "1", ...extra, cursor: String(first.nextCursor) },
+  });
+  expect(secondRes.status()).toBe(200);
+  const second = (await secondRes.json()) as CursorBody;
+  return { first, second };
+}
+
+test("PRESERVE: limit=1 then its nextCursor traverses both approved events in start_date order, total 2 on each page", async ({
+  request,
+}) => {
+  const { first, second } = await traverseByCursor(request);
+  expect(first.events.map((e) => e.id)).toEqual([IDS.approvedEvent]);
+  expect(first.total).toBe(2);
+  expect(first.prevCursor).toBeNull();
+  expect(second.events.map((e) => e.id)).toEqual([IDS.secondApprovedEvent]);
+  expect(second.total).toBe(2);
+  expect(typeof second.prevCursor).toBe("string");
+  expect(String(second.prevCursor).length).toBeGreaterThan(0);
+  expect(second.nextCursor).toBeNull();
+});
+
+test("PRESERVE: the same cursor traversal with search=Seed yields the same two pages (the search or() and the keyset or() are both applied)", async ({
+  request,
+}) => {
+  const { first, second } = await traverseByCursor(request, { search: "Seed" });
+  expect(first.events.map((e) => e.id)).toEqual([IDS.approvedEvent]);
+  expect(first.total).toBe(2);
+  expect(second.events.map((e) => e.id)).toEqual([IDS.secondApprovedEvent]);
+  expect(second.total).toBe(2);
+  expect(second.nextCursor).toBeNull();
+});
+
+test("PRESERVE: cursor=not-a-valid-cursor is a 400 with Invalid cursor", async ({ request }) => {
+  const res = await request.get("/api/events?cursor=not-a-valid-cursor");
+  expect(res.status()).toBe(400);
+  expect(await res.json()).toEqual({ error: "Invalid cursor" });
 });
 
 // ─── DEFECT ─────────────────────────────────────────────────────────────────

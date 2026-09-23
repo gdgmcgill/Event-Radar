@@ -26,7 +26,7 @@ re-plans the item and its existing owner stands.
 | **DI-20** | `src/hooks/useEvents.test.ts` intermittently flaky | **CLOSED before Phase 4** (quick task `260916-nst`, `33f5783`). Not re-planned | — |
 | **DI-28** | `.claude/CLAUDE.md` correction gitignored | **CLOSED before Phase 4** (quick task `260916-nst`, `33f5783`, owner chose to track the file). Not re-planned | — |
 | **DI-32** | The CI `e2e` job red on a real runner | **CLOSED before Phase 4** (`855da7f` + `b9f9bcb`; CI run `35055404669` green on all three jobs). Not re-planned | — |
-| **DI-24** | tsconfig excludes `**/*.test.ts(x)`, and F-066's "zero skipped suites" clause is unmet | **Split across two plans.** 04-06 removes the test-file exclusion from the type-check (F-066's second clause; 77 errors / 8 files per 04-RESEARCH.md § Q(g), to be re-measured there). 04-09 revives `src/app/api/events/route.test.ts` against the DEC-25 contract, giving zero skipped suites (F-066's first clause). Before-floor: 1 skipped suite, 5 skipped tests (`evidence/floor.before.txt` block 1) | 04-06, 04-09 |
+| **DI-24** | tsconfig excludes `**/*.test.ts(x)`, and F-066's "zero skipped suites" clause is unmet | **Split across two plans.** 04-06 removes the test-file exclusion from the type-check (F-066's second clause; 77 errors / 8 files per 04-RESEARCH.md § Q(g), to be re-measured there). 04-09 revives `src/app/api/events/route.test.ts` against the DEC-25 contract, giving zero skipped suites (F-066's first clause). Before-floor: 1 skipped suite, 5 skipped tests (`evidence/floor.before.txt` block 1). **CLOSED in full.** 04-06 met the type-check half (`9530d35`). 04-09 met the skipped-suite half (`ea71bb6`): the suite was rewritten against DEC-25 (19 tests, running), and the last skipped test in `get-events.test.ts` was revived because its skip reason was false. `npx jest --ci`: 50 of 50 suites, 717 passed, 0 skipped (`evidence/pagination-contract.txt`) | 04-06, 04-09 (closed) |
 | **DI-25** | `@supabase/supabase-js` 2.81.1 → 2.116.0 minor, and the `@supabase/ssr` 0.7 → 0.12 major | **Re-deferred per DEC-28, on an enumerated premise.** `evidence/di-25-enumeration.txt`: the bump raises 7 `TS2345` + 1 `TS2322`. Six are admin/club routes, one is `src/lib/audit.ts:38` (F-073), and one is `src/app/api/events/[id]/route.ts:318`, which is that file's PATCH handler, not the GET Phase 4 owns. No blocking site is in a Phase 4 handler. No dependency moves in Phase 4 | **Phase 5** for the minor (with the site list); **Phase 5 at the earliest** for the `ssr` major |
 | **DI-30** | REFAC-04's cast clause at 45 of 47, on F-071 / F-072 / F-073 | **F-071 is fixed in Phase 4** by 04-05 (the friends fallback, uncast). Census on the base commit: 2 code sites of `(supabase as any)`, at `friends/route.ts:48` and `moderation/page.tsx:78` (`evidence/floor.before.txt` block 15). F-072/F-073 untouched | **04-05** for F-071; **Phase 5** for F-072/F-073 |
 | **DI-31** | The `no-restricted-properties` companion rule, and wiring `check-elevated-ratchet.mjs` into CI | **To 04-03** for the companion rule (designed together with DI-34) and the CI wiring. **No shrink available in Phase 4, by measurement — none of the 13 slice handlers is in the 24-entry allow-list.** The CI wiring does not need a shrink to be an enforcement gain, so it is not deferred to wait for one | **04-03** |
@@ -136,6 +136,30 @@ not fixed in the plan that found it, why it is not merely cosmetic, and its owne
   value into `Event.tags`, which the category theming keys on, and the new unmapped-tag warning misses it.
 - **Owner:** 04-11, beside the F-081 identity-mapping decision, since both are one-place changes in
   `src/lib/eventTags.ts` that alter mapped output; if 04-11 defers, it travels with F-081.
+
+## DI-38 — `save-and-rsvp.spec.ts:53` races its `waitForResponse` against `page.reload()`
+
+- **Found by:** 04-09, Task 3. Run 1 of the full Playwright suite (`evidence/playwright.pagination.run1-flake.txt`)
+  gave 39 passed / 1 failed. Every event-read-path test passed. The one failure was "a student saves
+  an event and it appears on their profile", with `response.json: Protocol error
+  (Network.getResponseBody): No resource with given identifier found … Response body is not available
+  for a response that was navigated away from`. Run 2, from a fresh reset and seed, gave 40 passed / 0 failed.
+- **What it is.** The test waits for the first `GET /api/users/saved-events` response while calling
+  `page.reload()`. A saved-events GET issued by the page *before* the reload can satisfy the predicate.
+  The reload then discards that response's body, and `savedList.json()` throws. It is a harness race:
+  no data assertion failed.
+- **Not caused by 04-09, measured.** `--repeat-each=10` on that one test from a fresh seed: 5 of 10 hit
+  the same protocol error against the 04-09 route (a sixth repeat timed out on the saved control), and
+  3 of 10 hit it against the pre-04-09 route, which was swapped in temporarily and restored under `cmp`.
+  Repeats beyond the first start from an already-saved event and skip the click, which makes the race
+  far likelier than in a single full run. 04-09 touched neither the spec nor either route it exercises
+  (`/api/events/[id]/save`, `/api/users/saved-events`).
+- **Fix shape (not applied: out of scope for 04-09).** Register the wait only for a response that
+  belongs to the post-reload document. For example, await `page.reload()` first and then wait for
+  a saved-events response whose `frame()` is the new main frame. Or read the saved state with
+  `page.request.get("/api/users/saved-events")` after the reload instead of intercepting the page's own request.
+- **Owner:** 04-11 (phase close-out, which owns the final Playwright floor). If it defers, the item goes to
+  Phase 5 alongside the save route's slice.
 
 *Phase: 04-slices-1-2-saved-events-rsvp-and-the-event-read-path*
 *Plan: 04-01*
