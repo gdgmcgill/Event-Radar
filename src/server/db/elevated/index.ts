@@ -10,7 +10,7 @@
  * client construction, and the seam does not become a fourth Supabase client
  * factory. It is the only module outside `src/lib/supabase/` permitted to
  * import the service factory, and an ESLint boundary rule enforces that for
- * everything under `src/app/**`.
+ * everything under `src/**` (widened from `src/app/**` by plan 04-03, DI-34).
  *
  * Every elevated operation added in a later phase gets a row in REGISTRY.md
  * stating why RLS cannot express it. The register is empty in this phase.
