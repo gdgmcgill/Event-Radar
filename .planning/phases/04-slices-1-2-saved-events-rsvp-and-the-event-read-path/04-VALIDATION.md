@@ -2,7 +2,7 @@
 phase: 4
 slug: slices-1-2-saved-events-rsvp-and-the-event-read-path
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-09-16
 ---
@@ -45,7 +45,7 @@ created: 2026-09-16
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 04-01-T1 | 04-01 | 1 | REFAC-09, REFAC-10 | T-04-01-05 | floor measured on a named commit | floor capture | `head -1 evidence/floor.before.txt` matches `base=<sha>`; 13 exit-coded blocks | ❌ W0 | ⬜ |
 | 04-01-T2 | 04-01 | 1 | REFAC-09, REFAC-10 | T-04-01-01, -02 | every DEFECT id resolves in the register | gate | `node .planning/audit/tools/validate.mjs --check findings && node scripts/check-characterization-tags.mjs --all` | ❌ W0 | ⬜ |
-| 04-01-T3 | 04-01 | 1 | REFAC-09, REFAC-10 | T-04-01-SC | no package enters the main tree | doc + census | `grep -c '^## DEC-' evidence/phase-04-decisions.md` ≥ 9; `git worktree list` one line | ❌ W0 | ⬜ |
+| 04-01-T3 | 04-01 | 1 | REFAC-09, REFAC-10 | T-04-01-SC | no package enters the main tree | doc + census | `grep -c '^## DEC-' evidence/phase-04-decisions.md` ≥ 10 (DEC-23..DEC-32); `git worktree list` one line | ❌ W0 | ⬜ |
 | 04-02-T1 | 04-02 | 2 | REFAC-09 | T-04-02-01, -02 | save/saved-events/calendar pinned on unmodified source | unit (node) | `npx jest --ci --selectProjects node --testPathPatterns "(save\|saved-events\|calendar-events)-characterization\|saved-events-time-floor-defect"` | ❌ W0 | ⬜ |
 | 04-02-T2 | 04-02 | 2 | REFAC-09 | T-04-02-04 | body user_id ≠ session → 403 preserved; count blind to implementation | unit (node) | `npx jest --ci --selectProjects node --testPathPatterns "rsvp-(characterization\|count-defect)"` | ❌ W0 | ⬜ |
 | 04-02-T3 | 04-02 | 2 | REFAC-09 | T-04-02-02 | every assertion bites (mutation cycles) | e2e + unit | `npx jest --ci && node scripts/check-characterization-tags.mjs --all`; `npx playwright test` (before + 1) | ⚠️ extends existing spec | ⬜ |
@@ -111,6 +111,8 @@ created: 2026-09-16
 - [x] ~~Seed extension~~ — **not needed (DEC-30, plan 04-01).** The seed already holds RSVP rows (`scripts/seed/personas.ts:566-579`: one going, one cancelled), which research Pitfall 3 missed; an organizer-only event would itself create a seeded visual delta the moment F-080 lands. The sha256 determinism proof is untouched.
 - [ ] Playwright: an anonymous-browse spec that types `a,b` into search; an event-page club assertion
 
+Every other ❌ W0 row in the per-task map (the 04-01 evidence files and tag gate, `eventTags.test.ts`, `searchFilter.test.ts`, `eventCursor.test.ts`, `scripts/probes/search-escape-probe.ts`) is created by the task that verifies with it, test-first where the task is `tdd="true"`, before that task's `<automated>` command runs — so no verify command references a file nothing creates.
+
 ---
 
 ## Manual-Only Verifications
@@ -123,11 +125,13 @@ created: 2026-09-16
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies — all 30 tasks across 04-01..04-11, including the 04-11 checkpoint
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references — planned coverage; see the note under Wave 0 Requirements
+- [x] No watch-mode flags — every Jest command runs with `--ci`; no plan uses `--watch`
+- [ ] Feedback latency < 5s — execution-time: research measured 2.4 s for the full Jest suite, but the per-task commands also run `tsc` and lint and are timed during execution
+- [x] `nyquist_compliant: true` set in frontmatter
+
+Checked items are true at planning time (revision of 2026-09-23). The unchecked item, the `wave_0_complete` flag (flipped by 04-01, 04-02 and 04-04 as their Wave 0 files land) and Approval are execution-time and owner-time items, left open deliberately.
 
 **Approval:** pending

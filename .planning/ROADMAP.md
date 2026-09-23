@@ -189,7 +189,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Re-measured floor, F-079..F-085 registered (F-050 moved to Phase 4), PRESERVE/DEFECT tag gate, DEC-23..DEC-31 decision record, DI-25 sites enumerated
+- [ ] 04-01-PLAN.md — Re-measured floor, F-079..F-085 registered (F-050 moved to Phase 4), PRESERVE/DEFECT tag gate, DEC-23..DEC-32 decision record (DEC-32: F-082 exempt from the owner checkpoint, argued), DI-25 sites enumerated
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
