@@ -1,0 +1,59 @@
+Per-suite Jest counts at phase close — 04-11 Task 3, 2026-09-23
+head=d0135a3f4857a0bca3a9ce96786d4858be3df206 (src/ and e2e/ identical to evidence/floor.phase-after.txt line 1: git diff --stat d0135a3 -- src/ e2e/ is empty)
+
+$ npx jest --ci --json --outputFile=<scratch>/jest-final.json
+$ node -e <print numPassedTests, numPendingTests, numTotalTests, then "<tests> <status> <path>" per suite>
+suites: 50 passed / 0 pending / 50 total
+tests: 721 passed / 0 pending / 0 failed / 721 total
+
+   5 passed  src/__tests__/api/clubs/analytics.test.ts 
+   4 passed  src/__tests__/api/events/analytics.test.ts 
+  12 passed  src/__tests__/api/events/calendar-events-characterization.test.ts 
+  10 passed  src/__tests__/api/events/club-fabrication-defect.test.ts 
+  22 passed  src/__tests__/api/events/date-validation.test.ts 
+  16 passed  src/__tests__/api/events/events-detail-characterization.test.ts 
+  33 passed  src/__tests__/api/events/events-list-characterization.test.ts 
+   6 passed  src/__tests__/api/events/friends-defect.test.ts 
+  24 passed  src/__tests__/api/events/get-events.test.ts 
+   7 passed  src/__tests__/api/events/pagination-contract-defect.test.ts 
+  13 passed  src/__tests__/api/events/reviews.test.ts 
+  20 passed  src/__tests__/api/events/rsvp-characterization.test.ts 
+   4 passed  src/__tests__/api/events/rsvp-count-defect.test.ts 
+  14 passed  src/__tests__/api/events/rsvp.test.ts 
+  21 passed  src/__tests__/api/events/save-characterization.test.ts 
+  14 passed  src/__tests__/api/events/saved-events-characterization.test.ts 
+   4 passed  src/__tests__/api/events/saved-events-time-floor-defect.test.ts 
+   5 passed  src/__tests__/api/events/search-escaping-defect.test.ts 
+  11 passed  src/__tests__/lib/tag-coercion-defect.test.ts 
+   6 passed  src/__tests__/moderation/audit-shape.test.ts 
+   8 passed  src/__tests__/seed/env-override.test.ts 
+   7 passed  src/__tests__/seed/guard.test.ts 
+   3 passed  src/app/api/admin/analytics/users/route.test.ts 
+   8 passed  src/app/api/events/export/route.test.ts 
+  19 passed  src/app/api/events/route.test.ts 
+   8 passed  src/app/auth/callback/route.test.ts 
+   2 passed  src/components/ErrorBoundary.test.tsx 
+   5 passed  src/components/events/EventFilters.test.tsx 
+   4 passed  src/components/events/FilterSidebar.test.tsx 
+  20 passed  src/hooks/useEvents.test.ts 
+   4 passed  src/lib/__tests__/ban.test.ts 
+  13 passed  src/lib/__tests__/recommendations.test.ts 
+  39 passed  src/lib/classifier.test.ts 
+  42 passed  src/lib/dateValidation.test.ts 
+  12 passed  src/lib/diversity.test.ts 
+  33 passed  src/lib/eventCursor.test.ts 
+ 123 passed  src/lib/eventTags.test.ts 
+  11 passed  src/lib/experiments.test.ts 
+   3 passed  src/lib/exportUtils.test.ts 
+   4 passed  src/lib/sanitize.test.ts 
+  29 passed  src/lib/searchFilter.test.ts 
+   7 passed  src/middlewareRateLimit.test.ts 
+  20 passed  src/proxy.test.ts 
+  11 passed  src/server/__tests__/context.test.ts 
+   3 passed  src/server/__tests__/elevated.test.ts 
+   9 passed  src/server/__tests__/errors.test.ts 
+   4 passed  src/server/__tests__/http.test.ts 
+   9 passed  src/server/__tests__/requireClubRole.test.ts 
+   6 passed  src/server/__tests__/requireRole.test.ts 
+   4 passed  src/server/__tests__/requireUser.test.ts 
+exit=0

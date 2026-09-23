@@ -207,5 +207,41 @@ not fixed in the plan that found it, why it is not merely cosmetic, and its owne
 - **Owner:** the phase owner. F-081 stays `Open` in `.planning/audit/findings.json` with this id in its
   resolution.
 
+---
+
+# Part 5 — Final state at phase close (04-11)
+
+Every item this register holds, with its state when Phase 4 closed on 2026-09-23. The rows above keep
+their history; this table is the answer to "what is still open, and whose is it".
+
+| Item | Final state | Evidence | Owner after Phase 4 |
+|---|---|---|---|
+| DI-19, DI-20, DI-28, DI-32 | **Closed before Phase 4** (Part 1) | Part 1 rows | — |
+| DI-21 | Untouched, carried | Part 1 row | Phase 6 |
+| DI-22 | Untouched, carried | Part 1 row | Phase 5 |
+| DI-23 | Untouched, carried; honoured by every plan (no push, no `--linked`) | Part 1 row | Phase 8 |
+| **DI-24** | **CLOSED** (`9530d35`, `ea71bb6`) | `evidence/tsc-tests-included.txt`, `evidence/pagination-contract.txt`, `evidence/floor.phase-after.txt` block 1 (0 skipped) | — |
+| **DI-25** | **Re-deferred** per DEC-28, on the enumerated site list; no package moved in Phase 4 | `evidence/di-25-enumeration.txt`; `evidence/floor.phase-after.txt` block 5 | Phase 5 (minor); Phase 5 at the earliest (`ssr` major) |
+| DI-26 | Untouched, carried; no cache header added or removed | Part 1 row | Phase 6 (REFAC-19) |
+| DI-27 | Untouched, carried | Part 1 row | the phase owner; CERT-05, Phase 7 |
+| DI-29 | Untouched, carried | Part 1 row | the phase owner; CERT-01, Phase 7 |
+| **DI-30** | **F-071 half CLOSED** (`1351480`); `(supabase as any)` under `src/app/api/` is 0. F-072/F-073 carried | `evidence/floor.phase-after.txt` block 15 | Phase 5 (F-072, F-073) |
+| **DI-31** | **CLOSED** by 04-03 on its companion-rule and CI-wiring clauses (`59a4975`); no shrink was available, by measurement | `evidence/boundary-widening.txt` | — |
+| DI-33 | Untouched, carried | Part 1 row | Phase 8 (buckets); Phase 6 (cron jobs) |
+| **DI-34** | **CLOSED** by 04-03 (`c85cf71`); ratchet `committed=25 live=25 delta=0` | `evidence/boundary-widening.txt`; `evidence/floor.phase-after.txt` block 6 | — |
+| **DI-35** | **CLOSED** by 04-03 (`4ed3530` RED, `29c354b` GREEN), per DEC-24; the fail-closed ban check stays REFAC-11's | `evidence/di-35-narrowing.txt` | Phase 5 (REFAC-11, the ban check) |
+| DI-36 | Open, not fixed (a visibility change); not yet registered as an F-nnn | Part 4 entry | Phase 5 (REFAC-13) |
+| DI-37 | Open; **travels with DI-40** | Part 4 entry; `evidence/visual-fix-decision.md` | the phase owner |
+| **DI-38** | Open; **re-owned to Phase 5**, as its entry specified if 04-11 deferred. It fired again at this plan's after-floor (run 1: 39 passed, 1 failed at `save-and-rsvp.spec.ts:53`, same protocol error); the re-run from a fresh reset and seed passed 40/0. The spec was not changed: this plan ships no test or source change under `option-defer` | `evidence/playwright.phase-after.run1-flake.txt`, `evidence/playwright.phase-after.txt` | Phase 5 (with the save route's slice) |
+| **DI-39** | Open — F-080's visual half, **deferred by rule** at the 04-11 checkpoint | Part 4 entry; `evidence/visual-fix-decision.md` | the phase owner |
+| **DI-40** | Open — F-081's six identity mappings, **deferred by rule** at the 04-11 checkpoint | Part 4 entry; `evidence/visual-fix-decision.md` | the phase owner |
+
+**Research assumptions, final:** A1 stays ASSUMED (Phase 8). A2 CLOSED by 04-08 (`evidence/search-escape-probe.txt`).
+A3 MOOT (DEC-30). A4 CLOSED by 04-10 (`evidence/club-join-latency.txt`). A5 CLOSED by 04-01. A6 DECIDED by DEC-25
+and executed by 04-09 with no owner override. A7 went to the 04-11 checkpoint and was **deferred by rule** (DI-40).
+A8 CLOSED by 04-01.
+
+**Next new item id: DI-41.**
+
 *Phase: 04-slices-1-2-saved-events-rsvp-and-the-event-read-path*
 *Plan: 04-01*

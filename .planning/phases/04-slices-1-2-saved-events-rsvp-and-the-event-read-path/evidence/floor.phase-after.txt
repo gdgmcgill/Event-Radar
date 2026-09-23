@@ -1,0 +1,813 @@
+head=d0135a3f4857a0bca3a9ce96786d4858be3df206
+
+Phase 4 after-floor — every command of evidence/floor.before.txt, re-run at phase close
+**Plan:** 04-11 Task 3 · **Phase:** 04 · **Recorded:** 2026-09-23
+
+Line 1 is the commit every block below ran on (04-11 Task 2's commit). The only later
+commits are this plan's Task 3 evidence and register commit and its docs commit; neither
+touches src/, e2e/, supabase/ or a package manifest. Every row was produced by running
+the command in this working tree on 2026-09-23 (Node 24, Supabase CLI 2.115.0). Nothing
+is transcribed.
+
+SUMMARY
+| # | Command | Before (794556a, evidence/floor.before.txt) | Slice 1 after (9530d35) | Phase after (this file) | Verdict |
+|---|---------|---------------------------------------------|-------------------------|-------------------------|---------|
+| 1 | npx jest --ci | 358 passed, 5 skipped, 363; 34+1 of 35 suites | 512 passed, 5 skipped, 517; 46+1 of 47 suites | 721 passed, 0 skipped, 721; 50 passed of 50 suites | at or above every earlier count; 0 skipped suites and 0 skipped tests (F-066) |
+| 2 | npx jest --ci src/__tests__/api/events src/hooks/useEvents.test.ts | 7 suites; 101 passed, 1 skipped | 18 suites; 244 passed, 1 skipped | 18 suites; 249 passed, 0 skipped | at or above; skip gone (04-09 revived it) |
+| 3 | npm run lint | 0 errors, 19 warnings | 0 errors, 19 warnings | 0 errors, 19 warnings | equal |
+| 4 | npx tsc --noEmit | exit 0, test files excluded | exit 0, test files included | exit 0, test files included | equal exit, wider scope (DI-24) |
+| 5 | npm audit --audit-level=high --omit=dev | 0 critical, 0 high, 2 moderate; exit 0 | same | 0 critical, 0 high, 2 moderate (dompurify, yaml); exit 0 | equal; no package changed |
+| 6 | node scripts/check-elevated-ratchet.mjs | committed=24 live=24 delta=0 | committed=25 live=25 delta=0 | committed=25 live=25 delta=0 | as required (04-03's one-time widening) |
+| 7 | node scripts/check-migration-filenames.mjs | 4 parse | 4 parse | 4 parse | equal; no migration added |
+| 8 | node .planning/audit/tools/validate.mjs --quick | 118 / 2 failed / 1 skipped, exit 1 | same | 118 / 2 failed / 1 skipped, exit 1 | equal; the same two by-design schema-snapshot FAILs |
+| 9 | supabase db reset --local | exit 0 | exit 0 | exit 0 | equal |
+| 10 | pgTAP, UNSEEDED | Files=6 Tests=86 PASS; 040: 21 of 21 SKIP | same | Files=6 Tests=86 PASS; 040: 21 of 21 SKIP (block 10b) | equal (no schema change) |
+| 11 | npx tsx scripts/seed/load.ts | 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved | identical | identical | equal |
+| 12 | pgTAP, SEEDED | Files=6 Tests=86 PASS; 040: 21 ok, 0 SKIP | same | Files=6 Tests=86 PASS; 040: 21 ok, 0 SKIP, 0 not ok (block 12b) | equal |
+| 13 | npx playwright test (clean reset + seed first) | 27 passed, exit 0 | 37 passed, exit 0 | run 2: 40 passed, 0 failed, exit 0 (run 1: 39 passed, 1 failed = DI-38) | at or above; equals the 04-10 count (the decision moved no test) |
+| 14 | stale event-date census | 8 lines, 4 files | 1 line, 1 file | 0 lines | LOWER, to zero (F-050) |
+| 15 | (supabase as any) census | 4 lines (2 code sites) | 3 lines (1 code site) | 3 lines (1 code site, src/app/moderation/page.tsx:78, F-072 Phase 5); under src/app/api/: 0 | LOWER; 0 under src/app/api/ |
+
+NOTES
+- Order: blocks 1-8, then reset (9) -> unseeded pgTAP (10) -> a second reset and the
+  unseeded per-assertion probe (10b) -> seed (11) -> seeded pgTAP (12) -> seeded probe
+  (12b). The probe runs 040 inside BEGIN ... ROLLBACK and changes no data. Before block
+  13 the database was reset and seeded AGAIN, so the harness ran from a clean reset.
+- Block 13 has two runs. Run 1 failed only on DI-38's known race; the plan's rule
+  (reset + seed and re-run once, keep both logs) was applied. Run 2 is the floor.
+- Block 8 ran before this plan's register edit, so it measures the register at line 1's
+  commit. `validate.mjs --check findings` after the edit: 8 passed, 0 failed (recorded
+  in evidence/PHASE-4-COMPLETION.md § 6 and re-run in Task 3's verify).
+- Port 3000: free before and after each Playwright run (lsof exit=1).
+- The stack is left reset and seeded (block 16).
+- Every DB command targeted the local stack (127.0.0.1). No --linked flag was used.
+  Reset output is piped through a key/secret/token filter; its exit is the reset's own.
+
+==============================================================================
+RAW BLOCKS — invoking command, verbatim output, exit code
+==============================================================================
+
+------------------------------------------------------------------------------
+[1 · jest full]
+$ npx jest --ci
+PASS node src/proxy.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+  ● Console
+
+    console.error
+      Fuzzy search RPC error: { message: 'RPC unavailable' }
+
+      329 |
+      330 |       if (searchError) {
+    > 331 |         console.error('Fuzzy search RPC error:', searchError);
+          |                 ^
+      332 |         // Fallback to basic ILIKE search if RPC fails. The term is escaped for
+      333 |         // LIKE and double-quoted for PostgREST (F-082, see searchFilter.ts).
+      334 |         searchFallback = [
+
+      at GET (src/app/api/events/route.ts:331:17)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:287:5)
+
+    console.error
+      Supabase error fetching events: {"message":"Database connection failed"}
+
+      445 |       }
+      446 |
+    > 447 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      448 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      449 |         ? errorMessage
+      450 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:447:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:384:17)
+
+    console.error
+      Supabase error fetching events: {"message":"relation \"events\" does not exist"}
+
+      445 |       }
+      446 |
+    > 447 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      448 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      449 |         ? errorMessage
+      450 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:447:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:399:17)
+
+    console.error
+      Error fetching events: Error: Unexpected crash
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:407:13)
+          at /Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:305:39
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:312:13)
+          at Object.mockConstructor [as from] (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:102:19)
+          at GET (/Users/adyan/Documents/GitHub/Event-Radar/src/app/api/events/route.ts:306:8)
+          at processTicksAndRejections (node:internal/process/task_queues:104:5)
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:410:17)
+
+      507 |     );
+      508 |   } catch (error) {
+    > 509 |     console.error("Error fetching events:", error);
+          |             ^
+      510 |     return NextResponse.json(
+      511 |       { error: "Failed to fetch events" },
+      512 |       { status: 500 }
+
+      at GET (src/app/api/events/route.ts:509:13)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:410:17)
+
+PASS node src/__tests__/moderation/audit-shape.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+  ● Console
+
+    console.error
+      Error looking up event: { message: 'DB error' }
+
+      87 |
+      88 |     if (eventError) {
+    > 89 |       console.error("Error looking up event:", eventError);
+         |               ^
+      90 |       return serverError("verify event");
+      91 |     }
+      92 |
+
+      at GET (src/app/api/events/[id]/rsvp/route.ts:89:15)
+      at Object.<anonymous> (src/__tests__/api/events/rsvp.test.ts:130:17)
+
+PASS node src/app/auth/callback/route.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+PASS node src/lib/sanitize.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/app/api/events/route.test.ts
+PASS node src/lib/dateValidation.test.ts
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS jsdom src/components/ErrorBoundary.test.tsx
+PASS node src/lib/__tests__/ban.test.ts
+PASS jsdom src/components/events/FilterSidebar.test.tsx
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS node src/app/api/events/export/route.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/lib/eventTags.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/server/__tests__/elevated.test.ts
+PASS node src/server/__tests__/errors.test.ts
+PASS node src/lib/__tests__/recommendations.test.ts
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+PASS node src/__tests__/seed/env-override.test.ts
+PASS node src/lib/experiments.test.ts
+PASS node src/lib/exportUtils.test.ts
+PASS node src/__tests__/seed/guard.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/lib/diversity.test.ts
+PASS node src/server/__tests__/context.test.ts
+PASS node src/lib/classifier.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/lib/eventCursor.test.ts
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+PASS node src/__tests__/lib/tag-coercion-defect.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/lib/searchFilter.test.ts
+PASS jsdom src/components/events/EventFilters.test.tsx
+PASS jsdom src/hooks/useEvents.test.ts
+
+Test Suites: 50 passed, 50 total
+Tests:       721 passed, 721 total
+Snapshots:   0 total
+Time:        2.055 s
+Ran all test suites in 2 projects.
+exit=0
+
+------------------------------------------------------------------------------
+[2 · jest phase-relevant subset]
+$ npx jest --ci src/__tests__/api/events src/hooks/useEvents.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+  ● Console
+
+    console.error
+      Error looking up event: { message: 'DB error' }
+
+      87 |
+      88 |     if (eventError) {
+    > 89 |       console.error("Error looking up event:", eventError);
+         |               ^
+      90 |       return serverError("verify event");
+      91 |     }
+      92 |
+
+      at GET (src/app/api/events/[id]/rsvp/route.ts:89:15)
+      at Object.<anonymous> (src/__tests__/api/events/rsvp.test.ts:130:17)
+
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+  ● Console
+
+    console.error
+      Fuzzy search RPC error: { message: 'RPC unavailable' }
+
+      329 |
+      330 |       if (searchError) {
+    > 331 |         console.error('Fuzzy search RPC error:', searchError);
+          |                 ^
+      332 |         // Fallback to basic ILIKE search if RPC fails. The term is escaped for
+      333 |         // LIKE and double-quoted for PostgREST (F-082, see searchFilter.ts).
+      334 |         searchFallback = [
+
+      at GET (src/app/api/events/route.ts:331:17)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:287:5)
+
+    console.error
+      Supabase error fetching events: {"message":"Database connection failed"}
+
+      445 |       }
+      446 |
+    > 447 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      448 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      449 |         ? errorMessage
+      450 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:447:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:384:17)
+
+    console.error
+      Supabase error fetching events: {"message":"relation \"events\" does not exist"}
+
+      445 |       }
+      446 |
+    > 447 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      448 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      449 |         ? errorMessage
+      450 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:447:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:399:17)
+
+    console.error
+      Error fetching events: Error: Unexpected crash
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:407:13)
+          at /Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:305:39
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:312:13)
+          at Object.mockConstructor [as from] (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:102:19)
+          at GET (/Users/adyan/Documents/GitHub/Event-Radar/src/app/api/events/route.ts:306:8)
+          at processTicksAndRejections (node:internal/process/task_queues:104:5)
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:410:17)
+
+      507 |     );
+      508 |   } catch (error) {
+    > 509 |     console.error("Error fetching events:", error);
+          |             ^
+      510 |     return NextResponse.json(
+      511 |       { error: "Failed to fetch events" },
+      512 |       { status: 500 }
+
+      at GET (src/app/api/events/route.ts:509:13)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:410:17)
+
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS jsdom src/hooks/useEvents.test.ts
+
+Test Suites: 18 passed, 18 total
+Tests:       249 passed, 249 total
+Snapshots:   0 total
+Time:        1.845 s, estimated 2 s
+Ran all test suites matching src/__tests__/api/events|src/hooks/useEvents.test.ts in 2 projects.
+exit=0
+
+------------------------------------------------------------------------------
+[3 · lint]
+$ npm run lint
+
+> uni-verse@0.1.0 lint
+> eslint .
+
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-onboarding.js
+  67:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-online-users.js
+  33:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/calendar/page.tsx
+  779:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/contributors/page.tsx
+  74:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/events/[id]/EventDetailClient.tsx
+  235:5  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/moderation/organizers/page.tsx
+  251:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/moderation/page.tsx
+  77:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/my-events/page.tsx
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 159) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 167) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 181) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/page.tsx
+  64:17  warning  The ref value 'timerRefs.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'timerRefs.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/auth/SignOutButton.tsx
+  42:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  44:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubDiscoveryCard.tsx
+  43:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubSettingsTab.tsx
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  233:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  256:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/FollowButton.tsx
+  39:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/onboarding/OnboardingWizard.tsx
+  123:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+
+------------------------------------------------------------------------------
+[4 · tsc (test files included — DI-24)]
+$ npx tsc --noEmit
+exit=0
+
+------------------------------------------------------------------------------
+[5 · npm audit (production gate)]
+$ npm audit --audit-level=high --omit=dev
+# npm audit report
+
+dompurify  <=3.4.12
+Severity: moderate
+DOMPurify: FORBID_TAGS bypassed by function-based ADD_TAGS predicate (asymmetry with FORBID_ATTR fix) - https://github.com/advisories/GHSA-h7mw-gpvr-xq4m
+DOMPurify has a SAFE_FOR_TEMPLATES bypass in RETURN_DOM mode - https://github.com/advisories/GHSA-crv5-9vww-q3g8
+DOMPurify: Prototype Pollution to XSS Bypass via CUSTOM_ELEMENT_HANDLING Fallback - https://github.com/advisories/GHSA-v9jr-rg53-9pgp
+DOMPurify: Cross-realm IN_PLACE sanitization leaves executable markup intact via realm-bound `instanceof` checks - https://github.com/advisories/GHSA-hpcv-96wg-7vj8
+DOMPurify: IN_PLACE mode preserves attributes of a clobbered root element, allowing XSS via attacker-controlled root DOM - https://github.com/advisories/GHSA-r47g-fvhr-h676
+DOMPurify IN_PLACE Sanitization Bypass via Attached Shadow Root Inside <template>.content - https://github.com/advisories/GHSA-rp9w-3fw7-7cwq
+DOMPurify: `CUSTOM_ELEMENT_HANDLING` bypasses `afterSanitizeElements` for allowed custom elements. - https://github.com/advisories/GHSA-c2j3-45gr-mqc4
+DOMPurify: Permanent `ALLOWED_ATTR` pollution via `setConfig()` bypassing the hook clone-guard (incomplete fix of the 3.4.7 hook-pollution patch) - https://github.com/advisories/GHSA-cmwh-pvxp-8882
+DOMPurify: Trusted Types policy survives `clearConfig()` and can poison later `RETURN_TRUSTED_TYPE` output - https://github.com/advisories/GHSA-vxr8-fq34-vvx9
+DOMPurify: SAFE_FOR_TEMPLATES bypass - template expressions survive sanitization inside <template> content when using DOM output modes - https://github.com/advisories/GHSA-gvmj-g25r-r7wr
+DOMPurify: `IN_PLACE` mode trusts attacker-controlled `nodeName` on live non-form nodes, allowing script retention and XSS via attacker-supplied DOM objects - https://github.com/advisories/GHSA-x4vx-rjvf-j5p4
+DOMPurify: Hook mutation of `data.allowedTags` / `data.allowedAttributes` permanently pollutes `DEFAULT_ALLOWED_TAGS` / `DEFAULT_ALLOWED_ATTR` - https://github.com/advisories/GHSA-76mc-f452-cxcm
+DOMPurify's ADD_TAGS function form bypasses FORBID_TAGS due to short-circuit evaluation - https://github.com/advisories/GHSA-39q2-94rc-95cp
+DOMPurify: IN_PLACE hook removal leaves a detached subtree executable, causing XSS - https://github.com/advisories/GHSA-55q2-fjhq-7xh7
+fix available via `npm audit fix`
+node_modules/dompurify
+
+yaml  1.0.0 - 1.10.2 || 2.0.0 - 2.8.2
+Severity: moderate
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+fix available via `npm audit fix`
+node_modules/oas-linter/node_modules/yaml
+node_modules/oas-resolver/node_modules/yaml
+node_modules/oas-validator/node_modules/yaml
+node_modules/swagger2openapi/node_modules/yaml
+node_modules/yaml
+
+2 moderate severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+exit=0
+
+------------------------------------------------------------------------------
+[6 · elevated ratchet]
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+------------------------------------------------------------------------------
+[7 · migration filenames]
+$ node scripts/check-migration-filenames.mjs
+PASS: 4 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql
+exit=0
+
+------------------------------------------------------------------------------
+[8 · validate --quick]
+$ node .planning/audit/tools/validate.mjs --quick
+PASS schema-snapshots :: dump-is-non-trivial :: schema/prod.schema.sql is 117359 bytes
+PASS schema-snapshots :: dump-contains-create-table :: schema/prod.schema.sql
+PASS schema-snapshots :: dump-is-non-trivial :: schema/staging.schema.sql is 2690 bytes
+FAIL schema-snapshots :: dump-contains-create-table :: schema/staging.schema.sql
+PASS schema-snapshots :: dump-is-non-trivial :: schema/local.schema.sql is 2228 bytes
+FAIL schema-snapshots :: dump-contains-create-table :: schema/local.schema.sql
+PASS drift :: columns-non-empty :: 243 column rows
+PASS drift :: drift-non-empty :: 288 drift rows
+PASS drift :: every-live-table-has-a-drift-row :: all covered
+PASS drift :: all-three-status-columns-set :: all set
+PASS endpoints :: is-an-array :: array
+PASS endpoints :: row-count-matches-baseline :: baseline/versions.txt route_ts_count is 94, inventory has 94
+PASS endpoints :: schema-valid :: all rows valid
+PASS endpoints :: ids-unique :: all ids distinct
+PASS endpoints :: no-residual-placeholders :: fully classified
+PASS endpoints-signals :: row-count-matches-baseline :: baseline/versions.txt route_ts_count is 94, inventory has 94
+PASS endpoints-signals :: schema-valid :: all rows valid
+PASS endpoints-signals :: signals-present-on-every-row :: every row carries signals
+SKIP endpoints-signals :: placeholders-permitted :: this gate runs before hand classification; use --check endpoints afterwards
+PASS pages :: row-count-matches-baseline :: baseline/versions.txt page_tsx_count is 43, inventory has 43
+PASS pages :: schema-valid :: all rows valid
+PASS pages :: no-residual-placeholders :: fully classified
+PASS pages :: every-build-route-is-inventoried :: 140 build routes all covered
+PASS rls :: pg-policies-non-empty :: 101 policy rows read from the live catalog
+PASS rls :: review-addresses-rls-disabled-tables :: rls-disabled-tables
+PASS rls :: review-addresses-rls-enabled-with-no-policy :: rls-enabled-with-no-policy
+PASS rls :: review-addresses-using-true-policies :: using-true-policies
+PASS rls :: review-addresses-policies-with-no-to-clause :: policies-with-no-to-clause
+PASS heatmap :: row-count-equals-tables-times-commands :: 38 distinct tables times 4 commands is 152, csv has 152
+PASS heatmap :: every-cell-is-allow-deny-or-none :: all cells in the permitted set
+PASS service-role :: row-count-equals-callsite-count :: 22 route handlers with signals.uses_service_client true plus 3 non-route callsites is 25, register has 25
+PASS service-role :: callsite-count-agrees-with-baseline :: baseline/versions.txt service_client_file_count is 25, derived count is 25
+PASS service-role :: all-four-justifications-answered :: every row answers all four questions
+PASS cache :: every-personalized-endpoint-is-probed :: all personalized routes carry a verdict
+PASS cache :: positive-control-row-exists :: a run where nothing ever cached proves nothing about personalized routes
+PASS cache :: positive-control-recorded-a-hit :: control cached at least once
+PASS authz-registers :: every-getsession-callsite-is-registered :: 1 callsites registered
+PASS authz-registers :: getsession-rows-carry-a-classification :: each row must read authorization-gating or non-gating with a reason
+PASS authz-registers :: every-env-gated-check-is-registered :: 2 env-gated routes registered
+PASS authz-registers :: fail-open-register-non-empty :: register must list the reachable route for each env-gated check
+PASS cron :: covers-pg-cron-jobs :: pg_cron
+PASS cron :: covers-api-cron-handlers :: /api/cron/
+PASS cron :: covers-vercel-json-crons :: vercel.json
+PASS cron :: covers-supabase-edge-function :: edge function
+PASS cron :: covers-apify-instagram-webhook :: apify
+PASS cron :: covers-supabase-auth-hooks :: auth hook
+PASS cron :: each-source-carries-an-explicit-verdict :: 8 verdict markers for 6 named sources
+PASS deps :: npm-audit-parses :: production-only audit json
+PASS deps :: every-high-or-critical-has-a-reachability-row :: 24 high or critical advisories judged
+PASS deps :: report-states-reachability :: a reachability judgment is required, not just a severity
+PASS deps :: swagger-and-redoc-question-answered :: both answered
+PASS baseline :: baseline-file-non-empty :: baseline/jest.txt
+PASS baseline :: baseline-file-non-empty :: baseline/tsc.txt
+PASS baseline :: baseline-file-non-empty :: baseline/lint.txt
+PASS baseline :: baseline-file-non-empty :: baseline/build.txt
+PASS baseline :: baseline-file-non-empty :: baseline/versions.txt
+PASS baseline :: jest-records-a-pass-count :: pass count present
+PASS baseline :: jest-records-a-skip-count :: skip count present
+PASS baseline :: a-reason-exists-per-skipped-suite :: 5 skipped suites, 6 reason bullets in baseline/test-runner-decision.md
+PASS baseline :: test-runner-decision-cites-the-mock-call-evidence :: the jest versus vitest mock-call counts must be recorded
+PASS observability :: quantity-routes_without_try_catch-is-an-integer :: 22
+PASS observability :: quantity-routes_leaking_internal_error_text-is-an-integer :: 22
+PASS observability :: quantity-catch_any_count-is-an-integer :: 5
+PASS observability :: quantity-console_call_count-is-an-integer :: 162
+PASS observability :: quantity-request_correlation_callsite_count-is-an-integer :: 0
+PASS dead-code :: knip-output-parses :: knip json
+PASS dead-code :: explicit-disposition-for-each-named-target :: all dispositioned
+PASS dead-code :: stale-docs-list-dispositioned :: stale docs list
+PASS bundle-sweep :: records-envstate :: a sweep run without the real key in the build env is INCONCLUSIVE, not clean
+PASS bundle-sweep :: count-recorded-for-sb_secret_ :: 0
+PASS bundle-sweep :: count-recorded-for-service_role :: 0
+PASS bundle-sweep :: count-recorded-for-SUPABASE_SERVICE_ROLE_KEY :: 0
+PASS bundle-sweep :: count-recorded-for-ADMIN_API_KEY :: 0
+PASS bundle-sweep :: count-recorded-for-ADMIN_EMAILS :: 0
+PASS bundle-sweep :: count-recorded-for-CRON_SECRET :: 0
+PASS bundle-sweep :: count-recorded-for-jwt-shape :: 0
+PASS threat-models :: exactly-three-threat-models :: threat-model-anonymous.md, threat-model-escalation.md, threat-model-tenant.md
+PASS threat-models :: stays-within-one-page :: threat-model-anonymous.md is 71 lines, cap is 120
+PASS threat-models :: stride-table-populated :: threat-model-anonymous.md has 28 table lines
+PASS threat-models :: stays-within-one-page :: threat-model-escalation.md is 69 lines, cap is 120
+PASS threat-models :: stride-table-populated :: threat-model-escalation.md has 27 table lines
+PASS threat-models :: stays-within-one-page :: threat-model-tenant.md is 69 lines, cap is 120
+PASS threat-models :: stride-table-populated :: threat-model-tenant.md has 28 table lines
+PASS storage :: buckets-non-empty :: 4 buckets returned from the live catalog
+PASS storage :: bucket-avatars-answers-read-visibility :: read-visibility
+PASS storage :: bucket-avatars-answers-path-prefix-ownership :: path-prefix-ownership
+PASS storage :: bucket-avatars-answers-size-and-mime-limits :: size-and-mime-limits
+PASS storage :: bucket-banners-answers-read-visibility :: read-visibility
+PASS storage :: bucket-banners-answers-path-prefix-ownership :: path-prefix-ownership
+PASS storage :: bucket-banners-answers-size-and-mime-limits :: size-and-mime-limits
+PASS storage :: bucket-club-logos-answers-read-visibility :: read-visibility
+PASS storage :: bucket-club-logos-answers-path-prefix-ownership :: path-prefix-ownership
+PASS storage :: bucket-club-logos-answers-size-and-mime-limits :: size-and-mime-limits
+PASS storage :: bucket-event-images-answers-read-visibility :: read-visibility
+PASS storage :: bucket-event-images-answers-path-prefix-ownership :: path-prefix-ownership
+PASS storage :: bucket-event-images-answers-size-and-mime-limits :: size-and-mime-limits
+PASS dates :: both-candidate-column-pairs-named :: all four candidate columns named
+PASS dates :: authoritative-columns-declared :: an explicit verdict is required
+PASS dates :: cites-the-live-catalog-artifact :: the answer comes from information_schema.columns, never from the types file
+PASS findings :: schema-valid :: all findings valid
+PASS findings :: ids-match-the-stable-id-pattern :: all ids well formed
+PASS findings :: ids-unique :: all ids distinct
+PASS findings :: ten-required-fields-present-and-non-empty :: 85 findings complete
+PASS findings :: critical-and-high-carry-line-numbers :: every critical and high is pinned to lines
+PASS findings :: evidence-resolves-and-is-never-inline :: all evidence paths resolve
+PASS findings :: expired-risk-acceptance-reverts-to-open :: no expired or over-long acceptances
+PASS findings :: report-and-json-agree-on-finding-count :: FOUNDATION_AUDIT.md references 85 ids, findings.json has 85
+PASS sla :: severity-critical-has-a-table-row :: Critical
+PASS sla :: severity-critical-names-a-deadline :: The first Stage 3 slice that owns the affected layer. **No C
+PASS sla :: severity-high-has-a-table-row :: High
+PASS sla :: severity-high-names-a-deadline :: **Before Phase 7 (Certification Datasets and Persona Coverag
+PASS sla :: severity-medium-has-a-table-row :: Medium
+PASS sla :: severity-medium-names-a-deadline :: Within Stage 3, in the slice that touches the affected file.
+PASS sla :: severity-low-has-a-table-row :: Low
+PASS sla :: severity-low-names-a-deadline :: Opportunistically. No deadline.
+PASS sla :: exception-register-defined :: the Risk-accepted status must be defined
+PASS sla :: exception-requires-owner-date-expiry-and-rationale :: all four attributes required
+PASS sla :: expiry-capped-at-ninety-days :: 90 day cap stated
+PASS sla :: expired-acceptance-reverts-to-open :: enforced by --check findings
+PASS sla :: cvss-position-stated :: severity is exposure-adjusted; CVSS is not assigned to application-logic findings
+PASS sla :: severity-is-exposure-adjusted :: each level needs an exposure-adjusted definition
+--- 118 passed, 2 failed, 1 skipped
+exit=1
+
+------------------------------------------------------------------------------
+[9 · supabase db reset --local]
+$ supabase db reset --local 2>&1 | command grep -v -i "key\|secret\|token"
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+------------------------------------------------------------------------------
+[10 · pgTAP — UNSEEDED (immediately after block 9)]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+All tests successful.
+Files=6, Tests=86,  1 wallclock secs ( 0.00 usr  0.01 sys +  0.02 cusr  0.02 csys =  0.05 CPU)
+Result: PASS
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+------------------------------------------------------------------------------
+[10b · 040-seed-coverage per-assertion — UNSEEDED (after a second reset, as the before-floor did)]
+$ supabase db reset --local 2>&1 | command grep -v -i "key\|secret\|token"
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ sh /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tap040.sh
+CREATE EXTENSION
+SET
+BEGIN
+1..21
+CREATE FUNCTION
+CREATE FUNCTION
+ok 1 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 2 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 3 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 4 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 5 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 6 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 7 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 8 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 9 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 10 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 11 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 12 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 13 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 14 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 15 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 16 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 17 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 18 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 19 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 20 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ok 21 # SKIP seed not loaded — run `npx tsx scripts/seed/load.ts` after `supabase db reset`
+ROLLBACK
+DROP EXTENSION
+exit=0
+
+------------------------------------------------------------------------------
+[11 · seed load]
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+------------------------------------------------------------------------------
+[12 · pgTAP — SEEDED (immediately after block 11)]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+All tests successful.
+Files=6, Tests=86,  1 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.04 CPU)
+Result: PASS
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+------------------------------------------------------------------------------
+[12b · 040-seed-coverage per-assertion — SEEDED]
+$ sh /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tap040.sh
+CREATE EXTENSION
+SET
+BEGIN
+1..21
+CREATE FUNCTION
+CREATE FUNCTION
+ok 1 - seed covers role: user
+ok 2 - seed covers role: club_organizer
+ok 3 - seed covers role: admin
+ok 4 - seed covers ban state: not banned
+ok 5 - seed covers ban state: permanent ban (no expiry)
+ok 6 - seed covers ban state: active suspension (expiry after the pinned now)
+ok 7 - seed covers ban state: EXPIRED suspension — looks banned, must not be treated as banned
+ok 8 - seed covers onboarding: completed
+ok 9 - seed covers onboarding: mid-onboarding
+ok 10 - seed covers club status: pending
+ok 11 - seed covers club status: approved
+ok 12 - seed covers club status: rejected
+ok 13 - seed covers event status: pending
+ok 14 - seed covers event status: approved
+ok 15 - seed covers event status: rejected
+ok 16 - seed covers event status: suspended — the fourth value the constraint allows
+ok 17 - seed covers membership role: owner — what is_club_owner reads
+ok 18 - seed covers membership role: organizer — a non-owning member
+ok 19 - cross-club attacker belongs to no club the club owner owns
+ok 20 - every seeded user carries the pinned stamp, not a wall-clock one
+ok 21 - every seeded event carries the pinned stamp, not a wall-clock one
+ROLLBACK
+DROP EXTENSION
+exit=0
+
+------------------------------------------------------------------------------
+[13 · Playwright persona harness — fresh reset + seed, then the run]
+Two runs, both kept. Full logs: evidence/playwright.phase-after.run1-flake.txt (run 1)
+and evidence/playwright.phase-after.txt (run 2, the floor).
+
+Run 1 (reset + seed immediately before, port 3000 free: lsof exit=1):
+  1 failed
+    [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile 
+  39 passed (26.3s)
+exit=1
+  The one failure is e2e/specs/save-and-rsvp.spec.ts:53 "a student saves an event
+  and it appears on their profile": "response.json: Protocol error
+  (Network.getResponseBody): No resource with given identifier found … Response
+  body is not available for a response that was navigated away from". That is
+  DI-38's recorded signature (a waitForResponse racing page.reload(); no data
+  assertion failed). Per the plan's rule, the stack was reset and seeded again
+  and the suite re-run once.
+
+Run 2 (fresh reset + seed again, port 3000 free: lsof exit=1):
+  40 passed (23.8s)
+  0 failed, 0 flaky, 0 skipped
+exit=0
+
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   # after the run
+exit=1
+
+------------------------------------------------------------------------------
+[14 · census — stale event-date residue (04-RESEARCH.md § Q(d))]
+$ command grep -rn "event_date\|event_time" src/ supabase/ | command grep -v _archive_pre_baseline
+exit=1
+
+$ command grep -rn "event_date\|event_time" src/ supabase/ | command grep -v _archive_pre_baseline | wc -l
+       0
+exit=0
+
+------------------------------------------------------------------------------
+[15 · census — client casts]
+$ command grep -rn "(supabase as any)" src/
+src/app/moderation/page.tsx:78:      (supabase as any)
+src/__tests__/api/events/friends-defect.test.ts:8: * where an array of ids is required. `(supabase as any)` erased the client type
+src/__tests__/moderation/audit-shape.test.ts:12: * How the casts hid it. `(supabase as any)` erased the client type, so the
+exit=0
+
+$ command grep -rn "(supabase as any)" src/ | wc -l
+       3
+exit=0
+
+$ command grep -rn "(supabase as any)" src/app/api/ | wc -l
+       0
+exit=0
+
+
+------------------------------------------------------------------------------
+[16 · stack left reset + seeded for the next phase]
+$ supabase db reset --local 2>&1 | command grep -v -i "key\|secret\|token"
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN
+exit=1
+
+------------------------------------------------------------------------------
+[appendix · tap040.sh, the probe used by blocks 10b and 12b, verbatim — identical to the before-floor's]
+#!/bin/sh
+# Mirrors `supabase test db`: install pgTAP, run one file, drop pgTAP. Local container only.
+{ echo "CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions; SET search_path = public, extensions;"; cat supabase/tests/database/040-seed-coverage.test.sql; echo "DROP EXTENSION IF EXISTS pgtap;"; } \
+ | docker exec -i supabase_db_Event-Radar psql -U postgres -d postgres -tA -v ON_ERROR_STOP=1
+
+------------------------------------------------------------------------------
+[17 · supplementary, after this plan's register edit — tag gate, register validation, ratchet]
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+ok 18 files
+exit=0
+
+$ node .planning/audit/tools/validate.mjs --check findings
+PASS findings :: schema-valid :: all findings valid
+PASS findings :: ids-match-the-stable-id-pattern :: all ids well formed
+PASS findings :: ids-unique :: all ids distinct
+PASS findings :: ten-required-fields-present-and-non-empty :: 85 findings complete
+PASS findings :: critical-and-high-carry-line-numbers :: every critical and high is pinned to lines
+PASS findings :: evidence-resolves-and-is-never-inline :: all evidence paths resolve
+PASS findings :: expired-risk-acceptance-reverts-to-open :: no expired or over-long acceptances
+PASS findings :: report-and-json-agree-on-finding-count :: FOUNDATION_AUDIT.md references 85 ids, findings.json has 85
+--- 8 passed, 0 failed, 0 skipped
+exit=0
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
