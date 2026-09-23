@@ -1,0 +1,87 @@
+# tag-centralization.txt — plan 04-07 (REFAC-10, F-081, DEC-26)
+
+## 1. BEFORE — golden table run green against the pre-move mapTags
+HEAD: caf122c (no 04-07 commit yet)
+src/lib/eventTags.ts exists: no
+src/lib/eventTags.test.ts imports: 20:import { mapTags } from "@/lib/tagMapping";
+src/lib/tagMapping.ts sha1: 0a11993ddc954b1bcd2866c9f946fe8db411ed04 (== HEAD blob 0a11993ddc954b1bcd2866c9f946fe8db411ed04)
+
+Alias keys in the pre-move table, in order (grep of src/lib/tagMapping.ts lines 10-35):
+academic social sports career cultural wellness coding technology hackathon workshop networking party fitness health art music dance professional internship job game competition
+count: 22
+
+$ npx jest --ci --selectProjects node --testPathPatterns "src/lib/eventTags" --verbose
+Running one project: node
+PASS node src/lib/eventTags.test.ts
+  mapTags — golden table
+    ✓ covers all 22 alias keys and all 12 EventTag members (1 ms)
+    ✓ alias key academic maps to [academic]
+    ✓ alias key social maps to [social]
+    ✓ alias key sports maps to [sports]
+    ✓ alias key career maps to [career]
+    ✓ alias key cultural maps to [cultural]
+    ✓ alias key wellness maps to [wellness]
+    ✓ alias key coding maps to [academic]
+    ✓ alias key technology maps to [academic] (1 ms)
+    ✓ alias key hackathon maps to [academic]
+    ✓ alias key workshop maps to [academic]
+    ✓ alias key networking maps to [social]
+    ✓ alias key party maps to [social]
+    ✓ alias key fitness maps to [wellness]
+    ✓ alias key health maps to [wellness]
+    ✓ alias key art maps to [cultural]
+    ✓ alias key music maps to [cultural]
+    ✓ alias key dance maps to [cultural]
+    ✓ alias key professional maps to [career]
+    ✓ alias key internship maps to [career]
+    ✓ alias key job maps to [career]
+    ✓ alias key game maps to [sports]
+    ✓ alias key competition maps to [sports]
+    ✓ enum member academic maps to [academic]
+    ✓ enum member social maps to [social]
+    ✓ enum member sports maps to [sports]
+    ✓ enum member career maps to [career]
+    ✓ enum member cultural maps to [cultural]
+    ✓ enum member wellness maps to [wellness]
+    ✓ enum member music maps to [cultural]
+    ✓ enum member tech maps to [social]
+    ✓ enum member food maps to [social]
+    ✓ enum member volunteer maps to [social]
+    ✓ enum member arts maps to [social]
+    ✓ enum member networking maps to [social]
+    ✓ an unknown tag
+    ✓ a padded mixed-case tag
+    ✓ duplicates after mapping
+    ✓ null
+    ✓ an empty array
+
+Test Suites: 1 passed, 1 total
+Tests:       40 passed, 40 total
+Snapshots:   0 total
+Time:        0.12 s, estimated 1 s
+Ran all test suites matching src/lib/eventTags.
+exit=0
+
+## 2. AFTER THE MOVE (Task 1) — same golden table, subject imported from @/lib/eventTags and through the @/lib/tagMapping re-export
+src/lib/eventTags.test.ts imports:
+20:import { mapTags } from "@/lib/eventTags";
+21:import { mapTags as mapTagsViaTagMapping } from "@/lib/tagMapping";
+22:import { EventTag } from "@/types";
+Golden rows (GOLDEN_ALIASES, GOLDEN_MEMBERS, GOLDEN_EDGES) diff vs the before-run version: none (only the import lines and the appended re-export describe changed)
+tag-coercion-defect.test.ts: git diff --stat HEAD -- src/__tests__/lib/tag-coercion-defect.test.ts -> ''
+
+$ npx jest --ci --selectProjects node --testPathPatterns "eventTags|tag-coercion-defect"
+PASS node src/lib/eventTags.test.ts
+PASS node src/__tests__/lib/tag-coercion-defect.test.ts
+Test Suites: 2 passed, 2 total
+Tests:       86 passed, 86 total
+
+$ npx jest --ci  (full)
+Test Suites: 1 skipped, 47 passed, 47 of 48 total
+Tests:       5 skipped, 587 passed, 592 total
+
+$ npx tsc --noEmit -> exit 0
+$ npm run lint -> ✖ 19 problems (0 errors, 19 warnings)
+$ node scripts/check-characterization-tags.mjs --all -> ok 17 files
+stale-date census (event_date|event_time in src/ supabase/, excluding _archive_pre_baseline): 0 lines
+grep -c 'Record<string, EventTag>': tagMapping.ts=0 eventTags.ts=1

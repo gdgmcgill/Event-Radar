@@ -2,52 +2,12 @@
  * Shared tag mapping utilities for transforming database events to frontend format
  */
 
-import { EventTag, Event, Club } from "@/types";
+import type { Event, Club } from "@/types";
+import { mapTags } from "@/lib/eventTags";
 
-/**
- * Mapping from database tags (lowercase) to EventTag enum values
- */
-export const tagMapping: Record<string, EventTag> = {
-  // Direct mappings
-  academic: EventTag.ACADEMIC,
-  social: EventTag.SOCIAL,
-  sports: EventTag.SPORTS,
-  career: EventTag.CAREER,
-  cultural: EventTag.CULTURAL,
-  wellness: EventTag.WELLNESS,
-  // Alias mappings
-  coding: EventTag.ACADEMIC,
-  technology: EventTag.ACADEMIC,
-  hackathon: EventTag.ACADEMIC,
-  workshop: EventTag.ACADEMIC,
-  networking: EventTag.SOCIAL,
-  party: EventTag.SOCIAL,
-  fitness: EventTag.WELLNESS,
-  health: EventTag.WELLNESS,
-  art: EventTag.CULTURAL,
-  music: EventTag.CULTURAL,
-  dance: EventTag.CULTURAL,
-  professional: EventTag.CAREER,
-  internship: EventTag.CAREER,
-  job: EventTag.CAREER,
-  game: EventTag.SPORTS,
-  competition: EventTag.SPORTS,
-};
-
-/**
- * Map an array of database tags to EventTag enum values
- * @param dbTags - Array of tag strings from database
- * @returns Array of unique EventTag values
- */
-export function mapTags(dbTags: string[]): EventTag[] {
-  const mappedTags = (dbTags || []).map((tag: string) => {
-    const lowerTag = tag.toLowerCase().trim();
-    return tagMapping[lowerTag] || EventTag.SOCIAL; // Default to SOCIAL if no mapping
-  });
-
-  // Remove duplicates
-  return [...new Set(mappedTags)];
-}
+// The tag mapping lives in src/lib/eventTags.ts (REFAC-10). mapTags is
+// re-exported so this module's public surface is unchanged.
+export { mapTags };
 
 /**
  * Database event row type (matches what Supabase returns)
@@ -95,7 +55,7 @@ interface DBClub {
 
 /**
  * Transform a database event to the frontend Event type
- * Passes through start_date/end_date directly (no more event_date/event_time split)
+ * Passes the authoritative start_date and end_date columns through unchanged
  * @param dbEvent - Event row from database
  * @returns Transformed Event object
  */
