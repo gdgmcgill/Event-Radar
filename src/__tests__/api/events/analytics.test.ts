@@ -92,7 +92,7 @@ describe("GET /api/events/:id/analytics", () => {
     mockUser = { id: "user-123" };
     // Event exists with a club_id
     mockQueryResults.set("events", {
-      data: { id: "event-123", title: "Test Event", event_date: "2026-04-01", club_id: "club-abc" },
+      data: { id: "event-123", title: "Test Event", start_date: "2026-04-01", club_id: "club-abc" },
       error: null,
     });
     // User is NOT a member of the club
@@ -109,7 +109,7 @@ describe("GET /api/events/:id/analytics", () => {
   it("returns event analytics with zero defaults for new event", async () => {
     mockUser = { id: "user-123" };
     mockQueryResults.set("events", {
-      data: { id: "event-123", title: "Test Event", event_date: "2026-04-01", club_id: "club-abc" },
+      data: { id: "event-123", title: "Test Event", start_date: "2026-04-01", club_id: "club-abc" },
       error: null,
     });
     mockQueryResults.set("club_members", {
@@ -137,7 +137,7 @@ describe("GET /api/events/:id/analytics", () => {
   it("returns correct analytics aggregation", async () => {
     mockUser = { id: "user-123" };
     mockQueryResults.set("events", {
-      data: { id: "event-123", title: "Big Event", event_date: "2026-04-01", club_id: "club-abc" },
+      data: { id: "event-123", title: "Big Event", start_date: "2026-04-01", club_id: "club-abc" },
       error: null,
     });
     mockQueryResults.set("club_members", {

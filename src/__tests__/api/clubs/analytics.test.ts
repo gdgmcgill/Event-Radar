@@ -163,9 +163,9 @@ describe("GET /api/clubs/:id/analytics", () => {
     mockQueryResults.set("club_followers", { data: [], error: null });
     mockQueryResults.set("events", {
       data: [
-        { id: "e1", title: "Event 1", event_date: "2026-04-01", tags: ["social", "sports"] },
-        { id: "e2", title: "Event 2", event_date: "2026-04-02", tags: ["social", "academic"] },
-        { id: "e3", title: "Event 3", event_date: "2026-04-03", tags: ["social"] },
+        { id: "e1", title: "Event 1", start_date: "2026-04-01", tags: ["social", "sports"] },
+        { id: "e2", title: "Event 2", start_date: "2026-04-02", tags: ["social", "academic"] },
+        { id: "e3", title: "Event 3", start_date: "2026-04-03", tags: ["social"] },
       ],
       error: null,
     });

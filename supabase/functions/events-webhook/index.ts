@@ -96,7 +96,11 @@ function validateEvent(event: WebhookEvent): { valid: boolean; errors: string[] 
 
 /**
  * Database event structure for insertion
- * Matches the actual schema: start_date, end_date, category, organizer (no club_id, event_date, event_time, status)
+ * The columns this function writes to public.events: title, description,
+ * start_date, end_date, location, category, tags, image_url, organizer,
+ * status (always "pending"), source and source_url. It sets no club_id, so a
+ * webhook event is not attached to a club; the events table does have that
+ * column.
  */
 interface DatabaseEvent {
   title: string;
