@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 4
+current_phase: 04
 current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
-status: planning
+status: executing
 stopped_at: "03-08 COMPLETE — Phase 3 is 8 of 8 plans done and awaiting verification. The blocking checkpoint is cleared: the production migration-history repair resolved to `defer-to-phase-8`, recorded in writing because the phase owner was not present and the plan's own rule makes an undecided checkpoint the deferral. Production is provably untouched. `evidence/FOUNDATION-READINESS.md` certifies all five success criteria clause by clause at 107 distinct cited paths with 0 missing; five requirements Complete and three PARTIAL with the clause named. `evidence/deferred-items.md` consolidates every deferral with an owning phase and resolves the `D-` collision by prefix (DI- items, DEC- decisions). Register: five findings closed, two reassigned, four deliberately left Open because the criterion did not close even though the fix shipped. Two findings this plan made rather than inherited: DI-19's ratchet false positive fixed with the allow-list byte-identical, and DI-32 — the CI `e2e` job is red on a real runner."
-last_updated: "2026-09-16T04:18:37.453Z"
-last_activity: 2026-09-16
-last_activity_desc: Phase 3 complete, transitioned to Phase 4
+last_updated: "2026-09-23T04:33:59.525Z"
+last_activity: 2026-09-23
+last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 8
   completed_phases: 3
-  total_plans: 32
+  total_plans: 43
   completed_plans: 32
   percent: 38
 ---
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Every critical workflow in the existing app is verified correct, secure, and reproducible across all user roles before any new product feature is started. If a foundation change breaks a workflow that worked before, the program has failed.
-**Current focus:** Phase 3 — Refactor Foundations — Schema Truth and the Seam Kit
+**Current focus:** Phase 04 — Slices 1–2 — Saved Events/RSVP and the Event Read Path
 
 ## Current Position
 
-Phase: 4 — Slices 1–2 — Saved Events/RSVP and the Event Read Path
-Plan: Not started
-Status: Phase 3 is done and ready for `/gsd-verify-work`. The checkpoint is cleared: the production migration-history repair was **deferred to Phase 8** in writing, and production is provably untouched (45 rows, baseline absent, sha256 identical to the 03-01 census). All five success criteria are MET clause by clause, evidenced at `.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/FOUNDATION-READINESS.md` with 107 distinct cited paths and 0 missing. Five requirements Complete (REFAC-02/03/05/06/08); three PARTIAL with the clause named (REFAC-01 `migration repair`, REFAC-04 casts 45/47, REFAC-07 "and staging").
-Last activity: 2026-09-16 - Completed quick task 260916-nst: Clear pre-Phase-4 blockers: DI-20 flaky useEvents test, DI-28 CLAUDE.md tracking, research cache ignore
+Phase: 04 (Slices 1–2 — Saved Events/RSVP and the Event Read Path) — EXECUTING
+Plan: 1 of 11
+Status: Executing Phase 04
+Last activity: 2026-09-23 — Phase 04 execution started
 
 Progress: [███░░░░░░░] 31%
 
@@ -231,6 +231,7 @@ None yet.
 - ~~`.claude/CLAUDE.md`'s correction is still gitignored and a fresh clone does not carry it.~~ **RESOLVED 2026-09-16 (quick 260916-nst, `33f5783`): the owner chose to track the file; `.claude/*` stays ignored, `!.claude/CLAUDE.md` is versioned, and the false zustand claim is corrected. DI-28 closed.** Original note: Assigned to Phase 3 by Phase 2 and **not resolved** — overriding a deliberate `.gitignore` is the repository owner's call, and Phase 3 held the same line Phase 2 did. It has now crossed two phases undecided. DI-28, owner: the phase owner.
 
 ### Quick Tasks Completed
+
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260916-nst | Clear pre-Phase-4 blockers: DI-20 flaky useEvents test, DI-28 CLAUDE.md tracking, research cache ignore | 2026-09-16 | 33f5783 | [260916-nst-clear-pre-phase-4-blockers-di-20-flaky-u](./quick/260916-nst-clear-pre-phase-4-blockers-di-20-flaky-u/) |
