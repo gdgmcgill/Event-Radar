@@ -171,7 +171,13 @@ function friend(id: string) {
 type FriendsGet = (typeof import("@/app/api/events/[id]/friends/route"))["GET"];
 let GET: FriendsGet;
 
+// The fallback now logs each failure it degrades over (WR-02, Phase 4 code
+// review). The suite drives the RPC-error path on purpose, so the log lines
+// are expected; silence them without asserting on them.
+let errorSpy: jest.SpyInstance;
+
 beforeEach(async () => {
+  errorSpy = jest.spyOn(console, "error").mockImplementation(() => undefined);
   jest.resetModules();
   jest.clearAllMocks();
   inCalls = [];
@@ -182,6 +188,10 @@ beforeEach(async () => {
 
   const mod = await import("@/app/api/events/[id]/friends/route");
   GET = mod.GET;
+});
+
+afterEach(() => {
+  errorSpy.mockRestore();
 });
 
 describe("DEFECT F-071 (fixed in 04-05) — the fallback passes an array of followed ids", () => {

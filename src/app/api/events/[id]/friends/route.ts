@@ -28,24 +28,38 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     if (error) {
       // Runs only when the RPC errors; F-071 (a builder passed to .in()) fixed in 04-05.
-      const { data: following } = await supabase
+      // The fallback degrades to an empty list, never to an error response, so
+      // each failure is logged here or it is invisible (WR-02 of the Phase 4
+      // code review: F-071's TypeError went unnoticed for exactly that reason).
+      console.error("get_friends_going_to_event RPC error, using fallback:", error);
+
+      const { data: following, error: followingError } = await supabase
         .from("user_follows")
         .select("following_id")
         .eq("follower_id", user.id);
+      if (followingError) {
+        console.error("Friends fallback: user_follows read failed:", followingError);
+      }
       const followingIds = (following ?? []).map((r) => r.following_id);
 
-      const { data: manualFriends } = await supabase
+      const { data: manualFriends, error: savedError } = await supabase
         .from("saved_events")
         .select("user_id, users!inner(id, name, avatar_url)")
         .eq("event_id", eventId)
         .in("user_id", followingIds);
+      if (savedError) {
+        console.error("Friends fallback: saved_events read failed:", savedError);
+      }
 
       // Filter to mutual follows manually
       if (manualFriends) {
-        const { data: reverseFollows } = await supabase
+        const { data: reverseFollows, error: reverseError } = await supabase
           .from("user_follows")
           .select("follower_id")
           .eq("following_id", user.id);
+        if (reverseError) {
+          console.error("Friends fallback: reverse user_follows read failed:", reverseError);
+        }
 
         const reverseSet = new Set(
           (reverseFollows ?? []).map((r: any) => r.follower_id)
@@ -68,7 +82,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       friends: friends ?? [],
       count: friends?.length ?? 0,
     });
-  } catch {
+  } catch (error) {
+    console.error("Error fetching friends going to event:", error);
     return NextResponse.json({ friends: [], count: 0 });
   }
 }
