@@ -42,7 +42,11 @@ and its diff is recorded in
 `.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/boundary-widening.txt`.
 The one-move bypass the old scope allowed — put `createServiceClient()` in a new
 `src/lib/foo.ts` and import `foo` from a route — now fails lint on `foo.ts` and
-fails the ratchet.
+fails the ratchet. The two evasions the static import rule cannot see — a
+dynamic `import()` of the service module and a bare read of
+`SUPABASE_SERVICE_ROLE_KEY` — fail lint through a companion
+`no-restricted-syntax` rule (DI-31), and CI runs the ratchet on every pull
+request.
 
 This is still a **note, not a row**: a row would imply the operation goes
 through `getElevatedClient()`, which it does not. Migrating it to this door —

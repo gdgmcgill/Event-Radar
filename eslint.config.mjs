@@ -10,6 +10,9 @@ const ELEVATED_HOMES = ["src/lib/supabase/**", "src/server/db/elevated/**"];
 const ELEVATED_MESSAGE =
   "Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md.";
 
+const ELEVATED_KEY_MESSAGE =
+  "Do not read SUPABASE_SERVICE_ROLE_KEY outside src/lib/supabase/. Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md.";
+
 const eslintConfig = [
   { ignores: [".claude/**", ".next/**", "AI/**", "node_modules/**", "demo-video/**"] },
   ...coreWebVitals,
@@ -56,6 +59,54 @@ const eslintConfig = [
     },
   },
   {
+    // DI-31's two evasions of the import boundary above, closed by plan 04-03.
+    // The boundary sees static import and export declarations only, so it
+    // cannot see:
+    //   1. a bare read of the service-role key — build the client inline from
+    //      process.env.SUPABASE_SERVICE_ROLE_KEY with no restricted import;
+    //   2. a dynamic `await import("@/lib/supabase/service")` — an expression,
+    //      not a declaration. src/app/api/clubs/[id]/route.ts:202 does exactly
+    //      this today and is held only by the allow-list below.
+    //
+    // The key is NAMED. The broad form — ban process.env outright — is what
+    // DI-31 recorded as unshippable: it turns every legitimate NEXT_PUBLIC_*
+    // configuration read into an error. Only the service-role key is banned.
+    //
+    // Same files and homes as the boundary. Test files are exempt from THIS
+    // rule only: they set the variable for their own process (seed guard and
+    // callback tests), which reaches nothing in production.
+    //
+    // No existing no-restricted-syntax configuration is overwritten:
+    // `npx eslint --print-config` reports the rule unconfigured on route, lib
+    // and test files before this block (evidence/boundary-widening.txt § 7).
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    ignores: [...ELEVATED_HOMES, "src/**/*.test.ts", "src/**/*.test.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          // process.env.SUPABASE_SERVICE_ROLE_KEY, process.env["SUPABASE_SERVICE_ROLE_KEY"]
+          // (and process["env"] for either)
+          selector:
+            "MemberExpression[object.object.name='process']:matches([object.property.name='env'], [object.property.value='env']):matches([property.name='SUPABASE_SERVICE_ROLE_KEY'], [property.value='SUPABASE_SERVICE_ROLE_KEY'])",
+          message: ELEVATED_KEY_MESSAGE,
+        },
+        {
+          // const { SUPABASE_SERVICE_ROLE_KEY } = process.env — the same read,
+          // spelled as a destructuring pattern instead of a member access.
+          selector:
+            "VariableDeclarator[init.object.name='process']:matches([init.property.name='env'], [init.property.value='env']) > ObjectPattern > Property:matches([key.name='SUPABASE_SERVICE_ROLE_KEY'], [key.value='SUPABASE_SERVICE_ROLE_KEY'])",
+          message: ELEVATED_KEY_MESSAGE,
+        },
+        {
+          // import("@/lib/supabase/service"), import("../../lib/supabase/service")
+          selector: "ImportExpression[source.value=/lib.supabase.service(\\.\\w+)?$/]",
+          message: ELEVATED_MESSAGE,
+        },
+      ],
+    },
+  },
+  {
     // THE RATCHET — the sanctioned relaxation, in one reviewable generated file.
     // It holds the legacy callsites that pre-date the boundary. It may only
     // SHRINK: Phases 4-6 delete rows as each route moves to the seam, and
@@ -66,7 +117,14 @@ const eslintConfig = [
     // inline disable comment. Both would zero the error count while removing
     // the control; this list is the one relaxation, and it is auditable.
     files: LEGACY_ELEVATED_CALLSITES,
-    rules: { "@typescript-eslint/no-restricted-imports": "off" },
+    // It turns off every boundary rule, including the no-restricted-syntax
+    // companion: two legacy entries (calculate-popularity, auth/callback) read
+    // the service-role key inline and one (clubs/[id]) imports the service
+    // module dynamically. They leave this list the same way as the rest.
+    rules: {
+      "@typescript-eslint/no-restricted-imports": "off",
+      "no-restricted-syntax": "off",
+    },
   },
 ];
 

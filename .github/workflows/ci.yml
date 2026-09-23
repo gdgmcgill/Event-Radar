@@ -66,6 +66,18 @@ jobs:
       - name: Migration filename parse check
         run: node scripts/check-migration-filenames.mjs
 
+      # DI-31 (plan 04-03). The shrink-only census of files under src/** that
+      # reach the service-role client. Fails when a file the committed
+      # allow-list does not hold reaches it; the list may only shrink.
+      - name: Elevated-callsite ratchet
+        run: node scripts/check-elevated-ratchet.mjs
+
+      # Plan 04-01's gate: every characterization suite carries its tag, a
+      # defect-tagged suite cites a finding id, and every F-nnn cited is in
+      # .planning/audit/findings.json.
+      - name: Characterization tag gate
+        run: node scripts/check-characterization-tags.mjs --all
+
       - name: Run tests
         run: npm test
 

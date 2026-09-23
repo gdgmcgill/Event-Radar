@@ -370,3 +370,270 @@ one that is committed. A second `--write` on that first output had changed
 nothing (same sha256), which is the determinism the header claims. Neither
 discarded write was ever committed; the entry-level change was the same in
 every run.
+
+==============================================================================
+TASK 2 — the companion rule for DI-31's two evasions, and the CI wiring
+==============================================================================
+
+==============================================================================
+7. PRE-CHECK — no existing no-restricted-syntax configuration to overwrite
+==============================================================================
+Run BEFORE the companion block was added to eslint.config.mjs (after Task 1's
+commit). The rule is unconfigured on a route file, a lib file and a test file,
+and neither this repository's config nor eslint-config-next's dist configures
+it anywhere, so nothing is merged or replaced. The last block lists the only
+two files outside the sanctioned homes that read the service-role key: both
+are legacy allow-list entries, and every other env read in them is a public or
+non-credential variable.
+
+$ for f in 'src/app/api/events/route.ts' 'src/lib/audit.ts' 'src/app/api/events/route.test.ts'; do printf '%s: ' "$f"; npx eslint --print-config "$f" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const c=JSON.parse(s);console.log(JSON.stringify(c.rules["no-restricted-syntax"] ?? "(not configured)"))})'; done
+src/app/api/events/route.ts: "(not configured)"
+src/lib/audit.ts: "(not configured)"
+src/app/api/events/route.test.ts: "(not configured)"
+exit=0
+
+$ command grep -rn 'no-restricted-syntax' eslint.config.mjs node_modules/eslint-config-next/dist 2>/dev/null | head; echo '(end of grep)'
+(end of grep)
+exit=0
+
+$ command grep -rn 'process.env' src/app/api/admin/calculate-popularity/route.ts src/app/auth/callback/route.ts
+src/app/api/admin/calculate-popularity/route.ts:16:  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+src/app/api/admin/calculate-popularity/route.ts:17:  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+src/app/api/admin/calculate-popularity/route.ts:58:    const expectedKey = process.env.ADMIN_API_KEY;
+src/app/api/admin/calculate-popularity/route.ts:168:    const expectedKey = process.env.ADMIN_API_KEY;
+src/app/auth/callback/route.ts:22:const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+src/app/auth/callback/route.ts:61:    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+src/app/auth/callback/route.ts:62:    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+src/app/auth/callback/route.ts:123:        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+src/app/auth/callback/route.ts:124:        process.env.SUPABASE_SERVICE_ROLE_KEY!
+src/app/auth/callback/route.ts:162:  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+exit=0
+
+==============================================================================
+8. RED — each evasion, observed failing lint; then GREEN
+==============================================================================
+The companion rule: `no-restricted-syntax` over the boundary's files and homes,
+with test files exempt from this rule only. Selectors (eslint.config.mjs):
+  a. a member access on process.env (or process["env"]) whose property is the
+     identifier or string literal SUPABASE_SERVICE_ROLE_KEY — dot and bracket;
+  b. the same key destructured from process.env (a third spelling of the same
+     read, added beyond the plan's two selectors; see the summary);
+  c. an ImportExpression whose source ends in lib/supabase/service
+     (optionally with an extension).
+The allow-list block turns `no-restricted-syntax` off alongside the import rule.
+
+$ cat src/lib/probe-key.ts
+// TEMPORARY FIXTURE — plan 04-03, task 2. Deleted immediately after the red
+// capture. Builds the ingredients of a service-role client with no restricted
+// import: the bare-key evasion DI-31 named. The public URL read on the line
+// above it must NOT be reported — only the service-role key is banned.
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+export const probeKey = { url, key };
+exit=0
+
+$ cat src/lib/probe-dynamic.ts
+// TEMPORARY FIXTURE — plan 04-03, task 2. Deleted immediately after the red
+// capture. Reaches the service module through an import() EXPRESSION, which
+// the static import boundary cannot see: the dynamic-import evasion DI-31 named.
+export async function probeDynamic() {
+  const { createServiceClient } = await import("@/lib/supabase/service");
+  return createServiceClient();
+}
+exit=0
+
+$ npm run lint 2>&1 | command grep -v '^$' | command grep -A2 -E '^/.*probe-|problems'
+  77:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/my-events/page.tsx
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 159) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+--
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  233:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  256:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+--
+/Users/adyan/Documents/GitHub/Event-Radar/src/lib/probe-dynamic.ts
+  5:41  error  Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md  no-restricted-syntax
+/Users/adyan/Documents/GitHub/Event-Radar/src/lib/probe-key.ts
+  6:13  error  Do not read SUPABASE_SERVICE_ROLE_KEY outside src/lib/supabase/. Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md  no-restricted-syntax
+✖ 21 problems (2 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+exit=1
+
+$ npx eslint src/lib/probe-key.ts src/lib/probe-dynamic.ts
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/lib/probe-dynamic.ts
+  5:41  error  Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md  no-restricted-syntax
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/lib/probe-key.ts
+  6:13  error  Do not read SUPABASE_SERVICE_ROLE_KEY outside src/lib/supabase/. Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md  no-restricted-syntax
+
+✖ 2 problems (2 errors, 0 warnings)
+
+exit=1
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=26 delta=1
+
+FAIL: 1 callsite(s) are NOT in the committed allow-list:
+  + src/lib/probe-dynamic.ts
+
+A new file under src/** reaches the service-role client.
+Route it through src/server/db/elevated/ and add a row to
+src/server/db/elevated/REGISTRY.md. The allow-list may only shrink,
+so do NOT regenerate it to make this pass.
+exit=1
+
+$ git status --porcelain -- src/lib/probe-key.ts src/lib/probe-dynamic.ts; echo "(porcelain lines: $(git status --porcelain -- src/lib/probe-key.ts src/lib/probe-dynamic.ts | wc -l | tr -d ' '))"
+(porcelain lines: 0)
+exit=0
+
+Reading: lint reports exactly one error in each probe — probe-key.ts line 6
+(the key read; the NEXT_PUBLIC_SUPABASE_URL read on line 5 is NOT reported) and
+probe-dynamic.ts line 5 (the import() expression). The ratchet also names
+probe-dynamic.ts (the census counts dynamic imports of the service module); it
+does not count probe-key.ts, because the census counts imports and the key
+read is the lint rule's job — header of scripts/check-elevated-ratchet.mjs.
+Both probes were deleted; git status shows nothing for either path.
+
+8b. Spellings — in-memory sources linted at virtual paths through the ESLint
+Node API with the repository's own config (ESLint#lintText with a filePath;
+nothing written to disk under src/). The driver was copied into the repo root
+for the run and deleted.
+
+$ node ./.probe-variants.mjs
+ok   src/lib/v1.ts                    errors=1 want=1
+ok   src/lib/v2.ts                    errors=1 want=1
+ok   src/lib/v3.ts                    errors=1 want=1
+ok   src/lib/v4.ts                    errors=1 want=1
+ok   src/lib/v5.ts                    errors=1 want=1
+ok   src/app/v6/page.tsx              errors=1 want=1
+ok   src/server/v7.ts                 errors=1 want=1
+ok   src/server/v8.ts                 errors=1 want=1
+ok   src/lib/v9.ts                    errors=0 want=0
+ok   src/lib/v10.ts                   errors=0 want=0
+ok   src/lib/v11.test.ts              errors=0 want=0
+ok   src/lib/supabase/v12.ts          errors=0 want=0
+ok   src/server/db/elevated/v13.ts    errors=0 want=0
+13/13 variants as expected
+exit=0
+
+8c. Agreement — with the allow-list block removed, the set of files EITHER
+boundary rule reports is compared with the committed allow-list (the census).
+
+$ node ./.probe-agree.mjs
+import rule files: 24
+syntax rule files: 3
+  syntax: src/app/api/admin/calculate-popularity/route.ts
+  syntax: src/app/api/clubs/[id]/route.ts
+  syntax: src/app/auth/callback/route.ts
+union: 25   committed census: 25
+in lint only: []   in census only: []
+exit=0
+
+Reading: the two controls now agree exactly — 25 and 25, no file in one and
+not the other. src/app/api/clubs/[id]/route.ts, which the static rule alone
+missed in section 5, is reported by the dynamic-import selector.
+
+8d. GREEN — probes gone, companion rule in place.
+
+$ npm run lint 2>&1 | tail -3
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+==============================================================================
+9. CI — two steps in the `ci` job, after "Migration filename parse check"
+==============================================================================
+Only added lines; the workflow-level env block (the placeholder
+NEXT_PUBLIC_SUPABASE_* values DI-32's fix depends on) is untouched.
+
+$ git diff -- .github/workflows/ci.yml
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index baeff47..e1e75c3 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -66,6 +66,18 @@ jobs:
+       - name: Migration filename parse check
+         run: node scripts/check-migration-filenames.mjs
+ 
++      # DI-31 (plan 04-03). The shrink-only census of files under src/** that
++      # reach the service-role client. Fails when a file the committed
++      # allow-list does not hold reaches it; the list may only shrink.
++      - name: Elevated-callsite ratchet
++        run: node scripts/check-elevated-ratchet.mjs
++
++      # Plan 04-01's gate: every characterization suite carries its tag, a
++      # defect-tagged suite cites a finding id, and every F-nnn cited is in
++      # .planning/audit/findings.json.
++      - name: Characterization tag gate
++        run: node scripts/check-characterization-tags.mjs --all
++
+       - name: Run tests
+         run: npm test
+ 
+exit=0
+
+$ git diff --numstat -- .github/workflows/ci.yml
+12	0	.github/workflows/ci.yml
+exit=0
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+ok 11 files
+exit=0
+
+$ command grep -c 'node scripts/check-elevated-ratchet.mjs' .github/workflows/ci.yml; command grep -c 'node scripts/check-characterization-tags.mjs --all' .github/workflows/ci.yml
+1
+1
+exit=0
+
+$ npm run lint 2>&1 | tail -3
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+
+$ command grep -c 'SUPABASE_SERVICE_ROLE_KEY' eslint.config.mjs
+6
+exit=0
+
+$ node -e "const y=require('fs').readFileSync('.github/workflows/ci.yml','utf8');const i=y.indexOf('  ci:');const j=y.indexOf('\n  ', i+5);const job=y.slice(i, y.indexOf('\n  types:')>0?y.indexOf('\n  types:'):undefined);console.log(job.match(/- name: .*/g).join('\n'))"
+- name: Checkout code
+- name: Setup Node.js
+- name: Install dependencies
+- name: Run linter
+- name: TypeScript type-check
+- name: Migration filename parse check
+- name: Elevated-callsite ratchet
+- name: Characterization tag gate
+- name: Run tests
+- name: Production vulnerability gate
+- name: Run build
+exit=0
+
+CI run UNOBSERVED — no push in this plan. The two steps are proven locally
+above (both exit 0 on this tree, and section 4 / section 8 show the ratchet
+exiting 1 on a real reach). Per the Phase 2 STAB-14 precedent, observation
+waits for the push that also unblocks STAB-02's CI half and DI-32.
