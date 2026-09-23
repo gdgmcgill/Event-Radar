@@ -156,17 +156,20 @@ function cursorFor(row: EventRow | undefined): string | null {
  *          type: string
  *          enum: [weekday, weekend]
  *      - name: page
- *        description: Page number for pagination
+ *        description: Page number for pagination (a positive integer; default 1)
  *        in: query
  *        required: false
  *        schema:
  *          type: integer
+ *          minimum: 1
  *      - name: limit
- *        description: Number of events per page
+ *        description: Number of events per page (1 to 100; default 50)
  *        in: query
  *        required: false
  *        schema:
  *          type: integer
+ *          minimum: 1
+ *          maximum: 100
  *      - name: cursor
  *        description: Opaque keyset cursor from a previous response's nextCursor; returns the events after it in (start_date, id) order. Takes precedence over page.
  *        in: query
@@ -249,7 +252,7 @@ function cursorFor(row: EventRow | undefined): string | null {
  *                  description: Cursor naming this page's first event (cursor requests only)
  *        description: Events fetched successfully
  *      400:
- *        description: Invalid timeOfDay, dayType or cursor
+ *        description: Invalid timeOfDay, dayType, page, limit or cursor
  *      500:
  *        description: Internal server error
  */
@@ -266,8 +269,27 @@ export async function GET(request: NextRequest) {
     const idsParam = searchParams.get('ids');
     const timeOfDay = searchParams.get('timeOfDay');
     const dayType = searchParams.get('dayType');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    // `page` and `limit` are validated before any query. Unparsed they reached
+    // PostgREST (`range(NaN, NaN)`, `range(0, -1)`, a negative offset), which
+    // answered 400 and the error branch below turned into a 500. Cursor mode
+    // (`range(0, limit - 1)`) and `totalPages` (`Math.ceil(total / limit)`)
+    // are built on the same two values.
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      return NextResponse.json(
+        { error: 'limit must be an integer from 1 to 100', field: 'limit' },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isInteger(page) || page < 1) {
+      return NextResponse.json(
+        { error: 'page must be a positive integer', field: 'page' },
+        { status: 400 }
+      );
+    }
 
     // Validate timeOfDay and dayType values
     const validTimeOfDay = ['morning', 'afternoon', 'evening', 'night'];

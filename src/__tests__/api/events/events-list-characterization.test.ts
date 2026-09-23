@@ -20,6 +20,10 @@
  *     the approved/non-deleted filter
  *   - an invalid `timeOfDay` or `dayType` is 400 with the exact current
  *     message and issues no query of any kind
+ *   - a `limit` outside 1..100 or a `page` below 1, or either not an integer,
+ *     is 400 `{ error, field }` and issues no query of any kind (WR-01 of the
+ *     Phase 4 code review; before it these reached PostgREST and came back as
+ *     a 500 echoing its message)
  *   - the time-of-day RPC restricts by its ids; an empty or null RPC result is
  *     an early 200 with an empty list and no events query
  *   - page mode: `page=2&limit=10` over 25 matching rows returns the 11th to
@@ -461,6 +465,42 @@ describe("GET /api/events — errors", () => {
   it("a thrown error is a 500", async () => {
     const { res } = await get("", { throwOn: { events: "connection reset" } });
     expect(res.status).toBe(500);
+  });
+});
+
+describe("GET /api/events — page and limit validation", () => {
+  const LIMIT_400 = { error: "limit must be an integer from 1 to 100", field: "limit" };
+  const PAGE_400 = { error: "page must be a positive integer", field: "page" };
+
+  it.each([
+    ["limit=abc", LIMIT_400],
+    ["limit=0", LIMIT_400],
+    ["limit=-5", LIMIT_400],
+    ["limit=101", LIMIT_400],
+    ["page=abc", PAGE_400],
+    ["page=0", PAGE_400],
+    ["page=-1", PAGE_400],
+  ])("%s is a 400 naming the field, and nothing is queried", async (query, expected) => {
+    const { res, body, fake } = await get(`?${query}`);
+    expect(res.status).toBe(400);
+    expect(body).toEqual(expected);
+    expect(fake.calls).toEqual([]);
+  });
+
+  it("limit=1 and limit=100 are the accepted bounds", async () => {
+    const one = await get("?limit=1");
+    expect(one.res.status).toBe(200);
+    expect(one.body).toMatchObject({ page: 1, limit: 1 });
+
+    const hundred = await get("?limit=100");
+    expect(hundred.res.status).toBe(200);
+    expect(hundred.body).toMatchObject({ page: 1, limit: 100 });
+  });
+
+  it("a bad limit is reported before a bad timeOfDay", async () => {
+    const { res, body } = await get("?limit=abc&timeOfDay=dawn");
+    expect(res.status).toBe(400);
+    expect(body).toEqual(LIMIT_400);
   });
 });
 
