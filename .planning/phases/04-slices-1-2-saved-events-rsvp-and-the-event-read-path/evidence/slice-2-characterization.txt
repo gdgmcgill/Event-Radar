@@ -196,3 +196,143 @@ exit=0
 $ git diff --stat -- src/app src/lib src/server src/__tests__/api/events/get-events.test.ts src/app/api/events/route.test.ts   # empty = subjects, get-events.test.ts and the skipped cursor suite untouched
 exit=0
 
+=== TASK 2 — the detail route: PRESERVE contract, F-080 and F-081 DEFECT pins ===
+Recorded: 2026-09-23T05:32:47Z   HEAD at capture=72baa0c07ea7a2b28114f1fc3056daef745d6412
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-detail-characterization|club-fabrication-defect|tag-coercion-defect" --verbose
+Running one project: node
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+  F-080 pin A — the organizer fallback fabricates a club (moves only if the 04-11 decision ships the visual fix)
+    ✓ a row with no club and organizer 'Seed Organizer A' gets a club whose id and name are both that string, status approved (1 ms)
+    ✓ with a real club_id present, the fabricated club still ignores it: its id is the label, not the club_id
+  F-080 pin B — the real-club branch blanks five URL columns (moves in 04-10)
+    ✓ an embed carrying website_url, banner_url, discord_url, twitter_url and linkedin_url comes out with all five null
+  F-080 pin C — /api/users/saved-events reads events with columns * and no club embed (moves in 04-10)
+    ✓ the events read selects exactly '*' (2 ms)
+  F-080 pin D — /api/events/[id] reads the event with columns * and no club embed (moves only if the 04-11 decision ships the visual fix)
+    ✓ the events read selects exactly '*'
+    ✓ so a seeded-shape event's detail response names the organizer label as its club, not the real club (1 ms)
+
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+  GET /api/events/[id] — not found and errors
+    ✓ an id with no row is 404 Event not found
+    ✓ a soft-deleted row is 404 Event not found
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+  GET /api/events/[id] — the found event
+    ✓ returns 200 with exactly one key, event, holding the stored id, title, start_date and tags
+  GET /api/events/[id] — pending_edits, (a) with the real transform: non-owners never receive it
+    ✓ an anonymous caller gets no pending_edits key, though the row holds one
+    ✓ a signed-in stranger gets no pending_edits key, though the row holds one (1 ms)
+    ✓ a club organizer who did not create the event gets no pending_edits key, though the row holds one
+    ✓ a signed-in caller with no users row gets no pending_edits key, though the row holds one (1 ms)
+  GET /api/events/[id] — pending_edits, (b) the handler's gate, through a transform that carries it
+    ✓ the creator receives pending_edits
+    ✓ a caller whose users row has the admin role receives pending_edits
+    ✓ an anonymous caller has pending_edits stripped (1 ms)
+    ✓ a signed-in stranger has pending_edits stripped
+    ✓ a club organizer who did not create the event has pending_edits stripped
+    ✓ a signed-in caller with no users row has pending_edits stripped
+    ✓ the stripped event is otherwise identical to the creator's (1 ms)
+
+PASS node src/__tests__/lib/tag-coercion-defect.test.ts
+  F-081 — six of the twelve EventTag members do not round-trip (move only if the 04-11 decision ships the identity mappings)
+    ✓ exactly six members map to something other than themselves: music, tech, food, volunteer, arts, networking
+    ✓ tech, absent from the alias table, is coerced to [social]
+    ✓ food, absent from the alias table, is coerced to [social]
+    ✓ volunteer, absent from the alias table, is coerced to [social]
+    ✓ arts, absent from the alias table, is coerced to [social]
+    ✓ music is aliased to [cultural] (1 ms)
+    ✓ networking is aliased to [social]
+    ✓ two coerced tags collapse into a single social badge
+    ✓ the seeded pairs: [academic, tech] reads as [academic, social]; [music, social] as [cultural, social]
+  F-081 — an unknown tag is coerced to Social with no signal of any kind
+    ✓ quidditch maps to [social]
+    ✓ mapping unknown and coerced tags neither throws nor writes to any console method
+
+Test Suites: 3 passed, 3 total
+Tests:       33 passed, 33 total
+Snapshots:   0 total
+Time:        0.203 s, estimated 1 s
+Ran all test suites matching events-detail-characterization|club-fabrication-defect|tag-coercion-defect.
+exit=0
+
+$ grep -c "DEFECT characterization — F-080" src/__tests__/api/events/club-fabrication-defect.test.ts
+1
+exit=0
+
+$ grep -c "DEFECT characterization — F-081" src/__tests__/lib/tag-coercion-defect.test.ts
+1
+exit=0
+
+$ grep -c "moves in 04-10" src/__tests__/api/events/club-fabrication-defect.test.ts
+3
+exit=0
+
+$ grep -c "04-11" src/__tests__/api/events/club-fabrication-defect.test.ts
+4
+exit=0
+
+$ grep -c 'from "@/lib/tagMapping"' src/__tests__/lib/tag-coercion-defect.test.ts
+1
+exit=0
+
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   DEFECT   src/__tests__/api/events/pagination-contract-defect.test.ts (F-083)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+ok 17 files
+exit=0
+
+--- DI-36 probe: the real transform drops pending_edits (so the detail GET never returns it) ---
+$ npx tsx -e 'import { transformEventFromDB } from "./src/lib/tagMapping"; const row = { id: "e1", title: "t", description: null, start_date: "2026-10-05T18:00:00+00:00", location: null, tags: ["academic"], created_at: "2026-08-01T12:00:00+00:00", updated_at: null, created_by: "creator", pending_edits: { title: "Renamed", submitted_at: "2026-09-20T10:00:00+00:00" } }; const out = transformEventFromDB(row as never) as unknown as Record<string, unknown>; console.log("input has pending_edits:", "pending_edits" in row); console.log("transform output has pending_edits:", "pending_edits" in out);'
+input has pending_edits: true
+transform output has pending_edits: false
+exit=0
+
+--- DI-24 throwaway tsconfig (outside the repository, in the session scratchpad) ---
+$ cat /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice2-detail/tsconfig.json
+{
+  "extends": "/Users/adyan/Documents/GitHub/Event-Radar/tsconfig.json",
+  "compilerOptions": { "typeRoots": ["/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@types"], "incremental": false },
+  "include": [
+    "/Users/adyan/Documents/GitHub/Event-Radar/next-env.d.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/events-detail-characterization.test.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/club-fabrication-defect.test.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/lib/tag-coercion-defect.test.ts"
+  ],
+  "exclude": []
+}
+exit=0
+
+$ npx tsc --noEmit -p /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice2-detail/tsconfig.json --listFilesOnly | grep -E 'src/__tests__|next-env'   # proves the three suites and the helper are in the program
+/Users/adyan/Documents/GitHub/Event-Radar/next-env.d.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/helpers/fakeSupabase.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/events-detail-characterization.test.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/club-fabrication-defect.test.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/lib/tag-coercion-defect.test.ts
+exit=0
+
+$ npx tsc --noEmit -p /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice2-detail/tsconfig.json
+exit=0
+
+$ npx eslint src/__tests__/api/events/events-detail-characterization.test.ts src/__tests__/api/events/club-fabrication-defect.test.ts src/__tests__/lib/tag-coercion-defect.test.ts   # no new lint warning
+exit=0
+
+$ git diff --stat -- src/app src/lib src/server   # empty = subjects untouched
+exit=0
+

@@ -87,5 +87,39 @@ assertions executed rather than skipped must use the same per-assertion probe as
 *(Empty at 04-01. Append new items here as `DI-36`, `DI-37`, … with: found by, what it is, why it was
 not fixed in the plan that found it, why it is not merely cosmetic, and its owner.)*
 
+## DI-36 — `GET /api/events/[id]` never returns `pending_edits`, to anyone; its visibility gate is dead
+
+- **Found by:** 04-04, Task 2, while writing `events-detail-characterization.test.ts`. The plan's
+  behaviour list said "the creator gets `pending_edits`; an admin gets `pending_edits`". Measured: they
+  do not.
+- **What it is.** The detail GET (`src/app/api/events/[id]/route.ts:106-126`) transforms the row with
+  `transformEventFromDB`, then strips `pending_edits` for anyone who is neither the creator nor an admin.
+  But `transformEventFromDB` (`src/lib/tagMapping.ts:146-173`) builds a fresh object and never copies
+  `pending_edits`, so the key is absent before the gate runs. With the real transform, no caller receives
+  it. The stripping branch is dead at the response level. Probe (`evidence/slice-2-characterization.txt`,
+  Task 2): "input has pending_edits: true / transform output has pending_edits: false". Mutation cycle 4
+  in `evidence/slice-2-mutation-check.txt` shows that deleting the branch changes no real-transform
+  response.
+- **Consequence.** `EventDetailView.tsx:207` renders "Your changes to … will be reviewed by an admin" only
+  when `event.pending_edits` is set, and `EventDetailClient.tsx:394` passes `event.pending_edits` to the
+  edit form as `initialData`. Both read `/api/events/[id]` (`EventDetailClient.tsx:78`). So a creator whose
+  title or image edit is awaiting moderation never sees the notice on the detail page, and opening the
+  edit form from there shows the live values instead of the pending ones. (`/my-events` reads
+  `pending_edits` through its own query and is unaffected.)
+- **Why not fixed in 04-04.** 04-04 modifies no production file. The fix is also not in Slice 2's scope:
+  none of F-080..F-083 covers it, and copying `pending_edits` in the transform would change it for
+  every route that uses the transform (list, saved-events), which needs its own visibility decision.
+  The gate is correct today, which is not the same thing as the gate being reachable.
+- **Why not cosmetic.** A moderation-state notice the product built for creators cannot render, and the
+  one piece of code that would keep that data from non-owners is untestable through the real path.
+  `events-detail-characterization.test.ts` layer (b) pins the gate through a transform that carries the
+  column, so a fix cannot widen visibility unnoticed.
+- **Not yet registered** as an F-nnn. The register is edited only by generator-backed plans (04-01's
+  method). The next plan that edits `findings.json` should register it, which is expected to be F-086.
+- **Owner:** Phase 5 (REFAC-13, Slice 5 — admin/moderation containment, which owns the moderation
+  flow that `pending_edits` belongs to: `admin/events/[id]/edits`, the moderation queue, and this route's
+  PATCH, which writes the column). Note for 04-10/04-11: they edit this file's GET. They must not "fix" this in
+  passing, because it is a visibility change.
+
 *Phase: 04-slices-1-2-saved-events-rsvp-and-the-event-read-path*
 *Plan: 04-01*
