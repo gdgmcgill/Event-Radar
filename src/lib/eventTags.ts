@@ -88,7 +88,14 @@ export function partitionTags(dbTags: string[]): PartitionedTags {
 
   for (const tag of dbTags || []) {
     const lowerTag = tag.toLowerCase().trim();
-    const alias = TAG_ALIASES[lowerTag];
+    // Own properties only. `TAG_ALIASES` is an object literal, so a bare
+    // `TAG_ALIASES[lowerTag]` resolves `Object.prototype` keys: a tag named
+    // `constructor` or `__proto__` would come back as a function or object,
+    // both truthy, and be emitted inside `tags` (DI-37). Such a tag is unknown
+    // and falls to Social like any other.
+    const alias = Object.prototype.hasOwnProperty.call(TAG_ALIASES, lowerTag)
+      ? TAG_ALIASES[lowerTag]
+      : undefined;
     if (alias) {
       mapped.add(alias);
     } else {

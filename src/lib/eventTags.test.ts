@@ -22,6 +22,11 @@
  * `KNOWN_NON_ROUNDTRIP_TAGS`, and the one `[tags]` warning that
  * `transformEventFromDB` logs per event with unmapped tags. `mapTags` itself
  * stays silent (tag-coercion-defect.test.ts asserts that).
+ *
+ * The DI-37 describe pins that a tag named after an `Object.prototype` key
+ * (`constructor`, `__proto__`, `hasOwnProperty`) is an unknown tag: it maps to
+ * Social and is reported as unmapped, never to the function or object the
+ * prototype holds under that name.
  */
 
 import {
@@ -149,6 +154,51 @@ describe("partitionTags", () => {
     expect(mapTags(input as string[])).toEqual(
       partitionTags(input as string[]).mapped
     );
+  });
+});
+
+// ─── Object.prototype keys are not aliases (DI-37) ───
+
+const PROTOTYPE_KEYS = ["constructor", "__proto__", "hasOwnProperty"] as const;
+
+describe("partitionTags — a tag named after an Object.prototype key is unknown (DI-37)", () => {
+  it.each(PROTOTYPE_KEYS)("%s maps to [social] and is reported as unmapped", (key) => {
+    expect(mapTags([key])).toEqual([EventTag.SOCIAL]);
+    expect(partitionTags([key])).toEqual({
+      mapped: [EventTag.SOCIAL],
+      unmapped: [key.toLowerCase()],
+    });
+  });
+
+  it("never emits a value outside the EventTag enum", () => {
+    const { mapped, unmapped } = partitionTags([
+      "academic",
+      "Constructor",
+      " __proto__ ",
+      "hasOwnProperty",
+    ]);
+
+    expect(mapped).toEqual([EventTag.ACADEMIC, EventTag.SOCIAL]);
+    expect(unmapped).toEqual(["constructor", "__proto__", "hasownproperty"]);
+    for (const tag of mapped) {
+      expect(typeof tag).toBe("string");
+      expect(Object.values(EventTag)).toContain(tag);
+    }
+  });
+
+  it("the [tags] warning names a prototype-key tag like any other unmapped tag", () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const event = transformEventFromDB(dbRow("evt-proto", ["__proto__"]));
+      expect(event.tags).toEqual([EventTag.SOCIAL]);
+      expect(JSON.parse(JSON.stringify(event.tags))).toEqual(["social"]);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/^\[tags\] /),
+        { eventId: "evt-proto", unmapped: ["__proto__"] }
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 });
 
