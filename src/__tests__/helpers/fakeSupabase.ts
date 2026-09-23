@@ -15,7 +15,13 @@
  *     whose status is null, as Postgres does). Timestamps are compared as
  *     instants when both sides parse as ISO dates, so `2026-01-01` and
  *     `2026-01-01T00:00:00+00:00` compare correctly.
- *   - `or` and `overlaps` are RECORDED in the call log and not evaluated.
+ *   - `overlaps(column, values)` is EVALUATED as Postgres' `&&` on arrays: a
+ *     row matches when its array column shares at least one element with
+ *     `values`; a null or non-array column never matches. (Added by plan
+ *     04-04 for the event list's tag filter; no 04-02 suite calls it.)
+ *   - `or` is RECORDED in the call log and not evaluated: its argument is a
+ *     PostgREST logic-tree string, and parsing that grammar is exactly what
+ *     an in-process fake cannot do faithfully (F-082 is a property of it).
  *   - Successive `order()` calls are cumulative sort keys in call order: the
  *     first is primary, a later one only breaks ties. Postgres' default null
  *     placement is followed (NULLS LAST ascending, NULLS FIRST descending).
@@ -205,8 +211,13 @@ function matches(row: FakeRow, filter: FakeFilter): boolean {
       const c = compare(actual, filter.value);
       return c !== null && c < 0;
     }
+    case "overlaps": {
+      // Postgres `&&`: at least one shared element; NULL never matches.
+      if (!Array.isArray(actual) || !Array.isArray(filter.value)) return false;
+      const wanted = filter.value as unknown[];
+      return actual.some((a) => wanted.some((v) => compare(a, v) === 0));
+    }
     case "or":
-    case "overlaps":
       // Recorded, not evaluated.
       return true;
   }

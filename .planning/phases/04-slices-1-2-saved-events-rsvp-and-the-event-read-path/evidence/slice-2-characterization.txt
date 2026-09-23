@@ -1,0 +1,198 @@
+Slice 2 characterization runs — plan 04-04
+**Plan:** 04-04 · **Phase:** 04 · **Recorded:** 2026-09-23T05:28:40Z
+base=b632f62127fa4fa7dcb2d19f9a45b0cabef36ab9   HEAD at capture=b632f62127fa4fa7dcb2d19f9a45b0cabef36ab9
+
+Raw output below, verbatim: the command after '$', the exit code after it.
+The subjects under src/app, src/lib and src/server are unmodified (git diff block at the end of each task).
+
+=== TASK 1 — the event list: PRESERVE contract, F-082 and F-083 DEFECT pins ===
+
+--- fake extension (additive) ---
+src/__tests__/helpers/fakeSupabase.ts: `overlaps(column, values)` is now EVALUATED as Postgres `&&`
+(at least one shared element; a null or non-array column never matches). Before this plan it was
+recorded and not evaluated. No 04-02 suite calls overlaps (grep below), and the 04-02 suites are
+re-run green further down. `or` stays recorded-only.
+
+$ git diff -- src/__tests__/helpers/fakeSupabase.ts
+diff --git a/src/__tests__/helpers/fakeSupabase.ts b/src/__tests__/helpers/fakeSupabase.ts
+index f587251..db390b1 100644
+--- a/src/__tests__/helpers/fakeSupabase.ts
++++ b/src/__tests__/helpers/fakeSupabase.ts
+@@ -15,7 +15,13 @@
+  *     whose status is null, as Postgres does). Timestamps are compared as
+  *     instants when both sides parse as ISO dates, so `2026-01-01` and
+  *     `2026-01-01T00:00:00+00:00` compare correctly.
+- *   - `or` and `overlaps` are RECORDED in the call log and not evaluated.
++ *   - `overlaps(column, values)` is EVALUATED as Postgres' `&&` on arrays: a
++ *     row matches when its array column shares at least one element with
++ *     `values`; a null or non-array column never matches. (Added by plan
++ *     04-04 for the event list's tag filter; no 04-02 suite calls it.)
++ *   - `or` is RECORDED in the call log and not evaluated: its argument is a
++ *     PostgREST logic-tree string, and parsing that grammar is exactly what
++ *     an in-process fake cannot do faithfully (F-082 is a property of it).
+  *   - Successive `order()` calls are cumulative sort keys in call order: the
+  *     first is primary, a later one only breaks ties. Postgres' default null
+  *     placement is followed (NULLS LAST ascending, NULLS FIRST descending).
+@@ -205,8 +211,13 @@ function matches(row: FakeRow, filter: FakeFilter): boolean {
+       const c = compare(actual, filter.value);
+       return c !== null && c < 0;
+     }
++    case "overlaps": {
++      // Postgres `&&`: at least one shared element; NULL never matches.
++      if (!Array.isArray(actual) || !Array.isArray(filter.value)) return false;
++      const wanted = filter.value as unknown[];
++      return actual.some((a) => wanted.some((v) => compare(a, v) === 0));
++    }
+     case "or":
+-    case "overlaps":
+       // Recorded, not evaluated.
+       return true;
+   }
+exit=0
+
+$ grep -rln fakeSupabase src | xargs grep -ln overlaps   # only the new list suite may call overlaps through the fake (exit=1 before the list suite existed)
+src/__tests__/api/events/events-list-characterization.test.ts
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "events-list-characterization|search-escaping-defect|pagination-contract-defect" --verbose
+Running one project: node
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+  F-083 — the route ignores the client's cursor and emits none (moves in 04-09)
+    ✓ a well-formed cursor is ignored: the first rows come back, not the rows after the cursor (3 ms)
+    ✓ with a cursor, the handler still asks for rows 0 through limit-1 (1 ms)
+    ✓ the body has neither a nextCursor nor a prevCursor property
+    ✓ with more rows than the limit, still no next cursor is emitted — the body is exactly the five page-mode keys (1 ms)
+    ✓ cursor=not-a-valid-cursor is accepted with a 200, not rejected with a 400
+    ✓ ordering is start_date ascending alone — no id tie-break for a keyset to rely on (1 ms)
+    ✓ the early returns carry exactly the five page-mode keys, and no cursor keys
+
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+  F-082 — the search term is interpolated raw into the or() logic tree (moves in 04-08)
+    ✓ search=a,b hands .or() exactly the raw string title.ilike.%a,b%,description.ilike.%a,b%
+    ✓ search=% hands .or() exactly the raw string title.ilike.%%%,description.ilike.%%% (1 ms)
+    ✓ search=_ hands .or() exactly the raw string title.ilike.%_%,description.ilike.%_%
+    ✓ a comma in the term is not quoted, so it lands at the logic tree's top level
+  F-059 echo — a PGRST100 from the events query is returned to the caller verbatim (stays after 04-08; Phase 5)
+    ✓ returns 500 whose error is the PostgREST message, internal logic tree included (1 ms)
+
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+  GET /api/events — the base filter and ordering
+    ✓ returns only approved, non-deleted, upcoming events, in start_date order (1 ms)
+    ✓ never returns a pending, rejected or soft-deleted event, whatever else is asked
+    ✓ returns each event transformed, with its stored title, start_date and stable tags (1 ms)
+  GET /api/events — date bounds
+    ✓ with no dateFrom, floors start_date at getESTNowISO(): one minute before is dropped, one minute after is kept
+    ✓ an explicit dateFrom earlier than the floor replaces it
+    ✓ an explicit dateFrom later than the floor replaces it
+    ✓ dateTo adds an inclusive upper bound on start_date
+    ✓ the floor constant this file assumes is the one the mock returns
+  GET /api/events — tags and ids
+    ✓ tags=academic, social returns events whose tags overlap either value (1 ms)
+    ✓ tag values are trimmed: 'sports, social' matches the social event too
+    ✓ a tag no event carries returns an empty list with total 0
+    ✓ ids=a,b restricts the result to those ids
+    ✓ blank and space-padded elements of ids are ignored
+  GET /api/events — timeOfDay and dayType
+    ✓ an invalid timeOfDay is 400 with the exact message, and nothing is queried (1 ms)
+    ✓ an invalid dayType is 400 with the exact message, and nothing is queried
+    ✓ a valid timeOfDay restricts the list to the RPC's ids (still approved and upcoming only)
+    ✓ an empty time-filter RPC result is an early 200 with an empty list, and no events query
+    ✓ a null time-filter RPC result (the RPC errored) is the same early empty 200
+    ✓ the early return echoes the requested page and limit
+  GET /api/events — page mode
+    ✓ page=2&limit=10 over 25 rows returns the 11th to 20th rows with total 25 and totalPages 3
+    ✓ the last partial page holds the remainder
+    ✓ with no page or limit, page 1 of up to 50 rows is returned
+    ✓ total counts every matching row, not the rows on the page (1 ms)
+  GET /api/events — search
+    ✓ a successful fuzzy RPC restricts to its ids and orders by rank, not by start_date
+    ✓ a fuzzy RPC with no matches is an early 200 with an empty list and total 0, and no events query
+    ✓ when the fuzzy RPC errors, exactly one or() filter mentioning title.ilike., description.ilike. and the term is applied
+    ✓ with no search term, no search RPC is called and no or() filter is applied
+  GET /api/events — errors
+    ✓ PGRST103 (range not satisfiable) is benign: 200 with an empty list (1 ms)
+    ✓ PGRST116 is benign: 200 with an empty list
+    ✓ an error whose message starts with '{' is benign: 200 with an empty list
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+  GET /api/events — caching
+    ✓ a successful response carries Cache-Control: public, s-maxage=30, stale-while-revalidate=60
+
+Test Suites: 3 passed, 3 total
+Tests:       45 passed, 45 total
+Snapshots:   0 total
+Time:        0.174 s, estimated 1 s
+Ran all test suites matching events-list-characterization|search-escaping-defect|pagination-contract-defect.
+exit=0
+
+$ grep -c "DEFECT characterization — F-082" src/__tests__/api/events/search-escaping-defect.test.ts
+1
+exit=0
+
+$ grep -c "DEFECT characterization — F-083" src/__tests__/api/events/pagination-contract-defect.test.ts
+1
+exit=0
+
+$ grep -c "DELIBERATELY NOT PINNED" src/__tests__/api/events/events-list-characterization.test.ts
+1
+exit=0
+
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   DEFECT   src/__tests__/api/events/pagination-contract-defect.test.ts (F-083)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+ok 14 files
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns "characterization|defect" 2>&1 | tail -6   # 04-02's suites still pass with the fake extension
+
+Test Suites: 10 passed, 10 total
+Tests:       125 passed, 125 total
+Snapshots:   0 total
+Time:        0.28 s, estimated 1 s
+Ran all test suites matching characterization|defect.
+exit=0
+
+--- DI-24 throwaway tsconfig (outside the repository, in the session scratchpad) ---
+$ cat /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice2-list/tsconfig.json
+{
+  "extends": "/Users/adyan/Documents/GitHub/Event-Radar/tsconfig.json",
+  "compilerOptions": { "typeRoots": ["/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@types"], "incremental": false },
+  "include": [
+    "/Users/adyan/Documents/GitHub/Event-Radar/next-env.d.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/events-list-characterization.test.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/search-escaping-defect.test.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/pagination-contract-defect.test.ts"
+  ],
+  "exclude": []
+}
+exit=0
+
+$ npx tsc --noEmit -p /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice2-list/tsconfig.json --listFilesOnly | grep -E 'src/__tests__|next-env'   # proves the three suites and the helper are in the program
+/Users/adyan/Documents/GitHub/Event-Radar/next-env.d.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/helpers/fakeSupabase.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/events-list-characterization.test.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/search-escaping-defect.test.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/pagination-contract-defect.test.ts
+exit=0
+
+$ npx tsc --noEmit -p /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tsc-slice2-list/tsconfig.json
+exit=0
+
+$ npx tsc --noEmit   # the helper is in the main program and still type-checks
+exit=0
+
+$ git diff --stat -- src/app src/lib src/server src/__tests__/api/events/get-events.test.ts src/app/api/events/route.test.ts   # empty = subjects, get-events.test.ts and the skipped cursor suite untouched
+exit=0
+
