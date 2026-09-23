@@ -6,14 +6,14 @@ current_phase: 04
 current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 status: executing
 stopped_at: "Completed 04-04-PLAN.md — Slice 2 characterization net: list/detail PRESERVE, F-080..F-083 DEFECT, 9-test read-path spec (Playwright 37), DI-36 registered; next: 04-05"
-last_updated: "2026-09-23T05:41:33.080Z"
+last_updated: "2026-09-23T05:51:14.988Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 43
-  completed_plans: 36
+  completed_plans: 37
   percent: 38
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 04 (Slices 1–2 — Saved Events/RSVP and the Event Read Path) — EXECUTING
-Plan: 5 of 11
+Plan: 6 of 11
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 04 execution started
 
@@ -89,6 +89,7 @@ Progress: [███░░░░░░░] 31%
 | Phase 04 P02 | 14min | 3 tasks | 12 files |
 | Phase 04 P03 | 10min | 3 tasks | 11 files |
 | Phase 04 P04 | 15min | 3 tasks | 13 files |
+| Phase 04 P05 | 7min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -214,6 +215,8 @@ Recent decisions affecting current work:
 - [Phase 04]: [Phase 04 / 04-04] DI-36 found: transformEventFromDB never copies pending_edits, so GET /api/events/[id] returns it to nobody (creator and admin included); its stripping branch is dead and the creator's pending-edit notice cannot render. Owner Phase 5 (REFAC-13). The detail PRESERVE pins non-owner stripping (real transform) and the handler's gate (delegating transform wrapper). 04-10/04-11 must not fix it in passing.
 - [Phase 04]: [Phase 04 / 04-04] F-080 pins: A (organizer fallback) and D (detail selects *) move only if the 04-11 decision ships the visual fix; B (five blanked URL columns) and C (saved-events selects *) move in 04-10. F-081's e2e pin is the home feed's category rows (DiscoveryCard renders no tag labels). 04-07 must put the DEC-26 warning in transformEventFromDB, not mapTags, or tag-coercion-defect's no-signal assertion moves.
 - [Phase 04]: [Phase 04 / 04-04] DI-32 needed no work in 04-04: it was CLOSED before Phase 4 (855da7f + b9f9bcb, CI run 35055404669 green); the 04-03 summary's 'DI-32 belongs to 04-04' line was stale. The fake's overlaps() is now evaluated as Postgres && (additive; no 04-02 suite used it).
+- [Phase 04]: 04-05: friends seam adoption is its own commit (fe4e9f9) because friends-defect's mock lacked .single(); the four-handler adoption (a5ee4fc) kept an empty src/__tests__ diff
+- [Phase 04]: 04-05: RSVP counts are two parallel select('id', {count:'exact', head:true}) reads (F-079, d40dee4); friends fallback passes an id array (F-071, 1351480); zero (supabase as any) under src/app/api/
 
 ### Pending Todos
 
@@ -265,7 +268,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T05:41:33.076Z
+Last session: 2026-09-23T05:51:05.967Z
 Stopped at: Completed 04-04-PLAN.md — Slice 2 characterization net: list/detail PRESERVE, F-080..F-083 DEFECT, 9-test read-path spec (Playwright 37), DI-36 registered; next: 04-05
 Next: run `/gsd-verify-work` for Phase 3, then plan Phase 4. **Phase 4 inherits, all with written owners:** DI-32 (the red `e2e` CI job — fix it first, it is the regression net Phase 4 depends on), DI-24 (the tsconfig test-file exclusion, ~86 errors across 10 files, plus the cursor-pagination contract that is REFAC-10 itself), DI-25 (the Supabase SDK minor, whose blocking shape plan 03-06 already worked an example of, and the separate `ssr` major), DI-31 (the boundary's two evasions and the ratchet's missing CI wiring — both land with the first real shrink), DI-20 (the flaky `useEvents` hook test) and F-071. **Before any deploy, in this order:** rotate the production DB password, then decide the repair. Do not run `supabase db push` against production before Phase 8 or an explicit owner decision.
 Resume file: None
