@@ -139,6 +139,12 @@ not fixed in the plan that found it, why it is not merely cosmetic, and its owne
 - **04-11 disposition: deferred with F-081.** The checkpoint selected `option-defer` by rule
   (`evidence/visual-fix-decision.md`), so this item travels with **DI-40** and is now owned by **the
   phase owner**. It ships in the same change as the identity mappings.
+- **CLOSED after phase close** by `e45552a` `fix(04): CR-01 look up TAG_ALIASES by own property only
+  (DI-37)`, the fix for CR-01 of the Phase 4 code review (`04-REVIEW.md`; report `04-REVIEW-FIX.md`).
+  The lookup is now `Object.prototype.hasOwnProperty.call(TAG_ALIASES, lowerTag)`. `constructor`,
+  `__proto__` and `hasOwnProperty` fall to Social and are reported as unmapped, pinned in
+  `src/lib/eventTags.test.ts`. No real tag's output changed: the golden table and the F-081 DEFECT suite
+  passed unedited. It no longer travels with DI-40; the identity mappings stay deferred there.
 
 ## DI-38 — `save-and-rsvp.spec.ts:53` races its `waitForResponse` against `page.reload()`
 
@@ -203,7 +209,7 @@ not fixed in the plan that found it, why it is not merely cosmetic, and its owne
   `DEFECT F-081` (`e2e/specs/event-read-path.spec.ts:203`). All green, all unmoved.
 - **Criterion 3 is not affected.** Its tag clause ("centralized with unknown tags surfaced") is met by
   04-07 (`2db5d2a`, `46731e6`) independently of this item.
-- **Travels with it:** DI-37 (the prototype-key lookup), as DI-37's own entry specifies.
+- **Travels with it:** DI-37 (the prototype-key lookup), as DI-37's own entry specifies. **Update:** DI-37 was closed on its own by the code-review fix `e45552a` (CR-01); DI-40 now travels alone.
 - **Owner:** the phase owner. F-081 stays `Open` in `.planning/audit/findings.json` with this id in its
   resolution.
 
@@ -231,7 +237,7 @@ their history; this table is the answer to "what is still open, and whose is it"
 | **DI-34** | **CLOSED** by 04-03 (`c85cf71`); ratchet `committed=25 live=25 delta=0` | `evidence/boundary-widening.txt`; `evidence/floor.phase-after.txt` block 6 | — |
 | **DI-35** | **CLOSED** by 04-03 (`4ed3530` RED, `29c354b` GREEN), per DEC-24; the fail-closed ban check stays REFAC-11's | `evidence/di-35-narrowing.txt` | Phase 5 (REFAC-11, the ban check) |
 | DI-36 | Open, not fixed (a visibility change); not yet registered as an F-nnn | Part 4 entry | Phase 5 (REFAC-13) |
-| DI-37 | Open; **travels with DI-40** | Part 4 entry; `evidence/visual-fix-decision.md` | the phase owner |
+| **DI-37** | **CLOSED** after phase close by the code-review fix `e45552a` (CR-01, `04-REVIEW.md`); no longer travels with DI-40 | Part 4 entry; `04-REVIEW-FIX.md`; `src/lib/eventTags.test.ts` DI-37 describe | — |
 | **DI-38** | Open; **re-owned to Phase 5**, as its entry specified if 04-11 deferred. It fired again at this plan's after-floor (run 1: 39 passed, 1 failed at `save-and-rsvp.spec.ts:53`, same protocol error); the re-run from a fresh reset and seed passed 40/0. The spec was not changed: this plan ships no test or source change under `option-defer` | `evidence/playwright.phase-after.run1-flake.txt`, `evidence/playwright.phase-after.txt` | Phase 5 (with the save route's slice) |
 | **DI-39** | Open — F-080's visual half, **deferred by rule** at the 04-11 checkpoint | Part 4 entry; `evidence/visual-fix-decision.md` | the phase owner |
 | **DI-40** | Open — F-081's six identity mappings, **deferred by rule** at the 04-11 checkpoint | Part 4 entry; `evidence/visual-fix-decision.md` | the phase owner |
