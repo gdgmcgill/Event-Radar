@@ -1,0 +1,36 @@
+Search escape probe — research assumption A2 closed by measurement (F-082)
+**Plan:** 04-08 · **Phase:** 04 · **Recorded:** 2026-09-23T06:17:38Z
+HEAD at capture=c20d59b33929f8fa90235c9aeac80574e7dc449a (04-08 Task 1 fix committed; the probe script is the only uncommitted file it runs)
+PostgREST image: public.ecr.aws/supabase/postgrest:v16.1
+
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+$ npx tsx scripts/probes/search-escape-probe.ts
+probe: target http://127.0.0.1:54321 (local stack)
+probe: inserted 5 rows (e5ca9e00-0000-4000-8000-…)
+case             term               expected                                     got                                          others verdict
+--------------------------------------------------------------------------------------------------------------------------------------------
+percent (100%)   "100%"             percent                                      percent                                      0      PASS
+bare percent     "%"                percent                                      percent                                      0      PASS
+underscore       "_"                underscore                                   underscore                                   0      PASS
+double quote     "\""               quote                                        quote                                        0      PASS
+backslash        "\\"               backslash                                    backslash                                    0      PASS
+comma+parens     "comma, paren (x)" comma                                        comma                                        0      PASS
+bare asterisk    "*"                percent+underscore+quote+backslash+comma     percent+underscore+quote+backslash+comma     2      KNOWN
+probe: cleanup — probe rows remaining: 0
+probe: OK — 7 of 7 cases as expected, 0 failure(s)
+exit=0
+
+$ curl -s "$API_URL/rest/v1/events?select=id&id=in.(<the five probe ids>)" -H "apikey: <local anon key, not printed>"   # anon follow-up read
+[]
+probe rows remaining (anon read): 0
+exit=0
+
+$ curl -s "$API_URL/rest/v1/events?select=id&status=eq.approved" -H "apikey: <local anon key>"   # seeded approved events untouched
+[{"id":"5eed0000-0000-4000-8000-0000000000e1"}, 
+ {"id":"5eed0000-0000-4000-8000-0000000000e2"}]
+exit=0
