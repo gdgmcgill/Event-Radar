@@ -8,6 +8,8 @@
  * Supabase and auth are mocked so no live DB is required.
  */
 
+import { NextRequest } from "next/server";
+
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -59,16 +61,16 @@ jest.mock("@/lib/tagMapping", () => ({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function makeCreateRequest(body: Record<string, unknown>) {
-  return new Request("http://localhost:3000/api/events/create", {
+function makeCreateRequest(body: Record<string, unknown>): NextRequest {
+  return new NextRequest("http://localhost:3000/api/events/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 }
 
-function makeUpdateRequest(body: Record<string, unknown>) {
-  return new Request("http://localhost:3000/api/events/test-id", {
+function makeUpdateRequest(body: Record<string, unknown>): NextRequest {
+  return new NextRequest("http://localhost:3000/api/events/test-id", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -91,8 +93,10 @@ const validCreateBody = () => ({
 
 // ─── Module cache reset ───────────────────────────────────────────────────────
 
-let POST: (req: Request) => Promise<Response>;
-let PATCH: (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response>;
+// Each reference carries the handler's own type: create POST takes a
+// NextRequest; [id] PATCH takes (NextRequest, { params: Promise<{ id }> }).
+let POST: (typeof import("@/app/api/events/create/route"))["POST"];
+let PATCH: (typeof import("@/app/api/events/[id]/route"))["PATCH"];
 
 beforeEach(async () => {
   jest.resetModules();
@@ -111,8 +115,8 @@ beforeEach(async () => {
   const createModule = await import("@/app/api/events/create/route");
   const updateModule = await import("@/app/api/events/[id]/route");
 
-  POST = createModule.POST as typeof POST;
-  PATCH = updateModule.PATCH as typeof PATCH;
+  POST = createModule.POST;
+  PATCH = updateModule.PATCH;
 });
 
 // ─── Create Event — Date Validation Tests ────────────────────────────────────

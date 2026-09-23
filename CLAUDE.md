@@ -123,7 +123,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 - Never modify `.env.local` — contains actual Supabase credentials
 - McGill email validation is required for authentication
 - Types in `src/types/index.ts` define all data structures — keep them in sync with the DB schema
-- Test files (`*.test.ts`) are excluded from the main tsconfig and run via Jest separately
+- Test files (`*.test.ts`, `*.test.tsx`) are type-checked by the main tsconfig (`npx tsc --noEmit` and the `next build` type-check both cover them) and run by Jest's two projects (`node` and `jsdom`). Type a dynamically imported route handler as the handler's own type, e.g. `(typeof import("@/app/api/.../route"))["GET"]`, and call it with a request and a `{ params: Promise<...> }` context; never widen a route signature to make a test compile
 
 <!-- BEGIN:nextjs-agent-rules -->
 

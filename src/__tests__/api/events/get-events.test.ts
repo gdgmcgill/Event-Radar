@@ -257,7 +257,7 @@ describe("GET /api/events — empty response", () => {
 describe("GET /api/events — filters", () => {
   it("calls overlaps() when tags parameter is provided", async () => {
     // Capture the builder to inspect method calls
-    let capturedBuilder: ReturnType<typeof createChainableBuilder> | null = null;
+    let capturedBuilder = null as ReturnType<typeof createChainableBuilder> | null;
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
       return capturedBuilder;
@@ -273,7 +273,7 @@ describe("GET /api/events — filters", () => {
   });
 
   it("calls or() with ilike when search parameter is provided", async () => {
-    let capturedBuilder: ReturnType<typeof createChainableBuilder> | null = null;
+    let capturedBuilder = null as ReturnType<typeof createChainableBuilder> | null;
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
       return capturedBuilder;
@@ -293,7 +293,7 @@ describe("GET /api/events — filters", () => {
   });
 
   it("calls gte() when dateFrom parameter is provided", async () => {
-    let capturedBuilder: ReturnType<typeof createChainableBuilder> | null = null;
+    let capturedBuilder = null as ReturnType<typeof createChainableBuilder> | null;
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
       return capturedBuilder;
@@ -309,7 +309,7 @@ describe("GET /api/events — filters", () => {
   });
 
   it("calls lte() when dateTo parameter is provided", async () => {
-    let capturedBuilder: ReturnType<typeof createChainableBuilder> | null = null;
+    let capturedBuilder = null as ReturnType<typeof createChainableBuilder> | null;
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
       return capturedBuilder;
@@ -325,7 +325,7 @@ describe("GET /api/events — filters", () => {
   });
 
   it("does not call overlaps() when tags parameter is absent", async () => {
-    let capturedBuilder: ReturnType<typeof createChainableBuilder> | null = null;
+    let capturedBuilder = null as ReturnType<typeof createChainableBuilder> | null;
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
       return capturedBuilder;
@@ -338,7 +338,7 @@ describe("GET /api/events — filters", () => {
   });
 
   it("trims whitespace from individual tag values", async () => {
-    let capturedBuilder: ReturnType<typeof createChainableBuilder> | null = null;
+    let capturedBuilder = null as ReturnType<typeof createChainableBuilder> | null;
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
       return capturedBuilder;
@@ -354,7 +354,7 @@ describe("GET /api/events — filters", () => {
   });
 
   it("applies correct range offset for page 2 with limit 10", async () => {
-    let capturedBuilder: ReturnType<typeof createChainableBuilder> | null = null;
+    let capturedBuilder = null as ReturnType<typeof createChainableBuilder> | null;
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
       return capturedBuilder;
@@ -418,7 +418,7 @@ describe("GET /api/events — error handling", () => {
 
 describe("GET /api/events — response shape", () => {
   it.skip("only queries with eq('status', 'approved') — route no longer uses eq() for status filtering", async () => {
-    let capturedBuilder: ReturnType<typeof createChainableBuilder> | null = null;
+    let capturedBuilder = null as ReturnType<typeof createChainableBuilder> | null;
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
       return capturedBuilder;

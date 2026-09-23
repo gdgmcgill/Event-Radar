@@ -156,7 +156,7 @@ describe("DEFECT F-072 / F-073 — admin_audit_log.admin_email does not exist", 
     });
 
     const { default: ModerationDashboardPage } = await import("@/app/moderation/page");
-    await ModerationDashboardPage({} as any);
+    await ModerationDashboardPage();
 
     const auditSelect = selectsByTable.find((s) => s.table === "admin_audit_log");
     expect(auditSelect).toBeDefined();
@@ -171,7 +171,7 @@ describe("DEFECT F-072 / F-073 — admin_audit_log.admin_email does not exist", 
     });
 
     const { default: ModerationDashboardPage } = await import("@/app/moderation/page");
-    const tree = await ModerationDashboardPage({} as any);
+    const tree = await ModerationDashboardPage();
     const html = renderToStaticMarkup(tree);
 
     // The page does not throw and does not surface the failure. An operator sees
@@ -200,7 +200,7 @@ describe("DEFECT F-072 / F-073 — admin_audit_log.admin_email does not exist", 
     });
 
     const { default: ModerationDashboardPage } = await import("@/app/moderation/page");
-    const tree = await ModerationDashboardPage({} as any);
+    const tree = await ModerationDashboardPage();
     const html = renderToStaticMarkup(tree);
 
     expect(html).toContain("someone");

@@ -33,8 +33,6 @@
     "node_modules",
     "demo-video",
     "internal",
-    "supabase/functions",
-    "**/*.test.ts",
-    "**/*.test.tsx"
+    "supabase/functions"
   ]
 }

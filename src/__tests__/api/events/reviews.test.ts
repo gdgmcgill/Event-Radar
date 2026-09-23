@@ -5,6 +5,10 @@
  * without requiring a live database connection.
  */
 
+// A module, not a script: without this its top-level names collide with every
+// other script-style suite once tsc type-checks test files (DI-24).
+export {};
+
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
 // Mock chainable Supabase query builder
@@ -80,7 +84,9 @@ function createRouteContext(eventId = "test-event-id") {
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-let GET: any, POST: any;
+// Each reference carries the handler's own type: (Request, { params: Promise<{ id }> }).
+type ReviewsRoute = typeof import("@/app/api/events/[id]/reviews/route");
+let GET: ReviewsRoute["GET"], POST: ReviewsRoute["POST"];
 
 beforeEach(async () => {
   jest.resetModules();
@@ -97,8 +103,8 @@ beforeEach(async () => {
   });
 
   const routeModule = await import("@/app/api/events/[id]/reviews/route");
-  GET = routeModule.GET as typeof GET;
-  POST = routeModule.POST as typeof POST;
+  GET = routeModule.GET;
+  POST = routeModule.POST;
 });
 
 // ── POST Tests ─────────────────────────────────────────────────────────────

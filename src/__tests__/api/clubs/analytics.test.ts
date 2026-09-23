@@ -5,6 +5,8 @@
  * Uses the same mock Supabase approach as events/rsvp.test.ts.
  */
 
+import { NextRequest } from "next/server";
+
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
 function createMockQueryBuilder(resolvedValue: { data: unknown; error: unknown }) {
@@ -51,8 +53,8 @@ jest.mock("@/lib/supabase/server", () => ({
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function createMockRequest(): Request {
-  return new Request("http://localhost:3000/api/clubs/club-123/analytics", {
+function createMockRequest(): NextRequest {
+  return new NextRequest("http://localhost:3000/api/clubs/club-123/analytics", {
     method: "GET",
   });
 }
@@ -63,7 +65,8 @@ function createRouteContext(clubId = "club-123") {
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-let GET: (req: Request, ctx: ReturnType<typeof createRouteContext>) => Promise<Response>;
+// The handler's own type: (NextRequest, { params: Promise<{ id }> }).
+let GET: (typeof import("@/app/api/clubs/[id]/analytics/route"))["GET"];
 
 beforeEach(async () => {
   jest.resetModules();
@@ -73,7 +76,7 @@ beforeEach(async () => {
   mockQueryResults = new Map();
 
   const routeModule = await import("@/app/api/clubs/[id]/analytics/route");
-  GET = routeModule.GET as typeof GET;
+  GET = routeModule.GET;
 });
 
 describe("GET /api/clubs/:id/analytics", () => {

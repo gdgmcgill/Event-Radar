@@ -5,6 +5,8 @@
  * without requiring a live database connection.
  */
 
+import { NextRequest } from "next/server";
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 // Mock chainable Supabase query builder
@@ -55,15 +57,14 @@ jest.mock("@/lib/supabase/server", () => ({
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function createMockRequest(method: string, body?: Record<string, unknown>): Request {
-  const init: RequestInit = {
+function createMockRequest(method: string, body?: Record<string, unknown>): NextRequest {
+  // Next's RequestInit forbids `signal: null`, which the DOM RequestInit allows,
+  // so the init is written inline rather than typed as the DOM one.
+  return new NextRequest("http://localhost:3000/api/events/test-event-id/rsvp", {
     method,
     headers: { "Content-Type": "application/json" },
-  };
-  if (body) {
-    init.body = JSON.stringify(body);
-  }
-  return new Request("http://localhost:3000/api/events/test-event-id/rsvp", init);
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
 }
 
 function createRouteContext(eventId = "test-event-id") {
@@ -72,9 +73,10 @@ function createRouteContext(eventId = "test-event-id") {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-// Dynamically import route handlers (after mocks are set up)
- 
-let GET: any, POST: any, DELETE: any;
+// Dynamically import route handlers (after mocks are set up). Each reference
+// carries the handler's own type: (NextRequest, { params: Promise<{ id }> }).
+type RsvpRoute = typeof import("@/app/api/events/[id]/rsvp/route");
+let GET: RsvpRoute["GET"], POST: RsvpRoute["POST"], DELETE: RsvpRoute["DELETE"];
 
 beforeEach(async () => {
   jest.resetModules();
@@ -89,9 +91,9 @@ beforeEach(async () => {
   mockQueryResults.set("rsvps", { data: null, error: null });
 
   const routeModule = await import("@/app/api/events/[id]/rsvp/route");
-  GET = routeModule.GET as typeof GET;
-  POST = routeModule.POST as typeof POST;
-  DELETE = routeModule.DELETE as typeof DELETE;
+  GET = routeModule.GET;
+  POST = routeModule.POST;
+  DELETE = routeModule.DELETE;
 });
 
 // ─── GET Tests ──────────────────────────────────────────────────────────────
@@ -216,7 +218,7 @@ describe("POST /api/events/:id/rsvp", () => {
   it("returns 400 when JSON body is invalid", async () => {
     mockUser = { id: "user-123" };
 
-    const req = new Request("http://localhost:3000/api/events/test-event-id/rsvp", {
+    const req = new NextRequest("http://localhost:3000/api/events/test-event-id/rsvp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "not-json",

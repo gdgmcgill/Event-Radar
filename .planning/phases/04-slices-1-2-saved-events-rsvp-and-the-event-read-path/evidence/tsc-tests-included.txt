@@ -1,0 +1,261 @@
+base=a037d9510f70c5a5837b5e64b9a385a711724575
+
+DI-24 / F-066 clause 2 — tsc with test files included: error census before and after
+**Plan:** 04-06 Task 2 · **Phase:** 04 · **Recorded:** 2026-09-23
+
+Every number below was produced by running `npx tsc --noEmit` in this working
+tree on the base commit above (04-06 Task 1's commit) with the change below
+applied. Nothing is transcribed. Node 24, TypeScript 5.4 (the project pin).
+
+------------------------------------------------------------------------------
+[0 · the configuration change]
+$ git diff tsconfig.json
+diff --git a/tsconfig.json b/tsconfig.json
+index fbfbfe3..0f7f2a8 100644
+--- a/tsconfig.json
++++ b/tsconfig.json
+@@ -33,8 +33,6 @@
+     "node_modules",
+     "demo-video",
+     "internal",
+-    "supabase/functions",
+-    "**/*.test.ts",
+-    "**/*.test.tsx"
++    "supabase/functions"
+   ]
+ }
+
+Only the two test-file globs left `exclude`. `node_modules`, `demo-video`,
+`internal` and `supabase/functions` stay. `include` already reached
+`**/*.ts` and `**/*.tsx`, so test files are now in the program.
+
+------------------------------------------------------------------------------
+[1 · BEFORE census — exclusion removed, no test edited]
+$ npx tsc --noEmit
+exit=2
+TOTAL: 71 errors in 7 files
+
+By code:
+  TS2451  Cannot redeclare block-scoped variable     26
+  TS2554  Expected N arguments, but got M            17
+  TS2352  Conversion may be a mistake                15
+  TS2393  Duplicate function implementation          12
+  TS2353  Object literal may only specify known ...   1
+                                                    ----
+                                                     71
+
+By file:
+  src/__tests__/api/events/rsvp.test.ts              18
+  src/__tests__/api/events/reviews.test.ts           17
+  src/__tests__/api/events/analytics.test.ts          9
+  src/__tests__/api/clubs/analytics.test.ts           9
+  src/__tests__/api/events/get-events.test.ts         8
+  src/__tests__/api/events/date-validation.test.ts    7
+  src/__tests__/moderation/audit-shape.test.ts        3
+                                                    ----
+                                                     71
+
+By file and code:
+  src/__tests__/api/clubs/analytics.test.ts            TS2352   1
+  src/__tests__/api/clubs/analytics.test.ts            TS2393   3
+  src/__tests__/api/clubs/analytics.test.ts            TS2451   5
+  src/__tests__/api/events/analytics.test.ts           TS2352   1
+  src/__tests__/api/events/analytics.test.ts           TS2393   3
+  src/__tests__/api/events/analytics.test.ts           TS2451   5
+  src/__tests__/api/events/date-validation.test.ts     TS2352   2
+  src/__tests__/api/events/date-validation.test.ts     TS2353   1
+  src/__tests__/api/events/date-validation.test.ts     TS2451   4
+  src/__tests__/api/events/get-events.test.ts          TS2352   8
+  src/__tests__/api/events/reviews.test.ts             TS2352   1
+  src/__tests__/api/events/reviews.test.ts             TS2393   3
+  src/__tests__/api/events/reviews.test.ts             TS2451   6
+  src/__tests__/api/events/reviews.test.ts             TS2554   7
+  src/__tests__/api/events/rsvp.test.ts                TS2352   2
+  src/__tests__/api/events/rsvp.test.ts                TS2393   3
+  src/__tests__/api/events/rsvp.test.ts                TS2451   6
+  src/__tests__/api/events/rsvp.test.ts                TS2554   7
+  src/__tests__/moderation/audit-shape.test.ts         TS2554   3
+
+Compared with 04-RESEARCH.md § Q(g) (77 errors, 8 files, 2026-09-16):
+  - friends-defect.test.ts: 6 -> 0. 04-05 (1351480) typed its GET as the real
+    handler, called it with a NextRequest and the two-argument context, and
+    typed the mock's rpc member. 77 - 6 = 71, which is this count exactly.
+  - TS2451 29 -> 26 and TS2393 13 -> 12: the friends suite's share of the
+    cross-file collisions.
+  - Every other file's count equals the research's.
+  - Zero errors in any non-test file, and zero in the 11 suites 04-02 and
+    04-04 added: they are ES modules, so none of their names collide.
+
+Raw output, verbatim:
+src/__tests__/api/clubs/analytics.test.ts(10,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/clubs/analytics.test.ts(27,5): error TS2451: Cannot redeclare block-scoped variable 'mockUser'.
+src/__tests__/api/clubs/analytics.test.ts(28,5): error TS2451: Cannot redeclare block-scoped variable 'mockAuthError'.
+src/__tests__/api/clubs/analytics.test.ts(29,5): error TS2451: Cannot redeclare block-scoped variable 'mockQueryResults'.
+src/__tests__/api/clubs/analytics.test.ts(31,7): error TS2451: Cannot redeclare block-scoped variable 'mockSupabase'.
+src/__tests__/api/clubs/analytics.test.ts(54,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/clubs/analytics.test.ts(60,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/clubs/analytics.test.ts(66,5): error TS2451: Cannot redeclare block-scoped variable 'GET'.
+src/__tests__/api/clubs/analytics.test.ts(76,9): error TS2352: Conversion of type '(_request: NextRequest, { params }: RouteParams) => Promise<NextResponse<{ error: string; }> | NextResponse<{ follower_growth: { date: string; count: number; }[]; total_attendees: number; ... 5 more ...; best_event_type: { ...; } | null; }>>' to type '(req: Request, ctx: { params: Promise<{ id: string; }>; }) => Promise<Response>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of parameters '_request' and 'req' are incompatible.
+    Type 'Request' is missing the following properties from type 'NextRequest': cookies, nextUrl, page, ua
+src/__tests__/api/events/analytics.test.ts(10,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/events/analytics.test.ts(28,5): error TS2451: Cannot redeclare block-scoped variable 'mockUser'.
+src/__tests__/api/events/analytics.test.ts(29,5): error TS2451: Cannot redeclare block-scoped variable 'mockAuthError'.
+src/__tests__/api/events/analytics.test.ts(30,5): error TS2451: Cannot redeclare block-scoped variable 'mockQueryResults'.
+src/__tests__/api/events/analytics.test.ts(33,7): error TS2451: Cannot redeclare block-scoped variable 'mockSupabase'.
+src/__tests__/api/events/analytics.test.ts(56,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/events/analytics.test.ts(62,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/events/analytics.test.ts(68,5): error TS2451: Cannot redeclare block-scoped variable 'GET'.
+src/__tests__/api/events/analytics.test.ts(78,9): error TS2352: Conversion of type '(_request: NextRequest, { params }: RouteParams) => Promise<NextResponse<{ error: string; }> | NextResponse<{ event_id: string; title: string; start_date: string; ... 5 more ...; rsvp_interested: number; }>>' to type '(req: Request, ctx: { params: Promise<{ id: string; }>; }) => Promise<Response>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of parameters '_request' and 'req' are incompatible.
+    Type 'Request' is missing the following properties from type 'NextRequest': cookies, nextUrl, page, ua
+src/__tests__/api/events/date-validation.test.ts(22,5): error TS2451: Cannot redeclare block-scoped variable 'mockUser'.
+src/__tests__/api/events/date-validation.test.ts(23,5): error TS2451: Cannot redeclare block-scoped variable 'mockAuthError'.
+src/__tests__/api/events/date-validation.test.ts(38,7): error TS2451: Cannot redeclare block-scoped variable 'mockSupabase'.
+src/__tests__/api/events/date-validation.test.ts(94,5): error TS2451: Cannot redeclare block-scoped variable 'POST'.
+src/__tests__/api/events/date-validation.test.ts(100,30): error TS2353: Object literal may only specify known properties, and 'email' does not exist in type '{ id: string; }'.
+src/__tests__/api/events/date-validation.test.ts(114,10): error TS2352: Conversion of type '(request: NextRequest) => Promise<NextResponse<unknown>>' to type '(req: Request) => Promise<Response>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of parameters 'request' and 'req' are incompatible.
+    Type 'Request' is missing the following properties from type 'NextRequest': cookies, nextUrl, page, ua
+src/__tests__/api/events/date-validation.test.ts(115,11): error TS2352: Conversion of type '(request: NextRequest, { params }: RouteParams) => Promise<NextResponse<{ error: string; }> | NextResponse<{ event: { appeal_count: number; category: string | null; ... 22 more ...; updated_at: string | null; }; message: string; pending_fields: string[]; }>>' to type '(req: Request, ctx: { params: Promise<{ id: string; }>; }) => Promise<Response>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of parameters 'request' and 'req' are incompatible.
+    Type 'Request' is missing the following properties from type 'NextRequest': cookies, nextUrl, page, ua
+src/__tests__/api/events/get-events.test.ts(269,13): error TS2352: Conversion of type 'null' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/__tests__/api/events/get-events.test.ts(290,13): error TS2352: Conversion of type 'null' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/__tests__/api/events/get-events.test.ts(305,13): error TS2352: Conversion of type 'null' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/__tests__/api/events/get-events.test.ts(321,13): error TS2352: Conversion of type 'null' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/__tests__/api/events/get-events.test.ts(337,13): error TS2352: Conversion of type 'null' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/__tests__/api/events/get-events.test.ts(350,13): error TS2352: Conversion of type 'null' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/__tests__/api/events/get-events.test.ts(369,13): error TS2352: Conversion of type 'null' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/__tests__/api/events/get-events.test.ts(430,13): error TS2352: Conversion of type 'null' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/__tests__/api/events/reviews.test.ts(11,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/events/reviews.test.ts(36,5): error TS2451: Cannot redeclare block-scoped variable 'mockUser'.
+src/__tests__/api/events/reviews.test.ts(37,5): error TS2451: Cannot redeclare block-scoped variable 'mockAuthError'.
+src/__tests__/api/events/reviews.test.ts(39,5): error TS2451: Cannot redeclare block-scoped variable 'mockQueryResults'.
+src/__tests__/api/events/reviews.test.ts(43,7): error TS2451: Cannot redeclare block-scoped variable 'mockSupabase'.
+src/__tests__/api/events/reviews.test.ts(66,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/events/reviews.test.ts(77,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/events/reviews.test.ts(83,5): error TS2451: Cannot redeclare block-scoped variable 'GET'.
+src/__tests__/api/events/reviews.test.ts(83,15): error TS2451: Cannot redeclare block-scoped variable 'POST'.
+src/__tests__/api/events/reviews.test.ts(101,10): error TS2352: Conversion of type '(request: Request, context: RouteContext) => Promise<NextResponse<{ error: string; }> | NextResponse<{ review: { comment: string | null; created_at: string; event_id: string; id: string; rating: number; user_id: string; }; }>>' to type '(req: Request) => Promise<Response>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/__tests__/api/events/reviews.test.ts(109,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/reviews.test.ts(120,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/reviews.test.ts(131,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/reviews.test.ts(147,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/reviews.test.ts(165,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/reviews.test.ts(189,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/reviews.test.ts(213,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/rsvp.test.ts(11,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/events/rsvp.test.ts(31,5): error TS2451: Cannot redeclare block-scoped variable 'mockUser'.
+src/__tests__/api/events/rsvp.test.ts(32,5): error TS2451: Cannot redeclare block-scoped variable 'mockAuthError'.
+src/__tests__/api/events/rsvp.test.ts(33,5): error TS2451: Cannot redeclare block-scoped variable 'mockQueryResults'.
+src/__tests__/api/events/rsvp.test.ts(35,7): error TS2451: Cannot redeclare block-scoped variable 'mockSupabase'.
+src/__tests__/api/events/rsvp.test.ts(58,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/events/rsvp.test.ts(69,10): error TS2393: Duplicate function implementation.
+src/__tests__/api/events/rsvp.test.ts(77,5): error TS2451: Cannot redeclare block-scoped variable 'GET'.
+src/__tests__/api/events/rsvp.test.ts(77,15): error TS2451: Cannot redeclare block-scoped variable 'POST'.
+src/__tests__/api/events/rsvp.test.ts(92,9): error TS2352: Conversion of type '(_request: NextRequest, { params }: RouteContext) => Promise<NextResponse<unknown>>' to type '(req: Request, ctx: { params: Promise<{ id: string; }>; }) => Promise<Response>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of parameters '_request' and 'req' are incompatible.
+    Type 'Request' is missing the following properties from type 'NextRequest': cookies, nextUrl, page, ua
+src/__tests__/api/events/rsvp.test.ts(93,10): error TS2352: Conversion of type '(request: NextRequest, { params }: RouteContext) => Promise<NextResponse<unknown>>' to type '(req: Request) => Promise<Response>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/__tests__/api/events/rsvp.test.ts(144,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/rsvp.test.ts(155,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/rsvp.test.ts(169,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/rsvp.test.ts(180,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/rsvp.test.ts(194,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/rsvp.test.ts(209,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/api/events/rsvp.test.ts(224,33): error TS2554: Expected 1 arguments, but got 2.
+src/__tests__/moderation/audit-shape.test.ts(159,35): error TS2554: Expected 0 arguments, but got 1.
+src/__tests__/moderation/audit-shape.test.ts(174,48): error TS2554: Expected 0 arguments, but got 1.
+src/__tests__/moderation/audit-shape.test.ts(203,48): error TS2554: Expected 0 arguments, but got 1.
+
+------------------------------------------------------------------------------
+[2 · the fixes, by class — every one inside a test file]
+
+A. Cross-file collisions (TS2451 26, TS2393 12, and the 1 TS2353).
+   Seven suites were scripts, not modules, so their top-level `mockUser`,
+   `mockSupabase`, `GET`, `createMockQueryBuilder` ... shared one global scope.
+   Each became a module: rsvp, clubs/analytics, events/analytics and
+   date-validation by the `import { NextRequest } from "next/server"` each now
+   needs anyway; reviews (whose handlers take a plain Request, so it needs no
+   import) by an `export {}` with a one-line comment naming DI-24.
+
+   The date-validation TS2353 ("'email' does not exist in type '{ id: string }'",
+   line 100) was a collision artefact, not a fixture lie: the file's own
+   `mockUser` is declared `{ id: string; email: string } | null`, but in the
+   shared script scope the checker resolved the name to another suite's
+   `{ id: string }` declaration. It disappeared with module-ification and no
+   fixture changed. The research had counted it among "three genuine fixture
+   lies"; the other two were friends-defect's, already fixed in 04-05.
+
+B. Handler references (TS2554 14 in rsvp and reviews, TS2352 7 across rsvp,
+   reviews, both analytics suites and date-validation).
+   Each `let GET: any` / hand-written `(req: Request) => Promise<Response>`
+   became the handler's own type, `(typeof import("<route>"))["GET"]`, and the
+   `as typeof GET` casts on assignment were dropped because the assignment now
+   type-checks on its own. Requests are built as the handler declares them:
+     - rsvp, events/analytics, clubs/analytics, date-validation (create POST and
+       [id] PATCH): NextRequest, as those handlers declare `NextRequest`.
+       rsvp's JSON-body-invalid case also builds a NextRequest now.
+     - reviews: plain Request, because reviews/route.ts declares
+       `(request: Request, context: RouteContext)`.
+   Contexts were already `{ params: Promise.resolve({ id }) }`; none changed.
+   rsvp's createMockRequest writes the init inline (Next's RequestInit forbids
+   `signal: null`, which the DOM RequestInit type allows) — same method,
+   headers and body.
+
+C. get-events (TS2352 8): `let capturedBuilder: B | null = null` is narrowed
+   to `null` at the use site because the assignment happens in a closure, so
+   `capturedBuilder as B` read as a null-to-B conversion. Declared as
+   `let capturedBuilder = null as B | null` so the declared type survives; the
+   eight `as B` reads now narrow `B | null` to `B`. No assertion changed.
+
+D. audit-shape (TS2554 3): `ModerationDashboardPage({} as any)` became
+   `ModerationDashboardPage()` — the page is declared with no parameters
+   (src/app/moderation/page.tsx:36). Three `any`s removed, none added.
+
+Nothing needed a change under src/app, src/lib or src/server; no error was
+stopped on and recorded as source-only.
+
+Intermediate run after the first pass (2 errors, both rsvp.test.ts):
+  (68,81) TS2345 RequestInit not assignable to Next's RequestInit ('signal' null)
+  (227,28) TS2345 Request not assignable to NextRequest (the invalid-JSON case)
+Both fixed as described in B.
+
+------------------------------------------------------------------------------
+[3 · AFTER census]
+$ npx tsc --noEmit
+(no output)
+exit=0
+TOTAL: 0 errors
+
+------------------------------------------------------------------------------
+[4 · negative control — the typed references actually check the calls]
+A throwaway src/__tests__/zz-typecheck-control.test.ts (deleted after the run,
+never staged) declared `GET` as the rsvp handler's own type and called it
+wrongly twice:
+$ npx tsc --noEmit
+src/__tests__/zz-typecheck-control.test.ts(4,6): error TS2554: Expected 2 arguments, but got 1.
+src/__tests__/zz-typecheck-control.test.ts(6,10): error TS2345: Argument of type 'Request' is not assignable to parameter of type 'NextRequest'.
+exit=2
+So a test that calls a handler with the wrong shape now fails the type-check
+instead of passing silently, which is what `let GET: any` allowed.
+
+------------------------------------------------------------------------------
+[5 · nothing else moved]
+$ npx jest --ci
+Test Suites: 1 skipped, 46 passed, 46 of 47 total
+Tests:       5 skipped, 512 passed, 517 total
+(before this task: identical — 46 passed, 1 skipped suites; 512 passed, 5 skipped tests)
+
+$ npm run lint
+0 errors, 19 warnings (unchanged; none in a file this task touched)
+
+$ npm run build
+exit=0 ("Running TypeScript ... Finished TypeScript" — Next's build
+type-check now covers the test files too)
+
+$ git diff --stat -- src/app src/lib src/server
+(empty)
