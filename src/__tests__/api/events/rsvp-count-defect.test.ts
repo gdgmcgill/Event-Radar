@@ -51,6 +51,18 @@
  * Registered as F-079 in .planning/audit/findings.json. Closes in Phase 4.
  * Observed red under a mutation that adds a count option; see
  * `evidence/slice-1-mutation-check.txt`.
+ *
+ * Status: FIXED in 04-05, by the commit `fix(04-05): count RSVPs with
+ * head-count queries (F-079)`. The GET now issues two parallel
+ * `select("id", { count: "exact", head: true })` reads on rsvps, one filtered
+ * `status = going` and one `status = interested`, each scoped by `event_id`,
+ * and takes the counts from their `count` values. In that same commit the
+ * assertions below MOVED from "exactly one row-returning `id, status` read
+ * with no options, filtered `[eq event_id, neq status cancelled]`" to the
+ * fixed shape; the four before-assertions went red against the fixed route
+ * first (`evidence/defect-ledger.md`). The file keeps its tag and its F-079
+ * citation so the history stays readable. `rsvp-characterization.test.ts`
+ * pinned the response counts across the change and was not edited.
  */
 
 import { NextRequest } from "next/server";
@@ -109,37 +121,49 @@ function countReads(calls: FakeCall[]): FakeCall[] {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe("F-079 — RSVP counts are a row-returning select counted in JavaScript", () => {
-  it("anonymous GET issues exactly one rsvps read, and it is the count read", async () => {
+const HEAD_COUNT = { count: "exact", head: true };
+
+describe("F-079 (fixed in 04-05) — RSVP counts are two server-side head counts", () => {
+  it("anonymous GET issues exactly two rsvps reads, and both are count reads", async () => {
     const calls = await callGet(null);
-    expect(calls).toHaveLength(1);
-    expect(countReads(calls)).toHaveLength(1);
+    expect(calls).toHaveLength(2);
+    expect(countReads(calls)).toHaveLength(2);
   });
 
-  it("the count read selects id, status with no count option and no head option", async () => {
-    const [read] = countReads(await callGet(null));
-    expect(read.columns).toBe("id, status");
-    expect(read.options).toBeNull();
-    expect(read.options?.count).toBeUndefined();
-    expect(read.options?.head).toBeUndefined();
-    expect(read.terminal).toBe("then");
+  it("both count reads select id with { count: \"exact\", head: true }", async () => {
+    const reads = countReads(await callGet(null));
+    for (const read of reads) {
+      expect(read.columns).toBe("id");
+      expect(read.options).toEqual(HEAD_COUNT);
+      expect(read.terminal).toBe("then");
+    }
   });
 
-  it("the count read is filtered by event_id and by status not equal to cancelled — and nothing else", async () => {
-    const [read] = countReads(await callGet(null));
-    expect(read.filters).toEqual([
-      { op: "eq", column: "event_id", value: EVENT_ID },
-      { op: "neq", column: "status", value: "cancelled" },
-    ]);
+  it("one count read is filtered event_id + status going, the other event_id + status interested — and nothing else", async () => {
+    const reads = countReads(await callGet(null));
+    expect(reads.map((r) => r.filters)).toEqual(
+      expect.arrayContaining([
+        [
+          { op: "eq", column: "event_id", value: EVENT_ID },
+          { op: "eq", column: "status", value: "going" },
+        ],
+        [
+          { op: "eq", column: "event_id", value: EVENT_ID },
+          { op: "eq", column: "status", value: "interested" },
+        ],
+      ])
+    );
+    expect(reads).toHaveLength(2);
   });
 
-  it("a signed-in GET still counts through exactly one unscoped row-returning read", async () => {
+  it("a signed-in GET counts through the same two head reads; its only row-returning rsvps read is the caller-scoped user_rsvp lookup", async () => {
     const calls = await callGet(CALLER);
     const reads = countReads(calls);
-    expect(reads).toHaveLength(1);
-    expect(reads[0].columns).toBe("id, status");
-    expect(reads[0].options).toBeNull();
-    // No rsvps read of any kind asks PostgREST for a count.
-    expect(calls.filter((c) => c.options?.count !== undefined || c.options?.head !== undefined)).toEqual([]);
+    expect(reads).toHaveLength(2);
+    expect(reads.every((r) => r.options?.head === true && r.options?.count === "exact")).toBe(true);
+    // No rsvps read that is not scoped to one user returns rows.
+    const rowReturning = calls.filter((c) => c.operation === "select" && c.options?.head !== true);
+    expect(rowReturning).toHaveLength(1);
+    expect(rowReturning[0].filters).toContainEqual({ op: "eq", column: "user_id", value: CALLER.id });
   });
 });
