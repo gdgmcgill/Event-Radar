@@ -19,9 +19,10 @@
  *
  *   - `id` must be a canonical UUID;
  *   - `sortValue` must be an ISO-8601 date or timestamp that `Date.parse`
- *     accepts, and must not contain a comma, parenthesis, double quote or
- *     backslash (V8's `Date.parse` accepts "Feb 2, 2026", so the parse alone
- *     is not a sufficient check).
+ *     accepts, whose calendar date exists, and must not contain a comma,
+ *     parenthesis, double quote or backslash (V8's `Date.parse` accepts
+ *     "Feb 2, 2026" and rolls "2026-02-30" over to March 2, so the parse
+ *     alone is not a sufficient check).
  *
  * These checks are defence in depth. The route also wraps both values with
  * `postgrestQuotedValue` (`src/lib/searchFilter.ts`), so even a value that got
@@ -55,6 +56,26 @@ const ISO_DATE_OR_TIMESTAMP =
 
 /** Characters with meaning in a PostgREST logic tree or quoted value. */
 const POSTGREST_METACHARACTERS = /[,()"\\]/;
+
+/**
+ * Whether the leading `YYYY-MM-DD` of an ISO value names a day that exists.
+ *
+ * `Date.parse` accepts "2026-02-30" and "2026-04-31" by rolling them over to
+ * the next month, but Postgres rejects them (`22008 date/time field value out
+ * of range`), which the route would surface as a 500 echoing that message
+ * instead of the 400 the decoder promises. Fields are re-read from a Date
+ * built with `setUTCFullYear`, so years below 100 are not shifted to 19xx.
+ */
+function isRealCalendarDate(isoValue: string): boolean {
+  const [year, month, day] = isoValue.slice(0, 10).split("-").map(Number);
+  const probe = new Date(0);
+  probe.setUTCFullYear(year, month - 1, day);
+  return (
+    probe.getUTCFullYear() === year &&
+    probe.getUTCMonth() === month - 1 &&
+    probe.getUTCDate() === day
+  );
+}
 
 /**
  * Encode a list position as an opaque cursor.
@@ -102,7 +123,8 @@ export function decodeEventCursor(raw: string): EventCursor | null {
   if (
     POSTGREST_METACHARACTERS.test(sortValue) ||
     !ISO_DATE_OR_TIMESTAMP.test(sortValue) ||
-    Number.isNaN(Date.parse(sortValue))
+    Number.isNaN(Date.parse(sortValue)) ||
+    !isRealCalendarDate(sortValue)
   ) {
     return null;
   }

@@ -35,6 +35,9 @@ describe("decodeEventCursor — accepts what the encoder produces", () => {
     ["fractional seconds", "2026-10-05T15:00:00.123456+00:00"],
     ["a Z suffix", "2026-10-05T15:00:00.000Z"],
     ["a date alone (the skipped suite's fixtures)", "2026-02-02"],
+    ["a leap day in a leap year", "2024-02-29T10:00:00+00:00"],
+    ["the last day of a 31-day month", "2026-12-31"],
+    ["the last day of a 30-day month", "2026-04-30T23:59:59Z"],
   ])("accepts %s", (_label, sortValue) => {
     expect(decodeEventCursor(suiteEncode({ sortValue, id: ID }))).toEqual({
       sortValue,
@@ -61,6 +64,11 @@ describe("decodeEventCursor — returns null, never throws, for anything else", 
     ["a numeric sortValue", suiteEncode({ sortValue: 1767348000000, id: ID })],
     ["a sortValue Date.parse rejects", suiteEncode({ sortValue: "not-a-date", id: ID })],
     ["an impossible calendar date", suiteEncode({ sortValue: "2026-13-45", id: ID })],
+    ["a rolled-over calendar date (Feb 30)", suiteEncode({ sortValue: "2026-02-30", id: ID })],
+    ["a rolled-over calendar date with a time (Apr 31)", suiteEncode({ sortValue: "2026-04-31T10:00:00+00:00", id: ID })],
+    ["a leap day outside a leap year", suiteEncode({ sortValue: "2026-02-29", id: ID })],
+    ["a zero month", suiteEncode({ sortValue: "2026-00-10", id: ID })],
+    ["a zero day", suiteEncode({ sortValue: "2026-10-00", id: ID })],
     ["a non-UUID id", suiteEncode({ sortValue: SORT, id: "evt-1" })],
     ["a numeric id", suiteEncode({ sortValue: SORT, id: 5 })],
     ["a UUID with trailing text", suiteEncode({ sortValue: SORT, id: `${ID}x` })],
@@ -87,6 +95,13 @@ describe("decodeEventCursor — returns null, never throws, for anything else", 
     // V8 parses "Feb 2, 2026"; the decoder must not rely on Date.parse alone.
     expect(Number.isNaN(Date.parse("Feb 2, 2026"))).toBe(false);
     expect(decodeEventCursor(suiteEncode({ sortValue: "Feb 2, 2026", id: ID }))).toBeNull();
+  });
+
+  it("rejects a rolled-over calendar date that Date.parse would accept", () => {
+    // V8 rolls "2026-02-30" over to 2026-03-02; Postgres rejects it with 22008,
+    // which the route would have turned into a 500 (WR-03, Phase 4 review).
+    expect(Number.isNaN(Date.parse("2026-02-30"))).toBe(false);
+    expect(decodeEventCursor(suiteEncode({ sortValue: "2026-02-30", id: ID }))).toBeNull();
   });
 
   it("rejects a parenthesised sortValue that Date.parse would accept", () => {
