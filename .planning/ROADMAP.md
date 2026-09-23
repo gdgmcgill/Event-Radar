@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Read-Only Foundation Audit** - Inventory and assess everything with evidence; change nothing (completed 2026-09-14)
 - [x] **Phase 2: Dependency and Runtime Stabilization** - Pin, patch, and make the tree reproducible; make the test suite gate changes (completed 2026-09-15)
 - [x] **Phase 3: Refactor Foundations — Schema Truth and the Seam Kit** - Reconcile schema, generate types, build the server seam, the persona harness, and the seed (completed 2026-09-16)
-- [ ] **Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path** - Prove the seam on the two highest-traffic workflows and settle the event data shape
+- [x] **Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path** - Prove the seam on the two highest-traffic workflows and settle the event data shape (completed 2026-09-23)
 - [ ] **Phase 5: Slices 3–5 — Auth, Club Authorization, Admin Containment** - One fails-closed authorization ring; cross-tenant and escalation paths denied twice
 - [ ] **Phase 6: Slices 6–7 — Async Edge, Contracts, Caching, Observability** - Credential the edge, validate every input, kill the shared cache on personalized routes, make failures visible
 - [ ] **Phase 7: Certification Datasets and Persona Coverage** - Three datasets and a 13-persona matrix proving what is allowed and what is denied
@@ -184,7 +184,15 @@ Plans:
   3. Tag mapping is centralized with unknown tags surfaced rather than silently coerced to SOCIAL, and `%` and `_` are escaped in search input.
   4. After each slice the Playwright happy-path specs pass and the Validated workflow list in PROJECT.md is re-confirmed — browse, search, filter, save, and RSVP behave exactly as before, with no intentional visual change shipped alongside either slice.
 
-**Plans**: 10/11 plans executed
+**Requirement states** *(recorded 2026-09-23 by plan 04-11; these must agree with `.planning/REQUIREMENTS.md` and they do)*:
+
+- **REFAC-09 is Complete.**
+- **REFAC-10 is PARTIAL**, naming its unmet clause: "events list uses a real club join instead of fabricating club objects". The list routes and saved-events use the real join. The organizer fallback and the detail route's missing embed remain, deferred as DI-39.
+- **Success criteria 1, 3 and 4 are MET. Criterion 2 is PARTIAL** on the same clause.
+- The 04-11 owner checkpoint was **resolved by rule to option-defer** because no owner answer was available. The phase owner may reverse this (`evidence/visual-fix-decision.md`).
+- See `evidence/PHASE-4-COMPLETION.md`.
+
+**Plans**: 11/11 plans complete
 
 Plans:
 **Wave 1**
@@ -220,7 +228,7 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
-- [ ] 04-11-PLAN.md — Owner checkpoint on the two seeded-visible fixes (F-080 detail host, F-081 badges; default defer), then phase close-out and the completion note
+- [x] 04-11-PLAN.md — Owner checkpoint on the two seeded-visible fixes (F-080 detail host, F-081 badges; default defer), then phase close-out and the completion note
 
 **UI hint**: yes
 
@@ -309,7 +317,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
-| 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 10/11 | In Progress|  |
+| 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 11/11 | Complete   | 2026-09-23 |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |
 | 7. Certification Datasets and Persona Coverage | 0/TBD | Not started | - |
