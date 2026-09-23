@@ -136,6 +136,9 @@ not fixed in the plan that found it, why it is not merely cosmetic, and its owne
   value into `Event.tags`, which the category theming keys on, and the new unmapped-tag warning misses it.
 - **Owner:** 04-11, beside the F-081 identity-mapping decision, since both are one-place changes in
   `src/lib/eventTags.ts` that alter mapped output; if 04-11 defers, it travels with F-081.
+- **04-11 disposition: deferred with F-081.** The checkpoint selected `option-defer` by rule
+  (`evidence/visual-fix-decision.md`), so this item travels with **DI-40** and is now owned by **the
+  phase owner**. It ships in the same change as the identity mappings.
 
 ## DI-38 — `save-and-rsvp.spec.ts:53` races its `waitForResponse` against `page.reload()`
 
@@ -160,6 +163,49 @@ not fixed in the plan that found it, why it is not merely cosmetic, and its owne
   `page.request.get("/api/users/saved-events")` after the reload instead of intercepting the page's own request.
 - **Owner:** 04-11 (phase close-out, which owns the final Playwright floor). If it defers, the item goes to
   Phase 5 alongside the save route's slice.
+
+## DI-39 — F-080's visual half: the organizer fallback and the detail route's missing club embed
+
+- **Found by:** 04-01 (DEC-27), carried through 04-04 (pins A and D) and 04-10 (the non-visual half).
+  Deferred at the 04-11 checkpoint.
+- **What is deferred.** Removing the organizer branch of `transformEventFromDB` (`src/lib/tagMapping.ts`,
+  the `else if (dbEvent.organizer)` block that builds `{ id: organizer, name: organizer, status: "approved" }`),
+  and giving `GET /api/events/[id]` the shared `EVENT_WITH_CLUB_SELECT` embed in place of `select("*")`.
+- **Why deferred.** Orchestrator decision 1 (no intentional visual change on seeded data): shipping turns
+  "Hosted by Seed Organizer C" into "Hosted by Seed Approved Club" on both seeded approved events' detail
+  pages. The checkpoint was **resolved by rule — no owner answer was available** — which selects
+  `option-defer` (`evidence/visual-fix-decision.md`).
+- **Why not cosmetic.** ROADMAP criterion 2 and REFAC-10's first clause stay PARTIAL until it ships. In
+  production the detail page names an app-created event's creator as its host, and the card and the
+  detail page disagree about who hosts the same event.
+- **Pins that keep it visible:** `src/__tests__/api/events/club-fabrication-defect.test.ts` pin A
+  (2 tests) and pin D (2 tests); Playwright `DEFECT F-080` (`e2e/specs/event-read-path.spec.ts:182`).
+  All green, all unmoved.
+- **How to ship it:** `evidence/visual-fix-decision.md` § "Reversing this decision", commit A.
+- **Owner:** the phase owner (the checkpoint was resolved by rule, so the decision is still the owner's to
+  take). F-080 stays `Open` in `.planning/audit/findings.json` with this id in its resolution.
+
+## DI-40 — F-081's identity mappings: six `EventTag` members that do not map to themselves
+
+- **Found by:** 04-01 (DEC-26), pinned by 04-04's F-081 suite, centralized non-visually by 04-07.
+  Deferred at the 04-11 checkpoint.
+- **What is deferred.** Mapping `tech`, `food`, `volunteer`, `arts`, `music` and `networking` to themselves
+  in `TAG_ALIASES` (`src/lib/eventTags.ts`) and emptying `KNOWN_NON_ROUNDTRIP_TAGS`. Beside it:
+  reconciling `TAG_HIERARCHY` (`src/lib/constants.ts`) on hackathon, workshop, fitness and `competition`
+  (sports in the read path, career in the hierarchy), which still needs a product decision.
+- **Why deferred.** Orchestrator decision 1: shipping changes seeded badges (Seed Approved Event from
+  Academic + Social to Academic + Tech; Seed Approved Music Night from Cultural + Social to Music + Social).
+  **Resolved by rule — no owner answer was available** (`evidence/visual-fix-decision.md`).
+- **Why not cosmetic.** A user filtering by one of the six tags gets events whose badge names a different
+  category; the category theming keys on the coerced tag.
+- **Pins that keep it visible:** `src/__tests__/lib/tag-coercion-defect.test.ts` (both F-081 describes);
+  `KNOWN_NON_ROUNDTRIP_TAGS` and the completeness test in `src/lib/eventTags.test.ts`; Playwright
+  `DEFECT F-081` (`e2e/specs/event-read-path.spec.ts:203`). All green, all unmoved.
+- **Criterion 3 is not affected.** Its tag clause ("centralized with unknown tags surfaced") is met by
+  04-07 (`2db5d2a`, `46731e6`) independently of this item.
+- **Travels with it:** DI-37 (the prototype-key lookup), as DI-37's own entry specifies.
+- **Owner:** the phase owner. F-081 stays `Open` in `.planning/audit/findings.json` with this id in its
+  resolution.
 
 *Phase: 04-slices-1-2-saved-events-rsvp-and-the-event-read-path*
 *Plan: 04-01*

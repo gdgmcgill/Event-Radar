@@ -114,6 +114,13 @@ Note on the F-071 rows: the "old assertion" column quotes the suite as it stood 
 - **Detail route comment (F-050).** The false "Clubs table does not exist" comment in `src/app/api/events/[id]/route.ts` GET was replaced by a comment naming the gated half and the 04-11 checkpoint. The change is comment-only, proven by the plan's `git diff -U0` filter.
 - **Register.** F-080 is not flipped here. It stays Open, with pins A and D outstanding until the 04-11 decision.
 
+### F-080 pins A and D, and the F-081 suite: not moved (04-11 decision)
+
+- **Decision:** `option-defer`, **resolved by rule — no owner answer was available** (`evidence/visual-fix-decision.md`). No fix shipped, so no ledger row is added and no DEFECT assertion moved.
+- **F-080 pins A and D** (`src/__tests__/api/events/club-fabrication-defect.test.ts`, 2 + 2 tests) and Playwright `DEFECT F-080` (`e2e/specs/event-read-path.spec.ts:182`) stay green and unmoved. Deferred as **DI-39**.
+- **The F-081 suite** (`src/__tests__/lib/tag-coercion-defect.test.ts`) and Playwright `DEFECT F-081` (`e2e/specs/event-read-path.spec.ts:203`) stay green and unmoved. Deferred as **DI-40**, with DI-37 travelling beside it.
+- `git diff --stat bb27c64 -- src/ e2e/` is empty at this plan's close.
+
 ## Register flips (04-06)
 
 Plan 04-06 applied the status changes that this ledger defers, citing `evidence/slice-1-close.md`:
