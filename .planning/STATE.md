@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 04
 current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 status: executing
-stopped_at: "Completed 04-02-PLAN.md — Slice 1 characterization net (75 tests, 16 mutation cycles, Playwright 28); next: 04-03"
-last_updated: "2026-09-23T05:08:31.682Z"
+stopped_at: "Completed 04-03-PLAN.md — elevated boundary widened to src/ (25 entries, +src/lib/audit.ts), DI-31 companion rule and CI gates, request profile narrowed (DI-35); next: 04-04"
+last_updated: "2026-09-23T05:21:23.626Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 43
-  completed_plans: 34
+  completed_plans: 35
   percent: 38
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 04 (Slices 1–2 — Saved Events/RSVP and the Event Read Path) — EXECUTING
-Plan: 3 of 11
+Plan: 4 of 11
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 04 execution started
 
@@ -87,6 +87,7 @@ Progress: [███░░░░░░░] 31%
 | Phase 03 P08 | ~50 min | 3 tasks | 11 files |
 | Phase 04 P01 | 15min | 3 tasks | 9 files |
 | Phase 04 P02 | 14min | 3 tasks | 12 files |
+| Phase 04 P03 | 10min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -205,6 +206,9 @@ Recent decisions affecting current work:
 - [Phase 04]: [Phase 04 / 04-01] REFAC-09 and REFAC-10 NOT marked complete by 04-01 — it registers, measures and decides only (the 01-01 AUDIT-13/20 precedent).
 - [Phase 04]: [Phase 04 / 04-02] Slice 1 characterization net: createFakeSupabase (src/__tests__/helpers/fakeSupabase.ts) is the test seam; 4 PRESERVE + 2 DEFECT suites (F-079, F-085), 75 tests, against unmodified handlers. 04-05 must pass the four PRESERVE suites unedited and move only rsvp-count-defect; control cycle 5b/5c proved the 04-05 head-count shape leaves rsvp-characterization green. Floors now jest 433/5, Playwright 28.
 - [Phase 04]: [Phase 04 / 04-02] REFAC-09 NOT marked complete by 04-02 — only its before-state characterization clause is delivered; seam adoption and the count query are 04-05.
+- [Phase 04]: [Phase 04 / 04-03] DI-34 closed: the elevated census and the lint boundary both cover src/** (exempting src/lib/supabase/ and src/server/db/elevated/), skip type-only imports, and agree on 25 files; the one sanctioned regeneration added exactly +src/lib/audit.ts. The boundary is now @typescript-eslint/no-restricted-imports with allowTypeImports.
+- [Phase 04]: [Phase 04 / 04-03] DI-31 closed on its companion-rule and CI clauses: no-restricted-syntax fails a bare SUPABASE_SERVICE_ROLE_KEY read (dot, bracket, destructured) and a dynamic import() of the service module; the ci job runs the ratchet and the tag gate (CI run UNOBSERVED, no push). No shrink is available in Phase 4. src/app/api/clubs/[id]/route.ts reaches the service module only by dynamic import (allow-listed).
+- [Phase 04]: [Phase 04 / 04-03] DI-35 closed per DEC-24: RequestProfile/PROFILE_COLUMNS narrowed to id, roles, onboarding_completed; the seam performs NO ban check and its docblock says so. 04-05 handlers adopting the seam must keep checkBanStatus() where it is. REFAC-09 NOT marked complete (control integrity only; adoption is 04-05).
 
 ### Pending Todos
 
@@ -256,7 +260,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T05:08:31.678Z
-Stopped at: Completed 04-02-PLAN.md — Slice 1 characterization net (75 tests, 16 mutation cycles, Playwright 28); next: 04-03
+Last session: 2026-09-23T05:21:23.622Z
+Stopped at: Completed 04-03-PLAN.md — elevated boundary widened to src/ (25 entries, +src/lib/audit.ts), DI-31 companion rule and CI gates, request profile narrowed (DI-35); next: 04-04
 Next: run `/gsd-verify-work` for Phase 3, then plan Phase 4. **Phase 4 inherits, all with written owners:** DI-32 (the red `e2e` CI job — fix it first, it is the regression net Phase 4 depends on), DI-24 (the tsconfig test-file exclusion, ~86 errors across 10 files, plus the cursor-pagination contract that is REFAC-10 itself), DI-25 (the Supabase SDK minor, whose blocking shape plan 03-06 already worked an example of, and the separate `ssr` major), DI-31 (the boundary's two evasions and the ratchet's missing CI wiring — both land with the first real shrink), DI-20 (the flaky `useEvents` hook test) and F-071. **Before any deploy, in this order:** rotate the production DB password, then decide the repair. Do not run `supabase db push` against production before Phase 8 or an explicit owner decision.
 Resume file: None
