@@ -1,0 +1,114 @@
+# Club join latency — research assumption A4, plan 04-10 (F-080 non-visual half)
+# Recorded 2026-09-23T22:39:24Z against the LOCAL stack only (reset+seeded; production never touched).
+# Script: a scratch node script (not committed) that reads API_URL/ANON_KEY from `supabase status -o env`,
+# refuses any non-local URL, reads EVENT_CLUB_EMBED out of src/lib/tagMapping.ts, and times fetch+JSON parse.
+
+## 1. The read saved-events changes: select * alone vs select EVENT_WITH_CLUB_SELECT
+
+target: http://127.0.0.1:54321 (local), anon key, GET /rest/v1/events?status=eq.approved&deleted_at=is.null&order=start_date.asc,id.asc
+node v24.16.0, 3 warm-up pairs discarded, N=20 per arm, interleaved (alternating first arm)
+arm A select: *            rows=2
+arm B select: *, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at, banner_url, website_url, discord_url, twitter_url, linkedin_url)   rows=2 club keys per row=15
+
+run  A:star(ms)  B:embed(ms)
+  1       1.19         1.47
+  2       1.12         1.86
+  3       0.98         1.33
+  4       1.15         1.85
+  5       1.35         2.31
+  6       1.09         1.60
+  7       1.02         1.17
+  8       1.38         1.61
+  9       0.88         1.25
+ 10       0.83         1.21
+ 11       0.79         0.92
+ 12       0.70         1.02
+ 13       0.85         1.37
+ 14       0.82         1.27
+ 15       0.86         1.22
+ 16       0.87         1.01
+ 17       0.83         1.17
+ 18       0.91         1.23
+ 19       1.03         1.14
+ 20       0.75         1.08
+
+median A (star)  = 0.89 ms   min 0.70  max 1.38
+median B (embed) = 1.24 ms   min 0.92  max 2.31
+median difference (B - A) = 0.34 ms
+
+## 2. The read the six list routes change: old ten-column embed vs the fifteen-column shared embed
+
+target: http://127.0.0.1:54321 (local), anon key, GET /rest/v1/events?status=eq.approved&deleted_at=is.null&order=start_date.asc,id.asc
+node v24.16.0, 3 warm-up pairs discarded, N=20 per arm, interleaved (alternating first arm)
+arm A select: *, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at)   rows=2
+arm B select: *, club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at, banner_url, website_url, discord_url, twitter_url, linkedin_url)   rows=2 club keys per row=15
+
+run  A:ten(ms)   B:embed(ms)
+  1       1.86         1.83
+  2       1.73         1.75
+  3       1.87         2.27
+  4       2.03         1.75
+  5       2.06         1.63
+  6       1.09         1.46
+  7       0.79         1.11
+  8       0.88         1.51
+  9       0.96         1.31
+ 10       0.88         1.07
+ 11       0.90         0.96
+ 12       0.91         1.00
+ 13       0.83         1.09
+ 14       0.79         1.09
+ 15       0.96         0.95
+ 16       0.90         0.92
+ 17       0.98         0.97
+ 18       0.88         1.17
+ 19       0.90         1.02
+ 20       0.96         1.08
+
+median A (ten)   = 0.93 ms   min 0.79  max 2.06
+median B (embed) = 1.10 ms   min 0.92  max 2.27
+median difference (B - A) = 0.17 ms
+
+## 3. What the join costs inside Postgres: EXPLAIN (ANALYZE, BUFFERS) of the equivalent SQL
+## (PostgREST renders a many-to-one embed as a correlated per-row lookup of clubs by clubs.id)
+
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Incremental Sort (actual time=0.089..0.089 rows=2 loops=1)
+   Sort Key: e.start_date, e.id
+   Presorted Key: e.start_date
+   Full-sort Groups: 1  Sort Method: quicksort  Average Memory: 26kB  Peak Memory: 26kB
+   Buffers: shared hit=15
+   ->  Index Scan using idx_events_status_start_date on events e (actual time=0.048..0.052 rows=2 loops=1)
+         Index Cond: (status = 'approved'::text)
+         Buffers: shared hit=6
+         SubPlan 1
+           ->  Index Scan using clubs_pkey on clubs (actual time=0.013..0.013 rows=1 loops=2)
+                 Index Cond: (id = e.club_id)
+                 Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=374
+ Planning Time: 0.559 ms
+ Execution Time: 0.137 ms
+(16 rows)
+
+## 4. Indexes
+
+clubs_pkey | CREATE UNIQUE INDEX clubs_pkey ON public.clubs USING btree (id)
+idx_events_club_id | CREATE INDEX idx_events_club_id ON public.events USING btree (club_id)
+
+- events.club_id IS indexed: idx_events_club_id (btree), declared in supabase/migrations/20260915214553_baseline.sql:1476.
+  Correction to the research wording: the index comes from the Phase 3 baseline (03-04), not from 03-05's
+  20260915230000_fk_indexes_and_policy_gaps.sql, whose header says it deliberately does not re-issue baseline indexes.
+- For THIS embed direction (event -> its one club) the lookup is served by clubs_pkey, as the plan above shows
+  (Index Scan using clubs_pkey, one probe per event row). idx_events_club_id serves the reverse direction
+  (a club's events) and the FK's ON DELETE SET NULL.
+
+## 5. Verdict (numbers, not adjectives)
+
+- Saved-events (star -> star + embed): median 0.89 ms -> 1.24 ms, difference +0.34 ms per request (N=20 each, local stack).
+- List routes (ten -> fifteen embed columns): median 0.93 ms -> 1.10 ms, difference +0.17 ms per request (N=20 each, local stack).
+- Scale caveat: the seed has 5 events (2 approved) and 5 clubs, so these medians measure fixed per-request
+  overhead plus a two-row join. The per-row cost in Postgres is one clubs_pkey probe (section 3); at production
+  page sizes (limit 20-50) the join adds one PK probe per returned row, not a scan. This measurement does not
+  stand in for a production timing; Phase 8 (performance) owns that.

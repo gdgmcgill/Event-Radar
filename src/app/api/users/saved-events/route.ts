@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { transformEventFromDB } from "@/lib/tagMapping";
+import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { serverError } from "@/server/errors";
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     let eventsQuery = supabase
       .from("events")
-      .select("*")
+      .select(EVENT_WITH_CLUB_SELECT)
       .in("id", eventIds)
       .eq("status", "approved")
       .is("deleted_at", null);

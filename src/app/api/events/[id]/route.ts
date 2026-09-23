@@ -76,7 +76,12 @@ export async function GET(
     const { id } = await params;
     const supabase = await createClient();
 
-    // Fetch event without club relation since Clubs table does not exist
+    // Deliberately no club embed yet. The clubs table exists and the list
+    // routes embed it (EVENT_WITH_CLUB_SELECT). Giving this read the embed
+    // would change what every seeded detail page renders under "Hosted by",
+    // from the organizer label to the real club. That is F-080's gated half,
+    // decided at the 04-11 owner checkpoint (DEC-27). Until then the
+    // transform's organizer fallback supplies `club` here.
     const { data, error } = await supabase
       .from("events")
       .select("*")

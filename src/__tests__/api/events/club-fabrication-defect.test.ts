@@ -4,6 +4,8 @@
  * pin B FIXED in 04-10: the shared EVENT_CLUB_EMBED (src/lib/tagMapping.ts)
  * asks for the five link columns and the real-club branch reads them; pin B
  * now asserts the fixed behaviour (contact_email stays null, DEC-27).
+ * pin C FIXED in 04-10: /api/users/saved-events selects EVENT_WITH_CLUB_SELECT,
+ * so its events carry the real club from the join; pin C now asserts that.
  *
  * Subject: `src/lib/tagMapping.ts:102-144`, `transformEventFromDB`, and the two
  * routes that reach its fabricating branch because they select `*` with no
@@ -221,21 +223,39 @@ describe("F-080 pin B — FIXED in 04-10: the real-club branch carries the five 
 
 // ─── Pin C ──────────────────────────────────────────────────────────────────
 
-describe("F-080 pin C — /api/users/saved-events reads events with columns * and no club embed (moves in 04-10)", () => {
-  it("the events read selects exactly '*'", async () => {
+describe("F-080 pin C — FIXED in 04-10: /api/users/saved-events reads events with the shared club embed", () => {
+  async function savedEvents(eventRow: FakeRow) {
     mockFake = createFakeSupabase({
       user: CALLER,
       tables: {
         users: [{ id: CALLER.id, roles: ["user"], onboarding_completed: true, banned_at: null, ban_expires_at: null }],
         saved_events: [{ id: "s1", user_id: CALLER.id, event_id: EVENT_ID, created_at: "2026-09-01T10:00:00+00:00" }],
-        events: [SEEDED_SHAPE],
+        events: [eventRow],
       },
     });
     const res = await getSavedEvents(new NextRequest("http://localhost:3000/api/users/saved-events"));
+    return { res, body: (await res.json()) as { events: Array<{ club_id: string; club?: Record<string, unknown> }> } };
+  }
+
+  it("the events read selects EVENT_WITH_CLUB_SELECT, which embeds clubs", async () => {
+    const { res } = await savedEvents(SEEDED_SHAPE);
     expect(res.status).toBe(200);
     const select = eventSelect(mockFake.calls);
-    expect(select?.columns).toBe("*");
-    expect(select?.columns).not.toContain("clubs(");
+    expect(select?.columns).toBe(EVENT_WITH_CLUB_SELECT);
+    expect(select?.columns).toContain("club:clubs(");
+    expect(select?.columns).not.toContain("contact_email");
+  });
+
+  it("so a seeded-shape saved event carries the real club from the join, not the organizer label", async () => {
+    const { body } = await savedEvents({ ...SEEDED_SHAPE, club: CLUB_EMBED });
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0].club_id).toBe(CLUB_ID);
+    expect(body.events[0].club).toMatchObject({
+      id: CLUB_ID,
+      name: "Seed Approved Club",
+      website_url: CLUB_EMBED.website_url,
+      contact_email: null,
+    });
   });
 });
 

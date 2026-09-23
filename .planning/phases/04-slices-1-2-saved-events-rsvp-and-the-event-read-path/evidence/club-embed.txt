@@ -1,0 +1,156 @@
+# F-080 non-visual half — consumer census and embed proof (plan 04-10)
+# Recorded 2026-09-23T22:39:54Z at 1150b0f + Task 2 working tree
+
+## 1. The shared embed (src/lib/tagMapping.ts)
+
+27:export const EVENT_CLUB_EMBED =
+28-  "club:clubs(id, name, logo_url, instagram_handle, description, category, status, created_by, created_at, updated_at, banner_url, website_url, discord_url, twitter_url, linkedin_url)" as const;
+--
+31:export const EVENT_WITH_CLUB_SELECT = `*, ${EVENT_CLUB_EMBED}` as const;
+32-
+
+## 2. Routes selecting it (six list routes + saved-events)
+
+src/app/api/calendar/events/route.ts:3:import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
+src/app/api/calendar/events/route.ts:51:      .select(EVENT_WITH_CLUB_SELECT)
+src/app/api/users/saved-events/route.ts:12:import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
+src/app/api/users/saved-events/route.ts:84:      .select(EVENT_WITH_CLUB_SELECT)
+src/app/api/events/popular/route.ts:9:import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
+src/app/api/events/popular/route.ts:14:  `${EVENT_WITH_CLUB_SELECT}, popularity:event_popularity_scores(*)` as const;
+src/app/api/events/route.ts:9:import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
+src/app/api/events/route.ts:307:      .select(EVENT_WITH_CLUB_SELECT, { count: 'exact' })
+src/app/api/events/new/route.ts:3:import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
+src/app/api/events/new/route.ts:16:      .select(EVENT_WITH_CLUB_SELECT)
+src/app/api/events/following/route.ts:8:import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
+src/app/api/events/following/route.ts:39:      .select(EVENT_WITH_CLUB_SELECT)
+src/app/api/events/[id]/route.ts:80:    // routes embed it (EVENT_WITH_CLUB_SELECT). Giving this read the embed
+src/app/api/events/happening-now/route.ts:3:import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
+src/app/api/events/happening-now/route.ts:29:      .select(EVENT_WITH_CLUB_SELECT)
+
+## 3. Census: every UI read of the five link columns (and contact_email) in src/components and src/app
+## $ command grep -rnE "club\??\.(banner_url|website_url|discord_url|twitter_url|linkedin_url|contact_email)" src/components src/app src/hooks
+
+src/components/clubs/ClubDiscoveryCard.tsx:71:          {club.banner_url ? (
+src/components/clubs/ClubDiscoveryCard.tsx:74:                src={club.banner_url}
+src/components/clubs/ClubSettingsTab.tsx:72:  const [bannerUrl, setBannerUrl] = useState(club.banner_url || "");
+src/components/clubs/ClubSettingsTab.tsx:75:  const [contactEmail, setContactEmail] = useState(club.contact_email || "");
+src/components/clubs/ClubSettingsTab.tsx:76:  const [websiteUrl, setWebsiteUrl] = useState(club.website_url || "");
+src/components/clubs/ClubSettingsTab.tsx:77:  const [discordUrl, setDiscordUrl] = useState(club.discord_url || "");
+src/components/clubs/ClubSettingsTab.tsx:78:  const [twitterUrl, setTwitterUrl] = useState(club.twitter_url || "");
+src/components/clubs/ClubSettingsTab.tsx:79:  const [linkedinUrl, setLinkedinUrl] = useState(club.linkedin_url || "");
+src/components/clubs/ClubCompletionNudge.tsx:53:      complete: !!club.contact_email,
+src/app/clubs/[id]/page.tsx:245:            {club.twitter_url && (
+src/app/clubs/[id]/page.tsx:247:                href={club.twitter_url as string}
+src/app/clubs/[id]/page.tsx:256:            {club.discord_url && (
+src/app/clubs/[id]/page.tsx:258:                href={club.discord_url as string}
+src/app/clubs/[id]/page.tsx:267:            {club.linkedin_url && (
+src/app/clubs/[id]/page.tsx:269:                href={club.linkedin_url as string}
+src/app/clubs/[id]/page.tsx:278:            {club.website_url && (
+src/app/clubs/[id]/page.tsx:280:                href={club.website_url as string}
+
+Where each of those club objects comes from (none is an event payload's club):
+- ClubDiscoveryCard.tsx:71-74 — props from NewClubsSection, ClubCategoryRowsSection, FollowingClubsSection,
+  TrendingClubsSection, PopularWithFriendsClubsSection (club-list APIs, not event payloads):
+    src/components/clubs/NewClubsSection.tsx:47:            <ClubDiscoveryCard club={club} />
+    src/components/clubs/ClubCategoryRowsSection.tsx:60:                <ClubDiscoveryCard club={club} />
+    src/components/clubs/FollowingClubsSection.tsx:86:          <ClubDiscoveryCard key={club.id} club={club} />
+    src/components/clubs/TrendingClubsSection.tsx:73:            <ClubDiscoveryCard club={club} />
+    src/components/clubs/PopularWithFriendsClubsSection.tsx:57:            <ClubDiscoveryCard club={club} />
+- ClubSettingsTab.tsx / ClubCompletionNudge.tsx — the club being managed (ClubDashboard's clubData.club):
+    src/components/clubs/ClubDashboard.tsx:306:            <ClubSettingsTab club={club} onUpdate={handleClubUpdate} />
+    src/components/clubs/ClubOverviewTab.tsx:133:      <ClubCompletionNudge
+    61:  const club: Club | undefined = clubData?.club;
+- src/app/clubs/[id]/page.tsx:245-280 — the club read directly from the clubs table:
+    52:    supabase.from("clubs").select("*").eq("id", id).single(),
+
+## 4. Census: every read of an EVENT's club object in UI code, and the fields it reads
+## $ command grep -rnE "event\.club\??\.[a-z_]+" src/components src/app | grep -v /api/
+
+src/components/events/DiscoveryCard.tsx:83:event.club.logo_url
+src/components/events/DiscoveryCard.tsx:85:event.club.logo_url
+src/components/events/DiscoveryCard.tsx:86:event.club.name
+src/components/events/DiscoveryCard.tsx:93:event.club.name
+src/components/events/DiscoveryCard.tsx:98:event.club.name
+src/components/events/EventDetailView.tsx:224:event.club.logo_url
+src/components/events/EventDetailView.tsx:226:event.club.logo_url
+src/components/events/EventDetailView.tsx:227:event.club.name
+src/components/events/EventDetailView.tsx:234:event.club.name
+src/components/events/EventDetailView.tsx:248:event.club.name
+src/components/events/EventDetailView.tsx:250:event.club.category
+src/components/events/EventDetailView.tsx:252:event.club.category
+src/components/events/EventDetailsModal.tsx:142:event.club.logo_url
+src/components/events/EventDetailsModal.tsx:144:event.club.logo_url
+src/components/events/EventDetailsModal.tsx:145:event.club.name
+src/components/events/EventDetailsModal.tsx:152:event.club.name
+src/components/events/EventDetailsModal.tsx:166:event.club.name
+src/components/events/EventDetailsModal.tsx:168:event.club.category
+src/components/events/EventDetailsModal.tsx:169:event.club.category
+src/components/events/EventCard.tsx:293:event.club.name
+src/app/calendar/page.tsx:802:event.club?.name
+src/app/my-events/page.tsx:386:event.club.name
+
+Fields read off an event's club, de-duplicated:
+  - category
+  - logo_url
+  - name
+
+No whole-club passthrough from an event (club={event.club}, ...event.club, JSON.stringify(event)) exists:
+  (grep exit=1 — 1 means no match)
+
+=> No card, modal or detail view renders banner_url, website_url, discord_url, twitter_url, linkedin_url or
+   contact_email from an event payload. Filling the five link columns on list payloads changes no rendered output.
+
+## 5. Saved-events consumers (UI): ids only
+
+src/app/events/[id]/EventDetailClient.tsx:117:        const res = await fetch("/api/users/saved-events");
+      useEffect(() => {
+        if (!user || !id) return;
+        const checkSaved = async () => {
+          try {
+            const res = await fetch("/api/users/saved-events");
+            if (!res.ok) return;
+            const data = await res.json();
+            const ids: string[] = data.savedEventIds || [];
+            setSaved(ids.includes(id));
+          } catch {
+            // Silently fail
+          }
+        };
+
+=> The only UI consumer reads data.savedEventIds. The events[].club field saved-events now fills from the join
+   is rendered nowhere. The e2e spec save-and-rsvp.spec.ts reads the same response for ids too.
+
+## 6. Live PostgREST probe (local, anon): the embed returns 15 club keys, no contact_email
+
+event 5eed0000-0000-4000-8000-0000000000e1 organizer="Seed Organizer C" club_id=5eed0000-0000-4000-8000-0000000000c1
+  club.name="Seed Approved Club" keys(15)=banner_url,category,created_at,created_by,description,discord_url,id,instagram_handle,linkedin_url,logo_url,name,status,twitter_url,updated_at,website_url
+  contact_email present: false
+event 5eed0000-0000-4000-8000-0000000000e2 organizer="Seed Organizer C" club_id=5eed0000-0000-4000-8000-0000000000c1
+  club.name="Seed Approved Club" keys(15)=banner_url,category,created_at,created_by,description,discord_url,id,instagram_handle,linkedin_url,logo_url,name,status,twitter_url,updated_at,website_url
+  contact_email present: false
+
+## 7. DEFECT pin mutation checks (run during 04-10, files restored after each)
+
+- pin B: reverting website_url to the hard-coded null in transformEventFromDB turned
+  'an embed carrying website_url, banner_url, … comes out with all five values' red (1 failed, 8 passed).
+- pin C: reverting saved-events' select to "*" turned 'the events read selects EVENT_WITH_CLUB_SELECT,
+  which embeds clubs' red (1 failed, 9 passed). The response-level pin C test stays green under that
+  mutation by design: the in-memory fake answers an embed from the fixture's own club key (see the suite header),
+  so the select string is the observable.
+- pins A and D: unchanged and green (the organizer fallback and the detail route's select "*" are untouched).
+
+## 8. Seeded clubs' link columns (local DB) — bounds the list-payload delta on seeded data
+
+           name            |  status  | banner | website | discord | twitter | linkedin 
+---------------------------+----------+--------+---------+---------+---------+----------
+ Seed Approved Club        | approved | f      | f       | f       | f       | f
+ Seed Other Club           | approved | f      | f       | f       | f       | f
+ Seed Pending Club         | pending  | f      | f       | f       | f       | f
+ Seed Rejected Club        | rejected | f      | f       | f       | f       | f
+ Seed Second Approved Club | approved | f      | f       | f       | f       | f
+(5 rows)
+
+
+=> Every seeded club has all five link columns NULL, so on seeded data the list routes' JSON is byte-identical
+   in those five fields (null before, null after). The saved-events payload's club changes from the fabricated
+   organizer club to the real club, which no UI renders (section 5).
