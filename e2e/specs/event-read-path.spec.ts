@@ -2,7 +2,8 @@
  * event-read-path.spec.ts — the Slice 2 read path, against the real PostgREST.
  *
  * Phase 04-slices-1-2-saved-events-rsvp-and-the-event-read-path · plan 04-04
- * (tests 6 and 7, F-082, flipped from DEFECT to FIXED by plan 04-08, under DEC-32)
+ * (tests 6 and 7, F-082, flipped from DEFECT to FIXED by plan 04-08, under DEC-32;
+ * test 5, F-083, flipped by plan 04-09, under DEC-25)
  *
  * Re-confirms two Validated workflows from PROJECT.md:
  *   "Anonymous visitors can browse public event and club content without an
@@ -29,7 +30,8 @@
  *   3. PRESERVE           typing `a,b` into the search box shows "No events found" (today because
  *                         the page ignores the 500; after 04-08 because nothing matches)
  *   4. PRESERVE           /events/<approved id> renders "Seed Approved Event"
- *   5. DEFECT F-083       the limit=1 body has no `nextCursor` although total is 2  — moves in 04-09
+ *   5. FIXED (F-083)      the limit=1 body carries a non-empty `nextCursor`, total 2. Before
+ *                         04-09: no `nextCursor` property at all                    — moved in 04-09
  *   6. FIXED (F-082)      search=a,b → 200 with an empty events list. Before 04-08: a 500
  *                         echoing "failed to parse logic tree" (the F-059 echo)     — moved in 04-08
  *   7. FIXED (F-082)      search=% → total 0: a percent sign matches only a literal percent.
@@ -113,16 +115,6 @@ test("PRESERVE: the approved event's detail page renders its title", async ({ pa
 
 // ─── DEFECT ─────────────────────────────────────────────────────────────────
 
-test("DEFECT F-083: the list body has no nextCursor although more rows remain (moves in 04-09)", async ({
-  request,
-}) => {
-  const res = await request.get("/api/events?limit=1");
-  expect(res.status()).toBe(200);
-  const body = (await res.json()) as ListBody;
-  expect(body.total).toBeGreaterThan(body.events.length);
-  expect(body).not.toHaveProperty("nextCursor");
-});
-
 test("DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix)", async ({
   page,
   request,
@@ -187,4 +179,17 @@ test("FIXED F-082: search=% matches only a literal percent, so no seeded event (
   const body = (await res.json()) as ListBody;
   expect(body.total).toBe(0);
   expect(body.events).toEqual([]);
+});
+
+// Moved in 04-09 (DEC-25). Before: the body had no nextCursor property at all,
+// so "Load More" on / never rendered for a result larger than its limit.
+test("FIXED F-083: the list body carries a nextCursor when more rows remain (moved in 04-09)", async ({
+  request,
+}) => {
+  const res = await request.get("/api/events?limit=1");
+  expect(res.status()).toBe(200);
+  const body = (await res.json()) as ListBody;
+  expect(body.total).toBeGreaterThan(body.events.length);
+  expect(typeof body.nextCursor).toBe("string");
+  expect(String(body.nextCursor).length).toBeGreaterThan(0);
 });

@@ -45,6 +45,29 @@
  * Registered as F-083 in .planning/audit/findings.json. Closes in Phase 4.
  * Observed red under a mutation that adds a null `nextCursor` key to the
  * success body; see `evidence/slice-2-mutation-check.txt`.
+ *
+ * Status: FIXED in 04-09, by the commit `fix(04-09): implement the cursor
+ * contract the client already speaks (F-083, F-066)`, which implements
+ * DEC-25. The route now decodes `cursor` with `decodeEventCursor`
+ * (`src/lib/eventCursor.ts`) and rejects a bad one with 400
+ * `{ error: "Invalid cursor" }` before any query. It orders by `start_date`
+ * then `id`. In cursor mode it adds the keyset or()
+ * `start_date.gt."<v>",and(start_date.eq."<v>",id.gt."<id>")` and asks for rows
+ * 0 through limit-1, and it takes `total` from a separate head count carrying
+ * every other filter. Every body now has seven keys: the five page-mode keys
+ * plus `nextCursor` and `prevCursor`. In that same commit EVERY assertion below
+ * MOVED from the before-state listed above to the fixed contract. Five of the
+ * seven before-assertions went red against the fixed route first
+ * (`evidence/defect-ledger.md`). The other two ("the first rows come back" and
+ * "rows 0 through limit-1") stayed green, because the fake records an or()
+ * without evaluating it and the cursor-mode window really is rows 0 through
+ * limit-1. They move to assertions on the keyset or() itself. That the rows
+ * after the cursor are what comes back is proven against the real PostgREST
+ * by `e2e/specs/event-read-path.spec.ts` (the PRESERVE cursor traversals).
+ * The file keeps its tag and its F-083 citation so the history stays
+ * readable. `events-list-characterization.test.ts` pinned page mode across
+ * the change and was not edited. The contract itself is specified by
+ * `src/app/api/events/route.test.ts`, which is no longer skipped.
  */
 
 import { NextRequest } from "next/server";
@@ -97,7 +120,15 @@ const CURSOR_AT_ROW_5 = Buffer.from(
   JSON.stringify({ sortValue: ROWS[4].start_date, id: ROWS[4].id })
 ).toString("base64");
 
-const FIVE_KEYS = ["events", "limit", "page", "total", "totalPages"];
+const SEVEN_KEYS = [
+  "events",
+  "limit",
+  "nextCursor",
+  "page",
+  "prevCursor",
+  "total",
+  "totalPages",
+];
 
 interface ListBody {
   events: Array<{ id: string }>;
@@ -105,7 +136,15 @@ interface ListBody {
   page: number;
   limit: number;
   totalPages: number;
+  nextCursor: string | null;
+  prevCursor: string | null;
 }
+
+const decode = (cursor: string | null) =>
+  JSON.parse(Buffer.from(String(cursor), "base64").toString("utf-8")) as {
+    sortValue: string;
+    id: string;
+  };
 
 async function get(query: string, init: Partial<FakeSupabaseInit> = {}) {
   mockFake = createFakeSupabase({ user: null, tables: { events: ROWS }, ...init });
@@ -115,7 +154,14 @@ async function get(query: string, init: Partial<FakeSupabaseInit> = {}) {
 }
 
 const eventSelect = (calls: FakeCall[]): FakeCall | undefined =>
-  calls.find((c) => c.table === "events" && c.operation === "select");
+  calls.find(
+    (c) => c.table === "events" && c.operation === "select" && !c.options?.head
+  );
+
+const headCount = (calls: FakeCall[]): FakeCall | undefined =>
+  calls.find(
+    (c) => c.table === "events" && c.operation === "select" && c.options?.head === true
+  );
 
 beforeEach(() => {
   jest.spyOn(console, "error").mockImplementation(() => undefined);
@@ -128,54 +174,77 @@ afterEach(() => {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe("F-083 — the route ignores the client's cursor and emits none (moves in 04-09)", () => {
-  it("a well-formed cursor is ignored: the first rows come back, not the rows after the cursor", async () => {
-    const { res, body } = await get(`?limit=3&cursor=${encodeURIComponent(CURSOR_AT_ROW_5)}`);
+describe("F-083 (fixed in 04-09) — the route speaks the client's keyset cursor", () => {
+  it("a well-formed cursor adds the keyset or() after the cursor's row, both values quoted", async () => {
+    const { res, fake } = await get(`?limit=3&cursor=${encodeURIComponent(CURSOR_AT_ROW_5)}`);
     expect(res.status).toBe(200);
-    expect(body.events.map((e) => e.id)).toEqual(ROWS.slice(0, 3).map((r) => r.id));
-  });
-
-  it("with a cursor, the handler still asks for rows 0 through limit-1", async () => {
-    const { fake } = await get(`?limit=3&cursor=${encodeURIComponent(CURSOR_AT_ROW_5)}`);
-    expect(eventSelect(fake.calls)?.range).toEqual({ from: 0, to: 2 });
-  });
-
-  it("the body has neither a nextCursor nor a prevCursor property", async () => {
-    const { body } = await get(`?limit=3&cursor=${encodeURIComponent(CURSOR_AT_ROW_5)}`);
-    expect(body).not.toHaveProperty("nextCursor");
-    expect(body).not.toHaveProperty("prevCursor");
-  });
-
-  it("with more rows than the limit, still no next cursor is emitted — the body is exactly the five page-mode keys", async () => {
-    const { body } = await get("?limit=10");
-    expect(body.total).toBe(25);
-    expect(body.events).toHaveLength(10);
-    expect(body).not.toHaveProperty("nextCursor");
-    expect(Object.keys(body).sort()).toEqual(FIVE_KEYS);
-  });
-
-  it("cursor=not-a-valid-cursor is accepted with a 200, not rejected with a 400", async () => {
-    const { res, body } = await get("?limit=3&cursor=not-a-valid-cursor");
-    expect(res.status).toBe(200);
-    expect(body.events).toHaveLength(3);
-  });
-
-  it("ordering is start_date ascending alone — no id tie-break for a keyset to rely on", async () => {
-    const { fake } = await get("?limit=3");
-    expect(eventSelect(fake.calls)?.order).toEqual([
-      { column: "start_date", ascending: true, nullsFirst: false },
+    const ors = eventSelect(fake.calls)?.filters.filter((f) => f.op === "or");
+    expect(ors).toEqual([
+      {
+        op: "or",
+        column: "",
+        value:
+          `start_date.gt."${ROWS[4].start_date}",` +
+          `and(start_date.eq."${ROWS[4].start_date}",id.gt."${ROWS[4].id}")`,
+      },
     ]);
   });
 
-  it("the early returns carry exactly the five page-mode keys, and no cursor keys", async () => {
+  it("with a cursor, the handler asks for rows 0 through limit-1 after it, and counts the total with a separate head count", async () => {
+    const { fake } = await get(`?limit=3&cursor=${encodeURIComponent(CURSOR_AT_ROW_5)}`);
+    const main = eventSelect(fake.calls);
+    expect(main?.range).toEqual({ from: 0, to: 2 });
+    const count = headCount(fake.calls);
+    expect(count?.options).toEqual({ count: "exact", head: true });
+    // Every filter but the keyset: the total counts all matching events.
+    expect(count?.filters).toEqual(main?.filters.filter((f) => f.op !== "or"));
+  });
+
+  it("the body has a nextCursor and a prevCursor property", async () => {
+    const { body } = await get(`?limit=3&cursor=${encodeURIComponent(CURSOR_AT_ROW_5)}`);
+    expect(body).toHaveProperty("nextCursor");
+    expect(body).toHaveProperty("prevCursor");
+    // prevCursor names the first returned row (which rows those are is the
+    // real PostgREST's to decide; the fake does not evaluate the keyset).
+    const first = ROWS.find((r) => r.id === body.events[0].id);
+    expect(decode(body.prevCursor)).toEqual({ sortValue: first?.start_date, id: first?.id });
+  });
+
+  it("with more rows than the limit, a next cursor naming the last returned row is emitted — the body has the seven keys", async () => {
+    const { body } = await get("?limit=10");
+    expect(body.total).toBe(25);
+    expect(body.events).toHaveLength(10);
+    expect(decode(body.nextCursor)).toEqual({ sortValue: ROWS[9].start_date, id: ROWS[9].id });
+    expect(body.prevCursor).toBeNull();
+    expect(Object.keys(body).sort()).toEqual(SEVEN_KEYS);
+  });
+
+  it("cursor=not-a-valid-cursor is rejected with a 400, and nothing is queried", async () => {
+    const { res, body, fake } = await get("?limit=3&cursor=not-a-valid-cursor");
+    expect(res.status).toBe(400);
+    expect(body).toEqual({ error: "Invalid cursor" });
+    expect(fake.calls).toEqual([]);
+  });
+
+  it("ordering is start_date ascending, then id ascending — the tie-break a keyset relies on", async () => {
+    const { fake } = await get("?limit=3");
+    expect(eventSelect(fake.calls)?.order).toEqual([
+      { column: "start_date", ascending: true, nullsFirst: false },
+      { column: "id", ascending: true, nullsFirst: false },
+    ]);
+  });
+
+  it("the early returns carry the seven keys, with both cursors null", async () => {
     const time = await get("?dayType=weekend", {
       rpc: { get_event_ids_by_time_filter: { data: [], error: null } },
     });
-    expect(Object.keys(time.body).sort()).toEqual(FIVE_KEYS);
+    expect(Object.keys(time.body).sort()).toEqual(SEVEN_KEYS);
+    expect(time.body).toMatchObject({ nextCursor: null, prevCursor: null });
 
     const search = await get("?search=nothing", {
       rpc: { search_events_fuzzy: { data: [], error: null } },
     });
-    expect(Object.keys(search.body).sort()).toEqual(FIVE_KEYS);
+    expect(Object.keys(search.body).sort()).toEqual(SEVEN_KEYS);
+    expect(search.body).toMatchObject({ nextCursor: null, prevCursor: null });
   });
 });

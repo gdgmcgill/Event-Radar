@@ -418,7 +418,7 @@ describe("GET /api/events — error handling", () => {
 // ─── Response shape ───────────────────────────────────────────────────────────
 
 describe("GET /api/events — response shape", () => {
-  it.skip("only queries with eq('status', 'approved') — route no longer uses eq() for status filtering", async () => {
+  it("only queries with eq('status', 'approved')", async () => {
     let capturedBuilder = null as ReturnType<typeof createChainableBuilder> | null;
     mockSupabase.from.mockImplementation(() => {
       capturedBuilder = createChainableBuilder();
@@ -440,12 +440,13 @@ describe("GET /api/events — response shape", () => {
     expect(mockSupabase.from).toHaveBeenCalledWith("events");
   });
 
-  it("response contains exactly the keys: events, total, page, limit, totalPages", async () => {
+  it("response contains exactly the keys: events, total, page, limit, totalPages, nextCursor, prevCursor", async () => {
+    // The two cursor keys were added by 04-09 (F-083, DEC-25).
     const res = await GET(makeRequest());
     const body = await res.json();
 
     expect(Object.keys(body).sort()).toEqual(
-      ["events", "limit", "page", "total", "totalPages"].sort()
+      ["events", "limit", "nextCursor", "page", "prevCursor", "total", "totalPages"].sort()
     );
   });
 
