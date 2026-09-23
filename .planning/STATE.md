@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 04
 current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 status: executing
-stopped_at: "03-08 COMPLETE — Phase 3 is 8 of 8 plans done and awaiting verification. The blocking checkpoint is cleared: the production migration-history repair resolved to `defer-to-phase-8`, recorded in writing because the phase owner was not present and the plan's own rule makes an undecided checkpoint the deferral. Production is provably untouched. `evidence/FOUNDATION-READINESS.md` certifies all five success criteria clause by clause at 107 distinct cited paths with 0 missing; five requirements Complete and three PARTIAL with the clause named. `evidence/deferred-items.md` consolidates every deferral with an owning phase and resolves the `D-` collision by prefix (DI- items, DEC- decisions). Register: five findings closed, two reassigned, four deliberately left Open because the criterion did not close even though the fix shipped. Two findings this plan made rather than inherited: DI-19's ratchet false positive fixed with the allow-list byte-identical, and DI-32 — the CI `e2e` job is red on a real runner."
-last_updated: "2026-09-23T04:33:59.525Z"
+stopped_at: "Completed 04-01-PLAN.md — floor, F-079..F-085, tag gate, DEC-23..DEC-32; next: wave 2 (04-02, 04-03)"
+last_updated: "2026-09-23T04:50:48.481Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 43
-  completed_plans: 32
+  completed_plans: 33
   percent: 38
 ---
 
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 04 (Slices 1–2 — Saved Events/RSVP and the Event Read Path) — EXECUTING
-Plan: 1 of 11
-Status: Executing Phase 04
+Plan: 2 of 11
+Status: Ready to execute
 Last activity: 2026-09-23 — Phase 04 execution started
 
 Progress: [███░░░░░░░] 31%
@@ -85,6 +85,7 @@ Progress: [███░░░░░░░] 31%
 | Phase 03 P06 | 45 min | 3 tasks | 40 files |
 | Phase 03 P07 | 4h 10m | 3 tasks | 29 files |
 | Phase 03 P08 | ~50 min | 3 tasks | 11 files |
+| Phase 04 P01 | 15min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -196,6 +197,11 @@ Recent decisions affecting current work:
 - [Phase 03 / 03-08] Four findings whose FIX SHIPPED are left Open — F-015, F-016, F-020, F-046 — because in each case the validation CRITERION did not close even though the change did (a missing EXPLAIN assertion, an integration test that needs the policies in production, a general policy-column query never written, a drift generator never re-run). Flipping the status anyway is what T-03-08-05 prohibits.
 - [Phase 03 / 03-08] findings.json is edited SURGICALLY, never reserialized. The first attempt used JSON.stringify(…, null, 2) and produced a 912/231 whole-file reformat for seven record changes; it was reverted and redone as targeted per-record replacements (14 insertions / 7 deletions, formatting preserved). An unreviewable diff to a shared register is an unreviewed diff — T-03-08-08.
 - [Phase 03 / 03-08] **.mcp.json carries the production project ref in cleartext and is untracked but NOT gitignored** — one `git add -A` from committing a value REDACTION.md forbids in artifacts. Its `read_only=true` query parameter is also the standing server-side control behind every production read in Phase 3 and must not be removed. Recorded as human step 4; adding it to .gitignore is a one-line repository decision this plan did not take unilaterally.
+- [Phase 04]: [Phase 04 / 04-01] DEC-23..DEC-32 are recorded in 04-.../evidence/phase-04-decisions.md and every later Phase 4 plan executes against them. F-079..F-085 registered (85 findings, validate --check findings 8/8); F-050 now owned by Phase 4. The PRESERVE/DEFECT tag gate is scripts/check-characterization-tags.mjs (ok 5 files; red on an unknown or missing F-nnn). Before-floor on base 794556a: jest 358/5, pgTAP 86 unseeded (21 SKIP) and 86 seeded (0 SKIP), Playwright 27 — A8 closed by measurement.
+- [Phase 04]: [Phase 04 / 04-01] DEC-27 states the conflict the plan set cannot resolve alone: the visual half of the club-fabrication fix (F-080) conflicts with orchestrator decision 1 while ROADMAP success criterion 2 requires it. The non-visual half ships in 04-10; the visual half and the six tag identity mappings (DEC-26, F-081) go to the 04-11 owner checkpoint, deferral by default.
+- [Phase 04]: [Phase 04 / 04-01] PLANNER decisions the phase owner may override: DEC-25 (keyset cursor contract, before 04-09 executes) and DEC-32 (F-082 search escaping ships in 04-08 without the owner checkpoint, because criterion 3's escaping has no non-visual delivery). Override = an owner-signed paragraph appended to the DEC's section; 04-08 stops before changing any file if one exists.
+- [Phase 04]: [Phase 04 / 04-01] DEC-28, DI-25 measured in a throwaway worktree: supabase-js 2.116.0 raises 7 TS2345 + 1 TS2322 (audit.ts:38, F-073); none in a Phase 4 handler — events/[id]/route.ts:318 is that file's PATCH, not the GET Phase 4 owns, so 04-10/04-11 must leave PATCH's directUpdates typing alone. Minor re-deferred to Phase 5, ssr major to Phase 5 at the earliest. DEC-30: no seed change — the seed already carries 2 RSVPs (research Pitfall 3 corrected).
+- [Phase 04]: [Phase 04 / 04-01] REFAC-09 and REFAC-10 NOT marked complete by 04-01 — it registers, measures and decides only (the 01-01 AUDIT-13/20 precedent).
 
 ### Pending Todos
 
@@ -247,7 +253,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-16T04:05:00.000Z
-Stopped at: 03-08 COMPLETE — Phase 3 is 8 of 8 plans done and awaiting verification. The blocking checkpoint is cleared: the production migration-history repair resolved to `defer-to-phase-8`, recorded in writing because the phase owner was not present and the plan's own rule makes an undecided checkpoint the deferral. Production is provably untouched. `evidence/FOUNDATION-READINESS.md` certifies all five success criteria clause by clause at 107 distinct cited paths with 0 missing; five requirements Complete and three PARTIAL with the clause named. `evidence/deferred-items.md` consolidates every deferral with an owning phase and resolves the `D-` collision by prefix (DI- items, DEC- decisions). Register: five findings closed, two reassigned, four deliberately left Open because the criterion did not close even though the fix shipped. Two findings this plan made rather than inherited: DI-19's ratchet false positive fixed with the allow-list byte-identical, and DI-32 — the CI `e2e` job is red on a real runner.
+Last session: 2026-09-23T04:50:48.477Z
+Stopped at: Completed 04-01-PLAN.md — floor, F-079..F-085, tag gate, DEC-23..DEC-32; next: wave 2 (04-02, 04-03)
 Next: run `/gsd-verify-work` for Phase 3, then plan Phase 4. **Phase 4 inherits, all with written owners:** DI-32 (the red `e2e` CI job — fix it first, it is the regression net Phase 4 depends on), DI-24 (the tsconfig test-file exclusion, ~86 errors across 10 files, plus the cursor-pagination contract that is REFAC-10 itself), DI-25 (the Supabase SDK minor, whose blocking shape plan 03-06 already worked an example of, and the separate `ssr` major), DI-31 (the boundary's two evasions and the ratchet's missing CI wiring — both land with the first real shrink), DI-20 (the flaky `useEvents` hook test) and F-071. **Before any deploy, in this order:** rotate the production DB password, then decide the repair. Do not run `supabase db push` against production before Phase 8 or an explicit owner decision.
-Resume file: .planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/FOUNDATION-READINESS.md
+Resume file: None
