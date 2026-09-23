@@ -9,8 +9,11 @@
  *   Same approach as /api/events/:id/save – see that file for instructions.
  */
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { checkBanStatus } from "@/lib/ban";
+import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
+import { badRequest, forbidden, notFound, serverError } from "@/server/errors";
+import { created, ok } from "@/server/http";
 import type { NextRequest } from "next/server";
 
 interface RouteContext {
@@ -70,7 +73,9 @@ function isValidStatus(status: unknown): status is RsvpStatus {
 export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id: eventId } = await params;
-    const supabase = await createClient();
+    // Anonymous-tolerant: no requireUser. ctx.user is read below for user_rsvp.
+    const ctx = await createRequestContext();
+    const supabase = ctx.supabase;
 
     // Verify event exists
     const { data: eventExists, error: eventError } = await supabase
@@ -82,11 +87,11 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 
     if (eventError) {
       console.error("Error looking up event:", eventError);
-      return NextResponse.json({ error: "Failed to verify event" }, { status: 500 });
+      return serverError("verify event");
     }
 
     if (!eventExists) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+      return notFound("Event not found");
     }
 
     // Get RSVP counts (exclude cancelled)
@@ -98,7 +103,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 
     if (rsvpError) {
       console.error("Error fetching RSVPs:", rsvpError);
-      return NextResponse.json({ error: "Failed to fetch RSVPs" }, { status: 500 });
+      return serverError("fetch RSVPs");
     }
 
     const goingCount = rsvps?.filter((r) => r.status === "going").length ?? 0;
@@ -106,9 +111,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 
     // Check current user's RSVP (if authenticated)
     let userRsvp = null;
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = ctx.user;
 
     if (user) {
       const { data: existingRsvp } = await supabase
@@ -122,7 +125,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
       userRsvp = existingRsvp ?? null;
     }
 
-    return NextResponse.json({
+    return ok({
       counts: {
         going: goingCount,
         interested: interestedCount,
@@ -189,30 +192,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (banResponse) return banResponse;
 
     const { id: eventId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
 
     // Authenticate user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      if (authError) {
-        console.warn("Unauthenticated request to RSVP endpoint:", authError);
-      }
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const user = auth.user;
+    const supabase = ctx.supabase;
 
     // Parse body
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json(
-        { error: "Invalid JSON body" },
-        { status: 400 }
-      );
+      return badRequest("Invalid JSON body");
     }
 
     const { user_id: userIdFromBody, status } = body as {
@@ -222,25 +215,21 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     // Validate user_id
     if (!userIdFromBody) {
-      return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+      return badRequest("user_id is required");
     }
 
     if (userIdFromBody !== user.id) {
-      return NextResponse.json(
-        { error: "user_id does not match authenticated user" },
-        { status: 403 }
-      );
+      return forbidden("user_id does not match authenticated user");
     }
 
     // Validate status
     if (!status) {
-      return NextResponse.json({ error: "status is required" }, { status: 400 });
+      return badRequest("status is required");
     }
 
     if (!isValidStatus(status)) {
-      return NextResponse.json(
-        { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}` },
-        { status: 400 }
+      return badRequest(
+        `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`
       );
     }
 
@@ -254,11 +243,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     if (eventError) {
       console.error("Error looking up event:", eventError);
-      return NextResponse.json({ error: "Failed to verify event" }, { status: 500 });
+      return serverError("verify event");
     }
 
     if (!eventExists) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+      return notFound("Event not found");
     }
 
     // Check for existing RSVP
@@ -271,19 +260,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     if (existingError) {
       console.error("Error checking existing RSVP:", existingError);
-      return NextResponse.json(
-        { error: "Failed to check existing RSVP" },
-        { status: 500 }
-      );
+      return serverError("check existing RSVP");
     }
 
     // Update existing RSVP
     if (existingRsvp) {
       if (existingRsvp.status === status) {
-        return NextResponse.json(
-          { message: `Already RSVP'd as ${status}`, rsvp: existingRsvp },
-          { status: 200 }
-        );
+        return ok({ message: `Already RSVP'd as ${status}`, rsvp: existingRsvp });
       }
 
       const { data: updatedRsvp, error: updateError } = await supabase
@@ -295,13 +278,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
       if (updateError) {
         console.error("Error updating RSVP:", updateError);
-        return NextResponse.json({ error: "Failed to update RSVP" }, { status: 500 });
+        return serverError("update RSVP");
       }
 
-      return NextResponse.json(
-        { success: true, message: `RSVP updated to ${status}`, rsvp: updatedRsvp },
-        { status: 200 }
-      );
+      return ok({
+        success: true,
+        message: `RSVP updated to ${status}`,
+        rsvp: updatedRsvp,
+      });
     }
 
     // Create new RSVP
@@ -317,13 +301,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     if (insertError) {
       console.error("Error creating RSVP:", insertError);
-      return NextResponse.json({ error: "Failed to create RSVP" }, { status: 500 });
+      return serverError("create RSVP");
     }
 
-    return NextResponse.json(
-      { success: true, message: `RSVP'd as ${status}`, rsvp: newRsvp },
-      { status: 201 }
-    );
+    return created({ success: true, message: `RSVP'd as ${status}`, rsvp: newRsvp });
   } catch (error) {
     console.error("Unexpected error creating RSVP:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -374,20 +355,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
     const { id: eventId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
 
     // Authenticate user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      if (authError) {
-        console.warn("Unauthenticated request to RSVP endpoint:", authError);
-      }
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const user = auth.user;
+    const supabase = ctx.supabase;
 
     // Parse body
     let body: unknown;
@@ -400,14 +374,11 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     const userIdFromBody = (body as { user_id?: string }).user_id;
 
     if (!userIdFromBody) {
-      return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+      return badRequest("user_id is required");
     }
 
     if (userIdFromBody !== user.id) {
-      return NextResponse.json(
-        { error: "user_id does not match authenticated user" },
-        { status: 403 }
-      );
+      return forbidden("user_id does not match authenticated user");
     }
 
     // Soft-delete: set status to 'cancelled'
@@ -421,11 +392,11 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
     if (findError) {
       console.error("Error finding RSVP:", findError);
-      return NextResponse.json({ error: "Failed to find RSVP" }, { status: 500 });
+      return serverError("find RSVP");
     }
 
     if (!existingRsvp) {
-      return NextResponse.json({ error: "No active RSVP found for this event" }, { status: 404 });
+      return notFound("No active RSVP found for this event");
     }
 
     const { error: updateError } = await supabase
@@ -435,13 +406,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
     if (updateError) {
       console.error("Error cancelling RSVP:", updateError);
-      return NextResponse.json({ error: "Failed to cancel RSVP" }, { status: 500 });
+      return serverError("cancel RSVP");
     }
 
-    return NextResponse.json(
-      { success: true, message: "RSVP cancelled" },
-      { status: 200 }
-    );
+    return ok({ success: true, message: "RSVP cancelled" });
   } catch (error) {
     console.error("Unexpected error cancelling RSVP:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

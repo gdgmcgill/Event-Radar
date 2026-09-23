@@ -8,9 +8,12 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import { transformEventFromDB } from "@/lib/tagMapping";
+import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
+import { serverError } from "@/server/errors";
+import { ok } from "@/server/http";
 
 /**
  * @swagger
@@ -38,23 +41,13 @@ import { transformEventFromDB } from "@/lib/tagMapping";
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const ctx = await createRequestContext();
 
     // Missing/invalid session is an authorization failure, not a server failure.
-    if (authError || !user) {
-      if (authError) {
-        console.warn(
-          "Unauthenticated request to /api/users/saved-events:",
-          authError
-        );
-      }
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const user = auth.user;
+    const supabase = ctx.supabase;
 
     const sort = request.nextUrl.searchParams.get("sort") || "recent";
 
@@ -68,14 +61,11 @@ export async function GET(request: NextRequest) {
 
     if (savedError) {
       console.error("Fetch saved events error:", savedError);
-      return NextResponse.json(
-        { error: "Failed to fetch saved events" },
-        { status: 500 }
-      );
+      return serverError("fetch saved events");
     }
 
     if (!savedRows || savedRows.length === 0) {
-      return NextResponse.json({ events: [], savedEventIds: [] });
+      return ok({ events: [], savedEventIds: [] });
     }
 
     // Build a map of event_id -> saved_at timestamp
@@ -104,10 +94,7 @@ export async function GET(request: NextRequest) {
 
     if (eventsError) {
       console.error("Fetch event details error:", eventsError);
-      return NextResponse.json(
-        { error: "Failed to fetch event details" },
-        { status: 500 }
-      );
+      return serverError("fetch event details");
     }
 
     // Transform events using shared utility and add saved_at
@@ -134,7 +121,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    return ok({
       events,
       savedEventIds: events.map((e) => e.id),
     });

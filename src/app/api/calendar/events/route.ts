@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { transformEventFromDB } from "@/lib/tagMapping";
+import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
+import { ok } from "@/server/http";
 
 /**
  * GET /api/calendar/events
@@ -12,15 +14,11 @@ import { transformEventFromDB } from "@/lib/tagMapping";
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const ctx = await createRequestContext();
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const user = auth.user;
+    const supabase = ctx.supabase;
 
     const from = request.nextUrl.searchParams.get("from");
     const to = request.nextUrl.searchParams.get("to");
@@ -45,7 +43,7 @@ export async function GET(request: NextRequest) {
     const allIds = [...new Set([...savedIds, ...rsvpMap.keys()])];
 
     if (allIds.length === 0) {
-      return NextResponse.json({ events: [] });
+      return ok({ events: [] });
     }
 
     let query = supabase
@@ -83,7 +81,7 @@ export async function GET(request: NextRequest) {
       rsvp_status: rsvpMap.get(e.id) || null,
     }));
 
-    return NextResponse.json({ events: annotated });
+    return ok({ events: annotated });
   } catch (error) {
     console.error("Calendar events error:", error);
     return NextResponse.json(
