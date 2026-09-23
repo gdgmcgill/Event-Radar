@@ -1,0 +1,119 @@
+Findings registration and the PRESERVE/DEFECT tag gate — plan 04-01 Task 2
+**Plan:** 04-01 · **Phase:** 04 · **Recorded:** 2026-09-23
+Base commit: 794556af090ad39f55bb792143b1d2c880615ace (evidence/floor.before.txt line 1)
+Register before: 78 findings (F-001..F-078). After: 85 (F-079..F-085 added), F-050 closes_in_phase null -> "04".
+Throwaway fixtures live in the session scratchpad, OUTSIDE the repository, and are deleted at the end of this file.
+
+=== 1. Regenerate the human-readable register ===
+$ node .planning/audit/tools/gen-foundation-audit.mjs
+gen-foundation-audit: wrote FOUNDATION_AUDIT.md — 85 findings, 85 ids referenced
+exit=0
+
+$ node .planning/audit/tools/gen-foundation-audit.mjs --check
+gen-foundation-audit: up to date (85 findings)
+exit=0
+
+=== 2. The register's own gate ===
+$ node .planning/audit/tools/validate.mjs --check findings
+PASS findings :: schema-valid :: all findings valid
+PASS findings :: ids-match-the-stable-id-pattern :: all ids well formed
+PASS findings :: ids-unique :: all ids distinct
+PASS findings :: ten-required-fields-present-and-non-empty :: 85 findings complete
+PASS findings :: critical-and-high-carry-line-numbers :: every critical and high is pinned to lines
+PASS findings :: evidence-resolves-and-is-never-inline :: all evidence paths resolve
+PASS findings :: expired-risk-acceptance-reverts-to-open :: no expired or over-long acceptances
+PASS findings :: report-and-json-agree-on-finding-count :: FOUNDATION_AUDIT.md references 85 ids, findings.json has 85
+--- 8 passed, 0 failed, 0 skipped
+exit=0
+
+=== 3. The edit was surgical: insertions only apart from the one F-050 field line ===
+$ git diff --stat -- .planning/audit/findings.json
+ .planning/audit/findings.json | 181 +++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 180 insertions(+), 1 deletion(-)
+exit=0
+
+$ git diff --numstat -- .planning/audit/findings.json
+180	1	.planning/audit/findings.json
+exit=0
+
+$ git diff -U0 -- .planning/audit/findings.json | command grep -E '^-[^-]'
+-    "closes_in_phase": null,
+exit=0
+
+$ node -e 'const f=require("./.planning/audit/findings.json");const ids=["F-079","F-080","F-081","F-082","F-083","F-084","F-085"];for(const i of ids){const r=f.find(x=>x.id===i);console.log(i,r.status,r.severity,r.category,"closes",r.closes_in_phase,r.evidence)}console.log("F-050 closes_in_phase",JSON.stringify(f.find(r=>r.id==="F-050").closes_in_phase));process.exit(ids.every(i=>f.some(r=>r.id===i&&r.status==="Open"))&&f.find(r=>r.id==="F-050").closes_in_phase==="04"?0:1)'
+F-079 Open Low performance closes 04 quality/phase-04-slice-defects.md#f-079--rsvp-counts-load-every-row
+F-080 Open Medium validation closes 04 quality/phase-04-slice-defects.md#f-080--event-responses-fabricate-a-club
+F-081 Open Medium validation closes 04 quality/phase-04-slice-defects.md#f-081--six-of-twelve-tags-do-not-round-trip
+F-082 Open Medium injection closes 04 quality/phase-04-slice-defects.md#f-082--search-input-is-interpolated-raw-into-a-postgrest-filter
+F-083 Open Medium validation closes 04 quality/phase-04-slice-defects.md#f-083--the-list-pages-by-offset-while-the-client-pages-by-cursor
+F-084 Open Low dead-code closes 06 quality/phase-04-slice-defects.md#f-084--the-rsvp_count-column-is-written-by-nothing
+F-085 Open Low validation closes 06 quality/phase-04-slice-defects.md#f-085--two-upcoming-floors-disagree
+F-050 closes_in_phase "04"
+exit=0
+
+=== 4. The tag gate, green on this tree — expect exactly five suites ===
+$ node scripts/check-characterization-tags.mjs --all
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+ok 5 files
+exit=0
+
+=== 5. The tag gate, red on planted fixtures (outside the repository) ===
+--- fixture: DEFECT citing F-999, which the register does not hold (the plan's required red) ---
+/**
+ * DEFECT characterization — F-999
+ *
+ * Throwaway fixture for plan 04-01: cites an id the register does not hold.
+ */
+test("x", () => {});
+
+$ node scripts/check-characterization-tags.mjs $S/unknown-id-defect.test.ts
+FAIL DEFECT   /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tagfix/unknown-id-defect.test.ts: cites F-999, not an id in .planning/audit/findings.json
+FAIL 1 of 1 files
+exit=1
+
+--- fixture: DEFECT citing no id ---
+$ node scripts/check-characterization-tags.mjs $S/no-id-defect.test.ts
+FAIL DEFECT   /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tagfix/no-id-defect.test.ts: DEFECT suite cites no F-nnn finding id
+FAIL 1 of 1 files
+exit=1
+
+--- fixture: a characterization docblock with neither tag ---
+$ node scripts/check-characterization-tags.mjs $S/untagged-characterization.test.ts
+FAIL -        /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tagfix/untagged-characterization.test.ts: leading docblock contains neither PRESERVE nor DEFECT — untagged suite
+FAIL 1 of 1 files
+exit=1
+
+--- a path that does not exist ---
+$ node scripts/check-characterization-tags.mjs $S/does-not-exist.test.ts
+FAIL -        /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tagfix/does-not-exist.test.ts: file does not exist
+FAIL 1 of 1 files
+exit=1
+
+--- one bad fixture alongside the whole green tree: the tree stays green, the run is red ---
+$ node scripts/check-characterization-tags.mjs --all $S/unknown-id-defect.test.ts
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+FAIL DEFECT   /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/ffd1bd38-8e20-41a0-8d8e-dcd7a615050c/scratchpad/tagfix/unknown-id-defect.test.ts: cites F-999, not an id in .planning/audit/findings.json
+FAIL 1 of 6 files
+exit=1
+
+--- no arguments: usage, exit 2 ---
+$ node scripts/check-characterization-tags.mjs
+usage: node scripts/check-characterization-tags.mjs --all | <file> [<file> …]
+exit=2
+
+=== 6. Delete the throwaway fixtures and confirm nothing reached the repository ===
+$ rm -r $S && test ! -e $S && echo fixtures removed
+fixtures removed
+exit=0
+
+$ git status --porcelain -- src/ e2e/ supabase/
+exit=0
+

@@ -14,7 +14,7 @@
 
 ## Summary
 
-**78 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
+**85 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
 
 ### By severity
 
@@ -22,9 +22,9 @@
 |---|---:|---|
 | Critical | 4 | First Stage 3 slice owning the layer. **None may be Open when Phase 5 starts.** |
 | High | 20 | Before Phase 7 begins, or a dated risk acceptance with a reachability argument. |
-| Medium | 32 | Within Stage 3, in the slice that touches the file. |
-| Low | 22 | Opportunistically. No deadline. |
-| **Total** | **78** | |
+| Medium | 36 | Within Stage 3, in the slice that touches the file. |
+| Low | 25 | Opportunistically. No deadline. |
+| **Total** | **85** | |
 
 ### By category
 
@@ -36,16 +36,17 @@
 | config | 12 |
 | dependency | 5 |
 | observability | 7 |
-| validation | 4 |
-| performance | 3 |
-| dead-code | 4 |
-| **Total** | **78** |
+| validation | 8 |
+| performance | 4 |
+| dead-code | 5 |
+| injection | 1 |
+| **Total** | **85** |
 
 ### By status
 
 | Status | Count |
 |---|---:|
-| Open | 66 |
+| Open | 73 |
 | Fixed | 12 |
 
 ---
@@ -110,6 +111,10 @@
 | [F-076](#f-076) | Medium | authz | Five of the seven SECURITY DEFINER functions in the baseline have a mutable search_path |
 | [F-077](#f-077) | Medium | validation | The auth callback's next parameter reaches NextResponse.redirect unvalidated, and the new PRESERVE suite freezes that behaviour into the Phase 5-6 contract |
 | [F-078](#f-078) | Medium | dead-code | search_events_fuzzy is declared STABLE and sets a GUC in its body, so every fuzzy search errors at run time and silently falls back to ILIKE |
+| [F-080](#f-080) | Medium | validation | Event responses fabricate a club object from the free-text organizer string, with a non-UUID id, and blank five real club fields |
+| [F-081](#f-081) | Medium | validation | Six of twelve EventTag members do not survive the read-path tag mapping, and any unmapped tag is silently rendered as Social |
+| [F-082](#f-082) | Medium | injection | Search input is interpolated raw into a PostgREST or() filter, so % and _ act as wildcards and a comma produces a 400 the handler returns as a 500 carrying the internal filter text |
+| [F-083](#f-083) | Medium | validation | The events list client pages by cursor and the handler pages by offset, so nextCursor is never emitted and Load More never renders |
 | [F-004](#f-004) | Low | authz | The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time |
 | [F-018](#f-018) | Low | authz | 61 of 101 policies carry no TO clause; 39 rely on an auth.uid()-bearing predicate rather than role targeting to exclude anon |
 | [F-019](#f-019) | Low | performance | 68 unwrapped auth.uid() occurrences across 59 policies are re-evaluated per row |
@@ -132,6 +137,9 @@
 | [F-068](#f-068) | Low | observability | A redaction sweep that reports zero can be false-clean, and was treated as authoritative until one fired |
 | [F-069](#f-069) | Low | config | Page protection cannot be read from the middleware list alone — the single-ring model is wrong in both directions |
 | [F-070](#f-070) | Low | authz | The client-bundle secret sweep is INCONCLUSIVE, not clean — the build that produced it ran without the real key |
+| [F-079](#f-079) | Low | performance | RSVP counts are computed by loading every non-cancelled row and filtering in JavaScript, so they are silently capped at PostgREST max_rows |
+| [F-084](#f-084) | Low | dead-code | events.rsvp_count is a denormalized counter that no migration, trigger or route writes |
+| [F-085](#f-085) | Low | validation | /api/users/saved-events floors "upcoming" on true UTC while /api/events floors on Eastern wall-clock, so an event can be upcoming on one and past on the other for up to five hours a day |
 
 ---
 
@@ -1691,6 +1699,126 @@
 
 ---
 
+### F-080 — Event responses fabricate a club object from the free-text organizer string, with a non-UUID id, and blank five real club fields
+
+**Severity:** Medium · **Category:** validation · **Status:** Open · **Closes in phase:** 04
+
+**Exposure rationale.** A consistency defect on a Validated read path, with no compensating control. Every event created through /api/events/create stores organizer as the creator's display name (create route lines 88 and 176), so its detail page - rendered from /api/events/[id], which selects * with no club embed - reads 'Hosted by <creator name>' while the list card for the same row, from /api/events, shows the real club. Two surfaces disagree about one row, and the fabricated club carries a non-UUID id and a hard-coded 'approved' status. Not High: no data is exposed that F-022 does not already expose (six sibling routes embed the club under the same status-blind read policy), and nothing is written. Not Low: it is visible to every user on every app-created event and on every seeded event, not cosmetic drift.
+
+**Affected paths.**
+
+- `src/lib/tagMapping.ts` lines 102-144, transformEventFromDB: 111 and 114-118 null six real columns on the real branch; 124-143 fabricate a club from organizer
+- `src/app/api/events/[id]/route.ts` lines 79-86, select("*") with no club embed under a false comment
+- `src/app/api/users/saved-events/route.ts` lines 92-97, select("*") with no club embed
+- `src/components/events/EventDetailView.tsx` lines 219-260, the Hosted by block that renders the fabricated name
+
+**Evidence.** [`quality/phase-04-slice-defects.md#f-080--event-responses-fabricate-a-club`](./quality/phase-04-slice-defects.md#f-080--event-responses-fabricate-a-club)
+
+**Reproduction.**
+
+1. Read src/lib/tagMapping.ts lines 124-143: when dbEvent.club is absent and dbEvent.organizer is set, club = { id: dbEvent.organizer, name: dbEvent.organizer, status: "approved", everything else null }.
+2. Read src/app/api/events/[id]/route.ts lines 79-86 and src/app/api/users/saved-events/route.ts lines 92-97: both select "*" with no club embed, so every event they return takes the fabricating branch. Line 79's comment says the Clubs table does not exist; it does, and src/app/api/events/route.ts line 195 embeds it.
+3. Read src/app/api/events/create/route.ts line 88 (organizer = profile name, else email, else "Unknown") and line 176 (organizer stored): every app-created event carries the creator's name as organizer.
+4. Read scripts/seed/load.ts lines 325-349: every seeded event has a club_id AND a PRNG-picked organizer label, so on the seeded local stack every event's detail page renders 'Hosted by Seed Organizer A|B|C' rather than the club name.
+5. Read src/lib/tagMapping.ts lines 111 and 114-118: on the REAL branch banner_url, website_url, discord_url, twitter_url and linkedin_url are hard-coded null because the embed's column list omits them.
+
+**Recommended fix.** Stop fabricating: transformEventFromDB returns no club when there is no club row, and the display falls back to event.organizer, which the Event type already carries. Give /api/events/[id] and /api/users/saved-events the club embed, and share one embed column list that includes the five URL columns. Do not embed contact_email in event payloads (data minimisation, DEC-27). The non-visual half and the visual half ship separately (DEC-27; the visual half is gated by the 04-11 owner checkpoint).
+
+**Validation criterion.** src/__tests__/api/events/club-fabrication-defect.test.ts's assertions MOVE rather than being deleted; transformEventFromDB returns no club when there is no club row; /api/events/[id] and /api/users/saved-events select the club embed.
+
+**Related.** [F-050](#f-050), [F-022](#f-022)
+
+---
+
+### F-081 — Six of twelve EventTag members do not survive the read-path tag mapping, and any unmapped tag is silently rendered as Social
+
+**Severity:** Medium · **Category:** validation · **Status:** Open · **Closes in phase:** 04
+
+**Exposure rationale.** A correctness defect on the most-viewed surface in the app, measurable on seeded data, with no compensating control and no signal: mapTags defaults every unmapped tag to SOCIAL without a log line, so neither the user nor an operator can tell a Social event from a coerced one. The write path (the Instagram classifier) assigns all twelve members and the filter chips offer all twelve, so tech, food, volunteer and arts events are always mis-badged as Social, music as Cultural and networking as Social, and filtering by a badge's own label does not return the event carrying it. Not High: nothing crosses a trust boundary and the stored tags are correct - the read mapping is wrong, not the data. Not Low: it is user-visible on every such event, not hygiene.
+
+**Affected paths.**
+
+- `src/lib/tagMapping.ts` lines 10-50, the alias table (no key for tech, food, volunteer, arts; music and networking remapped) and mapTags' SOCIAL default at 45
+- `src/lib/constants.ts` lines 7-143, EVENT_TAGS and EVENT_CATEGORIES list and theme all twelve members; and 342-351, TAG_HIERARCHY, a third mapping that disagrees with the read path on hackathon, workshop, fitness and competition
+- `src/lib/classifier.ts` lines 553-584, the ingestion classifier assigns all twelve members
+
+**Evidence.** [`quality/phase-04-slice-defects.md#f-081--six-of-twelve-tags-do-not-round-trip`](./quality/phase-04-slice-defects.md#f-081--six-of-twelve-tags-do-not-round-trip)
+
+**Reproduction.**
+
+1. npx tsx -e 'import { mapTags } from "./src/lib/tagMapping"; import { EventTag } from "./src/types"; for (const m of Object.values(EventTag)) console.log(m, "->", mapTags([m])[0]);' - six of twelve do not map to themselves: music -> cultural, networking -> social, and tech, food, volunteer, arts -> social. The per-member table is in the evidence file.
+2. Same probe: mapTags(["quidditch"]) -> social, silently.
+3. Seeded rows: mapTags(["academic","tech"]) -> ["academic","social"] and mapTags(["music","social"]) -> ["cultural","social"] - the two seeded approved events render with those badges.
+4. Read src/lib/constants.ts lines 342-351: TAG_HIERARCHY maps hackathon and workshop to tech, fitness to sports and competition to career, while tagMapping maps them to academic, academic, wellness and sports.
+5. Read src/app/api/events/route.ts lines 210-211: ?tags=tech filters the raw column with .overlaps and matches the seeded event, whose card then shows a Social badge.
+
+**Recommended fix.** Centralize the mapping in one module keyed on EventTag, add a completeness test over Object.values(EventTag), and emit a server-side warning naming the unmapped tag and the event id instead of defaulting silently. Keep mapTags' output byte-identical in that commit. The six identity mappings change seeded badges, so they are a separate, logged commit gated by the 04-11 owner checkpoint (DEC-26). Reconcile TAG_HIERARCHY against the same table when the identity mappings land.
+
+**Validation criterion.** src/lib/eventTags.test.ts iterates Object.values(EventTag) and asserts each member is a key of the centralized mapping; src/__tests__/lib/tag-coercion-defect.test.ts's assertions MOVE when the identity mappings land; an unmapped tag produces a server-side warning naming the event id.
+
+---
+
+### F-082 — Search input is interpolated raw into a PostgREST or() filter, so % and _ act as wildcards and a comma produces a 400 the handler returns as a 500 carrying the internal filter text
+
+**Severity:** Medium · **Category:** injection · **Status:** Open · **Closes in phase:** 04
+
+**Exposure rationale.** Anonymous-reachable input injection into a query filter, exposure-adjusted DOWN from Critical and High because a compensating control bounds it: the injected or= group is ANDed with the handler's own status=approved and deleted_at-is-null filters (route.ts 197-198) and with the events RLS policy, so a crafted term can widen or break the OR group but cannot reach a row outside approved, undeleted events, and the text echoed on error is query structure, not a credential. Adjusted UP from Low because it is live on the only search path that executes (F-078 makes the fuzzy RPC always error), because % rewrites any search into match-everything - an unbounded ILIKE scan on demand - and because a single comma is a user-triggerable HTTP 500 that returns the internal PostgREST logic tree to an anonymous caller (the F-059 class). Category is injection: user text changes the structure of the query, ASVS 4.0.3 V5.3.
+
+**Affected paths.**
+
+- `src/app/api/events/route.ts` lines 214-243, the fuzzy RPC and its ILIKE fallback; the raw interpolation is at 225-227
+- `src/app/api/events/route.ts` lines 280-307, the error path: PGRST100 is not in the benign list (286-289) and its message is returned as the 500 body (303-306)
+
+**Evidence.** [`quality/phase-04-slice-defects.md#f-082--search-input-is-interpolated-raw-into-a-postgrest-filter`](./quality/phase-04-slice-defects.md#f-082--search-input-is-interpolated-raw-into-a-postgrest-filter)
+
+**Reproduction.**
+
+1. Read src/app/api/events/route.ts lines 225-227: `.or(`title.ilike.%${search}%,description.ilike.%${search}%`)` - the raw search string inside a PostgREST logic tree.
+2. Read node_modules/@supabase/postgrest-js/dist/cjs/PostgrestFilterBuilder.js: or() appends its argument verbatim; only in() escapes, and only , ( and ).
+3. Against the local stack, GET /rest/v1/events?select=title&status=eq.approved&or=(title.ilike.%a,b%,description.ilike.%a,b%) -> HTTP 400 PGRST100, message beginning "failed to parse logic tree ((title.ilike.%a,b%,description.ilike.%a,b%))".
+4. Read route.ts lines 286-289 and 303-306: only PGRST103, PGRST116 and a message starting with { are benign; PGRST100's message starts with a double quote, so the handler returns HTTP 500 with that message as the error body.
+5. Same endpoint with or=(title.ilike.%%%,...) and or=(title.ilike.%_%,...) - both seeded approved events are returned, although neither title contains % or _.
+6. Two-layer escaped forms (LIKE backslash, then PostgREST double-quoting with the backslash itself escaped) return [] for % and _, and the quoted comma returns 200 [] - the full measured table is in the evidence file.
+
+**Recommended fix.** Escape in a named, unit-tested function in src/lib/: first make %, _ and backslash literal for SQL LIKE (backslash is Postgres's default LIKE escape), then wrap the pattern as a PostgREST double-quoted value with backslash and double quote escaped, so comma and parentheses cannot break out of the or=(...) group. Build both ilike terms from it at the call site. Leave * at today's behaviour: PostgREST rewrites * to % in like/ilike values after unquoting, so no pattern can match a literal asterisk (DEC-32). Ships under DEC-32 in 04-08.
+
+**Validation criterion.** src/lib/searchFilter.test.ts asserts one escape per character for percent, underscore, comma, both parentheses, double quote and backslash; src/__tests__/api/events/search-escaping-defect.test.ts's assertions MOVE; scripts/probes/search-escape-probe.ts shows literal matching against local PostgREST; GET /api/events?search=a,b returns 200.
+
+**Related.** [F-078](#f-078), [F-059](#f-059)
+
+---
+
+### F-083 — The events list client pages by cursor and the handler pages by offset, so nextCursor is never emitted and Load More never renders
+
+**Severity:** Medium · **Category:** validation · **Status:** Open · **Closes in phase:** 04
+
+**Exposure rationale.** A functional defect on a Validated workflow with no compensating control: a user who searches or filters the feed sees at most the first 30 results and has no way to reach a second page, because the only pagination control is gated on a field the route never returns. Not High: no boundary is crossed and nothing is exposed or written. Not Low: it truncates a Validated user-facing workflow for every filtered search, and the suite that describes the intended contract is skipped, so nothing in CI can see it - the 20 executing hook tests assert cursor semantics against a mocked fetch.
+
+**Affected paths.**
+
+- `src/hooks/useEvents.ts` lines 53-138, sends cursor, sort, direction and clubId and reads nextCursor and prevCursor
+- `src/app/api/events/route.ts` lines 158-339, reads page and limit (171-172), orders by a hard-coded start_date (196), pages by .range() (275) and returns no cursor (326-333)
+- `src/app/page.tsx` lines 510-518, Load More rendered only when nextCursor is truthy
+- `src/app/api/events/route.test.ts` lines 19, the describe.skip holding the cursor contract
+
+**Evidence.** [`quality/phase-04-slice-defects.md#f-083--the-list-pages-by-offset-while-the-client-pages-by-cursor`](./quality/phase-04-slice-defects.md#f-083--the-list-pages-by-offset-while-the-client-pages-by-cursor)
+
+**Reproduction.**
+
+1. command grep -c -i cursor src/app/api/events/route.test.ts -> 27; command grep -c -i cursor src/app/api/events/route.ts -> 0.
+2. Read src/app/api/events/route.ts lines 164-172: the handler reads tags, search, dateFrom, dateTo, ids, timeOfDay, dayType, page and limit, and never cursor, sort, direction or clubId. Line 275 pages with .range(from, to); lines 326-333 return { events, total, page, limit, totalPages }.
+3. Read src/hooks/useEvents.ts lines 65-69 and 88-89 (cursor, sort, direction, clubId sent) and 134-135 (nextCursor: data.nextCursor ?? null).
+4. Read src/app/page.tsx lines 510-518: the Load More button is inside {nextCursor && ...}, so it never renders.
+5. npx jest --ci reports 1 skipped suite and 5 skipped tests; the skipped suite is src/app/api/events/route.test.ts (describe.skip at line 19).
+
+**Recommended fix.** Implement the keyset cursor contract in the route (DEC-25): cursor on (start_date, id) ascending, encoded as base64 JSON { sortValue, id } exactly as the skipped suite encodes it; keep page and limit accepted; add nextCursor and prevCursor; total stays the count of all matching rows; an invalid cursor is 400 { error: "Invalid cursor" }. Rewrite the skipped suite against that contract rather than deleting it.
+
+**Validation criterion.** src/app/api/events/route.test.ts runs un-skipped and green; src/__tests__/api/events/pagination-contract-defect.test.ts's assertions MOVE; a Playwright API spec traverses the two seeded approved events by cursor.
+
+**Related.** [F-066](#f-066)
+
+---
+
 ### F-004 — The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time
 
 **Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 05
@@ -1952,7 +2080,7 @@
 
 ### F-050 — Five source locations reference event_date and event_time columns that do not exist on the events table
 
-**Severity:** Low · **Category:** dead-code · **Status:** Open
+**Severity:** Low · **Category:** dead-code · **Status:** Open · **Closes in phase:** 04
 
 **Exposure rationale.** No production exposure — the authoritative columns are start_date and end_date, confirmed from information_schema.columns. The hazard is that two of the five are test fixtures that make their tests pass for the wrong reason: they supply event_date to routes that select start_date, leaving start_date undefined while the assertions look elsewhere. A third is invisible because *.test.ts is excluded from tsconfig.json. Two are comments, one of which additionally asserts that club_id and status are absent from events, which the column census disproves.
 
@@ -2276,6 +2404,90 @@
 **Validation criterion.** A sweep over .next/static and public/ from a build with the real key present, recording ENVSTATE conclusive and zero matches for all seven patterns.
 
 **Related.** [F-067](#f-067), [F-068](#f-068)
+
+---
+
+### F-079 — RSVP counts are computed by loading every non-cancelled row and filtering in JavaScript, so they are silently capped at PostgREST max_rows
+
+**Severity:** Low · **Category:** performance · **Status:** Open · **Closes in phase:** 04
+
+**Exposure rationale.** Exposure-adjusted to Low. The counts are public by design - the rsvp GET is anonymous-readable and F-011 records that the rsvps table itself is world-readable - so a wrong count discloses nothing and crosses no boundary, and no plausible later change makes it do so, which rules out Medium's latent-hazard clause. The correctness failure is reachable only above 1000 non-cancelled RSVPs on a single event, the local supabase/config.toml max_rows. Production's max_rows is UNVERIFIED (04-RESEARCH.md assumption A1; Phase 4 does not read production), so on production the cap may be the same, higher, or absent. Below 1000 RSVPs per event the counts are correct, which is why this is not Medium. What remains at every scale is the performance half: every count request transfers every non-cancelled row in order to count it in JavaScript, where a HEAD request with Prefer: count=exact returns the number alone.
+
+**Affected paths.**
+
+- `src/app/api/events/[id]/rsvp/route.ts` lines 92-105, the row-returning select (93-97) and the two .filter().length counts (104-105)
+- `supabase/config.toml` lines 18, max_rows = 1000
+
+**Evidence.** [`quality/phase-04-slice-defects.md#f-079--rsvp-counts-load-every-row`](./quality/phase-04-slice-defects.md#f-079--rsvp-counts-load-every-row)
+
+**Reproduction.**
+
+1. Read src/app/api/events/[id]/rsvp/route.ts lines 93-97: `.from("rsvps").select("id, status").eq("event_id", eventId).neq("status", "cancelled")` - a row-returning select with no count option.
+2. Read lines 104-105: goingCount and interestedCount are `rsvps?.filter(...).length`, computed in JavaScript over whatever rows came back.
+3. Read supabase/config.toml line 18: `max_rows = 1000`. PostgREST caps a row-returning select at max_rows with no error, so an event with more non-cancelled RSVPs than that under-reports silently.
+4. Contrast src/app/profile/page.tsx lines 38-42, which counts saved_events with `{ count: "exact", head: true }` - a HEAD request whose count arrives in Content-Range as a server-side COUNT(*) not subject to max_rows.
+
+**Recommended fix.** Replace the load-all with two parallel `{ count: "exact", head: true }` queries, one per status (`.eq("status", "going")` and `.eq("status", "interested")`), under Promise.all, returning 500 `{ error: "Failed to fetch RSVPs" }` if either errors - the error body the handler returns today. Prior art: src/app/profile/page.tsx lines 38-42. Keep `total === going + interested`. No DB function: that needs a migration (DEC-23).
+
+**Validation criterion.** src/__tests__/api/events/rsvp-count-defect.test.ts's assertions MOVE from a row-returning select with no count option to two head-count queries (count: "exact", head: true, one per status), and src/__tests__/api/events/rsvp-characterization.test.ts passes unmodified both before and after the fix commit.
+
+**Related.** [F-011](#f-011)
+
+---
+
+### F-084 — events.rsvp_count is a denormalized counter that no migration, trigger or route writes
+
+**Severity:** Low · **Category:** dead-code · **Status:** Open · **Closes in phase:** 06
+
+**Exposure rationale.** Dead denormalized state, Low under the SLA's hygiene definition. Nothing writes the column, so it holds its default (0) on every locally built database and whatever production's never-maintained column holds (production not read). Two readers pass it on: transformEventFromDB copies it into every Event response, and the CSV export writes it as the rsvp_count column (export route 32 and 231), so an export presents a stale number as data. Not Medium: no in-app surface renders it, it gates no decision, crosses no boundary, and the real counts come from the rsvp route (F-079). The hazard is that a later slice adopts it as the count source; DEC-31 forbids that.
+
+**Affected paths.**
+
+- `supabase/migrations/20260915214553_baseline.sql` lines 797, "rsvp_count" integer DEFAULT 0
+- `src/lib/tagMapping.ts` lines 161, passed through to Event.rsvp_count
+- `src/app/api/events/export/route.ts` lines 32 and 231, written into the CSV export
+
+**Evidence.** [`quality/phase-04-slice-defects.md#f-084--the-rsvp_count-column-is-written-by-nothing`](./quality/phase-04-slice-defects.md#f-084--the-rsvp_count-column-is-written-by-nothing)
+
+**Reproduction.**
+
+1. command grep -n rsvp_count supabase/migrations/*.sql -> one hit, the column declaration at 20260915214553_baseline.sql:797. The archived pre-baseline migrations contain no occurrence either.
+2. command grep -rn rsvp_count src/ --include='*.ts' --include='*.tsx' | command grep -v '\.test\.' -> the readers are src/lib/tagMapping.ts:161 and src/app/api/events/export/route.ts:32,231, plus the generated types; the club surfaces use a different, computed rsvp_counts object.
+3. No route, trigger or function writes the column: the only other repository reference is scripts/seed/load.ts:440, the --dump column list, which reads it.
+
+**Recommended fix.** Either drop the column, or maintain it with a trigger on rsvps; each with a pgTAP test. Both are schema changes, so neither is in Phase 4 (orchestrator decision 2, DEC-31). Until then, do not adopt it as a count source, and have the CSV export read the computed count.
+
+**Validation criterion.** A pgTAP case asserting either that events has no rsvp_count column, or that inserting, updating and cancelling an rsvps row keeps events.rsvp_count equal to the count of that event's non-cancelled rows; and a grep showing no src/ reader of the column remains if it is dropped.
+
+**Resolution.** Registered by plan 04-01 and deliberately NOT closed in Phase 4: every fix is a schema change, and Phase 4 adds nothing under supabase/migrations/ (orchestrator decision 2). Owner Phase 6, because a migration reaches production only through the DI-23 migration-history repair, which is deferred to Phase 8; a Phase 6 migration is the earliest one that can be written, tested locally and queued behind that repair.
+
+**Related.** [F-079](#f-079)
+
+---
+
+### F-085 — /api/users/saved-events floors "upcoming" on true UTC while /api/events floors on Eastern wall-clock, so an event can be upcoming on one and past on the other for up to five hours a day
+
+**Severity:** Low · **Category:** validation · **Status:** Open · **Closes in phase:** 06
+
+**Exposure rationale.** A consistency defect between two read surfaces, exposure-adjusted to Low: the window is bounded to the four hours (five under EST) before an event starts, the event reappears in the user's saved list when include_past=true is requested, and nothing crosses a boundary or is written. The event is not lost, only omitted from one list during that band - still a correctness defect, but a narrow one, which is why this is not Medium. Recorded rather than fixed because unifying the two floors is a timezone-dependent behaviour change (04-RESEARCH.md Pitfall 6).
+
+**Affected paths.**
+
+- `src/app/api/users/saved-events/route.ts` lines 99-101, gte("start_date", new Date().toISOString()) - true UTC
+- `src/app/api/events/route.ts` lines 245-246, gte('start_date', dateFrom || getESTNowISO()) - Eastern wall-clock as naive UTC
+- `src/lib/timezone.ts` lines 1-25, documents that start_date is stored as Eastern wall-clock with a +00 offset and that now must be expressed the same way
+
+**Evidence.** [`quality/phase-04-slice-defects.md#f-085--two-upcoming-floors-disagree`](./quality/phase-04-slice-defects.md#f-085--two-upcoming-floors-disagree)
+
+**Reproduction.**
+
+1. Read src/lib/timezone.ts lines 1-25: stored start_date values are Eastern wall-clock with offset +00, and comparing against now requires the naive-UTC form getESTNowISO returns.
+2. Read src/app/api/events/route.ts line 246 (floor = getESTNowISO()) and src/app/api/users/saved-events/route.ts line 100 (floor = new Date().toISOString()).
+3. Worked instance under EDT: at 14:30 Eastern (18:30Z), an event stored as 16:00Z passes the /api/events floor (16:00Z >= 14:30Z) and fails the saved-events floor (16:00Z < 18:30Z) - upcoming in the feed, absent from the user's upcoming saved list.
+
+**Recommended fix.** One shared floor function used by both endpoints, following the convention src/lib/timezone.ts documents. Not in Phase 4: it changes which events each endpoint returns during a time-of-day band, and must land with a characterization of both floors first (04-RESEARCH.md Pitfall 6).
+
+**Validation criterion.** src/__tests__/api/events/saved-events-time-floor-defect.test.ts's assertions MOVE when the shared floor lands.
 
 ---
 
