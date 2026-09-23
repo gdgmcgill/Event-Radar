@@ -184,7 +184,7 @@ Plans:
   3. Tag mapping is centralized with unknown tags surfaced rather than silently coerced to SOCIAL, and `%` and `_` are escaped in search input.
   4. After each slice the Playwright happy-path specs pass and the Validated workflow list in PROJECT.md is re-confirmed — browse, search, filter, save, and RSVP behave exactly as before, with no intentional visual change shipped alongside either slice.
 
-**Plans**: 5/11 plans executed
+**Plans**: 6/11 plans executed
 
 Plans:
 **Wave 1**
@@ -203,7 +203,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 04-06-PLAN.md — Slice 1 close: stale date fixtures (F-050), test files type-checked (DI-24, F-066), after-floor, harness, Validated-list re-confirmation
+- [x] 04-06-PLAN.md — Slice 1 close: stale date fixtures (F-050), test files type-checked (DI-24, F-066), after-floor, harness, Validated-list re-confirmation
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -309,7 +309,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | 1. Read-Only Foundation Audit | 13/13 | Complete    | 2026-09-14 |
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
-| 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 5/11 | In Progress|  |
+| 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 6/11 | In Progress|  |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |
 | 7. Certification Datasets and Persona Coverage | 0/TBD | Not started | - |

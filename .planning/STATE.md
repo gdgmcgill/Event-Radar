@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 04
 current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 status: executing
-stopped_at: "Completed 04-05-PLAN.md — Slice 1 refactor: seam in 5 handlers (a5ee4fc, fe4e9f9), F-079 head counts (d40dee4), F-071 friends fallback (1351480); jest 512/5; next: 04-06"
-last_updated: "2026-09-23T05:51:24.995Z"
+stopped_at: "Completed 04-06-PLAN.md — Slice 1 closed: F-050 fixtures (a037d95), tests type-checked 71->0 (9530d35), after-floor + Playwright 37/37 + F-079/F-071 Fixed (ba425f2); REFAC-09 complete; next: 04-07/04-08"
+last_updated: "2026-09-23T06:06:12.108Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 43
-  completed_plans: 37
+  completed_plans: 38
   percent: 38
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 04 (Slices 1–2 — Saved Events/RSVP and the Event Read Path) — EXECUTING
-Plan: 6 of 11
+Plan: 7 of 11
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 04 execution started
 
@@ -90,6 +90,7 @@ Progress: [███░░░░░░░] 31%
 | Phase 04 P03 | 10min | 3 tasks | 11 files |
 | Phase 04 P04 | 15min | 3 tasks | 13 files |
 | Phase 04 P05 | 7min | 3 tasks | 9 files |
+| Phase 04 P06 | 12min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -217,6 +218,8 @@ Recent decisions affecting current work:
 - [Phase 04]: [Phase 04 / 04-04] DI-32 needed no work in 04-04: it was CLOSED before Phase 4 (855da7f + b9f9bcb, CI run 35055404669 green); the 04-03 summary's 'DI-32 belongs to 04-04' line was stale. The fake's overlaps() is now evaluated as Postgres && (additive; no 04-02 suite used it).
 - [Phase 04]: 04-05: friends seam adoption is its own commit (fe4e9f9) because friends-defect's mock lacked .single(); the four-handler adoption (a5ee4fc) kept an empty src/__tests__ diff
 - [Phase 04]: 04-05: RSVP counts are two parallel select('id', {count:'exact', head:true}) reads (F-079, d40dee4); friends fallback passes an id array (F-071, 1351480); zero (supabase as any) under src/app/api/
+- [Phase 04]: 04-06: test files are type-checked (tsconfig exclude globs removed); handler refs in tests are typed as the handler's own type, never widened in src
+- [Phase 04]: 04-06: F-079 and F-071 Fixed; F-066 type-check clause met (stays Open for 04-09); its duplicate resolution keys merged; REFAC-09 complete
 
 ### Pending Todos
 
@@ -268,7 +271,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T05:51:24.991Z
-Stopped at: Completed 04-05-PLAN.md — Slice 1 refactor: seam in 5 handlers (a5ee4fc, fe4e9f9), F-079 head counts (d40dee4), F-071 friends fallback (1351480); jest 512/5; next: 04-06
+Last session: 2026-09-23T06:06:12.104Z
+Stopped at: Completed 04-06-PLAN.md — Slice 1 closed: F-050 fixtures (a037d95), tests type-checked 71->0 (9530d35), after-floor + Playwright 37/37 + F-079/F-071 Fixed (ba425f2); REFAC-09 complete; next: 04-07/04-08
 Next: run `/gsd-verify-work` for Phase 3, then plan Phase 4. **Phase 4 inherits, all with written owners:** DI-32 (the red `e2e` CI job — fix it first, it is the regression net Phase 4 depends on), DI-24 (the tsconfig test-file exclusion, ~86 errors across 10 files, plus the cursor-pagination contract that is REFAC-10 itself), DI-25 (the Supabase SDK minor, whose blocking shape plan 03-06 already worked an example of, and the separate `ssr` major), DI-31 (the boundary's two evasions and the ratchet's missing CI wiring — both land with the first real shrink), DI-20 (the flaky `useEvents` hook test) and F-071. **Before any deploy, in this order:** rotate the production DB password, then decide the repair. Do not run `supabase db push` against production before Phase 8 or an explicit owner decision.
 Resume file: None
