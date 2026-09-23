@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 04
 current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 status: executing
-stopped_at: "Completed 04-01-PLAN.md — floor, F-079..F-085, tag gate, DEC-23..DEC-32; next: wave 2 (04-02, 04-03)"
-last_updated: "2026-09-23T04:50:48.481Z"
+stopped_at: "Completed 04-02-PLAN.md — Slice 1 characterization net (75 tests, 16 mutation cycles, Playwright 28); next: 04-03"
+last_updated: "2026-09-23T05:08:31.682Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 43
-  completed_plans: 33
+  completed_plans: 34
   percent: 38
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 04 (Slices 1–2 — Saved Events/RSVP and the Event Read Path) — EXECUTING
-Plan: 2 of 11
+Plan: 3 of 11
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 04 execution started
 
@@ -86,6 +86,7 @@ Progress: [███░░░░░░░] 31%
 | Phase 03 P07 | 4h 10m | 3 tasks | 29 files |
 | Phase 03 P08 | ~50 min | 3 tasks | 11 files |
 | Phase 04 P01 | 15min | 3 tasks | 9 files |
+| Phase 04 P02 | 14min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -202,6 +203,8 @@ Recent decisions affecting current work:
 - [Phase 04]: [Phase 04 / 04-01] PLANNER decisions the phase owner may override: DEC-25 (keyset cursor contract, before 04-09 executes) and DEC-32 (F-082 search escaping ships in 04-08 without the owner checkpoint, because criterion 3's escaping has no non-visual delivery). Override = an owner-signed paragraph appended to the DEC's section; 04-08 stops before changing any file if one exists.
 - [Phase 04]: [Phase 04 / 04-01] DEC-28, DI-25 measured in a throwaway worktree: supabase-js 2.116.0 raises 7 TS2345 + 1 TS2322 (audit.ts:38, F-073); none in a Phase 4 handler — events/[id]/route.ts:318 is that file's PATCH, not the GET Phase 4 owns, so 04-10/04-11 must leave PATCH's directUpdates typing alone. Minor re-deferred to Phase 5, ssr major to Phase 5 at the earliest. DEC-30: no seed change — the seed already carries 2 RSVPs (research Pitfall 3 corrected).
 - [Phase 04]: [Phase 04 / 04-01] REFAC-09 and REFAC-10 NOT marked complete by 04-01 — it registers, measures and decides only (the 01-01 AUDIT-13/20 precedent).
+- [Phase 04]: [Phase 04 / 04-02] Slice 1 characterization net: createFakeSupabase (src/__tests__/helpers/fakeSupabase.ts) is the test seam; 4 PRESERVE + 2 DEFECT suites (F-079, F-085), 75 tests, against unmodified handlers. 04-05 must pass the four PRESERVE suites unedited and move only rsvp-count-defect; control cycle 5b/5c proved the 04-05 head-count shape leaves rsvp-characterization green. Floors now jest 433/5, Playwright 28.
+- [Phase 04]: [Phase 04 / 04-02] REFAC-09 NOT marked complete by 04-02 — only its before-state characterization clause is delivered; seam adoption and the count query are 04-05.
 
 ### Pending Todos
 
@@ -253,7 +256,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T04:50:48.477Z
-Stopped at: Completed 04-01-PLAN.md — floor, F-079..F-085, tag gate, DEC-23..DEC-32; next: wave 2 (04-02, 04-03)
+Last session: 2026-09-23T05:08:31.678Z
+Stopped at: Completed 04-02-PLAN.md — Slice 1 characterization net (75 tests, 16 mutation cycles, Playwright 28); next: 04-03
 Next: run `/gsd-verify-work` for Phase 3, then plan Phase 4. **Phase 4 inherits, all with written owners:** DI-32 (the red `e2e` CI job — fix it first, it is the regression net Phase 4 depends on), DI-24 (the tsconfig test-file exclusion, ~86 errors across 10 files, plus the cursor-pagination contract that is REFAC-10 itself), DI-25 (the Supabase SDK minor, whose blocking shape plan 03-06 already worked an example of, and the separate `ssr` major), DI-31 (the boundary's two evasions and the ratchet's missing CI wiring — both land with the first real shrink), DI-20 (the flaky `useEvents` hook test) and F-071. **Before any deploy, in this order:** rotate the production DB password, then decide the repair. Do not run `supabase db push` against production before Phase 8 or an explicit owner decision.
 Resume file: None
