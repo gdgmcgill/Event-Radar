@@ -1,0 +1,322 @@
+# DI-35 — narrowing the seam's request profile (plan 04-03, task 3; DEC-24)
+# Plan: 04-03 · Phase: 04 · Recorded: 2026-09-23
+#
+# Every block is "$ command", verbatim output, "exit=N" (pipelines under
+# `bash -o pipefail`, so exit=N is the pipeline's).
+
+==============================================================================
+1. BEFORE — who reads which profile column
+==============================================================================
+$ git rev-parse --short HEAD
+59a4975
+exit=0
+
+$ command grep -rn 'banned_at\|ban_expires_at' src/server/
+src/server/context.ts:37:  "id" | "roles" | "banned_at" | "ban_expires_at" | "onboarding_completed"
+src/server/context.ts:48:  "id, roles, banned_at, ban_expires_at, onboarding_completed";
+src/server/__tests__/requireRole.test.ts:30:      banned_at: null,
+src/server/__tests__/requireRole.test.ts:31:      ban_expires_at: null,
+src/server/__tests__/context.test.ts:42:  banned_at: null,
+src/server/__tests__/context.test.ts:43:  ban_expires_at: null,
+src/server/__tests__/context.test.ts:99:      "banned_at",
+src/server/__tests__/context.test.ts:100:      "ban_expires_at",
+exit=0
+
+$ command grep -rn 'profile\.\|ctx\.profile\|\.roles\|onboarding_completed' src/server/authz/
+src/server/authz/requireRole.ts:43:  if (!ctx.profile) {
+src/server/authz/requireRole.ts:49:  const bearer = { roles: ctx.profile.roles ?? [] } as RoleBearer;
+exit=0
+
+$ command grep -rln 'RequestProfile\|createRequestContext\|getRequestContext' src/ | sort
+src/__tests__/api/events/calendar-events-characterization.test.ts
+src/__tests__/api/events/rsvp-characterization.test.ts
+src/__tests__/api/events/save-characterization.test.ts
+src/__tests__/api/events/saved-events-characterization.test.ts
+src/server/__tests__/context.test.ts
+src/server/context.ts
+exit=0
+
+$ command grep -rn 'banned_at\|ban_expires_at\|checkBanStatus' src/proxy.ts src/lib/ban.ts | head -20
+src/proxy.ts:98:      .select("banned_at, ban_expires_at")
+src/proxy.ts:102:    if (banProfile?.banned_at) {
+src/proxy.ts:103:      isBanned = !banProfile.ban_expires_at || new Date(banProfile.ban_expires_at) > new Date();
+src/lib/ban.ts:5:  banned_at: string | null;
+src/lib/ban.ts:6:  ban_expires_at: string | null;
+src/lib/ban.ts:10:  if (!user.banned_at) return false;
+src/lib/ban.ts:11:  if (!user.ban_expires_at) return true; // permanent
+src/lib/ban.ts:12:  return new Date(user.ban_expires_at) > new Date();
+src/lib/ban.ts:20:export async function checkBanStatus(): Promise<NextResponse | null> {
+src/lib/ban.ts:29:    .select("banned_at, ban_expires_at")
+exit=0
+
+$ command grep -rn 'checkBanStatus' src/app | sort
+src/app/api/clubs/[id]/appeal/route.ts:11:  const banResponse = await checkBanStatus();
+src/app/api/clubs/[id]/appeal/route.ts:5:import { checkBanStatus } from "@/lib/ban";
+src/app/api/clubs/route.ts:42:  const banResponse = await checkBanStatus();
+src/app/api/clubs/route.ts:4:import { checkBanStatus } from "@/lib/ban";
+src/app/api/events/[id]/appeal/route.ts:11:  const banResponse = await checkBanStatus();
+src/app/api/events/[id]/appeal/route.ts:5:import { checkBanStatus } from "@/lib/ban";
+src/app/api/events/[id]/invite/route.ts:15:    const banResponse = await checkBanStatus();
+src/app/api/events/[id]/invite/route.ts:2:import { checkBanStatus } from "@/lib/ban";
+src/app/api/events/[id]/rsvp/route.ts:13:import { checkBanStatus } from "@/lib/ban";
+src/app/api/events/[id]/rsvp/route.ts:188:    const banResponse = await checkBanStatus();
+src/app/api/events/[id]/save/route.ts:12:import { checkBanStatus } from "@/lib/ban";
+src/app/api/events/[id]/save/route.ts:55:    const banResponse = await checkBanStatus();
+src/app/api/events/create/route.ts:11:    const banResponse = await checkBanStatus();
+src/app/api/events/create/route.ts:7:import { checkBanStatus } from "@/lib/ban";
+src/app/api/recommendations/feedback/route.ts:12:import { checkBanStatus } from "@/lib/ban";
+src/app/api/recommendations/feedback/route.ts:89:    const banResponse = await checkBanStatus();
+src/app/api/user/engagement/route.ts:120:    const banResponse = await checkBanStatus();
+src/app/api/user/engagement/route.ts:8:import { checkBanStatus } from "@/lib/ban";
+src/app/api/users/[id]/follow/route.ts:14:    const banResponse = await checkBanStatus();
+src/app/api/users/[id]/follow/route.ts:2:import { checkBanStatus } from "@/lib/ban";
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns 'src/server' 2>&1 | tail -6
+
+Test Suites: 7 passed, 7 total
+Tests:       46 passed, 46 total
+Snapshots:   0 total
+Time:        0.252 s, estimated 1 s
+Ran all test suites matching src/server.
+exit=0
+
+Reading:
+- The two ban columns appear in src/server/ only in context.ts (the type and
+  the select string) and in two test fixtures. No guard reads them — DI-35
+  re-derived, unchanged since Phase 3.
+- Profile fields read by the guards: requireRole reads `ctx.profile` (null
+  check) and `ctx.profile.roles`. requireClubRole reads no profile field (it
+  reads club_members). requireUser reads the auth user, not the profile. So
+  the narrowing to id, roles, onboarding_completed removes only unread columns.
+- createRequestContext is consumed only by its own suite; the four Slice 1
+  characterization suites name it in prose (the 04-02 fake answers its users
+  read), no handler has adopted it yet.
+- The ban checks that exist: the proxy ring (src/proxy.ts:91-110, outer catch
+  fail-open) and checkBanStatus() in src/lib/ban.ts. The census of
+  checkBanStatus callers is wider than DEC-24's phase-scoped wording ("save POST
+  and rsvp POST"): ten route files call it. The new docblock says "individual
+  write handlers — among them save POST and rsvp POST", which is true of the
+  whole tree, not only of this phase's slice.
+- 46 tests in the seam suites before the change.
+
+==============================================================================
+2. RED — the tests name the three columns; the code still selects five
+==============================================================================
+$ git diff -- src/server/__tests__/
+diff --git a/src/server/__tests__/context.test.ts b/src/server/__tests__/context.test.ts
+index 467433e..f2ce3fd 100644
+--- a/src/server/__tests__/context.test.ts
++++ b/src/server/__tests__/context.test.ts
+@@ -39,8 +39,6 @@ const AUTHENTICATED_USER = { id: "user-1", email: "someone@mail.mcgill.ca" };
+ const PROFILE_ROW = {
+   id: "user-1",
+   roles: ["user"],
+-  banned_at: null,
+-  ban_expires_at: null,
+   onboarding_completed: true,
+ };
+ 
+@@ -88,20 +86,16 @@ describe("createRequestContext", () => {
+     expect(ctx.user).toEqual(AUTHENTICATED_USER);
+   });
+ 
+-  it("reads the five-column profile slice from the users table", async () => {
++  it("reads the three-column profile slice from the users table", async () => {
+     const ctx = await createRequestContext();
+ 
+     expect(lastTable).toBe("users");
+     const selected = String(lastChain?.select.mock.calls[0][0]);
+-    for (const column of [
++    expect(selected.split(",").map((column) => column.trim())).toEqual([
+       "id",
+       "roles",
+-      "banned_at",
+-      "ban_expires_at",
+       "onboarding_completed",
+-    ]) {
+-      expect(selected).toContain(column);
+-    }
++    ]);
+     expect(ctx.profile).toEqual(PROFILE_ROW);
+   });
+ 
+diff --git a/src/server/__tests__/requireRole.test.ts b/src/server/__tests__/requireRole.test.ts
+index ea96579..39bcc05 100644
+--- a/src/server/__tests__/requireRole.test.ts
++++ b/src/server/__tests__/requireRole.test.ts
+@@ -27,8 +27,6 @@ function contextWithRoles(roles: string[]): RequestContext {
+     profile: {
+       id: "user-1",
+       roles,
+-      banned_at: null,
+-      ban_expires_at: null,
+       onboarding_completed: true,
+     },
+   } as unknown as Partial<RequestContext>);
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns 'src/server' 2>&1 | command grep -v '^\s*at ' | tail -45
+Running one project: node
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/server/__tests__/elevated.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/errors.test.ts
+FAIL node src/server/__tests__/context.test.ts
+  ● createRequestContext › reads the three-column profile slice from the users table
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 2
+
+      Array [
+        "id",
+        "roles",
+    +   "banned_at",
+    +   "ban_expires_at",
+        "onboarding_completed",
+      ]
+
+      92 |     expect(lastTable).toBe("users");
+      93 |     const selected = String(lastChain?.select.mock.calls[0][0]);
+    > 94 |     expect(selected.split(",").map((column) => column.trim())).toEqual([
+         |                                                                ^
+      95 |       "id",
+      96 |       "roles",
+      97 |       "onboarding_completed",
+
+
+Test Suites: 1 failed, 6 passed, 7 total
+Tests:       1 failed, 45 passed, 46 total
+Snapshots:   0 total
+Time:        0.232 s, estimated 1 s
+Ran all test suites matching src/server.
+exit=1
+
+Reading: the only assertion changed is the column assertion (now an exact list
+instead of five `toContain`s, plus its title); the only fixture change is
+dropping the two ban fields from each fixture. Nothing else in either file
+changed. It fails for the right reason: the select string still carries
+banned_at and ban_expires_at. Committed as the RED gate (4ed3530).
+
+==============================================================================
+3. GREEN — RequestProfile and PROFILE_COLUMNS narrowed; docblock corrected
+==============================================================================
+$ git diff -- src/server/context.ts
+diff --git a/src/server/context.ts b/src/server/context.ts
+index 09e99ea..89b5b2b 100644
+--- a/src/server/context.ts
++++ b/src/server/context.ts
+@@ -28,13 +28,33 @@ export type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+ /**
+  * The profile slice read once per request.
+  *
+- * These five columns are exactly what the ban check, the onboarding guard and
+- * the role guards between them need. Reading them once is the whole point of a
++ * These three columns are the row's key (`id`), what the role guard reads
++ * (`roles`, in `requireRole`) and what the onboarding guard will read
++ * (`onboarding_completed`). `requireClubRole` reads no profile column — it
++ * reads `club_members`. Reading the slice once is the whole point of a
+  * per-request context.
++ *
++ * THE SEAM PERFORMS NO BAN CHECK. `requireUser`, `requireRole` and
++ * `requireClubRole` establish authentication and role membership only; a
++ * handler that adopts them gets no ban enforcement from them. Ban enforcement
++ * today is:
++ *   - the proxy ring (`src/proxy.ts`), which reads the caller's ban columns on
++ *     every matched request but FAILS OPEN: the whole ring is skipped when its
++ *     environment is unbound (F-003), its outer catch passes the request
++ *     through on any error, and a failed ban read counts as "not banned". It
++ *     also answers a JSON API call with a redirect to an HTML page (F-062);
++ *   - `checkBanStatus()` (`src/lib/ban.ts`), called by individual write
++ *     handlers — among them save POST and rsvp POST, but not their DELETE
++ *     arms, an asymmetry the characterization suites pin.
++ *
++ * A seam ban guard that fails closed is REFAC-11, Phase 5. It will re-add
++ * `banned_at` and `ban_expires_at` to this slice knowingly, alongside the guard
++ * that reads them (DEC-24). Until then, selecting them here would only imply a
++ * check nobody performs (DI-35).
+  */
+ export type RequestProfile = Pick<
+   Tables<"users">,
+-  "id" | "roles" | "banned_at" | "ban_expires_at" | "onboarding_completed"
++  "id" | "roles" | "onboarding_completed"
+ >;
+ 
+ export type RequestContext = {
+@@ -45,7 +65,7 @@ export type RequestContext = {
+ };
+ 
+ const PROFILE_COLUMNS =
+-  "id, roles, banned_at, ban_expires_at, onboarding_completed";
++  "id, roles, onboarding_completed";
+ 
+ /**
+  * Builds the request context.
+exit=0
+
+$ npx jest --ci --selectProjects node --testPathPatterns 'src/server' 2>&1 | tail -6
+
+Test Suites: 7 passed, 7 total
+Tests:       46 passed, 46 total
+Snapshots:   0 total
+Time:        0.217 s, estimated 1 s
+Ran all test suites matching src/server.
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ command grep -rn 'banned_at\|ban_expires_at' src/server/
+src/server/context.ts:51: * `banned_at` and `ban_expires_at` to this slice knowingly, alongside the guard
+exit=0
+
+$ node -e 'const s=require("fs").readFileSync("src/server/context.ts","utf8");process.exit(/PROFILE_COLUMNS\s*=\s*\n?\s*"id, roles, onboarding_completed"/.test(s)?0:1)'
+exit=0
+
+$ command grep -c 'REFAC-11' src/server/context.ts
+1
+exit=0
+
+$ git diff --stat -- src/server/authz/; echo '(end of authz diff --stat)'
+(end of authz diff --stat)
+exit=0
+
+Reading: 46 tests before, 46 after, all passing; tsc clean. The only remaining
+mention of either ban column under src/server/ is the docblock sentence that
+says Phase 5 will re-add them. src/server/authz/ is unchanged. No ban guard
+was added (DEC-24; REFAC-11 is Phase 5's).
+
+==============================================================================
+4. WHOLE SUITE — the 04-02 floor still holds
+==============================================================================
+$ npx jest --ci 2>&1 | tail -6
+
+Test Suites: 1 skipped, 40 passed, 40 of 41 total
+Tests:       5 skipped, 433 passed, 438 total
+Snapshots:   0 total
+Time:        2.168 s
+Ran all test suites in 2 projects.
+exit=0
+
+$ npm run lint 2>&1 | tail -3
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+$ node scripts/check-characterization-tags.mjs --all | tail -1
+ok 11 files
+exit=0
+
+Reading: jest 433 passed / 5 skipped / 438 total, 40 passed + 1 skipped of 41
+suites — exactly the 04-02 floor (this plan adds no tests). Lint 0 errors /
+19 warnings (floor). Ratchet 25/25. Tag gate ok on 11 files.

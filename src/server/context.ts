@@ -28,13 +28,33 @@ export type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
 /**
  * The profile slice read once per request.
  *
- * These five columns are exactly what the ban check, the onboarding guard and
- * the role guards between them need. Reading them once is the whole point of a
+ * These three columns are the row's key (`id`), what the role guard reads
+ * (`roles`, in `requireRole`) and what the onboarding guard will read
+ * (`onboarding_completed`). `requireClubRole` reads no profile column — it
+ * reads `club_members`. Reading the slice once is the whole point of a
  * per-request context.
+ *
+ * THE SEAM PERFORMS NO BAN CHECK. `requireUser`, `requireRole` and
+ * `requireClubRole` establish authentication and role membership only; a
+ * handler that adopts them gets no ban enforcement from them. Ban enforcement
+ * today is:
+ *   - the proxy ring (`src/proxy.ts`), which reads the caller's ban columns on
+ *     every matched request but FAILS OPEN: the whole ring is skipped when its
+ *     environment is unbound (F-003), its outer catch passes the request
+ *     through on any error, and a failed ban read counts as "not banned". It
+ *     also answers a JSON API call with a redirect to an HTML page (F-062);
+ *   - `checkBanStatus()` (`src/lib/ban.ts`), called by individual write
+ *     handlers — among them save POST and rsvp POST, but not their DELETE
+ *     arms, an asymmetry the characterization suites pin.
+ *
+ * A seam ban guard that fails closed is REFAC-11, Phase 5. It will re-add
+ * `banned_at` and `ban_expires_at` to this slice knowingly, alongside the guard
+ * that reads them (DEC-24). Until then, selecting them here would only imply a
+ * check nobody performs (DI-35).
  */
 export type RequestProfile = Pick<
   Tables<"users">,
-  "id" | "roles" | "banned_at" | "ban_expires_at" | "onboarding_completed"
+  "id" | "roles" | "onboarding_completed"
 >;
 
 export type RequestContext = {
@@ -45,7 +65,7 @@ export type RequestContext = {
 };
 
 const PROFILE_COLUMNS =
-  "id, roles, banned_at, ban_expires_at, onboarding_completed";
+  "id, roles, onboarding_completed";
 
 /**
  * Builds the request context.
