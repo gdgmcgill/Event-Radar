@@ -6,14 +6,14 @@ current_phase: 04
 current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 status: executing
 stopped_at: "Completed 04-09-PLAN.md — keyset cursor contract (38a7091 codec, ea71bb6 route+suites, b237c14 Playwright 40/0); jest 717 passed / 0 skipped; DI-24 closed, DI-38 new; next: 04-10"
-last_updated: "2026-09-23T22:33:47.652Z"
+last_updated: "2026-09-23T22:44:29.849Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 43
-  completed_plans: 41
+  completed_plans: 42
   percent: 38
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 04 (Slices 1–2 — Saved Events/RSVP and the Event Read Path) — EXECUTING
-Plan: 10 of 11
+Plan: 11 of 11
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 04 execution started
 
@@ -94,6 +94,7 @@ Progress: [███░░░░░░░] 31%
 | Phase 04 P07 | 5min | 2 tasks | 5 files |
 | Phase 04 P08 | 7min | 2 tasks | 10 files |
 | Phase 04 P09 | 15min | 3 tasks | 14 files |
+| Phase 04 P10 | 8min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -231,6 +232,8 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-09: DEC-25 executed — GET /api/events keyset cursor on (start_date, id), quoted keyset or(), total from a head count, 400 Invalid cursor; fuzzy path ignores cursors and emits null
 - [Phase 04]: 04-09: src/app/api/events/route.test.ts rewritten (not revived) as a PRESERVE contract suite; tag gate floor is now ok 18 files
 - [Phase 04]: 04-09: composite (start_date, id) index for approved non-deleted events recorded as F-083 follow-up for Phase 8 — no migration in Phase 4
+- [Phase 04]: 04-10: DEC-27 non-visual half shipped — shared EVENT_WITH_CLUB_SELECT (15 club columns, no contact_email) on six list routes and saved-events; F-080 pins B and C FIXED (1150b0f, 9083430), pins A and D unmoved for the 04-11 owner checkpoint
+- [Phase 04]: 04-10: A4 closed with numbers — club embed adds +0.34 ms median (star to embed) and +0.17 ms (ten to fifteen columns) on the local stack; one clubs_pkey probe per row
 
 ### Pending Todos
 
@@ -282,7 +285,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T22:33:47.648Z
+Last session: 2026-09-23T22:44:20.826Z
 Stopped at: Completed 04-09-PLAN.md — keyset cursor contract (38a7091 codec, ea71bb6 route+suites, b237c14 Playwright 40/0); jest 717 passed / 0 skipped; DI-24 closed, DI-38 new; next: 04-10
 Next: run `/gsd-verify-work` for Phase 3, then plan Phase 4. **Phase 4 inherits, all with written owners:** DI-32 (the red `e2e` CI job — fix it first, it is the regression net Phase 4 depends on), DI-24 (the tsconfig test-file exclusion, ~86 errors across 10 files, plus the cursor-pagination contract that is REFAC-10 itself), DI-25 (the Supabase SDK minor, whose blocking shape plan 03-06 already worked an example of, and the separate `ssr` major), DI-31 (the boundary's two evasions and the ratchet's missing CI wiring — both land with the first real shrink), DI-20 (the flaky `useEvents` hook test) and F-071. **Before any deploy, in this order:** rotate the production DB password, then decide the repair. Do not run `supabase db push` against production before Phase 8 or an explicit owner decision.
 Resume file: None
