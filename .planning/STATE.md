@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 04
 current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
 status: executing
-stopped_at: "Completed 04-04-PLAN.md — Slice 2 characterization net: list/detail PRESERVE, F-080..F-083 DEFECT, 9-test read-path spec (Playwright 37), DI-36 registered; next: 04-05"
-last_updated: "2026-09-23T05:51:14.988Z"
+stopped_at: "Completed 04-05-PLAN.md — Slice 1 refactor: seam in 5 handlers (a5ee4fc, fe4e9f9), F-079 head counts (d40dee4), F-071 friends fallback (1351480); jest 512/5; next: 04-06"
+last_updated: "2026-09-23T05:51:24.995Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 04 execution started
 progress:
@@ -268,7 +268,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T05:51:05.967Z
-Stopped at: Completed 04-04-PLAN.md — Slice 2 characterization net: list/detail PRESERVE, F-080..F-083 DEFECT, 9-test read-path spec (Playwright 37), DI-36 registered; next: 04-05
+Last session: 2026-09-23T05:51:24.991Z
+Stopped at: Completed 04-05-PLAN.md — Slice 1 refactor: seam in 5 handlers (a5ee4fc, fe4e9f9), F-079 head counts (d40dee4), F-071 friends fallback (1351480); jest 512/5; next: 04-06
 Next: run `/gsd-verify-work` for Phase 3, then plan Phase 4. **Phase 4 inherits, all with written owners:** DI-32 (the red `e2e` CI job — fix it first, it is the regression net Phase 4 depends on), DI-24 (the tsconfig test-file exclusion, ~86 errors across 10 files, plus the cursor-pagination contract that is REFAC-10 itself), DI-25 (the Supabase SDK minor, whose blocking shape plan 03-06 already worked an example of, and the separate `ssr` major), DI-31 (the boundary's two evasions and the ratchet's missing CI wiring — both land with the first real shrink), DI-20 (the flaky `useEvents` hook test) and F-071. **Before any deploy, in this order:** rotate the production DB password, then decide the repair. Do not run `supabase db push` against production before Phase 8 or an explicit owner decision.
 Resume file: None
