@@ -1,0 +1,178 @@
+DI-25 enumeration — the type errors @supabase/supabase-js 2.116.0 raises on this tree
+**Plan:** 04-01 · **Phase:** 04 · **Recorded:** 2026-09-23
+Base commit: 794556af090ad39f55bb792143b1d2c880615ace (evidence/floor.before.txt line 1)
+Closes research assumption A5 (04-RESEARCH.md § Assumptions Log) by measurement.
+
+METHOD
+A detached git worktree of the base commit was created in the session scratchpad,
+OUTSIDE the repository (shown below as <scratch>). In it: `npm ci`, then
+`npx tsc --noEmit` on the pinned 2.81.1 (clean, exit 0, so every later error is
+the bump's), then `npm install --no-save @supabase/supabase-js@2.116.0`, then
+`npx tsc --noEmit` again. The worktree was then force-removed. Nothing from the
+install reached the main working tree: its package.json, package-lock.json and
+node_modules/.package-lock.json are unmodified and it still resolves 2.81.1
+(block 6). The package was checked OK in 04-RESEARCH.md § Package Legitimacy
+Audit. `npm ls` shows @supabase/ssr@0.7.0 deduping onto 2.116.0 in the worktree;
+that is the worktree's resolution only.
+
+RESULT — 8 diagnostics, 7 TS2345 and 1 TS2322 (Phase 2 measured six TS2345)
+
+| # | Site | Code | Handler / function | Phase 4? | Owner by subject |
+|---|------|------|--------------------|----------|------------------|
+| 1 | src/app/api/admin/events/[id]/edits/route.ts(67,15) | TS2345 Record<string, unknown> | admin event-edit approval | outside Phase 4 | Phase 5 (admin containment, REFAC-13) |
+| 2 | src/app/api/admin/events/[id]/route.ts(41,13) | TS2345 Record<string, unknown> | admin event update | outside Phase 4 | Phase 5 (REFAC-13) |
+| 3 | src/app/api/admin/experiments/[id]/route.ts(103,13) | TS2345 Record<string, unknown> | admin experiment update | outside Phase 4 | Phase 5 (REFAC-13) |
+| 4 | src/app/api/admin/featured/[id]/route.ts(43,15) | TS2345 Record<string, Json> | admin featured-event update | outside Phase 4 | Phase 5 (REFAC-13). NEW since Phase 2's six |
+| 5 | src/app/api/admin/users/[id]/route.ts(33,13) | TS2345 Record<string, unknown> | admin user update | outside Phase 4 | Phase 5 (REFAC-13) |
+| 6 | src/app/api/clubs/[id]/route.ts(129,15) | TS2345 Record<string, string \| null> | club update | outside Phase 4 | Phase 5 (club authorization, REFAC-12) |
+| 7 | src/app/api/events/[id]/route.ts(318,15) | TS2345 Record<string, unknown> | the PATCH handler (lines 152-344), the organizer's event-edit `.update(directUpdates)` | outside Phase 4, as a HANDLER — see note | the event-edit/moderation path; Phase 5 at the earliest |
+| 8 | src/lib/audit.ts(38,5) | TS2322 string \| null -> never | logAdminAction's insert of admin_email | outside Phase 4 | Phase 5 — this is F-073 itself: 2.116.0's RejectExcessProperties sees the non-existent admin_email column |
+
+NOTE ON SITE 7 — the one near-miss, stated rather than rounded away
+`src/app/api/events/[id]/route.ts` IS a Phase 4 file: Slice 2's inventory owns
+its GET (line 71, the select at 82), and plans 04-10/04-11 change that GET's
+select for F-080. The error is in the same file's PATCH (152-344), a data-mutation
+handler no Phase 4 slice inventories, characterizes or refactors. By the plan's
+test — "inside or outside Phase 4's thirteen handlers" — it is OUTSIDE. By file it
+is adjacent, so a later plan editing that file's GET must leave PATCH's
+`directUpdates` typing alone. No Phase 4 handler blocks the bump.
+
+CLASSIFICATION RULE
+"Phase 4's thirteen handlers" are the route files in 04-RESEARCH.md's Slice 1
+inventory (events/[id]/save, events/[id]/rsvp, users/saved-events,
+calendar/events, events/[id]/friends) and Slice 2 inventory (events, events/new,
+events/following, events/happening-now, events/popular, calendar/events,
+events/[id] GET, users/saved-events), scoped to the methods those inventories
+name. Sites 1-6 and 8 are in no file on either list.
+
+DISPOSITION (DEC-28): no blocking site is in a Phase 4 handler. The minor
+re-defers to Phase 5 with this list; the @supabase/ssr 0.7 -> 0.12 major defers
+to Phase 5 at the earliest (it touches cookie/session handling, REFAC-11's
+surface). No dependency moves in Phase 4.
+
+==============================================================================
+RAW BLOCKS — invoking command, verbatim output, exit code
+(The scratchpad path is shown as <scratch> in the commands; npm prints it with a
+masked segment.)
+==============================================================================
+
+------------------------------------------------------------------------------
+[1 · create the throwaway worktree]
+$ git worktree add --detach <scratch>/di25-wt 794556af090ad39f55bb792143b1d2c880615ace
+Preparing worktree (detached HEAD 794556a)
+HEAD is now at 794556a chore(04): run executors sequentially on the main tree (local stack, gitignored env)
+exit=0
+
+------------------------------------------------------------------------------
+[2 · npm ci in the worktree (tail)]
+$ npm ci
+exit=0
+9 vulnerabilities (3 low, 3 moderate, 2 high, 1 critical)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+
+------------------------------------------------------------------------------
+[3 · versions and tsc BEFORE the bump]
+$ npm ls @supabase/supabase-js @supabase/postgrest-js --depth=0
+uni-verse@0.1.0 /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/***/scratchpad/di25-wt
+└── @supabase/supabase-js@2.81.1
+
+exit=0
+
+$ npx tsc --noEmit   # BEFORE the bump, in the worktree
+exit=0
+
+------------------------------------------------------------------------------
+[4 · the no-save install]
+$ npm install --no-save @supabase/supabase-js@2.116.0
+exit=0
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+
+$ npm ls @supabase/supabase-js @supabase/postgrest-js
+uni-verse@0.1.0 /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/***/scratchpad/di25-wt
+├─┬ @supabase/ssr@0.7.0
+│ └── @supabase/supabase-js@2.116.0 deduped
+└─┬ @supabase/supabase-js@2.116.0
+  └── @supabase/postgrest-js@2.116.0
+
+
+$ git status --porcelain -- package.json package-lock.json   # in the worktree: --no-save wrote nothing
+exit=0
+
+------------------------------------------------------------------------------
+[5 · tsc AFTER the bump — full diagnostic output]
+$ npx tsc --noEmit   # AFTER the bump
+src/app/api/admin/events/[id]/edits/route.ts(67,15): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'RejectExcessProperties<{ appeal_count?: number | undefined; category?: string | null | undefined; club_id?: string | null | undefined; content_hash?: string | null | undefined; created_at?: string | null | undefined; ... 19 more ...; updated_at?: string | ... 1 more ... | undefined; }, Record<...>>'.
+  Type 'Record<string, unknown>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'unknown' is not assignable to type 'never'.
+src/app/api/admin/events/[id]/route.ts(41,13): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'RejectExcessProperties<{ appeal_count?: number | undefined; category?: string | null | undefined; club_id?: string | null | undefined; content_hash?: string | null | undefined; created_at?: string | null | undefined; ... 19 more ...; updated_at?: string | ... 1 more ... | undefined; }, Record<...>>'.
+  Type 'Record<string, unknown>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'unknown' is not assignable to type 'never'.
+src/app/api/admin/experiments/[id]/route.ts(103,13): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'RejectExcessProperties<{ created_at?: string | undefined; description?: string | null | undefined; end_date?: string | null | undefined; id?: string | undefined; name?: string | undefined; start_date?: string | null | undefined; status?: string | undefined; target_metric?: string | ... 1 more ... | undefined; update...'.
+  Type 'Record<string, unknown>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'unknown' is not assignable to type 'never'.
+src/app/api/admin/featured/[id]/route.ts(43,15): error TS2345: Argument of type 'Record<string, Json>' is not assignable to parameter of type 'RejectExcessProperties<{ created_at?: string | undefined; created_by?: string | undefined; ends_at?: string | undefined; event_id?: string | undefined; id?: string | undefined; priority?: number | undefined; sponsor_name?: string | ... 1 more ... | undefined; starts_at?: string | undefined; }, Record<...>>'.
+  Type 'Record<string, Json>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'Json' is not assignable to type 'never'.
+        Type 'null' is not assignable to type 'never'.
+src/app/api/admin/users/[id]/route.ts(33,13): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'RejectExcessProperties<{ avatar_url?: string | null | undefined; ban_expires_at?: string | null | undefined; ban_reason?: string | null | undefined; banned_at?: string | null | undefined; banned_by?: string | null | undefined; ... 16 more ...; year?: string | ... 1 more ... | undefined; }, Record<...>>'.
+  Type 'Record<string, unknown>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'unknown' is not assignable to type 'never'.
+src/app/api/clubs/[id]/route.ts(129,15): error TS2345: Argument of type 'Record<string, string | null>' is not assignable to parameter of type 'RejectExcessProperties<{ appeal_count?: number | undefined; banner_url?: string | null | undefined; category?: string | null | undefined; contact_email?: string | null | undefined; created_at?: string | undefined; ... 11 more ...; website_url?: string | ... 1 more ... | undefined; }, Record<...>>'.
+  Type 'Record<string, string | null>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'string | null' is not assignable to type 'never'.
+        Type 'null' is not assignable to type 'never'.
+src/app/api/events/[id]/route.ts(318,15): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'RejectExcessProperties<{ appeal_count?: number | undefined; category?: string | null | undefined; club_id?: string | null | undefined; content_hash?: string | null | undefined; created_at?: string | null | undefined; ... 19 more ...; updated_at?: string | ... 1 more ... | undefined; }, Record<...>>'.
+  Type 'Record<string, unknown>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'unknown' is not assignable to type 'never'.
+src/lib/audit.ts(38,5): error TS2322: Type 'string | null' is not assignable to type 'never'.
+  Type 'null' is not assignable to type 'never'.
+exit=2
+
+$ grep -E "error TS2345" <tsc output> | cut -d: -f1   # every TS2345 site, then its label from the table above
+src/app/api/admin/events/[id]/edits/route.ts(67,15)      TS2345  outside Phase 4
+src/app/api/admin/events/[id]/route.ts(41,13)            TS2345  outside Phase 4
+src/app/api/admin/experiments/[id]/route.ts(103,13)      TS2345  outside Phase 4
+src/app/api/admin/featured/[id]/route.ts(43,15)          TS2345  outside Phase 4
+src/app/api/admin/users/[id]/route.ts(33,13)             TS2345  outside Phase 4
+src/app/api/clubs/[id]/route.ts(129,15)                  TS2345  outside Phase 4
+src/app/api/events/[id]/route.ts(318,15)                 TS2345  outside Phase 4 (PATCH handler; the file's GET is Phase 4 — see NOTE ON SITE 7)
+exit=0
+
+------------------------------------------------------------------------------
+[6 · remove the worktree; the main tree is untouched]
+$ git worktree remove --force <scratch>/di25-wt
+exit=0
+
+$ git worktree prune && git worktree list
+/Users/adyan/Documents/GitHub/Event-Radar 27472b6 [main]
+exit=0
+
+$ git worktree list | wc -l
+       1
+
+$ test ! -e <scratch>/di25-wt && echo "worktree directory gone"
+worktree directory gone
+exit=0
+
+$ git status --porcelain -- package.json package-lock.json node_modules/.package-lock.json   # main tree
+exit=0
+
+$ npm ls @supabase/supabase-js --depth=0   # main tree still on the pinned version
+uni-verse@0.1.0 /Users/adyan/Documents/GitHub/Event-Radar
+└── @supabase/supabase-js@2.81.1
+
+exit=0
