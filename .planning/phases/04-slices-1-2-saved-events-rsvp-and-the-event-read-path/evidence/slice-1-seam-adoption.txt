@@ -1,0 +1,221 @@
+start=f5b07fa4e48cb8564c3bdd65d353a0f23596cd24
+
+# Slice 1 seam adoption evidence — plan 04-05
+# Recorded 2026-09-23T05:43:24Z. Jest only; the local stack and port 3000 are not used.
+
+## 1. Before state (at start, no file edited)
+$ npx jest --ci --selectProjects node --testPathPatterns "(save|saved-events|calendar-events|rsvp)-(characterization|count-defect|time-floor-defect)|rsvp.test|friends-defect"
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+Test Suites: 8 passed, 8 total
+Tests:       94 passed, 94 total
+exit=0  (re-run to capture the exit code; the first capture lost it to the pipe)
+
+## 2. Task 1 — seam adopted in save, rsvp, saved-events, calendar (friends split out, see section 3)
+$ npx jest --ci --selectProjects node --testPathPatterns "(save|saved-events|calendar-events|rsvp)-(characterization|count-defect|time-floor-defect)|rsvp.test|friends-defect"
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+Test Suites: 8 passed, 8 total
+Tests:       94 passed, 94 total
+exit=0
+
+$ git diff --stat f5b07fa4e48cb8564c3bdd65d353a0f23596cd24 -- src/__tests__   (must be empty)
+(end of diff output)
+
+$ grep -c "createRequestContext()" / "requireUser(ctx)" / "await createClient()" per file
+src/app/api/events/[id]/save/route.ts  ctx=2  requireUser=2  createClient=0
+src/app/api/events/[id]/rsvp/route.ts  ctx=3  requireUser=2  createClient=0
+src/app/api/users/saved-events/route.ts  ctx=1  requireUser=1  createClient=0
+src/app/api/calendar/events/route.ts  ctx=1  requireUser=1  createClient=0
+
+$ grep -n "checkBanStatus()" save/route.ts rsvp/route.ts
+src/app/api/events/[id]/save/route.ts:53:    const banResponse = await checkBanStatus();
+src/app/api/events/[id]/rsvp/route.ts:191:    const banResponse = await checkBanStatus();
+
+$ grep -n "Internal server error" (outer catches keep the literal body)
+src/app/api/events/[id]/rsvp/route.ts:71: *         description: Internal server error
+src/app/api/events/[id]/rsvp/route.ts:138:    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+src/app/api/events/[id]/rsvp/route.ts:187: *         description: Internal server error
+src/app/api/events/[id]/rsvp/route.ts:310:    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+src/app/api/events/[id]/rsvp/route.ts:353: *         description: Internal server error
+src/app/api/events/[id]/rsvp/route.ts:415:    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+src/app/api/events/[id]/save/route.ts:47:    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+src/app/api/events/[id]/save/route.ts:123:    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+src/app/api/users/saved-events/route.ts:40: *         description: Internal server error
+src/app/api/users/saved-events/route.ts:131:      { error: "Internal server error" },
+
+$ npx tsc --noEmit
+exit=0
+
+$ npm run lint (tail)
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+## 3. Task 1b — seam adopted in the friends handler (split from Task 1; see SUMMARY Deviation 1)
+Measured with the adopted friends handler and NO test edit: friends-defect.test.ts went 3 failed / 2 passed.
+Cause: its createMockBuilder lists select/eq/neq/gte/lte/order/limit/in/then but no .single(), so
+createRequestContext()'s users profile read (.select().eq().single()) throws TypeError inside the
+mock and the handler's outer catch answers { friends: [], count: 0 }. A real postgrest-js builder has
+.single() and returns { data, error } rather than throwing, so no response byte changes on a real client.
+Harness change in this commit: (1) builder.single resolving to the table's result; (2) the from() call-log
+assertion gains a leading "users" entry. No response assertion (status, body, count, friends, inCalls) moved.
+$ npx jest --ci --selectProjects node --testPathPatterns "(save|saved-events|calendar-events|rsvp)-(characterization|count-defect|time-floor-defect)|rsvp.test|friends-defect"
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+Test Suites: 8 passed, 8 total
+Tests:       94 passed, 94 total
+exit=0
+
+$ git diff --stat HEAD -- src/__tests__
+ src/__tests__/api/events/friends-defect.test.ts | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+src/app/api/events/[id]/friends/route.ts  ctx=1  requireUser=0  createClient=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ npm run lint (tail)
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+## 4. Task 2 — F-079 head-count queries
+--- step 2: unedited rsvp-count-defect against the fixed route (must be red) ---
+    ✕ anonymous GET issues exactly one rsvps read, and it is the count read (3 ms)
+    ✕ the count read selects id, status with no count option and no head option (1 ms)
+    ✕ the count read is filtered by event_id and by status not equal to cancelled — and nothing else (1 ms)
+    ✕ a signed-in GET still counts through exactly one unscoped row-returning read (1 ms)
+Tests:       4 failed, 4 total
+exit=1
+--- step 4 control: moved assertions against the pre-fix route (git show HEAD:route), then restored (must be red) ---
+    ✕ anonymous GET issues exactly two rsvps reads, and both are count reads (4 ms)
+    ✕ both count reads select id with { count: "exact", head: true } (1 ms)
+    ✕ one count read is filtered event_id + status going, the other event_id + status interested — and nothing else (1 ms)
+    ✕ a signed-in GET counts through the same two head reads; its only row-returning rsvps read is the caller-scoped user_rsvp lookup (1 ms)
+Tests:       4 failed, 4 total
+exit=1
+--- step 3/5: npx jest --ci --selectProjects node --testPathPatterns "rsvp" ---
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+Tests:       38 passed, 38 total
+exit=0
+$ git diff --stat f5b07fa -- src/__tests__/api/events/rsvp-characterization.test.ts src/__tests__/api/events/rsvp.test.ts
+(end of diff output)
+$ grep -c 'head: true' rsvp/route.ts = 3 on first commit (a comment also spelled the option); comment reworded to "head-only" and the commit amended -> 2;  grep -c Promise.all = 1
+$ npx tsc --noEmit
+exit=0
+$ npx tsc --noEmit -p <scratchpad>/tsc-slice1-rsvp/tsconfig.json   (DI-24 recipe; both RSVP suites + fake in program)
+exit=0
+$ npm run lint (tail)
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+
+## 5. Task 3 — F-071 friends fallback
+--- step 2: unedited friends-defect against the fixed route (must be red on the defect path) ---
+    ✓ the mechanism: a PostgREST builder is not iterable, so Set() rejects it (35 ms)
+    ✓ the happy path is unaffected — when the RPC succeeds the fallback never runs (4 ms)
+    ✕ the fallback path receives a query builder, not an array of ids (3 ms)
+    ✕ today's behaviour: the fallback throws and the handler answers with an empty list (3 ms)
+    ✓ an unauthenticated caller short-circuits before any of this (2 ms)
+Tests:       2 failed, 3 passed, 5 total
+exit=1
+--- step 3: moved assertions against the fixed route ---
+    ✓ the mechanism, kept as history: a PostgREST builder is not iterable, so Set() rejects it (7 ms)
+    ✓ the happy path is unaffected — when the RPC succeeds the fallback never runs (5 ms)
+    ✓ the fallback path passes .in() an array of the caller's followed ids (2 ms)
+    ✓ the fallback issues the reverse-follow query and answers with the mutual follows and a matching count (3 ms)
+    ✓ a caller who follows nobody passes an empty array and answers with nobody (2 ms)
+    ✓ an unauthenticated caller short-circuits before any of this (2 ms)
+Tests:       6 passed, 6 total
+exit=0
+--- step 4 control: moved assertions against the pre-fix route (git show HEAD:route), then restored + cmp ---
+    ✓ the mechanism, kept as history: a PostgREST builder is not iterable, so Set() rejects it (7 ms)
+    ✓ the happy path is unaffected — when the RPC succeeds the fallback never runs (5 ms)
+    ✕ the fallback path passes .in() an array of the caller's followed ids (3 ms)
+    ✕ the fallback issues the reverse-follow query and answers with the mutual follows and a matching count (3 ms)
+    ✕ a caller who follows nobody passes an empty array and answers with nobody (2 ms)
+    ✓ an unauthenticated caller short-circuits before any of this (3 ms)
+Tests:       3 failed, 3 passed, 6 total
+exit=1
+
+--- DI-24 throwaway tsconfig over the moved suite ---
+$ cat <scratchpad>/tsc-friends/tsconfig.json
+{
+  "extends": "/Users/adyan/Documents/GitHub/Event-Radar/tsconfig.json",
+  "compilerOptions": { "typeRoots": ["/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@types"], "incremental": false },
+  "include": [
+    "/Users/adyan/Documents/GitHub/Event-Radar/next-env.d.ts",
+    "/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/friends-defect.test.ts"
+  ],
+  "exclude": []
+}
+$ npx tsc --noEmit -p <scratchpad>/tsc-friends/tsconfig.json --listFilesOnly | grep -E 'src/__tests__|friends/route'
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/api/events/[id]/friends/route.ts
+/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/friends-defect.test.ts
+$ npx tsc --noEmit -p <scratchpad>/tsc-friends/tsconfig.json
+error TS count=0
+exit=0
+(for comparison, the pre-move suite under the same recipe: error TS count=0, exit=0 — its GET: any and {} as any erased the calls)
+
+$ command grep -rn "(supabase as any)" src/app/api/
+exit=1 (1 = no match)
+$ command grep -rn "(supabase as any)" src/app/ | wc -l
+       1
+src/app/moderation/page.tsx:78:      (supabase as any)
+
+## 6. Plan verification (full)
+$ npx jest --ci
+Test Suites: 1 skipped, 46 passed, 46 of 47 total
+Tests:       5 skipped, 512 passed, 517 total
+exit=0  (floor was 511 passed / 5 skipped; +1 = the new empty-follow-list friends test; skipped unchanged)
+$ npx tsc --noEmit
+exit=0
+$ npm run lint (tail)
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+$ node scripts/check-characterization-tags.mjs --all (tail)
+ok 17 files
+$ git diff --stat f5b07fa -- <four 04-02 PRESERVE suites> rsvp.test.ts saved-events-time-floor-defect.test.ts   (must be empty)
+(end of diff output)
+$ git diff --stat f5b07fa -- src/__tests__   (only the two moved DEFECT suites)
+ src/__tests__/api/events/friends-defect.test.ts    | 194 ++++++++++++++++-----
+ src/__tests__/api/events/rsvp-count-defect.test.ts |  70 +++++---
+ 2 files changed, 201 insertions(+), 63 deletions(-)
+$ git diff --stat f5b07fa -- supabase/migrations   (must be empty)
+(end of diff output)

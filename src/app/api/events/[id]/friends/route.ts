@@ -27,28 +27,18 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     );
 
     if (error) {
-      // Fallback: manual query if RPC doesn't exist yet
+      // Runs only when the RPC errors; F-071 (a builder passed to .in()) fixed in 04-05.
+      const { data: following } = await supabase
+        .from("user_follows")
+        .select("following_id")
+        .eq("follower_id", user.id);
+      const followingIds = (following ?? []).map((r) => r.following_id);
+
       const { data: manualFriends } = await supabase
         .from("saved_events")
         .select("user_id, users!inner(id, name, avatar_url)")
         .eq("event_id", eventId)
-        .in(
-          "user_id",
-          // DEFECT F-071 — a query builder is passed where an array of ids is
-          // required. `.in()` calls `Array.from(new Set(values))` on this
-          // argument and a builder is not iterable, so this throws and the
-          // handler's outer catch returns an empty friends list. The client
-          // cast below is one of only two left under src/ and it is retained
-          // deliberately: removing it makes the tree fail to type-check, and the
-          // only way to make it compile is to change the behaviour — which
-          // belongs to the slice that owns this path, not to a typing plan.
-          // Characterized by src/__tests__/api/events/friends-defect.test.ts.
-          // Closes in Phase 4. See evidence/type-fixes-note.md.
-          (supabase as any)
-            .from("user_follows")
-            .select("following_id")
-            .eq("follower_id", user.id)
-        );
+        .in("user_id", followingIds);
 
       // Filter to mutual follows manually
       if (manualFriends) {
