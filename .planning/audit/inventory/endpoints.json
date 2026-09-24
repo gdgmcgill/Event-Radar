@@ -2888,7 +2888,7 @@
       ],
       "loc": 76
     },
-    "auth_requirement": "anonymous",
+    "auth_requirement": "authenticated",
     "role_required": null,
     "rls_reliance": "partial",
     "service_role_justified": null,
@@ -2899,7 +2899,7 @@
     "test_present": false,
     "dead_or_duplicate": false,
     "expected_status": {
-      "anonymous": 200,
+      "anonymous": 401,
       "onboarded_student": 200,
       "mid_onboarding_student": 200,
       "club_member": 200,
@@ -2911,7 +2911,7 @@
       "suspended_active": 403,
       "suspension_expired": 200,
       "non_mcgill_signin": "n/a",
-      "machine_no_credential": 200
+      "machine_no_credential": 401
     },
     "findings": []
   },
@@ -2965,7 +2965,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 200,
-      "mid_onboarding_student": 200,
+      "mid_onboarding_student": 403,
       "club_member": 200,
       "club_owner": 200,
       "multi_club_organizer": 200,
@@ -3027,7 +3027,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 201,
-      "mid_onboarding_student": 201,
+      "mid_onboarding_student": 403,
       "club_member": 201,
       "club_owner": 201,
       "multi_club_organizer": 201,
@@ -3284,7 +3284,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 200,
-      "mid_onboarding_student": 200,
+      "mid_onboarding_student": 403,
       "club_member": 200,
       "club_owner": 200,
       "multi_club_organizer": 200,
@@ -3515,7 +3515,7 @@
       ],
       "loc": 62
     },
-    "auth_requirement": "anonymous",
+    "auth_requirement": "authenticated",
     "role_required": null,
     "rls_reliance": "partial",
     "service_role_justified": null,
@@ -3526,7 +3526,7 @@
     "test_present": false,
     "dead_or_duplicate": false,
     "expected_status": {
-      "anonymous": 200,
+      "anonymous": 401,
       "onboarded_student": 200,
       "mid_onboarding_student": 200,
       "club_member": 200,
@@ -3538,7 +3538,7 @@
       "suspended_active": 403,
       "suspension_expired": 200,
       "non_mcgill_signin": "n/a",
-      "machine_no_credential": 200
+      "machine_no_credential": 401
     },
     "findings": []
   },
@@ -3574,7 +3574,7 @@
       ],
       "loc": 81
     },
-    "auth_requirement": "anonymous",
+    "auth_requirement": "authenticated",
     "role_required": null,
     "rls_reliance": "partial",
     "service_role_justified": null,
@@ -3585,7 +3585,7 @@
     "test_present": false,
     "dead_or_duplicate": false,
     "expected_status": {
-      "anonymous": 200,
+      "anonymous": 401,
       "onboarded_student": 200,
       "mid_onboarding_student": 200,
       "club_member": 200,
@@ -3597,7 +3597,7 @@
       "suspended_active": 403,
       "suspension_expired": 200,
       "non_mcgill_signin": "n/a",
-      "machine_no_credential": 200
+      "machine_no_credential": 401
     },
     "findings": []
   },
@@ -3633,7 +3633,7 @@
       ],
       "loc": 64
     },
-    "auth_requirement": "anonymous",
+    "auth_requirement": "authenticated",
     "role_required": null,
     "rls_reliance": "partial",
     "service_role_justified": null,
@@ -3644,7 +3644,7 @@
     "test_present": false,
     "dead_or_duplicate": false,
     "expected_status": {
-      "anonymous": 200,
+      "anonymous": 401,
       "onboarded_student": 200,
       "mid_onboarding_student": 200,
       "club_member": 200,
@@ -3656,7 +3656,7 @@
       "suspended_active": 403,
       "suspension_expired": 200,
       "non_mcgill_signin": "n/a",
-      "machine_no_credential": 200
+      "machine_no_credential": 401
     },
     "findings": []
   },
@@ -4000,7 +4000,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 200,
-      "mid_onboarding_student": 200,
+      "mid_onboarding_student": 403,
       "club_member": 200,
       "club_owner": 200,
       "multi_club_organizer": 200,
@@ -4059,7 +4059,7 @@
     "expected_status": {
       "anonymous": 200,
       "onboarded_student": 200,
-      "mid_onboarding_student": 200,
+      "mid_onboarding_student": 403,
       "club_member": 200,
       "club_owner": 200,
       "multi_club_organizer": 200,
@@ -4178,7 +4178,7 @@
     "expected_status": {
       "anonymous": 201,
       "onboarded_student": 201,
-      "mid_onboarding_student": 201,
+      "mid_onboarding_student": 403,
       "club_member": 201,
       "club_owner": 201,
       "multi_club_organizer": 201,
@@ -4364,7 +4364,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 200,
-      "mid_onboarding_student": 200,
+      "mid_onboarding_student": 403,
       "club_member": 200,
       "club_owner": 200,
       "multi_club_organizer": 200,
@@ -4661,7 +4661,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 200,
-      "mid_onboarding_student": 200,
+      "mid_onboarding_student": 403,
       "club_member": 200,
       "club_owner": 200,
       "multi_club_organizer": 200,
@@ -4721,7 +4721,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 200,
-      "mid_onboarding_student": 200,
+      "mid_onboarding_student": 403,
       "club_member": 200,
       "club_owner": 200,
       "multi_club_organizer": 200,
@@ -4780,7 +4780,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 200,
-      "mid_onboarding_student": 200,
+      "mid_onboarding_student": 403,
       "club_member": 200,
       "club_owner": 200,
       "multi_club_organizer": 200,
@@ -4839,7 +4839,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 200,
-      "mid_onboarding_student": 200,
+      "mid_onboarding_student": 403,
       "club_member": 200,
       "club_owner": 200,
       "multi_club_organizer": 200,
@@ -5269,7 +5269,7 @@
     "expected_status": {
       "anonymous": 401,
       "onboarded_student": 201,
-      "mid_onboarding_student": 201,
+      "mid_onboarding_student": 403,
       "club_member": 201,
       "club_owner": 201,
       "multi_club_organizer": 201,
@@ -5689,7 +5689,7 @@
     "cache_policy_today": "(none — vercel.json /api/(.*) rule does not match this path; next.config.ts sets no Cache-Control)",
     "cache_policy_target": "private, no-store",
     "input_validation": "none",
-    "test_present": false,
+    "test_present": true,
     "dead_or_duplicate": false,
     "expected_status": {
       "anonymous": 302,

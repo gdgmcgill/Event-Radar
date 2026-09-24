@@ -199,6 +199,21 @@ const VERDICTS = {
   'api.moderation.reviews.targetType.targetId': A('authenticated',
     'inline roles check on the service client (users.roles includes "admin"), not verifyAdmin()', 'bypassed', false, 'admin'),
 
+  /* ---- authenticated since Phase 5 slice 3 (F-028, DEC-39) ---------------
+   * These four were anonymous-tolerant and personalized (the § 6 D-6 cohort).
+   * Plan 05-06 (7ff08c1) made each answer anonymous callers
+   * 401 {"error":"Unauthorized"}; every client caller was already user-gated.
+   * The other three D-6 routes (api.events.id.rsvp GET, api.clubs.id.events,
+   * api.notifications.count) stay anonymous and move with REFAC-19 (Phase 6). */
+  'api.events.id.friends': A('authenticated', null, 'partial', true, 'self',
+    'F-028 / DEC-39: anonymous callers get 401 since 05-06 (was 200 {friends:[],count:0}); signed-in callers get their own social graph.'),
+  'api.events.following': A('authenticated', null, 'partial', true, 'self',
+    'F-028 / DEC-39: anonymous callers get 401 since 05-06 (was 200 {events:[]}); signed-in callers get the clubs they follow.'),
+  'api.events.friends-activity': A('authenticated', null, 'partial', true, 'self',
+    'F-028 / DEC-39: anonymous callers get 401 since 05-06.'),
+  'api.events.friends-organizing': A('authenticated', null, 'partial', true, 'self',
+    'F-028 / DEC-39: anonymous callers get 401 since 05-06.'),
+
   /* ---- authenticated, club-scoped --------------------------------------- */
   'api.clubs.id.analytics': A('authenticated', VIA_CLUB, 'partial', false, 'club'),
   'api.clubs.id.appeal': A('authenticated', VIA_CLUB_OWNER, 'bypassed', false, 'club-owner'),
@@ -243,12 +258,6 @@ const VERDICTS = {
   /* ---- anonymous-tolerant AND personalized: the cache-disclosure cohort -- */
   'api.clubs.id.events': A('anonymous', null, 'partial', true, 'global',
     'No 401 anywhere. Returns `isOrganizer: true` plus the organizer event set to members and a reduced set to everyone else (route.ts:97,100).'),
-  'api.events.id.friends': A('anonymous', null, 'partial', true, 'global',
-    'Anonymous callers get {friends:[],count:0}; signed-in callers get their own social graph.'),
-  'api.events.following': A('anonymous', null, 'partial', true, 'global',
-    'Anonymous callers get {events:[]}; signed-in callers get the clubs they follow.'),
-  'api.events.friends-activity': A('anonymous', null, 'partial', true, 'global'),
-  'api.events.friends-organizing': A('anonymous', null, 'partial', true, 'global'),
   'api.notifications.count': A('anonymous', null, 'partial', true, 'global',
     'Anonymous callers get {unread_count:0}; signed-in callers get their own count.'),
   'api.events.id.rsvp': A('anonymous', null, 'partial', true, 'global',
@@ -272,6 +281,12 @@ const PERSONAS = [
   'banned_permanent', 'suspended_active', 'suspension_expired',
   'non_mcgill_signin', 'machine_no_credential',
 ];
+
+/**
+ * The two write arms DEC-34 exempts from requireOnboarded(): the onboarding
+ * wizard calls both before onboarding is complete (OnboardingWizard.tsx).
+ */
+const ONBOARDING_EXEMPT = new Set(['api.users.id', 'api.onboarding.complete']);
 
 /** Paths the middleware ban ring exempts (src/middleware.ts BAN_EXEMPT_PATHS). */
 const BAN_EXEMPT = new Set(['auth.signout', 'auth.callback']);
@@ -336,10 +351,24 @@ function derivePersonas(row, v) {
   // R3 — onboarded student.
   out.onboarded_student = student;
 
-  // R4 — mid-onboarding. The middleware onboarding guard explicitly skips
-  // /api/ and /auth/ (src/middleware.ts), so every row in this inventory is
-  // unaffected and inherits R3. For PAGES the guard is a 307 redirect.
-  out.mid_onboarding_student = student;
+  // R4 — mid-onboarding (DEC-34, Phase 5 slice 3). The proxy's onboarding
+  // redirect still skips /api/ and /auth/ (src/proxy.ts), but since 05-06 and
+  // 05-07 every state-changing, non-admin, authenticated arm under src/app/api
+  // calls requireOnboarded() and answers 403 {"error":"Onboarding required"}.
+  // So a write-only /api/ row whose student outcome is a success code is 403
+  // for this persona, except the two wizard calls DEC-34 exempts. Rows with a
+  // GET (GET arms gain no guard, and rule A5 keeps the weakest method), rows
+  // the student cannot reach anyway, and /auth/* rows (outside src/app/api;
+  // the signout route carries no onboarding guard) inherit R3 as before.
+  // For PAGES the guard is a 307 redirect to /onboarding.
+  const writeOnly = row.methods.every((m) => m !== 'GET');
+  out.mid_onboarding_student =
+    writeOnly &&
+    row.route.startsWith('/api/') &&
+    !ONBOARDING_EXEMPT.has(row.id) &&
+    student === S
+      ? 403
+      : student;
 
   // R5/R6/R7 — club personas.
   out.club_member = scope === 'club' ? S : scope === 'club-owner' ? 403 : student;
@@ -396,11 +425,18 @@ function main() {
   }
 
   const missing = [];
+  const retained = [];
   let changed = 0;
 
   for (const row of rows) {
     const v = VERDICTS[row.id];
     if (!v) { missing.push(row.id); continue; }
+    // A row whose handler file has since been deleted keeps its audit-time
+    // classification untouched: the inventory mirrors the audit baseline
+    // (versions.txt route_ts_count=94), so the row stays and nothing about it
+    // is re-derived from a file that no longer exists (DEC-55; api.auth-debug,
+    // deleted by 05-04 for F-027).
+    if (!fs.existsSync(path.join(ROOT, row.file))) { retained.push(row.id); continue; }
     const before = JSON.stringify(row);
     const src = fs.readFileSync(path.join(ROOT, row.file), 'utf8');
 
@@ -446,7 +482,10 @@ function main() {
       row.input_validation = row.signals.has_zod
         ? 'zod'
         : row.signals.parses_body
-          ? (/status:\s*400/.test(src) ? 'manual' : 'none')
+          // A 400 is either written inline or produced by the seam's badRequest()
+          // helper (src/server/errors.ts, adopted from Phase 4 on); both are a
+          // 400 path under rule V1.
+          ? (/status:\s*400|badRequest\(/.test(src) ? 'manual' : 'none')
           : 'none';
 
       const colocated = row.file.replace(/route\.ts$/, 'route.test.ts');
@@ -470,6 +509,9 @@ function main() {
 
   if (!DRY) writeJson(ENDPOINTS, rows);
   console.log(`endpoints: ${rows.length} rows, ${changed} changed (phase ${PHASE}${DRY ? ', dry-run' : ''})`);
+  if (retained.length) {
+    console.log(`endpoints: ${retained.length} row(s) retained unchanged, handler file deleted: ${retained.join(', ')}`);
+  }
 
   /* ---- phase 3: pages -------------------------------------------------- */
   if (PHASE >= 3) {

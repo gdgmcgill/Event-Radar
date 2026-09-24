@@ -1,0 +1,112 @@
+Endpoint contract regeneration for slice 3 — plan 05-08 Task 2
+**Plan:** 05-08 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24 · **Base:** 80f9533564a9d29986752de4b767c52a8ee0126a
+
+DEC-55: endpoints.json changes only through classify-inventory.mjs, with classification-rules.md
+updated in the same commit. This file is the proof that the set of changed expected_status rows
+is exactly the allowed set: the four F-028 rows (DEC-39) plus the write-only rows whose
+mid_onboarding_student cell moved to 403 under the new R4 (DEC-34).
+
+GENERATOR CHANGES (all in .planning/audit/tools/classify-inventory.mjs)
+1. VERDICTS: api.events.following, api.events.friends-activity, api.events.friends-organizing and
+   api.events.id.friends move from A('anonymous', ..., 'global') to
+   A('authenticated', null, 'partial', true, 'self'), the verdict the file uses for signed-in-only
+   self-scoped routes, each with a note citing F-028 / DEC-39. All four ids were confirmed in
+   endpoints.json before the edit.
+2. R4 in derivePersonas: 403 when every method is non-GET, the route is under /api/, the id is not
+   api.users.id or api.onboarding.complete, and student === S; otherwise student. Cites DEC-34.
+   The /api/ clause is a refinement of the plan's wording: without it auth.signout (POST only,
+   student 302) would be classified 403, but /auth/signout carries no onboarding guard
+   (grep -c requireOnboarded src/app/auth/signout/route.ts = 0) and the proxy exempts /auth/.
+3. Rule 3 (blocking): the first dry-run died with ENOENT on src/app/api/auth-debug/route.ts, deleted
+   by 05-04. A row whose handler file is gone is now retained byte-for-byte and reported on stdout
+   (DEC-55 keeps the api.auth-debug row).
+4. Rule 1: rule V1 read only an inline 'status: 400', so api.events.id.rsvp (which uses the seam's
+   badRequest() helper since 04-05) would have drifted input_validation manual -> none. The regex
+   now also matches 'badRequest('. After the fix that row is unchanged.
+
+Before the edit, the 12 R4 rows were checked against the code: each handler calls requireOnboarded(
+  src/app/api/events/[id]/invite/route.ts requireOnboarded( count=1
+  src/app/api/events/[id]/report/route.ts requireOnboarded( count=1
+  src/app/api/events/[id]/save/route.ts requireOnboarded( count=2
+  src/app/api/events/upload-image/route.ts requireOnboarded( count=1
+  src/app/api/feedback/route.ts requireOnboarded( count=1
+  src/app/api/interactions/route.ts requireOnboarded( count=1
+  src/app/api/notifications/[id]/route.ts requireOnboarded( count=1
+  src/app/api/profile/avatar/route.ts requireOnboarded( count=1
+  src/app/api/profile/banner/route.ts requireOnboarded( count=1
+  src/app/api/profile/inferred-tags/route.ts requireOnboarded( count=1
+  src/app/api/profile/interests/route.ts requireOnboarded( count=1
+  src/app/api/users/[id]/follow/route.ts requireOnboarded( count=2
+  src/app/auth/signout/route.ts requireOnboarded count=0
+Playwright confirms the rule end to end for one row (api.events.id.save, 403 Onboarding required) and
+both exemptions (api.users.id PATCH 200, api.onboarding.complete POST 200): playwright.slice-3-after.txt.
+
+------------------------------------------------------------------------------
+$ node .planning/audit/tools/classify-inventory.mjs --dry-run
+endpoints: 94 rows, 0 changed (phase 3, dry-run)
+endpoints: 1 row(s) retained unchanged, handler file deleted: api.auth-debug
+pages: 43 rows, 0 changed
+exit=0
+(the write run had already been made; the dry-run after it reporting 0 changed is the idempotence proof)
+------------------------------------------------------------------------------
+CHANGED expected_status ROWS, HEAD vs working tree (scratch script; git show HEAD:endpoints.json as the left side)
+$ node <scratch>/changed.mjs <scratch>/endpoints.head.json .planning/audit/inventory/endpoints.json
+F-028       api.events.id.friends            [GET] anonymous 200->401; machine_no_credential 200->401
+R4          api.events.id.invite             [POST] mid_onboarding_student 200->403
+R4          api.events.id.report             [POST] mid_onboarding_student 201->403
+R4          api.events.id.save               [DELETE,POST] mid_onboarding_student 200->403
+F-028       api.events.following             [GET] anonymous 200->401; machine_no_credential 200->401
+F-028       api.events.friends-activity      [GET] anonymous 200->401; machine_no_credential 200->401
+F-028       api.events.friends-organizing    [GET] anonymous 200->401; machine_no_credential 200->401
+R4          api.events.upload-image          [POST] mid_onboarding_student 200->403
+R4          api.feedback                     [POST] mid_onboarding_student 200->403
+R4          api.interactions                 [POST] mid_onboarding_student 201->403
+R4          api.notifications.id             [PATCH] mid_onboarding_student 200->403
+R4          api.profile.avatar               [POST] mid_onboarding_student 200->403
+R4          api.profile.banner               [POST] mid_onboarding_student 200->403
+R4          api.profile.inferred-tags        [DELETE] mid_onboarding_student 200->403
+R4          api.profile.interests            [PUT] mid_onboarding_student 200->403
+R4          api.users.id.follow              [POST,DELETE] mid_onboarding_student 201->403
+changed rows: 16 (F-028: 4 of 4; R4: 12); outside the allowed set: 0
+exit=0
+------------------------------------------------------------------------------
+EVERY OTHER FIELD THAT CHANGED (not expected_status)
+api.events.id.friends auth_requirement "anonymous" -> "authenticated"
+api.events.following auth_requirement "anonymous" -> "authenticated"
+api.events.friends-activity auth_requirement "anonymous" -> "authenticated"
+api.events.friends-organizing auth_requirement "anonymous" -> "authenticated"
+auth.callback test_present false -> true
+exit=0
+The four auth_requirement moves are the F-028 verdicts themselves. auth.callback test_present
+false -> true is a correct catch-up: src/app/auth/callback/route.test.ts has existed since Phase 3
+and endpoints.json had not been regenerated since Phase 1 (01-11, d11d859).
+------------------------------------------------------------------------------
+api.auth-debug row is still present (DEC-55):
+present: /api/auth-debug auth=anonymous
+exit=0
+------------------------------------------------------------------------------
+Derived CSV view regenerated with its own generator (never hand-edited):
+$ node .planning/audit/tools/gen-endpoints-csv.mjs
+wrote 94 rows to .planning/audit/inventory/endpoints.csv; 13 carry no authorization signal at all
+exit=0
+------------------------------------------------------------------------------
+$ node .planning/audit/tools/validate.mjs --check endpoints
+PASS endpoints :: is-an-array :: array
+PASS endpoints :: row-count-matches-baseline :: baseline/versions.txt route_ts_count is 94, inventory has 94
+PASS endpoints :: schema-valid :: all rows valid
+PASS endpoints :: ids-unique :: all ids distinct
+PASS endpoints :: no-residual-placeholders :: fully classified
+--- 5 passed, 0 failed, 0 skipped
+exit=0
+------------------------------------------------------------------------------
+$ node .planning/audit/tools/validate.mjs --quick   (FAIL/SKIP lines and the summary)
+FAIL schema-snapshots :: dump-contains-create-table :: schema/staging.schema.sql
+FAIL schema-snapshots :: dump-contains-create-table :: schema/local.schema.sql
+SKIP endpoints-signals :: placeholders-permitted :: this gate runs before hand classification; use --check endpoints afterwards
+--- 118 passed, 2 failed, 1 skipped
+exit=1
+Before-floor block 8: 118 passed, 2 failed, 1 skipped, exit 1, the same two by-design schema-snapshot
+FAILs and the same SKIP. Equal.
+------------------------------------------------------------------------------
+Plan acceptance check (verbatim from 05-08-PLAN.md Task 2):
+exit=0

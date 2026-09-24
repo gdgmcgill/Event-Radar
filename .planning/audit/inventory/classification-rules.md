@@ -165,7 +165,10 @@ Schema enum is `none | manual | zod | unknown`. **No schema validator is importe
 `src/`** — `signals.has_zod` is false on all ninety-four rows — so only `manual` and `none`
 occur: 77 manual, 17 none.
 
-Derived mechanically: a handler that parses a body and has at least one `400` path is `manual`;
+Derived mechanically: a handler that parses a body and has at least one `400` path is `manual`
+(an inline `status: 400`, or, from Phase 4 on, a call to the seam's `badRequest()` helper in
+`src/server/errors.ts`; the helper clause was added by 05-08 so that `/api/events/[id]/rsvp`, which
+adopted the helper in 04-05, is not misread as validating nothing);
 a handler that parses a body with no `400` path validates nothing and is `none`; a handler that
 parses no body is `none` (vacuously).
 
@@ -211,7 +214,7 @@ Thirteen keys, from `.planning/research/FEATURES.md` § Stage 4 and fixed by
 |---|---|
 | `anonymous` | no session at all |
 | `onboarded_student` | signed-in McGill student, onboarding complete, member of no club |
-| `mid_onboarding_student` | signed in, `needs_onboarding` cookie set |
+| `mid_onboarding_student` | signed in, `users.onboarding_completed` not true (since Phase 5 slice 3 the database value decides; the `needs_onboarding` cookie is a hint nothing reads) |
 | `club_member` | non-owner member of **the club the request concerns** |
 | `club_owner` | owner of the club the request concerns |
 | `multi_club_organizer` | owner/organizer of several clubs, including this one |
@@ -244,7 +247,7 @@ student = 401                       when auth_requirement == "machine"
 |---|---|---|
 | **R2** | `anonymous` | `S` when `auth_requirement == "anonymous"`, else **401**. An anonymous caller against an authenticated route expects *unauthorized*, never *forbidden* — 403 asserts a known identity that lacks permission, which is a different fact. |
 | **R3** | `onboarded_student` | `student` |
-| **R4** | `mid_onboarding_student` | `student`. See § 4 — the onboarding guard exempts `/api/` and `/auth/`, so **no endpoint row is affected**. For pages the guard is a 307 redirect to `/onboarding`. |
+| **R4** | `mid_onboarding_student` | **403** when (a) every method of the row is non-`GET`, (b) the route is under `/api/`, (c) the row id is neither `api.users.id` nor `api.onboarding.complete`, and (d) `student == S`; otherwise `student`. Rationale (DEC-34, Phase 5 slice 3): since 05-06 and 05-07 every state-changing, non-admin, authenticated arm under `src/app/api` calls `requireOnboarded()` and answers `403 {"error":"Onboarding required"}`; `POST /api/interactions` and `POST /api/feedback` apply it whenever a user is signed in. The two wizard calls are exempt. A row with a `GET` keeps `student`, because GET arms gain no guard and rule A5 records the weakest method. `/auth/*` rows keep `student`: they are outside `src/app/api` and `/auth/signout` carries no onboarding guard. Clause (d) leaves rows the student cannot reach (admin, club-scoped, machine) at their existing code. The proxy's onboarding redirect still skips `/api/` and `/auth/`, so this 403 comes from the handler ring, not the proxy. For pages the guard is a 307 redirect to `/onboarding`, now read from the database. Applied by `classify-inventory.mjs` in the 05-08 commit `docs(05-08): endpoint contract agrees with slice 3 (F-028, DEC-34)`; it moved 12 cells (`evidence/contract-regen-slice-3.txt` in the Phase 5 directory). |
 | **R5** | `club_member` | `S` when `scope == "club"`; **403** when `scope == "club-owner"`; else `student` |
 | **R6** | `club_owner` | `S` when `scope` is `club` or `club-owner`; else `student` |
 | **R7** | `multi_club_organizer` | identical to R6. Holding a role in several clubs confers nothing extra in *this* club. |
@@ -275,11 +278,16 @@ recorded here because CERT-06 needs them.
 
 Two middleware rings look like they should shape the persona matrix and do not:
 
-1. **The onboarding guard.** `src/middleware.ts` gates on
+1. **The onboarding guard (the proxy's half).** `src/middleware.ts` gated on
    `needsOnboarding && user && path !== "/onboarding" && !path.startsWith("/api/") && !path.startsWith("/auth/")`.
-   The two explicit prefix exemptions mean **every row in `endpoints.json` is out of scope**, so
-   `mid_onboarding_student` equals `onboarded_student` on all ninety-four. On pages the guard is
+   The two explicit prefix exemptions meant **every row in `endpoints.json` was out of scope**, so
+   `mid_onboarding_student` equalled `onboarded_student` on all ninety-four. On pages the guard is
    a 307 redirect to `/onboarding`.
+   *Phase 5 slice 3 update (DEC-34, DEC-36).* The proxy (`src/proxy.ts`) still exempts `/api/`
+   and `/auth/`, and now reads `onboarding_completed` from the database rather than the cookie.
+   The guard that does fire on endpoints is the handler ring: `requireOnboarded()` on every
+   non-exempt write arm. Rule R4 encodes it, so `mid_onboarding_student` now differs from
+   `onboarded_student` on 12 write-only rows.
 2. **The route-protection list.** `PROTECTED_ROUTES` at `src/middleware.ts:114` contains eight
    **page** paths and no `/api/` prefix, so it contributes nothing to any endpoint row. Every
    401 in this inventory comes from the handler itself.
@@ -337,7 +345,7 @@ Each is a finding candidate; none is fixed, and `git diff --exit-code -- src/` i
 | **D-3** | Same, fail-closed | `/api/cron/send-feedback-requests` | 401 | **500 to every caller**, unconditionally — the route cannot execute at all | FO-04 |
 | **D-4** | **Admin routes conflate 401 and 403.** `verifyAdmin()` returns `isAdmin: false` for an anonymous caller, so the handlers return 403 where the contract says 401. | 22 of the 25 admin rows | `anonymous: 401` | 403 | `src/lib/admin.ts` has no `user == null` branch distinct from the role failure |
 | **D-5** | **The ban ring redirects rather than refusing, on API routes.** | 92 rows | 403 | `NextResponse.redirect("/banned")` — a **307 to an HTML page** in answer to a JSON API call | `src/middleware.ts:105-108` |
-| **D-6** | **Eight personalized routes return 200 to anonymous callers instead of 401**, with a degraded body, and carry the blanket `s-maxage=60` shared-cache header. | the § P1 list | 401 *or* `private, no-store` | 200 + shared-cacheable | `signals.calls_get_user` true, no `401` path |
+| **D-6** | **Eight personalized routes return 200 to anonymous callers instead of 401**, with a degraded body, and carry the blanket `s-maxage=60` shared-cache header. | the § P1 list | 401 *or* `private, no-store` | 200 + shared-cacheable | `signals.calls_get_user` true, no `401` path. **Status (Phase 5, F-028, DEC-39):** four routes answer anonymous callers 401 since 05-06 (`7ff08c1`): `/api/events/following`, `/api/events/friends-activity`, `/api/events/friends-organizing`, `/api/events/[id]/friends`. Their verdicts are `authenticated` and their `anonymous` and `machine_no_credential` cells are 401 since the 05-08 regeneration. `GET /api/events/[id]/rsvp`, `/api/clubs/[id]/events` and `/api/notifications/count` stay anonymous and move with REFAC-19 in Phase 6, because they feed public UI. `/api/auth-debug` (D-7) was deleted by 05-04 (F-027). Its row stays in the inventory (DEC-55) |
 | **D-7** | **`/api/auth-debug` echoes the caller's own id and email with no gate**, under the blanket shared-cache header. | 1 | 401, or the route deleted | 200 to anyone | `src/app/api/auth-debug/route.ts:35-44` |
 | **D-8** | **`/api/health` returns a full infrastructure health report anonymously**, including a live auth-configuration probe. | 1 | 401 or a reduced body | 200 to anyone | `src/app/api/health/route.ts:330-374` |
 | **D-9** | **Two admin handlers parse a body and validate nothing.** | `/api/admin/events/[id]`, `/api/admin/users/[id]` | `manual` at minimum | `none` | REFAC-15 |
@@ -395,6 +403,12 @@ node .planning/audit/tools/validate.mjs --check pages
 bash .planning/audit/tools/readonly-guard.sh
 git diff --exit-code -- src/
 ```
+
+**Deleted handlers keep their row (DEC-55).** A row whose handler file no longer exists is left
+byte-for-byte as classified, and the script says so on stdout. The inventory mirrors the audit
+baseline (`baseline/versions.txt` `route_ts_count=94`), so dropping the row would make
+`--check endpoints` disagree with its own baseline. Today this applies to one row,
+`api.auth-debug`, deleted by 05-04 for F-027.
 
 The script merges by `id` and touches only the human-verdict fields, so
 `gen-endpoint-inventory.mjs` can be re-run afterwards without discarding a single classified
