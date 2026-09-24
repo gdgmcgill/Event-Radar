@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 import type { Review } from "@/types";
 
 interface RouteContext {
@@ -148,13 +149,9 @@ export async function GET(request: Request, context: RouteContext) {
     // Check if user is an organizer (club member)
     let isOrganizer = false;
     if (event?.club_id) {
-      const { data: membership } = await supabase
-        .from("club_members")
-        .select("id")
-        .eq("club_id", event.club_id)
-        .eq("user_id", userId)
-        .maybeSingle();
-      isOrganizer = !!membership;
+      isOrganizer = (
+        await requireClubRole(supabase, event.club_id, userId, CLUB_ROLES)
+      ).ok;
     }
 
     // Fetch all reviews for this event

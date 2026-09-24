@@ -1,5 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
+import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,15 +15,11 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id: eventId } = await params;
-    const supabase = await createClient();
-
-    // Auth check
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const ctx = await createRequestContext();
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const user = auth.user;
+    const supabase = ctx.supabase;
 
     // Fetch event to get club_id
     const { data: event, error: eventError } = await supabase
@@ -48,20 +46,15 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Authorization: verify user is member of the event's club
-    const { data: membership } = await supabase
-      .from("club_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("club_id", event.club_id)
-      .maybeSingle();
-
-    if (!membership) {
-      return NextResponse.json(
-        { error: "You must be a club member to view analytics" },
-        { status: 403 }
-      );
-    }
+    // Authorization: any member (owner or organizer) of the event's club
+    const gate = await requireClubRole(
+      supabase,
+      event.club_id,
+      user.id,
+      CLUB_ROLES,
+      "You must be a club member to view analytics"
+    );
+    if (!gate.ok) return gate.response;
 
     // Fetch popularity scores (may not exist for new events)
     const { data: popularity } = await supabase

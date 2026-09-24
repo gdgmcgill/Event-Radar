@@ -38,3 +38,11 @@ After the nine club-route files adopted `requireClubRole`, `src/__tests__/api/cl
 `role: "owner"`, which the guard's `CLUB_ROLES` set admits, and its `users` result defaults to
 `null`, which `createRequestContext` tolerates (the GET arm reads only `requireUser`). Full
 `npx jest --ci` 1135/1135 with no fixture edit. Evidence: `evidence/club-guard-adoption.txt` §1f.
+
+### Task 2 — one fixture line
+
+`src/__tests__/api/events/reviews.test.ts` (untagged, mock-chain style): the "includes anonymized
+comments for organizer" case's `club_members` mock row was `{ id, user_id, club_id }` with no `role`.
+`requireClubRole` admits a row only when its role is in the accepted set, so the row read as a
+non-member. A real row always carries `role` (NOT NULL, `club_members_role_check`). The row gained
+`role: "organizer"`; no assertion changed. Diff in `evidence/club-guard-adoption.txt` §2f.

@@ -6,6 +6,8 @@ import { computeEventContentHash } from "@/lib/contentHash";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
+import { hasRole } from "@/lib/roles";
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,7 +88,6 @@ export async function POST(request: NextRequest) {
       .single();
 
     const organizer = profile?.name || profile?.email || user.email || "Unknown";
-    const roles: string[] = profile?.roles ?? [];
 
     // Compute content hash for duplicate detection
     const contentHash = await computeEventContentHash(title, start_date, organizer);
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
     // - Non-club events: always pending, requires admin approval
     let status: "pending" | "approved" = "pending";
 
-    if (roles.includes("admin")) {
+    if (ctx.profile !== null && hasRole(ctx.profile, "admin")) {
       status = "approved";
     } else if (body.club_id) {
       // Check the club is approved AND user is a member/organizer of it
@@ -151,14 +152,14 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (club && club.status === "approved") {
-        const { data: membership } = await supabase
-          .from("club_members")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("club_id", body.club_id)
-          .single();
+        const membership = await requireClubRole(
+          supabase,
+          body.club_id,
+          user.id,
+          CLUB_ROLES
+        );
 
-        if (membership) {
+        if (membership.ok) {
           status = "approved";
         }
       }

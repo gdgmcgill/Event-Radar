@@ -288,7 +288,7 @@ describe("GET /api/events/:id/reviews", () => {
     });
     // User is a club member (organizer)
     mockQueryResults.set("club_members", {
-      data: { id: "cm-1", user_id: "user-123", club_id: "club-1" },
+      data: { id: "cm-1", user_id: "user-123", club_id: "club-1", role: "organizer" },
       error: null,
     });
     mockQueryResults.set("rsvps", { data: null, error: null });

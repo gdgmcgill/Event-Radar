@@ -183,3 +183,112 @@ stored role, and CLUB_ROLES/isClubRole). Two existing seam rows used roles the s
 ("member", "officer") and no longer type-check against the narrowed ClubRole; they now use
 "organizer" and CLUB_ROLES with the same assertions. That file is a seam unit test, not a
 characterization suite (no PRESERVE/DEFECT tag).
+
+## Task 2 — event-side club flags and gates, inline admin checks to hasRole, DI-25 for events/[id] PATCH
+
+### 2a. Census BEFORE (c407515): club_members reads and inline admin decisions in the four files
+
+src/app/api/events/[id]/analytics/route.ts:
+  53:      .from("club_members")
+src/app/api/events/[id]/reviews/route.ts:
+  152:        .from("club_members")
+src/app/api/events/[id]/route.ts:
+  126:        isAdmin = (profile?.roles ?? []).includes("admin");
+  209:    const isAdmin = roles.includes("admin");
+  228:        .from("club_members")
+  240:        .from("club_members")
+  392:      canDelete = (profile?.roles ?? []).includes("admin");
+  397:        .from("club_members")
+src/app/api/events/create/route.ts:
+  143:    if (roles.includes("admin")) {
+  155:          .from("club_members")
+
+Gate/flag membership reads: 6 (events/[id]/analytics:52 #13, reviews:151 #14, events/[id] PATCH :227
+and :239 #15 (both arms of the composite), DELETE :396 #16, create:154 #17). Non-gate reads: 0.
+Inline admin decisions: 4 (events/[id] GET :126, PATCH :209, DELETE :392, create :143).
+
+### 2b. Census AFTER Task 2
+
+src/app/api/events/[id]/analytics/route.ts: club_members=0 requireClubRole(=1 hasRole(ctx.profile=0 includes("admin")=0
+src/app/api/events/[id]/reviews/route.ts: club_members=0 requireClubRole(=1 hasRole(ctx.profile=0 includes("admin")=0
+src/app/api/events/[id]/route.ts: club_members=0 requireClubRole(=3 hasRole(ctx.profile=3 includes("admin")=0
+src/app/api/events/create/route.ts: club_members=0 requireClubRole(=1 hasRole(ctx.profile=1 includes("admin")=0
+
+Membership reads 6 -> 0; requireClubRole( call sites 6 (§ C rows 13-17, #15 counted twice for its
+two arms); inline admin decisions 4 -> 0, each now hasRole(ctx.profile, "admin") on the request
+context's profile read (`ctx.profile !== null && hasRole(ctx.profile, "admin")`).
+
+| # | Site | Kind | Accepted set | Message |
+|---|------|------|--------------|---------|
+| 13 | events/[id]/analytics GET | gate (after the 400 for a club-less event) | CLUB_ROLES | You must be a club member to view analytics |
+| 14 | events/[id]/reviews GET | flag isOrganizer = (await requireClubRole(...)).ok | CLUB_ROLES | — |
+| 15 | events/[id] PATCH | composite arm; isClubMember from .ok on both branches | CLUB_ROLES | composite 403 "You do not have permission to edit this event" unchanged |
+| 16 | events/[id] DELETE | composite arm | CLUB_ROLES | composite 403 "You do not have permission to delete this event" unchanged |
+| 17 | events/create POST | flag (auto-approve), inside the unchanged approved-club condition | CLUB_ROLES | — |
+
+events/[id]/analytics GET moved onto createRequestContext + requireUser (401 bytes identical).
+events/[id]/reviews GET keeps its own createClient and its `authError || !user` 401; only the flag changed.
+events/create keeps its own "name, email, roles" profile read (the organizer label); only the admin
+decision moved to the context's profile.
+
+### 2c. events/[id] GET pending_edits gate
+
+Moved: the GET now builds createRequestContext() and strips pending_edits unless the caller is the
+creator or `ctx.profile !== null && hasRole(ctx.profile, "admin")`. The condition the plan set was
+met: events-detail-characterization.test.ts passes unedited (2d). The read order changes (auth and
+profile before the event read, and the profile is now read for the creator too); no PRESERVE row
+pins read order, and the response bytes are unchanged.
+
+### 2d. DI-25: directUpdates
+
+$ grep -n "TablesUpdate<\"events\">" "src/app/api/events/[id]/route.ts"
+243:    const directUpdates: TablesUpdate<"events"> = {};
+Every value it carries is unchanged: the EDITABLE_FIELDS body values, pending_edits null (admin
+clearing) and the merged pending_edits object.
+
+### 2e. hasRole's parameter type
+
+src/lib/roles.ts: hasRole(user: User, ...) -> hasRole(user: Pick<User, "roles">, ...). The predicate
+reads only `roles`; the full User type made hasRole(ctx.profile, "admin") (the plan's literal form)
+fail to type-check. Type-only; every existing caller passes a User, which still satisfies it.
+(Rule 3 deviation: src/lib/roles.ts is not in the plan's files list.)
+
+### 2f. Untagged suite, mock wiring only
+
+src/__tests__/api/events/reviews.test.ts "includes anonymized comments for organizer" went red: its
+club_members mock row had no `role`, which the guard (correctly) treats as a deny. A real row always
+carries role (NOT NULL, club_members_role_check). One fixture line gained role: "organizer"; no
+assertion changed:
+diff --git a/src/__tests__/api/events/reviews.test.ts b/src/__tests__/api/events/reviews.test.ts
+index 0a925d2..0af4646 100644
+--- a/src/__tests__/api/events/reviews.test.ts
++++ b/src/__tests__/api/events/reviews.test.ts
+@@ -288,7 +288,7 @@ describe("GET /api/events/:id/reviews", () => {
+     });
+     // User is a club member (organizer)
+     mockQueryResults.set("club_members", {
+-      data: { id: "cm-1", user_id: "user-123", club_id: "club-1" },
++      data: { id: "cm-1", user_id: "user-123", club_id: "club-1", role: "organizer" },
+       error: null,
+     });
+     mockQueryResults.set("rsvps", { data: null, error: null });
+
+### 2g. Floor after Task 2
+
+$ npx jest --ci src/__tests__/api/events src/__tests__/api/clubs
+Test Suites: 22 passed, 22 total
+Tests:       371 passed, 371 total
+exit 0
+$ npx jest --ci
+Test Suites: 65 passed, 65 total
+Tests:       1135 passed, 1135 total
+exit 0
+$ npx tsc --noEmit
+exit 0 (no output)
+$ npm run lint
+✖ 19 problems (0 errors, 19 warnings)
+exit 0 (warnings all in untouched files)
+$ git diff --stat c407515 -- 'src/__tests__/api/events/*-characterization.test.ts' src/__tests__/api/clubs/club-gates-characterization.test.ts
+(no output)
+$ grep -n 'includes("admin")' "src/app/api/events/[id]/route.ts" src/app/api/events/create/route.ts
+(no output) exit 1

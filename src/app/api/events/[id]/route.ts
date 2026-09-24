@@ -4,10 +4,12 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
+import { hasRole } from "@/lib/roles";
+import type { TablesUpdate } from "@/lib/supabase/types";
 import { transformEventFromDB } from "@/lib/tagMapping";
 import type { NextRequest } from "next/server";
 import { validateEventDates, isValidISODate } from "@/lib/dateValidation";
@@ -77,7 +79,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
+    const supabase = ctx.supabase;
 
     // Deliberately no club embed yet. The clubs table exists and the list
     // routes embed it (EVENT_WITH_CLUB_SELECT). Giving this read the embed
@@ -114,17 +117,9 @@ export async function GET(
     const event = transformEventFromDB(data as Parameters<typeof transformEventFromDB>[0]);
 
     // Strip pending_edits from public responses — only show to creator or admins
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const currentUser = ctx.user;
     if (!currentUser || data.created_by !== currentUser.id) {
-      let isAdmin = false;
-      if (currentUser) {
-        const { data: profile } = await supabase
-          .from("users")
-          .select("roles")
-          .eq("id", currentUser.id)
-          .single();
-        isAdmin = (profile?.roles ?? []).includes("admin");
-      }
+      const isAdmin = ctx.profile !== null && hasRole(ctx.profile, "admin");
       if (!isAdmin) {
         const { pending_edits: _, ...eventWithoutPending } = event as unknown as Record<string, unknown>;
         return NextResponse.json({ event: eventWithoutPending });
@@ -196,17 +191,9 @@ export async function PATCH(
       );
     }
 
-    // Get user roles
-    const { data: profile } = await supabase
-      .from("users")
-      .select("roles")
-      .eq("id", user.id)
-      .single();
-
-    const roles: string[] = profile?.roles ?? [];
-
-    // Permission check: admin can edit any event
-    const isAdmin = roles.includes("admin");
+    // Permission check: admin can edit any event. The roles come from the
+    // request context's profile read, the one role predicate decides.
+    const isAdmin = ctx.profile !== null && hasRole(ctx.profile, "admin");
     let canEdit = isAdmin;
 
     // Original creator can edit their own pending or approved events
@@ -221,28 +208,24 @@ export async function PATCH(
       }
     }
 
-    // Club member can edit their club's events
+    // Club member (owner or organizer) can edit their club's events
     let isClubMember = false;
     if (!canEdit && event.club_id) {
-      const { data: membership } = await supabase
-        .from("club_members")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("club_id", event.club_id)
-        .single();
+      const membership = await requireClubRole(
+        supabase,
+        event.club_id,
+        user.id,
+        CLUB_ROLES
+      );
 
-      if (membership) {
+      if (membership.ok) {
         canEdit = true;
         isClubMember = true;
       }
     } else if (canEdit && event.club_id) {
-      const { data: membership } = await supabase
-        .from("club_members")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("club_id", event.club_id)
-        .single();
-      isClubMember = !!membership;
+      isClubMember = (
+        await requireClubRole(supabase, event.club_id, user.id, CLUB_ROLES)
+      ).ok;
     }
 
     if (!canEdit) {
@@ -254,7 +237,10 @@ export async function PATCH(
 
     // Build update payload from allowed fields only
     const body = await request.json();
-    const directUpdates: Record<string, unknown> = {};
+    // DI-25: typed with the generated update type. The body's values are
+    // carried as they arrive; the column set is EDITABLE_FIELDS plus
+    // pending_edits, all of which are columns of events.
+    const directUpdates: TablesUpdate<"events"> = {};
     const pendingEdits: Record<string, string> = {};
 
     for (const field of EDITABLE_FIELDS) {
@@ -380,26 +366,17 @@ export async function DELETE(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // Permission: creator OR admin OR club member
+    // Permission: creator OR admin OR club member (owner or organizer)
     let canDelete = event.created_by === user.id;
 
     if (!canDelete) {
-      const { data: profile } = await supabase
-        .from("users")
-        .select("roles")
-        .eq("id", user.id)
-        .single();
-      canDelete = (profile?.roles ?? []).includes("admin");
+      canDelete = ctx.profile !== null && hasRole(ctx.profile, "admin");
     }
 
     if (!canDelete && event.club_id) {
-      const { data: membership } = await supabase
-        .from("club_members")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("club_id", event.club_id)
-        .single();
-      canDelete = !!membership;
+      canDelete = (
+        await requireClubRole(supabase, event.club_id, user.id, CLUB_ROLES)
+      ).ok;
     }
 
     if (!canDelete) {
