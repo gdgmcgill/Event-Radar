@@ -46,8 +46,8 @@
 
 | Status | Count |
 |---|---:|
-| Open | 73 |
-| Fixed | 18 |
+| Open | 66 |
+| Fixed | 25 |
 
 ---
 
@@ -486,7 +486,7 @@
 
 ### F-027 — /api/auth-debug echoes the caller's own id and email with no gate, under a shared-cache directive
 
-**Severity:** High · **Category:** cache-exposure · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** cache-exposure · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Anonymous, personalized and shared-cacheable at once — the only route in the inventory with all three properties. It has no authorization check whatsoever, returns caller-identifying data, and carries the blanket s-maxage=60 directive, so a signed-in caller's identity response is storable and re-servable. It was one of the eight routes observed HIT/STALE with age 77s. Held below Critical only because the data it echoes is the caller's own rather than an arbitrary victim's.
 
@@ -506,6 +506,8 @@
 **Recommended fix.** Delete the route. A debug endpoint that echoes identity has no place in a production deployment; if it is needed for development, gate it behind a NODE_ENV check that fails closed in production and mark the response `private, no-store`.
 
 **Validation criterion.** A test asserting that /api/auth-debug returns 404 in a production build, and a grep asserting the route file does not exist under src/app/api/.
+
+**Resolution.** **Fixed in Phase 5: plan 05-04 (`7bef995`, the route deleted, DEC-39), closed out by plan 05-08.** Validation criterion met on both clauses. The 404: Playwright `e2e/specs/ban-and-onboarding-ring.spec.ts` 'the deleted debug route (F-027) › answers 404 in the production build' (`6b9a721`) requests `GET /api/auth-debug` with no cookies against `next build && next start` and asserts status 404; it is green in the slice-3 full run (`evidence/playwright.slice-3-after.txt` Part 2, test 28). The grep: `find src/app/api -path '*auth-debug*'` prints nothing on head `6b9a721`. The `api.auth-debug` row stays in `endpoints.json` by DEC-55 (the generator retains rows whose handler file is gone). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
 
 **Related.** [F-025](#f-025), [F-029](#f-029)
 
@@ -617,6 +619,8 @@
 **Recommended fix.** Add a startup assertion that every environment variable the code reads is present, failing the deployment rather than degrading silently. Then decide per variable whether to configure it or to delete the code that reads it — F-001 and F-002 argue for deleting the shared-secret gates entirely in favour of verifyAdmin() and pg_cron.
 
 **Validation criterion.** A boot-time check enumerating required variables that fails the build or the first request when any is absent, plus a test asserting the check fires.
+
+**Resolution.** **Progress recorded at the Phase 5 slice-3 close (plan 05-08); status unchanged.** The `ADMIN_EMAILS` reader is deleted: plan 05-05 (`077a081`) removed the callback's allowlist parse and role grant (F-004), and no non-test file under `src/` reads the variable. The `ADMIN_API_KEY` reader (`src/app/api/admin/calculate-popularity/route.ts`) goes in plan 05-14. Plan 05-04 (`6e716fb`, DEC-37) added the boot completeness check in `src/instrumentation.ts` `register()` for the Supabase variables, with `src/instrumentation.test.ts` asserting it fires; `CRON_SECRET` and the per-variable configure-or-delete decision remain, so the record stays Open with its Phase 6 owner. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
 
 **Related.** [F-001](#f-001), [F-002](#f-002), [F-004](#f-004)
 
@@ -838,7 +842,7 @@
 
 ### F-003 — The entire middleware authentication ring is environment-variable-conditional and passes traffic through unauthenticated when unbound
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Applies to every route through the middleware matcher, but the two variables are NEXT_PUBLIC_* and are present in production, so the ring is skipped only in a misconfigured deployment rather than today. The compensating control is the layout guard ring, which covers 14 pages but no API handler. Latent hazard that becomes High the moment a deployment ships without them.
 
@@ -858,6 +862,8 @@
 **Recommended fix.** Fail closed: throw at module load if either variable is absent, so a misconfigured deployment refuses to start rather than serving unauthenticated. A middleware that silently disables itself is worse than one that crashes, because the failure is invisible in production logs.
 
 **Validation criterion.** A test that boots the middleware with the variables unset and asserts it throws, plus a test asserting /profile redirects an anonymous caller when they are set.
+
+**Resolution.** **Fixed in Phase 5: plans 05-04 (`7bef995`) and 05-05 (`e2d6d3a`, `077a081`), closed out by plan 05-08.** Config half: every `process.env.X!` under `src/` is replaced by the validated lazy readers in `src/lib/env.ts`, which throw `MissingEnvError` on an absent or blank value (`src/lib/env.test.ts`); the census in `src/lib/__tests__/env-assertions-defect.test.ts` is empty and the slice-3 floor measures 0 (`evidence/floor.slice-3-after.txt` block 14). Proxy half: with `NEXT_PUBLIC_SUPABASE_URL` unset, the proxy's client construction throws `MissingEnvError`; the proxy logs that error and fails closed with a 500 (plain text on a page, JSON on `/api/*`) instead of passing the request through (`src/proxy-defect.test.ts` rows a and a2, DEC-36; ledger rows in `evidence/defect-ledger.md`). Validation criterion met: the unset-variable rows assert the throw (the logged `MissingEnvError`) and its fail-closed result, and `/profile` redirecting an anonymous caller with the variables set is pinned by `src/proxy-characterization.test.ts` (every protected route plus `/profile/edit`) and Playwright `protected-route-redirect.spec.ts`, both green and unedited on the slice-3 floor. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
 
 **Related.** [F-069](#f-069)
 
@@ -998,7 +1004,7 @@
 
 ### F-028 — Eight personalized routes answer anonymous callers with 200 and a degraded body instead of 401
 
-**Severity:** Medium · **Category:** cache-exposure · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** cache-exposure · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** The body is degraded rather than another user's, so no cross-tenant data crosses the boundary directly. The defect is that a 200 is cacheable where a 401 would at least be a different entry, and that a caller cannot distinguish 'you are not signed in' from 'there is nothing here'. Compensating control: the degraded body contains no personal data. This is the shape that makes F-025 exploitable in practice, which is why it is recorded separately.
 
@@ -1016,6 +1022,8 @@
 **Recommended fix.** Return 401 when no session is present on a personalized route, rather than a degraded 200. The status code is part of the contract and a cache keys on it.
 
 **Validation criterion.** A test asserting that each of the eight routes returns 401 to an anonymous caller.
+
+**Resolution.** **Partly fixed in Phase 5; re-pointed to Phase 6 by plan 05-08 (DEC-39).** Four of eight routes answer 401 in Phase 5 (05-06, DEC-39); rsvp GET, clubs/[id]/events and notifications/count move with REFAC-19. The four fixed routes are `/api/events/following`, `/api/events/friends-activity`, `/api/events/friends-organizing` and `/api/events/[id]/friends` (`7ff08c1`, INTENTIONAL BEHAVIOUR CHANGE), pinned by `src/__tests__/api/events/anonymous-personalized-defect.test.ts` and reflected in `endpoints.json` by `7bccf15` (anonymous expected_status 401). The eighth route, `/api/auth-debug`, is deleted (F-027). The rsvp GET and the club events GET feed public UI (the Validated anonymous-browse and public-club-page workflows), so a 401 there is REFAC-19's cache-and-contract decision, not slice 3's. Unmet clause: the criterion's 'each of the eight routes' is not met until those three move. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
 
 **Related.** [F-025](#f-025), [F-061](#f-061)
 
@@ -1530,7 +1538,7 @@
 
 ### F-062 — The ban ring answers JSON API calls with a 307 redirect to an HTML page, on ninety-two routes
 
-**Severity:** Medium · **Category:** validation · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** validation · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** A systemic contract defect affecting nearly every route: a banned user's API call receives a redirect to an HTML page rather than a JSON error, so any client parsing the response gets HTML where it expects JSON. No boundary is crossed and no data leaks — the ban is enforced — but the enforcement is unusable by the API's own consumers and untestable as a JSON contract.
 
@@ -1548,6 +1556,8 @@
 **Recommended fix.** Branch on the request path in the ban check: redirect page requests, return 403 with a JSON body for anything under /api/.
 
 **Validation criterion.** A test asserting a banned user's request to an /api/ route returns 403 with a JSON content type, and that the same user's request to a page still redirects.
+
+**Resolution.** **Fixed in Phase 5: plan 05-05 (`e2d6d3a`, INTENTIONAL BEHAVIOUR CHANGE, DEC-36), closed out by plan 05-08.** The proxy answers a banned caller on `/api/*` with `403 {"error":"Account suspended"}` and a JSON content type, and still redirects page requests to `/banned`. The handler ring backs it on every non-admin write arm (05-06 `aa50ff6`, 05-07 `aa2191e`, `c620d16`). Validation criterion met at both rings: unit, `src/proxy-defect.test.ts` row e (moved in `e2d6d3a`, ledger row in `evidence/defect-ledger.md`); end to end against a production build and the seeded local stack, `e2e/specs/ban-and-onboarding-ring.spec.ts` 'a permanently banned user (F-062, F-088)': an API write and an API read each get 403 with `application/json` and the body `{ error: 'Account suspended' }`, and `page.goto('/my-events')` lands on `/banned`; the suspended-active persona gets the same 403; `banned-redirect.spec.ts` passes unedited. All green in the slice-3 full run (`evidence/playwright.slice-3-after.txt` Part 2). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
 
 **Related.** [F-061](#f-061)
 
@@ -1646,7 +1656,7 @@
 
 ### F-077 — The auth callback's next parameter reaches NextResponse.redirect unvalidated, and the new PRESERVE suite freezes that behaviour into the Phase 5-6 contract
 
-**Severity:** Medium · **Category:** validation · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** validation · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** An open redirect on the one route that has just set session cookies. `new URL(next, requestUrl.origin)` lets an ABSOLUTE value win over the base, so ?next=https://evil.example/ sends the freshly-authenticated user off-origin with the cookies already attached to the response. Medium rather than High because exploitation is not direct: src/components/auth/SignInButton.tsx only ever sets a pathname, so an attacker must get their value into the OAuth redirect_to, and whether that is reachable depends on how permissive the Supabase redirect allow-list is - which this repository neither controls nor asserts. The reason it is registered at all is the second half: Phase 3's PRESERVE suite now asserts the next behaviour (test 6) under a header saying these expectations must pass byte-for-byte identically afterwards, which converts a missing validation into a contract later phases are instructed to preserve.
 
@@ -1669,7 +1679,7 @@
 
 **Validation criterion.** A unit case in src/app/auth/callback/route.test.ts asserting that an absolute and a protocol-relative next value both redirect to "/" on the same origin, plus the existing test 6 still asserting that a relative path is honoured - so the fix cannot be implemented by dropping next support altogether.
 
-**Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md WR-11) and registered rather than fixed.** The defect is inherited, but Phase 3 is where it was characterized and therefore where it became a frozen expectation - which is the part this record exists to un-freeze. Not fixed in Phase 3's review-fix pass because adding the guard is an application behaviour change on the authentication path, and the PRESERVE suite that pins the current behaviour is itself a Phase 3 deliverable: changing both in a review-fix pass would edit the safety net and the thing it measures in the same commit. Owner: Phase 5. Cross-referenced from the callback characterization note so a reader of that file learns the freeze is known and scheduled.
+**Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md WR-11) and registered rather than fixed.** The defect is inherited, but Phase 3 is where it was characterized and therefore where it became a frozen expectation - which is the part this record exists to un-freeze. Not fixed in Phase 3's review-fix pass because adding the guard is an application behaviour change on the authentication path, and the PRESERVE suite that pins the current behaviour is itself a Phase 3 deliverable: changing both in a review-fix pass would edit the safety net and the thing it measures in the same commit. Owner: Phase 5. Cross-referenced from the callback characterization note so a reader of that file learns the freeze is known and scheduled. **Fixed in Phase 5: plan 05-05 (`077a081`, INTENTIONAL BEHAVIOUR CHANGE, DEC-38), closed out by plan 05-08.** The callback honours `next` only when it is a same-origin relative path; anything else lands on `/`. Validation criterion met in substance, with one location difference stated here: the hostile cases are unit cases in the sibling DEFECT file `src/app/auth/callback/route-defect.test.ts` ('F-077: %s lands on https://callback.test/' over an absolute, a protocol-relative and a slash-backslash value, each asserting the Location is exactly the same-origin `/`), not in `route.test.ts`, because tags are file-level and the tag gate (`scripts/check-characterization-tags.mjs`) keeps a moved DEFECT assertion out of a PRESERVE file. The anti-regression clause is met in the file the criterion names: `route.test.ts` test 6 ('routes an already-onboarded McGill user to the next destination') still asserts a relative `next` is honoured, and it passed unedited across `077a081`. Both green on the slice-3 floor. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
 
 **Related.** [F-003](#f-003), [F-004](#f-004), [F-069](#f-069)
 
@@ -1866,7 +1876,7 @@
 
 ### F-088 — The authorization ring fails open on its own errors: the proxy's outer catch passes the request through, a failed ban read counts as not banned, the legacy ban helper admits a caller with no profile row, and most state-changing handler arms carry no ban check
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Exposure-adjusted to Medium. The proxy blocks a banned user on the happy path, so exploitation needs a proxy fault (the outer catch passes through) or a missing or unreadable users row (both the proxy and checkBanStatus() read that as not banned). That partial compensating control is why this is not High. But the handler ring, which the Next.js documentation treats as authoritative with the proxy advisory, has no ban check on 30 of the 40 state-changing non-admin arms, including the DELETE arms of save and rsvp, so a fail-open shape sits on an authorization control. It is not High also because a ban is a moderation sanction, not a tenant boundary: a banned user who reaches a write arm acts only as themselves.
 
@@ -1889,6 +1899,8 @@
 **Recommended fix.** Make the ring fail closed (DEC-34..DEC-36): one proxy users read whose non-PGRST116 error throws; an outer catch that returns 500 JSON under /api/ and a plain 500 otherwise; a seam guard requireActiveUser(ctx) that denies a missing profile (403 Profile not found) and a banned user (403 Account suspended) on every state-changing authenticated arm, DELETE included; delete checkBanStatus() once its callers migrate.
 
 **Validation criterion.** src/proxy-defect.test.ts and src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts assertions MOVE when the fix lands; e2e/specs/ban-and-onboarding-ring.spec.ts is green.
+
+**Resolution.** **Fixed in Phase 5: plans 05-05 (`e2d6d3a`), 05-06 (`aa50ff6`) and 05-07 (`aa2191e`, `c620d16`), all INTENTIONAL BEHAVIOUR CHANGE; closed out by plan 05-08.** Proxy ring: the outer catch answers 500 instead of passing through, a failed ban read fails closed, and a signed-in caller with no profile row gets `403 Profile not found` on `/api/*` and is signed out to `/?error=profile_sync_failed` on a page (DEC-35, DEC-36). Handler ring: every state-changing, non-admin write arm (39 arms, enforced by the completeness test in `write-handlers-ring-defect.test.ts`) calls `requireActiveUser(ctx)`, DELETE included, and the legacy ban helper is deleted (census 0, `evidence/floor.slice-3-after.txt` block 17). Validation criterion met on every clause: the `src/proxy-defect.test.ts` rows b, c, d-api, d-page and the `write-handlers-ring-defect.test.ts` D1 and D2 rows moved in those commits (ledger rows in `evidence/defect-ledger.md`, each with the four-step protocol evidence), and `e2e/specs/ban-and-onboarding-ring.spec.ts` is green in the slice-3 full run from a clean reset (`evidence/playwright.slice-3-after.txt` Part 2: 53 passed, 0 failed), with the no-profile-row persona proven end to end by `e2e/specs/no-profile-row.spec.ts`. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
 
 **Related.** [F-003](#f-003), [F-062](#f-062), [F-069](#f-069)
 
@@ -1924,7 +1936,7 @@
 
 ### F-004 — The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time
 
-**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Low · **Category:** authz · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Fails closed today: ADMIN_EMAILS is not configured in production, so the empty allowlist promotes nobody. Registered rather than dismissed because the same block is the only automatic privilege-grant path in the codebase — a future edit to the allowlist is a privilege escalation, not a configuration tweak, and it runs on a service-role client. The onboarding half of the same block fails open, skipping profile sync entirely when the variable is absent.
 
@@ -1944,6 +1956,8 @@
 **Recommended fix.** Move administrative role assignment out of the sign-in path entirely: grant admin through an audited, logged administrative action that writes admin_audit_log, not through an environment variable read on every callback. Separate the onboarding profile sync from the role grant so the two do not share a failure condition.
 
 **Validation criterion.** A test asserting that completing sign-in never writes to users.roles regardless of the ADMIN_EMAILS value, and a test asserting profile sync runs even when ADMIN_EMAILS is unset.
+
+**Resolution.** **Fixed in Phase 5: plan 05-05 (`077a081`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 05-08.** The callback no longer parses an allowlist or grants any role; no non-test file under `src/` reads `ADMIN_EMAILS` (one comment remains in `src/app/api/admin/users/[id]/route.ts`). Profile sync is decoupled from the variable and now fails closed: when the elevated door throws, the user is signed out to `/?error=profile_sync_failed` (DEC-38, FO-05). Validation criterion met: `src/app/auth/callback/route-defect.test.ts` 'F-004: with the allowlist variable naming the signing-in address, no users update is issued' (no `users` update, one upsert), and the PRESERVE test 5 in `src/app/auth/callback/route.test.ts` ('upserts the profile and routes a new McGill user to /onboarding') runs with `ADMIN_EMAILS` deleted in its `beforeEach` and asserts the upsert. Both are green on the slice-3 floor. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
 
 **Related.** [F-007](#f-007), [F-040](#f-040)
 
@@ -2627,7 +2641,7 @@
 
 ### F-089 — The onboarding guard is a deletable one-hour cookie enforced on page requests only, so an un-onboarded account can browse by deleting it and can call every write API directly
 
-**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Low · **Category:** authz · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Exposure-adjusted to Low. Onboarding collects profile preferences; it is not an authorization or consent gate, so bypassing it grants no privilege, discloses nothing and crosses no boundary. It is recorded because REFAC-11 requires the onboarding guard to hold at the API ring, and today the guard is a client-held hint: the proxy never reads users.onboarding_completed, the cookie expires after an hour, POST /api/onboarding/complete clears it for any signed-in caller, and /api/* is exempt.
 
@@ -2649,6 +2663,8 @@
 **Recommended fix.** Read onboarding_completed in the proxy's single users read and keep the cookie as a hint only (DEC-36); add requireOnboarded(ctx) to every state-changing authenticated API arm except POST /api/onboarding/complete and PATCH /api/users/[id] (DEC-34).
 
 **Validation criterion.** The onboarding rows of src/proxy-defect.test.ts and src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts MOVE when the fix lands; in e2e, a mid_onboarding_student direct POST returns 403 {"error":"Onboarding required"}.
+
+**Resolution.** **Fixed in Phase 5: plans 05-05 (`e2d6d3a`), 05-06 (`aa50ff6`) and 05-07 (`aa2191e`, `c620d16`), all INTENTIONAL BEHAVIOUR CHANGE; closed out by plan 05-08.** The proxy reads `onboarding_completed` in its single `users` read and keeps the cookie as a hint only (DEC-36); every state-changing write arm except DEC-34's two exemptions (`PATCH /api/users/[id]`, `POST /api/onboarding/complete`) calls `requireOnboarded(ctx)`. Validation criterion met on both clauses: the onboarding rows moved (`src/proxy-defect.test.ts` rows f and g; `write-handlers-ring-defect.test.ts` D3 rows for 14 + 12 + 11 arms), each with a ledger row in `evidence/defect-ledger.md`; and in e2e, `e2e/specs/ban-and-onboarding-ring.spec.ts` 'the mid-onboarding student (F-089, DEC-34)' gets `403 { error: 'Onboarding required' }` on a direct `POST /api/events/<id>/save`, is sent to `/onboarding` even with the `needs_onboarding` cookie deleted, and still completes both wizard calls (200). Green in the slice-3 full run (`evidence/playwright.slice-3-after.txt` Part 2). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
 
 **Related.** [F-088](#f-088)
 

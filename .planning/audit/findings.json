@@ -64,9 +64,10 @@
     ],
     "recommended_fix": "Fail closed: throw at module load if either variable is absent, so a misconfigured deployment refuses to start rather than serving unauthenticated. A middleware that silently disables itself is worse than one that crashes, because the failure is invisible in production logs.",
     "validation_criterion": "A test that boots the middleware with the variables unset and asserts it throws, plus a test asserting /profile redirects an anonymous caller when they are set.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "05",
+    "resolution": "**Fixed in Phase 5: plans 05-04 (`7bef995`) and 05-05 (`e2d6d3a`, `077a081`), closed out by plan 05-08.** Config half: every `process.env.X!` under `src/` is replaced by the validated lazy readers in `src/lib/env.ts`, which throw `MissingEnvError` on an absent or blank value (`src/lib/env.test.ts`); the census in `src/lib/__tests__/env-assertions-defect.test.ts` is empty and the slice-3 floor measures 0 (`evidence/floor.slice-3-after.txt` block 14). Proxy half: with `NEXT_PUBLIC_SUPABASE_URL` unset, the proxy's client construction throws `MissingEnvError`; the proxy logs that error and fails closed with a 500 (plain text on a page, JSON on `/api/*`) instead of passing the request through (`src/proxy-defect.test.ts` rows a and a2, DEC-36; ledger rows in `evidence/defect-ledger.md`). Validation criterion met: the unset-variable rows assert the throw (the logged `MissingEnvError`) and its fail-closed result, and `/profile` redirecting an anonymous caller with the variables set is pinned by `src/proxy-characterization.test.ts` (every protected route plus `/profile/edit`) and Playwright `protected-route-redirect.spec.ts`, both green and unedited on the slice-3 floor. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.",
     "related": ["F-069"]
   },
   {
@@ -87,9 +88,10 @@
     ],
     "recommended_fix": "Move administrative role assignment out of the sign-in path entirely: grant admin through an audited, logged administrative action that writes admin_audit_log, not through an environment variable read on every callback. Separate the onboarding profile sync from the role grant so the two do not share a failure condition.",
     "validation_criterion": "A test asserting that completing sign-in never writes to users.roles regardless of the ADMIN_EMAILS value, and a test asserting profile sync runs even when ADMIN_EMAILS is unset.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "05",
+    "resolution": "**Fixed in Phase 5: plan 05-05 (`077a081`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 05-08.** The callback no longer parses an allowlist or grants any role; no non-test file under `src/` reads `ADMIN_EMAILS` (one comment remains in `src/app/api/admin/users/[id]/route.ts`). Profile sync is decoupled from the variable and now fails closed: when the elevated door throws, the user is signed out to `/?error=profile_sync_failed` (DEC-38, FO-05). Validation criterion met: `src/app/auth/callback/route-defect.test.ts` 'F-004: with the allowlist variable naming the signing-in address, no users update is issued' (no `users` update, one upsert), and the PRESERVE test 5 in `src/app/auth/callback/route.test.ts` ('upserts the profile and routes a new McGill user to /onboarding') runs with `ADMIN_EMAILS` deleted in its `beforeEach` and asserts the upsert. Both are green on the slice-3 floor. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.",
     "related": ["F-007", "F-040"]
   },
   {
@@ -610,9 +612,10 @@
     ],
     "recommended_fix": "Delete the route. A debug endpoint that echoes identity has no place in a production deployment; if it is needed for development, gate it behind a NODE_ENV check that fails closed in production and mark the response `private, no-store`.",
     "validation_criterion": "A test asserting that /api/auth-debug returns 404 in a production build, and a grep asserting the route file does not exist under src/app/api/.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "05",
+    "resolution": "**Fixed in Phase 5: plan 05-04 (`7bef995`, the route deleted, DEC-39), closed out by plan 05-08.** Validation criterion met on both clauses. The 404: Playwright `e2e/specs/ban-and-onboarding-ring.spec.ts` 'the deleted debug route (F-027) › answers 404 in the production build' (`6b9a721`) requests `GET /api/auth-debug` with no cookies against `next build && next start` and asserts status 404; it is green in the slice-3 full run (`evidence/playwright.slice-3-after.txt` Part 2, test 28). The grep: `find src/app/api -path '*auth-debug*'` prints nothing on head `6b9a721`. The `api.auth-debug` row stays in `endpoints.json` by DEC-55 (the generator retains rows whose handler file is gone). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.",
     "related": ["F-025", "F-029"]
   },
   {
@@ -633,7 +636,8 @@
     "validation_criterion": "A test asserting that each of the eight routes returns 401 to an anonymous caller.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
+    "resolution": "**Partly fixed in Phase 5; re-pointed to Phase 6 by plan 05-08 (DEC-39).** Four of eight routes answer 401 in Phase 5 (05-06, DEC-39); rsvp GET, clubs/[id]/events and notifications/count move with REFAC-19. The four fixed routes are `/api/events/following`, `/api/events/friends-activity`, `/api/events/friends-organizing` and `/api/events/[id]/friends` (`7ff08c1`, INTENTIONAL BEHAVIOUR CHANGE), pinned by `src/__tests__/api/events/anonymous-personalized-defect.test.ts` and reflected in `endpoints.json` by `7bccf15` (anonymous expected_status 401). The eighth route, `/api/auth-debug`, is deleted (F-027). The rsvp GET and the club events GET feed public UI (the Validated anonymous-browse and public-club-page workflows), so a 401 there is REFAC-19's cache-and-contract decision, not slice 3's. Unmet clause: the criterion's 'each of the eight routes' is not met until those three move. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.",
     "related": ["F-025", "F-061"]
   },
   {
@@ -907,6 +911,7 @@
     "status": "Open",
     "risk_acceptance": null,
     "closes_in_phase": "06",
+    "resolution": "**Progress recorded at the Phase 5 slice-3 close (plan 05-08); status unchanged.** The `ADMIN_EMAILS` reader is deleted: plan 05-05 (`077a081`) removed the callback's allowlist parse and role grant (F-004), and no non-test file under `src/` reads the variable. The `ADMIN_API_KEY` reader (`src/app/api/admin/calculate-popularity/route.ts`) goes in plan 05-14. Plan 05-04 (`6e716fb`, DEC-37) added the boot completeness check in `src/instrumentation.ts` `register()` for the Supabase variables, with `src/instrumentation.test.ts` asserting it fires; `CRON_SECRET` and the per-variable configure-or-delete decision remain, so the record stays Open with its Phase 6 owner. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.",
     "related": ["F-001", "F-002", "F-004"]
   },
   {
@@ -1404,9 +1409,10 @@
     ],
     "recommended_fix": "Branch on the request path in the ban check: redirect page requests, return 403 with a JSON body for anything under /api/.",
     "validation_criterion": "A test asserting a banned user's request to an /api/ route returns 403 with a JSON content type, and that the same user's request to a page still redirects.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "05",
+    "resolution": "**Fixed in Phase 5: plan 05-05 (`e2d6d3a`, INTENTIONAL BEHAVIOUR CHANGE, DEC-36), closed out by plan 05-08.** The proxy answers a banned caller on `/api/*` with `403 {\"error\":\"Account suspended\"}` and a JSON content type, and still redirects page requests to `/banned`. The handler ring backs it on every non-admin write arm (05-06 `aa50ff6`, 05-07 `aa2191e`, `c620d16`). Validation criterion met at both rings: unit, `src/proxy-defect.test.ts` row e (moved in `e2d6d3a`, ledger row in `evidence/defect-ledger.md`); end to end against a production build and the seeded local stack, `e2e/specs/ban-and-onboarding-ring.spec.ts` 'a permanently banned user (F-062, F-088)': an API write and an API read each get 403 with `application/json` and the body `{ error: 'Account suspended' }`, and `page.goto('/my-events')` lands on `/banned`; the suspended-active persona gets the same 403; `banned-redirect.spec.ts` passes unedited. All green in the slice-3 full run (`evidence/playwright.slice-3-after.txt` Part 2). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.",
     "related": ["F-061"]
   },
   {
@@ -1824,10 +1830,10 @@
     ],
     "recommended_fix": "Two lines in the route, and a test BEFORE the freeze takes effect. In the route: const raw = requestUrl.searchParams.get(\"next\") ?? \"/\"; const next = raw.startsWith(\"/\") && !raw.startsWith(\"//\") ? raw : \"/\"; - the !startsWith(\"//\") half is load-bearing, since //evil.example is protocol-relative and passes a naive leading-slash check. In the suite, add a case asserting that ?next=https%3A%2F%2Fevil.test lands on \"/\", so the characterization pins the SAFE behaviour rather than the current one. Separately, audit the Supabase redirect allow-list for this project, which is the control that decides whether the route-level defect is reachable at all.",
     "validation_criterion": "A unit case in src/app/auth/callback/route.test.ts asserting that an absolute and a protocol-relative next value both redirect to \"/\" on the same origin, plus the existing test 6 still asserting that a relative path is honoured - so the fix cannot be implemented by dropping next support altogether.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "05",
-    "resolution": "**Raised by the Phase 3 code review (03-REVIEW.md WR-11) and registered rather than fixed.** The defect is inherited, but Phase 3 is where it was characterized and therefore where it became a frozen expectation - which is the part this record exists to un-freeze. Not fixed in Phase 3's review-fix pass because adding the guard is an application behaviour change on the authentication path, and the PRESERVE suite that pins the current behaviour is itself a Phase 3 deliverable: changing both in a review-fix pass would edit the safety net and the thing it measures in the same commit. Owner: Phase 5. Cross-referenced from the callback characterization note so a reader of that file learns the freeze is known and scheduled.",
+    "resolution": "**Raised by the Phase 3 code review (03-REVIEW.md WR-11) and registered rather than fixed.** The defect is inherited, but Phase 3 is where it was characterized and therefore where it became a frozen expectation - which is the part this record exists to un-freeze. Not fixed in Phase 3's review-fix pass because adding the guard is an application behaviour change on the authentication path, and the PRESERVE suite that pins the current behaviour is itself a Phase 3 deliverable: changing both in a review-fix pass would edit the safety net and the thing it measures in the same commit. Owner: Phase 5. Cross-referenced from the callback characterization note so a reader of that file learns the freeze is known and scheduled. **Fixed in Phase 5: plan 05-05 (`077a081`, INTENTIONAL BEHAVIOUR CHANGE, DEC-38), closed out by plan 05-08.** The callback honours `next` only when it is a same-origin relative path; anything else lands on `/`. Validation criterion met in substance, with one location difference stated here: the hostile cases are unit cases in the sibling DEFECT file `src/app/auth/callback/route-defect.test.ts` ('F-077: %s lands on https://callback.test/' over an absolute, a protocol-relative and a slash-backslash value, each asserting the Location is exactly the same-origin `/`), not in `route.test.ts`, because tags are file-level and the tag gate (`scripts/check-characterization-tags.mjs`) keeps a moved DEFECT assertion out of a PRESERVE file. The anti-regression clause is met in the file the criterion names: `route.test.ts` test 6 ('routes an already-onboarded McGill user to the next destination') still asserts a relative `next` is honoured, and it passed unedited across `077a081`. Both green on the slice-3 floor. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.",
     "related": [
       "F-003",
       "F-004",
@@ -2121,9 +2127,10 @@
     ],
     "recommended_fix": "Make the ring fail closed (DEC-34..DEC-36): one proxy users read whose non-PGRST116 error throws; an outer catch that returns 500 JSON under /api/ and a plain 500 otherwise; a seam guard requireActiveUser(ctx) that denies a missing profile (403 Profile not found) and a banned user (403 Account suspended) on every state-changing authenticated arm, DELETE included; delete checkBanStatus() once its callers migrate.",
     "validation_criterion": "src/proxy-defect.test.ts and src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts assertions MOVE when the fix lands; e2e/specs/ban-and-onboarding-ring.spec.ts is green.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "05",
+    "resolution": "**Fixed in Phase 5: plans 05-05 (`e2d6d3a`), 05-06 (`aa50ff6`) and 05-07 (`aa2191e`, `c620d16`), all INTENTIONAL BEHAVIOUR CHANGE; closed out by plan 05-08.** Proxy ring: the outer catch answers 500 instead of passing through, a failed ban read fails closed, and a signed-in caller with no profile row gets `403 Profile not found` on `/api/*` and is signed out to `/?error=profile_sync_failed` on a page (DEC-35, DEC-36). Handler ring: every state-changing, non-admin write arm (39 arms, enforced by the completeness test in `write-handlers-ring-defect.test.ts`) calls `requireActiveUser(ctx)`, DELETE included, and the legacy ban helper is deleted (census 0, `evidence/floor.slice-3-after.txt` block 17). Validation criterion met on every clause: the `src/proxy-defect.test.ts` rows b, c, d-api, d-page and the `write-handlers-ring-defect.test.ts` D1 and D2 rows moved in those commits (ledger rows in `evidence/defect-ledger.md`, each with the four-step protocol evidence), and `e2e/specs/ban-and-onboarding-ring.spec.ts` is green in the slice-3 full run from a clean reset (`evidence/playwright.slice-3-after.txt` Part 2: 53 passed, 0 failed), with the no-profile-row persona proven end to end by `e2e/specs/no-profile-row.spec.ts`. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.",
     "related": ["F-003", "F-062", "F-069"]
   },
   {
@@ -2146,9 +2153,10 @@
     ],
     "recommended_fix": "Read onboarding_completed in the proxy's single users read and keep the cookie as a hint only (DEC-36); add requireOnboarded(ctx) to every state-changing authenticated API arm except POST /api/onboarding/complete and PATCH /api/users/[id] (DEC-34).",
     "validation_criterion": "The onboarding rows of src/proxy-defect.test.ts and src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts MOVE when the fix lands; in e2e, a mid_onboarding_student direct POST returns 403 {\"error\":\"Onboarding required\"}.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "05",
+    "resolution": "**Fixed in Phase 5: plans 05-05 (`e2d6d3a`), 05-06 (`aa50ff6`) and 05-07 (`aa2191e`, `c620d16`), all INTENTIONAL BEHAVIOUR CHANGE; closed out by plan 05-08.** The proxy reads `onboarding_completed` in its single `users` read and keeps the cookie as a hint only (DEC-36); every state-changing write arm except DEC-34's two exemptions (`PATCH /api/users/[id]`, `POST /api/onboarding/complete`) calls `requireOnboarded(ctx)`. Validation criterion met on both clauses: the onboarding rows moved (`src/proxy-defect.test.ts` rows f and g; `write-handlers-ring-defect.test.ts` D3 rows for 14 + 12 + 11 arms), each with a ledger row in `evidence/defect-ledger.md`; and in e2e, `e2e/specs/ban-and-onboarding-ring.spec.ts` 'the mid-onboarding student (F-089, DEC-34)' gets `403 { error: 'Onboarding required' }` on a direct `POST /api/events/<id>/save`, is sent to `/onboarding` even with the `needs_onboarding` cookie deleted, and still completes both wizard calls (200). Green in the slice-3 full run (`evidence/playwright.slice-3-after.txt` Part 2). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.",
     "related": ["F-088"]
   },
   {

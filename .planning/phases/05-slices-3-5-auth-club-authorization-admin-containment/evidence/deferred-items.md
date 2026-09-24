@@ -123,9 +123,121 @@ and an owner, so no Phase 5 plan executes on an assumption nobody is holding.
 *(Empty at 05-01. Append new items here as `DI-44`, `DI-45`, … with: found by, what it is, why it
 was not fixed in the plan that found it, why it is not merely cosmetic, and its owner.)*
 
+## Slice 3 (05-02..05-07), registered by 05-08
+
+Source: the "Deferred items found" and "Observations for later plans" sections of the 05-02..05-07
+SUMMARYs. 05-02 and 05-04 list none; 05-05, 05-06 and 05-07 list only observations. Each
+observation below is registered once. Observations that were already acted on are listed after
+DI-47 with where they closed, so none is dropped silently.
+
+## DI-44 — `recommendations/feedback` keeps an unreachable body-`user_id` fallback, and the anon-role write of a foreign `user_id` is unprobed
+
+- **Found by:** 05-03 (candidate DI), re-stated by 05-06 and 05-07.
+- **What it is.** `src/app/api/recommendations/feedback/route.ts:129` and `:182` take
+  `authUser?.id ?? body.user_id`. Before 05-06 an anonymous caller could write thumbs feedback
+  (upsert) and analytics feedback (insert) attributed to any `user_id` the body named. 05-06
+  (`aa50ff6`) put an anonymous branch first, so the fallback can no longer run through this handler.
+  A comment at `:94` marks it unreachable. Two things remain: the dead fallback code, and the
+  question whether the tables' RLS refuses an anon-role write with a foreign `user_id` when it
+  comes straight to PostgREST, bypassing the handler.
+- **Why deferred.** 05-06 and 05-07 were told to keep every read and write unchanged apart from the
+  guard, and the file was outside 05-07's list. The RLS probe is local-stack database work, not
+  slice-3 handler work. No finding in `findings.json` covers it (05-03 searched for
+  `recommendations/feedback`, body `user_id` and impersonation). This plan registers it as a DI and
+  not as a finding because the handler path is closed and the database half has not been measured.
+- **Why not cosmetic.** If the RLS half is open, it is a write-impersonation path that skips the
+  handler. The dead fallback is also the kind of code that a later edit could make reachable again.
+- **Owner:** slice 5 (05-15/05-16, the service-role and RLS privilege work) for the anon-role probe.
+  Phase 6 for removing the dead fallback, unless 05-15 already rewrites that handler.
+
+## DI-45 — Auth-failure log lines removed by the context adoption
+
+- **Found by:** 05-06 (deviation 4). The same kind of change as Phase 4's DEC-29.
+- **What it is.** `POST /api/user/engagement` no longer logs
+  `Unauthenticated request to /api/user/engagement:` when `getUser()` returns an auth error, because
+  `createRequestContext()` does not expose the auth error object. `GET` on the same route still
+  logs it (`src/app/api/user/engagement/route.ts:66`). No response byte changed, and no test pinned
+  the log.
+- **Why deferred.** Adding it back would mean widening the context's surface for a log line, and
+  DEC-29 already moves auth-failure logging to Phase 6's structured logging.
+- **Why not cosmetic.** Auth-failure signals are what an operator uses to spot credential stuffing
+  or a broken session refresh. Losing them silently, route by route, erodes observability. The
+  structured-logging work needs this list so it restores them deliberately.
+- **Owner:** Phase 6 (structured logging, with DEC-29's three lines from Phase 4).
+
+## DI-46 — CLAUDE.md cites `PROTECTED_ROUTES` at `src/proxy.ts:114`; it is now at line 188
+
+- **Found by:** 05-05 ("Observations for later plans").
+- **What it is.** The project CLAUDE.md says the `PROTECTED_ROUTES` array is at `src/proxy.ts:114`.
+  After 05-05's proxy rewrite it is at `:188`. The literal, its eight entries and the regex
+  re-derivation command CLAUDE.md gives all still work. Only the line number is stale.
+- **Why deferred.** Executors do not edit CLAUDE.md. It is the owner's instruction file, and a change
+  to it needs the owner's own hand.
+- **Why not cosmetic.** CLAUDE.md is the file every agent reads first, and it calls this line "the
+  only authority". A wrong pointer sends a reader to the wrong code on the auth path. The damage is
+  limited because the re-derivation command is correct, so the fix is one number.
+- **Owner:** the phase owner (a one-line CLAUDE.md edit). Re-check whenever `src/proxy.ts` changes
+  again: 05-17 adds the CSRF origin check to the proxy.
+
+## DI-47 — Branches and prose left behind by the handler ring
+
+- **Found by:** 05-07 ("Observations for later plans").
+- **What it is.**
+  (a) `src/app/api/profile/inferred-tags/route.ts:34`: the handler's own
+  `404 {"error":"Profile not found"}` cannot be reached by a caller with no `users` row, because
+  `requireActiveUser` answers 403 first. It remains only for a row deleted between the context read
+  and the handler's read.
+  (b) `src/__tests__/api/auth-ring/write-handlers-characterization.test.ts` and `writeHandlerTable.ts`
+  still describe "the legacy ban helper", which was deleted in `c620d16`. The `legacyBan` flag now
+  records which arms used it before 05-06/05-07. Both files must stay unedited as PRESERVE
+  instruments.
+- **Why deferred.** (a) The plan said to keep every read and write otherwise unchanged, and the
+  branch still covers a real race. (b) Editing a PRESERVE file needs a ledger row and a reason
+  stronger than prose.
+- **Why not cosmetic.** (a) Two bodies with the same text and different statuses (403 from the
+  guard, 404 from the handler) are a contract ambiguity. Phase 7's persona matrix is generated from
+  `endpoints.json`, and it has to pick one. (b) is the cosmetic half, kept here so the two are
+  cleaned together.
+- **Owner:** Phase 6 (endpoint contract work, REFAC-19), with (b) done under a ledger row when those
+  suites are next legitimately edited.
+
+## DI-48 — On the admin and moderation surface, the ban is still enforced only by the proxy
+
+- **Found by:** 05-08, while measuring REFAC-11 clause by clause (`slice-3-close.md` § 7).
+- **What it is.** DEC-34's handler-ring ban guard covers every state-changing *non-admin* arm (39
+  arms, completeness-tested). The admin and moderation arms authorize through `verifyAdmin()`
+  (`src/lib/admin.ts`, 33 callsites), which reads `roles` only. The seam's `requireRole`
+  (`src/server/authz/requireRole.ts`) has no ban check either. So a banned user who still holds the
+  `admin` role is refused on `/api/admin/*` only by the proxy's ban read. That read fails closed
+  since 05-05 (`e2d6d3a`), but by CONTEXT Area 1 the proxy is meant to be advisory ("nothing in the
+  proxy is load-bearing for authz").
+- **Why deferred.** The admin arms are slice 5's (REFAC-13, 05-12/05-13 replace `verifyAdmin()`
+  with the seam). Guarding them in slice 3 would mean touching 25 admin files twice. No `src/` file
+  changes in 05-08.
+- **Why not cosmetic.** It is the one place where REFAC-11's "middleware is advisory-only" clause
+  is not yet true, and it is why REFAC-11 is recorded PARTIAL at the slice-3 close. The exposure is
+  narrow: the caller must be both banned and an admin, the proxy does refuse them today, and F-006
+  (a non-admin clearing `banned_at`) is slice 5's.
+- **Owner:** slice 5, 05-12/05-13. When the admin arms adopt the seam, compose
+  `requireActiveUser(ctx)` before `requireRole(ctx, "admin")` (or make `requireRole` read the ban
+  columns it already has in the context row), pin it with an admin-arm DEFECT row, and then flip
+  REFAC-11 to Complete. If the phase owner decides a banned admin is out of scope, record that as a
+  decision and close this item.
+
+**Observations already acted on (no DI):**
+- *`src/server/context.ts` docblock names the legacy helper* (05-06): rewritten by 05-07. The header
+  now says `src/lib/ban.ts` exports only `isBanned`, and `grep -rn checkBanStatus src` exits 1.
+- *PRESERVE docblocks in the save and rsvp suites say "ban asymmetry, pinned for Phase 5"* (05-06
+  deviation 1): removed by 05-07 as comment-only lines (05-07 deviation 1).
+- *The un-onboarded persona is now redirected from the database, and banned API callers get 403
+  JSON* (05-05, 05-06, 05-07 notes for 05-08): pinned end to end by
+  `e2e/specs/ban-and-onboarding-ring.spec.ts` (05-08 `80f9533`).
+- *The guard runs before body validation in `interactions` and `feedback`* (05-07): this is intended,
+  so it is not a DI. It is listed in `slice-3-close.md` § 5 as an INTENTIONAL BEHAVIOUR CHANGE.
+
 ---
 
-**Next new item id: DI-44.**
+**Next new item id: DI-49.**
 
 *Phase: 05-slices-3-5-auth-club-authorization-admin-containment*
 *Plan: 05-01*
