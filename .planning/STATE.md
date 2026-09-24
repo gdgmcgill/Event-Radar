@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
-stopped_at: Completed 05-14-PLAN.md
-last_updated: "2026-09-24T21:54:26.838Z"
+stopped_at: Completed 05-15-PLAN.md
+last_updated: "2026-09-24T22:20:32.346Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 62
-  completed_plans: 57
+  completed_plans: 58
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
-Plan: 15 of 19
+Plan: 16 of 19
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 05 execution started
 
@@ -110,6 +110,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P12 | 14min | 3 tasks | 10 files |
 | Phase 05 P13 | 11min | 3 tasks | 38 files |
 | Phase 05 P14 | 16min | 3 tasks | 33 files |
+| Phase 05 P15 | 24min | 3 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -286,6 +287,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-14: calculate-popularity composes requireActiveUser before requireRole (DEC-58); FIXED_ARMS and BAN_GUARDED_ARMS hold all 35 arms, DI-48 closed on /api/admin/*
 - [Phase 05]: 05-14: GET /api/events/[id] attaches pending_edits for creator/admin only when non-null and still strips it for everyone else (PRESERVE layer b); shared transform unchanged
 - [Phase 05]: 05-14: audit actors resolved by users id on the cookie client (browser client on the audit-log page); GET /api/admin/audit-log unchanged
+- [Phase 05]: 05-15: every research F permits-cell re-verified against production and local policy text (43 identical); no cell wrong, no policy widened; the events-appeal pre-read stays on the door so a non-creator still gets 403 (tenth REGISTRY row, Phase 7 retirement) — Behaviour preservation: a cookie-client read would turn 403 into 404 with no finding behind it
+- [Phase 05]: 05-15: /users/[id] is a soft 404 (root loading.tsx streams 200 before the page runs); a private profile gives anonymous readers the same not-found response as a missing profile, with neither name nor email (F-005) — Next documents that the status cannot change once streaming starts; a hard 404 would need a proxy check (deferred to 05-19)
 
 ### Pending Todos
 
@@ -337,7 +340,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T21:54:26.834Z
-Stopped at: Completed 05-14-PLAN.md
-Next: execute 05-14-PLAN.md (calculate-popularity fails closed, F-001; admin role changes land, F-091; audit writer; contract regen). 05-13 put createRequestContext() + requireActiveUser(ctx) + requireRole(ctx, "admin") at all 33 former helper arms in 25 files (90819ee, 9f0e5b5), moved the moderation reviews route and both admin layouts onto getRequestContext()/hasRole and deleted src/lib/admin.ts (b8e172e). F-061 fixed at those arms (anonymous 401, non-admin 403; only recommendations/batch POST changed its non-admin status). DEC-58 closes DI-48 for 33 of 35 arms: 05-14 must compose requireActiveUser ahead of requireRole at calculate-popularity too and add both ids to BAN_GUARDED_ARMS as well as FIXED_ARMS, after which 05-19 can flip REFAC-11. Floor: Jest 1298/0 (70 suites), tag gate ok 34, tsc 0, lint 0, ratchet committed 25 / live 22; Playwright admin-guard + admin-moderation-queue + admin-login-cookie-equivalence 17/17 after a clean reset. Candidates for 05-19: CLAUDE.md:67 and .claude/CLAUDE.md:327 still name verifyAdmin/src/lib/admin.ts; the layouts and moderation reviews admin path read the role only (ban proxy-enforced). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
+Last session: 2026-09-24T22:20:27.904Z
+Stopped at: Completed 05-15-PLAN.md
+Next: execute 05-16-PLAN.md (F-006 column-scoped users grant and F-007 audit-log write revocation, local only). 05-15 split 17 route files between ctx.supabase and getElevatedClient() (26cbb2a, f99cf6d), fixed F-005 with one shared visibility gate and a ten-column select without email, and regenerated the allow-list to the two cron routes (4d3073b). REGISTRY.md holds ten new rows. Floor: Jest 1325/1325 (71 suites), tag gate ok 34, tsc 0, lint 0 errors, ratchet committed 2 / live 2; full Playwright 91/91 after a clean reset. The stack is left reset and seeded, and port 3000 is free. 05-16's floor must include public-profile-privacy.spec.ts and admin-write-paths.spec.ts: profile/avatar, profile/banner and users/[id] PATCH now write on the cookie client, which the F-006 grant must still permit. Candidates for 05-19: GET /api/admin/reports answers 500 (PGRST200, a bad reporter embed); /users/[id] is a soft 404 because of the root loading.tsx; the ratchet template prose is stale at 0 of 2; CLAUDE.md:67 and .claude/CLAUDE.md:327 still name verifyAdmin. DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
 Resume file: None
