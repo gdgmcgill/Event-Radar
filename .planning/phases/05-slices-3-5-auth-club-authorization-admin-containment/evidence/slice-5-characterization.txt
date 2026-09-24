@@ -563,3 +563,73 @@ ok 34 files
 exit=0
 $ git diff --stat 4e368b6 -- src/__tests__/moderation/audit-shape.test.ts src/__tests__/api/events/events-detail-characterization.test.ts   (unedited: prints nothing)
 exit=0
+
+================================================================================
+PART 3 — Task 3: Playwright pins after a clean reset and seed (F-061, F-090)
+================================================================================
+# head=1753bc3e8ba7e6b891f01d5976b6b75da0a96fd8  (specs uncommitted in the working tree at run time)
+# Port 3000 was free before the run (lsof printed nothing). The [WebServer] log lines
+# (next build output and the [tags] Unmapped-tags warnings) are elided; every other line
+# is verbatim. NOTE on the first two exit= lines: the reset and the seed were piped
+# through tail, so those two exit= values are tail's. Their own success lines
+# ('Finished supabase db reset on branch main.' and the seed loader's summary) are the
+# proof. The Playwright exit= is the runner's own.
+
+$ supabase db reset --local
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ npx playwright test e2e/specs/admin-guard.spec.ts e2e/specs/csrf-origin.spec.ts
+
+Running 17 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (385ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (254ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (226ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (236ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (446ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (434ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (241ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (194ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (192ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (223ms)
+  ✓  11 [chromium] › e2e/specs/admin-guard.spec.ts:43:7 › an anonymous caller › DEFECT F-061: anonymous admin call answers 403 (13ms)
+  ✓  12 [chromium] › e2e/specs/admin-guard.spec.ts:60:7 › an onboarded student › PRESERVE: a non-admin gets 403 Forbidden (149ms)
+  ✓  13 [chromium] › e2e/specs/admin-guard.spec.ts:68:7 › an admin › PRESERVE: the admin gets 200 with the stats body (124ms)
+  ✓  14 [chromium] › e2e/specs/csrf-origin.spec.ts:69:7 › an onboarded student's session, from another site › DEFECT F-090: a POST carrying Origin https://evil.example is accepted (257ms)
+  ✓  15 [chromium] › e2e/specs/csrf-origin.spec.ts:75:7 › an onboarded student's session, from another site › DEFECT F-090: a POST carrying Sec-Fetch-Site cross-site is accepted (314ms)
+  ✓  16 [chromium] › e2e/specs/csrf-origin.spec.ts:85:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with the application's own Origin is accepted (261ms)
+  ✓  17 [chromium] › e2e/specs/csrf-origin.spec.ts:93:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted (275ms)
+
+  17 passed (12.9s)
+exit=0
+
+## 3.1 T-05-12-02: no saved row left behind (onboarded_student x secondApprovedEvent)
+$ docker exec supabase_db_Event-Radar psql -U postgres -d postgres -tAc "SELECT count(*) FROM public.saved_events WHERE user_id = '5eed0000-0000-4000-8000-000000000001' AND event_id = '5eed0000-0000-4000-8000-0000000000e2';"
+0
+exit=0
+$ docker exec supabase_db_Event-Radar psql -U postgres -d postgres -tAc "SELECT count(*) FROM public.saved_events;"   (whole table: the seed writes none)
+0
+exit=0
+
+## 3.2 T-05-12-03: neither spec calls calculate-popularity
+$ grep -c "calculate-popularity" e2e/specs/admin-guard.spec.ts e2e/specs/csrf-origin.spec.ts
+e2e/specs/admin-guard.spec.ts:1
+e2e/specs/csrf-origin.spec.ts:0
+(the one match in admin-guard.spec.ts is the header comment stating the prohibition; no request is made to it)
+$ grep -n "request.*calculate-popularity\|get(.*calculate\|post(.*calculate" e2e/specs/admin-guard.spec.ts e2e/specs/csrf-origin.spec.ts
+exit=1
+
+Reading: F-061 on the real stack: anonymous GET /api/admin/stats is 403 Forbidden (contract
+401); student 403 Forbidden and admin 200 are the surviving bytes. F-090 on the real stack:
+with a live session cookie, a POST carrying Origin https://evil.example, or Sec-Fetch-Site
+cross-site, is answered 200 {saved:true} and the row is written, exactly like a same-origin
+POST and a POST with neither header. No proxy branch and no handler reads either header.

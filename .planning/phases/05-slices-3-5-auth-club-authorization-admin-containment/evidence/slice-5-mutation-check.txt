@@ -1,0 +1,398 @@
+# Slice 5 mutation check — plan 05-12
+# head=1753bc3e8ba7e6b891f01d5976b6b75da0a96fd8  (05-11 head 4e368b6 + 05-12 Tasks 1-2: 52937b6, 1753bc3)
+# recorded: 2026-09-24T21:21:35Z
+#
+# Method: each cycle applies one named mutation to PRODUCTION SOURCE with an exact-string
+# replace (scratchpad mutate.py, body below), runs the suites that should notice, lists every
+# red test, then restores the file with 'git checkout --' and proves the restore with
+# 'git diff --exit-code' (restore exit=0). No mutation was committed. The Playwright run had
+# finished before the first cycle, so no build read a mutated file.
+#
+# Plan cycle (2) said 'give admin/clubs GET a 403 for non-admins -> the legacy401 DEFECT row
+# red'. Measurement (slice-5-characterization.txt 1.5) shows admin/clubs GET ALREADY answers
+# a non-admin 403, so that mutation would be a no-op. It is replaced by two cycles: 2a gives
+# recommendations/batch POST (the one arm that answers a non-admin 401) the 05-13 fix shape, and
+# 2b removes admin/clubs GET's anonymous-401 branch. Cycle 7 is an addition: it proves the DI-48
+# banned-admin rows bite.
+
+## mutate.py (verbatim)
+    #!/usr/bin/env python3
+    """Apply one named mutation to a tracked file (exact-string replace, must match once)."""
+    import sys
+    MUT = {
+     "1": ("src/lib/admin.ts",
+           'return { supabase, user, isAdmin: roles.includes("admin") };',
+           'return { supabase, user, isAdmin: roles.includes("admin") || true };'),
+     "2a": ("src/app/api/recommendations/batch/route.ts",
+           '''    const { isAdmin } = await verifyAdmin();
+        if (!isAdmin) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }''',
+           '''    const { isAdmin, user } = await verifyAdmin();
+        if (!user) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!isAdmin) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }'''),
+     "2b": ("src/app/api/admin/clubs/route.ts",
+           '''  if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    ''', ''),
+     "3": ("src/app/api/admin/calculate-popularity/route.ts",
+           '''    // If ADMIN_API_KEY is set, require it; otherwise allow in development
+        if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {''',
+           '''    // If ADMIN_API_KEY is set, require it; otherwise allow in development
+        if (!expectedKey || authHeader !== `Bearer ${expectedKey}`) {'''),
+     "3g": ("src/app/api/admin/calculate-popularity/route.ts",
+           '''    const expectedKey = process.env.ADMIN_API_KEY;
+    
+        if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {''',
+           '''    const expectedKey = process.env.ADMIN_API_KEY;
+    
+        if (!expectedKey || authHeader !== `Bearer ${expectedKey}`) {'''),
+     "4": ("src/app/api/admin/users/[id]/route.ts",
+           '''const sanitizedRoles = (body.roles as string[]).filter((r: string) => r !== "admin");''',
+           '''const sanitizedRoles = [...(body.roles as string[])];'''),
+     "5": ("src/app/users/[id]/page.tsx",
+           '''  if (error || !target) notFound();
+    ''',
+           '''  if (error || !target) notFound();
+      if (!authUser && target.visibility === "private") notFound();
+    '''),
+     "6": ("src/app/api/events/[id]/route.ts",
+           '''    const event = transformEventFromDB(data as Parameters<typeof transformEventFromDB>[0]);''',
+           '''    const event = {
+          ...transformEventFromDB(data as Parameters<typeof transformEventFromDB>[0]),
+          pending_edits: data.pending_edits,
+        } as ReturnType<typeof transformEventFromDB>;'''),
+     "7": ("src/lib/admin.ts",
+           '''    .select("roles")''',
+           '''    .select("roles, banned_at")'''),
+    }
+    key = sys.argv[1]
+    path, old, new = MUT[key]
+    s = open(path).read()
+    n = s.count(old)
+    assert n == 1, f"{key}: expected 1 match in {path}, got {n}"
+    s = s.replace(old, new)
+    if key == "7":
+        old2 = '  const roles: string[] = profile?.roles ?? [];'
+        assert s.count(old2) == 1
+        s = s.replace(old2, '  if (profile?.banned_at) return { supabase, user, isAdmin: false };\n' + old2)
+    open(path, "w").write(s)
+    print(f"mutation {key} applied to {path}")
+
+## cycles.sh (verbatim)
+    #!/bin/zsh
+    # Usage: cycles.sh — runs every mutation cycle, restoring each file from git.
+    SP=/private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/d6f0f2c2-0ba5-4efb-b3ce-b5d843e8e77d/scratchpad
+    cd /Users/adyan/Documents/GitHub/Event-Radar
+    ADMIN="src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/admin-guard-defect.test.ts"
+    run_cycle() {
+      local name="$1" keys="$2" files="$3" suites="$4" predict="$5"
+      echo "--------------------------------------------------------------------------------"
+      echo "CYCLE $name"
+      echo "PREDICT: $predict"
+      for k in ${=keys}; do echo "\$ python3 mutate.py $k"; python3 $SP/mutate.py $k; done
+      echo "\$ git diff --stat -- $files"; git diff --stat -- ${=files}
+      echo "\$ npx jest --ci --verbose $suites"
+      npx jest --ci --verbose ${=suites} > $SP/cycle.out 2>&1; local rc=$?
+      grep -E "✕" $SP/cycle.out | sed 's/ ([0-9]* ms)//'
+      grep -E "^Tests:" $SP/cycle.out
+      echo "jest exit=$rc"
+      echo "\$ git checkout -- $files && git diff --exit-code -- $files"
+      git checkout -- ${=files}; git diff --exit-code -- ${=files}; echo "restore exit=$?"
+    }
+    run_cycle 1 "1" "src/lib/admin.ts" "$ADMIN" \
+      "admin helper admits everyone: every PRESERVE P1 student-403 row (32) goes red; D2 (batch student 401) goes red; D1 stays green (anonymous returns before the role read)"
+    run_cycle 2a "2a" "src/app/api/recommendations/batch/route.ts" "$ADMIN" \
+      "batch POST given the 05-13 fix shape (anonymous 401, non-admin 403): exactly the D2 row goes red; PRESERVE P2 batch anonymous 401 stays green (control)"
+    run_cycle 2b "2b" "src/app/api/admin/clubs/route.ts" "$ADMIN" \
+      "admin/clubs GET loses its !user 401 branch: PRESERVE P2 'admin/clubs GET' anonymous-401 row goes red"
+    run_cycle 3 "3 3g" "src/app/api/admin/calculate-popularity/route.ts" "$ADMIN" \
+      "calculate-popularity 401s when ADMIN_API_KEY is unset: all four D3 rows go red; P3 admin rows for both verbs go red too (the mutation refuses the admin as well)"
+    run_cycle 4 "4" "src/app/api/admin/users/[id]/route.ts" "src/__tests__/api/admin/admin-users-patch-defect.test.ts" \
+      "admin users PATCH stops stripping admin: R1 (payload lacks admin) and R3 (self demotion) go red"
+    run_cycle 5 "5" "src/app/users/[id]/page.tsx" "src/__tests__/pages/public-profile-defect.test.tsx" \
+      "page calls notFound() for an anonymous viewer of a private target: P2 goes red; the public rows stay green"
+    run_cycle 6 "6" "src/app/api/events/[id]/route.ts" "src/__tests__/api/events/pending-edits-defect.test.ts src/__tests__/api/events/events-detail-characterization.test.ts" \
+      "GET copies pending_edits after the transform: E1 (creator) and E2 (admin) go red; E3, E4 and the detail characterization suite stay green"
+    run_cycle 7 "7" "src/lib/admin.ts" "$ADMIN" \
+      "admin helper refuses a caller whose banned_at is set: all 33 helper-arm D4 banned-admin rows go red; the 2 calculate-popularity D4 rows stay green"
+
+## Cycle output (verbatim)
+--------------------------------------------------------------------------------
+CYCLE 1
+PREDICT: admin helper admits everyone: every PRESERVE P1 student-403 row (32) goes red; D2 (batch student 401) goes red; D1 stays green (anonymous returns before the role read)
+$ python3 mutate.py 1
+mutation 1 applied to src/lib/admin.ts
+$ git diff --stat -- src/lib/admin.ts
+ src/lib/admin.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+$ npx jest --ci --verbose src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/admin-guard-defect.test.ts
+    ✕ recommendations/batch POST
+    ✕ admin/analytics/events GET
+    ✕ admin/analytics/users GET
+    ✕ admin/audit-log GET
+    ✕ admin/clubs/[id] PATCH
+    ✕ admin/clubs GET
+    ✕ admin/events/[id]/edits PATCH
+    ✕ admin/events/[id] PUT
+    ✕ admin/events/[id] DELETE
+    ✕ admin/events/[id]/status PATCH
+    ✕ admin/events GET
+    ✕ admin/events POST
+    ✕ admin/experiments/[id]/results GET
+    ✕ admin/experiments/[id] GET
+    ✕ admin/experiments/[id] PATCH
+    ✕ admin/experiments/[id] DELETE
+    ✕ admin/experiments GET
+    ✕ admin/experiments POST
+    ✕ admin/featured/[id] PATCH
+    ✕ admin/featured/[id] DELETE
+    ✕ admin/featured GET
+    ✕ admin/featured POST
+    ✕ admin/organizer-requests/[id] PATCH
+    ✕ admin/organizer-requests GET
+    ✕ admin/organizers GET
+    ✕ admin/reports/[id] PATCH
+    ✕ admin/reports GET
+    ✕ admin/stats GET
+    ✕ admin/users/[id]/ban POST
+    ✕ admin/users/[id]/ban DELETE
+    ✕ admin/users/[id] PATCH
+    ✕ admin/users GET
+    ✕ recommendations/analytics GET
+Tests:       33 failed, 113 passed, 146 total
+jest exit=1
+$ git checkout -- src/lib/admin.ts && git diff --exit-code -- src/lib/admin.ts
+restore exit=0
+--------------------------------------------------------------------------------
+CYCLE 2a
+PREDICT: batch POST given the 05-13 fix shape (anonymous 401, non-admin 403): exactly the D2 row goes red; PRESERVE P2 batch anonymous 401 stays green (control)
+$ python3 mutate.py 2a
+mutation 2a applied to src/app/api/recommendations/batch/route.ts
+$ git diff --stat -- src/app/api/recommendations/batch/route.ts
+ src/app/api/recommendations/batch/route.ts | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+$ npx jest --ci --verbose src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/admin-guard-defect.test.ts
+    ✕ recommendations/batch POST
+Tests:       1 failed, 145 passed, 146 total
+jest exit=1
+$ git checkout -- src/app/api/recommendations/batch/route.ts && git diff --exit-code -- src/app/api/recommendations/batch/route.ts
+restore exit=0
+--------------------------------------------------------------------------------
+CYCLE 2b
+PREDICT: admin/clubs GET loses its !user 401 branch: PRESERVE P2 'admin/clubs GET' anonymous-401 row goes red
+$ python3 mutate.py 2b
+mutation 2b applied to src/app/api/admin/clubs/route.ts
+$ git diff --stat -- src/app/api/admin/clubs/route.ts
+ src/app/api/admin/clubs/route.ts | 3 ---
+ 1 file changed, 3 deletions(-)
+$ npx jest --ci --verbose src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/admin-guard-defect.test.ts
+    ✕ admin/clubs GET
+Tests:       1 failed, 145 passed, 146 total
+jest exit=1
+$ git checkout -- src/app/api/admin/clubs/route.ts && git diff --exit-code -- src/app/api/admin/clubs/route.ts
+restore exit=0
+--------------------------------------------------------------------------------
+CYCLE 3
+PREDICT: calculate-popularity 401s when ADMIN_API_KEY is unset: all four D3 rows go red; P3 admin rows for both verbs go red too (the mutation refuses the admin as well)
+$ python3 mutate.py 3
+mutation 3 applied to src/app/api/admin/calculate-popularity/route.ts
+$ python3 mutate.py 3g
+mutation 3g applied to src/app/api/admin/calculate-popularity/route.ts
+$ git diff --stat -- src/app/api/admin/calculate-popularity/route.ts
+ src/app/api/admin/calculate-popularity/route.ts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+$ npx jest --ci --verbose src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/admin-guard-defect.test.ts
+    ✕ admin/calculate-popularity POST
+    ✕ admin/calculate-popularity GET
+    ✕ admin/calculate-popularity POST as anonymous
+    ✕ admin/calculate-popularity POST as student
+    ✕ admin/calculate-popularity GET as anonymous
+    ✕ admin/calculate-popularity GET as student
+    ✕ admin/calculate-popularity POST
+    ✕ admin/calculate-popularity GET
+Tests:       8 failed, 138 passed, 146 total
+jest exit=1
+$ git checkout -- src/app/api/admin/calculate-popularity/route.ts && git diff --exit-code -- src/app/api/admin/calculate-popularity/route.ts
+restore exit=0
+--------------------------------------------------------------------------------
+CYCLE 4
+PREDICT: admin users PATCH stops stripping admin: R1 (payload lacks admin) and R3 (self demotion) go red
+$ python3 mutate.py 4
+mutation 4 applied to src/app/api/admin/users/[id]/route.ts
+$ git diff --stat -- src/app/api/admin/users/[id]/route.ts
+ src/app/api/admin/users/[id]/route.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+$ npx jest --ci --verbose src/__tests__/api/admin/admin-users-patch-defect.test.ts
+    ✕ R1: another user's +admin change is written on the cookie client with admin stripped, 500s, and is not audited
+    ✕ R3: a roles change on the caller's own id is admitted, and the strip demotes the admin
+Tests:       2 failed, 4 passed, 6 total
+jest exit=1
+$ git checkout -- src/app/api/admin/users/[id]/route.ts && git diff --exit-code -- src/app/api/admin/users/[id]/route.ts
+restore exit=0
+--------------------------------------------------------------------------------
+CYCLE 5
+PREDICT: page calls notFound() for an anonymous viewer of a private target: P2 goes red; the public rows stay green
+$ python3 mutate.py 5
+mutation 5 applied to src/app/users/[id]/page.tsx
+$ git diff --stat -- src/app/users/[id]/page.tsx
+ src/app/users/[id]/page.tsx | 1 +
+ 1 file changed, 1 insertion(+)
+$ npx jest --ci --verbose src/__tests__/pages/public-profile-defect.test.tsx
+    ✕ P2: the page renders instead of calling notFound()
+Tests:       1 failed, 5 passed, 6 total
+jest exit=1
+$ git checkout -- src/app/users/[id]/page.tsx && git diff --exit-code -- src/app/users/[id]/page.tsx
+restore exit=0
+--------------------------------------------------------------------------------
+CYCLE 6
+PREDICT: GET copies pending_edits after the transform: E1 (creator) and E2 (admin) go red; E3, E4 and the detail characterization suite stay green
+$ python3 mutate.py 6
+mutation 6 applied to src/app/api/events/[id]/route.ts
+$ git diff --stat -- src/app/api/events/[id]/route.ts
+ src/app/api/events/[id]/route.ts | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+$ npx jest --ci --verbose src/__tests__/api/events/pending-edits-defect.test.ts src/__tests__/api/events/events-detail-characterization.test.ts
+    ✕ E1: the creator does not receive pending_edits
+    ✕ E2: an admin does not receive pending_edits
+Tests:       2 failed, 18 passed, 20 total
+jest exit=1
+$ git checkout -- src/app/api/events/[id]/route.ts && git diff --exit-code -- src/app/api/events/[id]/route.ts
+restore exit=0
+--------------------------------------------------------------------------------
+CYCLE 7
+PREDICT: admin helper refuses a caller whose banned_at is set: all 33 helper-arm D4 banned-admin rows go red; the 2 calculate-popularity D4 rows stay green
+$ python3 mutate.py 7
+mutation 7 applied to src/lib/admin.ts
+$ git diff --stat -- src/lib/admin.ts
+ src/lib/admin.ts | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+$ npx jest --ci --verbose src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/admin-guard-defect.test.ts
+    ✕ admin/analytics/events GET
+    ✕ admin/analytics/users GET
+    ✕ admin/audit-log GET
+    ✕ admin/clubs/[id] PATCH
+    ✕ admin/clubs GET
+    ✕ admin/events/[id]/edits PATCH
+    ✕ admin/events/[id] PUT
+    ✕ admin/events/[id] DELETE
+    ✕ admin/events/[id]/status PATCH
+    ✕ admin/events GET
+    ✕ admin/events POST
+    ✕ admin/experiments/[id]/results GET
+    ✕ admin/experiments/[id] GET
+    ✕ admin/experiments/[id] PATCH
+    ✕ admin/experiments/[id] DELETE
+    ✕ admin/experiments GET
+    ✕ admin/experiments POST
+    ✕ admin/featured/[id] PATCH
+    ✕ admin/featured/[id] DELETE
+    ✕ admin/featured GET
+    ✕ admin/featured POST
+    ✕ admin/organizer-requests/[id] PATCH
+    ✕ admin/organizer-requests GET
+    ✕ admin/organizers GET
+    ✕ admin/reports/[id] PATCH
+    ✕ admin/reports GET
+    ✕ admin/stats GET
+    ✕ admin/users/[id]/ban POST
+    ✕ admin/users/[id]/ban DELETE
+    ✕ admin/users/[id] PATCH
+    ✕ admin/users GET
+    ✕ recommendations/analytics GET
+    ✕ recommendations/batch POST
+Tests:       33 failed, 113 passed, 146 total
+jest exit=1
+$ git checkout -- src/lib/admin.ts && git diff --exit-code -- src/lib/admin.ts
+restore exit=0
+
+## Reading, cycle by cycle
+1  PREDICTED and OBSERVED: 33 red = the 32 P1 student-403 rows + D2 (batch). D1 green.
+2a PREDICTED and OBSERVED: 1 red = D2 'recommendations/batch POST'. P2's batch anonymous-401 row
+   stayed green: the fix shape moves only its DEFECT row (control).
+2b PREDICTED and OBSERVED: 1 red = P2 'admin/clubs GET'.
+3  PREDICTED 6, OBSERVED 8: the four D3 rows and both P3 admin rows, as predicted, plus both
+   calculate-popularity D4 banned-admin rows, which assert 'admitted today' and the mutation
+   refuses every caller. Unpredicted but correct; nothing else moved.
+4  PREDICTED and OBSERVED: R1 and R3 red; R2, R4, N1, N2 green.
+5  PREDICTED and OBSERVED: P2 red; P1, P3 and the three public/missing rows green.
+6  PREDICTED and OBSERVED: E1 and E2 red; E3, E4 and all of events-detail-characterization green.
+7  PREDICTED and OBSERVED: 33 red = D4 at every helper arm; the two calculate-popularity D4
+   rows green (they never call the helper).
+
+================================================================================
+Ledger-set measurements: the fixed branch of each set is not vacuous
+(test-file edits against unmodified source, restored the same way)
+================================================================================
+--------------------------------------------------------------------------------
+MEASUREMENT M1 (ledger set, unmodified source): add "admin/stats GET" to FIXED_ARMS
+PREDICT: the D1 row for admin/stats GET goes red (the fixed branch expects 401, source answers 403)
+ src/__tests__/api/admin/admin-guard-defect.test.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+    ✕ admin/stats GET
+Tests:       1 failed, 72 passed, 73 total
+jest exit=1
+restore exit=0
+--------------------------------------------------------------------------------
+MEASUREMENT M2 (ledger set, unmodified source): add "recommendations/batch POST" to FIXED_ARMS
+PREDICT: the D2 row goes red (expects 403, source answers 401)
+ src/__tests__/api/admin/admin-guard-defect.test.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+    ✕ recommendations/batch POST
+Tests:       1 failed, 72 passed, 73 total
+jest exit=1
+restore exit=0
+--------------------------------------------------------------------------------
+MEASUREMENT M3 (ledger set, unmodified source): add "admin/calculate-popularity POST" to FIXED_ARMS
+PREDICT: both D3 POST rows go red (expect 401/403 with no elevated call, source answers 200)
+ src/__tests__/api/admin/admin-guard-defect.test.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+    ✕ admin/calculate-popularity POST as anonymous
+    ✕ admin/calculate-popularity POST as student
+Tests:       2 failed, 71 passed, 73 total
+jest exit=1
+restore exit=0
+--------------------------------------------------------------------------------
+MEASUREMENT M4 (ledger set, unmodified source): add "admin/stats GET" to BAN_GUARDED_ARMS
+PREDICT: the D4 row for admin/stats GET goes red (expects 403 Account suspended, source admits)
+ src/__tests__/api/admin/admin-guard-defect.test.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+    ✕ admin/stats GET
+Tests:       1 failed, 72 passed, 73 total
+jest exit=1
+restore exit=0
+
+================================================================================
+FINAL checks
+================================================================================
+$ node scripts/check-characterization-tags.mjs --all   (piped through tail -1; the gate's own exit re-run unpiped: 0)
+ok 34 files
+exit=0
+$ npx jest --ci
+Test Suites: 70 passed, 70 total
+Tests:       1297 passed, 1297 total
+exit=0 (run at 21:21Z, output in the executor's scratchpad; the two summary lines are verbatim)
+$ npx tsc --noEmit
+exit=0
+$ npx eslint src/__tests__/api/admin src/__tests__/pages src/__tests__/api/events/pending-edits-defect.test.ts e2e/specs/admin-guard.spec.ts e2e/specs/csrf-origin.spec.ts
+exit=0
+$ git diff --exit-code -- src/app src/lib src/server   (working tree vs index: no mutation left behind)
+exit=0
+$ git diff --stat 4e368b6 -- src/app src/lib src/server   (the plan's literal line: 05-11 head to now)
+exit=0
+$ git diff --stat 4e368b6 -- src/ supabase/
+ .../api/admin/admin-guard-characterization.test.ts | 229 ++++++++
+ src/__tests__/api/admin/admin-guard-defect.test.ts | 261 +++++++++
+ .../api/admin/admin-users-patch-defect.test.ts     | 240 ++++++++
+ src/__tests__/api/admin/adminArmTable.ts           | 613 +++++++++++++++++++++
+ .../api/events/pending-edits-defect.test.ts        | 165 ++++++
+ src/__tests__/pages/public-profile-defect.test.tsx | 270 +++++++++
+ 6 files changed, 1778 insertions(+)
+exit=0
+$ git diff --name-status 4e368b6 -- src/ supabase/ | grep -v "^A.*\(test\.tsx\?\|adminArmTable\.ts\)$"   (anything that is not a new test file)
+exit=1  (1 = nothing but added test files)
