@@ -1,0 +1,345 @@
+Slice 4 characterization evidence — plan 05-09
+**Plan:** 05-09 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24
+
+Base: HEAD f1ab6a1216c178c79794ac5e030935b9e3e3397e (05-08 close). No file under src/app, src/lib,
+src/server or supabase/ is modified by this plan. §1 and §2 are Task 1 (Jest). §3 is Task 2
+(Playwright). The RLS before-probe is in its own file, rls-ring-before.txt.
+
+==============================================================================
+§1 — Measurement before pinning (Task 1)
+==============================================================================
+
+Method (05-03's): a temporary harness, src/__tests__/api/clubs/zz-measure-temp.test.ts, drove
+every one of research § C's 17 sites as five callers against the shared PostgREST fake. Fake A is
+the cookie client (@/lib/supabase/server). Fake B is the elevated client (@/lib/supabase/service).
+Both fakes are separate and hold the same fixture:
+  - Gate Club (approved) with an owner row and an organizer row;
+  - the attacker, who owns Attacker Club (approved) and Attacker Pending Club (pending);
+  - an admin with roles ["user","admin"] and no membership;
+  - a non-caller creator of the gate club's approved event.
+Each caller has an onboarded, unbanned users row. The harness printed each outcome and the writes
+on each client. It was deleted after the run and never committed. Its output is below verbatim,
+with long bodies truncated at 220 characters by the harness itself.
+
+Callers: anonymous; attacker = non-member; organizer = wrong role on owner-only sites and right
+role on owner+organizer sites; admin = no membership; owner = right role.
+
+$ npx jest --ci src/__tests__/api/clubs/zz-measure-temp.test.ts
+#1 clubs/[id]/analytics GET | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#1 clubs/[id]/analytics GET | attacker | 403 {"error":"You must be a club member to view analytics"} | cookie writes: [] | elevated writes: []
+#1 clubs/[id]/analytics GET | organizer | 200 {"follower_growth":[],"total_attendees":0,"popular_tags":[],"events":[{"event_id":"5eed0000-0000-4000-8000-0c90000000e4","title":"Organizer Event","start_date":"2026-01-13T18:00:00+00:00","views":0,"clicks":0,"saves":0,"… | cookie writes: [] | elevated writes: []
+#1 clubs/[id]/analytics GET | admin | 403 {"error":"You must be a club member to view analytics"} | cookie writes: [] | elevated writes: []
+#1 clubs/[id]/analytics GET | owner | 200 {"follower_growth":[],"total_attendees":0,"popular_tags":[],"events":[{"event_id":"5eed0000-0000-4000-8000-0c90000000e4","title":"Organizer Event","start_date":"2026-01-13T18:00:00+00:00","views":0,"clicks":0,"saves":0,"… | cookie writes: [] | elevated writes: []
+#2 clubs/[id]/events GET | anonymous | 200 {"events":[{"id":"5eed0000-0000-4000-8000-0c90000000e4","title":"Organizer Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000002","start_date":"202… | cookie writes: [] | elevated writes: []
+#2 clubs/[id]/events GET | attacker | 200 {"events":[{"id":"5eed0000-0000-4000-8000-0c90000000e4","title":"Organizer Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000002","start_date":"202… | cookie writes: [] | elevated writes: []
+#2 clubs/[id]/events GET | organizer | 200 {"events":[{"id":"5eed0000-0000-4000-8000-0c90000000e4","title":"Organizer Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000002","start_date":"202… | cookie writes: [] | elevated writes: []
+#2 clubs/[id]/events GET | admin | 200 {"events":[{"id":"5eed0000-0000-4000-8000-0c90000000e4","title":"Organizer Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000002","start_date":"202… | cookie writes: [] | elevated writes: []
+#2 clubs/[id]/events GET | owner | 200 {"events":[{"id":"5eed0000-0000-4000-8000-0c90000000e4","title":"Organizer Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000002","start_date":"202… | cookie writes: [] | elevated writes: []
+#3 clubs/[id]/invites GET | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#3 clubs/[id]/invites GET | attacker | 403 {"error":"Only the club owner can view invitations"} | cookie writes: [] | elevated writes: []
+#3 clubs/[id]/invites GET | organizer | 403 {"error":"Only the club owner can view invitations"} | cookie writes: [] | elevated writes: []
+#3 clubs/[id]/invites GET | admin | 403 {"error":"Only the club owner can view invitations"} | cookie writes: [] | elevated writes: []
+#3 clubs/[id]/invites GET | owner | 200 [] | cookie writes: [] | elevated writes: []
+#4 clubs/[id]/invites POST | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#4 clubs/[id]/invites POST | attacker | 403 {"error":"Only the club owner can send invitations"} | cookie writes: [] | elevated writes: []
+#4 clubs/[id]/invites POST | organizer | 403 {"error":"Only the club owner can send invitations"} | cookie writes: [] | elevated writes: []
+#4 clubs/[id]/invites POST | admin | 403 {"error":"Only the club owner can send invitations"} | cookie writes: [] | elevated writes: []
+#4 clubs/[id]/invites POST | owner | 201 {"invite":{"token":null}} | cookie writes: ["club_invitations.insert {\"club_id\":\"5eed0000-0000-4000-8000-0c90000000c1\",\"inviter_id\":\"5eed0000-0000-4000-8000-0c9000000001\",\"invitee_email\":\"invitee@mail.mcgill.ca\"}"] | elevated writes: []
+#5 clubs/[id]/members/role PATCH | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#5 clubs/[id]/members/role PATCH | attacker | 403 {"error":"Only the club owner can change roles"} | cookie writes: [] | elevated writes: []
+#5 clubs/[id]/members/role PATCH | organizer | 403 {"error":"Only the club owner can change roles"} | cookie writes: [] | elevated writes: []
+#5 clubs/[id]/members/role PATCH | admin | 403 {"error":"Only the club owner can change roles"} | cookie writes: [] | elevated writes: []
+#5 clubs/[id]/members/role PATCH | owner | 200 {"member":{"id":"5eed0000-0000-4000-8000-0c90000000b2","club_id":"5eed0000-0000-4000-8000-0c90000000c1","user_id":"5eed0000-0000-4000-8000-0c9000000002","role":"organizer","created_at":"2026-01-02T00:00:00Z"}} | cookie writes: ["club_members.update {\"role\":\"organizer\"}"] | elevated writes: []
+#6 clubs/[id]/members GET | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#6 clubs/[id]/members GET | attacker | 403 {"error":"You must be a member of this club to view members"} | cookie writes: [] | elevated writes: []
+#6 clubs/[id]/members GET | organizer | 200 {"members":[{"id":"5eed0000-0000-4000-8000-0c90000000b1","user_id":"5eed0000-0000-4000-8000-0c9000000001","role":"owner","created_at":"2026-01-01T00:00:00Z","user":{"id":"5eed0000-0000-4000-8000-0c9000000001","email":"ga… | cookie writes: [] | elevated writes: []
+#6 clubs/[id]/members GET | admin | 403 {"error":"You must be a member of this club to view members"} | cookie writes: [] | elevated writes: []
+#6 clubs/[id]/members GET | owner | 200 {"members":[{"id":"5eed0000-0000-4000-8000-0c90000000b1","user_id":"5eed0000-0000-4000-8000-0c9000000001","role":"owner","created_at":"2026-01-01T00:00:00Z","user":{"id":"5eed0000-0000-4000-8000-0c9000000001","email":"ga… | cookie writes: [] | elevated writes: []
+#7 clubs/[id]/members DELETE | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#7 clubs/[id]/members DELETE | attacker | 403 {"error":"Only the club owner can remove members"} | cookie writes: [] | elevated writes: []
+#7 clubs/[id]/members DELETE | organizer | 403 {"error":"Only the club owner can remove members"} | cookie writes: [] | elevated writes: []
+#7 clubs/[id]/members DELETE | admin | 403 {"error":"Only the club owner can remove members"} | cookie writes: [] | elevated writes: []
+#7 clubs/[id]/members DELETE | owner | 200 {"success":true} | cookie writes: ["club_members.delete null"] | elevated writes: []
+#8 clubs/[id] PATCH | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#8 clubs/[id] PATCH | attacker | 403 {"error":"Only the club owner can update club details"} | cookie writes: [] | elevated writes: []
+#8 clubs/[id] PATCH | organizer | 403 {"error":"Only the club owner can update club details"} | cookie writes: [] | elevated writes: []
+#8 clubs/[id] PATCH | admin | 403 {"error":"Only the club owner can update club details"} | cookie writes: [] | elevated writes: []
+#8 clubs/[id] PATCH | owner | 200 {"club":{"id":"5eed0000-0000-4000-8000-0c90000000c1","name":"Gate Club","status":"approved","created_by":"5eed0000-0000-4000-8000-0c9000000001","description":"An updated description"}} | cookie writes: ["clubs.update {\"description\":\"An updated description\"}"] | elevated writes: []
+#9 clubs/[id] DELETE | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#9 clubs/[id] DELETE | attacker | 403 {"error":"Only the club owner can delete the club"} | cookie writes: [] | elevated writes: []
+#9 clubs/[id] DELETE | organizer | 403 {"error":"Only the club owner can delete the club"} | cookie writes: [] | elevated writes: []
+#9 clubs/[id] DELETE | admin | 403 {"error":"Only the club owner can delete the club"} | cookie writes: [] | elevated writes: []
+#9 clubs/[id] DELETE | owner | 200 {"success":true} | cookie writes: ["clubs.update {\"status\":\"deleted\"}"] | elevated writes: ["admin_audit_log.insert {\"admin_user_id\":\"5eed0000-0000-4000-8000-0c9000000001\",\"action\":\"club_deleted\",\"target_type\":\"club\",\"target_id\":\"5eed0000-0000-4000-8000-0c90000000c1\",\"metadata\":{\"club_name\":\"Gate Club\"}}"]
+#10 clubs/[id]/transfer POST | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#10 clubs/[id]/transfer POST | attacker | 403 {"error":"Only the club owner can transfer ownership"} | cookie writes: [] | elevated writes: []
+#10 clubs/[id]/transfer POST | organizer | 403 {"error":"Only the club owner can transfer ownership"} | cookie writes: [] | elevated writes: []
+#10 clubs/[id]/transfer POST | admin | 403 {"error":"Only the club owner can transfer ownership"} | cookie writes: [] | elevated writes: []
+#10 clubs/[id]/transfer POST | owner | 200 {"success":true} | cookie writes: [] | elevated writes: ["club_members.update {\"role\":\"owner\"}","club_members.update {\"role\":\"organizer\"}","admin_audit_log.insert {\"admin_user_id\":\"5eed0000-0000-4000-8000-0c9000000001\",\"action\":\"club_ownership_transferred\",\"target_type\":\"club\",\"target_id\":\"5eed0000-0000-4000-8000-0c90000000c1\",\"metadata\":{\"new_owner_id\":\"5eed0000-0000-4000-8000-0c9000000002\",\"previous_owner_id\":\"5eed0000-0000-4000-8000-0c9000000001\"}}"]
+#11 clubs/banner POST | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#11 clubs/banner POST | attacker | 403 {"error":"Only the club owner can upload a banner"} | cookie writes: [] | elevated writes: []
+#11 clubs/banner POST | organizer | 403 {"error":"Only the club owner can upload a banner"} | cookie writes: [] | elevated writes: []
+#11 clubs/banner POST | admin | 403 {"error":"Only the club owner can upload a banner"} | cookie writes: [] | elevated writes: []
+#11 clubs/banner POST | owner | 500 {"error":"Failed to upload banner"} | cookie writes: [] | elevated writes: []
+#12 clubs/logo POST | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#12 clubs/logo POST | attacker | 403 {"error":"Only the club owner can upload a logo"} | cookie writes: [] | elevated writes: []
+#12 clubs/logo POST | organizer | 403 {"error":"Only the club owner can upload a logo"} | cookie writes: [] | elevated writes: []
+#12 clubs/logo POST | admin | 403 {"error":"Only the club owner can upload a logo"} | cookie writes: [] | elevated writes: []
+#12 clubs/logo POST | owner | 500 {"error":"Failed to upload logo"} | cookie writes: [] | elevated writes: []
+#13 events/[id]/analytics GET | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#13 events/[id]/analytics GET | attacker | 403 {"error":"You must be a club member to view analytics"} | cookie writes: [] | elevated writes: []
+#13 events/[id]/analytics GET | organizer | 200 {"event_id":"5eed0000-0000-4000-8000-0c90000000e1","title":"Gate Event","start_date":"2026-01-10T18:00:00+00:00","views":0,"clicks":0,"saves":0,"unique_viewers":0,"rsvp_going":0,"rsvp_interested":0} | cookie writes: [] | elevated writes: []
+#13 events/[id]/analytics GET | admin | 403 {"error":"You must be a club member to view analytics"} | cookie writes: [] | elevated writes: []
+#13 events/[id]/analytics GET | owner | 200 {"event_id":"5eed0000-0000-4000-8000-0c90000000e1","title":"Gate Event","start_date":"2026-01-10T18:00:00+00:00","views":0,"clicks":0,"saves":0,"unique_viewers":0,"rsvp_going":0,"rsvp_interested":0} | cookie writes: [] | elevated writes: []
+#14 events/[id]/reviews GET | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#14 events/[id]/reviews GET | attacker | 200 {"aggregate":{"average_rating":4,"total_reviews":1,"distribution":[{"rating":1,"count":0},{"rating":2,"count":0},{"rating":3,"count":0},{"rating":4,"count":1},{"rating":5,"count":0}],"comments":[]},"user_review":null,"ca… | cookie writes: [] | elevated writes: []
+#14 events/[id]/reviews GET | organizer | 200 {"aggregate":{"average_rating":4,"total_reviews":1,"distribution":[{"rating":1,"count":0},{"rating":2,"count":0},{"rating":3,"count":0},{"rating":4,"count":1},{"rating":5,"count":0}],"comments":[{"rating":4,"comment":"Wo… | cookie writes: [] | elevated writes: []
+#14 events/[id]/reviews GET | admin | 200 {"aggregate":{"average_rating":4,"total_reviews":1,"distribution":[{"rating":1,"count":0},{"rating":2,"count":0},{"rating":3,"count":0},{"rating":4,"count":1},{"rating":5,"count":0}],"comments":[]},"user_review":null,"ca… | cookie writes: [] | elevated writes: []
+#14 events/[id]/reviews GET | owner | 200 {"aggregate":{"average_rating":4,"total_reviews":1,"distribution":[{"rating":1,"count":0},{"rating":2,"count":0},{"rating":3,"count":0},{"rating":4,"count":1},{"rating":5,"count":0}],"comments":[{"rating":4,"comment":"Wo… | cookie writes: [] | elevated writes: []
+#15 events/[id] PATCH | anonymous | 401 {"error":"You must be signed in to edit an event"} | cookie writes: [] | elevated writes: []
+#15 events/[id] PATCH | attacker | 403 {"error":"You do not have permission to edit this event"} | cookie writes: [] | elevated writes: []
+#15 events/[id] PATCH | organizer | 200 {"event":{"id":"5eed0000-0000-4000-8000-0c90000000e1","title":"Gate Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000005","start_date":"2026-01-10… | cookie writes: ["events.update {\"description\":\"Edited\"}"] | elevated writes: []
+#15 events/[id] PATCH | admin | 200 {"event":{"id":"5eed0000-0000-4000-8000-0c90000000e1","title":"Gate Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000005","start_date":"2026-01-10… | cookie writes: ["events.update {\"description\":\"Edited\"}"] | elevated writes: []
+#15 events/[id] PATCH | owner | 200 {"event":{"id":"5eed0000-0000-4000-8000-0c90000000e1","title":"Gate Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000005","start_date":"2026-01-10… | cookie writes: ["events.update {\"description\":\"Edited\"}"] | elevated writes: []
+#16 events/[id] DELETE | anonymous | 401 {"error":"Unauthorized"} | cookie writes: [] | elevated writes: []
+#16 events/[id] DELETE | attacker | 403 {"error":"You do not have permission to delete this event"} | cookie writes: [] | elevated writes: []
+#16 events/[id] DELETE | organizer | 200 {"success":true} | cookie writes: ["events.update {\"deleted_at\":\"2026-09-24T20:19:45.467Z\"}"] | elevated writes: []
+#16 events/[id] DELETE | admin | 200 {"success":true} | cookie writes: ["events.update {\"deleted_at\":\"2026-09-24T20:19:45.467Z\"}"] | elevated writes: []
+#16 events/[id] DELETE | owner | 200 {"success":true} | cookie writes: ["events.update {\"deleted_at\":\"2026-09-24T20:19:45.467Z\"}"] | elevated writes: []
+#17 events/create POST | anonymous | 401 {"error":"You must be signed in to create an event"} | cookie writes: [] | elevated writes: []
+#17 events/create POST | attacker | 201 {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Created Gate Event","description":"About it","start_date":"2031-03-15T18:00:00Z","end_date":"2031-03… | cookie writes: ["events.insert {\"title\":\"Created Gate Event\",\"description\":\"About it\",\"start_date\":\"2031-03-15T18:00:00Z\",\"end_date\":\"2031-03-15T18:00:00Z\",\"location\":\"Room 1\",\"organizer\":\"Gate Attacker\",\"tags\":[\"academic\"],\"image_url\":null,\"category\":\"academic\",\"club_id\":\"5eed0000-0000-4000-8000-0c90000000c1\",\"status\":\"pending\",\"created_by\":\"5eed0000-0000-4000-8000-0c9000000003\",\"content_hash\":\"1484507725dd5253c4e506aeec2816e25985c6468683bd5cc9c4c06503cf0a7a\",\"is_free\":true,\"price\":null,\"rsvp_link\":null}"] | elevated writes: []
+#17 events/create POST | organizer | 201 {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Created Gate Event","description":"About it","start_date":"2031-03-15T18:00:00Z","end_date":"2031-03… | cookie writes: ["events.insert {\"title\":\"Created Gate Event\",\"description\":\"About it\",\"start_date\":\"2031-03-15T18:00:00Z\",\"end_date\":\"2031-03-15T18:00:00Z\",\"location\":\"Room 1\",\"organizer\":\"Gate Organizer\",\"tags\":[\"academic\"],\"image_url\":null,\"category\":\"academic\",\"club_id\":\"5eed0000-0000-4000-8000-0c90000000c1\",\"status\":\"approved\",\"created_by\":\"5eed0000-0000-4000-8000-0c9000000002\",\"content_hash\":\"95478f184e3503baf47b54c334560d0d4ab57e6e10360c67a2d5b3958c13a2a2\",\"is_free\":true,\"price\":null,\"rsvp_link\":null}"] | elevated writes: []
+#17 events/create POST | admin | 201 {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Created Gate Event","description":"About it","start_date":"2031-03-15T18:00:00Z","end_date":"2031-03… | cookie writes: ["events.insert {\"title\":\"Created Gate Event\",\"description\":\"About it\",\"start_date\":\"2031-03-15T18:00:00Z\",\"end_date\":\"2031-03-15T18:00:00Z\",\"location\":\"Room 1\",\"organizer\":\"Gate Admin\",\"tags\":[\"academic\"],\"image_url\":null,\"category\":\"academic\",\"club_id\":\"5eed0000-0000-4000-8000-0c90000000c1\",\"status\":\"approved\",\"created_by\":\"5eed0000-0000-4000-8000-0c9000000004\",\"content_hash\":\"7e26b18f0fe470edba86f078653f7d3278488a071dfc0f0687e20b813ca2f9bd\",\"is_free\":true,\"price\":null,\"rsvp_link\":null}"] | elevated writes: []
+#17 events/create POST | owner | 201 {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Created Gate Event","description":"About it","start_date":"2031-03-15T18:00:00Z","end_date":"2031-03… | cookie writes: ["events.insert {\"title\":\"Created Gate Event\",\"description\":\"About it\",\"start_date\":\"2031-03-15T18:00:00Z\",\"end_date\":\"2031-03-15T18:00:00Z\",\"location\":\"Room 1\",\"organizer\":\"Gate Owner\",\"tags\":[\"academic\"],\"image_url\":null,\"category\":\"academic\",\"club_id\":\"5eed0000-0000-4000-8000-0c90000000c1\",\"status\":\"approved\",\"created_by\":\"5eed0000-0000-4000-8000-0c9000000001\",\"content_hash\":\"4159cc67153b83cf5e51e45eb6bef4bf29095f770eb80e66ec2e9cd6b66c981f\",\"is_free\":true,\"price\":null,\"rsvp_link\":null}"] | elevated writes: []
+FLAG create club=attackersPending | attacker | 201 {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Created Gate Event","description":"About it","start_date":"2031-03-15T18:00:00Z","end_date":"2031-03-15T18:00:00Z","location":"Room 1","orga… | cookie writes: ["events.insert {\"title\":\"Created Gate Event\",\"description\":\"About it\",\"start_date\":\"2031-03-15T18:00:00Z\",\"end_date\":\"2031-03-15T18:00:00Z\",\"location\":\"Room 1\",\"organizer\":\"Gate Attacker\",\"tags\":[\"academic\"],\"image_url\":null,\"category\":\"academic\",\"club_id\":\"5eed0000-0000-4000-8000-0c90000000c3\",\"status\":\"pending\",\"created_by\":\"5eed0000-0000-4000-8000-0c9000000003\",\"content_hash\":\"1484507725dd5253c4e506aeec2816e25985c6468683bd5cc9c4c06503cf0a7a\",\"is_free\":true,\"price\":null,\"rsvp_link\":null}"] | elevated writes: []
+FLAG create club=attackers | attacker | 201 {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Created Gate Event","description":"About it","start_date":"2031-03-15T18:00:00Z","end_date":"2031-03-15T18:00:00Z","location":"Room 1","orga… | cookie writes: ["events.insert {\"title\":\"Created Gate Event\",\"description\":\"About it\",\"start_date\":\"2031-03-15T18:00:00Z\",\"end_date\":\"2031-03-15T18:00:00Z\",\"location\":\"Room 1\",\"organizer\":\"Gate Attacker\",\"tags\":[\"academic\"],\"image_url\":null,\"category\":\"academic\",\"club_id\":\"5eed0000-0000-4000-8000-0c90000000c2\",\"status\":\"approved\",\"created_by\":\"5eed0000-0000-4000-8000-0c9000000003\",\"content_hash\":\"1484507725dd5253c4e506aeec2816e25985c6468683bd5cc9c4c06503cf0a7a\",\"is_free\":true,\"price\":null,\"rsvp_link\":null}"] | elevated writes: []
+FLAG create no club | organizer | 201 {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Created Gate Event","description":"About it","start_date":"2031-03-15T18:00:00Z","end_date":"2031-03-15T18:00:00Z","location":"Room 1","orga… | cookie writes: ["events.insert {\"title\":\"Created Gate Event\",\"description\":\"About it\",\"start_date\":\"2031-03-15T18:00:00Z\",\"end_date\":\"2031-03-15T18:00:00Z\",\"location\":\"Room 1\",\"organizer\":\"Gate Organizer\",\"tags\":[\"academic\"],\"image_url\":null,\"category\":\"academic\",\"club_id\":null,\"status\":\"pending\",\"created_by\":\"5eed0000-0000-4000-8000-0c9000000002\",\"content_hash\":\"95478f184e3503baf47b54c334560d0d4ab57e6e10360c67a2d5b3958c13a2a2\",\"is_free\":true,\"price\":null,\"rsvp_link\":null}"] | elevated writes: []
+FLAG events PATCH title byAttacker | attacker | 200 {"event":{"id":"5eed0000-0000-4000-8000-0c90000000e3","title":"Attacker Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000003","start_date":"2026-01-12T18:00:00+00:00","deleted_at":null,"… | cookie writes: ["events.update {\"pending_edits\":{\"title\":\"Renamed\",\"submitted_at\":\"2026-09-24T20:19:45.507Z\"}}"] | elevated writes: []
+FLAG events PATCH title byOrganizer | organizer | 200 {"event":{"id":"5eed0000-0000-4000-8000-0c90000000e4","title":"Renamed","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000002","start_date":"2026-01-13T18:00:00+00:00","deleted_at":null,"pending… | cookie writes: ["events.update {\"title\":\"Renamed\"}"] | elevated writes: []
+FLAG events PATCH title gate (member non-creator) | organizer | 200 {"event":{"id":"5eed0000-0000-4000-8000-0c90000000e1","title":"Gate Event","status":"approved","club_id":"5eed0000-0000-4000-8000-0c90000000c1","created_by":"5eed0000-0000-4000-8000-0c9000000005","start_date":"2026-01-10T18:00:00+00:00","deleted_at":null,"pend… | cookie writes: ["events.update {\"pending_edits\":{\"title\":\"Renamed\",\"submitted_at\":\"2026-09-24T20:19:45.507Z\"}}"] | elevated writes: []
+FLAG events DELETE byAttacker | attacker | 200 {"success":true} | cookie writes: ["events.update {\"deleted_at\":\"2026-09-24T20:19:45.507Z\"}"] | elevated writes: []
+exit=0 (1 passed)
+
+$ npx jest --ci src/__tests__/api/clubs/zz-measure-temp.test.ts -t "flag fields"
+FLAGFIELD #2 | anonymous | 200 isOrganizer=false statuses=["approved","approved","approved"] rsvp_counts=["absent","absent","absent"]
+FLAGFIELD #14 | anonymous | 401 comments={"error":"Unauthorized"}
+FLAGFIELD #2 | attacker | 200 isOrganizer=false statuses=["approved","approved","approved"] rsvp_counts=["absent","absent","absent"]
+FLAGFIELD #14 | attacker | 200 comments=[]
+FLAGFIELD #2 | organizer | 200 isOrganizer=true statuses=["approved","approved","pending","approved"] rsvp_counts=[{"going":0,"interested":0,"cancelled":0},{"going":0,"interested":0,"cancelled":0},{"going":0,"interested":0,"cancelled":0},{"going":0,"interested":0,"cancelled":0}]
+FLAGFIELD #14 | organizer | 200 comments=[{"rating":4,"comment":"Worth going","created_at":"2026-01-11T00:00:00Z"}]
+FLAGFIELD #2 | admin | 200 isOrganizer=false statuses=["approved","approved","approved"] rsvp_counts=["absent","absent","absent"]
+FLAGFIELD #14 | admin | 200 comments=[]
+FLAGFIELD #2 | owner | 200 isOrganizer=true statuses=["approved","approved","pending","approved"] rsvp_counts=[{"going":0,"interested":0,"cancelled":0},{"going":0,"interested":0,"cancelled":0},{"going":0,"interested":0,"cancelled":0},{"going":0,"interested":0,"cancelled":0}]
+FLAGFIELD #14 | owner | 200 comments=[{"rating":4,"comment":"Worth going","created_at":"2026-01-11T00:00:00Z"}]
+exit=0
+
+Comparison with research § C (T-05-09-04):
+  - Every one of the 14 deny strings measured above (12 gates + the 2 composite arms) is
+    byte-identical to § C's "Deny bytes (keep)" column. There are no mismatches.
+  - Accepted sets are as § C lists them: owner+organizer at #1, 2, 6, 13, 14, 15, 16 and 17;
+    owner only at #3, 4, 5, 7, 8, 9, 10, 11 and 12.
+  - The admin with no membership is refused at all 12 gates with the site's own 403 (R9 holds
+    today).
+    - The composite arms #15 and #16 admit the admin through the handler's own
+      roles.includes("admin") read.
+    - #2 and #14 treat the admin as a non-member.
+    - #17 auto-approves the admin through its inline admin arm.
+  - Anonymous:
+    - 401 {"error":"Unauthorized"} everywhere, except:
+      - #2 (public, 200);
+      - #15, 401 "You must be signed in to edit an event";
+      - #17, 401 "You must be signed in to create an event".
+    - The last two are DEC-34's retained anonymous texts.
+  - Owner on #11 and #12 answers 500 "Failed to upload …". The fake has no storage member, so
+    the handler's catch answers. That is past the membership decision, so P5 counts it as
+    "proceeds".
+  - Owner writes (the F-087 surface):
+    - #8 PATCH, the `clubs.update {"description":…}`: on the cookie client.
+    - #9 DELETE:
+      - the `clubs.update {"status":"deleted"}` is on the cookie client;
+      - the `admin_audit_log.insert` action club_deleted is on the elevated client.
+    - #5 members/role, the `club_members.update {"role":"organizer"}`: on the cookie client.
+    - #10 transfer: both club_members updates and the audit insert are on the elevated client.
+
+==============================================================================
+§2 — The pinned suites on unmodified source (Task 1)
+==============================================================================
+
+Files:
+  - src/__tests__/api/clubs/club-gates-characterization.test.ts (PRESERVE, 107 tests);
+  - src/__tests__/api/clubs/club-owner-writes-defect.test.ts (DEFECT F-087, 13 tests).
+The third suite in the directory, analytics.test.ts, predates this plan and is unchanged.
+
+$ npx jest --ci src/__tests__/api/clubs
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/__tests__/api/clubs/club-gates-characterization.test.ts
+PASS node src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       125 passed, 125 total
+Snapshots:   0 total
+Time:        0.394 s, estimated 1 s
+Ran all test suites matching src/__tests__/api/clubs.
+exit=0
+
+$ npx jest --ci --verbose <the two new suites>
+PASS node src/__tests__/api/clubs/club-gates-characterization.test.ts
+  P0 the table is research § C
+    ✓ 17 sites, numbered 1 to 17 in order (1 ms)
+    ✓ 12 gates, 3 flags, 2 composite arms
+    ✓ the accepted sets are the only two C1 allows
+    ✓ every deny string is § C's, byte for byte
+  P1 anonymous caller
+    ✓ #1 clubs/[id]/analytics GET answers its measured anonymous bytes and writes nothing (54 ms)
+    ✓ #3 clubs/[id]/invites GET answers its measured anonymous bytes and writes nothing (5 ms)
+    ✓ #4 clubs/[id]/invites POST answers its measured anonymous bytes and writes nothing
+    ✓ #5 clubs/[id]/members/role PATCH answers its measured anonymous bytes and writes nothing (1 ms)
+    ✓ #6 clubs/[id]/members GET answers its measured anonymous bytes and writes nothing (1 ms)
+    ✓ #7 clubs/[id]/members DELETE answers its measured anonymous bytes and writes nothing (1 ms)
+    ✓ #8 clubs/[id] PATCH answers its measured anonymous bytes and writes nothing (1 ms)
+    ✓ #9 clubs/[id] DELETE answers its measured anonymous bytes and writes nothing
+    ✓ #10 clubs/[id]/transfer POST answers its measured anonymous bytes and writes nothing
+    ✓ #11 clubs/banner POST answers its measured anonymous bytes and writes nothing (2 ms)
+    ✓ #12 clubs/logo POST answers its measured anonymous bytes and writes nothing (1 ms)
+    ✓ #13 events/[id]/analytics GET answers its measured anonymous bytes and writes nothing (1 ms)
+    ✓ #14 events/[id]/reviews GET answers its measured anonymous bytes and writes nothing (1 ms)
+    ✓ #15 events/[id] PATCH answers its measured anonymous bytes and writes nothing (4 ms)
+    ✓ #16 events/[id] DELETE answers its measured anonymous bytes and writes nothing
+    ✓ #17 events/create POST answers its measured anonymous bytes and writes nothing (33 ms)
+    ✓ #2 clubs/[id]/events GET admits the anonymous caller (public route) (2 ms)
+  P2 non-member (owner of a different club)
+    ✓ #1 clubs/[id]/analytics GET answers 403 with its exact body and writes nothing
+    ✓ #3 clubs/[id]/invites GET answers 403 with its exact body and writes nothing (1 ms)
+    ✓ #4 clubs/[id]/invites POST answers 403 with its exact body and writes nothing (1 ms)
+    ✓ #5 clubs/[id]/members/role PATCH answers 403 with its exact body and writes nothing (1 ms)
+    ✓ #6 clubs/[id]/members GET answers 403 with its exact body and writes nothing
+    ✓ #7 clubs/[id]/members DELETE answers 403 with its exact body and writes nothing (1 ms)
+    ✓ #8 clubs/[id] PATCH answers 403 with its exact body and writes nothing
+    ✓ #9 clubs/[id] DELETE answers 403 with its exact body and writes nothing (1 ms)
+    ✓ #10 clubs/[id]/transfer POST answers 403 with its exact body and writes nothing
+    ✓ #11 clubs/banner POST answers 403 with its exact body and writes nothing (4 ms)
+    ✓ #12 clubs/logo POST answers 403 with its exact body and writes nothing (1 ms)
+    ✓ #13 events/[id]/analytics GET answers 403 with its exact body and writes nothing
+    ✓ #15 events/[id] PATCH answers 403 with its exact body and writes nothing
+    ✓ #16 events/[id] DELETE answers 403 with its exact body and writes nothing
+  P3 wrong role (the organizer) on the owner-only gates
+    ✓ #3 clubs/[id]/invites GET answers 403 with its exact body and writes nothing
+    ✓ #4 clubs/[id]/invites POST answers 403 with its exact body and writes nothing
+    ✓ #5 clubs/[id]/members/role PATCH answers 403 with its exact body and writes nothing
+    ✓ #7 clubs/[id]/members DELETE answers 403 with its exact body and writes nothing (1 ms)
+    ✓ #8 clubs/[id] PATCH answers 403 with its exact body and writes nothing
+    ✓ #9 clubs/[id] DELETE answers 403 with its exact body and writes nothing
+    ✓ #10 clubs/[id]/transfer POST answers 403 with its exact body and writes nothing
+    ✓ #11 clubs/banner POST answers 403 with its exact body and writes nothing (3 ms)
+    ✓ #12 clubs/logo POST answers 403 with its exact body and writes nothing (1 ms)
+  P4 admin with no membership row (R9: no bypass)
+    ✓ #1 clubs/[id]/analytics GET answers the same 403 as any non-member
+    ✓ #3 clubs/[id]/invites GET answers the same 403 as any non-member
+    ✓ #4 clubs/[id]/invites POST answers the same 403 as any non-member
+    ✓ #5 clubs/[id]/members/role PATCH answers the same 403 as any non-member
+    ✓ #6 clubs/[id]/members GET answers the same 403 as any non-member
+    ✓ #7 clubs/[id]/members DELETE answers the same 403 as any non-member
+    ✓ #8 clubs/[id] PATCH answers the same 403 as any non-member (1 ms)
+    ✓ #9 clubs/[id] DELETE answers the same 403 as any non-member
+    ✓ #10 clubs/[id]/transfer POST answers the same 403 as any non-member
+    ✓ #11 clubs/banner POST answers the same 403 as any non-member
+    ✓ #12 clubs/logo POST answers the same 403 as any non-member (1 ms)
+    ✓ #13 events/[id]/analytics GET answers the same 403 as any non-member
+    ✓ #15 events/[id] PATCH admits the admin through its own inline admin arm, not membership
+    ✓ #16 events/[id] DELETE admits the admin through its own inline admin arm, not membership (1 ms)
+  P5 right role: the handler proceeds past the membership decision
+    ✓ #1 clubs/[id]/analytics GET as owner is neither 401 nor 403
+    ✓ #1 clubs/[id]/analytics GET as organizer is neither 401 nor 403
+    ✓ #2 clubs/[id]/events GET as owner is neither 401 nor 403 (1 ms)
+    ✓ #2 clubs/[id]/events GET as organizer is neither 401 nor 403
+    ✓ #3 clubs/[id]/invites GET as owner is neither 401 nor 403
+    ✓ #4 clubs/[id]/invites POST as owner is neither 401 nor 403
+    ✓ #5 clubs/[id]/members/role PATCH as owner is neither 401 nor 403
+    ✓ #6 clubs/[id]/members GET as owner is neither 401 nor 403
+    ✓ #6 clubs/[id]/members GET as organizer is neither 401 nor 403
+    ✓ #7 clubs/[id]/members DELETE as owner is neither 401 nor 403
+    ✓ #8 clubs/[id] PATCH as owner is neither 401 nor 403
+    ✓ #9 clubs/[id] DELETE as owner is neither 401 nor 403
+    ✓ #10 clubs/[id]/transfer POST as owner is neither 401 nor 403
+    ✓ #11 clubs/banner POST as owner is neither 401 nor 403
+    ✓ #12 clubs/logo POST as owner is neither 401 nor 403 (1 ms)
+    ✓ #13 events/[id]/analytics GET as owner is neither 401 nor 403
+    ✓ #13 events/[id]/analytics GET as organizer is neither 401 nor 403
+    ✓ #14 events/[id]/reviews GET as owner is neither 401 nor 403
+    ✓ #14 events/[id]/reviews GET as organizer is neither 401 nor 403
+    ✓ #15 events/[id] PATCH as owner is neither 401 nor 403 (1 ms)
+    ✓ #15 events/[id] PATCH as organizer is neither 401 nor 403
+    ✓ #16 events/[id] DELETE as owner is neither 401 nor 403
+    ✓ #16 events/[id] DELETE as organizer is neither 401 nor 403
+    ✓ #17 events/create POST as owner is neither 401 nor 403 (8 ms)
+    ✓ #17 events/create POST as organizer is neither 401 nor 403 (1 ms)
+  P6 #2 clubs/[id]/events GET: isOrganizer
+    ✓ a member (owner) is an organizer: pending rows listed, RSVP counts attached
+    ✓ a member (organizer) is an organizer: pending rows listed, RSVP counts attached
+    ✓ a non-member (anonymous) is not: approved rows only, no RSVP counts (1 ms)
+    ✓ a non-member (attacker) is not: approved rows only, no RSVP counts
+    ✓ a non-member (admin) is not: approved rows only, no RSVP counts
+  P6 #14 events/[id]/reviews GET: isOrganizer
+    ✓ a member (owner) sees the anonymized comments
+    ✓ a member (organizer) sees the anonymized comments (1 ms)
+    ✓ a non-member (attacker) gets an empty comments array
+    ✓ a non-member (admin) gets an empty comments array
+  P6 #17 events/create POST: the auto-approve flag
+    ✓ a member (owner) of an approved club creates an approved event
+    ✓ a member (organizer) of an approved club creates an approved event (1 ms)
+    ✓ a non-member creating for someone else's approved club gets pending
+    ✓ a member of their own approved club gets approved
+    ✓ a member of their own pending club gets pending (1 ms)
+    ✓ a member creating with no club gets pending
+    ✓ an admin with no membership gets approved through the inline admin arm
+  P6 #15 events/[id] PATCH: the composite member arm and isClubMember
+    ✓ a member who did not create the event may edit it
+    ✓ a non-member who did not create it is refused (1 ms)
+    ✓ a member-creator's title edit on an approved event goes live
+    ✓ a non-member creator's title edit on an approved event is held for moderation
+    ✓ a member who did not create it has a title edit held for moderation
+  P6 #16 events/[id] DELETE: the composite member arm
+    ✓ a member who did not create the event may delete it
+    ✓ a non-member who did not create it is refused (1 ms)
+    ✓ a non-member creator may delete their own event (the creator arm)
+PASS node src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+  D1 PATCH /api/clubs/[id] as the owner
+    ✓ today: the clubs update is issued on the cookie client, not the elevated one (1 ms)
+    ✓ today: the update is filtered to the club named in the path
+    ✓ stays: the whitelist drops status, so the payload is exactly { description }
+  D2 DELETE /api/clubs/[id] as the owner
+    ✓ today: the soft-delete update is issued on the cookie client (1 ms)
+    ✓ stays: the club_deleted audit row is inserted on the elevated client
+  D3 the caller's own membership is read on the cookie client
+    ✓ PATCH /api/clubs/[id]
+    ✓ DELETE /api/clubs/[id] (1 ms)
+    ✓ PATCH /api/clubs/[id]/members/role
+  D4 PATCH /api/clubs/[id]/members/role as the owner
+    ✓ today: the club_members update is issued on the cookie client
+  D5 POST /api/clubs/[id]/transfer as the owner
+    ✓ today: every write is on the elevated client, none on the cookie client (1 ms)
+    ✓ today: the promotion is filtered by the target's membership id
+    ✓ today: the demotion is filtered by the caller's membership id (moves to club_id, user_id per DEC-40)
+    ✓ stays: the ownership-transfer audit row is inserted on the elevated client
+Test Suites: 2 passed, 2 total
+Tests:       120 passed, 120 total
+Snapshots:   0 total
+Time:        0.347 s, estimated 1 s
+Ran all test suites matching src/__tests__/api/clubs/club-gates-characterization.test.ts|src/__tests__/api/clubs/club-owner-writes-defect.test.ts.
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ node scripts/check-characterization-tags.mjs src/__tests__/api/clubs/club-gates-characterization.test.ts src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok 2 files
+exit=0
+
+$ git status --porcelain -- src/app src/lib src/server
+(empty) exit=0
+
+Site-row count in the PRESERVE table (acceptance: at least 17):
+$ grep -cE '^    n: [0-9]+,' src/__tests__/api/clubs/club-gates-characterization.test.ts
+17
+
