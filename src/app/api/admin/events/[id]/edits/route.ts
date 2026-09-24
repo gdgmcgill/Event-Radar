@@ -98,7 +98,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     await logAdminAction({
       adminUserId: user.id,
-      adminEmail: user.email,
+      requestId: ctx.requestId,
       action: "approved_edits",
       targetType: "event",
       targetId: id,
@@ -141,7 +141,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   await logAdminAction({
     adminUserId: user.id,
-    adminEmail: user.email,
+    requestId: ctx.requestId,
     action: "rejected_edits",
     targetType: "event",
     targetId: id,

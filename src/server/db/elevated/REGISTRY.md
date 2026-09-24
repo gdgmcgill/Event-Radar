@@ -18,6 +18,7 @@ exception that nobody wrote down is indistinguishable from an oversight.
 | Record a club deletion or ownership transfer in admin_audit_log | `src/app/api/clubs/[id]/route.ts`, `src/app/api/clubs/[id]/transfer/route.ts` | after F-007 no client role may insert audit rows; the door is the only writer | 05 |
 | Recompute event popularity scores (rpc update_event_popularity) | `src/app/api/admin/calculate-popularity/route.ts` | writes event_popularity_scores, which are service-role-only by design (F-010); invoked on behalf of an admin, not a row owner | 05 |
 | Change another user's roles or name as an admin | `src/app/api/admin/users/[id]/route.ts` | users has no admin UPDATE policy and the F-006 column grant withholds roles from authenticated; the change is an audited admin action (F-004, F-091) | 05 |
+| Insert admin_audit_log rows for every moderation action | `src/lib/audit.ts` (logAdminAction) | after F-007 no client role may insert; the door is the only writer, so the record cannot be forged by the actor it records | 05 |
 
 Rows added from Phase 5 (05-05 onward).
 
@@ -35,37 +36,14 @@ service module) and `src/app/api/clubs/[id]/transfer/route.ts` from the live
 census, so the ratchet counts three entries fewer than the committed list. Plan
 05-14 moved `src/app/api/admin/calculate-popularity/route.ts` onto the door
 (its inline service-key client is deleted, F-001), so the ratchet counts four
-entries fewer. `src/lib/audit.ts`, below, is still a legacy caller.
+entries fewer; the same plan moved `src/lib/audit.ts` onto the door (F-073),
+so it counts five fewer.
 
-### One pre-existing elevated caller, counted by both controls since plan 04-03
+### The audit writer
 
-`src/lib/audit.ts` calls `createServiceClient()` and exports `logAdminAction`,
-which **ten** route files under `src/app/api/admin/**` import, across fourteen
-callsites (`grep -rl 'from "@/lib/audit"' src/app | wc -l`, and F-073 for the
-callsite count). It is an RLS-bypassing write reachable from admin routes on
-every moderation action.
-
-Until plan 04-03 **neither** control could see it: the ESLint boundary covered
-`src/app/**` only and `scripts/check-elevated-ratchet.mjs` walked `src/app`
-only, so an *indirect* reach through `src/lib/` was invisible to both (DI-34,
-raised by 03-REVIEW.md CR-03). Since plan 04-03 both controls cover `src/**`,
-exempting only the credential's two sanctioned homes — `src/lib/supabase/`
-(where the factory is defined) and `src/server/db/elevated/` (this door) — and
-both count `src/lib/audit.ts`. The allow-list was regenerated once, inside that
-plan, to absorb it; that is the one sanctioned growth of a shrink-only list,
-and its diff is recorded in
-`.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/boundary-widening.txt`.
-The one-move bypass the old scope allowed — put `createServiceClient()` in a new
-`src/lib/foo.ts` and import `foo` from a route — now fails lint on `foo.ts` and
-fails the ratchet. The two evasions the static import rule cannot see — a
-dynamic `import()` of the service module and a bare read of
-`SUPABASE_SERVICE_ROLE_KEY` — fail lint through a companion
-`no-restricted-syntax` rule (DI-31), and CI runs the ratchet on every pull
-request.
-
-This is still a **note, not a row**: a row would imply the operation goes
-through `getElevatedClient()`, which it does not. Migrating it to this door —
-and adding its row — is Phase 5's (REFAC-13).
+`src/lib/audit.ts` (`logAdminAction`), counted by both controls as a legacy
+caller from plan 04-03 until plan 05-14, now writes through the door and has
+its row above.
 
 An empty register with a stated reason is a control. An absent register is an
 omission. The distinction is the whole point of writing this file now rather

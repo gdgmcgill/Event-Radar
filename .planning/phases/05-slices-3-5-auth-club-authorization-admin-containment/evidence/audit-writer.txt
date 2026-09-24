@@ -1,0 +1,201 @@
+# Audit writer — plan 05-14 Task 2 (REFAC-13, F-073, F-072, DEC-46; the F-007 validation)
+
+Recorded 2026-09-24 on the local tree. Base: 4cf4928 (05-14 Task 1). Every command is quoted with
+its exit code; outputs are verbatim unless marked as an excerpt. Scratch outputs were written
+outside the repository and are quoted here.
+
+## 1. The fixes
+
+src/lib/audit.ts: imports `getElevatedClient` from `@/server/db/elevated` instead of the service
+factory; the `adminEmail` parameter and the `admin_email` key are gone from the insert; an
+optional `requestId` is accepted; the insert's `{ error }` is read and a rejection is logged as
+`console.error("[Audit] admin_audit_log insert rejected", { action, targetType, targetId,
+requestId, code, message })`. The function still resolves without throwing.
+
+Callers: all 15 `logAdminAction(` callsites in 11 route files (10 carried `adminEmail: user.email`
+before; `admin/users/[id]` is new in Task 1) now pass `requestId: ctx.requestId` and no email.
+
+src/app/moderation/page.tsx (server component): the audit read is the typed cookie client with
+`select("id, admin_user_id, action, target_type, target_id, metadata, created_at")`; the
+`(supabase as any)` cast, its eslint-disable line, the `as Promise<{ data: AuditEntry[] | null }>`
+assertion and the local `AuditEntry` interface are deleted (F-072). A second read,
+`users.select("id, name, email").in("id", <distinct admin_user_id>)` on the same cookie client,
+builds the actor map; the actor renders as name, else the email's local part, else the first 8
+characters of admin_user_id. `created_at` is `string | null` in the generated Row, so the
+timestamp renders only when present.
+
+src/app/moderation/audit-log/page.tsx (client component): rows still come from
+`GET /api/admin/audit-log` (which selects `*`, the table's seven real columns; unchanged). After
+each page arrives, the page reads `users.select("id, name, email").in("id", <distinct ids>)` on the
+browser client (the same cookie session) and renders name, else email local part, else the first
+8 characters of the id. The `admin_email` field is gone from its `AuditEntry`.
+
+REGISTRY.md: row "Insert admin_audit_log rows for every moderation action | src/lib/audit.ts
+(logAdminAction)"; the 04-03 "note, not a row" section is replaced by one sentence pointing at it.
+
+## 2. Protocol step 2 — audit-shape.test.ts UNEDITED against the fixed source: red
+
+$ npx jest --ci src/__tests__/moderation/audit-shape.test.ts   (excerpt: the test list and summary)
+    ✓ the generated types have no admin_email column, so no migration creates one
+    ✕ the moderation dashboard asks for admin_email anyway (47 ms)
+    ✓ today's behaviour: the panel renders its empty state, not an error (8 ms)
+    ✕ the awaited shape was never checked — rows of any shape render unchallenged (6 ms)
+    ✕ every audit write carries admin_email, so every audit write is rejected (6 ms)
+    ✓ logAdminAction inspects nothing, which is why this went unnoticed (7 ms)
+Tests:       3 failed, 3 passed, 6 total
+exit=1
+
+The three rows that pinned the defect went red (dashboard select contains admin_email; a row
+carrying admin_email renders its local part; the insert payload has an admin_email key). ts-jest
+does not type-check in this config, so the unedited call's adminEmail argument ran rather than
+failing compilation; tsc --noEmit reported it (TS2353) until the suite moved.
+
+## 3. Protocol step 3 — rows moved to the fixed shape: green
+
+Mock seam change inside the DEFECT file: the service mock now returns its own recording client, so
+the suite can tell an elevated insert from a cookie one, and .in() filters are recorded.
+
+$ npx jest --ci src/__tests__/moderation/audit-shape.test.ts   (excerpt)
+    ✓ the generated types have no admin_email column, so no migration creates one (1 ms)
+    ✓ fixed: the moderation dashboard selects the table's real columns, no email column (11 ms)
+    ✓ fixed: the dashboard source carries no client cast and no shape assertion on the audit read
+    ✓ today's behaviour: the panel renders its empty state, not an error (5 ms)
+    ✓ fixed: audit rows render with the actor read from users by id on the cookie client (7 ms)
+    ✓ fixed: the audit write carries no email column and goes to the elevated client (1 ms)
+    ✓ fixed: a rejected insert is logged loudly with the request id, and the call still resolves (1 ms)
+    ✓ an accepted insert logs nothing
+Tests:       8 passed, 8 total
+exit=0
+
+## 4. Protocol step 4 — pre-fix src/lib/audit.ts and src/app/moderation/page.tsx put back: red; restored
+
+$ npx jest --ci src/__tests__/moderation/audit-shape.test.ts   (excerpt)
+    ✓ the generated types have no admin_email column, so no migration creates one (1 ms)
+    ✕ fixed: the moderation dashboard selects the table's real columns, no email column (15 ms)
+    ✕ fixed: the dashboard source carries no client cast and no shape assertion on the audit read
+    ✓ today's behaviour: the panel renders its empty state, not an error (5 ms)
+    ✕ fixed: audit rows render with the actor read from users by id on the cookie client (5 ms)
+    ✕ fixed: the audit write carries no email column and goes to the elevated client (1 ms)
+    ✕ fixed: a rejected insert is logged loudly with the request id, and the call still resolves (1 ms)
+    ✓ an accepted insert logs nothing
+Tests:       5 failed, 3 passed, 8 total
+exit=1
+$ cmp <file> <saved fixed copy>   (both files)
+cmp identical
+exit=0
+
+## 5. Jest, tsc, lint
+
+$ npx jest --ci src/__tests__/moderation src/__tests__/api/admin src/app/api/admin   (excerpt)
+Test Suites: 5 passed, 5 total
+Tests:       165 passed, 165 total
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ npm run lint   (excerpt: the summary; 19 warnings before this task, 18 after: the unused
+  eslint-disable in src/app/moderation/page.tsx went with the cast)
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+exit=0
+
+## 6. Playwright after a clean reset and seed
+
+Each exit= is the command's own (no pipe). The reset output is its last lines; the seed output is
+whole; the Playwright output is filtered to the test lines and summary.
+
+$ supabase db reset --local   (excerpt: last lines)
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+$ npx playwright test e2e/specs/admin-audit-row.spec.ts e2e/specs/admin-moderation-queue.spec.ts   (excerpt)
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (387ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (280ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (266ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (256ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (258ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (259ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (247ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (205ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (210ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (246ms)
+  ✓  11 [chromium] › e2e/specs/admin-audit-row.spec.ts:114:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-073: approving the fixture writes exactly one audit row (174ms)
+  ✓  12 [chromium] › e2e/specs/admin-audit-row.spec.ts:134:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-072: Recent Activity shows the action and the actor by name (508ms)
+  ✓  13 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (480ms)
+  ✓  14 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  15 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (263ms)
+  15 passed (14.9s)
+exit=0
+
+Reading: approving the fixture answered 200 and admin_audit_log gained exactly one row for it
+(count 0 before, 1 after, action approved, admin_user_id = IDS.admin, target_type event). The
+dashboard's Recent Activity rendered the fixture's title on the line whose actor is "Seed Admin",
+read from users by id. afterAll deleted the fixture's audit rows, notifications and event, and
+asserted all three at 0.
+
+## 7. Residue after the run (local stack only)
+
+$ docker exec supabase_db_Event-Radar psql -U postgres -At -c "<four counts>"
+events_fixture=0
+audit_rows_total=0
+orphan_notifications=0
+events_total=5
+exit=0
+
+$ lsof -iTCP:3000 -sTCP:LISTEN   (after the run)
+(no output: port 3000 is free)
+exit=1
+
+## 8. Acceptance criteria
+
+$ grep -cF 'getElevatedClient()' src/lib/audit.ts
+1
+exit=0
+$ grep -cF 'requestId' src/lib/audit.ts
+2
+exit=0
+$ grep -cF '[Audit] admin_audit_log insert rejected' src/lib/audit.ts
+1
+exit=0
+$ node -e (admin_email absent from src/lib/audit.ts)
+exit=0
+$ command grep -rn "adminEmail" src/app src/lib
+exit=1
+$ grep -c ".in(\"id\"" src/app/moderation/page.tsx
+2
+exit=0
+$ grep -c "(supabase as any)" src/app/moderation/page.tsx
+0
+exit=1
+$ grep -rn "admin_email" src/app src/lib
+exit=1
+$ grep -c "requestId: ctx.requestId" <every logAdminAction caller>
+src/app/api/admin/clubs/[id]/route.ts:1
+src/app/api/admin/organizer-requests/[id]/route.ts:1
+src/app/api/admin/users/[id]/route.ts:1
+src/app/api/admin/users/[id]/ban/route.ts:2
+src/app/api/admin/featured/route.ts:1
+src/app/api/admin/featured/[id]/route.ts:2
+src/app/api/admin/events/route.ts:1
+src/app/api/admin/events/[id]/route.ts:2
+src/app/api/admin/events/[id]/status/route.ts:1
+src/app/api/admin/events/[id]/edits/route.ts:2
+src/app/api/admin/reports/[id]/route.ts:1
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=20 delta=-5
+retired=5 (the list shrank — this is the intended direction)
+  - src/app/api/admin/calculate-popularity/route.ts
+  - src/app/api/clubs/\[id\]/route.ts
+  - src/app/api/clubs/\[id\]/transfer/route.ts
+  - src/app/auth/callback/route.ts
+  - src/lib/audit.ts
+PASS: the live census is a subset of the committed allow-list
+exit=0

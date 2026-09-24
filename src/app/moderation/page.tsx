@@ -15,15 +15,6 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
-interface AuditEntry {
-  id: string;
-  admin_email: string | null;
-  action: string;
-  target_type: string;
-  metadata: Record<string, unknown>;
-  created_at: string;
-}
-
 interface PendingClub {
   id: string;
   name: string;
@@ -63,23 +54,14 @@ export default async function ModerationDashboardPage() {
         .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(5),
-      // DEFECT F-072 — this select asks for `admin_audit_log.admin_email`, a
-      // column that does not exist in the live schema (PostgREST 42703). The
-      // request fails, `.data` is null, and the Recent Activity panel below has
-      // always rendered empty. The `as Promise<…>` assertion on the last line
-      // hid it, and the client cast hid the assertion. Both are retained
-      // deliberately: removing either makes the tree fail to type-check, and the
-      // only ways to make it compile are to drop the column from the query or to
-      // add it to the schema — both behaviour changes that belong to the slice
-      // that owns this path, not to a typing plan.
-      // Characterized by src/__tests__/moderation/audit-shape.test.ts.
-      // See evidence/type-fixes-note.md.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (supabase as any)
+      // admin_audit_log has no email column (F-072) and admin_user_id
+      // references auth.users, so PostgREST cannot embed users(...). The
+      // actor is resolved below by a second read on users, by id.
+      supabase
         .from("admin_audit_log")
-        .select("id, admin_email, action, target_type, metadata, created_at")
+        .select("id, admin_user_id, action, target_type, target_id, metadata, created_at")
         .order("created_at", { ascending: false })
-        .limit(10) as Promise<{ data: AuditEntry[] | null }>,
+        .limit(10),
       supabase
         .from("events")
         .select("id", { count: "exact", head: true })
@@ -101,6 +83,28 @@ export default async function ModerationDashboardPage() {
   const pendingEvents = recentEvents.data ?? [];
   const rawClubs = (recentClubs.data ?? []) as PendingClub[];
   const auditEntries = auditLogRes.data ?? [];
+
+  // Resolve audit actors by id on the cookie client ("Admins can view all
+  // profiles" permits the read). Name, else the email's local part, else the
+  // first 8 characters of the id.
+  const actorIds = [...new Set(auditEntries.map((entry) => entry.admin_user_id))];
+  let actorMap: Record<string, string> = {};
+  if (actorIds.length > 0) {
+    const { data: actors } = await supabase
+      .from("users")
+      .select("id, name, email")
+      .in("id", actorIds);
+    if (actors) {
+      actorMap = Object.fromEntries(
+        actors.flatMap((u) => {
+          const label = u.name || u.email?.split("@")[0];
+          return label ? [[u.id, label]] : [];
+        })
+      );
+    }
+  }
+  const actorName = (adminUserId: string): string =>
+    actorMap[adminUserId] ?? adminUserId.slice(0, 8);
 
   // Resolve creator UUIDs to names
   const creatorIds = rawClubs
@@ -422,8 +426,7 @@ export default async function ModerationDashboardPage() {
             </div>
           ) : (
             auditEntries.map((entry) => {
-              const adminName =
-                entry.admin_email?.split("@")[0] ?? "Admin";
+              const adminName = actorName(entry.admin_user_id);
               const meta = entry.metadata as Record<string, unknown>;
               const targetName =
                 (meta?.event_title as string) ??
@@ -454,7 +457,7 @@ export default async function ModerationDashboardPage() {
                     </span>
                   </div>
                   <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
-                    {formatTimeAgo(entry.created_at)}
+                    {entry.created_at ? formatTimeAgo(entry.created_at) : null}
                   </span>
                 </div>
               );

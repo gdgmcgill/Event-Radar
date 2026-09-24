@@ -147,7 +147,7 @@ export async function PATCH(
         : (status as "approved" | "rejected" | "suspended");
     await logAdminAction({
       adminUserId: user.id,
-      adminEmail: user.email,
+      requestId: ctx.requestId,
       action: auditAction,
       targetType: "event",
       targetId: id,

@@ -221,7 +221,7 @@ export async function POST(
   try {
     await logAdminAction({
       adminUserId: user.id,
-      adminEmail: user.email,
+      requestId: ctx.requestId,
       action: "banned",
       targetType: "user",
       targetId: id,
@@ -311,7 +311,7 @@ export async function DELETE(
   try {
     await logAdminAction({
       adminUserId: user.id,
-      adminEmail: user.email,
+      requestId: ctx.requestId,
       action: "unbanned",
       targetType: "user",
       targetId: id,

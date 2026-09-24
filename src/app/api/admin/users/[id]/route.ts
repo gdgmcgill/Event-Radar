@@ -82,6 +82,7 @@ export async function PATCH(
       targetType: "user",
       targetId: id,
       metadata: { roles },
+      requestId: ctx.requestId,
     });
   }
 

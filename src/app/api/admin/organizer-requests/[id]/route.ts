@@ -67,7 +67,7 @@ export async function PATCH(
   try {
     await logAdminAction({
       adminUserId: user.id,
-      adminEmail: user.email,
+      requestId: ctx.requestId,
       action: status as "approved" | "rejected",
       targetType: "organizer_request",
       targetId: id,

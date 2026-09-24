@@ -57,7 +57,7 @@ export async function PATCH(
     try {
       await logAdminAction({
         adminUserId: user.id,
-        adminEmail: user.email,
+        requestId: ctx.requestId,
         action: "updated",
         targetType: "featured_event",
         targetId: id,
@@ -103,7 +103,7 @@ export async function DELETE(
     try {
       await logAdminAction({
         adminUserId: user.id,
-        adminEmail: user.email,
+        requestId: ctx.requestId,
         action: "deleted",
         targetType: "featured_event",
         targetId: id,

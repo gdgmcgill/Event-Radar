@@ -61,7 +61,7 @@ export async function PUT(
     if (user) {
       await logAdminAction({
         adminUserId: user.id,
-        adminEmail: user.email,
+        requestId: ctx.requestId,
         action: "updated",
         targetType: "event",
         targetId: id,
@@ -104,7 +104,7 @@ export async function DELETE(
     if (user) {
       await logAdminAction({
         adminUserId: user.id,
-        adminEmail: user.email,
+        requestId: ctx.requestId,
         action: "deleted",
         targetType: "event",
         targetId: id,

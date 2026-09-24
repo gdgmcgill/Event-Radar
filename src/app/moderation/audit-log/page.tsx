@@ -10,11 +10,13 @@ import {
   Filter,
   FileText,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
+// admin_audit_log has no email column (F-072); the actor is resolved from
+// users by admin_user_id after the page of entries arrives.
 interface AuditEntry {
   id: string;
   admin_user_id: string;
-  admin_email: string | null;
   action: string;
   target_type: string;
   target_id: string;
@@ -90,6 +92,7 @@ function formatMetadata(metadata: Record<string, unknown>): string {
 
 export default function AuditLogPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [actorMap, setActorMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -110,6 +113,28 @@ export default function AuditLogPage() {
       }
       const data: AuditResponse = await res.json();
       setEntries(data.entries);
+
+      // Resolve the actors by id on the cookie-authenticated browser client
+      // ("Admins can view all profiles" permits the read). Name, else the
+      // email's local part; ids with neither fall back to their first 8
+      // characters at render.
+      const actorIds = [...new Set(data.entries.map((e) => e.admin_user_id))];
+      if (actorIds.length > 0) {
+        const { data: actors } = await createClient()
+          .from("users")
+          .select("id, name, email")
+          .in("id", actorIds);
+        setActorMap(
+          Object.fromEntries(
+            (actors ?? []).flatMap((u) => {
+              const label = u.name || u.email?.split("@")[0];
+              return label ? [[u.id, label]] : [];
+            })
+          )
+        );
+      } else {
+        setActorMap({});
+      }
       setTotalPages(data.totalPages);
       setTotal(data.total);
     } catch (err) {
@@ -223,7 +248,7 @@ export default function AuditLogPage() {
 
                   {/* Admin */}
                   <span className="text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                    {entry.admin_email || entry.admin_user_id.slice(0, 8)}
+                    {actorMap[entry.admin_user_id] ?? entry.admin_user_id.slice(0, 8)}
                   </span>
 
                   {/* Action */}

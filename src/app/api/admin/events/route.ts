@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
   try {
     await logAdminAction({
       adminUserId: user.id,
-      adminEmail: user.email,
+      requestId: ctx.requestId,
       action: "created",
       targetType: "event",
       targetId: data.id,

@@ -60,7 +60,7 @@ export async function PATCH(
   try {
     await logAdminAction({
       adminUserId: user.id,
-      adminEmail: user.email,
+      requestId: ctx.requestId,
       action: status === "reviewed" ? "report_reviewed" : "report_dismissed",
       targetType: "event_report",
       targetId: id,
