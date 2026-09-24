@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 04
-current_phase_name: Slices 1–2 — Saved Events/RSVP and the Event Read Path
+current_phase: 05
+current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
-stopped_at: "Completed 04-11-PLAN.md — Phase 4 closed: checkpoint resolved by rule to option-defer (DI-39/DI-40, phase owner); F-050/F-066/F-082/F-083 Fixed; REFAC-09 Complete, REFAC-10 PARTIAL; Jest 721/0, Playwright 40/0; next: phase verification"
-last_updated: "2026-09-24T04:21:25.674Z"
-last_activity: 2026-09-23
-last_activity_desc: Phase 04 execution started
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-09-24T04:37:09.503Z"
+last_activity: 2026-09-24
+last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 43
-  completed_plans: 43
+  total_plans: 62
+  completed_plans: 44
   percent: 50
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Every critical workflow in the existing app is verified correct, secure, and reproducible across all user roles before any new product feature is started. If a foundation change breaks a workflow that worked before, the program has failed.
-**Current focus:** Phase 04 — Slices 1–2 — Saved Events/RSVP and the Event Read Path
+**Current focus:** Phase 05 — Slices 3–5 — Auth, Club Authorization, Admin Containment
 
 ## Current Position
 
-Phase: 04 (Slices 1–2 — Saved Events/RSVP and the Event Read Path) — EXECUTING
-Plan: 11 of 11
+Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
+Plan: 2 of 19
 Status: Ready to execute
-Last activity: 2026-09-23 — Phase 04 execution started
+Last activity: 2026-09-24 — Phase 05 execution started
 
-Progress: [███░░░░░░░] 31%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -96,6 +96,7 @@ Progress: [███░░░░░░░] 31%
 | Phase 04 P09 | 15min | 3 tasks | 14 files |
 | Phase 04 P10 | 8min | 2 tasks | 14 files |
 | Phase 04 P11 | 11min | 3 tasks | 12 files |
+| Phase 05 P01 | 14min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -237,6 +238,10 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-10: A4 closed with numbers — club embed adds +0.34 ms median (star to embed) and +0.17 ms (ten to fifteen columns) on the local stack; one clubs_pkey probe per row
 - [Phase 04]: 04-11: owner checkpoint resolved by rule to option-defer (no owner answer); F-080 visual half and F-081 identity mappings deferred as DI-39/DI-40, owner the phase owner
 - [Phase 04]: 04-11: REFAC-10 PARTIAL on 'events list uses a real club join instead of fabricating club objects'; REFAC-09 Complete; criteria 1, 3, 4 MET, criterion 2 PARTIAL (evidence/PHASE-4-COMPLETION.md)
+- [Phase 05]: DEC-33..DEC-57 recorded in evidence/phase-05-decisions.md as rule-resolved defaults (no owner present); each is overridable by a signed paragraph before its executing plan runs
+- [Phase 05]: F-086..F-091 registered; the C16 re-pointing moved 41 findings to 06/07/08, leaving 22 owned by Phase 5; F-060/F-068 stay null (outside the map)
+- [Phase 05]: DEC-51 makes the Upstash install a BLOCKING package-legitimacy checkpoint in 05-18, overriding CONTEXT's rule-resolved 'not blocking'
+- [Phase 05]: DI-38 closed (4a9e272, 10/10 repeats); before-floor on 4a9e272 is Jest 744/0, pgTAP 86, Playwright 40/0
 
 ### Pending Todos
 
@@ -288,7 +293,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T22:59:00.727Z
-Stopped at: Completed 04-11-PLAN.md — Phase 4 closed: checkpoint resolved by rule to option-defer (DI-39/DI-40, phase owner); F-050/F-066/F-082/F-083 Fixed; REFAC-09 Complete, REFAC-10 PARTIAL; Jest 721/0, Playwright 40/0; next: phase verification
-Next: run `/gsd-verify-work` for Phase 3, then plan Phase 4. **Phase 4 inherits, all with written owners:** DI-32 (the red `e2e` CI job — fix it first, it is the regression net Phase 4 depends on), DI-24 (the tsconfig test-file exclusion, ~86 errors across 10 files, plus the cursor-pagination contract that is REFAC-10 itself), DI-25 (the Supabase SDK minor, whose blocking shape plan 03-06 already worked an example of, and the separate `ssr` major), DI-31 (the boundary's two evasions and the ratchet's missing CI wiring — both land with the first real shrink), DI-20 (the flaky `useEvents` hook test) and F-071. **Before any deploy, in this order:** rotate the production DB password, then decide the repair. Do not run `supabase db push` against production before Phase 8 or an explicit owner decision.
+Last session: 2026-09-24T04:37:09.498Z
+Stopped at: Completed 05-01-PLAN.md
+Next: execute 05-02-PLAN.md (slice 3 characterization, the ring). Compare against `05-…/evidence/floor.before.txt` (base 4a9e272) and cite F-086..F-091. DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
 Resume file: None
