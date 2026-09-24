@@ -15,6 +15,10 @@
  * restored after every test.
  */
 
+// A module, not a script: without this its top-level names would share the
+// global scope with every other import-free test file under tsc.
+export {};
+
 const MANAGED_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",

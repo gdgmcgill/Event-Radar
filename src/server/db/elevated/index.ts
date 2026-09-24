@@ -16,7 +16,7 @@
  * stating why RLS cannot express it. The register is empty in this phase.
  */
 
-import { createServiceClient } from "@/lib/supabase/service";
+import { createServiceClient, serviceRoleKey } from "@/lib/supabase/service";
 
 /**
  * Returns a Supabase client authenticated with the service role key.
@@ -31,4 +31,19 @@ import { createServiceClient } from "@/lib/supabase/service";
  */
 export function getElevatedClient(): ReturnType<typeof createServiceClient> {
   return createServiceClient();
+}
+
+/**
+ * Asserts that the service-role key is configured, and does nothing else.
+ *
+ * It constructs NO client and returns nothing: it reads the key through
+ * `serviceRoleKey()`, which throws MissingEnvError naming
+ * SUPABASE_SERVICE_ROLE_KEY when the variable is absent or blank, and it
+ * discards the value. It exists so that the boot check in
+ * `src/instrumentation.ts` can verify the credential without importing the
+ * service module itself, which the lint boundary forbids everywhere outside
+ * this door and `src/lib/supabase/` (DEC-37).
+ */
+export function assertElevatedConfigured(): void {
+  serviceRoleKey();
 }

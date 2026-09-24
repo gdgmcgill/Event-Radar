@@ -1,0 +1,300 @@
+Boot completeness check — plan 05-04 Task 2 (DEC-37; research Assumptions Log A1)
+**Plan:** 05-04 · **Phase:** 05 · **Recorded:** 2026-09-24T05:20:15Z
+HEAD at capture=7bef995d26ac4fd9eca6b36bd34a154a92fe25ca (Task 2 changes in the working tree, committed with this file)
+
+Every block: the command, its verbatim output, then exit=<code>. The build route table (lines starting
+with a box-drawing character) is filtered out of the build blocks; build-ci-env.txt holds a full table.
+
+==============================================================================
+(a) CI-env build with src/instrumentation.ts present
+==============================================================================
+$ SUPABASE_SERVICE_ROLE_KEY= NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key npm run build
+
+> uni-verse@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.js took 4ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 883ms
+  Running TypeScript ...
+  Finished TypeScript in 908ms ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/100) ...
+  Generating static pages using 9 workers (25/100) 
+  Generating static pages using 9 workers (50/100) 
+(node:46947) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  Generating static pages using 9 workers (75/100) 
+✓ Generating static pages using 9 workers (100/100) in 285ms
+  Finalizing page optimization ...
+
+Route (app)
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+exit=0
+$ grep -c "Config\|MissingEnv" <the output above>
+0
+
+--- (a2) A1 measured directly: the same build with the NEXT_PHASE guard line temporarily removed
+Removed line:   if (process.env.NEXT_PHASE === "phase-production-build") return;
+(source kept in the scratchpad, restored afterwards; cmp src/instrumentation.ts <kept copy> → identical)
+$ SUPABASE_SERVICE_ROLE_KEY= NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key npm run build
+
+> uni-verse@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.js took 6ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 360ms
+  Running TypeScript ...
+  Finished TypeScript in 906ms ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/100) ...
+  Generating static pages using 9 workers (25/100) 
+  Generating static pages using 9 workers (50/100) 
+(node:47012) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  Generating static pages using 9 workers (75/100) 
+✓ Generating static pages using 9 workers (100/100) in 286ms
+  Finalizing page optimization ...
+
+Route (app)
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+exit=0
+$ grep -c "Config\|MissingEnv" <the output above>
+0
+
+Finding (A1 closed by measurement): Next 16.3.5's build does not call register() in its page-data
+or static-generation workers for this app. The build passes with or without the NEXT_PHASE guard.
+The guard stays anyway: DEC-37 requires it, it costs nothing, and it protects against a future Next
+that does run register() during the build. The unit case 'resolves with every variable unset when
+NEXT_PHASE is "phase-production-build"' pins it.
+
+--- (a3) Rebuilt from the restored, guarded source before the start probes
+$ SUPABASE_SERVICE_ROLE_KEY= NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key npm run build
+exit=0
+
+==============================================================================
+(b) Start probe: next start -p 3100 with a blank service key and placeholder public vars
+==============================================================================
+Probe script (scratchpad, not committed), verbatim:
+----8<----
+// Start probe for plan 05-04 Task 2: spawn `next start` with a blank service
+// key and placeholder public vars, capture output for up to 20 s, then kill.
+import { spawn } from "node:child_process";
+
+const cwd = "/Users/adyan/Documents/GitHub/Event-Radar";
+const env = {
+  ...process.env,
+  SUPABASE_SERVICE_ROLE_KEY: "",
+  NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder-key",
+};
+const started = Date.now();
+const child = spawn("npx", ["next", "start", "-p", "3100"], { cwd, env, detached: true });
+let out = "";
+child.stdout.on("data", (d) => (out += d));
+child.stderr.on("data", (d) => (out += d));
+
+let exited = false;
+let exitInfo = null;
+child.on("exit", (code, signal) => {
+  exited = true;
+  exitInfo = { code, signal, afterMs: Date.now() - started };
+});
+
+// While it runs, try one request so "refuses to serve" is measured, not assumed.
+let probe = "not attempted";
+setTimeout(async () => {
+  if (exited) { probe = "skipped: process already exited"; return; }
+  try {
+    const res = await fetch("http://localhost:3100/api/health", { signal: AbortSignal.timeout(5000) });
+    probe = `GET /api/health -> ${res.status} at ${Date.now() - started} ms`;
+  } catch (e) {
+    probe = `GET /api/health -> request failed: ${e.cause?.code ?? e.name}`;
+  }
+}, 4000);
+
+const deadline = setInterval(() => {
+  if (exited || Date.now() - started >= 20000) {
+    clearInterval(deadline);
+    const killedByProbe = !exited;
+    if (!exited) {
+      try { process.kill(-child.pid, "SIGTERM"); } catch {}
+    }
+    setTimeout(() => {
+      console.log("=== captured stdout+stderr (verbatim) ===");
+      console.log(out.trimEnd());
+      console.log("=== probe result ===");
+      console.log(`process exited on its own within 20 s: ${!killedByProbe}`);
+      console.log(`exit info: ${JSON.stringify(exitInfo)}`);
+      console.log(`killed by probe: ${killedByProbe}`);
+      console.log(`request while running: ${probe}`);
+      console.log(`contains "[Config] refusing to start": ${out.includes("[Config] refusing to start")}`);
+      console.log(`contains "MissingEnvError": ${out.includes("MissingEnvError")}`);
+      process.exit(0);
+    }, 1500);
+  }
+}, 250);
+----8<----
+
+--- (b1) First run. The request went to http://127.0.0.1:3100 at 8000 ms (script since edited to the form above)
+$ node start-probe.mjs
+=== captured stdout+stderr (verbatim) ===
+▲ Next.js 16.3.5
+- Local:         http://localhost:3100
+- Network:       http://192.168.2.209:3100
+✓ Ready in 47ms
+✓ Running next.config.js took 5ms
+=== probe result ===
+process exited on its own within 20 s: false
+exit info: {"code":143,"signal":null,"afterMs":61937}
+killed by probe: true
+request while running: GET /api/health -> request failed: ECONNREFUSED
+contains "[Config] refusing to start": false
+contains "MissingEnvError": false
+probe exit=0
+Reading: 127.0.0.1 was refused. Next announced http://localhost:3100, which resolved to the IPv6
+loopback on this host. Because no request reached the server, register() never ran and nothing
+was logged. This run does not measure the boot check. It shows that register() does not run at
+'Ready'. The recorded afterMs=61937 was not investigated further. The process was killed by the
+probe (killed by probe: true), and port 3100 was free afterwards.
+$ lsof -i :3100
+exit=1
+
+--- (b2) Second run. The request goes to http://localhost:3100/api/health at 4000 ms
+$ node start-probe.mjs
+=== captured stdout+stderr (verbatim) ===
+▲ Next.js 16.3.5
+- Local:         http://localhost:3100
+- Network:       http://192.168.2.209:3100
+✓ Ready in 47ms
+✓ Running next.config.js took 5ms
+[Config] refusing to start: Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY
+Failed to prepare server Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY
+    at s (.next/server/chunks/src_004t_at._.js:1:553)
+    at <unknown> (.next/server/chunks/src_server_db_elevated_index_ts_1dwrz81._.js:1:124)
+    at Module.s [as register] (.next/server/chunks/src_004t_at._.js:1:228)
+⨯ unhandledRejection: Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY
+    at s (.next/server/chunks/src_004t_at._.js:1:553)
+    at <unknown> (.next/server/chunks/src_server_db_elevated_index_ts_1dwrz81._.js:1:124)
+    at Module.s [as register] (.next/server/chunks/src_004t_at._.js:1:228)
+Failed to prepare server Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY
+    at s (.next/server/chunks/src_004t_at._.js:1:553)
+    at <unknown> (.next/server/chunks/src_server_db_elevated_index_ts_1dwrz81._.js:1:124)
+    at Module.s [as register] (.next/server/chunks/src_004t_at._.js:1:228)
+Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY
+    at s (.next/server/chunks/src_004t_at._.js:1:553)
+    at <unknown> (.next/server/chunks/src_server_db_elevated_index_ts_1dwrz81._.js:1:124)
+    at Module.s [as register] (.next/server/chunks/src_004t_at._.js:1:228)
+Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY
+    at s (.next/server/chunks/src_004t_at._.js:1:553)
+    at <unknown> (.next/server/chunks/src_server_db_elevated_index_ts_1dwrz81._.js:1:124)
+    at Module.s [as register] (.next/server/chunks/src_004t_at._.js:1:228)
+=== probe result ===
+process exited on its own within 20 s: false
+exit info: {"code":143,"signal":null,"afterMs":20168}
+killed by probe: true
+request while running: GET /api/health -> 500 at 4049 ms
+contains "[Config] refusing to start": true
+contains "MissingEnvError": true
+probe exit=0
+$ lsof -i :3100
+exit=1
+
+--- (b3) Control. The same probe with a non-blank dummy service key and an unreachable local URL
+(SUPABASE_SERVICE_ROLE_KEY=control-dummy-not-a-key, NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:59999)
+$ node start-probe-control.mjs
+=== captured stdout+stderr (verbatim) ===
+▲ Next.js 16.3.5
+- Local:         http://localhost:3100
+- Network:       http://192.168.2.209:3100
+✓ Ready in 46ms
+✓ Running next.config.js took 5ms
+=== probe result ===
+process exited on its own within 20 s: false
+exit info: {"code":143,"signal":null,"afterMs":20172}
+killed by probe: true
+request while running: GET /api/health -> 503 at 4132 ms
+contains "[Config] refusing to start": false
+contains "MissingEnvError": false
+probe exit=0
+$ lsof -i :3100
+exit=1
+
+==============================================================================
+What Next 16.3.5 does with a throwing register() (measured, not assumed)
+==============================================================================
+- 'next start' prints Ready immediately. register() runs lazily, when the server is prepared for
+  its first request, not at process start.
+- When register() throws, Next logs '[Config] refusing to start: Missing required environment
+  variable: SUPABASE_SERVICE_ROLE_KEY', then 'Failed to prepare server Error [MissingEnvError]'.
+  The request is answered with 500 and the process does NOT exit (it was still running at 20 s).
+- In the control, register() passes and the same request reaches the health route, which answers
+  503 (its own database-unreachable status). The 500 in (b2) is therefore the boot check's.
+- So 'refuses to start' means 'refuses to serve': every request fails, with one named log line that
+  names the variable and never its value. That is what the must-have truth asks for (a server
+  missing its env refuses to serve). Process exit is not something register() can force in this
+  Next version. The unit tests are the authority on register()'s own behaviour.
+
+==============================================================================
+Task 2 unit tests and gates
+==============================================================================
+--- RED (before src/instrumentation.ts existed)
+$ npx jest --ci src/instrumentation.test.ts
+10     Cannot find module './instrumentation' from 'src/instrumentation.test.ts'
+1 Tests:       10 failed, 10 total
+1 exit=1
+
+--- GREEN
+$ npx jest --ci --verbose src/instrumentation.test.ts src/server/__tests__/elevated.test.ts
+PASS node src/instrumentation.test.ts
+    ✓ resolves when all three required variables are set, and logs nothing (10 ms)
+    ✓ rejects with MissingEnvError naming NEXT_PUBLIC_SUPABASE_URL when it is unset (2 ms)
+    ✓ rejects with MissingEnvError naming NEXT_PUBLIC_SUPABASE_ANON_KEY when it is unset (1 ms)
+    ✓ rejects with MissingEnvError naming SUPABASE_SERVICE_ROLE_KEY when it is unset (2 ms)
+    ✓ rejects with MissingEnvError naming NEXT_PUBLIC_SUPABASE_URL when it is blank
+    ✓ rejects with MissingEnvError naming NEXT_PUBLIC_SUPABASE_ANON_KEY when it is blank
+    ✓ rejects with MissingEnvError naming SUPABASE_SERVICE_ROLE_KEY when it is blank (3 ms)
+    ✓ resolves with every variable unset when NEXT_PHASE is "phase-production-build"
+    ✓ resolves with every variable unset when NEXT_RUNTIME is "edge"
+    ✓ resolves with every variable unset when NEXT_RUNTIME is not set
+PASS node src/server/__tests__/elevated.test.ts
+    ✓ returns exactly the client the existing service factory produced
+    ✓ delegates to the existing factory rather than constructing a client
+    ✓ produces a client per call, holding no module-level singleton
+Tests:       13 passed, 13 total
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+$ npm run lint
+  77:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 19 problems (0 errors, 19 warnings)
+exit=0
+$ node scripts/check-elevated-ratchet.mjs   (instrumentation does not enter the census)
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+$ npx jest --ci
+Test Suites: 60 passed, 60 total
+Tests:       994 passed, 994 total
+exit=0
