@@ -1,0 +1,379 @@
+RLS ring before-probe — plan 05-09 (slice 4, before any policy or handler changes)
+**Plan:** 05-09 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24
+
+Target: the local stack only (docker container supabase_db_Event-Radar; no --linked, no production).
+State: `supabase db reset --local` + `npx tsx scripts/seed/load.ts` at 2026-09-24, exit 0 both
+(slice-4-characterization.txt §3). The club-authorization spec then ran; it wrote nothing (its one
+owner PATCH answered 500 and the description md5 below is unchanged).
+
+Method (research § D, Pitfall 3):
+  - Each probe is ONE psql invocation holding ONE transaction:
+    BEGIN; SET LOCAL ROLE authenticated (or anon); set_config('request.jwt.claims', …, true) and
+    set_config('request.jwt.claim.sub', …, true); SELECT auth.uid() proves the impersonation
+    took; the statement; ROLLBACK.
+  - One invocation per probe keeps psql's stderr (ERROR lines) attributable to its probe. A first
+    single-invocation run printed the same outcomes but interleaved the two streams through the
+    docker pipe.
+  - No INSERT uses RETURNING, so an INSERT outcome is the WITH CHECK decision alone.
+  - UPDATE/DELETE denials are silent 0-row outcomes. INSERT denials raise 42501.
+  - Baseline and after counts are read as the session owner (bypasses RLS). They prove no probe
+    persisted a row.
+
+Personas (scripts/seed/personas.ts IDS):
+  cross_club_attacker 5eed0000-0000-4000-8000-000000000006 (owner of otherClub only)
+  club_owner          5eed0000-0000-4000-8000-000000000004 (owner of approvedClub)
+  approvedClub        5eed0000-0000-4000-8000-0000000000c1
+  memberOfApproved    5eed0000-0000-4000-8000-0000000000b1 (club_member's organizer row)
+
+Summary (each probe's full output follows):
+
+| # | Actor | Statement | Expected (plan / § D) | Measured | Holds? |
+|---|-------|-----------|-----------------------|----------|--------|
+| P1 | cross_club_attacker | INSERT events, approvedClub, status approved, created_by = club_owner | succeeds (F-008) | INSERT 0 1 | HOLE, F-008 (forged creator, forged approval) |
+| P2 | cross_club_attacker | INSERT events, approvedClub, status approved, created_by = attacker | succeeds | INSERT 0 1 | HOLE, F-008 (non-member self-approves into another club) |
+| P3 | club_owner | UPDATE clubs on approvedClub | UPDATE 0 (F-087) | UPDATE 0 | owner is denied: the F-087 cause |
+| P4 | club_owner | UPDATE club_members role on memberOfApproved | UPDATE 0 | UPDATE 0 | owner is denied: the F-087 cause (members/role) |
+| P5 | cross_club_attacker | DELETE FROM club_members WHERE club_id = approvedClub | DELETE 0 | DELETE 0 | denial holds |
+| P6 | club_owner | DELETE memberOfApproved | DELETE 1 | DELETE 1 | owner allowed, as the policy intends |
+| P7 | cross_club_attacker | INSERT club_invitations for approvedClub | 42501 | ERROR 42501 (club_invitations) | denial holds |
+| P8 | anonymous (anon) | INSERT events, approvedClub, status approved | record | ERROR 42501 (events) | denial holds: no anon INSERT policy |
+
+Denials that already hold at the RLS ring: P5, P7, P8. The two F-087 owner-update outcomes are
+P3 and P4. The owner delete, P6, is allowed as intended.
+The attacker is also denied UPDATE on clubs and club_members by the same policies that deny the
+owner in P3/P4 (`Admins can update clubs`, `Admins manage memberships` are the only UPDATE policies;
+pg_policies below).
+
+Policies on the probed tables at probe time (read-only query):
+    tablename     |                   policyname                    |  cmd   |      roles      
+------------------+-------------------------------------------------+--------+-----------------
+ club_invitations | Club owners can create club invitations         | INSERT | {authenticated}
+ club_invitations | Club owners can view club invitations           | SELECT | {authenticated}
+ club_invitations | Invitees can view their own invitations         | SELECT | {authenticated}
+ club_invitations | Club owners can update club invitations         | UPDATE | {authenticated}
+ club_invitations | Invitees can accept their own invitations       | UPDATE | {authenticated}
+ club_members     | Admins manage memberships                       | ALL    | {authenticated}
+ club_members     | Club owners can remove members                  | DELETE | {authenticated}
+ club_members     | Invitees can join the club they were invited to | INSERT | {authenticated}
+ club_members     | Club owners can view all club members           | SELECT | {authenticated}
+ club_members     | Users see own memberships                       | SELECT | {authenticated}
+ clubs            | Admins can insert clubs                         | INSERT | {authenticated}
+ clubs            | Anyone can read clubs                           | SELECT | {public}
+ clubs            | Admins can update clubs                         | UPDATE | {authenticated}
+ events           | Admins can delete events                        | DELETE | {authenticated}
+ events           | Authenticated users can insert events           | INSERT | {authenticated}
+ events           | Admins can view all events                      | SELECT | {authenticated}
+ events           | Approved events are viewable by everyone        | SELECT | {public}
+ events           | Organizers can view own events                  | SELECT | {authenticated}
+ events           | Admins can update any event                     | UPDATE | {authenticated}
+ events           | Organizers can update own events                | UPDATE | {authenticated}
+(20 rows)
+
+
+==============================================================================
+Probe output (psql -e echoes each statement; [stderr] holds that invocation's ERROR lines)
+==============================================================================
+
+------------------------------------------------------------------------------
+-- ── baseline, as the session owner (bypasses RLS) ───────────────────────────
+------------------------------------------------------------------------------
+SELECT 'baseline' AS phase,
+  (SELECT count(*) FROM public.events) AS events,
+  (SELECT count(*) FROM public.club_members) AS club_members,
+  (SELECT count(*) FROM public.club_invitations) AS club_invitations,
+  (SELECT md5(description) FROM public.clubs WHERE id = '5eed0000-0000-4000-8000-0000000000c1') AS approved_club_description_md5;
+  phase   | events | club_members | club_invitations |  approved_club_description_md5   
+----------+--------+--------------+------------------+----------------------------------
+ baseline |      5 |            6 |                0 | e9a5efcdade89d7f867733736be96a78
+(1 row)
+
+psql exit=0
+
+------------------------------------------------------------------------------
+-- ── P1 cross_club_attacker: forged approved event, created_by = club_owner (F-008) ──
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000006","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000006', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000006 | authenticated
+(1 row)
+
+INSERT INTO public.events (title, start_date, end_date, club_id, created_by, status)
+  VALUES ('rls probe P1 forged', '2031-01-01T18:00:00Z', '2031-01-01T20:00:00Z', '5eed0000-0000-4000-8000-0000000000c1', '5eed0000-0000-4000-8000-000000000004', 'approved');
+INSERT 0 1
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- ── P2 cross_club_attacker: approved event for approvedClub, created_by = attacker ──
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000006","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000006', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000006 | authenticated
+(1 row)
+
+INSERT INTO public.events (title, start_date, end_date, club_id, created_by, status)
+  VALUES ('rls probe P2 self', '2031-01-02T18:00:00Z', '2031-01-02T20:00:00Z', '5eed0000-0000-4000-8000-0000000000c1', '5eed0000-0000-4000-8000-000000000006', 'approved');
+INSERT 0 1
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- ── P3 club_owner: UPDATE clubs on own approvedClub (F-087) ─────────────────
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000004","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000004', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000004 | authenticated
+(1 row)
+
+UPDATE public.clubs SET description = description || ' (probe)' WHERE id = '5eed0000-0000-4000-8000-0000000000c1';
+UPDATE 0
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- ── P4 club_owner: UPDATE club_members role on memberOfApproved (F-087) ─────
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000004","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000004', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000004 | authenticated
+(1 row)
+
+UPDATE public.club_members SET role = 'organizer' WHERE id = '5eed0000-0000-4000-8000-0000000000b1';
+UPDATE 0
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- ── P5 cross_club_attacker: DELETE every club_members row of approvedClub ───
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000006","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000006', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000006 | authenticated
+(1 row)
+
+DELETE FROM public.club_members WHERE club_id = '5eed0000-0000-4000-8000-0000000000c1';
+DELETE 0
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- ── P6 club_owner: DELETE memberOfApproved (the owner remove-member policy) ──
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000004","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000004', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000004 | authenticated
+(1 row)
+
+DELETE FROM public.club_members WHERE id = '5eed0000-0000-4000-8000-0000000000b1';
+DELETE 1
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- ── P7 cross_club_attacker: INSERT club_invitations for approvedClub ────────
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000006","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000006', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000006 | authenticated
+(1 row)
+
+INSERT INTO public.club_invitations (club_id, inviter_id, invitee_email)
+  VALUES ('5eed0000-0000-4000-8000-0000000000c1', '5eed0000-0000-4000-8000-000000000006', 'rls.probe.p7@mail.mcgill.ca');
+ROLLBACK;
+ROLLBACK
+[stderr]
+ERROR:  42501: new row violates row-level security policy for table "club_invitations"
+LOCATION:  ExecWithCheckOptions, execMain.c:2158
+psql exit=0
+
+------------------------------------------------------------------------------
+-- ── P8 anonymous: INSERT into events ────────────────────────────────────────
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE anon;
+SET
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+ acting_as | db_role 
+-----------+---------
+           | anon
+(1 row)
+
+INSERT INTO public.events (title, start_date, end_date, club_id, status)
+  VALUES ('rls probe P8 anon', '2031-01-03T18:00:00Z', '2031-01-03T20:00:00Z', '5eed0000-0000-4000-8000-0000000000c1', 'approved');
+ROLLBACK;
+ROLLBACK
+[stderr]
+ERROR:  42501: new row violates row-level security policy for table "events"
+LOCATION:  ExecWithCheckOptions, execMain.c:2158
+psql exit=0
+
+------------------------------------------------------------------------------
+-- ── after, as the session owner: nothing persisted ──────────────────────────
+------------------------------------------------------------------------------
+SELECT 'after' AS phase,
+  (SELECT count(*) FROM public.events) AS events,
+  (SELECT count(*) FROM public.club_members) AS club_members,
+  (SELECT count(*) FROM public.club_invitations) AS club_invitations,
+  (SELECT md5(description) FROM public.clubs WHERE id = '5eed0000-0000-4000-8000-0000000000c1') AS approved_club_description_md5;
+ phase | events | club_members | club_invitations |  approved_club_description_md5   
+-------+--------+--------------+------------------+----------------------------------
+ after |      5 |            6 |                0 | e9a5efcdade89d7f867733736be96a78
+(1 row)
+
+SELECT count(*) AS probe_rows_left FROM public.events WHERE title LIKE 'rls probe%';
+ probe_rows_left 
+-----------------
+               0
+(1 row)
+
+SELECT id, role FROM public.club_members WHERE id = '5eed0000-0000-4000-8000-0000000000b1';
+                  id                  |   role    
+--------------------------------------+-----------
+ 5eed0000-0000-4000-8000-0000000000b1 | organizer
+(1 row)
+
+psql exit=0
+
+==============================================================================
+Post-probe check (Task 2 acceptance; T-05-09-02)
+==============================================================================
+- events: 5 before, 5 after. The seed's count is 5 ("seed: … 5 events"), so it is unchanged.
+- club_members: 6 before, 6 after. The seed's count is 6.
+- club_invitations: 0 before, 0 after.
+- Approved club description md5: e9a5efcdade89d7f867733736be96a78 before and after.
+- Probe rows left: 0.
+- memberOfApproved is still present with role organizer.
+- Every probe transaction ended in ROLLBACK (8 of 8), and no probe left a row.
+
+What slice 4 must change here (for 05-10/05-11; not changed by this plan):
+  - P1/P2, F-008: the events INSERT policy (DEC-42, migration 20260923120000_events_insert_club_scope.sql
+    in 05-11). After it, P1 and P2 must both raise 42501. P2 is refused because the attacker is not
+    a member of approvedClub.
+  - P3/P4, F-087: the RLS ring keeps denying these direct owner UPDATEs (DEC-41). The owner path
+    moves to the elevated door in the handlers, so the 0-row outcomes here are expected to stay.

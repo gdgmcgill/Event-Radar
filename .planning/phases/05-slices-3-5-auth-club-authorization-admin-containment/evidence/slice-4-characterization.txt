@@ -343,3 +343,102 @@ Site-row count in the PRESERVE table (acceptance: at least 17):
 $ grep -cE '^    n: [0-9]+,' src/__tests__/api/clubs/club-gates-characterization.test.ts
 17
 
+==============================================================================
+§3 — Playwright: e2e/specs/club-authorization.spec.ts after a clean reset and seed (Task 2)
+==============================================================================
+
+- Spec written against HEAD d0ba354 (Task 1's commit). The spec is uncommitted.
+- A production build was started by the webServer (reuseExistingServer: false), against the local
+  stack at 127.0.0.1:54321 only.
+- [WebServer] lines are removed. Every test line and the summary are verbatim.
+- Reset/seed output is filtered for key/secret/token/password/jwt lines, and none was present.
+- The run was first-run green, with no retry.
+
+$ lsof -i :3000
+exit=1
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ npx playwright test e2e/specs/club-authorization.spec.ts
+
+Running 29 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (405ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (271ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (289ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (516ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (230ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (268ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (280ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (231ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (217ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (227ms)
+  ✓  11 [chromium] › e2e/specs/club-authorization.spec.ts:68:7 › the cross-club attacker on the approved club (REFAC-12) › cannot update the club (162ms)
+  ✓  12 [chromium] › e2e/specs/club-authorization.spec.ts:75:7 › the cross-club attacker on the approved club (REFAC-12) › cannot delete the club (130ms)
+  ✓  13 [chromium] › e2e/specs/club-authorization.spec.ts:82:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view invitations (126ms)
+  ✓  14 [chromium] › e2e/specs/club-authorization.spec.ts:89:7 › the cross-club attacker on the approved club (REFAC-12) › cannot send invitations (116ms)
+  ✓  15 [chromium] › e2e/specs/club-authorization.spec.ts:96:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view members (107ms)
+  ✓  16 [chromium] › e2e/specs/club-authorization.spec.ts:103:7 › the cross-club attacker on the approved club (REFAC-12) › cannot remove members (107ms)
+  ✓  17 [chromium] › e2e/specs/club-authorization.spec.ts:112:7 › the cross-club attacker on the approved club (REFAC-12) › cannot change member roles (108ms)
+  ✓  18 [chromium] › e2e/specs/club-authorization.spec.ts:121:7 › the cross-club attacker on the approved club (REFAC-12) › cannot transfer ownership (105ms)
+  ✓  19 [chromium] › e2e/specs/club-authorization.spec.ts:128:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view club analytics (141ms)
+  ✓  20 [chromium] › e2e/specs/club-authorization.spec.ts:135:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view the analytics of the club's event (104ms)
+  ✓  21 [chromium] › e2e/specs/club-authorization.spec.ts:142:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's banner (107ms)
+  ✓  22 [chromium] › e2e/specs/club-authorization.spec.ts:149:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's logo (124ms)
+  ✓  23 [chromium] › e2e/specs/club-authorization.spec.ts:160:7 › the club's organizer (not the owner) › cannot update the club (owner only) (104ms)
+  ✓  24 [chromium] › e2e/specs/club-authorization.spec.ts:167:7 › the club's organizer (not the owner) › can view members (104ms)
+  ✓  25 [chromium] › e2e/specs/club-authorization.spec.ts:174:7 › the club's organizer (not the owner) › can view club analytics (110ms)
+  ✓  26 [chromium] › e2e/specs/club-authorization.spec.ts:182:7 › the club owner › can view invitations (129ms)
+  ✓  27 [chromium] › e2e/specs/club-authorization.spec.ts:188:7 › the club owner › can view members (105ms)
+  ✓  28 [chromium] › e2e/specs/club-authorization.spec.ts:197:7 › the club owner › can view club analytics (106ms)
+  ✓  29 [chromium] › e2e/specs/club-authorization.spec.ts:201:7 › the club owner › DEFECT F-087: the owner's own club PATCH answers 500 (138ms)
+
+  29 passed (13.9s)
+exit=0
+$ lsof -i :3000
+exit=1
+
+Deny bytes measured versus research § C (T-05-09-04). All 13 measured 403 bodies equal § C's
+strings byte for byte:
+  - #1/#13 "You must be a club member to view analytics" (club and event analytics);
+  - #3 "Only the club owner can view invitations";
+  - #4 "Only the club owner can send invitations";
+  - #5 "Only the club owner can change roles";
+  - #6 "You must be a member of this club to view members";
+  - #7 "Only the club owner can remove members";
+  - #8 "Only the club owner can update club details" (attacker and organizer);
+  - #9 "Only the club owner can delete the club";
+  - #10 "Only the club owner can transfer ownership";
+  - #11 "Only the club owner can upload a banner";
+  - #12 "Only the club owner can upload a logo".
+No mismatch.
+
+DEFECT F-087 on the real stack: the club_owner's PATCH of approvedClub with its current description
+answered 500 {"error":"Failed to update club"}, and a re-read showed the description unchanged. The
+cause is P3 in rls-ring-before.txt (UPDATE 0 as the owner).
+
+Attacker assertions: 12, above the plan's minimum of 9. The plan's nine are there, plus event
+analytics (#13), banner (#11) and logo (#12). All attacker bodies would fail validation even if
+their gate were open (see the spec's docblock). The members DELETE and members/role PATCH target
+IDS.ownerOfApproved rather than IDS.memberOfApproved for that reason (deviation recorded in
+05-09-SUMMARY.md).
+
