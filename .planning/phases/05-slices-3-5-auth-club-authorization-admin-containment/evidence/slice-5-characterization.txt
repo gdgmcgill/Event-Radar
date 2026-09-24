@@ -403,3 +403,163 @@ ok 2 files
 exit=0
 $ grep -c "^    id: \"" src/__tests__/api/admin/adminArmTable.ts
 35
+
+================================================================================
+PART 2 — Task 2: behaviour DEFECT pins (F-091, F-005, F-086)
+================================================================================
+
+## 2.1 F-091 measurement (temporary harness zz-measure2-temp.test.ts, deleted,
+##     never committed). Admin caller; cookie fake A holds only the caller's own
+##     users row (the only row the cookie client's UPDATE can match under RLS);
+##     elevated fake B holds both. A:/B: are each fake's call log.
+$ npx jest --ci src/__tests__/api/admin/zz-measure2-temp.test.ts   (exit=0)
+other +admin     500 {"error":"Internal server error"}
+   A: users.select eq(id,0001) | users.update{"updated_at":"2026-09-24T21:15:51.167Z","roles":["user"]} eq(id,0002)
+   B: 
+other organizer  500 {"error":"Internal server error"}
+   A: users.select eq(id,0001) | users.update{"updated_at":"2026-09-24T21:15:51.168Z","roles":["user","club_organizer"]} eq(id,0002)
+   B: 
+self roles       200 {"user":{"id":"5eed0000-0000-4000-8000-0a5100000001","name":"n","roles":["user"]
+   A: users.select eq(id,0001) | users.update{"updated_at":"2026-09-24T21:15:51.168Z","roles":["user"]} eq(id,0001)
+   B: 
+self organizer   200 {"user":{"id":"5eed0000-0000-4000-8000-0a5100000001","name":"n","roles":["user",
+   A: users.select eq(id,0001) | users.update{"updated_at":"2026-09-24T21:15:51.169Z","roles":["user","club_organizer"]} eq(id,0001)
+   B: 
+other superuser  500 {"error":"Internal server error"}
+   A: users.select eq(id,0001) | users.update{"updated_at":"2026-09-24T21:15:51.169Z","roles":["user","superuser"]} eq(id,0002)
+   B: 
+self name        200 {"user":{"id":"5eed0000-0000-4000-8000-0a5100000001","name":"New Name","roles":[
+   A: users.select eq(id,0001) | users.update{"updated_at":"2026-09-24T21:15:51.169Z","name":"New Name"} eq(id,0001)
+   B: 
+other name       500 {"error":"Internal server error"}
+   A: users.select eq(id,0001) | users.update{"updated_at":"2026-09-24T21:15:51.169Z","name":"New Name"} eq(id,0002)
+   B: 
+
+Reading: every roles change for another user is issued on A and 500s; admin is stripped
+from every array; an admin's own-id roles change is admitted (200) and the strip demotes
+them; 'superuser' is not validated; no admin_audit_log insert anywhere; B is never called.
+
+## 2.2 F-005 (page and metadata, jsdom project) and 2.3 F-086 (real transform):
+##     the suites are the measurement; each value was observed before it was pinned.
+##     Private anonymous: generateMetadata title 'Private Person | UNI-VERSE', zero
+##     session reads, service select 'name'; page returns markup carrying the name,
+##     notFound not called; the page's users select is exactly
+##     'id, name, avatar_url, banner_url, email, pronouns, year, faculty, visibility, interest_tags, created_at'.
+##     F-086: creator, admin, stranger and anonymous all get 200 with no pending_edits key.
+
+## 2.4 Task 2 verify
+$ npx jest --ci --verbose src/__tests__/api/admin src/__tests__/pages src/__tests__/api/events/pending-edits-defect.test.ts src/__tests__/moderation/audit-shape.test.ts src/__tests__/api/events/events-detail-characterization.test.ts
+PASS jsdom src/__tests__/pages/public-profile-defect.test.tsx
+  F-005 today: a private profile, viewed anonymously
+    ✓ P1: generateMetadata puts the private target's name in the title without reading the session (36 ms)
+    ✓ P2: the page renders instead of calling notFound() (16 ms)
+    ✓ P3: the page's users select reads email
+  F-005 rows that do not move: a public profile, viewed anonymously
+    ✓ renders, and notFound() is not called (3 ms)
+    ✓ its metadata title carries the name
+    ✓ a missing target calls notFound()
+PASS node src/__tests__/api/events/pending-edits-defect.test.ts
+  F-086 today: pending_edits is dropped by the shared transform
+    ✓ E1: the creator does not receive pending_edits (5 ms)
+    ✓ E2: an admin does not receive pending_edits
+  F-086 rows that do not move
+    ✓ E3: another signed-in user does not receive pending_edits (1 ms)
+    ✓ E4: an anonymous caller does not receive pending_edits
+PASS node src/__tests__/api/admin/admin-guard-defect.test.ts
+  D1 (F-061): an anonymous caller at a helper arm
+    ✓ covers 30 arms
+  D2 (F-061): an authenticated non-admin where the arm answers 401
+  D3 (F-001): calculate-popularity with ADMIN_API_KEY unset
+    ✓ covers both verbs
+  D4 (DI-48): an admin whose ban is in force
+PASS node src/__tests__/moderation/audit-shape.test.ts
+  DEFECT F-072 / F-073 — admin_audit_log.admin_email does not exist
+    ✓ the generated types have no admin_email column, so no migration creates one (1 ms)
+    ✓ the moderation dashboard asks for admin_email anyway (5 ms)
+    ✓ today's behaviour: the panel renders its empty state, not an error (6 ms)
+    ✓ the awaited shape was never checked — rows of any shape render unchallenged (4 ms)
+    ✓ every audit write carries admin_email, so every audit write is rejected
+    ✓ logAdminAction inspects nothing, which is why this went unnoticed
+PASS node src/__tests__/api/admin/admin-guard-characterization.test.ts
+  P0: the admin arm table equals the tree
+    ✓ holds exactly the exported verbs of the admin family (35 arms) (1 ms)
+    ✓ flags exactly the measured arms
+  P1: an authenticated non-admin gets 403 Forbidden and nothing is written
+    ✓ covers 32 arms
+  P2: an anonymous caller gets 401 Unauthorized at the three arms that answer it today
+  P3: an admin is admitted at every arm (neither 401 nor 403)
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+  GET /api/events/[id] — not found and errors
+    ✓ an id with no row is 404 Event not found (1 ms)
+    ✓ a soft-deleted row is 404 Event not found
+    ✓ any other query error is a 500
+    ✓ a thrown error is a 500
+  GET /api/events/[id] — the found event
+    ✓ returns 200 with exactly one key, event, holding the stored id, title, start_date and tags (1 ms)
+  GET /api/events/[id] — pending_edits, (a) with the real transform: non-owners never receive it
+    ✓ an anonymous caller gets no pending_edits key, though the row holds one
+    ✓ a signed-in stranger gets no pending_edits key, though the row holds one
+    ✓ a club organizer who did not create the event gets no pending_edits key, though the row holds one
+    ✓ a signed-in caller with no users row gets no pending_edits key, though the row holds one (1 ms)
+  GET /api/events/[id] — pending_edits, (b) the handler's gate, through a transform that carries it
+    ✓ the creator receives pending_edits
+    ✓ a caller whose users row has the admin role receives pending_edits
+    ✓ an anonymous caller has pending_edits stripped
+    ✓ a signed-in stranger has pending_edits stripped
+    ✓ a club organizer who did not create the event has pending_edits stripped
+    ✓ a signed-in caller with no users row has pending_edits stripped (1 ms)
+    ✓ the stripped event is otherwise identical to the creator's
+PASS node src/__tests__/api/admin/admin-users-patch-defect.test.ts
+  F-091 today: PATCH /api/admin/users/[id]
+    ✓ R1: another user's +admin change is written on the cookie client with admin stripped, 500s, and is not audited (1 ms)
+    ✓ R2: the organizer toggle for another user 500s on the cookie client
+    ✓ R3: a roles change on the caller's own id is admitted, and the strip demotes the admin
+    ✓ R4: an unknown role value is not validated; the update is attempted with it
+  F-091 rows that do not move
+    ✓ N1: a name-only edit of the caller's own row succeeds
+    ✓ N2: a non-admin caller is refused 403 Forbidden and nothing is updated
+Test Suites: 7 passed, 7 total
+Tests:       184 passed, 184 total
+Snapshots:   0 total
+Time:        0.491 s, estimated 1 s
+Ran all test suites matching src/__tests__/api/admin|src/__tests__/pages|src/__tests__/api/events/pending-edits-defect.test.ts|src/__tests__/moderation/audit-shape.test.ts|src/__tests__/api/events/events-detail-characterization.test.ts in 2 projects.
+exit=0
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/admin/admin-guard-characterization.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-guard-defect.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-users-patch-defect.test.ts (F-091)
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/events/ban-asymmetry-defect.test.ts (F-088, F-062, F-089)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071, F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   DEFECT   src/__tests__/api/events/pending-edits-defect.test.ts (F-086)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   DEFECT   src/__tests__/pages/public-profile-defect.test.tsx (F-005)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 34 files
+exit=0
+$ git diff --stat 4e368b6 -- src/__tests__/moderation/audit-shape.test.ts src/__tests__/api/events/events-detail-characterization.test.ts   (unedited: prints nothing)
+exit=0
