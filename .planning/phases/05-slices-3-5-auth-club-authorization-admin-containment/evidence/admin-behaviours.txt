@@ -139,3 +139,62 @@ $ grep -n "calculate-popularity\|admin/users/\[id\]/route" src/server/db/elevate
 20:| Change another user's roles or name as an admin | `src/app/api/admin/users/[id]/route.ts` | users has no admin UPDATE policy and the F-006 column grant withholds roles from authenticated; the change is an audited admin action (F-004, F-091) | 05 |
 36:05-14 moved `src/app/api/admin/calculate-popularity/route.ts` onto the door
 exit=0
+
+# Task 3, part 1 — F-086: pending edits reach the creator and admins (DEC-53, DI-36)
+
+Base: d510914 (05-14 Task 2). The plan names no separate evidence file for the F-086 protocol, so
+it is recorded here with the other behaviour fixes of this plan.
+
+## 7. The fix
+
+GET /api/events/[id]: after the unchanged `transformEventFromDB`, a caller who is the row's
+`created_by` or holds the admin role (`hasRole(ctx.profile, "admin")`) gets the transformed event
+with `pending_edits: data.pending_edits` attached when the row has pending edits; when the row has
+none, the creator and admins get the transformed event exactly as before (no new `null` key, so no
+seeded row's bytes change). Everyone else gets the event with any `pending_edits` key removed, as
+the PRESERVE suite's layer (b) requires even when a transform carries the column. The request
+context from 05-10 is reused. `src/lib/tagMapping.ts` is unchanged, so the list routes are
+unaffected.
+
+## 8. Protocol step 2 — pending-edits-defect.test.ts UNEDITED, beside the PRESERVE detail suite: red on exactly E1 and E2
+
+$ npx jest --ci src/__tests__/api/events/pending-edits-defect.test.ts src/__tests__/api/events/events-detail-characterization.test.ts   (excerpt)
+  ● F-086 today: pending_edits is dropped by the shared transform › E1: the creator does not receive pending_edits
+  ● F-086 today: pending_edits is dropped by the shared transform › E2: an admin does not receive pending_edits
+Tests:       2 failed, 18 passed, 20 total
+exit=1
+
+## 9. Protocol step 3 — E1 and E2 moved (present and equal to the row's { title: "x" }): green
+
+$ npx jest --ci <same two suites>   (excerpt)
+Tests:       20 passed, 20 total
+exit=0
+
+## 10. Protocol step 4 — pre-fix route source put back: red; restored
+
+$ npx jest --ci src/__tests__/api/events/pending-edits-defect.test.ts   (excerpt)
+    ✕ E1: the creator receives pending_edits equal to the row's value (7 ms)
+    ✕ E2: an admin receives pending_edits equal to the row's value
+    ✓ E3: another signed-in user does not receive pending_edits (1 ms)
+    ✓ E4: an anonymous caller does not receive pending_edits
+Tests:       2 failed, 2 passed, 4 total
+exit=1
+$ cmp "src/app/api/events/[id]/route.ts" <saved fixed copy>
+cmp identical
+exit=0
+
+## 11. The events suites; PRESERVE and the shared transform untouched
+
+$ npx jest --ci src/__tests__/api/events   (excerpt)
+Test Suites: 20 passed, 20 total
+Tests:       250 passed, 250 total
+exit=0
+
+$ git diff --exit-code f349ee9 -- src/__tests__/api/events/events-detail-characterization.test.ts src/lib/tagMapping.ts
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ npx eslint "src/app/api/events/[id]/route.ts"
+exit=0

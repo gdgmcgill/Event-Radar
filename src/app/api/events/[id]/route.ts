@@ -116,17 +116,26 @@ export async function GET(
     // Transform event to frontend format (cast needed: clubs relation may not exist in DB types)
     const event = transformEventFromDB(data as Parameters<typeof transformEventFromDB>[0]);
 
-    // Strip pending_edits from public responses — only show to creator or admins
-    const currentUser = ctx.user;
-    if (!currentUser || data.created_by !== currentUser.id) {
-      const isAdmin = ctx.profile !== null && hasRole(ctx.profile, "admin");
-      if (!isAdmin) {
-        const { pending_edits: _, ...eventWithoutPending } = event as unknown as Record<string, unknown>;
-        return NextResponse.json({ event: eventWithoutPending });
-      }
+    // pending_edits reaches the event's creator and admins only (F-086,
+    // DEC-53). The shared transform does not copy the column and is not
+    // changed here, so the list routes are unaffected; the row's value is
+    // attached after it, when there is one (a row without pending edits
+    // answers exactly as before). Everyone else gets the event without the
+    // key, even if a future transform carries it.
+    const isCreator = ctx.user !== null && data.created_by === ctx.user.id;
+    const isAdmin = ctx.profile !== null && hasRole(ctx.profile, "admin");
+    if (isCreator || isAdmin) {
+      return NextResponse.json({
+        event:
+          data.pending_edits != null
+            ? { ...event, pending_edits: data.pending_edits }
+            : event,
+      });
     }
 
-    return NextResponse.json({ event });
+    const { pending_edits: _omitted, ...publicEvent } =
+      event as unknown as Record<string, unknown>;
+    return NextResponse.json({ event: publicEvent });
   } catch (error) {
     console.error("Error fetching event:", error);
     return NextResponse.json(

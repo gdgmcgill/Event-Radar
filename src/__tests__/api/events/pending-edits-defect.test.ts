@@ -1,7 +1,8 @@
 /**
  * DEFECT characterization — F-086: pending edits never reach their creator (or an admin)
  *
- * Status: OPEN — the creator and admin rows move in 05-14 (DEC-53).
+ * Status: FIXED in 05-14 — E1 and E2 moved to the fixed shape (DEC-53); E3
+ * and E4 did not move.
  *
  * Subject: `GET /api/events/[id]` (`src/app/api/events/[id]/route.ts`),
  * written against the unmodified route at plan 05-12's base commit (4e368b6),
@@ -120,27 +121,25 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-// ─── Moves in 05-14 ────────────────────────────────────────────────────────
+// ─── Moved in 05-14 ────────────────────────────────────────────────────────
 
-describe("F-086 today: pending_edits is dropped by the shared transform", () => {
-  it("E1: the creator does not receive pending_edits", async () => {
+describe("F-086 fixed: the creator and admins receive pending_edits", () => {
+  it("E1: the creator receives pending_edits equal to the row's value", async () => {
     as(CREATOR);
     const { status, event } = await get();
 
     expect(status).toBe(200);
     expect(event.id).toBe(EVENT_ID);
-    expect(event.pending_edits).toBeUndefined();
-    expect(Object.keys(event)).not.toContain("pending_edits");
+    expect(event.pending_edits).toEqual(PENDING);
   });
 
-  it("E2: an admin does not receive pending_edits", async () => {
+  it("E2: an admin receives pending_edits equal to the row's value", async () => {
     as(ADMIN);
     const { status, event } = await get();
 
     expect(status).toBe(200);
     expect(event.id).toBe(EVENT_ID);
-    expect(event.pending_edits).toBeUndefined();
-    expect(Object.keys(event)).not.toContain("pending_edits");
+    expect(event.pending_edits).toEqual(PENDING);
   });
 });
 
