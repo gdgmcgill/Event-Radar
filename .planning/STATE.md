@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
-stopped_at: Completed 05-13-PLAN.md
-last_updated: "2026-09-24T21:54:16.189Z"
+stopped_at: Completed 05-14-PLAN.md
+last_updated: "2026-09-24T21:54:26.838Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
@@ -337,7 +337,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T21:54:07.280Z
-Stopped at: Completed 05-13-PLAN.md
+Last session: 2026-09-24T21:54:26.834Z
+Stopped at: Completed 05-14-PLAN.md
 Next: execute 05-14-PLAN.md (calculate-popularity fails closed, F-001; admin role changes land, F-091; audit writer; contract regen). 05-13 put createRequestContext() + requireActiveUser(ctx) + requireRole(ctx, "admin") at all 33 former helper arms in 25 files (90819ee, 9f0e5b5), moved the moderation reviews route and both admin layouts onto getRequestContext()/hasRole and deleted src/lib/admin.ts (b8e172e). F-061 fixed at those arms (anonymous 401, non-admin 403; only recommendations/batch POST changed its non-admin status). DEC-58 closes DI-48 for 33 of 35 arms: 05-14 must compose requireActiveUser ahead of requireRole at calculate-popularity too and add both ids to BAN_GUARDED_ARMS as well as FIXED_ARMS, after which 05-19 can flip REFAC-11. Floor: Jest 1298/0 (70 suites), tag gate ok 34, tsc 0, lint 0, ratchet committed 25 / live 22; Playwright admin-guard + admin-moderation-queue + admin-login-cookie-equivalence 17/17 after a clean reset. Candidates for 05-19: CLAUDE.md:67 and .claude/CLAUDE.md:327 still name verifyAdmin/src/lib/admin.ts; the layouts and moderation reviews admin path read the role only (ban proxy-enforced). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
 Resume file: None
