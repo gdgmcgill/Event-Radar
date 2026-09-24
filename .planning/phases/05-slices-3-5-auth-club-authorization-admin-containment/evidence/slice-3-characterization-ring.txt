@@ -1,0 +1,88 @@
+Slice 3 ring characterization — plan 05-02
+**Plan:** 05-02 · **Phase:** 05 · **Recorded:** 2026-09-24T04:41:34Z
+HEAD at capture=a7b02a58939a05ac89f0d4f5f532459f72e9e4fd (the 05-01 head is a7b02a5; the suites below are in the working tree and are committed with this block)
+
+Every block: the command, its verbatim output, then exit=<code> captured under bash (PIPESTATUS).
+Blank lines and stack-frame lines are filtered from the Jest output; nothing else is.
+
+==============================================================================
+TASK 1 — proxy ring PRESERVE and DEFECT suites against the unmodified proxy
+==============================================================================
+
+$ node scripts/check-characterization-tags.mjs src/proxy-characterization.test.ts src/proxy-defect.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok 2 files
+exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts src/proxy-defect.test.ts src/proxy.test.ts
+PASS node src/proxy.test.ts
+  middleware matcher (PRESERVE — must be identical after the proxy rename)
+    ✓ runs on /my-events (2 ms)
+    ✓ runs on /create-event
+    ✓ runs on /notifications
+    ✓ runs on /profile
+    ✓ runs on /settings (1 ms)
+    ✓ runs on /my-clubs
+    ✓ runs on /invites
+    ✓ runs on /friends
+    ✓ runs on /
+    ✓ runs on /api/events
+    ✓ runs on /docs
+    ✓ runs on /banned (1 ms)
+    ✓ runs on /onboarding
+    ✓ skips /_next/static/chunks/main-app.js
+    ✓ skips /_next/image
+    ✓ skips /favicon.ico
+    ✓ skips /auth/callback
+    ✓ skips /logo.png
+    ✓ skips /icon.svg
+    ✓ exports exactly one matcher entry
+PASS node src/proxy-defect.test.ts
+  proxy ring (DEFECT — F-003, F-062, F-088, F-089; OPEN until 05-05)
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (1 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged (1 ms)
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out (1 ms)
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+PASS node src/proxy-characterization.test.ts
+  proxy ring (PRESERVE — REFAC-11)
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id (1 ms)
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (1 ms)
+    1. anonymous GET on a protected route
+      ✓ /my-events → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path>
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path>
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /invites → 307 to / with signin=required and next=<path>
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+    7. onboarding guard
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding (1 ms)
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 3 passed, 3 total
+Tests:       52 passed, 52 total
+Snapshots:   0 total
+Time:        0.255 s, estimated 1 s
+Ran all test suites matching src/proxy-characterization.test.ts|src/proxy-defect.test.ts|src/proxy.test.ts.
+exit=0
+
+$ git diff --stat a7b02a5 -- src/proxy.ts src/proxy.test.ts
+exit=0 (empty output = unmodified)
+
