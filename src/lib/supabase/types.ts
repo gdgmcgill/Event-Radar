@@ -1313,6 +1313,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_club_member: { Args: { p_club_id: string }; Returns: boolean }
       is_club_owner: { Args: { p_club_id: string }; Returns: boolean }
       search_events_fuzzy: {
         Args: { result_limit?: number; search_term: string }

@@ -97,8 +97,12 @@ SUPABASE_CMD=${SUPABASE_CMD:-"npx supabase"}
 # mutated, and the harness would report nothing at all about it rather than
 # reporting a problem, which is the quiet kind of gap this whole script exists
 # to refuse.
+# 05-11 adds the F-008 events INSERT policy (asserted by 060). The baseline also
+# creates that policy name but is not listed: the new file DROPs it first, so
+# commenting out the new CREATE removes the policy entirely.
 POLICY_MIGRATION_GLOBS="supabase/migrations/*_fk_indexes_and_policy_gaps.sql
-supabase/migrations/*_invitation_policy_fixes.sql"
+supabase/migrations/*_invitation_policy_fixes.sql
+supabase/migrations/*_events_insert_club_scope.sql"
 
 MIGRATIONS=()
 while IFS= read -r glob; do
