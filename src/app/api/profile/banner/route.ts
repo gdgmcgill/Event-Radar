@@ -4,7 +4,6 @@
  */
 
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
@@ -70,8 +69,11 @@ export async function POST(request: NextRequest) {
 
     const bannerUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
-    const serviceClient = createServiceClient();
-    const { data: dbData, error: dbError } = await serviceClient
+    // Update the caller's own row on the cookie client: "Users can update own
+    // profile" permits it, and banner_url and updated_at are in the F-006
+    // column grant (DEC-49). A refused update returns no row, and .single()
+    // turns that into the 500 below rather than a silent success.
+    const { data: dbData, error: dbError } = await supabase
       .from("users")
       .update({ banner_url: bannerUrl, updated_at: new Date().toISOString() })
       .eq("id", user.id)

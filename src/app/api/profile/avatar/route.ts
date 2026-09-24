@@ -4,7 +4,6 @@
  */
 
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
@@ -77,10 +76,11 @@ export async function POST(request: NextRequest) {
     // Add cache-busting timestamp to prevent stale avatars
     const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
-    // Update user profile with the new avatar URL using service client
-    // The server client's DB update can fail silently with cookie-based auth
-    const serviceClient = createServiceClient();
-    const { data: dbData, error: dbError } = await serviceClient
+    // Update the caller's own row on the cookie client: "Users can update own
+    // profile" permits it, and avatar_url and updated_at are in the F-006
+    // column grant (DEC-49). A refused update returns no row, and .single()
+    // turns that into the 500 below rather than a silent success.
+    const { data: dbData, error: dbError } = await supabase
       .from("users")
       .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
       .eq("id", user.id)

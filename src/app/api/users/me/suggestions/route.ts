@@ -1,13 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { NextResponse } from "next/server";
 
 /**
  * GET /api/users/me/suggestions — Suggest people based on shared clubs,
  * overlapping interest tags, same faculty/year, or shared event RSVPs.
  *
- * Uses service client to bypass RLS — the suggestion algorithm needs to
- * read other users' profiles, club memberships, and RSVPs.
+ * The caller's own rows and the world-readable club follower list are read
+ * on the cookie client (DEC-49). Other users' profiles, club memberships and
+ * event RSVPs go through the elevated door. REGISTRY.md row: "Friend
+ * suggestions read other users' profiles, memberships and RSVPs".
  */
 export async function GET() {
   try {
@@ -20,18 +22,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Use service client for data queries (bypasses RLS)
-    const service = createServiceClient();
+    // Cross-user reads only (see the row named above).
+    const service = getElevatedClient();
 
-    // Get current user's profile
-    const { data: profile } = await service
+    // Get current user's profile ("Users can read own profile")
+    const { data: profile } = await supabase
       .from("users")
       .select("interest_tags, faculty, year")
       .eq("id", user.id)
       .single();
 
     // Get who the user already follows
-    const { data: following } = await service
+    const { data: following } = await supabase
       .from("user_follows")
       .select("following_id")
       .eq("follower_id", user.id);
@@ -42,7 +44,7 @@ export async function GET() {
     followingIds.add(user.id); // exclude self
 
     // Get current user's clubs
-    const { data: myClubMembers } = await service
+    const { data: myClubMembers } = await supabase
       .from("club_members")
       .select("club_id")
       .eq("user_id", user.id);
@@ -50,7 +52,7 @@ export async function GET() {
     const myClubIds = (myClubMembers ?? []).map((m: any) => m.club_id);
 
     // Get current user's club follows
-    const { data: myClubFollows } = await service
+    const { data: myClubFollows } = await supabase
       .from("club_followers")
       .select("club_id")
       .eq("user_id", user.id);
@@ -63,7 +65,7 @@ export async function GET() {
     ];
 
     // Get current user's RSVPs
-    const { data: myRsvps } = await service
+    const { data: myRsvps } = await supabase
       .from("rsvps")
       .select("event_id")
       .eq("user_id", user.id)
@@ -109,8 +111,8 @@ export async function GET() {
         }
       }
 
-      // Also check club followers
-      const { data: clubFollowerMates } = await service
+      // Also check club followers ("Anyone can view follower data")
+      const { data: clubFollowerMates } = await supabase
         .from("club_followers")
         .select("user_id, club_id, clubs(name)")
         .in("club_id", allClubIds)

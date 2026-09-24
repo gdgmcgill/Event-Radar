@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
@@ -27,9 +27,18 @@ export async function POST(
     );
   }
 
-  const serviceClient = createServiceClient();
+  // The appeal review ("Creators can appeal their items"), the status reset
+  // ("Organizers can update own events") and the final re-read ("Organizers
+  // can view own events") run on the caller's cookie client (DEC-49). The
+  // pre-read, the admin lookup and the admin notifications go through the
+  // elevated door.
+  const supabase = ctx.supabase;
 
-  const { data: event, error: fetchError } = await serviceClient
+  // The pre-read runs before the creator check. On the cookie client a
+  // non-creator could not see a rejected or suspended event and would get 404
+  // "Event not found" where this route answers 403 "Forbidden". REGISTRY.md
+  // row: "Read an appealed event before the creator check".
+  const { data: event, error: fetchError } = await getElevatedClient()
     .from("events")
     .select("id, title, created_by, status, appeal_count")
     .eq("id", id)
@@ -50,7 +59,7 @@ export async function POST(
     );
   }
 
-  const { error: reviewError } = await serviceClient
+  const { error: reviewError } = await supabase
     .from("moderation_reviews")
     .insert({
       target_type: "event",
@@ -65,7 +74,7 @@ export async function POST(
     return NextResponse.json({ error: reviewError.message }, { status: 500 });
   }
 
-  const { data: updateData, error: updateError } = await serviceClient
+  const { data: updateData, error: updateError } = await supabase
     .from("events")
     .update({
       status: "pending",
@@ -85,13 +94,16 @@ export async function POST(
   }
 
   try {
-    const { data: admins } = await serviceClient
+    // users shows another user's row only to admins. REGISTRY.md row: "Read
+    // another user's name for appeals and review listings".
+    const { data: admins } = await getElevatedClient()
       .from("users")
       .select("id")
       .contains("roles", ["admin"]);
 
     if (admins && admins.length > 0) {
-      await serviceClient.from("notifications").insert(
+      // REGISTRY.md row: "Notify another user (notifications insert)".
+      await getElevatedClient().from("notifications").insert(
         admins.map((admin) => ({
           user_id: admin.id,
           type: "event_appeal",
@@ -106,7 +118,7 @@ export async function POST(
     console.error("[Appeal] Failed to send admin notifications:", notifErr);
   }
 
-  const { data: updatedEvent } = await serviceClient
+  const { data: updatedEvent } = await supabase
     .from("events")
     .select("*")
     .eq("id", id)

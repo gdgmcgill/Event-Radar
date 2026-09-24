@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { hasRole } from "@/lib/roles";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
@@ -20,7 +20,12 @@ export async function GET(
     return NextResponse.json({ error: "Invalid target type" }, { status: 400 });
   }
 
-  const serviceClient = createServiceClient();
+  // The target read and the review listing run on the caller's cookie client:
+  // "Anyone can read clubs", "Organizers can view own events", "Admins can
+  // view all events", and on moderation_reviews "Creators can view reviews of
+  // their items" and "Admins full access" (DEC-49). Only the author-name
+  // enrichment goes through the elevated door.
+  const supabase = ctx.supabase;
 
   // The admin decision reads the request context's profile slice, the same
   // one read every admin guard uses; the creator path below is unchanged.
@@ -28,7 +33,7 @@ export async function GET(
 
   if (!isAdmin) {
     const table = targetType === "event" ? "events" : "clubs";
-    const { data: item } = await serviceClient
+    const { data: item } = await supabase
       .from(table)
       .select("created_by")
       .eq("id", targetId)
@@ -39,7 +44,7 @@ export async function GET(
     }
   }
 
-  const { data: reviews, error } = await serviceClient
+  const { data: reviews, error } = await supabase
     .from("moderation_reviews")
     .select("*")
     .eq("target_type", targetType)
@@ -53,7 +58,10 @@ export async function GET(
   const authorIds = [...new Set((reviews ?? []).map((r) => r.author_id))];
   let authorMap: Record<string, string> = {};
   if (authorIds.length > 0) {
-    const { data: authors } = await serviceClient
+    // The authors are admins and the creator; a creator cannot read an
+    // admin's users row. REGISTRY.md row: "Read another user's name for
+    // appeals and review listings".
+    const { data: authors } = await getElevatedClient()
       .from("users")
       .select("id, name, email")
       .in("id", authorIds);

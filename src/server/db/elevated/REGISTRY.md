@@ -19,9 +19,15 @@ exception that nobody wrote down is indistinguishable from an oversight.
 | Recompute event popularity scores (rpc update_event_popularity) | `src/app/api/admin/calculate-popularity/route.ts` | writes event_popularity_scores, which are service-role-only by design (F-010); invoked on behalf of an admin, not a row owner | 05 |
 | Change another user's roles or name as an admin | `src/app/api/admin/users/[id]/route.ts` | users has no admin UPDATE policy and the F-006 column grant withholds roles from authenticated; the change is an audited admin action (F-004, F-091) | 05 |
 | Insert admin_audit_log rows for every moderation action | `src/lib/audit.ts` (logAdminAction) | after F-007 no client role may insert; the door is the only writer, so the record cannot be forged by the actor it records | 05 |
-| Notify another user (notifications insert) | `src/app/api/admin/clubs/[id]/route.ts`, `src/app/api/admin/events/[id]/edits/route.ts`, `src/app/api/admin/events/[id]/status/route.ts`, `src/app/api/admin/organizer-requests/[id]/route.ts`, `src/app/api/admin/users/[id]/ban/route.ts` | notifications INSERT is granted to service_role only; a notification for another user cannot be a caller-scoped policy | 05 |
+| Notify another user (notifications insert) | `src/app/api/admin/clubs/[id]/route.ts`, `src/app/api/admin/events/[id]/edits/route.ts`, `src/app/api/admin/events/[id]/status/route.ts`, `src/app/api/admin/organizer-requests/[id]/route.ts`, `src/app/api/admin/users/[id]/ban/route.ts`, `src/app/api/clubs/[id]/appeal/route.ts`, `src/app/api/events/[id]/appeal/route.ts` | notifications INSERT is granted to service_role only; a notification for another user cannot be a caller-scoped policy | 05 |
 | Set another user's roles on approval (club_organizer) | `src/app/api/admin/clubs/[id]/route.ts`, `src/app/api/admin/organizer-requests/[id]/route.ts` | users has no admin UPDATE policy and the F-006 grant withholds roles | 05 |
 | Ban or unban a user (banned_at, ban_expires_at, ban_reason) | `src/app/api/admin/users/[id]/ban/route.ts` | users has no admin UPDATE policy; the ban columns are withheld from authenticated by the F-006 grant | 05 |
+| Club appeal: reset a rejected club to pending | `src/app/api/clubs/[id]/appeal/route.ts` | clubs has no owner UPDATE policy (DEC-41) | 05 |
+| Read another user's name for appeals and review listings (the admins to notify of an appeal; review authors' names) | `src/app/api/clubs/[id]/appeal/route.ts`, `src/app/api/events/[id]/appeal/route.ts`, `src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts` | users has own-row and admin SELECT policies only; a cross-user name read would need a public-read policy that also exposes email and ban columns | 05 |
+| Read an appealed event before the creator check | `src/app/api/events/[id]/appeal/route.ts` | events SELECT shows a rejected or suspended event only to its creator and admins; the route answers a non-creator 403 Forbidden, which needs the row whatever its status (on the cookie client that answer would become 404). Retired if Phase 7's per-table RLS review accepts 404 for non-creators; only the creator/non-creator decision uses the row | 05 |
+| Create a club with its owner membership and the creator's organizer role | `src/app/api/clubs/route.ts` (POST) | clubs INSERT is admin-only, club_members has no self-owner insert, and roles is withheld by the F-006 grant | 05 |
+| Batch score computation (rpc compute_user_scores) | `src/app/api/recommendations/batch/route.ts` | a privileged batch write over every user (F-075 revokes its public EXECUTE in Phase 6) | 05 |
+| Friend suggestions read other users' profiles, memberships and RSVPs | `src/app/api/users/me/suggestions/route.ts` | users has own-row and admin reads only, and club_members shows another user's membership only to that club's owner; the RSVP-mates read stays with them because its events(title) embed names events the events SELECT policy hides from non-creators. The caller's own rows and the world-readable follow tables are read on the cookie client | 05 |
 
 Rows added from Phase 5 (05-05 onward).
 
@@ -44,7 +50,10 @@ so it counts five fewer. Plan 05-15 split the eight admin write and read
 routes between the caller's cookie client (every operation an admin policy
 already permits) and the door (notifications, another user's roles, the ban
 columns); `admin/organizers`, `admin/reports` and `admin/reports/[id]` need no
-door at all.
+door at all. The same plan moved the non-admin sites: `profile/avatar`,
+`profile/banner` and the `users/[id]` self-update run on the cookie client
+only, and the appeals, club creation, review listing, batch scoring and friend
+suggestions keep only the rows above on the door.
 
 ### The audit writer
 

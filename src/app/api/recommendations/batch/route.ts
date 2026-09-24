@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
@@ -13,7 +13,9 @@ export async function POST() {
     const auth = requireRole(ctx, "admin");
     if (!auth.ok) return auth.response;
 
-    const supabase = createServiceClient();
+    // A privileged batch write over every user's scores. REGISTRY.md row:
+    // "Batch score computation (rpc compute_user_scores)".
+    const supabase = getElevatedClient();
 
     const { error } = await supabase.rpc("compute_user_scores");
 

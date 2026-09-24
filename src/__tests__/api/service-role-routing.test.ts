@@ -547,6 +547,312 @@ describe("admin/users/[id]/ban", () => {
   });
 });
 
-// Used by the non-admin family below; referenced here so the persona builder
-// is type-checked with the admin family.
-void asStudent;
+// ─── Non-admin family (Task 2) ─────────────────────────────────────────────
+
+describe("clubs/[id]/appeal POST", () => {
+  type Route = typeof import("@/app/api/clubs/[id]/appeal/route");
+
+  it("club read and appeal review on the cookie client; status reset, admin lookup and notifications through the door", async () => {
+    asStudent(
+      {
+        "clubs.select": {
+          data: { id: CLUB_ID, name: "Routing Club", created_by: STUDENT.id, status: "rejected", appeal_count: 0 },
+        },
+      },
+      {
+        "clubs.update": { data: [{ id: CLUB_ID }] },
+        "users.select": { data: [{ id: ADMIN.id }] },
+      }
+    );
+    const { POST }: Route = await import("@/app/api/clubs/[id]/appeal/route");
+    const res = await POST(
+      jsonRequest(`clubs/${CLUB_ID}/appeal`, "POST", { message: "Please reconsider" }),
+      idParams(CLUB_ID)
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    expect(mockCookie.calls).toEqual(["clubs.select", "moderation_reviews.insert"]);
+    expect(mockElevated.calls).toEqual(["clubs.update", "users.select", "notifications.insert"]);
+  });
+});
+
+describe("events/[id]/appeal POST", () => {
+  type Route = typeof import("@/app/api/events/[id]/appeal/route");
+
+  it("review, status reset and re-read on the cookie client; pre-read, admin lookup and notifications through the door", async () => {
+    asStudent(
+      {
+        "events.update": { data: [{ id: EVENT_ID }] },
+        "events.select": { data: { id: EVENT_ID, title: "Routing Event", status: "pending" } },
+      },
+      {
+        "events.select": {
+          data: { id: EVENT_ID, title: "Routing Event", created_by: STUDENT.id, status: "rejected", appeal_count: 0 },
+        },
+        "users.select": { data: [{ id: ADMIN.id }] },
+      }
+    );
+    const { POST }: Route = await import("@/app/api/events/[id]/appeal/route");
+    const res = await POST(
+      jsonRequest(`events/${EVENT_ID}/appeal`, "POST", { message: "Please reconsider" }),
+      idParams(EVENT_ID)
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      success: true,
+      event: { id: EVENT_ID, title: "Routing Event", status: "pending" },
+    });
+    expect(mockCookie.calls).toEqual([
+      "moderation_reviews.insert",
+      "events.update",
+      "events.select",
+    ]);
+    expect(mockElevated.calls).toEqual(["events.select", "users.select", "notifications.insert"]);
+  });
+
+  it("a non-creator still gets 403 Forbidden (the pre-read sees the row whatever its status)", async () => {
+    asStudent(
+      {},
+      {
+        "events.select": {
+          data: { id: EVENT_ID, title: "Routing Event", created_by: OTHER, status: "rejected", appeal_count: 0 },
+        },
+      }
+    );
+    const { POST }: Route = await import("@/app/api/events/[id]/appeal/route");
+    const res = await POST(
+      jsonRequest(`events/${EVENT_ID}/appeal`, "POST", { message: "Please reconsider" }),
+      idParams(EVENT_ID)
+    );
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "Forbidden" });
+    expect(mockCookie.calls).toEqual([]);
+    expect(mockElevated.calls).toEqual(["events.select"]);
+  });
+});
+
+describe("clubs POST", () => {
+  it("duplicate check and own roles read on the cookie client; club, owner membership and organizer role through the door", async () => {
+    asStudent(
+      {
+        "users.select": { data: { roles: ["user"] } },
+      },
+      {
+        "clubs.insert": { data: { id: CLUB_ID, name: "Routing Club", status: "pending" } },
+      }
+    );
+    const { POST } = await import("@/app/api/clubs/route");
+    const res = await POST(
+      jsonRequest("clubs", "POST", {
+        name: "Routing Club",
+        description: "A club for routing",
+        category: "Academic",
+        contact_email: "club@mail.mcgill.ca",
+      })
+    );
+
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual({ id: CLUB_ID, name: "Routing Club", status: "pending" });
+    expect(mockCookie.calls).toEqual(["clubs.select", "users.select"]);
+    expect(mockElevated.calls).toEqual(["clubs.insert", "club_members.insert", "users.update"]);
+  });
+});
+
+describe("moderation/reviews/[targetType]/[targetId] GET", () => {
+  type Route = typeof import("@/app/api/moderation/reviews/[targetType]/[targetId]/route");
+  const reviewParams = () => ({
+    params: Promise.resolve({ targetType: "event", targetId: EVENT_ID }),
+  });
+
+  it("creator: target gate and reviews on the cookie client; only author names through the door", async () => {
+    asStudent(
+      {
+        "events.select": { data: { created_by: STUDENT.id } },
+        "moderation_reviews.select": {
+          data: [{ id: "r1", author_id: ADMIN.id, action: "rejection", target_id: EVENT_ID }],
+        },
+      },
+      {
+        "users.select": { data: [{ id: ADMIN.id, name: "Routing Admin", email: ADMIN.email }] },
+      }
+    );
+    const { GET }: Route = await import("@/app/api/moderation/reviews/[targetType]/[targetId]/route");
+    const res = await GET(new NextRequest(`${BASE}/moderation/reviews/event/${EVENT_ID}`), reviewParams());
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      reviews: [
+        { id: "r1", author_id: ADMIN.id, action: "rejection", target_id: EVENT_ID, author_name: "Routing Admin" },
+      ],
+    });
+    expect(mockCookie.calls).toEqual(["events.select", "moderation_reviews.select"]);
+    expect(mockElevated.calls).toEqual(["users.select"]);
+  });
+
+  it("admin: reviews on the cookie client; only author names through the door", async () => {
+    asAdmin(
+      {
+        "moderation_reviews.select": {
+          data: [{ id: "r1", author_id: ADMIN.id, action: "rejection", target_id: EVENT_ID }],
+        },
+      },
+      {
+        "users.select": { data: [{ id: ADMIN.id, name: "Routing Admin", email: ADMIN.email }] },
+      }
+    );
+    const { GET }: Route = await import("@/app/api/moderation/reviews/[targetType]/[targetId]/route");
+    const res = await GET(new NextRequest(`${BASE}/moderation/reviews/event/${EVENT_ID}`), reviewParams());
+
+    expect(res.status).toBe(200);
+    expect(mockCookie.calls).toEqual(["moderation_reviews.select"]);
+    expect(mockElevated.calls).toEqual(["users.select"]);
+  });
+});
+
+function uploadRequest(path: string): NextRequest {
+  const form = new FormData();
+  form.append(
+    "file",
+    new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "routing.png", {
+      type: "image/png",
+    })
+  );
+  return new NextRequest(`${BASE}/${path}`, { method: "POST", body: form });
+}
+
+describe("profile/avatar POST", () => {
+  it("storage and the own-row update on the cookie client; nothing through the door", async () => {
+    asStudent({ "users.update": { data: { id: STUDENT.id } } });
+    const { POST } = await import("@/app/api/profile/avatar/route");
+    const res = await POST(uploadRequest("profile/avatar"));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.avatar_url).toMatch(/^http:\/\/storage\.test\/avatars\/.+\/avatar\.png\?t=\d+$/);
+    expect(mockCookie.calls).toEqual([
+      "storage:avatars.upload",
+      "storage:avatars.getPublicUrl",
+      "users.update",
+    ]);
+    expect(mockElevated.calls).toEqual([]);
+  });
+
+  it("a refused own-row update (no row back) is still the 500 it was", async () => {
+    asStudent({});
+    const { POST } = await import("@/app/api/profile/avatar/route");
+    const res = await POST(uploadRequest("profile/avatar"));
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Failed to save avatar URL" });
+    expect(mockElevated.calls).toEqual([]);
+  });
+});
+
+describe("profile/banner POST", () => {
+  it("storage and the own-row update on the cookie client; nothing through the door", async () => {
+    asStudent({ "users.update": { data: { id: STUDENT.id } } });
+    const { POST } = await import("@/app/api/profile/banner/route");
+    const res = await POST(uploadRequest("profile/banner"));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.banner_url).toMatch(/^http:\/\/storage\.test\/banners\/.+\/banner\.png\?t=\d+$/);
+    expect(mockCookie.calls).toEqual([
+      "storage:banners.upload",
+      "storage:banners.getPublicUrl",
+      "users.update",
+    ]);
+    expect(mockElevated.calls).toEqual([]);
+  });
+});
+
+describe("recommendations/batch POST", () => {
+  it("the rpc through the door; nothing else on either client", async () => {
+    asAdmin({}, { "rpc:compute_user_scores": { data: null } });
+    const { POST } = await import("@/app/api/recommendations/batch/route");
+    const res = await POST();
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ success: true, message: "Batch scoring completed" });
+    expect(mockCookie.calls).toEqual([]);
+    expect(mockElevated.calls).toEqual(["rpc:compute_user_scores"]);
+  });
+});
+
+describe("users/[id] PATCH", () => {
+  type Route = typeof import("@/app/api/users/[id]/route");
+
+  it("the self-update on the cookie client; nothing through the door", async () => {
+    const row = { id: STUDENT.id, name: "Routing Student", visibility: "private" };
+    asStudent({ "users.update": { data: row } });
+    const { PATCH }: Route = await import("@/app/api/users/[id]/route");
+    const res = await PATCH(
+      jsonRequest(`users/${STUDENT.id}`, "PATCH", { name: "Routing Student", visibility: "private" }),
+      idParams(STUDENT.id)
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, data: row });
+    expect(mockCookie.calls).toEqual(["users.update"]);
+    expect(mockElevated.calls).toEqual([]);
+  });
+});
+
+describe("users/me/suggestions GET", () => {
+  it("own rows and club followers on the cookie client; other users' profiles, memberships and RSVPs through the door", async () => {
+    asStudent(
+      {
+        "users.select": { data: { interest_tags: ["academic"], faculty: "Science", year: "2027" } },
+        "user_follows.select": { data: [] },
+        "club_members.select": { data: [{ club_id: CLUB_ID }] },
+        "club_followers.select": { data: [] },
+        "rsvps.select": { data: [{ event_id: EVENT_ID }] },
+      },
+      {
+        "club_members.select": { data: [{ user_id: OTHER, club_id: CLUB_ID, clubs: { name: "Routing Club" } }] },
+        "rsvps.select": { data: [] },
+        "users.select": {
+          data: [{ id: OTHER, name: "Other Student", avatar_url: null, faculty: "Science", year: "2026", interest_tags: ["academic"] }],
+        },
+      }
+    );
+    const { GET } = await import("@/app/api/users/me/suggestions/route");
+    const res = await GET();
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      suggestions: [
+        {
+          id: OTHER,
+          name: "Other Student",
+          avatar_url: null,
+          faculty: "Science",
+          year: "2026",
+          reason: "Both in Routing Club",
+          reason_type: "club",
+          score: 4,
+        },
+      ],
+    });
+    expect(mockCookie.calls).toEqual([
+      "users.select",
+      "user_follows.select",
+      "club_members.select",
+      "club_followers.select",
+      "rsvps.select",
+      "club_followers.select",
+    ]);
+    expect(mockElevated.calls).toEqual([
+      "club_members.select",
+      "rsvps.select",
+      "users.select",
+      "users.select",
+      "users.select",
+    ]);
+  });
+});

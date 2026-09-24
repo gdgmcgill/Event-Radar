@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { VALID_INTEREST_TAGS } from "@/lib/constants";
@@ -176,8 +175,10 @@ export async function PATCH(
       );
     }
 
-    const serviceClient = createServiceClient();
-    const { data, error } = await serviceClient
+    // The caller's own row on the cookie client: "Users can update own
+    // profile" permits it, and every column this payload can carry is in the
+    // F-006 column grant (DEC-49).
+    const { data, error } = await ctx.supabase
       .from("users")
       .update(updatePayload)
       .eq("id", id)

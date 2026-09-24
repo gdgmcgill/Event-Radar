@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { sanitizeText } from "@/lib/sanitize";
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
@@ -86,11 +86,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Use service client to bypass RLS for role mutation
-  const serviceClient = createServiceClient();
+  // The duplicate-name read ("Anyone can read clubs") and the caller's own
+  // roles read ("Users can read own profile") run on the cookie client
+  // (DEC-49). The club insert, the owner membership and the organizer role go
+  // through the elevated door. REGISTRY.md row: "Create a club with its owner
+  // membership and the creator's organizer role".
+  const supabase = ctx.supabase;
+  const elevated = getElevatedClient();
 
   // Check for duplicate club name (case-insensitive, non-rejected clubs only)
-  const { data: existingClub } = await serviceClient
+  const { data: existingClub } = await supabase
     .from("clubs")
     .select("id, name")
     .ilike("name", name.trim())
@@ -105,7 +110,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 1. Create the club
-  const { data: club, error: clubError } = await serviceClient
+  const { data: club, error: clubError } = await elevated
     .from("clubs")
     .insert({
       name: name.trim(),
@@ -129,12 +134,12 @@ export async function POST(request: NextRequest) {
   }
 
   // 2. Add creator as owner
-  await serviceClient
+  await elevated
     .from("club_members")
     .insert({ user_id: user.id, club_id: club.id, role: "owner" });
 
   // 3. Add club_organizer role if not already present
-  const { data: profile } = await serviceClient
+  const { data: profile } = await supabase
     .from("users")
     .select("roles")
     .eq("id", user.id)
@@ -142,7 +147,7 @@ export async function POST(request: NextRequest) {
 
   const currentRoles = (profile?.roles as ("user" | "admin" | "club_organizer")[]) || ["user"];
   if (!currentRoles.includes("club_organizer")) {
-    await serviceClient
+    await elevated
       .from("users")
       .update({ roles: [...currentRoles, "club_organizer"] as ("user" | "admin" | "club_organizer")[] })
       .eq("id", user.id);

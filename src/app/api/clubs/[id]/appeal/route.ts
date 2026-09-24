@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
@@ -27,9 +27,13 @@ export async function POST(
     );
   }
 
-  const serviceClient = createServiceClient();
+  // The club read ("Anyone can read clubs") and the appeal review ("Creators
+  // can appeal their items") run on the caller's cookie client (DEC-49). The
+  // status reset, the admin lookup and the admin notifications go through the
+  // elevated door.
+  const supabase = ctx.supabase;
 
-  const { data: club, error: fetchError } = await serviceClient
+  const { data: club, error: fetchError } = await supabase
     .from("clubs")
     .select("id, name, created_by, status, appeal_count")
     .eq("id", id)
@@ -50,7 +54,7 @@ export async function POST(
     );
   }
 
-  const { error: reviewError } = await serviceClient
+  const { error: reviewError } = await supabase
     .from("moderation_reviews")
     .insert({
       target_type: "club",
@@ -65,7 +69,9 @@ export async function POST(
     return NextResponse.json({ error: reviewError.message }, { status: 500 });
   }
 
-  const { data: updateData, error: updateError } = await serviceClient
+  // clubs has no owner UPDATE policy (DEC-41). REGISTRY.md row: "Club appeal:
+  // reset a rejected club to pending".
+  const { data: updateData, error: updateError } = await getElevatedClient()
     .from("clubs")
     .update({
       status: "pending",
@@ -85,13 +91,16 @@ export async function POST(
   }
 
   try {
-    const { data: admins } = await serviceClient
+    // users shows another user's row only to admins. REGISTRY.md row: "Read
+    // another user's name for appeals and review listings".
+    const { data: admins } = await getElevatedClient()
       .from("users")
       .select("id")
       .contains("roles", ["admin"]);
 
     if (admins && admins.length > 0) {
-      await serviceClient.from("notifications").insert(
+      // REGISTRY.md row: "Notify another user (notifications insert)".
+      await getElevatedClient().from("notifications").insert(
         admins.map((admin) => ({
           user_id: admin.id,
           type: "club_appeal",

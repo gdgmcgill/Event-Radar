@@ -159,3 +159,84 @@ PGRST200 on either client and the route answers 500 today, before and after this
 $ curl -s "$API_URL/rest/v1/event_reports?select=*,event:events!inner(id,title,status,deleted_at),reporter:users!event_reports_reporter_id_fkey(id,display_name,avatar_url)&limit=1" (anon key)
 {"code":"PGRST200","details":"Searched for a foreign key relationship between 'event_reports' and 'users' using the hint 'event_reports_reporter_id_fkey' in the schema 'public', but no matches were found.","hint":"Perhaps you meant 'events' instead of 'users'.","message":"Could not find a relationship between 'event_reports' and 'users' in the schema cache"}
 Candidate deferred item for 05-19 to register.
+
+## 5. Task 2 — the non-admin sites
+
+Cell-by-cell verdicts (same two policy sources as § 1; the caller is the signed-in student unless
+stated):
+
+| Operation | Policy | Verdict |
+|---|---|---|
+| clubs SELECT (appeal, duplicate-name check, review gate) | "Anyone can read clubs" USING true | cookie |
+| moderation_reviews INSERT action=appeal by the creator | "Creators can appeal their items" CHECK action='appeal' AND author_id=auth.uid() AND the target's created_by=auth.uid() (the handler checks the same before inserting) | cookie |
+| clubs UPDATE (appeal status reset) | none for owners: "Admins can update clubs" only (DEC-41) | DOOR (row) |
+| events UPDATE (appeal status reset, RETURNING id) | "Organizers can update own events" USING/CHECK auth.uid()=created_by | cookie |
+| events SELECT after the reset (creator) | "Organizers can view own events" | cookie |
+| events SELECT before the creator check | permitted only to the creator/admins for a non-approved event; a non-creator must still get 403, not 404 | DOOR (row) — see § 6 deviation |
+| users SELECT of the admins / review authors | own-row and admin SELECT only | DOOR (row) |
+| notifications INSERT to the admins | service_role only | DOOR (existing row, callers added) |
+| clubs INSERT, club_members owner INSERT, users roles UPDATE (club creation) | "Admins can insert clubs" only; club_members INSERT admin or invitee-with-open-invite (organizer); roles withheld by F-006 | DOOR (row) |
+| users SELECT own roles (club creation) | "Users can read own profile" | cookie |
+| events SELECT created_by (review gate, creator path) | "Organizers can view own events"; a non-creator reads 0 rows and gets the same 403 as before (`!item`) | cookie |
+| moderation_reviews SELECT (creator / admin) | "Creators can view reviews of their items", "Admins full access" | cookie |
+| users UPDATE own avatar_url / banner_url / profile columns, RETURNING | "Users can update own profile" USING auth.uid()=id; every written column is in 05-16's column grant (production: table-level grant today) | cookie |
+| rpc compute_user_scores | EXECUTE is granted to anon/authenticated today (F-075) but it is a privileged batch write | DOOR (row) |
+| suggestions: own users row, own user_follows, own club_members, own club_followers, own rsvps | own-row policies / "Anyone can view follows", "Anyone can view follower data", "Anyone can view rsvps" | cookie |
+| suggestions: club_followers of the caller's clubs (clubs(name) embed) | "Anyone can view follower data", clubs public | cookie |
+| suggestions: club_members of the caller's clubs | own memberships and club owners only | DOOR (row) |
+| suggestions: rsvps of the caller's events with events(title) embed | rsvps public, but the embed hides non-approved events from non-creators, which would change the reason text | DOOR (row) |
+| suggestions: other users' profiles (tags, faculty, final profile read) | own-row and admin only | DOOR (row) |
+
+$ grep -rn "createServiceClient\|lib/supabase/service\|serviceClient" <the nine files>
+exit=1   (no match)
+profile/avatar, profile/banner and users/[id] contain no getElevatedClient() (cookie only).
+
+REGISTRY.md rows added: club appeal status reset; cross-user name reads (appeals and review
+listings); read an appealed event before the creator check (one row beyond the plan's list, § 6);
+create a club with its owner membership and organizer role; batch score computation; friend
+suggestions. The two appeal routes were added to the existing "Notify another user" row's callers.
+
+Routing suite extended to all seventeen route files (24 cases). Mutation check: the nine
+pre-migration sources put back temporarily:
+$ npx jest --ci src/__tests__/api/service-role-routing.test.ts
+Tests:       10 failed, 14 passed, 24 total
+exit=1
+The two Task 2 rows that stay green against the old sources are expected: recommendations/batch's
+rpc was already on the service client (fake B either way), and the events-appeal non-creator 403
+row pins preserved behaviour. The twelve Task 1 rows are green because those files were already
+migrated. Fixed sources restored, each `cmp` identical (9 × "restored").
+
+Task 2 verify block:
+$ npx jest --ci
+Test Suites: 71 passed, 71 total
+Tests:       1325 passed, 1325 total
+exit=0
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=3 delta=-22
+PASS: the live census is a subset of the committed allow-list
+ratchet exit=0
+$ npm run lint
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+exit=0 (no warning in any file this plan touched)
+$ npx tsc --noEmit
+exit=0
+$ node scripts/check-characterization-tags.mjs --all
+ok 34 files
+tags exit=0
+PRESERVE suites unedited: `git diff --stat HEAD -- src/__tests__ src/app/auth src/proxy*.ts src/lib`
+shows only src/__tests__/api/service-role-routing.test.ts (this plan's own suite).
+
+## 6. Deviations recorded for Task 2
+
+1. events/[id]/appeal keeps its pre-read on the door, with its own REGISTRY row. The plan names
+   the events update and the review for the cookie client and does not place the pre-read. On the
+   cookie client a non-creator cannot see a rejected or suspended event, so the route's
+   403 {"error":"Forbidden"} would become 404 {"error":"Event not found"}: a wire change with no
+   finding behind it. The pre-read therefore stays privileged; the routing suite pins the 403 and
+   that no cookie-client call happens on the non-creator path.
+2. The suggestions row does not say "follows". The caller's own user_follows and the club
+   follower lists are world-readable ("Anyone can view follows", "Anyone can view follower data"),
+   so those reads moved to the cookie client and the row names only what still needs the door.
+3. The cross-user read row's operation name is widened to say what is read: the admins to notify
+   of an appeal (ids) and review authors' names. The reason text is the plan's.
