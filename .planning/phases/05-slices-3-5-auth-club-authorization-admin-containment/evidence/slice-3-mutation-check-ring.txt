@@ -1,0 +1,1164 @@
+Slice 3 ring mutation cycles — plan 05-02
+**Plan:** 05-02 · **Phase:** 05 · **Recorded:** 2026-09-24T04:46:04Z
+HEAD at capture=c163b2c124cc6616205d76808fcb9b7a263c93be (Tasks 1-2 committed: e75cb27, c163b2c)
+
+Format follows Phase 4's evidence/slice-2-mutation-check.txt. Each cycle: the mutation (the first
+occurrence of the exact text, asserted present; the driver aborts rather than guess), `git diff` of the
+mutated SOURCE file (never a test), the pinned suite run under the mutation (the indented ✕ lines name the
+failing tests), the restore with `git checkout --`, `git diff --exit-code` (git_diff_exit=0 means
+byte-identical), and the green re-run. jest_exit is Jest's own exit code, taken from PIPESTATUS under bash.
+NOTE: each "$ npx jest … | grep -E "✕|✓|…"" line quotes the grep pattern, so it contains one ✕ glyph
+itself; the failing tests are the indented ✕ lines below it.
+
+The plan's eight named cycles are 1, 2, 3, 4, 5, 6, 7 and 8. The suffixed cycles strengthen coverage:
+  2b  PRESERVE case 5 (expired suspension admitted): the expiry comparison inverted
+  2c  PRESERVE case 6 (ban-exempt /auth/signout): the path dropped from BAN_EXEMPT_PATHS
+  3b  PRESERVE case 8 (limiter first): the limiter moved after client construction
+  5b  DEFECT c and d (F-088 fail-open ban read): a null profile counted as banned
+  5d  DEFECT g (F-089 stale cookie): the predicate ignores the cookie
+  5e  DEFECT f (F-089 cookie deleted): the predicate no longer needs the cookie
+      (5e also reddens DEFECT c and d's GET /my-events case: an always-true predicate sends those
+       users to /onboarding, so their "no Location" assertion fails too. Expected, and noted so the
+       extra ✕ lines are not read as an unexplained failure.)
+Two CONTROLS apply a fix-shaped mutation and expect the matching PRESERVE assertions to stay GREEN:
+  5c  the F-062 fix shape (403 JSON under /api/): only DEFECT e goes red; all 24 PRESERVE proxy tests stay green
+  6b  a fixed next rule (/-prefixed, not //, not /\): only the three F-077 hostile cases go red; the
+      same-origin control and all 8 tests of the unedited route.test.ts stay green
+That is the claim "no slice-3 fix can move a PRESERVE assertion", observed rather than asserted.
+
+CYCLE 6c IS A MEASUREMENT FOR 05-05, not a pin check. It applies F-077's recommended_fix exactly as the
+register words it (raw.startsWith("/") && !raw.startsWith("//")). Absolute and protocol-relative go red.
+The slash-backslash case STAYS GREEN: under that fix, next=/\evil.test/x still redirects to
+https://evil.test/x, because WHATWG URL parsing treats \ as / for special schemes. The fix 05-05 lands must
+also reject a leading "/\" (cycle 6b's rule). The route-defect.test.ts slash-backslash case is the pin
+that catches the incomplete fix.
+
+Summary. Every cycle below went red under its mutation and was restored with git_diff_exit=0:
+  cycles with at least one ✕ line: 1 2 2b 2c 3 3b 4 5 5b 5c 5d 5e 6 6b 6c 7 8 
+  restore lines with git_diff_exit=0: 18 (the 16 edit cycles, cycle 8's whole-src/ check after the probe file is deleted, and the FINAL check)
+
+Driver (scratchpad, not committed): /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/d6f0f2c2-0ba5-4efb-b3ce-b5d843e8e77d/scratchpad/mutate.cjs
+$ node …/scratchpad/mutate.cjs
+
+==============================================================================
+CYCLE 1 — proxy: delete the searchParams.set("next", path) line
+==============================================================================
+expected: RED — PRESERVE case 1 (every protected route's next assertion)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..4ead86e 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -116,7 +116,6 @@ export async function proxy(request: NextRequest) {
+     const signInUrl = request.nextUrl.clone();
+     signInUrl.pathname = "/";
+     signInUrl.searchParams.set("signin", "required");
+-    signInUrl.searchParams.set("next", path);
+     return NextResponse.redirect(signInUrl);
+   }
+ 
+exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved (1 ms)
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (1 ms)
+      ✕ /my-events → 307 to / with signin=required and next=<path> (2 ms)
+      ✕ /create-event → 307 to / with signin=required and next=<path>
+      ✕ /notifications → 307 to / with signin=required and next=<path>
+      ✕ /profile → 307 to / with signin=required and next=<path>
+      ✕ /settings → 307 to / with signin=required and next=<path>
+      ✕ /my-clubs → 307 to / with signin=required and next=<path> (1 ms)
+      ✕ /invites → 307 to / with signin=required and next=<path>
+      ✕ /friends → 307 to / with signin=required and next=<path>
+      ✕ /profile/edit → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       9 failed, 15 passed, 24 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200 (1 ms)
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+jest_exit=0
+
+==============================================================================
+CYCLE 2 — proxy: the banned redirect pathname becomes /
+==============================================================================
+expected: RED — PRESERVE case 4 (both banned personas)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..bb90c37 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -105,7 +105,7 @@ export async function proxy(request: NextRequest) {
+ 
+     if (isBanned) {
+       const bannedUrl = request.nextUrl.clone();
+-      bannedUrl.pathname = "/banned";
++      bannedUrl.pathname = "/";
+       return NextResponse.redirect(bannedUrl);
+     }
+   }
+exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200 (1 ms)
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✕ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved (1 ms)
+    ✕ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved (1 ms)
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 22 passed, 24 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200 (1 ms)
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location (1 ms)
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path>
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+jest_exit=0
+
+==============================================================================
+CYCLE 2b — proxy: the suspension expiry comparison is inverted
+==============================================================================
+expected: RED — PRESERVE case 5 (expired suspension admitted) and case 4 (suspended_active)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..34e78ac 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -100,7 +100,7 @@ export async function proxy(request: NextRequest) {
+       .single();
+ 
+     if (banProfile?.banned_at) {
+-      isBanned = !banProfile.ban_expires_at || new Date(banProfile.ban_expires_at) > new Date();
++      isBanned = !banProfile.ban_expires_at || new Date(banProfile.ban_expires_at) < new Date();
+     }
+ 
+     if (isBanned) {
+exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id (1 ms)
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✕ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✕ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location (1 ms)
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path>
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path>
+      ✓ /friends → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 22 passed, 24 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id (1 ms)
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (2 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path>
+      ✓ /settings → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path>
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding (1 ms)
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+jest_exit=0
+
+==============================================================================
+CYCLE 2c — proxy: /auth/signout drops out of BAN_EXEMPT_PATHS
+==============================================================================
+expected: RED — PRESERVE case 6 for /auth/signout
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..dcb5a0f 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -89,7 +89,7 @@ export async function proxy(request: NextRequest) {
+   const path = request.nextUrl.pathname;
+ 
+   // Ban enforcement: redirect banned users to /banned
+-  const BAN_EXEMPT_PATHS = ["/banned", "/auth/signout", "/auth/callback"];
++  const BAN_EXEMPT_PATHS = ["/banned", "/auth/callback"];
+   if (user && !BAN_EXEMPT_PATHS.some((p) => path === p || path.startsWith(p + "/"))) {
+     let isBanned = false;
+ 
+exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id (1 ms)
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✕ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (1 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (2 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path>
+      ✓ /friends → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 23 passed, 24 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id (1 ms)
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location (1 ms)
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (2 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path>
+      ✓ /friends → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+jest_exit=0
+
+==============================================================================
+CYCLE 3 — proxy: the onboarding exemption path !== "/onboarding" is inverted
+==============================================================================
+expected: RED — PRESERVE case 7 (the / redirect and the /onboarding exemption)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..f73f4a2 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -126,7 +126,7 @@ export async function proxy(request: NextRequest) {
+   if (
+     needsOnboarding &&
+     user &&
+-    path !== "/onboarding" &&
++    path === "/onboarding" &&
+     !path.startsWith("/api/") &&
+     !path.startsWith("/auth/")
+   ) {
+exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (2 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path>
+      ✓ /notifications → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /profile → 307 to / with signin=required and next=<path>
+      ✓ /settings → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path>
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✕ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding (1 ms)
+      ✕ the same user on /onboarding is not sent to /onboarding (1 ms)
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 22 passed, 24 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200 (1 ms)
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events (1 ms)
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (2 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+jest_exit=0
+
+==============================================================================
+CYCLE 3b — proxy: applyApiRateLimit moves after client construction (limiter no longer first)
+==============================================================================
+expected: RED — PRESERVE case 8 (a client was constructed for the 429'd request)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..d9a90dd 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -4,8 +4,6 @@ import { applyApiRateLimit } from "./middlewareRateLimit";
+ 
+ export async function proxy(request: NextRequest) {
+   // Apply public API rate limits before any auth work
+-  const rateLimitResponse = applyApiRateLimit(request);
+-  if (rateLimitResponse) return rateLimitResponse;
+ 
+   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+@@ -51,6 +49,9 @@ export async function proxy(request: NextRequest) {
+   // IMPORTANT: Do not add any logic between createServerClient and
+   // supabase.auth.getUser().
+ 
++  const rateLimitResponse = applyApiRateLimit(request);
++  if (rateLimitResponse) return rateLimitResponse;
++
+   const {
+     data: { user },
+   } = await supabase.auth.getUser();
+exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200 (1 ms)
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location (1 ms)
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✕ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (2 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path>
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 23 passed, 24 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved (1 ms)
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (1 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (2 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path>
+      ✓ /notifications → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /profile → 307 to / with signin=required and next=<path>
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /invites → 307 to / with signin=required and next=<path>
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected (1 ms)
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding (1 ms)
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+jest_exit=0
+
+==============================================================================
+CYCLE 4 — proxy: the env pass-through return becomes a throw
+==============================================================================
+expected: RED — DEFECT a (F-003)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..4012f71 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -12,7 +12,7 @@ export async function proxy(request: NextRequest) {
+ 
+   // If Supabase env vars are missing, pass through without auth
+   if (!supabaseUrl || !supabaseAnonKey) {
+-    return NextResponse.next({ request });
++    throw new Error("mutation: supabase env unbound");
+   }
+ 
+   try {
+exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged (1 ms)
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through (1 ms)
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON (1 ms)
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through (1 ms)
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON (1 ms)
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+jest_exit=0
+
+==============================================================================
+CYCLE 5 — proxy: the outer catch rethrows
+==============================================================================
+expected: RED — DEFECT b (F-088 catch pass-through)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..f7450ab 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -140,7 +140,7 @@ export async function proxy(request: NextRequest) {
+   } catch (e) {
+     // If middleware fails, pass through rather than 500ing the entire site
+     console.error("[Middleware] Error:", e);
+-    return NextResponse.next({ request });
++    throw e;
+   }
+ }
+ 
+exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✕ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged (1 ms)
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON (1 ms)
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged (1 ms)
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out (1 ms)
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through (1 ms)
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+jest_exit=0
+
+==============================================================================
+CYCLE 5b — proxy: a failed or empty ban read counts as banned (fail closed)
+==============================================================================
+expected: RED — DEFECT c and both d cases (F-088 fail-open ban read)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..f9d0b36 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -99,6 +99,7 @@ export async function proxy(request: NextRequest) {
+       .eq("id", user.id)
+       .single();
+ 
++    if (!banProfile) isBanned = true;
+     if (banProfile?.banned_at) {
+       isBanned = !banProfile.ban_expires_at || new Date(banProfile.ban_expires_at) > new Date();
+     }
+exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged (1 ms)
+    ✕ F-088: a users read failing with XX000 is read as not banned — /my-events passed through (1 ms)
+    ✕ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out (1 ms)
+    ✕ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 5 passed, 8 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through (1 ms)
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out (1 ms)
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+jest_exit=0
+
+==============================================================================
+CYCLE 5c — proxy: a banned /api/* call is answered 403 JSON (the F-062 fix shape)
+==============================================================================
+expected: RED — DEFECT e (F-062) only; CONTROL: PRESERVE stays GREEN (page redirect unchanged)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..a2a2558 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -106,6 +106,9 @@ export async function proxy(request: NextRequest) {
+     if (isBanned) {
+       const bannedUrl = request.nextUrl.clone();
+       bannedUrl.pathname = "/banned";
++      if (path.startsWith("/api/")) {
++        return NextResponse.json({ error: "Account suspended" }, { status: 403 });
++      }
+       return NextResponse.redirect(bannedUrl);
+     }
+   }
+exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200 (1 ms)
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events (1 ms)
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (2 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path> (2 ms)
+      ✓ /create-event → 307 to / with signin=required and next=<path>
+      ✓ /notifications → 307 to / with signin=required and next=<path>
+      ✓ /profile → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /settings → 307 to / with signin=required and next=<path>
+      ✓ /my-clubs → 307 to / with signin=required and next=<path>
+      ✓ /invites → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✕ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON (1 ms)
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       1 failed, 31 passed, 32 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts src/proxy-characterization.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged (1 ms)
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out (1 ms)
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding (1 ms)
+    ✓ re-derives a non-empty PROTECTED_ROUTES list from the source literal (1 ms)
+    ✓ 2. anonymous GET / is passed through: no Location, status 200
+    ✓ 2. anonymous GET /api/events is passed through: no Location, status 200 (1 ms)
+    ✓ 3. an active user on /my-events is passed through after exactly one users read keyed on its id
+    ✓ 4. banned_permanent GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 4. suspended_active GET /events?x=1 → 307 to /banned with the query string preserved
+    ✓ 5. a suspension whose expiry has passed is admitted on /my-events
+    ✓ 6. a permanently banned user on /banned: no users read, no Location
+    ✓ 6. a permanently banned user on /auth/signout: no users read, no Location
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (1 ms)
+      ✓ /my-events → 307 to / with signin=required and next=<path>
+      ✓ /create-event → 307 to / with signin=required and next=<path>
+      ✓ /notifications → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /profile → 307 to / with signin=required and next=<path>
+      ✓ /settings → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /my-clubs → 307 to / with signin=required and next=<path> (1 ms)
+      ✓ /invites → 307 to / with signin=required and next=<path>
+      ✓ /friends → 307 to / with signin=required and next=<path>
+      ✓ /profile/edit → 307 to / with signin=required and next=<path>
+      ✓ /profiles is not a protected prefix: anonymous GET is not redirected
+      ✓ an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding (1 ms)
+      ✓ the same user on /onboarding is not sent to /onboarding
+      ✓ the same user on /api/events is not sent to /onboarding
+      ✓ the same user on /auth/signout is not sent to /onboarding
+Test Suites: 2 passed, 2 total
+Tests:       32 passed, 32 total
+jest_exit=0
+
+==============================================================================
+CYCLE 5d — proxy: the onboarding predicate ignores the cookie
+==============================================================================
+expected: RED — DEFECT g (F-089 stale cookie)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..d834089 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -121,7 +121,7 @@ export async function proxy(request: NextRequest) {
+   }
+ 
+   // Onboarding guard: redirect to /onboarding if cookie is set
+-  const needsOnboarding = request.cookies.get("needs_onboarding")?.value === "1";
++  const needsOnboarding = false as boolean;
+ 
+   if (
+     needsOnboarding &&
+exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged (1 ms)
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out (1 ms)
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✕ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged (1 ms)
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out (1 ms)
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+jest_exit=0
+
+==============================================================================
+CYCLE 5e — proxy: the onboarding predicate is always true (cookie no longer required)
+==============================================================================
+expected: RED — DEFECT f (F-089 cookie deleted, passed through)
+# mutation applied: first of 1 occurrence(s) replaced in src/proxy.ts
+
+$ git diff -- 'src/proxy.ts'; echo "exit=$?"
+diff --git a/src/proxy.ts b/src/proxy.ts
+index e006e42..78ebfea 100644
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -121,7 +121,7 @@ export async function proxy(request: NextRequest) {
+   }
+ 
+   // Onboarding guard: redirect to /onboarding if cookie is set
+-  const needsOnboarding = request.cookies.get("needs_onboarding")?.value === "1";
++  const needsOnboarding = true as boolean;
+ 
+   if (
+     needsOnboarding &&
+exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged (1 ms)
+    ✕ F-088: a users read failing with XX000 is read as not banned — /my-events passed through (1 ms)
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✕ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON (1 ms)
+    ✕ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 5 passed, 8 total
+jest_exit=1
+
+$ git checkout -- 'src/proxy.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/proxy.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/proxy-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✓ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged
+    ✓ F-088: a users read failing with XX000 is read as not banned — /my-events passed through (1 ms)
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✓ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out
+    ✓ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON (1 ms)
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+jest_exit=0
+
+==============================================================================
+CYCLE 6 — callback: the next read becomes the constant "/"
+==============================================================================
+expected: RED — DEFECT F-077 hostile-value cases (and the control)
+# mutation applied: first of 1 occurrence(s) replaced in src/app/auth/callback/route.ts
+
+$ git diff -- 'src/app/auth/callback/route.ts'; echo "exit=$?"
+diff --git a/src/app/auth/callback/route.ts b/src/app/auth/callback/route.ts
+index 850c449..cf388d2 100644
+--- a/src/app/auth/callback/route.ts
++++ b/src/app/auth/callback/route.ts
+@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
+   stage = "parse_request";
+   const requestUrl = new URL(request.url);
+   const code = requestUrl.searchParams.get("code");
+-  const next = requestUrl.searchParams.get("next") ?? "/";
++  const next = "/";
+   const errorParam = requestUrl.searchParams.get("error");
+   const errorDescription = requestUrl.searchParams.get("error_description");
+ 
+exit=0
+
+$ npx jest --ci --verbose src/app/auth/callback/route-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-077: an absolute next (https://evil.test/x) redirects off-origin to https://evil.test (29 ms)
+    ✕ F-077: a protocol-relative next (//evil.test/x) redirects off-origin to host evil.test (11 ms)
+    ✕ F-077: a slash-backslash next (/\evil.test/x) redirects off-origin to host evil.test (8 ms)
+    ✕ control: a same-origin next (/my-events) is honoured on callback.test (9 ms)
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 4 total
+jest_exit=1
+
+$ git checkout -- 'src/app/auth/callback/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/auth/callback/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/app/auth/callback/route-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-077: an absolute next (https://evil.test/x) redirects off-origin to https://evil.test (26 ms)
+    ✓ F-077: a protocol-relative next (//evil.test/x) redirects off-origin to host evil.test (11 ms)
+    ✓ F-077: a slash-backslash next (/\evil.test/x) redirects off-origin to host evil.test (8 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (9 ms)
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+jest_exit=0
+
+==============================================================================
+CYCLE 6b — callback: CONTROL — a fixed next rule (/-prefixed, not //, not /\)
+==============================================================================
+expected: RED — the three F-077 hostile cases only; CONTROL: the same-origin control and all 8 PRESERVE callback tests stay GREEN
+# mutation applied: first of 1 occurrence(s) replaced in src/app/auth/callback/route.ts
+
+$ git diff -- 'src/app/auth/callback/route.ts'; echo "exit=$?"
+diff --git a/src/app/auth/callback/route.ts b/src/app/auth/callback/route.ts
+index 850c449..815ea00 100644
+--- a/src/app/auth/callback/route.ts
++++ b/src/app/auth/callback/route.ts
+@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
+   stage = "parse_request";
+   const requestUrl = new URL(request.url);
+   const code = requestUrl.searchParams.get("code");
+-  const next = requestUrl.searchParams.get("next") ?? "/";
++  const rawNext = requestUrl.searchParams.get("next") ?? "/";
++  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\") ? rawNext : "/";
+   const errorParam = requestUrl.searchParams.get("error");
+   const errorDescription = requestUrl.searchParams.get("error_description");
+ 
+exit=0
+
+$ npx jest --ci --verbose src/app/auth/callback/route-defect.test.ts src/app/auth/callback/route.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-077: an absolute next (https://evil.test/x) redirects off-origin to https://evil.test (26 ms)
+    ✕ F-077: a protocol-relative next (//evil.test/x) redirects off-origin to host evil.test (11 ms)
+    ✕ F-077: a slash-backslash next (/\evil.test/x) redirects off-origin to host evil.test (9 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (8 ms)
+    ✓ passes an inbound provider error through without attempting an exchange (8 ms)
+    ✓ redirects with error=no_code when the code parameter is absent (8 ms)
+    ✓ redirects with error=auth_failed and the provider message when the exchange fails (9 ms)
+    ✓ rejects a non-McGill address, signs it out, and deletes the orphaned auth user (11 ms)
+    ✓ upserts the profile and routes a new McGill user to /onboarding (8 ms)
+    ✓ routes an already-onboarded McGill user to the next destination, with no onboarding cookie (8 ms)
+    ✓ appends admin to the existing roles for an address in ADMIN_EMAILS (8 ms)
+    ✓ skips profile sync entirely and still admits the user when the service key is absent (8 ms)
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       3 failed, 9 passed, 12 total
+jest_exit=1
+
+$ git checkout -- 'src/app/auth/callback/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/auth/callback/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/app/auth/callback/route-defect.test.ts src/app/auth/callback/route.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-077: an absolute next (https://evil.test/x) redirects off-origin to https://evil.test (34 ms)
+    ✓ F-077: a protocol-relative next (//evil.test/x) redirects off-origin to host evil.test (14 ms)
+    ✓ F-077: a slash-backslash next (/\evil.test/x) redirects off-origin to host evil.test (10 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (9 ms)
+    ✓ passes an inbound provider error through without attempting an exchange (10 ms)
+    ✓ redirects with error=no_code when the code parameter is absent (8 ms)
+    ✓ redirects with error=auth_failed and the provider message when the exchange fails (8 ms)
+    ✓ rejects a non-McGill address, signs it out, and deletes the orphaned auth user (12 ms)
+    ✓ upserts the profile and routes a new McGill user to /onboarding (9 ms)
+    ✓ routes an already-onboarded McGill user to the next destination, with no onboarding cookie (10 ms)
+    ✓ appends admin to the existing roles for an address in ADMIN_EMAILS (9 ms)
+    ✓ skips profile sync entirely and still admits the user when the service key is absent (9 ms)
+Test Suites: 2 passed, 2 total
+Tests:       12 passed, 12 total
+jest_exit=0
+
+==============================================================================
+CYCLE 6c — callback: MEASUREMENT — F-077's literal recommended fix (/-prefixed and not //, no backslash rule)
+==============================================================================
+expected: RED — absolute and protocol-relative only; the slash-backslash case stays GREEN, i.e. still off-origin under the register's recommended fix
+# mutation applied: first of 1 occurrence(s) replaced in src/app/auth/callback/route.ts
+
+$ git diff -- 'src/app/auth/callback/route.ts'; echo "exit=$?"
+diff --git a/src/app/auth/callback/route.ts b/src/app/auth/callback/route.ts
+index 850c449..bef7c25 100644
+--- a/src/app/auth/callback/route.ts
++++ b/src/app/auth/callback/route.ts
+@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
+   stage = "parse_request";
+   const requestUrl = new URL(request.url);
+   const code = requestUrl.searchParams.get("code");
+-  const next = requestUrl.searchParams.get("next") ?? "/";
++  const rawNext = requestUrl.searchParams.get("next") ?? "/";
++  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+   const errorParam = requestUrl.searchParams.get("error");
+   const errorDescription = requestUrl.searchParams.get("error_description");
+ 
+exit=0
+
+$ npx jest --ci --verbose src/app/auth/callback/route-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-077: an absolute next (https://evil.test/x) redirects off-origin to https://evil.test (27 ms)
+    ✕ F-077: a protocol-relative next (//evil.test/x) redirects off-origin to host evil.test (11 ms)
+    ✓ F-077: a slash-backslash next (/\evil.test/x) redirects off-origin to host evil.test (9 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (9 ms)
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 passed, 4 total
+jest_exit=1
+
+$ git checkout -- 'src/app/auth/callback/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/auth/callback/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/app/auth/callback/route-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-077: an absolute next (https://evil.test/x) redirects off-origin to https://evil.test (26 ms)
+    ✓ F-077: a protocol-relative next (//evil.test/x) redirects off-origin to host evil.test (11 ms)
+    ✓ F-077: a slash-backslash next (/\evil.test/x) redirects off-origin to host evil.test (8 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (8 ms)
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+jest_exit=0
+
+==============================================================================
+CYCLE 7 — src/lib/supabase/server.ts: remove one ! (the URL assertion)
+==============================================================================
+expected: RED — the env census (one pair gone)
+# mutation applied: first of 1 occurrence(s) replaced in src/lib/supabase/server.ts
+
+$ git diff -- 'src/lib/supabase/server.ts'; echo "exit=$?"
+diff --git a/src/lib/supabase/server.ts b/src/lib/supabase/server.ts
+index b8b189c..a596f5d 100644
+--- a/src/lib/supabase/server.ts
++++ b/src/lib/supabase/server.ts
+@@ -11,7 +11,7 @@ export async function createClient() {
+   const cookieStore = await cookies();
+ 
+   return createServerClient<Database>(
+-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
++    process.env.NEXT_PUBLIC_SUPABASE_URL,
+     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+     {
+       cookies: {
+exit=0
+
+$ npx jest --ci --verbose src/lib/__tests__/env-assertions-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-003: the census equals today's 15 file:VARIABLE pairs exactly (9 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (2 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+jest_exit=1
+
+$ git checkout -- 'src/lib/supabase/server.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/lib/supabase/server.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/lib/__tests__/env-assertions-defect.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ F-003: the census equals today's 15 file:VARIABLE pairs exactly (8 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (3 ms)
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+jest_exit=0
+
+==============================================================================
+CYCLE 8 — create src/tmp-getsession-probe.ts containing a getSession( call
+==============================================================================
+expected: RED — the getSession gate (a second caller appears)
+$ git status --porcelain -- 'src/tmp-getsession-probe.ts'; cat 'src/tmp-getsession-probe.ts'; echo "exit=$?"
+?? src/tmp-getsession-probe.ts
+// mutation probe for 05-02 cycle 8; deleted by the driver
+export async function probe(c: { auth: { getSession(): Promise<unknown> } }) {
+  return c.auth.getSession();
+}
+exit=0
+
+$ npx jest --ci --verbose src/server/__tests__/getsession-gate.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ the only production file calling getSession( is the non-gating api/health route (8 ms)
+    ✓ src/server/context.ts verifies the session with auth.getUser(
+    ✓ src/proxy.ts verifies the session with auth.getUser( (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+jest_exit=1
+
+$ rm -f 'src/tmp-getsession-probe.ts'; test ! -e 'src/tmp-getsession-probe.ts'; echo "absent_exit=$?"; git status --porcelain -- 'src/tmp-getsession-probe.ts' src/; echo "porcelain_lines=$(git status --porcelain -- src/ | wc -l | tr -d ' ')"   # restore proof
+absent_exit=0
+porcelain_lines=0
+$ git diff --exit-code -- src/; echo "git_diff_exit=$?"   # restore proof, all of src/
+git_diff_exit=0
+
+$ npx jest --ci --verbose src/server/__tests__/getsession-gate.test.ts 2>&1 | grep -E "✕|✓|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+    ✓ the only production file calling getSession( is the non-gating api/health route (7 ms)
+    ✓ src/server/context.ts verifies the session with auth.getUser(
+    ✓ src/proxy.ts verifies the session with auth.getUser(
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+jest_exit=0
+
+==============================================================================
+FINAL — every mutated subject byte-identical to HEAD
+==============================================================================
+$ git diff --exit-code -- src/proxy.ts src/app/auth/callback/route.ts src/lib/supabase/server.ts; echo "git_diff_exit=$?"
+git_diff_exit=0
+$ git status --porcelain -- src/; echo "porcelain_exit=$?"
+porcelain_exit=0
+driver_failures=0

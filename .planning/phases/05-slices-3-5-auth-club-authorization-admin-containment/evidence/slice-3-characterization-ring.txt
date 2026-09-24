@@ -212,3 +212,83 @@ exit=0
 $ git diff --stat a7b02a5 -- src/app/auth/callback/route.ts src/app/auth/callback/route.test.ts src/lib/supabase
 exit=0 (empty output = unmodified)
 
+==============================================================================
+TASK 3 — unmodified-source proof, tag gate, type-check, full floor
+==============================================================================
+Recorded: 2026-09-24T04:46:39Z · HEAD at capture=c163b2c124cc6616205d76808fcb9b7a263c93be
+Mutation cycles: evidence/slice-3-mutation-check-ring.txt (17 cycles, all red under mutation, all restored).
+
+[3.1 · the plan's diff command, verbatim]
+$ git diff --stat a7b02a5 -- src/proxy.ts src/proxy.test.ts src/app src/lib src/server/context.ts
+ src/app/auth/callback/route-defect.test.ts      | 224 ++++++++++++++++++++++++
+ src/lib/__tests__/env-assertions-defect.test.ts | 105 +++++++++++
+ 2 files changed, 329 insertions(+)
+exit=0
+
+The two lines above are this plan's NEW test files, which live under src/app and src/lib by the plan's
+own files_modified list, so this pathspec cannot print nothing. Every entry is an added *.test.ts file.
+The production-only form of the same check, excluding test files:
+$ git diff --stat a7b02a5 -- src/proxy.ts src/proxy.test.ts src/app src/lib src/server/context.ts ':(exclude)*.test.ts' ':(exclude)*.test.tsx'
+exit=0 (empty output = no production file changed)
+
+$ git diff --name-status a7b02a5 -- src/ supabase/
+A	src/app/auth/callback/route-defect.test.ts
+A	src/lib/__tests__/env-assertions-defect.test.ts
+A	src/proxy-characterization.test.ts
+A	src/proxy-defect.test.ts
+A	src/server/__tests__/getsession-gate.test.ts
+exit=0  (A = added; no M or D line means no tracked file under src/ or supabase/ was modified or deleted)
+
+$ git status --porcelain -- src/ supabase/
+exit=0 (empty = clean working tree under src/ and supabase/)
+
+[3.2 · characterization tag gate, --all (before-floor: ok 18 files)]
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 23 files
+exit=0
+
+[3.3 · type-check (test files are type-checked by the main tsconfig)]
+$ npx tsc --noEmit
+exit=0
+
+[3.4 · lint]
+$ npm run lint 2>&1 | tail -3
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+
+[3.5 · full Jest floor (before-floor: 744 passed / 50 suites)]
+$ npx jest --ci 2>&1 | grep -E '^(Tests|Test Suites|Snapshots):'
+Test Suites: 55 passed, 55 total
+Tests:       785 passed, 785 total
+Snapshots:   0 total
+exit=0
+
+[3.6 · the plan's Task 3 verify line]
+$ node scripts/check-characterization-tags.mjs --all >/dev/null && npx tsc --noEmit && git diff --exit-code -- src/proxy.ts src/app/auth/callback/route.ts
+exit=0
+
