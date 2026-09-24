@@ -20,6 +20,9 @@
  *     DEC-34 exemptions and must still succeed.
  *   - DEC-35 (no profile row) lives in `no-profile-row.spec.ts`, because the
  *     seed cannot express that persona (DEC-54).
+ *   - F-027 / DEC-39: `/api/auth-debug` was deleted by 05-04. The last describe
+ *     pins the 404 the production build now answers, which is the clause of
+ *     F-027's validation criterion that a grep cannot prove.
  *
  * ASSERTS STATUS, CONTENT TYPE, BODY AND FINAL PATHNAME, NEVER RENDERED MARKUP.
  *   Same discipline as `banned-redirect.spec.ts`: what is under test is the
@@ -117,5 +120,14 @@ test.describe("the mid-onboarding student (F-089, DEC-34)", () => {
     const res = await page.request.post("/api/onboarding/complete");
     expect(res.status()).toBe(200);
     expect(await res.json()).toEqual({ success: true });
+  });
+});
+
+test.describe("the deleted debug route (F-027)", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("answers 404 in the production build", async ({ page }) => {
+    const res = await page.request.get("/api/auth-debug");
+    expect(res.status()).toBe(404);
   });
 });
