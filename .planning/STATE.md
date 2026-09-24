@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
-stopped_at: Completed 05-08-PLAN.md
-last_updated: "2026-09-24T20:30:00.075Z"
+stopped_at: Completed 05-10-PLAN.md
+last_updated: "2026-09-24T20:43:14.703Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 62
-  completed_plans: 52
+  completed_plans: 53
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
-Plan: 10 of 19
+Plan: 11 of 19
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 05 execution started
 
@@ -105,6 +105,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P07 | 7min | 2 tasks | 31 files |
 | Phase 05 P08 | 11min | 3 tasks | 13 files |
 | Phase 05 P09 | 12min | 3 tasks | 6 files |
+| Phase 05 P10 | 10min | 3 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -268,6 +269,9 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-08: F-003, F-004, F-027, F-062, F-077, F-088, F-089 Fixed on met validation criteria; F-028 re-pointed to 06 (four of eight routes answer 401 in Phase 5)
 - [Phase 05]: 05-09: club PRESERVE pins only observables (status, body, status class), never query shape or writing client, so 05-10 can adopt requireClubRole and move owner writes to the elevated door without editing it (control 3b proves the latter)
 - [Phase 05]: 05-09: attacker e2e bodies are ones that would fail validation even if the gate were open (members DELETE/role target ownerOfApproved), so a regressed gate goes red without writing a row
+- [Phase 05]: 05-10: requireClubRole at all 17 § C sites with CLUB_ROLES or ["owner"] and each site's own 403 message; no admin bypass; an unexpected stored club role is a deny (DEC-40)
+- [Phase 05]: 05-10: F-087 fixed — owner club edit, soft-delete, role change and transfer write on getElevatedClient() after the owner gate; whitelist keeps status/created_by/id unwritable; three REGISTRY rows; ratchet live 24 -> 22 (DEC-41)
+- [Phase 05]: 05-10: hasRole takes Pick<User, "roles">, so hasRole(ctx.profile, "admin") replaces the inline admin checks in events/[id] and events/create
 
 ### Pending Todos
 
@@ -319,7 +323,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T20:29:50.001Z
-Stopped at: Completed 05-08-PLAN.md
-Next: execute 05-10-PLAN.md (slice 4: requireClubRole adoption at the 17 sites, F-087 owner writes to the elevated door). 05-09 pinned the net: club-gates-characterization.test.ts (PRESERVE, 107, must stay unedited), club-owner-writes-defect.test.ts (DEFECT F-087, 13, D1/D2/D4 rows move A→B, transfer demotion moves to (club_id, user_id)), e2e/specs/club-authorization.spec.ts (29/0; its "DEFECT F-087" test flips to 200), evidence/rls-ring-before.txt (F-008 P1/P2 INSERT succeed until 05-11). Floor: Jest 1133/0, tag gate ok 29. Candidate DI for 05-11: organizer's GET members truncated by club_members SELECT RLS (slice-4-characterization.txt §4). REFAC-11 is PARTIAL on one clause (admin arms' ban is proxy-only, DI-48, for 05-12/05-13). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
+Last session: 2026-09-24T20:43:14.699Z
+Stopped at: Completed 05-10-PLAN.md
+Next: execute 05-11-PLAN.md (F-008 events INSERT policy fix-forward, pgTAP 060 club tenant isolation, club-invitation-acceptance spec). 05-10 delivered REFAC-12: requireClubRole at all 17 § C sites (CLUB_ROLES / ["owner"], exact 403 bytes, no admin bypass), hasRole(ctx.profile, "admin") at the events inline admin checks, and F-087 fixed (owner club writes on getElevatedClient() behind the owner gate and whitelist; three REGISTRY rows; e2e FIXED F-087 29/0). Floor: Jest 1135/0, tag gate ok 29, ratchet committed 25 / live 22. pgTAP 060 must still show a direct owner UPDATE clubs affecting 0 rows. Candidate DIs for 05-11 to register: organizer's GET members truncated by club_members SELECT RLS (05-09 slice-4-characterization.txt §4), and the transfer POST's no-op rollback (05-10-SUMMARY Deferred items). REFAC-11 is PARTIAL on one clause (admin arms' ban is proxy-only, DI-48, for 05-12/05-13). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
 Resume file: None

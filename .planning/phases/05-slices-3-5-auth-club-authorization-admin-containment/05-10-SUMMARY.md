@@ -63,7 +63,7 @@ key-decisions:
 patterns-established:
   - "Owner-only elevated write: requireClubRole(..., [\"owner\"], msg), then build the payload from a whitelist typed TablesUpdate<T>, then getElevatedClient(). Add a REGISTRY row in the same commit, and add an e2e check that a smuggled non-whitelisted column is dropped"
 
-requirements-completed: [REFAC-12]
+requirements-completed: []  # REFAC-12's authz-ring half is delivered here; its RLS-ring clause (F-008) lands in 05-11, which also carries REFAC-12, so the checkbox stays Pending until then
 
 # Metrics
 duration: 10min
@@ -178,6 +178,13 @@ Only the local stack was used. There was no `db push`, no `--linked` and no `git
 ## Issues Encountered
 
 None. Playwright passed on the first run.
+
+## Requirement status
+
+REFAC-12 reads: "the 19 hand-rolled club-membership checks collapse into `requireClubRole`, cross-club access attempts return 403 at the authz ring and are denied at the RLS ring".
+- **Delivered here:** the collapse, and the authz-ring 403s. The e2e spec pins 12 attacker 403s.
+- **Not delivered here:** the RLS-ring clause. It needs 05-11's F-008 events INSERT policy, because `rls-ring-before.txt` P1 and P2 still succeed.
+- `requirements.mark-complete REFAC-12` was run and then reverted. `.planning/REQUIREMENTS.md` keeps REFAC-12 Pending, and 05-11 (which also lists REFAC-12) should mark it complete.
 
 ## Next Phase Readiness
 
