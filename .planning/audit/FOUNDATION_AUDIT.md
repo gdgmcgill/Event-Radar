@@ -14,7 +14,7 @@
 
 ## Summary
 
-**85 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
+**91 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
 
 ### By severity
 
@@ -22,31 +22,31 @@
 |---|---:|---|
 | Critical | 4 | First Stage 3 slice owning the layer. **None may be Open when Phase 5 starts.** |
 | High | 20 | Before Phase 7 begins, or a dated risk acceptance with a reachability argument. |
-| Medium | 36 | Within Stage 3, in the slice that touches the file. |
-| Low | 25 | Opportunistically. No deadline. |
-| **Total** | **85** | |
+| Medium | 39 | Within Stage 3, in the slice that touches the file. |
+| Low | 28 | Opportunistically. No deadline. |
+| **Total** | **91** | |
 
 ### By category
 
 | Category | Count |
 |---|---:|
-| authz | 28 |
+| authz | 33 |
 | cache-exposure | 4 |
 | schema-drift | 11 |
 | config | 12 |
 | dependency | 5 |
 | observability | 7 |
-| validation | 8 |
+| validation | 9 |
 | performance | 4 |
 | dead-code | 5 |
 | injection | 1 |
-| **Total** | **85** |
+| **Total** | **91** |
 
 ### By status
 
 | Status | Count |
 |---|---:|
-| Open | 67 |
+| Open | 73 |
 | Fixed | 18 |
 
 ---
@@ -115,6 +115,9 @@
 | [F-081](#f-081) | Medium | validation | Six of twelve EventTag members do not survive the read-path tag mapping, and any unmapped tag is silently rendered as Social |
 | [F-082](#f-082) | Medium | injection | Search input is interpolated raw into a PostgREST or() filter, so % and _ act as wildcards and a comma produces a 400 the handler returns as a 500 carrying the internal filter text |
 | [F-083](#f-083) | Medium | validation | The events list client pages by cursor and the handler pages by offset, so nextCursor is never emitted and Load More never renders |
+| [F-087](#f-087) | Medium | authz | Club owners cannot edit or delete their club or change member roles: clubs has no owner UPDATE policy and club_members UPDATE is admin-only, so PATCH returns 500, DELETE returns success without deleting and writes an audit row, and the role change returns 500 |
+| [F-088](#f-088) | Medium | authz | The authorization ring fails open on its own errors: the proxy's outer catch passes the request through, a failed ban read counts as not banned, the legacy ban helper admits a caller with no profile row, and most state-changing handler arms carry no ban check |
+| [F-091](#f-091) | Medium | authz | PATCH /api/admin/users/[id] cannot change another user's roles (cookie client, no admin UPDATE policy on users, so 500), strips "admin" from every submitted role array, and writes no audit row |
 | [F-004](#f-004) | Low | authz | The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time |
 | [F-018](#f-018) | Low | authz | 61 of 101 policies carry no TO clause; 39 rely on an auth.uid()-bearing predicate rather than role targeting to exclude anon |
 | [F-019](#f-019) | Low | performance | 68 unwrapped auth.uid() occurrences across 59 policies are re-evaluated per row |
@@ -140,6 +143,9 @@
 | [F-079](#f-079) | Low | performance | RSVP counts are computed by loading every non-cancelled row and filtering in JavaScript, so they are silently capped at PostgREST max_rows |
 | [F-084](#f-084) | Low | dead-code | events.rsvp_count is a denormalized counter that no migration, trigger or route writes |
 | [F-085](#f-085) | Low | validation | /api/users/saved-events floors "upcoming" on true UTC while /api/events floors on Eastern wall-clock, so an event can be upcoming on one and past on the other for up to five hours a day |
+| [F-086](#f-086) | Low | validation | GET /api/events/[id] never returns pending_edits, so the creator's pending-edit notice and edit prefill cannot render and the route's stripping gate is dead |
+| [F-089](#f-089) | Low | authz | The onboarding guard is a deletable one-hour cookie enforced on page requests only, so an un-onboarded account can browse by deleting it and can call every write API directly |
+| [F-090](#f-090) | Low | authz | No state-changing API route checks Origin or Sec-Fetch-Site; forgery is prevented only by the SameSite=Lax default of the Supabase auth cookies, and two GET handlers change state |
 
 ---
 
@@ -264,7 +270,7 @@
 
 ### F-002 — Reminder cron route compares the Authorization header against the fixed literal 'Bearer undefined'
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Fail-open shape on a machine path in front of a service-role client. The check still runs, but its comparison target is a template literal interpolating an unset variable, so it degrades to one well-known constant rather than disappearing. CRON_SECRET is confirmed absent from production. Bounded below Critical only because the caller must send an exact known string rather than nothing at all.
 
@@ -345,7 +351,7 @@
 
 ### F-009 — Anonymous callers can forge another user's interaction history, poisoning recommendations and popularity through an AFTER INSERT trigger
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Anonymous-reachable tampering with no compensating control, amplified by a trigger. WITH CHECK (true) with roles {public} on user_interactions, and anon holds INSERT. Forged rows both feed the tag-affinity and interaction signals consumed by compute_user_scores() and drive unbounded recomputation of event_popularity_scores. Held below Critical because the damage is to derived ranking state rather than to credentials or personal data, and because a caller-bound alternative policy already exists on the same table.
 
@@ -372,7 +378,7 @@
 
 ### F-010 — Any authenticated user can insert, update or delete any row in event_popularity_scores
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Crosses the tenant boundary for every event in the system: the policy's cmd is ALL and its role targeting sits in the predicate (auth.role() = 'authenticated') rather than in a TO clause, so it covers INSERT, UPDATE and DELETE for every signed-in caller. Ranking becomes attacker-controlled, and all five handlers reading this table use the cookie client, so nothing downstream re-derives the value. No compensating control.
 
@@ -399,7 +405,7 @@
 
 ### F-011 — The attendance graph in rsvps is world-readable by anonymous callers, on a table declared by no migration
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Anonymous-reachable disclosure of who is attending what, attributable per account, with no compensating control — six of the eight handlers touching rsvps are RLS-reliant, so the policy is the only ring. Compounded by the table existing in production with no schema-as-code anywhere, so a rebuilt environment does not reproduce it and no review of the repository would have found this policy.
 
@@ -426,7 +432,7 @@
 
 ### F-012 — The live policy set and the repository disagree: 41 production policies are declared by no migration and 24 declared policies are absent from production
 
-**Severity:** High · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** This finding is the failure of the compensating control itself. 41 of 101 live policies (41%) exist only in production, so a code review of supabase/migrations/ cannot see the rules that actually govern the data — which is how the two Criticals and four of the five Highs survived. In the other direction, 24 migration-declared policies never reached production, which is how two live functional breaks (F-016, F-017) arose. Any certification run against a rebuilt environment is measuring a different system.
 
@@ -454,7 +460,7 @@
 
 ### F-026 — Thirty-seven auth-gated routes, including all fifteen admin handlers, sit under the same blanket shared-cache directive
 
-**Severity:** High · **Category:** cache-exposure · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** cache-exposure · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Crosses a trust boundary on authenticated and administrative paths, with no compensating control. Nothing cached during the anonymous probe because these routes answer 401 — but the anonymous 401s on /api/notifications and /api/users/saved-events both carried `s-maxage=60, stale-while-revalidate=300`, proving the header is attached by path rather than by response. An authorized caller's 200 on any of those paths is therefore storable and re-servable to an unauthorized one. Held below Critical because no authorized 200 was observed being stored, unlike F-025.
 
@@ -507,7 +513,7 @@
 
 ### F-030 — Any authenticated user can overwrite any club's logo or banner object by addressing the Storage API directly
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Crosses the club authorization boundary with no compensating control at the layer that matters. The club-logos INSERT and UPDATE policies test only bucket_id and auth.role(), with no ownership predicate. Both upload routes do perform a genuine club_members owner check — and it is bypassed simply by not using the route, because the caller holds a session token that addresses the Storage REST API directly. A trust boundary enforced in exactly one of two layers. Bounded below Critical by McGill-gated authentication and by the accidental absence of a DELETE policy.
 
@@ -535,7 +541,7 @@
 
 ### F-038 — No email is sent by anything in the project, while three names and a Validated requirement assert otherwise
 
-**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** A Validated product requirement — PROJECT.md's 'In-app notifications and email reminders' — has no implementation anywhere. No email-provider dependency exists in the project at all. Both the live pg_cron function and the dead handler insert in-app notifications rows and nothing else, while the table name email_reminder_log, the route name send-reminders and the requirement's own wording all assert an email path. Graded High rather than Medium because the gap is between what the program believes it has shipped and what exists, and that belief is load-bearing for every downstream phase: email_reminder_log holds exactly 0 rows, which is consistent with both 'working and idle' and 'never implemented' unless someone checks.
 
@@ -564,7 +570,7 @@
 
 ### F-039 — The events-webhook edge function is deployed and ACTIVE with verify_jwt disabled, built from a developer's local checkout
 
-**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** An anonymously reachable ingestion endpoint with no gateway authentication — verify_jwt is false, so the platform performs no JWT check and all request-level authentication must be implemented inside the function body. An in-body HMAC check does exist and was verified, which is the compensating control that holds this below Critical. Two further facts raise it above Medium: the function has no replay protection or deduplication on an HMAC-authenticated endpoint, and it was deployed from a different developer's local filesystem rather than from CI, so the deployed code is not provably the code in this repository.
 
@@ -591,7 +597,7 @@
 
 ### F-040 — Only three environment variables are configured in production; ADMIN_API_KEY, CRON_SECRET and ADMIN_EMAILS are all absent
 
-**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** This is the fact that converts three conditional findings into live ones. F-001's admin gate is skipped entirely, F-002's comparison degrades to a known literal, and F-004's allowlist is empty — all because the variables their code reads are not set. Graded High in its own right because the configuration surface the code believes it has is three times larger than what exists, so any reasoning about the deployment from the source alone is wrong.
 
@@ -767,7 +773,7 @@
 
 ### F-074 — get_friends and get_friends_going_to_event are anon-executable SECURITY DEFINER functions that take the subject as a parameter, so any unauthenticated caller can read any user's friend graph
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Anonymous-reachable IDOR against the social graph with no compensating control. Both functions are SECURITY DEFINER, so they run as postgres and bypass every RLS policy on users and user_follows; both take the subject as an ARGUMENT rather than reading it from the session, so there is nothing to bypass in the first place; and both are GRANT ALL ... TO anon, so the public anon key that ships in the client bundle is sufficient. get_friends_going_to_event additionally discloses who saved a given event. Not Critical because what is disclosed is id, name and avatar_url plus a mutual-follow edge rather than credentials or contact details, and user ids must first be harvested (which /api/users/search and /users/[id] make trivial). High because the boundary crossed is anonymous-to-authenticated and the disclosure is of every user, not one.
 
@@ -800,7 +806,7 @@
 
 ### F-075 — compute_user_scores, send_event_reminders and send_feedback_requests are SECURITY DEFINER privileged writes granted to anon
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Three unauthenticated write/compute primitives, each reachable with the public anon key alone. compute_user_scores() is a full recompute of user_event_scores across every user - the job Phase 3 put on a six-hour pg_cron schedule precisely because it is expensive - callable on demand and unthrottled, which is a denial-of-service primitive against the database the whole application shares. send_event_reminders() and send_feedback_requests() write notifications rows on behalf of OTHER users. Not Critical because the notification writes de-duplicate on (user_id, event_id, type) so the spam ceiling is bounded, and because no data is disclosed to the caller. High because an anonymous caller triggering privileged writes for other users is an authorization failure regardless of the ceiling, and because the compute path has no ceiling at all.
 
@@ -859,7 +865,7 @@
 
 ### F-013 — The complete social graph (user_follows, club_followers) is bulk-readable by anonymous callers
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Anonymous-reachable disclosure, but of association rather than of identifying content, and the users table already carries a visibility column the product intends for exactly this. Held at Medium because the exposed edges are inherently semi-public in a campus-events product; the defect is that the visibility column is ignored rather than that the data exists.
 
@@ -885,7 +891,7 @@
 
 ### F-014 — Review text is anonymously readable alongside its author's user_id
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Anonymous-reachable, and it links an opinion to an account, which is a stronger disclosure than the review text alone. Held at Medium because the reviews table holds 0 rows today, so there is nothing to disclose yet — but the policy is what the table will be filled under.
 
@@ -911,7 +917,7 @@
 
 ### F-015 — events.status, the predicate column of the anonymous feed policy, has no index
 
-**Severity:** Medium · **Category:** performance · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** performance · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Correctness-adjacent performance defect whose cost is paid on every anonymous feed read — the most-hit path in the product. Held at Medium because it degrades rather than breaks, and because the table is small today; it becomes a denial-of-service lever as the events table grows, which is exactly the plausible future change the SLA's Medium definition names.
 
@@ -965,7 +971,7 @@
 
 ### F-017 — A/B experiment assignment silently degrades to the control path for every non-admin caller
 
-**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Correctness defect with a compensating control that is itself the problem: experiments and experiment_variants each have exactly one live policy, an admin-only ALL, and the five migration-declared read policies are absent. /api/recommendations reads all three experiment tables on the cookie client, so a non-admin gets zero rows and falls through to control without erroring. No user-visible failure, which is why it survived — the experiment framework reports results it never actually ran.
 
@@ -1017,7 +1023,7 @@
 
 ### F-029 — /api/health returns a full infrastructure health report, including a live auth-configuration probe, to any caller
 
-**Severity:** Medium · **Category:** observability · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** observability · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Anonymous-reachable information disclosure about infrastructure state rather than user data. Compensating control: the response was observed MISS on all three probes and is the one route the shared cache declines to store, because it emits set-cookie. The disclosure is reconnaissance value — which dependencies are reachable, whether auth is configured — not a direct compromise.
 
@@ -1043,7 +1049,7 @@
 
 ### F-031 — club-logos has neither a file size limit nor a content-type allow-list
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Upload abuse on a bucket any authenticated user can write to (F-030), so the two compound. Held at Medium because production's project-wide storage ceiling was not captured and is recorded as a gap rather than assumed absent, and because authentication is still required.
 
@@ -1068,7 +1074,7 @@
 
 ### F-032 — avatars has no content-type allow-list, so arbitrary content can be hosted under a user's own prefix
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Writes are confined to the caller's own prefix, which is the compensating control and the reason this is not F-030. What is unbounded is the number of keys under that prefix and the content type of each — the route's four-type check is not reproduced in the policy, so the bucket can host arbitrary content on the project's domain.
 
@@ -1094,7 +1100,7 @@
 
 ### F-033 — The banners INSERT policy tests the bucket only, while its sibling UPDATE and DELETE policies test path-prefix ownership
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Permits key pre-emption under another user's prefix — a caller can create an object at a key another user will later expect to own. Overwrite of live content is still blocked, because UPDATE does test the prefix, which is the compensating control that keeps this below F-030. The asymmetry between the three policies on one bucket is what makes it a defect rather than a design.
 
@@ -1119,7 +1125,7 @@
 
 ### F-034 — A bucket-agnostic USING (true) read policy on storage.objects becomes a cross-tenant read the day a private bucket exists
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Latent hazard, which is the SLA's own Medium definition: grants nothing today because all four buckets are public, grants everything the day a private bucket is created. No compensating control would stand in the way at that point, because the policy does not name a bucket.
 
@@ -1147,7 +1153,7 @@
 
 ### F-035 — Three of four storage buckets and thirteen object policies exist only in production, declared by no migration or config file
 
-**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Schema drift on the storage layer: avatars, banners and club-logos exist in production and nowhere in the repository. supabase/config.toml's [storage.buckets.*] block is entirely commented out and only event-images has a migration. A rebuilt environment has a materially different storage layer, which invalidates any certification run against it — and it means no review of the repository could have found F-030 through F-034.
 
@@ -1174,7 +1180,7 @@
 
 ### F-037 — Two dead cron handlers duplicate live pg_cron functions with four behavioural divergences
 
-**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Correctness and maintenance defect with a compensating control: nothing triggers the handlers, proved three independent ways, so the divergence is dormant rather than live. The hazard is that scheduling them — the obvious reading of 'the cron route has no trigger' — would activate four divergences against the pg_cron implementations and send duplicate notifications to real users. The route is separately a live security defect as F-002.
 
@@ -1203,7 +1209,7 @@
 
 ### F-041 — user_event_scores holds exactly zero rows, so personalized recommendations always take the popularity fallback
 
-**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** A Validated capability that does not happen in production. compute_user_scores() runs on schedule with zero failures and the table is empty, so every recommendation request falls through to the popularity-ranked feed. Held at Medium rather than High because the fallback is a working product experience rather than an outage, and because the defect is discoverable only by counting rows — n_live_tup would not have shown it. Compounded by F-017: the A/B framework meant to measure recommendation quality is also degraded.
 
@@ -1230,7 +1236,7 @@
 
 ### F-042 — All three pg_cron jobs exist only in production; the repository's sole trace is a commented-out schedule line in a never-applied migration
 
-**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Three live scheduled jobs mutating production data every 15, 30 and 360 minutes, none of them schema-as-code. A rebuilt environment runs nothing. Held at Medium because the jobs are working correctly — 97 successful runs, zero failures in the captured window — so the defect is reproducibility rather than behaviour. It is the same class as F-012 and F-035 and should be fixed in the same slice.
 
@@ -1394,7 +1400,7 @@
 
 ### F-054 — /docs is an anonymous public route that publishes the full API surface through a shipped rendering package
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Anonymous-reachable information disclosure, confirmed by two independent checks: find over src/app/docs returns exactly one file, so no layout auth ring exists, and /docs is absent from the eight-entry PROTECTED_ROUTES. The reachable package (redoc) additionally carries three advisories on a path that takes first-party input, fixed by 2.5.2 to 2.5.4. Held at Medium because the disclosed content is an API description rather than data — it is reconnaissance, and reconnaissance of endpoints that are separately findings here.
 
@@ -1421,7 +1427,7 @@
 
 ### F-055 — The Content-Security-Policy allows both 'unsafe-inline' and 'unsafe-eval'
 
-**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** A weakened CSP does not itself disclose or grant anything; it removes the second line of defence against an injected script. Compensating control: the header is present and the rest of the policy is restrictive, and no injection finding exists in this register. Recorded because it was noticed while dispositioning a Next.js advisory whose mitigation assumes nonce-based CSP, which this configuration cannot provide.
 
@@ -1446,7 +1452,7 @@
 
 ### F-058 — Twenty-two of ninety-four route files have no error handling, and no route on any path carries request correlation or rate limiting
 
-**Severity:** Medium · **Category:** observability · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** observability · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Operational blindness rather than a direct exposure. Three measured integers: 22 route files with no try/catch, 0 request-correlation callsites across the whole codebase, and 0 rate-limiting callsites on administrative paths. The consequence is that every other finding here is harder to detect in production and impossible to attribute to a request. The absence of rate limiting on /api/admin/* is what makes F-001 and F-002 unbounded rather than merely open.
 
@@ -1472,7 +1478,7 @@
 
 ### F-059 — Twenty-two route files return internal error text to the caller across forty sites
 
-**Severity:** Medium · **Category:** observability · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** observability · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** Information disclosure across the anonymous trust boundary: Supabase error messages carry table names, column names and constraint names into response bodies. Held at Medium because the disclosure is schema reconnaissance rather than data, and because the count excludes server-side logging and throw sinks, which are correct — only text that crosses into the response body is counted. Five catch (error: any) clauses, all in /api/health, are the widest of them.
 
@@ -1610,7 +1616,7 @@
 
 ### F-076 — Five of the seven SECURITY DEFINER functions in the baseline have a mutable search_path
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** The standard function_search_path_mutable advisory. Only is_admin and is_club_owner carry SET search_path TO 'public'; compute_user_scores, get_friends, get_friends_going_to_event, send_event_reminders and send_feedback_requests do not, and every one of their bodies references unqualified relations (users, user_follows, saved_events, notifications). Medium rather than High because exploitation requires a CREATE privilege on some schema in the cluster, which no application role currently holds - it is the SEVERITY_SLA.md latent clause. It is recorded as its own finding rather than folded into F-074/F-075 because it is the AMPLIFIER for both: a definer function with a mutable path plus a public EXECUTE grant is the shape that turns a schema-creation privilege anywhere in the cluster into arbitrary execution as postgres.
 
@@ -1671,7 +1677,7 @@
 
 ### F-078 — search_events_fuzzy is declared STABLE and sets a GUC in its body, so every fuzzy search errors at run time and silently falls back to ILIKE
 
-**Severity:** Medium · **Category:** dead-code · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** dead-code · **Status:** Open · **Closes in phase:** 06
 
 **Exposure rationale.** A Validated user-facing capability that has never worked, plus two indexes added to serve it that can never be used, plus a swallowed error. Postgres refuses a bare SET statement inside a non-VOLATILE function, so `public.search_events_fuzzy` raises SQLSTATE 0A000 'SET is not allowed in a non-volatile function' on EVERY invocation. src/app/api/events/route.ts:222 catches it, console.errors it and falls through to an ILIKE query, so the feature degrades invisibly and the end-to-end search spec passes on the fallback path. Not High because no authorization boundary is crossed and no data is disclosed - the result set is merely worse than intended. Not Low because it makes two of the indexes Phase 3 added (idx_events_title_trgm, idx_events_description_trgm) permanently unreachable, and because the fallback path it forces is the one that interpolates user input into a PostgREST or() filter.
 
@@ -1829,6 +1835,93 @@
 
 ---
 
+### F-087 — Club owners cannot edit or delete their club or change member roles: clubs has no owner UPDATE policy and club_members UPDATE is admin-only, so PATCH returns 500, DELETE returns success without deleting and writes an audit row, and the role change returns 500
+
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** Exposure-adjusted to Medium. The RLS ring denies in the safe direction - nothing is exposed and no boundary is crossed, because only the verified owner reaches the write and the database refuses it - which rules out High. It is not Low because it breaks a Validated organizer workflow in both environments and the DELETE arm reports false success: the owner is told the club was deleted, the club stays live, and an admin_audit_log row records a deletion that never happened, a data-integrity defect in the moderation record. The compensating control is that no row is corrupted.
+
+**Affected paths.**
+
+- `src/app/api/clubs/[id]/route.ts` lines 127-139, the PATCH update on the cookie client (500 on zero rows); 191-212, the DELETE soft-delete (0 rows, no error) and the club_deleted audit insert
+- `src/app/api/clubs/[id]/members/role/route.ts` lines 54-63, the club_members role update on the cookie client (500 on zero rows)
+
+**Evidence.** [`quality/phase-05-slice-defects.md#f-087--owner-club-writes-are-denied-by-rls`](./quality/phase-05-slice-defects.md#f-087--owner-club-writes-are-denied-by-rls)
+
+**Reproduction.**
+
+1. On the seeded local stack, inside BEGIN ... ROLLBACK as club_owner (5eed0000-0000-4000-8000-000000000004, role owner of approvedClub 5eed0000-0000-4000-8000-0000000000c1): UPDATE clubs SET description -> UPDATE 0; UPDATE clubs SET status = 'deleted' -> UPDATE 0; UPDATE club_members SET role = 'organizer' on another member -> UPDATE 0 (re-run 2026-09-24).
+2. pg_policies: the only UPDATE-capable policies are clubs 'Admins can update clubs' (is_admin()) and club_members 'Admins manage memberships' (ALL, admin EXISTS).
+3. Read src/app/api/clubs/[id]/route.ts:127-139: .update().select("*").single() on zero rows errors, so PATCH returns 500 {"error":"Failed to update club"} to the real owner.
+4. Read :191-212: .update({ status: "deleted" }) has no .select(), so zero rows is not an error; the handler writes a club_deleted audit row through createServiceClient() and returns {"success":true}.
+5. Read src/app/api/clubs/[id]/members/role/route.ts:54-63: .update().select().single() on zero rows errors, so the role change returns 500 {"error":"Failed to update role"}.
+
+**Recommended fix.** After requireClubRole(..., ["owner"]), perform the three writes through getElevatedClient() with the handler's existing column whitelist, so status, created_by and id are never writable through the owner path (DEC-41), each with a REGISTRY row. Keep the RLS ring denying direct owner writes; an owner UPDATE policy needs status immutability and is deferred to Phase 7.
+
+**Validation criterion.** src/__tests__/api/clubs/club-owner-writes-defect.test.ts's assertions MOVE when the fix lands; e2e/specs/club-authorization.spec.ts's "DEFECT F-087" test flips to 200; supabase/tests/database/060-club-tenant-isolation.test.sql asserts a direct owner UPDATE on clubs still affects 0 rows.
+
+**Related.** [F-016](#f-016), [F-022](#f-022)
+
+---
+
+### F-088 — The authorization ring fails open on its own errors: the proxy's outer catch passes the request through, a failed ban read counts as not banned, the legacy ban helper admits a caller with no profile row, and most state-changing handler arms carry no ban check
+
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** Exposure-adjusted to Medium. The proxy blocks a banned user on the happy path, so exploitation needs a proxy fault (the outer catch passes through) or a missing or unreadable users row (both the proxy and checkBanStatus() read that as not banned). That partial compensating control is why this is not High. But the handler ring, which the Next.js documentation treats as authoritative with the proxy advisory, has no ban check on 30 of the 40 state-changing non-admin arms, including the DELETE arms of save and rsvp, so a fail-open shape sits on an authorization control. It is not High also because a ban is a moderation sanction, not a tenant boundary: a banned user who reaches a write arm acts only as themselves.
+
+**Affected paths.**
+
+- `src/proxy.ts` lines 92-111, the ban read whose error is never inspected (isBanned stays false on a failed or empty read); 140-144, the outer catch returns NextResponse.next()
+- `src/lib/ban.ts` lines 20-37, checkBanStatus() returns null (not banned) when the profile row is absent or unreadable
+- `src/app/api/events/[id]/save/route.ts` lines 24, the DELETE arm, no ban check
+- `src/app/api/events/[id]/rsvp/route.ts` lines 366, the DELETE arm, no ban check
+
+**Evidence.** [`quality/phase-05-slice-defects.md#f-088--the-auth-ring-fails-open-on-its-own-errors`](./quality/phase-05-slice-defects.md#f-088--the-auth-ring-fails-open-on-its-own-errors)
+
+**Reproduction.**
+
+1. Read src/proxy.ts:140-144: catch (e) { console.error("[Middleware] Error:", e); return NextResponse.next({ request }); } - any throw admits the request unchecked.
+2. Read src/proxy.ts:92-111: const { data: banProfile } = await supabase.from("users")...single(); the error is discarded and isBanned is only set when banProfile?.banned_at is truthy.
+3. Read src/lib/ban.ts:27-37: if (profile && isBanned(profile)) return 403; otherwise return null, so a null profile is admitted.
+4. Count on the base commit: 40 exported POST/PUT/PATCH/DELETE arms under src/app/api outside admin/ and cron/; 10 files call checkBanStatus() (evidence/floor.before.txt block 17 of the Phase 5 evidence directory).
+
+**Recommended fix.** Make the ring fail closed (DEC-34..DEC-36): one proxy users read whose non-PGRST116 error throws; an outer catch that returns 500 JSON under /api/ and a plain 500 otherwise; a seam guard requireActiveUser(ctx) that denies a missing profile (403 Profile not found) and a banned user (403 Account suspended) on every state-changing authenticated arm, DELETE included; delete checkBanStatus() once its callers migrate.
+
+**Validation criterion.** src/proxy-defect.test.ts and src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts assertions MOVE when the fix lands; e2e/specs/ban-and-onboarding-ring.spec.ts is green.
+
+**Related.** [F-003](#f-003), [F-062](#f-062), [F-069](#f-069)
+
+---
+
+### F-091 — PATCH /api/admin/users/[id] cannot change another user's roles (cookie client, no admin UPDATE policy on users, so 500), strips "admin" from every submitted role array, and writes no audit row
+
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** Exposure-adjusted to Medium. Reaching the route needs an admin session, and today it fails safe (the write affects zero rows for any other target), so nothing is exposed and no boundary is crossed, which rules out High. It is a latent hazard that the SLA's Medium clause names: once F-004 deletes the callback's ADMIN_EMAILS grant this route is the only admin-grant path, and its admin strip would make the role ungrantable; and a role change that lands with no admin_audit_log row leaves no moderation trace (the F-073 class). The /moderation/users organizer toggle is silently broken meanwhile.
+
+**Affected paths.**
+
+- `src/app/api/admin/users/[id]/route.ts` lines 21-26, the admin strip; 31-36, the cookie-client update (500 on zero rows); no logAdminAction call
+- `src/app/moderation/users/page.tsx` lines 53-57, the organizer toggle's PATCH with the target's whole role array
+
+**Evidence.** [`quality/phase-05-slice-defects.md#f-091--admin-role-changes-cannot-land-and-strip-admin`](./quality/phase-05-slice-defects.md#f-091--admin-role-changes-cannot-land-and-strip-admin)
+
+**Reproduction.**
+
+1. On the seeded local stack, inside BEGIN ... ROLLBACK as admin (5eed0000-0000-4000-8000-000000000007, roles {user,admin}): UPDATE users SET roles = {user,club_organizer} WHERE id = onboarded_student (5eed0000-0000-4000-8000-000000000001) -> UPDATE 0; the same update on the caller's own row -> UPDATE 1 (re-run 2026-09-24).
+2. pg_policies: the only UPDATE policy on users is 'Users can update own profile' (auth.uid() = id).
+3. Read src/app/api/admin/users/[id]/route.ts:31-36: .update().select().single() on the cookie client errors on zero rows, so the route returns 500 {"error":"Internal server error"}.
+4. Read :21-26: the submitted roles are filtered with r !== "admin" before the write; grep finds no logAdminAction in the file.
+
+**Recommended fix.** Write through getElevatedClient() with a REGISTRY row; validate roles against user_role (400 {"error":"Invalid role","field":"roles"}); keep "user" always included; refuse a roles change on the caller's own id (403 {"error":"You cannot change your own roles"}); stop stripping admin; write logAdminAction with action "updated", targetType "user", metadata { roles } (DEC-45).
+
+**Validation criterion.** src/__tests__/api/admin/admin-users-patch-defect.test.ts's assertions MOVE when the fix lands.
+
+**Related.** [F-004](#f-004), [F-006](#f-006)
+
+---
+
 ### F-004 — The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time
 
 **Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 05
@@ -1858,7 +1951,7 @@
 
 ### F-018 — 61 of 101 policies carry no TO clause; 39 rely on an auth.uid()-bearing predicate rather than role targeting to exclude anon
 
-**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Hygiene with a real latent edge. The 39 are genuinely shut today because auth.uid() is NULL for anon, so no data is exposed — but the mechanism is accidental rather than declared, and a future predicate rewrite that drops the auth.uid() reference silently opens the policy to anonymous callers. There is no TO anon policy anywhere, which is the reason the current state holds.
 
@@ -1884,7 +1977,7 @@
 
 ### F-019 — 68 unwrapped auth.uid() occurrences across 59 policies are re-evaluated per row
 
-**Severity:** Low · **Category:** performance · **Status:** Open
+**Severity:** Low · **Category:** performance · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Pure performance hygiene with no exposure. Exactly 1 of 101 policies wraps the call as (select auth.uid()); the rest pay a function call per candidate row. Cost is invisible at current table sizes and grows linearly with them.
 
@@ -1909,7 +2002,7 @@
 
 ### F-020 — Four policy-referenced columns on featured_events and moderation_reviews have no index
 
-**Severity:** Low · **Category:** performance · **Status:** Open
+**Severity:** Low · **Category:** performance · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Performance hygiene on low-traffic administrative and curation paths. Partly anonymous-reachable through featured_events, but the table is small and the read is not on the hot feed path, so the cost is bounded.
 
@@ -1934,7 +2027,7 @@
 
 ### F-021 — event_popularity_scores carries two byte-identical permissive USING (true) SELECT policies
 
-**Severity:** Low · **Category:** authz · **Status:** Open
+**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Anonymous-reachable but grants nothing beyond what a single policy grants — permissive policies are OR-ed. The hazard is a maintenance trap: revoking public read requires dropping both, and dropping one appears to change nothing, which is exactly how the other survives a cleanup.
 
@@ -1958,7 +2051,7 @@
 
 ### F-022 — Pending and rejected clubs are publicly readable, because the club read policy ignores the status column
 
-**Severity:** Low · **Category:** authz · **Status:** Open
+**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Anonymous-reachable, but the content is a club directory entry that is intended to be public once approved — the disclosure is of pre-approval existence, not of private data. The asymmetry with events, whose anonymous read policy correctly filters on status = 'approved', is what makes this a defect rather than a design.
 
@@ -1984,7 +2077,7 @@
 
 ### F-023 — Twelve policies inline the admin EXISTS subquery instead of calling is_admin(); only six call the helper
 
-**Severity:** Low · **Category:** authz · **Status:** Open
+**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Hygiene with a correctness edge: twelve copies of a privilege predicate across eleven tables means a change to the definition of 'admin' must be applied twelve times, and a missed copy is a silent authorization divergence. No current exposure — all twelve are equivalent today.
 
@@ -2009,7 +2102,7 @@
 
 ### F-024 — Any authenticated user can read every object in every storage bucket
 
-**Severity:** Low · **Category:** authz · **Status:** Open
+**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Grants nothing today because all four buckets are already public, so the policy adds no exposure a URL does not already give. Registered because it becomes an immediate cross-tenant read the day a private bucket is created — the latent-hazard shape the SLA's Medium definition anticipates, held at Low only because no private bucket exists.
 
@@ -2037,7 +2130,7 @@
 
 ### F-036 — event-images carries two byte-identical permissive SELECT policies
 
-**Severity:** Low · **Category:** config · **Status:** Open
+**Severity:** Low · **Category:** config · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Hygiene with a maintenance trap identical in shape to F-021: revoking public read requires dropping both, and dropping only the migration-declared one leaves the bucket open while appearing closed. No current exposure beyond what the public bucket flag already grants.
 
@@ -2369,7 +2462,7 @@
 
 ### F-069 — Page protection cannot be read from the middleware list alone — the single-ring model is wrong in both directions
 
-**Severity:** Low · **Category:** config · **Status:** Open · **Closes in phase:** 05
+**Severity:** Low · **Category:** config · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** A method finding with a demonstrated cost on both sides. Fourteen pages are protected by a layout ring the middleware list cannot see, so a middleware-only reading marks them unprotected; and one page has a guard mechanism present yet is genuinely unprotected (F-005), so a mechanism-present reading marks it protected. Both errors occurred in this audit before the two-ring model was adopted. No exposure of its own; it is the reason F-005 was nearly missed.
 
@@ -2395,7 +2488,7 @@
 
 ### F-070 — The client-bundle secret sweep is INCONCLUSIVE, not clean — the build that produced it ran without the real key
 
-**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** An evidence gap recorded so a zero is not misread as a negative. All seven sweep patterns returned 0 over .next/static and public/, which proves the service-role key was absent from that build environment, not that a build holding it would not inline it. The artifact records ENVSTATE: INCONCLUSIVE-key-absent-from-build-env rather than a clean verdict, and every reachable_from_client_bundle answer in the service-role register repeats the caveat. Low because no leak is known; it is the confidence that is unearned, not the result.
 
@@ -2502,6 +2595,89 @@
 **Recommended fix.** One shared floor function used by both endpoints, following the convention src/lib/timezone.ts documents. Not in Phase 4: it changes which events each endpoint returns during a time-of-day band, and must land with a characterization of both floors first (04-RESEARCH.md Pitfall 6).
 
 **Validation criterion.** src/__tests__/api/events/saved-events-time-floor-defect.test.ts's assertions MOVE when the shared floor lands.
+
+---
+
+### F-086 — GET /api/events/[id] never returns pending_edits, so the creator's pending-edit notice and edit prefill cannot render and the route's stripping gate is dead
+
+**Severity:** Low · **Category:** validation · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** Exposure-adjusted to Low. Nothing is disclosed to anyone who should not see it and no boundary is crossed: the defect withholds the creator's own pending edit from the creator (and from admins), so its failure direction is safe. The control that would matter if the shared transform ever started copying the column - the creator-or-admin stripping gate - is correct but unreachable through the real transform, and Phase 4 pinned it through a transform that carries the column, so a later change cannot widen visibility unnoticed; that bounds the latent-hazard clause that would make it Medium. What remains is a correctness defect on the creator's detail page: the moderation notice and the edit-form prefill never render.
+
+**Affected paths.**
+
+- `src/app/api/events/[id]/route.ts` lines 110 (transformEventFromDB) and 112-128, the GET stripping branch, dead because the key is already absent
+- `src/lib/tagMapping.ts` lines 94-175, transformEventFromDB builds a fresh object and never copies pending_edits
+- `src/components/events/EventDetailView.tsx` lines 207-213, the creator's pending-edit notice, gated on event.pending_edits
+
+**Evidence.** [`quality/phase-05-slice-defects.md#f-086--pending-edits-never-reach-their-creator`](./quality/phase-05-slice-defects.md#f-086--pending-edits-never-reach-their-creator)
+
+**Reproduction.**
+
+1. Read src/app/api/events/[id]/route.ts line 87 (select("*"), so the row carries pending_edits) and line 110 (the response body is transformEventFromDB(data)).
+2. Run npx tsx -e with transformEventFromDB on a row carrying pending_edits: the output has no pending_edits key (probe re-run 2026-09-24: "input has pending_edits: true / transform output has pending_edits: false").
+3. Read lines 112-128: the stripping gate removes a key that is already absent, so the creator and admins receive the same body as everyone else.
+4. Read src/components/events/EventDetailView.tsx:207-213 and EventDetailClient.tsx:394: both read event.pending_edits from this route, so the notice and the edit-form prefill never render.
+
+**Recommended fix.** In GET /api/events/[id], after the unchanged shared transform, attach pending_edits from the row when the caller is the event's creator or an admin (DEC-53). Do not copy the column inside transformEventFromDB, which every list route shares.
+
+**Validation criterion.** src/__tests__/api/events/pending-edits-defect.test.ts's assertions MOVE when the fix lands, and src/__tests__/api/events/events-detail-characterization.test.ts passes unedited.
+
+---
+
+### F-089 — The onboarding guard is a deletable one-hour cookie enforced on page requests only, so an un-onboarded account can browse by deleting it and can call every write API directly
+
+**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** Exposure-adjusted to Low. Onboarding collects profile preferences; it is not an authorization or consent gate, so bypassing it grants no privilege, discloses nothing and crosses no boundary. It is recorded because REFAC-11 requires the onboarding guard to hold at the API ring, and today the guard is a client-held hint: the proxy never reads users.onboarding_completed, the cookie expires after an hour, POST /api/onboarding/complete clears it for any signed-in caller, and /api/* is exempt.
+
+**Affected paths.**
+
+- `src/proxy.ts` lines 123-136, the predicate is the needs_onboarding cookie and /api/ and /auth/ are exempt
+- `src/app/auth/callback/route.ts` lines 223-230, the cookie set (httpOnly, sameSite lax, maxAge 3600)
+- `src/app/api/onboarding/complete/route.ts` lines 15-22, clears the cookie for any signed-in caller without reading onboarding_completed
+
+**Evidence.** [`quality/phase-05-slice-defects.md#f-089--the-onboarding-guard-is-a-deletable-cookie`](./quality/phase-05-slice-defects.md#f-089--the-onboarding-guard-is-a-deletable-cookie)
+
+**Reproduction.**
+
+1. Read src/proxy.ts:124: needsOnboarding = request.cookies.get("needs_onboarding")?.value === "1"; the database column is never read.
+2. Read :126-136: the redirect skips path.startsWith("/api/") and "/auth/", so every API route is reachable mid-onboarding.
+3. Read src/app/api/onboarding/complete/route.ts:15-22: a signed-in caller clears the cookie with no check on onboarding_completed.
+4. Seeded fact, read as the database owner on the local stack: mid_onboarding_student (5eed0000-0000-4000-8000-000000000002) has onboarding_completed = f.
+
+**Recommended fix.** Read onboarding_completed in the proxy's single users read and keep the cookie as a hint only (DEC-36); add requireOnboarded(ctx) to every state-changing authenticated API arm except POST /api/onboarding/complete and PATCH /api/users/[id] (DEC-34).
+
+**Validation criterion.** The onboarding rows of src/proxy-defect.test.ts and src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts MOVE when the fix lands; in e2e, a mid_onboarding_student direct POST returns 403 {"error":"Onboarding required"}.
+
+**Related.** [F-088](#f-088)
+
+---
+
+### F-090 — No state-changing API route checks Origin or Sec-Fetch-Site; forgery is prevented only by the SameSite=Lax default of the Supabase auth cookies, and two GET handlers change state
+
+**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+
+**Exposure rationale.** Exposure-adjusted to Low. SameSite=Lax (the @supabase/ssr DEFAULT_COOKIE_OPTIONS) keeps the session cookies off cross-site POST, PATCH and DELETE requests in every current browser, which is a working compensating control for the main forgery vector. The two state-changing GETs, which a Lax cookie does reach on top-level navigation, need the invitation token (a secret, with RLS pinning the invitee email) or produce a benign experiment assignment. The residual is legacy browsers and the Lax-by-default POST window for cookies without an explicit SameSite (research assumption A3). Recorded because REFAC-17 requires the assessment and a defence-in-depth check wherever exposure remains.
+
+**Affected paths.**
+
+- `src/proxy.ts`
+- `src/app/invites/[token]/page.tsx` lines 137-147, auto-accept on GET: inserts club_members and updates club_invitations
+- `src/app/api/recommendations/route.ts` lines 230, inserts experiment_assignments on GET
+
+**Evidence.** [`quality/phase-05-slice-defects.md#f-090--no-origin-check-on-state-changing-api-routes`](./quality/phase-05-slice-defects.md#f-090--no-origin-check-on-state-changing-api-routes)
+
+**Reproduction.**
+
+1. command grep -rniE "sec-fetch-site|headers\.get\(.origin.\)|get\(\"origin\"\)" src (tests excluded) prints nothing on the base commit (exit 1).
+2. Read node_modules/@supabase/ssr/dist/main/utils/constants.js: DEFAULT_COOKIE_OPTIONS sets sameSite: "lax".
+3. Read src/app/invites/[token]/page.tsx:137-147: a GET render inserts the membership and marks the invitation accepted.
+4. Read src/app/api/recommendations/route.ts:230: a GET inserts an experiment_assignments row.
+
+**Recommended fix.** In the proxy, reject a non-GET/HEAD/OPTIONS /api/* request with 403 {"error":"Cross-site request blocked"} when Sec-Fetch-Site is cross-site or an Origin header is present whose host differs from x-forwarded-host ?? host; pass requests carrying neither header (DEC-52). Record the two state-changing GETs as Low residuals in evidence/csrf-assessment.md (DI-41).
+
+**Validation criterion.** src/server/__tests__/csrf.test.ts passes; e2e/specs/csrf-origin.spec.ts flips; .planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/csrf-assessment.md exists.
 
 ---
 

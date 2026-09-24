@@ -43,7 +43,7 @@
     "validation_criterion": "A test asserting that with CRON_SECRET unset the route returns 500 for every caller, and with it set returns 401 for a wrong token and 200 only for the correct one. A grep asserting no `Bearer ${` template literal appears in any comparison under src/app/api/cron/.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-037", "F-040"]
   },
   {
@@ -208,7 +208,7 @@
     "validation_criterion": "A pgTAP test asserting that an anon INSERT naming a non-null user_id is rejected, and that an authenticated INSERT naming another user's id is rejected.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "07",
     "related": ["F-010", "F-041"]
   },
   {
@@ -231,7 +231,7 @@
     "validation_criterion": "A pgTAP test asserting that an authenticated INSERT, UPDATE and DELETE on event_popularity_scores are all rejected, while a SELECT succeeds and the scheduled recomputation still writes.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "07",
     "related": ["F-021", "F-023"]
   },
   {
@@ -254,7 +254,7 @@
     "validation_criterion": "A pgTAP test asserting that an anon SELECT on rsvps returns zero rows, that a user sees only their own rsvps, and that an event organizer sees the attendee list for their own events only.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "07",
     "related": ["F-044", "F-013"]
   },
   {
@@ -278,7 +278,7 @@
     "validation_criterion": "A CI job that reconciles live pg_policies against the migration-declared set and fails on any difference, run green once.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "07",
     "related": ["F-043", "F-016", "F-017", "F-035", "F-042"]
   },
   {
@@ -300,7 +300,7 @@
     "validation_criterion": "A pgTAP test asserting that an anon SELECT on user_follows returns no edge whose follower or followee has visibility other than public.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "07",
     "related": ["F-011", "F-014"]
   },
   {
@@ -322,7 +322,7 @@
     "validation_criterion": "A pgTAP test asserting that an anon SELECT on reviews cannot project user_id.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "07",
     "related": ["F-013"]
   },
   {
@@ -345,7 +345,7 @@
     "validation_criterion": "A query asserting an index exists on events(status), plus an EXPLAIN assertion that the anonymous feed query uses it.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "07",
     "related": ["F-020"]
   },
   {
@@ -391,7 +391,7 @@
     "validation_criterion": "An integration test asserting a non-admin caller to /api/recommendations is assigned a variant and that experiment_assignments records it.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-012", "F-041"]
   },
   {
@@ -413,7 +413,7 @@
     "validation_criterion": "A query asserting that no policy in the public schema has roles = {public} unless it is deliberately registered as a public-read policy in a documented allowlist.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "07",
     "related": ["F-023"]
   },
   {
@@ -434,7 +434,7 @@
     "validation_criterion": "A query asserting that no policy expression contains auth.uid() outside a subselect.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": null,
+    "closes_in_phase": "07",
     "related": ["F-015", "F-020"]
   },
   {
@@ -455,7 +455,7 @@
     "validation_criterion": "A query asserting that every column referenced by a policy predicate in the public schema is covered by an index.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": null,
+    "closes_in_phase": "07",
     "related": ["F-015"]
   },
   {
@@ -475,7 +475,7 @@
     "validation_criterion": "A query asserting that no table in the public schema has two permissive SELECT policies with identical qual expressions.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": null,
+    "closes_in_phase": "07",
     "related": ["F-010"]
   },
   {
@@ -497,7 +497,7 @@
     "validation_criterion": "A pgTAP test asserting that an anon SELECT on clubs returns no row whose status is not 'approved'.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": null,
+    "closes_in_phase": "07",
     "related": ["F-008"]
   },
   {
@@ -518,7 +518,7 @@
     "validation_criterion": "A query asserting that no policy expression in the public schema contains an inline admin EXISTS subquery.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": null,
+    "closes_in_phase": "07",
     "related": ["F-018"]
   },
   {
@@ -540,7 +540,7 @@
     "validation_criterion": "A test creating a private bucket and asserting that an authenticated caller who does not own an object in it cannot read that object.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": null,
+    "closes_in_phase": "08",
     "resolution": "**Phase 3 code review (03-REVIEW.md WR-06): the enabling policy is now codified by a migration.** This finding's cause is F-034's policy, which `supabase/migrations/20260915214553_baseline.sql:2772` now creates in every rebuilt environment rather than only in production. No severity change — it is still Low because all four live buckets are public today — but the exposure is no longer confined to the one database somebody could fix by hand. See F-034 for the full note.",
     "related": ["F-030", "F-034"]
   },
@@ -589,7 +589,7 @@
     "validation_criterion": "A test asserting that every route classified admin or authenticated in inventory/endpoints.json responds with a Cache-Control containing `private` or `no-store`, on both its success and its 401 path.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-025"]
   },
   {
@@ -655,7 +655,7 @@
     "validation_criterion": "A test asserting that an anonymous GET /api/health returns a body containing no dependency names, no configuration state and no error text, and that the detailed report requires an admin session.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-027", "F-059"]
   },
   {
@@ -679,7 +679,7 @@
     "validation_criterion": "A test where user A, an owner of club 1 but not club 2, attempts a direct Storage API upload under club 2's prefix and is rejected, while the same upload under club 1's prefix succeeds.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "08",
     "related": ["F-033", "F-031", "F-024"]
   },
   {
@@ -700,7 +700,7 @@
     "validation_criterion": "A test asserting that a direct Storage API upload of a non-image content type, and of a file above the limit, are both rejected for club-logos.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "08",
     "related": ["F-030", "F-032"]
   },
   {
@@ -722,7 +722,7 @@
     "validation_criterion": "A test asserting a direct Storage API upload of a non-image content type under the caller's own avatars prefix is rejected.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "08",
     "related": ["F-031"]
   },
   {
@@ -743,7 +743,7 @@
     "validation_criterion": "A test asserting that an authenticated caller cannot INSERT an object under another user's banners prefix.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "08",
     "related": ["F-030"]
   },
   {
@@ -765,7 +765,7 @@
     "validation_criterion": "A test creating a private bucket and asserting an authenticated non-owner cannot read its objects.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "08",
     "resolution": "**Phase 3 code review (03-REVIEW.md WR-06) changed this finding's REACH, not its severity.** When this was written the policy existed in production and in no declarative source (see F-035), so it was a production-only hazard. `supabase/migrations/20260915214553_baseline.sql:2772` now carries it verbatim in the hand-added storage section, which means EVERY environment built from this repository — local, CI, staging, any future rebuild — is created with `FOR SELECT TO authenticated USING (true)` across all buckets from its first second. The eleven bucket-scoped policies beside it are decorative for any authenticated caller. The reviewer also noted that the baseline's section header correctly explains why storage POLICIES were included and storage STRUCTURE was not, but the policies were carried without being read. Still Medium, still Phase 5; the fix now has to be a follow-up migration (drop, or scope to `bucket_id IN ('event-images','club-logos','banners')`) rather than a dashboard edit, and nothing in `supabase/tests/database/` looks at the `storage` schema at all.",
     "related": ["F-024"]
   },
@@ -789,7 +789,7 @@
     "validation_criterion": "A fresh `supabase db reset` followed by a bucket and policy census that matches the production catalog exactly.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "08",
     "related": ["F-012", "F-042", "F-043"]
   },
   {
@@ -810,7 +810,7 @@
     "validation_criterion": "A query asserting no bucket has two permissive SELECT policies with identical predicates.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": null,
+    "closes_in_phase": "08",
     "related": ["F-021", "F-035"]
   },
   {
@@ -835,7 +835,7 @@
     "validation_criterion": "A grep asserting src/app/api/cron/ is empty or contains only handlers with a confirmed trigger, plus a check that the pg_cron run history continues to show zero failures after the deletion.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-002", "F-038", "F-042"]
   },
   {
@@ -860,7 +860,7 @@
     "validation_criterion": "Either an integration test asserting an email is dispatched and logged for a due reminder, or a grep asserting no identifier in the codebase contains 'email' for a path that only writes in-app notifications, plus a corrected PROJECT.md line.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-037", "F-041"]
   },
   {
@@ -883,7 +883,7 @@
     "validation_criterion": "A test replaying a previously accepted, validly-signed payload and asserting it is rejected, plus a deployment record showing the function was built by CI from a named commit.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-050", "F-042"]
   },
   {
@@ -906,7 +906,7 @@
     "validation_criterion": "A boot-time check enumerating required variables that fails the build or the first request when any is absent, plus a test asserting the check fires.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-001", "F-002", "F-004"]
   },
   {
@@ -929,7 +929,7 @@
     "validation_criterion": "A check asserting user_event_scores is non-empty after a scheduled compute_user_scores() run, and an integration test asserting a user with interaction history receives a personalized ordering distinct from the popularity ordering.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-017", "F-009", "F-038"]
   },
   {
@@ -951,7 +951,7 @@
     "validation_criterion": "A fresh `supabase db reset` followed by a cron.job census matching the production job list exactly.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-012", "F-035", "F-043", "F-037"]
   },
   {
@@ -1234,7 +1234,7 @@
     "validation_criterion": "A test asserting an anonymous request to /docs redirects or returns 404, and that an authenticated non-admin also does not receive the API description.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-003", "F-053", "F-029"]
   },
   {
@@ -1255,7 +1255,7 @@
     "validation_criterion": "A test asserting the CSP response header contains neither 'unsafe-inline' nor 'unsafe-eval', and that the application still renders without console CSP violations.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-051"]
   },
   {
@@ -1320,7 +1320,7 @@
     "validation_criterion": "A check asserting every file under src/app/api/**/route.ts exports handlers wrapped by the shared wrapper, and a test asserting an admin route returns 429 after the configured request budget.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-059", "F-060", "F-001"]
   },
   {
@@ -1342,7 +1342,7 @@
     "validation_criterion": "A grep asserting no route handler interpolates a caught error's message into a NextResponse body, and a test asserting a constraint violation returns a generic body.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "related": ["F-058", "F-029"]
   },
   {
@@ -1570,7 +1570,7 @@
     "validation_criterion": "An automated sweep requesting every page route anonymously and asserting the observed behaviour matches the effective_protection column.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "07",
     "related": ["F-005", "F-003", "F-063"]
   },
   {
@@ -1592,7 +1592,7 @@
     "validation_criterion": "A sweep over .next/static and public/ from a build with the real key present, recording ENVSTATE conclusive and zero matches for all seven patterns.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "08",
     "related": ["F-067", "F-068"]
   },
   {
@@ -1734,7 +1734,7 @@
     "validation_criterion": "A pgTAP assertion that ok(NOT has_function_privilege('anon', 'public.get_friends(uuid)', 'EXECUTE')) for both functions, plus a case that impersonates user A with tests.act_as and asserts the function returns A's friends and not B's when asked for B - an assertion that fails if the subject is ever taken from a parameter again.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "resolution": "**Raised by the Phase 3 code review (03-REVIEW.md CR-01) and registered rather than fixed.** Inherited from production, not authored by Phase 3 - but supabase/migrations/20260915214553_baseline.sql is what creates it in every environment built from this repository from now on, which is why it is a repository finding and not only a production one. Not fixed in Phase 3's review-fix pass because changing an RPC's signature and its grants is production-codified behaviour: five live callsites pass the subject explicitly, and Phase 3's charter is behaviour preservation. No characterization test was written either - an assertion documenting that anon CAN call this would have to be deleted by the fix, and the one worth writing is the assertion that it cannot, which belongs with the fix. Owner: Phase 5 (authz/RLS hardening).",
     "related": [
       "F-013",
@@ -1766,7 +1766,7 @@
     "validation_criterion": "A pgTAP assertion per function that ok(NOT has_function_privilege('anon', '<signature>', 'EXECUTE')) AND NOT has_function_privilege('authenticated', ...), plus a re-run of supabase/tests/database/030-cron-schedule.test.sql proving the scheduled job still runs after the revoke.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "resolution": "**Raised by the Phase 3 code review (03-REVIEW.md CR-05) and registered rather than fixed.** Inherited from production; codified for every rebuilt environment by the baseline migration. Not fixed in Phase 3's review-fix pass because revoking EXECUTE changes who can invoke three live functions, and the cron HTTP routes that call them have not been traced to a role - doing this blind is how a scheduled job stops running silently, which is the failure mode this program exists to end rather than create. Owner: Phase 5 (authz/RLS hardening), together with F-076.",
     "related": [
       "F-074",
@@ -1797,7 +1797,7 @@
     "validation_criterion": "A pgTAP assertion that iterates pg_proc WHERE prosecdef AND pronamespace = 'public'::regnamespace and requires proconfig to contain a search_path entry for EVERY row - one assertion that a future definer function cannot satisfy by forgetting, rather than five assertions naming the five functions that exist today.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "resolution": "**Raised by the Phase 3 code review (03-REVIEW.md WR-05) and registered rather than fixed.** Inherited from production; codified for every rebuilt environment by the baseline migration. Not fixed in Phase 3's review-fix pass because pinning the path REQUIRES rewriting five function bodies to schema-qualify their relations, which is a behaviour-affecting change to production-codified SQL and is exactly the kind of work Stage 2's charter excludes. Owner: Phase 5, in the same migration as F-075.",
     "related": [
       "F-074",
@@ -1857,7 +1857,7 @@
     "validation_criterion": "A pgTAP case asserting that SELECT * FROM public.search_events_fuzzy('<term>', 10) executes without raising and returns the seeded event whose title contains the term, plus an EXPLAIN assertion (with enable_seqscan off, per the 010 file's convention) that the plan names idx_events_title_trgm - so 'the function runs' and 'the indexes it was written for are usable' are two separate reds.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "05",
+    "closes_in_phase": "06",
     "resolution": "**Found during the Phase 3 code-review fix pass (03-REVIEW-FIX.md), not by 03-REVIEW.md.** It surfaced in the Playwright server log while verifying unrelated fixes: the harness passes, and the reason it passes is the fallback. Registered rather than fixed because changing a function's volatility or its body is production-codified behaviour outside a review-fix pass's remit, and because the right fix is entangled with the fallback's error handling and with the `or()` interpolation on the same lines. Recorded here rather than only in 03-REVIEW-FIX.md so it cannot go quiet. Owner: Phase 5.",
     "related": [
       "F-015",
@@ -2049,5 +2049,155 @@
     "risk_acceptance": null,
     "closes_in_phase": "06",
     "related": []
+  },
+  {
+    "id": "F-086",
+    "title": "GET /api/events/[id] never returns pending_edits, so the creator's pending-edit notice and edit prefill cannot render and the route's stripping gate is dead",
+    "severity": "Low",
+    "severity_rationale": "Exposure-adjusted to Low. Nothing is disclosed to anyone who should not see it and no boundary is crossed: the defect withholds the creator's own pending edit from the creator (and from admins), so its failure direction is safe. The control that would matter if the shared transform ever started copying the column - the creator-or-admin stripping gate - is correct but unreachable through the real transform, and Phase 4 pinned it through a transform that carries the column, so a later change cannot widen visibility unnoticed; that bounds the latent-hazard clause that would make it Medium. What remains is a correctness defect on the creator's detail page: the moderation notice and the edit-form prefill never render.",
+    "category": "validation",
+    "affected_paths": [
+      { "path": "src/app/api/events/[id]/route.ts", "lines": "110 (transformEventFromDB) and 112-128, the GET stripping branch, dead because the key is already absent" },
+      { "path": "src/lib/tagMapping.ts", "lines": "94-175, transformEventFromDB builds a fresh object and never copies pending_edits" },
+      { "path": "src/components/events/EventDetailView.tsx", "lines": "207-213, the creator's pending-edit notice, gated on event.pending_edits" }
+    ],
+    "evidence": "quality/phase-05-slice-defects.md#f-086--pending-edits-never-reach-their-creator",
+    "reproduction": [
+      "Read src/app/api/events/[id]/route.ts line 87 (select(\"*\"), so the row carries pending_edits) and line 110 (the response body is transformEventFromDB(data)).",
+      "Run npx tsx -e with transformEventFromDB on a row carrying pending_edits: the output has no pending_edits key (probe re-run 2026-09-24: \"input has pending_edits: true / transform output has pending_edits: false\").",
+      "Read lines 112-128: the stripping gate removes a key that is already absent, so the creator and admins receive the same body as everyone else.",
+      "Read src/components/events/EventDetailView.tsx:207-213 and EventDetailClient.tsx:394: both read event.pending_edits from this route, so the notice and the edit-form prefill never render."
+    ],
+    "recommended_fix": "In GET /api/events/[id], after the unchanged shared transform, attach pending_edits from the row when the caller is the event's creator or an admin (DEC-53). Do not copy the column inside transformEventFromDB, which every list route shares.",
+    "validation_criterion": "src/__tests__/api/events/pending-edits-defect.test.ts's assertions MOVE when the fix lands, and src/__tests__/api/events/events-detail-characterization.test.ts passes unedited.",
+    "status": "Open",
+    "risk_acceptance": null,
+    "closes_in_phase": "05",
+    "related": []
+  },
+  {
+    "id": "F-087",
+    "title": "Club owners cannot edit or delete their club or change member roles: clubs has no owner UPDATE policy and club_members UPDATE is admin-only, so PATCH returns 500, DELETE returns success without deleting and writes an audit row, and the role change returns 500",
+    "severity": "Medium",
+    "severity_rationale": "Exposure-adjusted to Medium. The RLS ring denies in the safe direction - nothing is exposed and no boundary is crossed, because only the verified owner reaches the write and the database refuses it - which rules out High. It is not Low because it breaks a Validated organizer workflow in both environments and the DELETE arm reports false success: the owner is told the club was deleted, the club stays live, and an admin_audit_log row records a deletion that never happened, a data-integrity defect in the moderation record. The compensating control is that no row is corrupted.",
+    "category": "authz",
+    "affected_paths": [
+      { "path": "src/app/api/clubs/[id]/route.ts", "lines": "127-139, the PATCH update on the cookie client (500 on zero rows); 191-212, the DELETE soft-delete (0 rows, no error) and the club_deleted audit insert" },
+      { "path": "src/app/api/clubs/[id]/members/role/route.ts", "lines": "54-63, the club_members role update on the cookie client (500 on zero rows)" }
+    ],
+    "evidence": "quality/phase-05-slice-defects.md#f-087--owner-club-writes-are-denied-by-rls",
+    "reproduction": [
+      "On the seeded local stack, inside BEGIN ... ROLLBACK as club_owner (5eed0000-0000-4000-8000-000000000004, role owner of approvedClub 5eed0000-0000-4000-8000-0000000000c1): UPDATE clubs SET description -> UPDATE 0; UPDATE clubs SET status = 'deleted' -> UPDATE 0; UPDATE club_members SET role = 'organizer' on another member -> UPDATE 0 (re-run 2026-09-24).",
+      "pg_policies: the only UPDATE-capable policies are clubs 'Admins can update clubs' (is_admin()) and club_members 'Admins manage memberships' (ALL, admin EXISTS).",
+      "Read src/app/api/clubs/[id]/route.ts:127-139: .update().select(\"*\").single() on zero rows errors, so PATCH returns 500 {\"error\":\"Failed to update club\"} to the real owner.",
+      "Read :191-212: .update({ status: \"deleted\" }) has no .select(), so zero rows is not an error; the handler writes a club_deleted audit row through createServiceClient() and returns {\"success\":true}.",
+      "Read src/app/api/clubs/[id]/members/role/route.ts:54-63: .update().select().single() on zero rows errors, so the role change returns 500 {\"error\":\"Failed to update role\"}."
+    ],
+    "recommended_fix": "After requireClubRole(..., [\"owner\"]), perform the three writes through getElevatedClient() with the handler's existing column whitelist, so status, created_by and id are never writable through the owner path (DEC-41), each with a REGISTRY row. Keep the RLS ring denying direct owner writes; an owner UPDATE policy needs status immutability and is deferred to Phase 7.",
+    "validation_criterion": "src/__tests__/api/clubs/club-owner-writes-defect.test.ts's assertions MOVE when the fix lands; e2e/specs/club-authorization.spec.ts's \"DEFECT F-087\" test flips to 200; supabase/tests/database/060-club-tenant-isolation.test.sql asserts a direct owner UPDATE on clubs still affects 0 rows.",
+    "status": "Open",
+    "risk_acceptance": null,
+    "closes_in_phase": "05",
+    "related": ["F-016", "F-022"]
+  },
+  {
+    "id": "F-088",
+    "title": "The authorization ring fails open on its own errors: the proxy's outer catch passes the request through, a failed ban read counts as not banned, the legacy ban helper admits a caller with no profile row, and most state-changing handler arms carry no ban check",
+    "severity": "Medium",
+    "severity_rationale": "Exposure-adjusted to Medium. The proxy blocks a banned user on the happy path, so exploitation needs a proxy fault (the outer catch passes through) or a missing or unreadable users row (both the proxy and checkBanStatus() read that as not banned). That partial compensating control is why this is not High. But the handler ring, which the Next.js documentation treats as authoritative with the proxy advisory, has no ban check on 30 of the 40 state-changing non-admin arms, including the DELETE arms of save and rsvp, so a fail-open shape sits on an authorization control. It is not High also because a ban is a moderation sanction, not a tenant boundary: a banned user who reaches a write arm acts only as themselves.",
+    "category": "authz",
+    "affected_paths": [
+      { "path": "src/proxy.ts", "lines": "92-111, the ban read whose error is never inspected (isBanned stays false on a failed or empty read); 140-144, the outer catch returns NextResponse.next()" },
+      { "path": "src/lib/ban.ts", "lines": "20-37, checkBanStatus() returns null (not banned) when the profile row is absent or unreadable" },
+      { "path": "src/app/api/events/[id]/save/route.ts", "lines": "24, the DELETE arm, no ban check" },
+      { "path": "src/app/api/events/[id]/rsvp/route.ts", "lines": "366, the DELETE arm, no ban check" }
+    ],
+    "evidence": "quality/phase-05-slice-defects.md#f-088--the-auth-ring-fails-open-on-its-own-errors",
+    "reproduction": [
+      "Read src/proxy.ts:140-144: catch (e) { console.error(\"[Middleware] Error:\", e); return NextResponse.next({ request }); } - any throw admits the request unchecked.",
+      "Read src/proxy.ts:92-111: const { data: banProfile } = await supabase.from(\"users\")...single(); the error is discarded and isBanned is only set when banProfile?.banned_at is truthy.",
+      "Read src/lib/ban.ts:27-37: if (profile && isBanned(profile)) return 403; otherwise return null, so a null profile is admitted.",
+      "Count on the base commit: 40 exported POST/PUT/PATCH/DELETE arms under src/app/api outside admin/ and cron/; 10 files call checkBanStatus() (evidence/floor.before.txt block 17 of the Phase 5 evidence directory)."
+    ],
+    "recommended_fix": "Make the ring fail closed (DEC-34..DEC-36): one proxy users read whose non-PGRST116 error throws; an outer catch that returns 500 JSON under /api/ and a plain 500 otherwise; a seam guard requireActiveUser(ctx) that denies a missing profile (403 Profile not found) and a banned user (403 Account suspended) on every state-changing authenticated arm, DELETE included; delete checkBanStatus() once its callers migrate.",
+    "validation_criterion": "src/proxy-defect.test.ts and src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts assertions MOVE when the fix lands; e2e/specs/ban-and-onboarding-ring.spec.ts is green.",
+    "status": "Open",
+    "risk_acceptance": null,
+    "closes_in_phase": "05",
+    "related": ["F-003", "F-062", "F-069"]
+  },
+  {
+    "id": "F-089",
+    "title": "The onboarding guard is a deletable one-hour cookie enforced on page requests only, so an un-onboarded account can browse by deleting it and can call every write API directly",
+    "severity": "Low",
+    "severity_rationale": "Exposure-adjusted to Low. Onboarding collects profile preferences; it is not an authorization or consent gate, so bypassing it grants no privilege, discloses nothing and crosses no boundary. It is recorded because REFAC-11 requires the onboarding guard to hold at the API ring, and today the guard is a client-held hint: the proxy never reads users.onboarding_completed, the cookie expires after an hour, POST /api/onboarding/complete clears it for any signed-in caller, and /api/* is exempt.",
+    "category": "authz",
+    "affected_paths": [
+      { "path": "src/proxy.ts", "lines": "123-136, the predicate is the needs_onboarding cookie and /api/ and /auth/ are exempt" },
+      { "path": "src/app/auth/callback/route.ts", "lines": "223-230, the cookie set (httpOnly, sameSite lax, maxAge 3600)" },
+      { "path": "src/app/api/onboarding/complete/route.ts", "lines": "15-22, clears the cookie for any signed-in caller without reading onboarding_completed" }
+    ],
+    "evidence": "quality/phase-05-slice-defects.md#f-089--the-onboarding-guard-is-a-deletable-cookie",
+    "reproduction": [
+      "Read src/proxy.ts:124: needsOnboarding = request.cookies.get(\"needs_onboarding\")?.value === \"1\"; the database column is never read.",
+      "Read :126-136: the redirect skips path.startsWith(\"/api/\") and \"/auth/\", so every API route is reachable mid-onboarding.",
+      "Read src/app/api/onboarding/complete/route.ts:15-22: a signed-in caller clears the cookie with no check on onboarding_completed.",
+      "Seeded fact, read as the database owner on the local stack: mid_onboarding_student (5eed0000-0000-4000-8000-000000000002) has onboarding_completed = f."
+    ],
+    "recommended_fix": "Read onboarding_completed in the proxy's single users read and keep the cookie as a hint only (DEC-36); add requireOnboarded(ctx) to every state-changing authenticated API arm except POST /api/onboarding/complete and PATCH /api/users/[id] (DEC-34).",
+    "validation_criterion": "The onboarding rows of src/proxy-defect.test.ts and src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts MOVE when the fix lands; in e2e, a mid_onboarding_student direct POST returns 403 {\"error\":\"Onboarding required\"}.",
+    "status": "Open",
+    "risk_acceptance": null,
+    "closes_in_phase": "05",
+    "related": ["F-088"]
+  },
+  {
+    "id": "F-090",
+    "title": "No state-changing API route checks Origin or Sec-Fetch-Site; forgery is prevented only by the SameSite=Lax default of the Supabase auth cookies, and two GET handlers change state",
+    "severity": "Low",
+    "severity_rationale": "Exposure-adjusted to Low. SameSite=Lax (the @supabase/ssr DEFAULT_COOKIE_OPTIONS) keeps the session cookies off cross-site POST, PATCH and DELETE requests in every current browser, which is a working compensating control for the main forgery vector. The two state-changing GETs, which a Lax cookie does reach on top-level navigation, need the invitation token (a secret, with RLS pinning the invitee email) or produce a benign experiment assignment. The residual is legacy browsers and the Lax-by-default POST window for cookies without an explicit SameSite (research assumption A3). Recorded because REFAC-17 requires the assessment and a defence-in-depth check wherever exposure remains.",
+    "category": "authz",
+    "affected_paths": [
+      { "path": "src/proxy.ts", "lines": null },
+      { "path": "src/app/invites/[token]/page.tsx", "lines": "137-147, auto-accept on GET: inserts club_members and updates club_invitations" },
+      { "path": "src/app/api/recommendations/route.ts", "lines": "230, inserts experiment_assignments on GET" }
+    ],
+    "evidence": "quality/phase-05-slice-defects.md#f-090--no-origin-check-on-state-changing-api-routes",
+    "reproduction": [
+      "command grep -rniE \"sec-fetch-site|headers\\.get\\(.origin.\\)|get\\(\\\"origin\\\"\\)\" src (tests excluded) prints nothing on the base commit (exit 1).",
+      "Read node_modules/@supabase/ssr/dist/main/utils/constants.js: DEFAULT_COOKIE_OPTIONS sets sameSite: \"lax\".",
+      "Read src/app/invites/[token]/page.tsx:137-147: a GET render inserts the membership and marks the invitation accepted.",
+      "Read src/app/api/recommendations/route.ts:230: a GET inserts an experiment_assignments row."
+    ],
+    "recommended_fix": "In the proxy, reject a non-GET/HEAD/OPTIONS /api/* request with 403 {\"error\":\"Cross-site request blocked\"} when Sec-Fetch-Site is cross-site or an Origin header is present whose host differs from x-forwarded-host ?? host; pass requests carrying neither header (DEC-52). Record the two state-changing GETs as Low residuals in evidence/csrf-assessment.md (DI-41).",
+    "validation_criterion": "src/server/__tests__/csrf.test.ts passes; e2e/specs/csrf-origin.spec.ts flips; .planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/csrf-assessment.md exists.",
+    "status": "Open",
+    "risk_acceptance": null,
+    "closes_in_phase": "05",
+    "related": []
+  },
+  {
+    "id": "F-091",
+    "title": "PATCH /api/admin/users/[id] cannot change another user's roles (cookie client, no admin UPDATE policy on users, so 500), strips \"admin\" from every submitted role array, and writes no audit row",
+    "severity": "Medium",
+    "severity_rationale": "Exposure-adjusted to Medium. Reaching the route needs an admin session, and today it fails safe (the write affects zero rows for any other target), so nothing is exposed and no boundary is crossed, which rules out High. It is a latent hazard that the SLA's Medium clause names: once F-004 deletes the callback's ADMIN_EMAILS grant this route is the only admin-grant path, and its admin strip would make the role ungrantable; and a role change that lands with no admin_audit_log row leaves no moderation trace (the F-073 class). The /moderation/users organizer toggle is silently broken meanwhile.",
+    "category": "authz",
+    "affected_paths": [
+      { "path": "src/app/api/admin/users/[id]/route.ts", "lines": "21-26, the admin strip; 31-36, the cookie-client update (500 on zero rows); no logAdminAction call" },
+      { "path": "src/app/moderation/users/page.tsx", "lines": "53-57, the organizer toggle's PATCH with the target's whole role array" }
+    ],
+    "evidence": "quality/phase-05-slice-defects.md#f-091--admin-role-changes-cannot-land-and-strip-admin",
+    "reproduction": [
+      "On the seeded local stack, inside BEGIN ... ROLLBACK as admin (5eed0000-0000-4000-8000-000000000007, roles {user,admin}): UPDATE users SET roles = {user,club_organizer} WHERE id = onboarded_student (5eed0000-0000-4000-8000-000000000001) -> UPDATE 0; the same update on the caller's own row -> UPDATE 1 (re-run 2026-09-24).",
+      "pg_policies: the only UPDATE policy on users is 'Users can update own profile' (auth.uid() = id).",
+      "Read src/app/api/admin/users/[id]/route.ts:31-36: .update().select().single() on the cookie client errors on zero rows, so the route returns 500 {\"error\":\"Internal server error\"}.",
+      "Read :21-26: the submitted roles are filtered with r !== \"admin\" before the write; grep finds no logAdminAction in the file."
+    ],
+    "recommended_fix": "Write through getElevatedClient() with a REGISTRY row; validate roles against user_role (400 {\"error\":\"Invalid role\",\"field\":\"roles\"}); keep \"user\" always included; refuse a roles change on the caller's own id (403 {\"error\":\"You cannot change your own roles\"}); stop stripping admin; write logAdminAction with action \"updated\", targetType \"user\", metadata { roles } (DEC-45).",
+    "validation_criterion": "src/__tests__/api/admin/admin-users-patch-defect.test.ts's assertions MOVE when the fix lands.",
+    "status": "Open",
+    "risk_acceptance": null,
+    "closes_in_phase": "05",
+    "related": ["F-004", "F-006"]
   }
 ]
