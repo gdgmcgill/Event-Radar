@@ -442,3 +442,25 @@ their gate were open (see the spec's docblock). The members DELETE and members/r
 IDS.ownerOfApproved rather than IDS.memberOfApproved for that reason (deviation recorded in
 05-09-SUMMARY.md).
 
+==============================================================================
+§4 — Observation for 05-11 (a candidate deferred item; nothing changed)
+==============================================================================
+
+The organizer's `GET /api/clubs/<id>/members` passes its gate (#6 accepts owner and organizer).
+But the listing runs on the cookie client, and the `club_members` SELECT policies are
+`Club owners can view all club members` (is_club_owner) and `Users see own memberships`
+(auth.uid() = user_id). So a non-owner member receives only their own row. The Playwright test
+"the club's organizer › can view members" asserts only that club_member's own row is present, so it
+pins nothing about this.
+
+Measured read-only on the seeded local stack (rolled back):
+$ docker exec -i supabase_db_Event-Radar psql -U postgres -X -e   # as club_member …003
+SELECT auth.uid() AS acting_as;                        → 5eed0000-0000-4000-8000-000000000003
+SELECT id, user_id, role FROM public.club_members
+  WHERE club_id = '5eed…00c1' ORDER BY created_at;     → 1 row (b1, …003, organizer)
+ROLLBACK;
+SELECT count(*) … WHERE club_id = '5eed…00c1';         → 3 (session owner, bypasses RLS)
+
+This is the same family as research § D's "events UPDATE … handler/RLS mismatch for non-creator
+members": a membership gate in the handler that RLS does not mirror. It is not F-087, which covers
+the owner's writes. 05-09-SUMMARY.md lists it under "Deferred items found" for 05-11 to register.
