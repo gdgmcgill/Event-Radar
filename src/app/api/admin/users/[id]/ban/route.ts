@@ -3,7 +3,7 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 
 /**
  * POST /api/admin/users/[id]/ban — Ban a user
@@ -54,7 +54,11 @@ export async function POST(
     );
   }
 
-  const serviceClient = createServiceClient();
+  // Reads, the content suspension and its moderation reviews run on the
+  // caller's cookie client: the admin policies on users (SELECT), events,
+  // clubs and moderation_reviews permit them (DEC-49). The ban columns and the
+  // notification go through the elevated door.
+  const supabase = ctx.supabase;
 
   // Prevent self-ban
   if (id === user.id) {
@@ -62,7 +66,7 @@ export async function POST(
   }
 
   // Check target user exists
-  const { data: targetUser, error: fetchError } = await serviceClient
+  const { data: targetUser, error: fetchError } = await supabase
     .from("users")
     .select("id, name, banned_at, roles")
     .eq("id", id)
@@ -94,8 +98,10 @@ export async function POST(
     banExpiresAt = expiresAt.toISOString();
   }
 
-  // Update user with ban fields
-  const { error: updateError } = await serviceClient
+  // Update user with ban fields. users has no admin UPDATE policy and the
+  // F-006 grant withholds the ban columns. REGISTRY.md row: "Ban or unban a
+  // user (banned_at, ban_expires_at, ban_reason)".
+  const { error: updateError } = await getElevatedClient()
     .from("users")
     .update({
       banned_at: now.toISOString(),
@@ -114,7 +120,7 @@ export async function POST(
   const warnings: string[] = [];
   if (suspend_content) {
     // Fetch affected items first for moderation_reviews
-    const { data: approvedEvents, error: evtFetchErr } = await serviceClient
+    const { data: approvedEvents, error: evtFetchErr } = await supabase
       .from("events")
       .select("id, title")
       .eq("created_by", id)
@@ -125,7 +131,7 @@ export async function POST(
       warnings.push("Failed to fetch events for suspension");
     }
 
-    const { data: approvedClubs, error: clubFetchErr } = await serviceClient
+    const { data: approvedClubs, error: clubFetchErr } = await supabase
       .from("clubs")
       .select("id, name")
       .eq("created_by", id)
@@ -138,7 +144,7 @@ export async function POST(
 
     // Suspend events
     if (approvedEvents && approvedEvents.length > 0) {
-      const { error: evtUpdateErr } = await serviceClient
+      const { error: evtUpdateErr } = await supabase
         .from("events")
         .update({ status: "suspended", updated_at: now.toISOString() })
         .eq("created_by", id)
@@ -150,7 +156,7 @@ export async function POST(
       }
 
       // Create moderation_reviews for each suspended event
-      const { error: evtReviewErr } = await serviceClient.from("moderation_reviews").insert(
+      const { error: evtReviewErr } = await supabase.from("moderation_reviews").insert(
         approvedEvents.map((event) => ({
           target_type: "event",
           target_id: event.id,
@@ -169,7 +175,7 @@ export async function POST(
 
     // Suspend clubs
     if (approvedClubs && approvedClubs.length > 0) {
-      const { error: clubUpdateErr } = await serviceClient
+      const { error: clubUpdateErr } = await supabase
         .from("clubs")
         .update({ status: "suspended", updated_at: now.toISOString() })
         .eq("created_by", id)
@@ -181,7 +187,7 @@ export async function POST(
       }
 
       // Create moderation_reviews for each suspended club
-      const { error: clubReviewErr } = await serviceClient.from("moderation_reviews").insert(
+      const { error: clubReviewErr } = await supabase.from("moderation_reviews").insert(
         approvedClubs.map((club) => ({
           target_type: "club",
           target_id: club.id,
@@ -205,7 +211,8 @@ export async function POST(
       ? `${duration_days} day${duration_days > 1 ? "s" : ""}`
       : "permanently";
 
-    await serviceClient.from("notifications").insert({
+    // REGISTRY.md row: "Notify another user (notifications insert)".
+    await getElevatedClient().from("notifications").insert({
       user_id: id,
       type: "user_banned",
       title: "Account Banned",
@@ -259,10 +266,12 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const serviceClient = createServiceClient();
+  // The target read runs on the cookie client ("Admins can view all
+  // profiles"); clearing the ban and the notification go through the door.
+  const supabase = ctx.supabase;
 
   // Check target user exists and is banned
-  const { data: targetUser, error: fetchError } = await serviceClient
+  const { data: targetUser, error: fetchError } = await supabase
     .from("users")
     .select("id, name, banned_at")
     .eq("id", id)
@@ -279,8 +288,9 @@ export async function DELETE(
     );
   }
 
-  // Clear only banned_at and ban_expires_at (preserve ban_reason and banned_by for history)
-  const { error: updateError } = await serviceClient
+  // Clear only banned_at and ban_expires_at (preserve ban_reason and banned_by for history).
+  // REGISTRY.md row: "Ban or unban a user (banned_at, ban_expires_at, ban_reason)".
+  const { error: updateError } = await getElevatedClient()
     .from("users")
     .update({
       banned_at: null,
@@ -294,7 +304,8 @@ export async function DELETE(
 
   // Send notification
   try {
-    await serviceClient.from("notifications").insert({
+    // REGISTRY.md row: "Notify another user (notifications insert)".
+    await getElevatedClient().from("notifications").insert({
       user_id: id,
       type: "user_unbanned",
       title: "Account Unbanned",

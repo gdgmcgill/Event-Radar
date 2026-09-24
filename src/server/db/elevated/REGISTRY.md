@@ -19,6 +19,9 @@ exception that nobody wrote down is indistinguishable from an oversight.
 | Recompute event popularity scores (rpc update_event_popularity) | `src/app/api/admin/calculate-popularity/route.ts` | writes event_popularity_scores, which are service-role-only by design (F-010); invoked on behalf of an admin, not a row owner | 05 |
 | Change another user's roles or name as an admin | `src/app/api/admin/users/[id]/route.ts` | users has no admin UPDATE policy and the F-006 column grant withholds roles from authenticated; the change is an audited admin action (F-004, F-091) | 05 |
 | Insert admin_audit_log rows for every moderation action | `src/lib/audit.ts` (logAdminAction) | after F-007 no client role may insert; the door is the only writer, so the record cannot be forged by the actor it records | 05 |
+| Notify another user (notifications insert) | `src/app/api/admin/clubs/[id]/route.ts`, `src/app/api/admin/events/[id]/edits/route.ts`, `src/app/api/admin/events/[id]/status/route.ts`, `src/app/api/admin/organizer-requests/[id]/route.ts`, `src/app/api/admin/users/[id]/ban/route.ts` | notifications INSERT is granted to service_role only; a notification for another user cannot be a caller-scoped policy | 05 |
+| Set another user's roles on approval (club_organizer) | `src/app/api/admin/clubs/[id]/route.ts`, `src/app/api/admin/organizer-requests/[id]/route.ts` | users has no admin UPDATE policy and the F-006 grant withholds roles | 05 |
+| Ban or unban a user (banned_at, ban_expires_at, ban_reason) | `src/app/api/admin/users/[id]/ban/route.ts` | users has no admin UPDATE policy; the ban columns are withheld from authenticated by the F-006 grant | 05 |
 
 Rows added from Phase 5 (05-05 onward).
 
@@ -37,7 +40,11 @@ census, so the ratchet counts three entries fewer than the committed list. Plan
 05-14 moved `src/app/api/admin/calculate-popularity/route.ts` onto the door
 (its inline service-key client is deleted, F-001), so the ratchet counts four
 entries fewer; the same plan moved `src/lib/audit.ts` onto the door (F-073),
-so it counts five fewer.
+so it counts five fewer. Plan 05-15 split the eight admin write and read
+routes between the caller's cookie client (every operation an admin policy
+already permits) and the door (notifications, another user's roles, the ban
+columns); `admin/organizers`, `admin/reports` and `admin/reports/[id]` need no
+door at all.
 
 ### The audit writer
 

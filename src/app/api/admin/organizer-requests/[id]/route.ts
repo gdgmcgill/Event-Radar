@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
 
 export async function PATCH(
@@ -28,9 +28,14 @@ export async function PATCH(
     );
   }
 
-  const serviceClient = createServiceClient();
+  // The request read and update, the target's roles read, the membership
+  // upsert and the club name read run on the caller's cookie client: the admin
+  // policies on organizer_requests, users (SELECT), club_members and the public
+  // clubs read permit them (DEC-49). The roles write and the notification go
+  // through the elevated door.
+  const supabase = ctx.supabase;
 
-  const { data: orgRequest, error: fetchError } = await serviceClient
+  const { data: orgRequest, error: fetchError } = await supabase
     .from("organizer_requests")
     .select("*")
     .eq("id", id)
@@ -50,7 +55,7 @@ export async function PATCH(
     );
   }
 
-  const { error: updateError } = await serviceClient
+  const { error: updateError } = await supabase
     .from("organizer_requests")
     .update({
       status,
@@ -78,7 +83,7 @@ export async function PATCH(
   }
 
   if (status === "approved") {
-    const { data: targetUser } = await serviceClient
+    const { data: targetUser } = await supabase
       .from("users")
       .select("roles")
       .eq("id", orgRequest.user_id)
@@ -86,7 +91,10 @@ export async function PATCH(
 
     if (targetUser && !targetUser.roles?.includes("club_organizer")) {
       const updatedRoles = [...(targetUser.roles || []), "club_organizer"] as ("user" | "club_organizer" | "admin")[];
-      await serviceClient
+      // users has no admin UPDATE policy and the F-006 grant withholds roles.
+      // REGISTRY.md row: "Set another user's roles on approval
+      // (club_organizer)".
+      await getElevatedClient()
         .from("users")
         .update({
           roles: updatedRoles,
@@ -95,7 +103,7 @@ export async function PATCH(
         .eq("id", orgRequest.user_id);
     }
 
-    await serviceClient.from("club_members").upsert(
+    await supabase.from("club_members").upsert(
       {
         user_id: orgRequest.user_id,
         club_id: orgRequest.club_id,
@@ -106,7 +114,7 @@ export async function PATCH(
   }
 
   try {
-    const { data: club } = await serviceClient
+    const { data: club } = await supabase
       .from("clubs")
       .select("name")
       .eq("id", orgRequest.club_id)
@@ -115,7 +123,8 @@ export async function PATCH(
     const clubName = club?.name || "the club";
     const isApproved = status === "approved";
 
-    await serviceClient.from("notifications").insert({
+    // REGISTRY.md row: "Notify another user (notifications insert)".
+    await getElevatedClient().from("notifications").insert({
       user_id: orgRequest.user_id,
       type: isApproved ? "organizer_approved" : "organizer_rejected",
       title: isApproved

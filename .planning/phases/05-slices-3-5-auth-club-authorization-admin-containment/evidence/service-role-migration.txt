@@ -1,0 +1,161 @@
+# Service-role migration — plan 05-15 (REFAC-13, DEC-49)
+
+Phase: 05-slices-3-5-auth-club-authorization-admin-containment · Plan: 05-15 · Recorded: 2026-09-24
+Base commit: 27220bd. Every exit= below is the command's own (no pipe), unless stated.
+
+Rule (DEC-49): an operation an existing RLS policy already permits moves to the caller's cookie
+client (ctx.supabase); every other operation goes through getElevatedClient() with a REGISTRY.md
+row. No policy is widened (research Pitfall 10).
+
+## 0. Ratchet before this plan
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=20 delta=-5
+(retired: calculate-popularity, clubs/[id], clubs/[id]/transfer, auth/callback, lib/audit.ts)
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+## 1. Policy re-verification (every "permits" cell re-checked before moving an operation)
+
+Source A: .planning/audit/rls/pg_policies.json (production capture, 2026-09-14T18:27:11Z,
+supabase-mcp execute_sql). Source B: live pg_policies on the local stack (docker exec psql).
+Tables compared: clubs, moderation_reviews, club_members, events, organizer_requests,
+event_reports, users, notifications, user_follows, club_followers, rsvps, saved_events.
+
+Comparison of USING / WITH CHECK text, whitespace-normalised, production vs local:
+  identical: 43
+  DIFFERS: events INSERT "Authenticated users can insert events" (F-008, 05-11 migration; local only)
+  local-only: club_members INSERT "Invitees can join the club they were invited to" (20260916 migration)
+Neither difference touches an operation this plan moves (no events INSERT, and the club_members
+upserts below rely on the admin ALL policy, present in both sets).
+
+Table privileges for `authenticated` on the local stack (has_table_privilege SELECT/INSERT/UPDATE):
+all twelve tables t t t (the F-006 users column grant lands in 05-16; every users column this plan
+writes on the cookie client — avatar_url, banner_url, name, pronouns, year, faculty, visibility,
+interest_tags, onboarding_completed, updated_at — is in 05-16's GRANT UPDATE list).
+Triggers on the moved tables: only BEFORE UPDATE update_updated_at_column() on clubs, events,
+organizer_requests, users (sets NEW.updated_at; no cross-table write). is_admin() and
+is_club_owner() are SECURITY DEFINER.
+
+Cell-by-cell verdicts (policy names verbatim from both sets):
+
+| Operation (admin caller) | Policy that permits it on the cookie client | Verdict |
+|---|---|---|
+| clubs SELECT | "Anyone can read clubs" USING true | cookie |
+| clubs UPDATE | "Admins can update clubs" USING is_admin() CHECK is_admin() | cookie |
+| moderation_reviews INSERT | "Admins full access" ALL, USING admin EXISTS (no CHECK, so USING is the check) | cookie |
+| club_members UPSERT (INSERT + ON CONFLICT UPDATE) | "Admins manage memberships" ALL, admin EXISTS | cookie |
+| users SELECT (another user's roles, ban state) | "Admins can view all profiles" USING is_admin() | cookie |
+| users UPDATE (another user's roles / ban columns) | none: only "Users can update own profile" USING auth.uid() = id | DOOR (row) |
+| notifications INSERT / UPSERT | none for authenticated: "Service role can insert notifications" TO service_role | DOOR (row) |
+| events SELECT / UPDATE (incl. RETURNING id) | "Admins can view all events", "Admins can update any event" | cookie |
+| organizer_requests SELECT / UPDATE | "Admins manage requests" ALL, admin EXISTS | cookie |
+| event_reports SELECT / UPDATE | "Admins can read all reports", "Admins can update reports" | cookie |
+
+No cell in research § F was wrong for the admin family, so no operation research marked
+"permitted" had to stay on the door. The e2e run in § 4 confirms every cookie-client write on the
+real policies.
+
+## 2. Per-file split (Task 1)
+
+| File | Cookie client (ctx.supabase) | Door (getElevatedClient()) |
+|---|---|---|
+| admin/clubs/[id] PATCH | clubs select, clubs update, moderation_reviews insert, users select (creator roles), club_members upsert | users update (roles), notifications insert (×3 branches) |
+| admin/events/[id]/edits PATCH | events select, events update ×2 (approve/reject) | notifications insert ×2 |
+| admin/events/[id]/status PATCH | events select, events update, moderation_reviews insert (×4 branches) | notifications upsert (approve), insert (suspend/reject) |
+| admin/organizer-requests/[id] PATCH | organizer_requests select/update, users select (roles), club_members upsert, clubs select | users update (roles), notifications insert |
+| admin/organizers GET | users, club_members (+clubs embed), events selects | none |
+| admin/reports GET | event_reports selects (+events, users embeds) | none |
+| admin/reports/[id] PATCH | event_reports select/update | none |
+| admin/users/[id]/ban POST | users select, events select/update, clubs select/update, moderation_reviews insert ×2 | users update (ban columns), notifications insert |
+| admin/users/[id]/ban DELETE | users select | users update (clear ban), notifications insert |
+
+The audit writer (logAdminAction, src/lib/audit.ts) was already on the door since 05-14 and is
+unchanged. No response body, status or error string changed; only the client each call uses.
+
+$ grep -rn "serviceClient\|createServiceClient\|lib/supabase/service" src/app/api/admin/
+exit=1   (no match: none of the eight files imports the service module)
+
+REGISTRY.md rows added (src/server/db/elevated/REGISTRY.md):
+  - Notify another user (notifications insert) — the five admin callers
+  - Set another user's roles on approval (club_organizer) — admin/clubs/[id], admin/organizer-requests/[id]
+  - Ban or unban a user (banned_at, ban_expires_at, ban_reason) — admin/users/[id]/ban
+
+## 3. Routing unit suite (src/__tests__/api/service-role-routing.test.ts)
+
+Cookie fake A behind @/lib/supabase/server, elevated fake B behind @/lib/supabase/service (the door
+wraps it). Each case drives a success path as an admin and asserts the ordered <table>.<op> list on
+each fake. 12 cases cover all eight admin files (both verbs of ban; approve and reject/suspend
+variants of clubs, edits, status).
+
+Mutation check: the eight pre-migration sources (git show HEAD:<file>) put back temporarily:
+$ npx jest --ci src/__tests__/api/service-role-routing.test.ts
+Tests:       12 failed, 12 total
+exit=1
+Fixed sources restored; each `cmp` against the saved copy identical (8 × "restored").
+
+Task 1 verify block:
+$ npx jest --ci src/__tests__/api/service-role-routing.test.ts src/__tests__/api/admin
+Test Suites: 4 passed, 4 total
+Tests:       166 passed, 166 total
+exit=0
+(admin-guard-characterization.test.ts, admin-guard-defect.test.ts and admin-users-patch-defect.test.ts
+pass unedited: `git diff --stat -- src/__tests__/api/admin/ src/__tests__/api/auth-ring/ src/__tests__/helpers/` is empty.)
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=12 delta=-13
+PASS: the live census is a subset of the committed allow-list
+exit=0
+$ npm run lint
+✖ 18 problems (0 errors, 18 warnings)
+exit=0
+$ npx tsc --noEmit
+exit=0
+
+## 4. Playwright on the real stack (clean reset and seed)
+
+$ supabase db reset --local   (last line)
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ npx playwright test e2e/specs/admin-write-paths.spec.ts e2e/specs/admin-audit-row.spec.ts e2e/specs/admin-moderation-queue.spec.ts e2e/specs/admin-guard.spec.ts   (test lines)
+  ✓  11 [chromium] › e2e/specs/admin-audit-row.spec.ts:114:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-073: approving the fixture writes exactly one audit row (180ms)
+  ✓  12 [chromium] › e2e/specs/admin-audit-row.spec.ts:134:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-072: Recent Activity shows the action and the actor by name (501ms)
+  ✓  13 [chromium] › e2e/specs/admin-guard.spec.ts:43:7 › an anonymous caller › FIXED F-061: anonymous admin call answers 401 (6ms)
+  ✓  14 [chromium] › e2e/specs/admin-guard.spec.ts:62:7 › an onboarded student › PRESERVE: a non-admin gets 403 Forbidden (113ms)
+  ✓  15 [chromium] › e2e/specs/admin-guard.spec.ts:70:7 › an admin › PRESERVE: the admin gets 200 with the stats body (107ms)
+  ✓  16 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (450ms)
+  ✓  17 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  18 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (251ms)
+  ✓  19 [chromium] › e2e/specs/admin-write-paths.spec.ts:222:7 › admin writes through their split clients (DEC-49) › approving a pending club: approved, owner membership, organizer role, notification (146ms)
+  ✓  20 [chromium] › e2e/specs/admin-write-paths.spec.ts:252:7 › admin writes through their split clients (DEC-49) › resolving a report: status and reviewer change (121ms)
+  ✓  21 [chromium] › e2e/specs/admin-write-paths.spec.ts:267:7 › admin writes through their split clients (DEC-49) › approving an organizer request: approved, organizer membership, notification (126ms)
+  ✓  22 [chromium] › e2e/specs/admin-write-paths.spec.ts:298:7 › admin writes through their split clients (DEC-49) › banning with suspend_content: banned, own club suspended with a review, notification (137ms)
+  ✓  23 [chromium] › e2e/specs/admin-write-paths.spec.ts:335:7 › admin writes through their split clients (DEC-49) › unbanning: banned_at and ban_expires_at are cleared (117ms)
+  23 passed (16.1s)
+exit=0
+
+Fixture residue, queried directly after the run (docker exec psql, postgres role):
+auth.users = 0
+public.users = 0
+clubs = 0
+event_reports (non-seed) = 0
+organizer_requests = 0
+notifications = 0
+moderation_reviews = 0
+club_members = 6
+admin_audit_log = 0
+exit=0
+(club_members = 6 is the seed's six memberships; every other count is the table's total, and the
+seed writes none of those rows.)
+
+Observed, not changed (pre-existing, out of scope): GET /api/admin/reports embeds
+`reporter:users!event_reports_reporter_id_fkey(id, display_name, avatar_url)`. event_reports.reporter_id
+references auth.users, not public.users, and users has no display_name column, so PostgREST answers
+PGRST200 on either client and the route answers 500 today, before and after this plan:
+$ curl -s "$API_URL/rest/v1/event_reports?select=*,event:events!inner(id,title,status,deleted_at),reporter:users!event_reports_reporter_id_fkey(id,display_name,avatar_url)&limit=1" (anon key)
+{"code":"PGRST200","details":"Searched for a foreign key relationship between 'event_reports' and 'users' using the hint 'event_reports_reporter_id_fkey' in the schema 'public', but no matches were found.","hint":"Perhaps you meant 'events' instead of 'users'.","message":"Could not find a relationship between 'event_reports' and 'users' in the schema cache"}
+Candidate deferred item for 05-19 to register.

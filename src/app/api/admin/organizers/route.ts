@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { createServiceClient } from "@/lib/supabase/service";
 
 export async function GET(request: NextRequest) {
   const ctx = await createRequestContext();
@@ -15,7 +14,10 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search") ?? "";
   const status = searchParams.get("status") ?? "all";
 
-  const supabase = createServiceClient();
+  // Every read here is permitted to an admin on the cookie client ("Admins can
+  // view all profiles", "Admins manage memberships", "Admins can view all
+  // events", public clubs read), so no elevated client is needed (DEC-49).
+  const supabase = ctx.supabase;
 
   // Query users with club_organizer role
   let query = supabase

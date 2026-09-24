@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { createServiceClient } from "@/lib/supabase/service";
 
 export async function GET(request: NextRequest) {
   const ctx = await createRequestContext();
@@ -20,7 +19,10 @@ export async function GET(request: NextRequest) {
   const rawOffset = parseInt(url.searchParams.get("offset") || "0");
   const offset = isNaN(rawOffset) || rawOffset < 0 ? 0 : rawOffset;
 
-  const supabase = createServiceClient();
+  // "Admins can read all reports", "Admins can view all events" and "Admins
+  // can view all profiles" permit every read here on the cookie client, so no
+  // elevated client is needed (DEC-49).
+  const supabase = ctx.supabase;
 
   let query = supabase
     .from("event_reports")

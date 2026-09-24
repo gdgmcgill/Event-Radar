@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
 
@@ -59,9 +59,14 @@ export async function PATCH(
     }
   }
 
-  const serviceClient = createServiceClient();
+  // The club read and update, the moderation review and the owner membership
+  // run on the caller's cookie client: the admin policies on clubs
+  // ("Admins can update clubs"), moderation_reviews ("Admins full access") and
+  // club_members ("Admins manage memberships") permit them (DEC-49). Only the
+  // creator's roles write and the notifications go through the elevated door.
+  const supabase = ctx.supabase;
 
-  const { data: club, error: fetchError } = await serviceClient
+  const { data: club, error: fetchError } = await supabase
     .from("clubs")
     .select("*")
     .eq("id", id)
@@ -87,7 +92,7 @@ export async function PATCH(
     );
   }
 
-  const { error: updateError } = await serviceClient
+  const { error: updateError } = await supabase
     .from("clubs")
     .update({
       status,
@@ -101,7 +106,7 @@ export async function PATCH(
 
   // Insert moderation review row
   if (status === "rejected") {
-    await serviceClient.from("moderation_reviews").insert({
+    await supabase.from("moderation_reviews").insert({
       target_type: "club",
       target_id: id,
       action: "rejection",
@@ -110,7 +115,7 @@ export async function PATCH(
       author_id: user.id,
     });
   } else if (status === "suspended") {
-    await serviceClient.from("moderation_reviews").insert({
+    await supabase.from("moderation_reviews").insert({
       target_type: "club",
       target_id: id,
       action: "suspension",
@@ -119,7 +124,7 @@ export async function PATCH(
       author_id: user.id,
     });
   } else if (status === "approved" && club.status === "suspended") {
-    await serviceClient.from("moderation_reviews").insert({
+    await supabase.from("moderation_reviews").insert({
       target_type: "club",
       target_id: id,
       action: "unsuspension",
@@ -128,7 +133,7 @@ export async function PATCH(
       author_id: user.id,
     });
   } else if (status === "approved" && (club.appeal_count ?? 0) > 0) {
-    await serviceClient.from("moderation_reviews").insert({
+    await supabase.from("moderation_reviews").insert({
       target_type: "club",
       target_id: id,
       action: "approval",
@@ -159,7 +164,11 @@ export async function PATCH(
   if (status === "approved" && club.created_by) {
     // Skip role assignment and club_members upsert when unsuspending (user already has them)
     if (club.status !== "suspended") {
-      const { data: targetUser } = await serviceClient
+      // Reading another user's roles is permitted to an admin ("Admins can view
+      // all profiles"); writing them is not: users has no admin UPDATE policy
+      // and the F-006 grant withholds roles. REGISTRY.md row: "Set another
+      // user's roles on approval (club_organizer)".
+      const { data: targetUser } = await supabase
         .from("users")
         .select("roles")
         .eq("id", club.created_by)
@@ -167,7 +176,7 @@ export async function PATCH(
 
       if (targetUser && !targetUser.roles?.includes("club_organizer")) {
         const updatedRoles = [...(targetUser.roles || []), "club_organizer"] as ("user" | "club_organizer" | "admin")[];
-        await serviceClient
+        await getElevatedClient()
           .from("users")
           .update({
             roles: updatedRoles,
@@ -176,7 +185,7 @@ export async function PATCH(
           .eq("id", club.created_by);
       }
 
-      await serviceClient.from("club_members").upsert(
+      await supabase.from("club_members").upsert(
         {
           user_id: club.created_by,
           club_id: id,
@@ -187,7 +196,9 @@ export async function PATCH(
     }
 
     try {
-      await serviceClient.from("notifications").insert({
+      // notifications INSERT is granted to service_role only. REGISTRY.md row:
+      // "Notify another user (notifications insert)".
+      await getElevatedClient().from("notifications").insert({
         user_id: club.created_by,
         type: "club_approved",
         title: "Club Approved!",
@@ -201,7 +212,7 @@ export async function PATCH(
   if (status === "suspended" && club.created_by) {
     try {
       const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
-      await serviceClient.from("notifications").insert({
+      await getElevatedClient().from("notifications").insert({
         user_id: club.created_by,
         type: "club_suspended",
         title: "Club Suspended",
@@ -216,7 +227,7 @@ export async function PATCH(
   if (status === "rejected" && club.created_by) {
     try {
       const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
-      await serviceClient.from("notifications").insert({
+      await getElevatedClient().from("notifications").insert({
         user_id: club.created_by,
         type: "club_rejected",
         title: "Club Not Approved",

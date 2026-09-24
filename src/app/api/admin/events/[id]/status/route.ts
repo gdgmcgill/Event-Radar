@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
 
@@ -26,10 +26,15 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  const serviceClient = createServiceClient();
+  // The event read and update and the moderation review run on the caller's
+  // cookie client: the admin policies on events and moderation_reviews permit
+  // them (DEC-49). The creator's notification goes through the elevated door:
+  // notifications INSERT is granted to service_role only. REGISTRY.md row:
+  // "Notify another user (notifications insert)".
+  const supabase = ctx.supabase;
 
   // Fetch current event
-  const { data: event, error: fetchError } = await serviceClient
+  const { data: event, error: fetchError } = await supabase
     .from("events")
     .select("title, created_by, status, appeal_count")
     .eq("id", id)
@@ -88,7 +93,7 @@ export async function PATCH(
   }
 
   // Update event status
-  const { error: updateError } = await serviceClient
+  const { error: updateError } = await supabase
     .from("events")
     .update({
       status,
@@ -102,7 +107,7 @@ export async function PATCH(
 
   // Insert moderation review row
   if (status === "rejected") {
-    await serviceClient.from("moderation_reviews").insert({
+    await supabase.from("moderation_reviews").insert({
       target_type: "event",
       target_id: id,
       action: "rejection",
@@ -111,7 +116,7 @@ export async function PATCH(
       author_id: user.id,
     });
   } else if (status === "suspended") {
-    await serviceClient.from("moderation_reviews").insert({
+    await supabase.from("moderation_reviews").insert({
       target_type: "event",
       target_id: id,
       action: "suspension",
@@ -120,7 +125,7 @@ export async function PATCH(
       author_id: user.id,
     });
   } else if (status === "approved" && event.status === "suspended") {
-    await serviceClient.from("moderation_reviews").insert({
+    await supabase.from("moderation_reviews").insert({
       target_type: "event",
       target_id: id,
       action: "unsuspension",
@@ -129,7 +134,7 @@ export async function PATCH(
       author_id: user.id,
     });
   } else if (status === "approved" && (event.appeal_count ?? 0) > 0) {
-    await serviceClient.from("moderation_reviews").insert({
+    await supabase.from("moderation_reviews").insert({
       target_type: "event",
       target_id: id,
       action: "approval",
@@ -161,7 +166,7 @@ export async function PATCH(
   try {
     if (event.created_by) {
       if (status === "approved") {
-        await serviceClient.from("notifications").upsert(
+        await getElevatedClient().from("notifications").upsert(
           {
             user_id: event.created_by,
             type: "event_approved",
@@ -175,7 +180,7 @@ export async function PATCH(
         );
       } else if (status === "suspended") {
         const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
-        await serviceClient.from("notifications").insert({
+        await getElevatedClient().from("notifications").insert({
           user_id: event.created_by,
           type: "event_suspended",
           title: "Event Suspended",
@@ -186,7 +191,7 @@ export async function PATCH(
         });
       } else {
         const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
-        await serviceClient.from("notifications").insert({
+        await getElevatedClient().from("notifications").insert({
           user_id: event.created_by,
           type: "event_rejected",
           title: "Event Not Approved",

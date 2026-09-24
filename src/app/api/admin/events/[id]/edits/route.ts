@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
 
 interface RouteParams {
@@ -36,7 +36,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const supabase = createServiceClient();
+  // The event read and both updates run on the caller's cookie client: the
+  // admin policies on events ("Admins can view all events", "Admins can
+  // update any event") permit them (DEC-49). The creator's notification goes
+  // through the elevated door: notifications INSERT is granted to service_role
+  // only. REGISTRY.md row: "Notify another user (notifications insert)".
+  const supabase = ctx.supabase;
 
   const { data: event, error: fetchError } = await supabase
     .from("events")
@@ -85,7 +90,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     if (event.created_by) {
-      await supabase.from("notifications").insert({
+      await getElevatedClient().from("notifications").insert({
         user_id: event.created_by,
         type: "edit_approved",
         title: "Edits Approved",
@@ -128,7 +133,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   if (event.created_by) {
-    await supabase.from("notifications").insert({
+    await getElevatedClient().from("notifications").insert({
       user_id: event.created_by,
       type: "edit_rejected",
       title: "Edits Rejected",

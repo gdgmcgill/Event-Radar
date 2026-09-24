@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { createServiceClient } from "@/lib/supabase/service";
 import { logAdminAction } from "@/lib/audit";
 
 export async function PATCH(
@@ -25,7 +24,10 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  const supabase = createServiceClient();
+  // "Admins can read all reports" and "Admins can update reports" permit the
+  // read and the update on the cookie client, so no elevated client is needed
+  // (DEC-49).
+  const supabase = ctx.supabase;
 
   const { data: report, error: fetchError } = await supabase
     .from("event_reports")
