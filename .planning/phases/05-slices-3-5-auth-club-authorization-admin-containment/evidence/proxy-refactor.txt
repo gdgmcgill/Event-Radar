@@ -1,0 +1,202 @@
+Proxy refactor — plan 05-05 Task 1 (DEC-36; F-003, F-062, F-088, F-089)
+**Plan:** 05-05 · **Phase:** 05 · **Recorded:** 2026-09-24T05:34:54Z
+HEAD at capture=c14fdc8bf30265219f24afae3150764ae3c39056 (the 05-04 head is c14fdc8; Task 1's changes are in the working tree and are committed with this file)
+
+Every block: the command, its output filtered to PASS/FAIL, test lines, Expected/Received and counts (Jest stack frames dropped), then exit=<code>.
+
+==============================================================================
+1. Ledger protocol step 2 — the fixed proxy, src/proxy-defect.test.ts UNEDITED: red
+==============================================================================
+$ git diff --quiet c14fdc8 -- src/proxy-defect.test.ts; echo $?
+0
+$ npx jest --ci --verbose src/proxy-defect.test.ts   # fixed proxy, suite unedited
+FAIL node src/proxy-defect.test.ts
+    ✕ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built (2 ms)
+    ✕ F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged
+    ✕ F-088: a users read failing with XX000 is read as not banned — /my-events passed through (1 ms)
+    ✕ F-088: a users read answering PGRST116 (no row) is read as not banned — POST /api/events/x/save passed through, no sign-out
+    ✕ F-088: a users read answering PGRST116 (no row) is read as not banned — GET /my-events passed through, no sign-out (1 ms)
+    ✕ F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON
+    ✕ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through
+    ✕ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding (1 ms)
+    Expected: 200
+    Received: 500
+    Expected: 200
+    Received: 500
+    Expected: 200
+    Received: 500
+    Expected: 200
+    Received: 403
+    Received: "https://proxy.test/?error=profile_sync_failed"
+    Expected: 307
+    Received: 403
+    Received: "https://proxy.test/onboarding"
+    Expected: 307
+    Received: 200
+Test Suites: 1 failed, 1 total
+Tests:       8 failed, 8 total
+exit=1
+
+==============================================================================
+2. Ledger protocol step 3 — the rows moved to their fixed shapes: green
+   (row a gains the /api/events JSON variant; row d is split into its /api and page cases)
+   The PRESERVE suites pass unedited, and their diff against the 05-04 head is empty.
+==============================================================================
+$ npx jest --ci --verbose src/proxy-defect.test.ts   # fixed proxy, moved suite
+PASS node src/proxy-defect.test.ts
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile → 500 plain text, no client built, logged (3 ms)
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /api/events → 500 JSON {"error":"Failed to process request"}
+    ✓ F-088: auth.getUser rejecting reaches the catch — /profile → 500, not passed through, and logged
+    ✓ F-088: a users read failing with XX000 fails closed — /my-events → 500 after one users read
+    ✓ F-088: a users read answering PGRST116 (no row) on POST /api/events/x/save → 403 {"error":"Profile not found"}, no sign-out (1 ms)
+    ✓ F-088: a users read answering PGRST116 (no row) on GET /my-events → signed out once, 307 to /?error=profile_sync_failed carrying the sign-out's cookies (1 ms)
+    ✓ F-062: a banned user's POST /api/events/x/save → 403 {"error":"Account suspended"} as JSON, no redirect
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events → 307 to /onboarding (database truth)
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / is passed through
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+exit=0
+$ npx jest --ci src/proxy.test.ts src/proxy-characterization.test.ts   # fixed proxy, PRESERVE suites unedited
+PASS node src/proxy.test.ts
+PASS node src/proxy-characterization.test.ts
+Test Suites: 2 passed, 2 total
+Tests:       44 passed, 44 total
+exit=0
+$ git diff --stat c14fdc8 -- src/proxy-characterization.test.ts src/proxy.test.ts   # prints nothing
+exit=0
+
+==============================================================================
+3. Ledger protocol step 4 — the pre-fix proxy (git show c14fdc8:src/proxy.ts) restored
+   temporarily under the moved suite: red; then the fixed proxy restored and cmp-identical
+==============================================================================
+--- step 4: pre-fix proxy (c14fdc8) restored temporarily
+$ npx jest --ci --verbose src/proxy-defect.test.ts   # PRE-FIX proxy restored, moved suite
+FAIL node src/proxy-defect.test.ts
+    ✕ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile → 500 plain text, no client built, logged (3 ms)
+    ✕ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /api/events → 500 JSON {"error":"Failed to process request"} (1 ms)
+    ✕ F-088: auth.getUser rejecting reaches the catch — /profile → 500, not passed through, and logged
+    ✕ F-088: a users read failing with XX000 fails closed — /my-events → 500 after one users read
+    ✕ F-088: a users read answering PGRST116 (no row) on POST /api/events/x/save → 403 {"error":"Profile not found"}, no sign-out
+    ✕ F-088: a users read answering PGRST116 (no row) on GET /my-events → signed out once, 307 to /?error=profile_sync_failed carrying the sign-out's cookies (1 ms)
+    ✕ F-062: a banned user's POST /api/events/x/save → 403 {"error":"Account suspended"} as JSON, no redirect
+    ✕ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events → 307 to /onboarding (database truth)
+    ✕ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / is passed through (1 ms)
+    Expected: 500
+    Received: 200
+  ● proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /api/events → 500 JSON {"error":"Failed to process request"}
+    Expected: 500
+    Received: 200
+      227 |     expect(await res.json()).toEqual({ error: "Failed to process request" });
+    Expected: 500
+    Received: 200
+    Expected: 500
+    Received: 200
+  ● proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-088: a users read answering PGRST116 (no row) on POST /api/events/x/save → 403 {"error":"Profile not found"}, no sign-out
+    Expected: 403
+    Received: 200
+      277 |     expect(await res.json()).toEqual({ error: "Profile not found" });
+  ● proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-088: a users read answering PGRST116 (no row) on GET /my-events → signed out once, 307 to /?error=profile_sync_failed carrying the sign-out's cookies
+    Expected number of calls: 1
+    Received number of calls: 0
+  ● proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-062: a banned user's POST /api/events/x/save → 403 {"error":"Account suspended"} as JSON, no redirect
+    Expected: 403
+    Received: 307
+      329 |     expect(await res.json()).toEqual({ error: "Account suspended" });
+    Expected: 307
+    Received: 200
+    Received: "https://proxy.test/onboarding"
+Test Suites: 1 failed, 1 total
+Tests:       9 failed, 9 total
+exit=1
+$ cmp src/proxy.ts <fixed copy>
+cmp identical (exit=0)
+
+==============================================================================
+4. Extra mutation (not in the plan): the row-d page case bites on the cookie carry
+==============================================================================
+--- mutation: drop the cookie copy onto the profile_sync_failed redirect
+$ npx jest --ci --verbose src/proxy-defect.test.ts   # cookie copy removed
+FAIL node src/proxy-defect.test.ts
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile → 500 plain text, no client built, logged (2 ms)
+    ✓ F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /api/events → 500 JSON {"error":"Failed to process request"}
+    ✓ F-088: auth.getUser rejecting reaches the catch — /profile → 500, not passed through, and logged (1 ms)
+    ✓ F-088: a users read failing with XX000 fails closed — /my-events → 500 after one users read
+    ✓ F-088: a users read answering PGRST116 (no row) on POST /api/events/x/save → 403 {"error":"Profile not found"}, no sign-out
+    ✕ F-088: a users read answering PGRST116 (no row) on GET /my-events → signed out once, 307 to /?error=profile_sync_failed carrying the sign-out's cookies
+    ✓ F-062: a banned user's POST /api/events/x/save → 403 {"error":"Account suspended"} as JSON, no redirect
+    ✓ F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events → 307 to /onboarding (database truth)
+    ✓ F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / is passed through
+  ● proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-088: a users read answering PGRST116 (no row) on GET /my-events → signed out once, 307 to /?error=profile_sync_failed carrying the sign-out's cookies
+    Received: undefined
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 8 passed, 9 total
+exit=1
+$ cmp src/proxy.ts <fixed copy>
+cmp identical
+
+==============================================================================
+5. Preserved regions and acceptance greps
+==============================================================================
+$ diff <(git show c14fdc8:src/proxy.ts | sed -n 20,87p) <(the same 68 lines in the new src/proxy.ts, from "let supabaseResponse")
+exit=0  (client creation, the no-logic-before-getUser comment and the cookie cleanup are byte-identical)
+$ diff <(git show c14fdc8:src/proxy.ts | sed -n 147,158p) <(tail -12 src/proxy.ts)
+exit=0  (config.matcher byte-identical)
+$ grep -n "const PROTECTED_ROUTES" src/proxy.ts; git show c14fdc8:src/proxy.ts | grep -n "const PROTECTED_ROUTES"
+188:  const PROTECTED_ROUTES = ["/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"];
+114:  const PROTECTED_ROUTES = ["/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"];
+$ node -e (the plan's one-line-literal and no-env-pass-through check)
+exit=0
+$ node -e "…" (CLAUDE.md re-derivation of PROTECTED_ROUTES)
+"/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"
+exit=0
+$ grep -c 'Failed to process request' src/proxy.ts
+2
+$ grep -c 'Profile not found' src/proxy.ts
+1
+$ grep -c 'Account suspended' src/proxy.ts
+2
+$ grep -c 'profile_sync_failed' src/proxy.ts
+2
+$ grep -c 'select("banned_at, ban_expires_at, onboarding_completed")' src/proxy.ts
+1
+$ grep -n "needs_onboarding" src/proxy.ts   # named only in the docblock and a comment; never read
+36: *     `needs_onboarding` cookie. The callback still sets that cookie as a hint
+198:  // The needs_onboarding cookie is a hint the callback sets; it is not read.
+
+==============================================================================
+6. Type check, lint, build, full floor
+==============================================================================
+$ npx tsc --noEmit
+exit=0
+$ npm run lint
+  77:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 19 problems (0 errors, 19 warnings)
+(no line names src/proxy.ts or src/proxy-defect.test.ts)
+exit=0
+$ npm run build
+
+> uni-verse@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.js took 6ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1328ms
+  Running TypeScript ...
+  Finished TypeScript in 1042ms ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/100) ...
+  …
+✓ Generating static pages using 9 workers (100/100) in 316ms
+ƒ Proxy (Middleware)
+exit=0
+$ npx jest --ci
+Test Suites: 62 passed, 62 total
+Tests:       1009 passed, 1009 total   (1008 + 1: row a's /api/events variant)
+exit=0
+$ node scripts/check-characterization-tags.mjs --all
+ok 26 files
+exit=0

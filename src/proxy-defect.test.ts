@@ -19,16 +19,36 @@
  *     stale cookie still redirects an onboarded one.
  *
  * What this file is and is not:
- *   It pins TODAY's wrong shapes exactly, so the commit that fixes each one
- *   has to move an assertion visibly. It is not the specification of the fix.
- *   The after-shapes are DEC-34..DEC-36 in the phase decision record and
- *   05-RESEARCH.md § B. What must survive the fix lives in
+ *   Plan 05-02 wrote it to pin the wrong shapes above exactly, so the commit
+ *   that fixed each one had to move an assertion visibly. Plan 05-05 fixed
+ *   them (DEC-35, DEC-36) and moved every row to its fixed shape in the same
+ *   commit, following the protocol in `evidence/defect-ledger.md`: the
+ *   unedited rows went red against the fixed proxy, the moved rows went green,
+ *   and the moved rows went red again with the pre-fix proxy restored. Each
+ *   moved row has a ledger row. The line numbers in "The defect" above are the
+ *   pre-fix proxy's. What must survive the fix lives in
  *   `src/proxy-characterization.test.ts`, not here.
  *
- * Registered as F-003 (Medium), F-062 (Medium), F-088 (Medium) and F-089
- * (Low) in .planning/audit/findings.json. Closes in Phase 5 (plan 05-05).
+ *   Fixed shapes pinned below:
+ *   - a. F-003: env unset → 500, plain text on a page, JSON
+ *        `{"error":"Failed to process request"}` under `/api/`; no client built
+ *   - b. F-088: `auth.getUser` rejecting → 500, logged `[Middleware] Error:`
+ *   - c. F-088: a users read failing with XX000 → 500
+ *   - d. F-088: no users row (PGRST116) → `/api/*` 403
+ *        `{"error":"Profile not found"}`; a page signs out once and gets 307 to
+ *        `/?error=profile_sync_failed`, carrying the sign-out's cookies
+ *   - e. F-062: a banned `/api/*` call → 403 `{"error":"Account suspended"}`
+ *        with a JSON content type
+ *   - f. F-089: no cookie, database says not onboarded → 307 to `/onboarding`
+ *   - g. F-089: a stale cookie on an onboarded user → no redirect
  *
- * Status: OPEN — assertions move in 05-05's proxy commit
+ * Registered as F-003 (Medium), F-062 (Medium), F-088 (Medium) and F-089
+ * (Low) in .planning/audit/findings.json.
+ *
+ * Status: FIXED in 05-05 by the commit "fix(05-05): proxy fails closed,
+ * answers /api/* with JSON 403, reads onboarding from the database"; its hash
+ * is recorded against each row in evidence/defect-ledger.md (a commit cannot
+ * name its own hash)
  *
  * The mock seam is "@supabase/ssr", for the reason given in the characterization
  * file: the proxy imports createServerClient from it directly. The users read
@@ -48,16 +68,16 @@ import { proxy } from "./proxy";
 
 // ─── Seam mocks ──────────────────────────────────────────────────────────────
 
-/** proxy.ts:54-56 — supabase.auth.getUser() */
+/** supabase.auth.getUser() */
 const mockGetUser = jest.fn();
 
-/** Not called by today's proxy; asserted so a no-row sign-out would be seen. */
+/** Called once on a page with no users row (DEC-35); asserted wherever a sign-out must or must not happen. */
 const mockSignOut = jest.fn();
 
-/** proxy.ts:96-100 — .single() at the end of the users read */
+/** .single() at the end of the one users read */
 const mockSingle = jest.fn();
 
-/** proxy.ts:27 — createServerClient(url, key, { cookies }) */
+/** createServerClient(url, key, { cookies }) */
 const mockCreateServerClient = jest.fn();
 
 type UsersRead = { table: string; columns: string; eq: [string, unknown] };
@@ -152,7 +172,10 @@ function location(res: Response): URL | null {
 
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
-describe("proxy ring (DEFECT — F-003, F-062, F-088, F-089; OPEN until 05-05)", () => {
+/** The session cookie name the placeholder project URL yields. */
+const AUTH_COOKIE = "sb-placeholder-project-auth-token";
+
+describe("proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05)", () => {
   const savedEnv = { ...process.env };
   let consoleError: jest.SpyInstance;
 
@@ -177,30 +200,49 @@ describe("proxy ring (DEFECT — F-003, F-062, F-088, F-089; OPEN until 05-05)",
   });
 
   // ── a. F-003 ──────────────────────────────────────────────────────────────
-  it("F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile is passed through and no client is built", async () => {
+  it("F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile → 500 plain text, no client built, logged", async () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
     const res = await proxy(req("/profile"));
 
+    expect(res.status).toBe(500);
     expect(res.headers.get("location")).toBeNull();
-    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type") ?? "").not.toContain("application/json");
+    expect(await res.text()).toBe("Internal Server Error");
+    expect(mockCreateServerClient).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "[Middleware] Error:",
+      expect.objectContaining({ name: "MissingEnvError" })
+    );
+  });
+
+  it('F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /api/events → 500 JSON {"error":"Failed to process request"}', async () => {
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+    const res = await proxy(req("/api/events"));
+
+    expect(res.status).toBe(500);
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.headers.get("content-type") ?? "").toContain("application/json");
+    expect(await res.json()).toEqual({ error: "Failed to process request" });
     expect(mockCreateServerClient).not.toHaveBeenCalled();
   });
 
   // ── b. F-088: the outer catch ─────────────────────────────────────────────
-  it("F-088: auth.getUser rejecting is swallowed by the outer catch — passed through with status 200 and logged", async () => {
+  it("F-088: auth.getUser rejecting reaches the catch — /profile → 500, not passed through, and logged", async () => {
     const failure = new Error("auth server unreachable");
     mockGetUser.mockRejectedValue(failure);
 
     const res = await proxy(req("/profile"));
 
+    expect(res.status).toBe(500);
     expect(res.headers.get("location")).toBeNull();
-    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("Internal Server Error");
     expect(consoleError).toHaveBeenCalledWith("[Middleware] Error:", failure);
   });
 
-  // ── c. F-088: a failed ban read ───────────────────────────────────────────
-  it("F-088: a users read failing with XX000 is read as not banned — /my-events passed through", async () => {
+  // ── c. F-088: a failed users read ─────────────────────────────────────────
+  it("F-088: a users read failing with XX000 fails closed — /my-events → 500 after one users read", async () => {
     authenticatedAs("active");
     mockSingle.mockResolvedValue({
       data: null,
@@ -210,63 +252,101 @@ describe("proxy ring (DEFECT — F-003, F-062, F-088, F-089; OPEN until 05-05)",
     const res = await proxy(req("/my-events"));
 
     expect(reads.filter((r) => r.table === "users")).toHaveLength(1);
+    expect(res.status).toBe(500);
     expect(res.headers.get("location")).toBeNull();
-    expect(res.status).toBe(200);
+    expect(mockSignOut).not.toHaveBeenCalled();
   });
 
   // ── d. F-088: no users row ────────────────────────────────────────────────
-  it.each([
-    ["POST", "/api/events/x/save"],
-    ["GET", "/my-events"],
-  ])(
-    "F-088: a users read answering PGRST116 (no row) is read as not banned — %s %s passed through, no sign-out",
-    async (method, route) => {
-      authenticatedAs("active");
-      mockSingle.mockResolvedValue({
-        data: null,
-        error: {
-          code: "PGRST116",
-          message: "JSON object requested, multiple (or no) rows returned",
-        },
-      });
+  it('F-088: a users read answering PGRST116 (no row) on POST /api/events/x/save → 403 {"error":"Profile not found"}, no sign-out', async () => {
+    authenticatedAs("active");
+    mockSingle.mockResolvedValue({
+      data: null,
+      error: {
+        code: "PGRST116",
+        message: "JSON object requested, multiple (or no) rows returned",
+      },
+    });
 
-      const res = await proxy(req(route, { method }));
+    const res = await proxy(req("/api/events/x/save", { method: "POST" }));
 
-      expect(reads.filter((r) => r.table === "users")).toHaveLength(1);
-      expect(res.headers.get("location")).toBeNull();
-      expect(res.status).toBe(200);
-      expect(mockSignOut).not.toHaveBeenCalled();
-    }
-  );
+    expect(reads.filter((r) => r.table === "users")).toHaveLength(1);
+    expect(res.status).toBe(403);
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.headers.get("content-type") ?? "").toContain("application/json");
+    expect(await res.json()).toEqual({ error: "Profile not found" });
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it("F-088: a users read answering PGRST116 (no row) on GET /my-events → signed out once, 307 to /?error=profile_sync_failed carrying the sign-out's cookies", async () => {
+    // Capture the proxy's cookie adapter so the scripted sign-out can clear
+    // the session through setAll, as @supabase/ssr does.
+    let setAll: ((c: { name: string; value: string; options: object }[]) => void) | null = null;
+    mockCreateServerClient.mockImplementation(
+      (_url: string, _key: string, options: { cookies: { setAll: typeof setAll } }) => {
+        setAll = options.cookies.setAll;
+        return scriptedClient();
+      }
+    );
+    mockSignOut.mockImplementation(async () => {
+      setAll?.([{ name: AUTH_COOKIE, value: "", options: { maxAge: 0, path: "/" } }]);
+      return { error: null };
+    });
+    authenticatedAs("active");
+    mockSingle.mockResolvedValue({
+      data: null,
+      error: {
+        code: "PGRST116",
+        message: "JSON object requested, multiple (or no) rows returned",
+      },
+    });
+
+    const res = await proxy(req("/my-events"));
+
+    expect(reads.filter((r) => r.table === "users")).toHaveLength(1);
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(REDIRECT_STATUS);
+    const loc = location(res);
+    expect(loc?.origin).toBe("https://proxy.test");
+    expect(loc?.pathname).toBe("/");
+    expect(loc?.search).toBe("?error=profile_sync_failed");
+    const cleared = res.headers
+      .getSetCookie()
+      .find((header) => header.startsWith(`${AUTH_COOKIE}=`));
+    expect(cleared).toBeDefined();
+    expect(cleared).toMatch(/Max-Age=0/i);
+  });
 
   // ── e. F-062 ──────────────────────────────────────────────────────────────
-  it("F-062: a banned user's POST /api/events/x/save is answered with a 307 to the HTML page /banned, not JSON", async () => {
+  it('F-062: a banned user\'s POST /api/events/x/save → 403 {"error":"Account suspended"} as JSON, no redirect', async () => {
     signedInAs("banned_permanent");
 
     const res = await proxy(req("/api/events/x/save", { method: "POST" }));
 
-    expect(res.status).toBe(REDIRECT_STATUS);
-    expect(location(res)?.pathname).toBe("/banned");
-    expect(res.headers.get("content-type") ?? "").not.toContain("application/json");
+    expect(res.status).toBe(403);
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.headers.get("content-type") ?? "").toContain("application/json");
+    expect(await res.json()).toEqual({ error: "Account suspended" });
   });
 
   // ── f. F-089: cookie deleted ──────────────────────────────────────────────
-  it("F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events is passed through", async () => {
+  it("F-089: an un-onboarded user with NO needs_onboarding cookie on /my-events → 307 to /onboarding (database truth)", async () => {
     signedInAs("unonboarded");
 
     const res = await proxy(req("/my-events"));
 
-    expect(res.headers.get("location")).toBeNull();
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(REDIRECT_STATUS);
+    expect(location(res)?.pathname).toBe("/onboarding");
+    expect(reads.filter((r) => r.table === "users")).toHaveLength(1);
   });
 
   // ── g. F-089: stale cookie ────────────────────────────────────────────────
-  it("F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / → 307 to /onboarding", async () => {
+  it("F-089: an onboarded user carrying a stale needs_onboarding=1 cookie on / is passed through", async () => {
     signedInAs("active");
 
     const res = await proxy(req("/", { cookie: "needs_onboarding=1" }));
 
-    expect(res.status).toBe(REDIRECT_STATUS);
-    expect(location(res)?.pathname).toBe("/onboarding");
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.status).toBe(200);
   });
 });
