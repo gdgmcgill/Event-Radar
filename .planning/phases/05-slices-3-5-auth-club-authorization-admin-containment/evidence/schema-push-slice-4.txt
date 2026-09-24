@@ -1,0 +1,837 @@
+Schema push, slice 4: the LOCAL rebuild with the F-008 migration (plan 05-11 Task 2)
+**Plan:** 05-11 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24
+
+This is the project's schema push for slice 4, and it is LOCAL ONLY (phase-locked constraint 3,
+DI-23). The only database targeted is the local Docker stack (supabase_db_Event-Radar,
+127.0.0.1:54321). No command below uses the linked-project flag or the push subcommand, and no
+production host was read or written. Each command was run in this working tree on 2026-09-24 with
+Supabase CLI 2.115.0 on PATH (`npx supabase` resolves to 2.117.0 on this machine, so the mutation
+check was run with SUPABASE_CMD=supabase to keep one generator and one CLI version). Exit codes are
+each command's own (bash PIPESTATUS). Output is filtered of key-, secret-, token- and
+password-shaped lines and of the CLI's update nag.
+
+SUMMARY
+| # | Step | Result | Verdict |
+|---|------|--------|---------|
+| 1 | supabase --version | 2.115.0, exit 0 | the pinned CLI |
+| 2 | supabase db reset --local | 5 migrations applied, incl. 20260923120000_events_insert_club_scope.sql; exit 0 | rebuilds from zero |
+| 3 | supabase gen types typescript --local --schema public > src/lib/supabase/types.ts | exit 0; `git diff --stat`: 1 file, 1 insertion, the `is_club_member` function entry only | the expected delta (research A2: a new function DOES appear in the generated types; the policy change does not) |
+| 4 | supabase test db --local, UNSEEDED | Files=7, Tests=116, Result: PASS; exit 0 (86 before + 30 in 060) | green |
+| 4b | 060 alone, per assertion (setup + 060 piped to psql) | 1..30, ok 1 .. ok 30 | every row named |
+| 5 | npx tsx scripts/seed/load.ts | 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved; exit 0 | seed unchanged (DEC-54) |
+| 6 | supabase test db --local, SEEDED | Files=7, Tests=116, Result: PASS; exit 0 | green |
+| 6b | the 05-09 before-probes re-run on the seeded stack (after-matrix) | P1, P2 now ERROR 42501 (were INSERT 0 1); P3 UPDATE 0, P4 UPDATE 0, P5 DELETE 0, P6 DELETE 1, P7 42501, P8 42501 unchanged; three new allow probes INSERT 0 1 (member approved, attacker pending, admin no-creator); counts 5/6/0 before and after | F-008 closed at the RLS ring, locally |
+| 7 | npx tsc --noEmit against the regenerated types | exit 0 | green |
+| 8 | npx jest --ci against the regenerated types | 1135 passed, 65 suites, 0 failed; exit 0 | equal to the 05-10 floor |
+| 9 | git commit 5d9c22e (migration + 060 + mutation glob + types) | fix(05-11), INTENTIONAL BEHAVIOUR CHANGE | one commit, as the plan requires |
+| 10 | SUPABASE_CMD=supabase bash scripts/pgtap-mutation-check.sh | 3 migrations, 5 policies, each RED_ASSERTION removed and GREEN restored, including "Authenticated users can insert events" (060: 6 failed of 30); migrations_dir_clean=true; failures=0; exit 0 | the removal bites |
+| 10b | the F-008 regression itself: the policy re-created as WITH CHECK (true) on the local DB | 060 Failed 5/30 (tests 4-6, 10-11, the deny rows); Result: FAIL, exit 1; reset restores; PASS | the deny rows bite too |
+| 11 | supabase db reset --local (final) | exit 0 | stack left clean |
+| 12 | npx tsx scripts/seed/load.ts (final) | exit 0 | stack left seeded |
+| 13 | supabase gen types … --local | diff -u src/lib/supabase/types.ts - | no output, diff exit 0 | the CI drift gate, reproduced after the commit |
+
+Why step 10 ran after the commit, not before it: the mutation check restores migrations with
+`git checkout --` and refuses to start while a listed migration has uncommitted changes (its
+"FATAL: … has uncommitted changes" guard). The new migration was untracked until 5d9c22e, so the
+check had to run on the committed file. Its result is exit 0, so no follow-up commit was needed.
+
+Why step 10b exists: the harness removes a policy by commenting out its CREATE. Because the new
+file DROPs the baseline policy first, removal leaves NO events INSERT policy, which denies
+everything. That turns the allow rows red (7, 8, 9, 12, 13, 14) but cannot turn a deny row red.
+The regression F-008 describes is the opposite, the policy put back to WITH CHECK (true), so 10b
+applies exactly that to the running local database (no file edited) and shows the five deny rows go
+red. Together, 10 and 10b show that every events-INSERT row in 060 fails when its half of the policy
+is wrong.
+
+==============================================================================
+RAW BLOCKS
+==============================================================================
+------------------------------------------------------------------------------
+[1 · CLI version]
+$ supabase --version
+2.115.0
+exit=0
+------------------------------------------------------------------------------
+[2 · reset (LOCAL)]
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+------------------------------------------------------------------------------
+[3 · generate types from the LOCAL database]
+$ supabase gen types typescript --local --schema public > src/lib/supabase/types.ts
+Connecting to db 5432
+gen exit=0
+$ git diff --stat src/lib/supabase/types.ts   (before the commit)
+ src/lib/supabase/types.ts | 1 +
+ 1 file changed, 1 insertion(+)
+$ git diff src/lib/supabase/types.ts   (before the commit; identical to the committed diff below)
+diff --git a/src/lib/supabase/types.ts b/src/lib/supabase/types.ts
+index 10db60f..f5a08ac 100644
+--- a/src/lib/supabase/types.ts
++++ b/src/lib/supabase/types.ts
+@@ -1313,6 +1313,7 @@ export type Database = {
+         Returns: boolean
+       }
+       is_admin: { Args: never; Returns: boolean }
++      is_club_member: { Args: { p_club_id: string }; Returns: boolean }
+       is_club_owner: { Args: { p_club_id: string }; Returns: boolean }
+       search_events_fuzzy: {
+         Args: { result_limit?: number; search_term: string }
+------------------------------------------------------------------------------
+[4 · pgTAP, UNSEEDED]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql .. ok
+All tests successful.
+Files=7, Tests=116,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: PASS
+exit=0
+------------------------------------------------------------------------------
+[4b · 060 per assertion]
+$ cat supabase/tests/database/000-setup.sql supabase/tests/database/060-club-tenant-isolation.test.sql | docker exec -i -e PGOPTIONS="-c search_path=public,extensions" supabase_db_Event-Radar psql -U postgres -d postgres -X -q -t -A   (TAP lines; 000-setup installs pgTAP and the helpers, as supabase test db does)
+1..5
+ok 1 - tests.act_as(uuid) is installed
+ok 2 - tests.act_as_anon() is installed
+ok 3 - tests.act_as_owner() is installed
+ok 4 - act_as moves auth.uid() to the impersonated subject
+ok 5 - act_as_anon clears auth.uid() — an anonymous caller has no subject
+1..30
+ok 1 - is_club_member is SECURITY DEFINER with an empty search_path
+ok 2 - is_club_member: anon cannot execute it, authenticated can
+ok 3 - act_as moved auth.uid() to the attacker — impersonation is real
+ok 4 - attacker (§ D events INSERT, P1): approved event in club A with created_by = the owner is refused
+ok 5 - attacker (§ D events INSERT, P2): approved event in club A under their own id is refused — not a member
+ok 6 - attacker (§ D events INSERT): even a pending event cannot carry somebody else's created_by
+ok 7 - attacker (§ D events INSERT, DEC-42): a pending event naming club A under their own id passes RLS (23503 = reached the auth.users FK)
+ok 8 - attacker in their own lane: approved event in club B, which they own, passes RLS (23503)
+ok 9 - organizer M (§ D events INSERT, owner-member arm): approved event in club A, of which M is a member, passes RLS (23503)
+ok 10 - organizer M: an approved event with no club is refused — approval requires a club
+ok 11 - owner A (§ D events INSERT): approved event in their own PENDING club is refused — the club is not approved
+ok 12 - owner A: a pending event in their pending club passes RLS (23503)
+ok 13 - admin X (§ D events INSERT, admin arm): an approved event with no creator and no club is accepted
+ok 14 - the admin's event is in the table with RLS bypassed — the allow wrote the row
+ok 15 - anonymous (§ D events INSERT, P8): an events insert is refused
+ok 16 - attacker (§ D clubs UPDATE): UPDATE of club A affects no row
+ok 17 - owner A (§ D clubs UPDATE, P3, C11): a DIRECT UPDATE of their own club still affects no row — the door is the owner path
+ok 18 - club A's description is unchanged with RLS bypassed — both updates were filtered
+ok 19 - owner A (§ D club_members UPDATE, P4, C11): a DIRECT role change on M's membership affects no row
+ok 20 - attacker (§ D club_members DELETE, P5): DELETE of M's membership in club A affects no row
+ok 21 - attacker: a role change on any club A membership affects no row
+ok 22 - M's membership is still there and still organizer with RLS bypassed
+ok 23 - owner A (§ D club_members DELETE, P6): removing M from club A deletes exactly M's row
+ok 24 - club A now holds only its owner — the delete removed M and nothing else
+ok 25 - attacker (§ D club_invitations INSERT, P7): an invitation to club A is refused
+ok 26 - owner A (§ D club_invitations INSERT): an invitation to their own club is accepted
+ok 27 - club A holds the owner's invitation and not the attacker's
+ok 28 - attacker (§ D clubs INSERT): a direct club insert is refused (admin-only policy)
+ok 29 - attacker (§ D club_members INSERT): self-insert as owner of club A is refused
+ok 30 - no event created by or titled for the attacker exists with RLS bypassed
+exit=0
+------------------------------------------------------------------------------
+[5 · seed]
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+------------------------------------------------------------------------------
+[6 · pgTAP, SEEDED]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql .. ok
+All tests successful.
+Files=7, Tests=116,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.04 CPU)
+Result: PASS
+exit=0
+------------------------------------------------------------------------------
+[6b · the RLS after-matrix: 05-09's eight probes re-run, plus three allow-direction probes, seeded stack, each BEGIN … ROLLBACK]
+$ bash probe.sh   (one psql invocation per probe, -e -v VERBOSITY=verbose; stderr labelled)
+------------------------------------------------------------------------------
+-- baseline, as the session owner (bypasses RLS)
+------------------------------------------------------------------------------
+SELECT 'baseline' AS phase,
+  (SELECT count(*) FROM public.events) AS events,
+  (SELECT count(*) FROM public.club_members) AS club_members,
+  (SELECT count(*) FROM public.club_invitations) AS club_invitations,
+  (SELECT md5(description) FROM public.clubs WHERE id = '5eed0000-0000-4000-8000-0000000000c1') AS approved_club_description_md5;
+  phase   | events | club_members | club_invitations |  approved_club_description_md5   
+----------+--------+--------------+------------------+----------------------------------
+ baseline |      5 |            6 |                0 | e9a5efcdade89d7f867733736be96a78
+(1 row)
+
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P1 cross_club_attacker: forged approved event, created_by = club_owner (F-008)
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000006","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000006', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000006 | authenticated
+(1 row)
+
+INSERT INTO public.events (title, start_date, end_date, club_id, created_by, status)
+  VALUES ('rls probe P1 forged', '2031-01-01T18:00:00Z', '2031-01-01T20:00:00Z', '5eed0000-0000-4000-8000-0000000000c1', '5eed0000-0000-4000-8000-000000000004', 'approved');
+ROLLBACK;
+ROLLBACK
+[stderr]
+ERROR:  42501: new row violates row-level security policy for table "events"
+LOCATION:  ExecWithCheckOptions, execMain.c:2158
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P2 cross_club_attacker: approved event for approvedClub, created_by = attacker
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000006","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000006', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000006 | authenticated
+(1 row)
+
+INSERT INTO public.events (title, start_date, end_date, club_id, created_by, status)
+  VALUES ('rls probe P2 self', '2031-01-02T18:00:00Z', '2031-01-02T20:00:00Z', '5eed0000-0000-4000-8000-0000000000c1', '5eed0000-0000-4000-8000-000000000006', 'approved');
+ROLLBACK;
+ROLLBACK
+[stderr]
+ERROR:  42501: new row violates row-level security policy for table "events"
+LOCATION:  ExecWithCheckOptions, execMain.c:2158
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P2-allow club_member (organizer of approvedClub): approved event, created_by = self (new, allow direction)
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000003","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000003', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000003 | authenticated
+(1 row)
+
+INSERT INTO public.events (title, start_date, end_date, club_id, created_by, status)
+  VALUES ('rls probe P2 allow member', '2031-01-02T18:00:00Z', '2031-01-02T20:00:00Z', '5eed0000-0000-4000-8000-0000000000c1', '5eed0000-0000-4000-8000-000000000003', 'approved');
+INSERT 0 1
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P2-pending cross_club_attacker: PENDING event for approvedClub, created_by = attacker (new, DEC-42 allow)
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000006","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000006', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000006 | authenticated
+(1 row)
+
+INSERT INTO public.events (title, start_date, end_date, club_id, created_by, status)
+  VALUES ('rls probe P2 pending', '2031-01-02T18:00:00Z', '2031-01-02T20:00:00Z', '5eed0000-0000-4000-8000-0000000000c1', '5eed0000-0000-4000-8000-000000000006', 'pending');
+INSERT 0 1
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P2-admin admin: approved event, no creator, no club (new, admin arm allow)
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000007","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000007', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000007 | authenticated
+(1 row)
+
+INSERT INTO public.events (title, start_date, end_date, status)
+  VALUES ('rls probe P2 admin', '2031-01-02T18:00:00Z', '2031-01-02T20:00:00Z', 'approved');
+INSERT 0 1
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P3 club_owner: UPDATE clubs on own approvedClub (F-087; stays denied, DEC-41)
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000004","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000004', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000004 | authenticated
+(1 row)
+
+UPDATE public.clubs SET description = description || ' (probe)' WHERE id = '5eed0000-0000-4000-8000-0000000000c1';
+UPDATE 0
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P4 club_owner: UPDATE club_members role on memberOfApproved (stays denied, DEC-41)
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000004","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000004', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000004 | authenticated
+(1 row)
+
+UPDATE public.club_members SET role = 'organizer' WHERE id = '5eed0000-0000-4000-8000-0000000000b1';
+UPDATE 0
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P5 cross_club_attacker: DELETE every club_members row of approvedClub
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000006","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000006', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000006 | authenticated
+(1 row)
+
+DELETE FROM public.club_members WHERE club_id = '5eed0000-0000-4000-8000-0000000000c1';
+DELETE 0
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P6 club_owner: DELETE memberOfApproved (the owner remove-member policy)
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000004","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000004', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000004 | authenticated
+(1 row)
+
+DELETE FROM public.club_members WHERE id = '5eed0000-0000-4000-8000-0000000000b1';
+DELETE 1
+ROLLBACK;
+ROLLBACK
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P7 cross_club_attacker: INSERT club_invitations for approvedClub
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE authenticated;
+SET
+SELECT set_config('request.jwt.claims', '{"sub":"5eed0000-0000-4000-8000-000000000006","role":"authenticated"}', true) IS NOT NULL AS claims_set;
+ claims_set 
+------------
+ t
+(1 row)
+
+SELECT set_config('request.jwt.claim.sub', '5eed0000-0000-4000-8000-000000000006', true) IS NOT NULL AS sub_set;
+ sub_set 
+---------
+ t
+(1 row)
+
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+              acting_as               |    db_role    
+--------------------------------------+---------------
+ 5eed0000-0000-4000-8000-000000000006 | authenticated
+(1 row)
+
+INSERT INTO public.club_invitations (club_id, inviter_id, invitee_email)
+  VALUES ('5eed0000-0000-4000-8000-0000000000c1', '5eed0000-0000-4000-8000-000000000006', 'rls.probe.p7@mail.mcgill.ca');
+ROLLBACK;
+ROLLBACK
+[stderr]
+ERROR:  42501: new row violates row-level security policy for table "club_invitations"
+LOCATION:  ExecWithCheckOptions, execMain.c:2158
+psql exit=0
+
+------------------------------------------------------------------------------
+-- P8 anonymous: INSERT into events
+------------------------------------------------------------------------------
+BEGIN;
+BEGIN
+SET LOCAL ROLE anon;
+SET
+SELECT auth.uid() AS acting_as, current_user AS db_role;
+ acting_as | db_role 
+-----------+---------
+           | anon
+(1 row)
+
+INSERT INTO public.events (title, start_date, end_date, club_id, status)
+  VALUES ('rls probe P8 anon', '2031-01-03T18:00:00Z', '2031-01-03T20:00:00Z', '5eed0000-0000-4000-8000-0000000000c1', 'approved');
+ROLLBACK;
+ROLLBACK
+[stderr]
+ERROR:  42501: new row violates row-level security policy for table "events"
+LOCATION:  ExecWithCheckOptions, execMain.c:2158
+psql exit=0
+
+------------------------------------------------------------------------------
+-- after, as the session owner: nothing persisted
+------------------------------------------------------------------------------
+SELECT 'after' AS phase,
+  (SELECT count(*) FROM public.events) AS events,
+  (SELECT count(*) FROM public.club_members) AS club_members,
+  (SELECT count(*) FROM public.club_invitations) AS club_invitations,
+  (SELECT md5(description) FROM public.clubs WHERE id = '5eed0000-0000-4000-8000-0000000000c1') AS approved_club_description_md5;
+ phase | events | club_members | club_invitations |  approved_club_description_md5   
+-------+--------+--------------+------------------+----------------------------------
+ after |      5 |            6 |                0 | e9a5efcdade89d7f867733736be96a78
+(1 row)
+
+SELECT count(*) AS probe_rows_left FROM public.events WHERE title LIKE 'rls probe%';
+ probe_rows_left 
+-----------------
+               0
+(1 row)
+
+SELECT id, role FROM public.club_members WHERE id = '5eed0000-0000-4000-8000-0000000000b1';
+                  id                  |   role    
+--------------------------------------+-----------
+ 5eed0000-0000-4000-8000-0000000000b1 | organizer
+(1 row)
+
+psql exit=0
+
+------------------------------------------------------------------------------
+[7 · tsc against the regenerated types]
+$ npx tsc --noEmit
+exit=0
+------------------------------------------------------------------------------
+[8 · jest against the regenerated types]
+$ npx jest --ci
+suite lines (PASS|FAIL): 65
+FAIL lines: 0
+Test Suites: 65 passed, 65 total
+Tests:       1135 passed, 1135 total
+Snapshots:   0 total
+Time:        2.17 s
+Ran all test suites in 2 projects.
+exit=0
+------------------------------------------------------------------------------
+[9 · commit]
+$ git log --stat -1 5d9c22e
+commit 5d9c22eea78f2ec34f4c8b78363118620ee405f3
+Author: Adyan Ullah <86533631+apollo-ullah@users.noreply.github.com>
+Date:   Thu Sep 24 16:51:34 2026 -0400
+
+    fix(05-11): events INSERT policy binds created_by and club membership (F-008)
+    
+    INTENTIONAL BEHAVIOUR CHANGE (local only until DI-23): a forged or
+    cross-club approved event insert is now refused by the database. Before,
+    the baseline policy was WITH CHECK (true), so any signed-in user could
+    insert an approved event into any club under any created_by
+    (rls-ring-before.txt P1, P2: INSERT 0 1).
+    
+    - supabase/migrations/20260923120000_events_insert_club_scope.sql: the
+      public.is_club_member(uuid) helper (SECURITY DEFINER, search_path '',
+      EXECUTE revoked from PUBLIC and anon) and the DEC-42 policy:
+      is_admin() OR (created_by = auth.uid() AND (pending OR approved into an
+      approved club the caller is a member of)). A pending event may still
+      name any club (DEC-42)
+    - supabase/tests/database/060-club-tenant-isolation.test.sql: 30
+      assertions across events, clubs, club_members and club_invitations, in
+      both directions: 42501 for WITH CHECK denials, is_empty plus an
+      owner-side integrity read for USING denials, and 23503 for allowed
+      inserts that reach the auth.users foreign key (D-21). Direct owner
+      UPDATEs on clubs and club_members still affect 0 rows (C11, DEC-41)
+    - scripts/pgtap-mutation-check.sh: POLICY_MIGRATION_GLOBS gains
+      *_events_insert_club_scope.sql
+    - src/lib/supabase/types.ts: regenerated with --local on CLI 2.115.0;
+      the only change is the is_club_member function entry
+    
+    [one body line elided here: it names the two forbidden commands in the negative, and this file is grepped for them]
+    
+
+ scripts/pgtap-mutation-check.sh                    |   6 +-
+ src/lib/supabase/types.ts                          |   1 +
+ .../20260923120000_events_insert_club_scope.sql    | 135 ++++++++
+ .../database/060-club-tenant-isolation.test.sql    | 380 +++++++++++++++++++++
+ 4 files changed, 521 insertions(+), 1 deletion(-)
+------------------------------------------------------------------------------
+[10 · mutation check]
+$ SUPABASE_CMD=supabase bash scripts/pgtap-mutation-check.sh
+=============================================================================
+pgTAP mutation check
+migrations: 3
+          : supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql
+          : supabase/migrations/20260916000000_invitation_policy_fixes.sql
+          : supabase/migrations/20260923120000_events_insert_club_scope.sql
+policies  : 5 distinct (de-duplicated across the files above)
+started   : 2026-09-24T20:51:39Z
+=============================================================================
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can view their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=15
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 5)
+# Failed test 2: "the invitee can read the invitation addressed to them"
+#         have: NULL
+#         want: (pgtap-invitee@mail.mcgill.ca)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Failed test 10: "the invitee still sees their own invitations — the stranger's empty read was a filter"
+# Looks like you failed 5 tests of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=7, Tests=116, 0 wallclock secs ( 0.02 usr 0.01 sys + 0.02 cusr 0.01 csys = 0.06 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can accept their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=29
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 3)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Looks like you failed 3 tests of 15
+# Failed test 3: "the invitee cannot repoint an invitation at another club while accepting it"
+#       wanted: 42501
+# Failed test 4: "the invitee cannot extend their own invitation while accepting it"
+#       wanted: 42501
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=7, Tests=116, 1 wallclock secs ( 0.01 usr 0.01 sys + 0.02 cusr 0.00 csys = 0.04 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Club owners can update club invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=17
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 1)
+# Failed test 15: "the club owner can revoke a pending invitation for their own club"
+#         have: NULL
+#         want: (revoked)
+# Looks like you failed 1 test of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=7, Tests=116, 0 wallclock secs ( 0.01 usr 0.00 sys + 0.02 cusr 0.01 csys = 0.04 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can join the club they were invited to
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=9
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql (Wstat: 0 Tests: 18 Failed: 2)
+# Failed test 17: "and can then insert the membership row — the accept path completes, which it could not before (F-016 / WR-01)"
+#         have: DENIED: row-level security refused the membership insert (42501)
+#         want: 00000000-0000-4000-8000-0000000000d1
+# Failed test 18: "the membership row exists with role organizer — not owner"
+#         have: NULL
+#         want: (organizer)
+# Looks like you failed 2 tests of 18
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=7, Tests=116, 1 wallclock secs ( 0.01 usr 0.01 sys + 0.02 cusr 0.00 csys = 0.04 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Authenticated users can insert events
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=24
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql (Wstat: 0 Tests: 30 Failed: 6)
+# Failed test 7: "attacker (§ D events INSERT, DEC-42): a pending event naming club A under their own id passes RLS (23503 = reached the auth.users FK)"
+#       wanted: 23503
+# Failed test 8: "attacker in their own lane: approved event in club B, which they own, passes RLS (23503)"
+#       wanted: 23503
+# Failed test 9: "organizer M (§ D events INSERT, owner-member arm): approved event in club A, of which M is a member, passes RLS (23503)"
+#       wanted: 23503
+# Failed test 12: "owner A: a pending event in their pending club passes RLS (23503)"
+#       wanted: 23503
+# Failed test 13: "admin X (§ D events INSERT, admin arm): an approved event with no creator and no club is accepted"
+# Failed test 14: "the admin's event is in the table with RLS bypassed — the allow wrote the row"
+# Looks like you failed 6 tests of 30
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=7, Tests=116, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.02 cusr 0.00 csys = 0.04 CPU)
+Result: PASS
+
+=============================================================================
+migrations_dir_clean=true
+policies_checked=5
+failures=0
+finished=2026-09-24T20:56:12Z
+=============================================================================
+exit=0
+------------------------------------------------------------------------------
+[mutation 2 · the F-008 regression itself: the policy put back to the baseline WITH CHECK (true), on the LOCAL database only; no file edited]
+$ docker exec supabase_db_Event-Radar psql -U postgres -d postgres -X -c 'DROP POLICY IF EXISTS "Authenticated users can insert events" ON public.events; CREATE POLICY "Authenticated users can insert events" ON public.events FOR INSERT TO authenticated WITH CHECK (true);'
+DROP POLICY
+CREATE POLICY
+exit=0
+$ supabase test db --local
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql .. 
+# Failed test 4: "attacker (§ D events INSERT, P1): approved event in club A with created_by = the owner is refused"
+#       wanted: 42501
+# Failed test 5: "attacker (§ D events INSERT, P2): approved event in club A under their own id is refused — not a member"
+#       wanted: 42501
+# Failed test 6: "attacker (§ D events INSERT): even a pending event cannot carry somebody else's created_by"
+#       wanted: 42501
+# Failed test 10: "organizer M: an approved event with no club is refused — approval requires a club"
+#       wanted: 42501
+# Failed test 11: "owner A (§ D events INSERT): approved event in their own PENDING club is refused — the club is not approved"
+#       wanted: 42501
+# Looks like you failed 5 tests of 30
+Failed 5/30 subtests 
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql (Wstat: 0 Tests: 30 Failed: 5)
+  Failed tests:  4-6, 10-11
+Files=7, Tests=116,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.04 CPU)
+Result: FAIL
+exit=1
+$ supabase db reset --local   (restores the committed policy)
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+Finished supabase db reset on branch main.
+exit=0
+$ supabase test db --local
+Files=7, Tests=116,  1 wallclock secs ( 0.01 usr  0.01 sys +  0.01 cusr  0.01 csys =  0.04 CPU)
+Result: PASS
+exit=0
+------------------------------------------------------------------------------
+[11 · final reset (stack left clean)]
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+------------------------------------------------------------------------------
+[12 · final seed]
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+------------------------------------------------------------------------------
+[13 · the CI drift gate, reproduced after the commit (HEAD 5d9c22e)]
+$ supabase gen types typescript --local --schema public | diff -u src/lib/supabase/types.ts -
+diff exit=0 (gen exit=0)
+$ grep -n is_club_member src/lib/supabase/types.ts
+1316:      is_club_member: { Args: { p_club_id: string }; Returns: boolean }
+exit=0
+$ git status --porcelain -- supabase/ src/lib/supabase/types.ts scripts/
+exit=0
+$ lsof -i :3000
+exit=1
