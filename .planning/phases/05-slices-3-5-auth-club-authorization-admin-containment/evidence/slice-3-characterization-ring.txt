@@ -86,3 +86,129 @@ exit=0
 $ git diff --stat a7b02a5 -- src/proxy.ts src/proxy.test.ts
 exit=0 (empty output = unmodified)
 
+==============================================================================
+TASK 2 — callback F-077, env-assertion census, one-getSession gate
+==============================================================================
+Recorded: 2026-09-24T04:43:08Z · HEAD at capture=e75cb27f00cb87e7fee2e3cc3048f8ff1f9f9db2
+
+[2.1 · node probe: what new URL(next, origin) yields for each next value, measured BEFORE the F-077 file was written]
+$ node -e '<probe>'   # for each query value: parse ?next= with URLSearchParams exactly as route.ts:37 does, then new URL(next, origin) as route.ts:205 does
+{"query":"https%3A%2F%2Fevil.test%2Fx","next":"https://evil.test/x","href":"https://evil.test/x","origin":"https://evil.test","host":"evil.test","pathname":"/x"}
+{"query":"%2F%2Fevil.test%2Fx","next":"//evil.test/x","href":"https://evil.test/x","origin":"https://evil.test","host":"evil.test","pathname":"/x"}
+{"query":"%2F%5Cevil.test%2Fx","next":"/\\evil.test/x","href":"https://evil.test/x","origin":"https://evil.test","host":"evil.test","pathname":"/x"}
+{"query":"%2Fmy-events","next":"/my-events","href":"https://callback.test/my-events","origin":"https://callback.test","host":"callback.test","pathname":"/my-events"}
+exit=0  (node v24.16.0)
+
+Pinned in src/app/auth/callback/route-defect.test.ts from this measurement:
+  absolute        next=https%3A%2F%2Fevil.test%2Fx -> origin https://evil.test, pathname /x
+  protocol-rel.   next=%2F%2Fevil.test%2Fx         -> host evil.test, origin https://evil.test, pathname /x
+  slash-backslash next=%2F%5Cevil.test%2Fx         -> host evil.test, origin https://evil.test, pathname /x (WHATWG treats \ as / for special schemes)
+  control         next=%2Fmy-events                -> host callback.test, pathname /my-events
+The measurement matched the plan's expectation for all three hostile values; no difference to record.
+
+[2.2 · env non-null assertion census, derived from the tree]
+$ command grep -rnoE 'process\.env\.[A-Z_]+!' src
+src/app/auth/signout/route.ts:11:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/auth/signout/route.ts:12:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/app/auth/callback/route.ts:61:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/auth/callback/route.ts:62:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/app/auth/callback/route.ts:123:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/auth/callback/route.ts:124:process.env.SUPABASE_SERVICE_ROLE_KEY!
+src/app/api/auth-debug/route.ts:11:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/api/auth-debug/route.ts:21:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/api/auth-debug/route.ts:22:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/lib/supabase/client.ts:11:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/lib/supabase/client.ts:12:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/lib/supabase/server.ts:14:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/lib/supabase/server.ts:15:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/lib/supabase/service.ts:11:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/lib/supabase/service.ts:12:process.env.SUPABASE_SERVICE_ROLE_KEY!
+exit=0
+
+$ command grep -rnoE 'process\.env\.[A-Z_]+!' src | wc -l
+      15
+exit=0
+
+Pinned list (EXPECTED_TODAY in src/lib/__tests__/env-assertions-defect.test.ts), file:VARIABLE sorted, duplicates kept:
+const EXPECTED_TODAY = [
+  "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+  "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+  "src/app/auth/callback/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "src/app/auth/callback/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+  "src/app/auth/callback/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+  "src/app/auth/callback/route.ts:SUPABASE_SERVICE_ROLE_KEY",
+  "src/app/auth/signout/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "src/app/auth/signout/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+  "src/lib/supabase/client.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "src/lib/supabase/client.ts:NEXT_PUBLIC_SUPABASE_URL",
+  "src/lib/supabase/server.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "src/lib/supabase/server.ts:NEXT_PUBLIC_SUPABASE_URL",
+  "src/lib/supabase/service.ts:NEXT_PUBLIC_SUPABASE_URL",
+  "src/lib/supabase/service.ts:SUPABASE_SERVICE_ROLE_KEY",
+];
+
+Comparison with 05-RESEARCH.md § A: identical. Six files, 15 occurrences (floor.before.txt census: env ! 15).
+The research table lists auth-debug as 'URL, ANON' at :11,21-22; the tree has URL at :11 and :21 and ANON at :22,
+so the pinned list carries auth-debug URL twice. No test file under src/ carries an env ! today, so excluding
+test files changes nothing in the count. src/ holds only .ts/.tsx besides one .css and one .md:
+$ find src -type f ! -name '*.ts' ! -name '*.tsx' | sed 's/.*\.//' | sort | uniq -c
+   1 css
+   1 md
+exit=0
+
+[2.3 · getSession( census]
+$ command grep -rln 'getSession(' src | grep -vE '\.test\.tsx?$|/__tests__/'
+src/app/api/health/route.ts
+exit=0
+$ command grep -n 'auth.getUser(' src/server/context.ts src/proxy.ts
+src/server/context.ts:82:  } = await supabase.auth.getUser();
+src/proxy.ts:52:  // supabase.auth.getUser().
+src/proxy.ts:56:  } = await supabase.auth.getUser();
+exit=0
+
+[2.4 · tag gate on the three new files]
+$ node scripts/check-characterization-tags.mjs src/app/auth/callback/route-defect.test.ts src/lib/__tests__/env-assertions-defect.test.ts src/server/__tests__/getsession-gate.test.ts
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 3 files
+exit=0
+
+[2.5 · the three new suites and the unedited PRESERVE callback suite]
+$ npx jest --ci --verbose src/app/auth/callback src/lib/__tests__/env-assertions-defect.test.ts src/server/__tests__/getsession-gate.test.ts
+PASS node src/app/auth/callback/route-defect.test.ts
+  GET /auth/callback next target (DEFECT — F-077; OPEN until 05-05)
+    ✓ F-077: an absolute next (https://evil.test/x) redirects off-origin to https://evil.test (25 ms)
+    ✓ F-077: a protocol-relative next (//evil.test/x) redirects off-origin to host evil.test (10 ms)
+    ✓ F-077: a slash-backslash next (/\evil.test/x) redirects off-origin to host evil.test (9 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (8 ms)
+PASS node src/app/auth/callback/route.test.ts
+  GET /auth/callback (PRESERVE — REFAC-08)
+    ✓ passes an inbound provider error through without attempting an exchange (8 ms)
+    ✓ redirects with error=no_code when the code parameter is absent (8 ms)
+    ✓ redirects with error=auth_failed and the provider message when the exchange fails (7 ms)
+    ✓ rejects a non-McGill address, signs it out, and deletes the orphaned auth user (9 ms)
+    ✓ upserts the profile and routes a new McGill user to /onboarding (8 ms)
+    ✓ routes an already-onboarded McGill user to the next destination, with no onboarding cookie (7 ms)
+    ✓ appends admin to the existing roles for an address in ADMIN_EMAILS (10 ms)
+    ✓ skips profile sync entirely and still admits the user when the service key is absent (8 ms)
+PASS node src/lib/__tests__/env-assertions-defect.test.ts
+  process.env non-null assertions under src/ (DEFECT — F-003; OPEN until 05-05)
+    ✓ F-003: the census equals today's 15 file:VARIABLE pairs exactly (7 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (2 ms)
+PASS node src/server/__tests__/getsession-gate.test.ts
+  session accessor gate (PRESERVE — REFAC-11 clause 1)
+    ✓ the only production file calling getSession( is the non-gating api/health route (6 ms)
+    ✓ src/server/context.ts verifies the session with auth.getUser(
+    ✓ src/proxy.ts verifies the session with auth.getUser(
+Test Suites: 4 passed, 4 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        0.282 s, estimated 1 s
+Ran all test suites matching src/app/auth/callback|src/lib/__tests__/env-assertions-defect.test.ts|src/server/__tests__/getsession-gate.test.ts.
+exit=0
+
+$ git diff --stat a7b02a5 -- src/app/auth/callback/route.ts src/app/auth/callback/route.test.ts src/lib/supabase
+exit=0 (empty output = unmodified)
+
