@@ -246,7 +246,81 @@ Plans:
   4. Rate limiting runs from a distributed store so it holds across serverless instances and now covers `/api/admin/*`; CSRF exposure is assessed against Supabase cookie SameSite behavior and protection added on state-changing routes wherever exposure remains.
   5. After each of the three slices the Playwright specs pass and the Validated workflow list is re-confirmed — in particular every persona can still sign in, non-McGill sign-in is still rejected, banned users are still blocked, and organizers still reach their club surfaces.
 
-**Plans**: TBD
+**Plans**: 19 plans (18 autonomous; 05-18 stops at a blocking-human package-legitimacy checkpoint). Executed sequentially on the main tree; slice 3 (05-02..05-08) closes before slice 4 (05-09..05-11), which closes before slice 5 (05-12..05-19).
+
+Plans:
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — Register, measure, decide: DI-38 harness race fixed, before-floor, F-086..F-091 registered and ~41 findings re-pointed (C16), DEC-33..DEC-57, deferred register, defect ledger
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 05-02-PLAN.md — Slice 3 characterization, the ring: proxy PRESERVE/DEFECT suites, callback F-077 pins, env-assertion census, one-getSession gate
+- [ ] 05-03-PLAN.md — Slice 3 characterization, the handlers: 39 write arms pinned (anonymous bytes, legacy ban bytes, today's admissions), F-028 pins
+
+**Wave 3**
+
+- [ ] 05-04-PLAN.md — Validated lazy config (`src/lib/env.ts`), boot check in `src/instrumentation.ts`, `requireActiveUser` and `requireOnboarded`, `/api/auth-debug` deleted
+
+**Wave 4**
+
+- [ ] 05-05-PLAN.md — Proxy fails closed (JSON 403 for banned /api, DB-truth onboarding, no-profile handling); callback grants no roles, fails closed, same-origin `next`, service role through the door
+
+**Wave 5**
+
+- [ ] 05-06-PLAN.md — Guards on the events-family write arms (ban asymmetry closed); F-028's four routes answer 401
+
+**Wave 6**
+
+- [ ] 05-07-PLAN.md — Guards on the remaining write arms (clubs, users, profile, notifications, onboarding, telemetry); legacy ban helper deleted
+
+**Wave 7**
+
+- [ ] 05-08-PLAN.md — Slice 3 close: ban/onboarding/no-profile Playwright specs, endpoint contract regenerated, floor from a clean reset, REFAC-11 state
+
+**Wave 8**
+
+- [ ] 05-09-PLAN.md — Slice 4 characterization: 17 club sites pinned, F-087 pinned, cross-club Playwright spec, RLS-ring before-probe
+
+**Wave 9**
+
+- [ ] 05-10-PLAN.md — `CLUB_ROLES` and `requireClubRole` at all 17 sites, admin via `hasRole`, owner club writes through the door (F-087)
+
+**Wave 10**
+
+- [ ] 05-11-PLAN.md — F-008 fix-forward migration, 060 both-direction pgTAP, [BLOCKING] local schema push, F-016 proven locally, slice 4 close
+
+**Wave 11**
+
+- [ ] 05-12-PLAN.md — Slice 5 characterization: admin guard at 35 arms, F-001, F-091, F-005, F-086 and F-090 pinned
+
+**Wave 12**
+
+- [ ] 05-13-PLAN.md — `requireRole(ctx, "admin")` at every admin route, layouts through the context, `src/lib/admin.ts` deleted (F-061)
+
+**Wave 13**
+
+- [ ] 05-14-PLAN.md — calculate-popularity fails closed (F-001), admin role changes land and are audited (F-091), audit writer through the door (F-073/F-072), pending edits to their owner (F-086), admin contract regenerated
+
+**Wave 14**
+
+- [ ] 05-15-PLAN.md — Every non-cron service-role use through the door or the cookie client with REGISTRY rows; F-005 public profile; allow-list shrunk to the two cron routes
+
+**Wave 15**
+
+- [ ] 05-16-PLAN.md — F-006/F-007 fix-forward migration (column-scoped users grant, SECURITY DEFINER counter, audit-log writes revoked), 050/055 pgTAP, [BLOCKING] local schema push
+
+**Wave 16**
+
+- [ ] 05-17-PLAN.md — `RateLimitStore`, admin budgets (600 GET / 120 mutation), CSRF origin check in the proxy, `evidence/csrf-assessment.md`
+
+**Wave 17** *(non-autonomous: blocking-human checkpoint)*
+
+- [ ] 05-18-PLAN.md — Package-legitimacy checkpoint, then `@upstash/ratelimit` 2.1.0 / `@upstash/redis` 1.38.4, `UpstashRateLimitStore`, production boot requirement, harness guard
+
+**Wave 18**
+
+- [ ] 05-19-PLAN.md — `@supabase/supabase-js` 2.116.0 (DI-25) as the last code change, phase after-floor, slice 5 close, `PHASE-5-COMPLETION.md`, requirement states
 
 ### Phase 6: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 
@@ -318,7 +392,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 11/11 | Complete   | 2026-09-23 |
-| 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/TBD | Not started | - |
+| 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 0/19 | Planned | - |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |
 | 7. Certification Datasets and Persona Coverage | 0/TBD | Not started | - |
 | 8. Operational Certification and Sign-Off | 0/TBD | Not started | - |
