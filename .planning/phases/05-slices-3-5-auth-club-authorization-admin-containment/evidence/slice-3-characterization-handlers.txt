@@ -1,0 +1,584 @@
+base=0c265a4
+
+Slice 3 handler-ring characterization — plan 05-03
+**Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24
+
+Line 1 is the commit every block below ran on (0c265a4, `docs(05-02): complete auth ring
+characterization plan`). No file under src/app, src/lib, src/server or supabase/ was modified by
+this plan; every block ran against the unmodified handlers. Every command below was run in this
+working tree (Node 24, local only; production never contacted, .env.local never read). Output is
+verbatim; exit codes are printed by the shell after each command.
+
+Sections
+  1. The write arms, enumerated from the tree (Task 1)
+  2. Measured outcomes per arm and persona, before pinning (Task 1)
+  3. The Task 1 suites on the unmodified tree (Task 1)
+  4. F-028: measured anonymous bytes and the client callers (Task 2)
+  5. Closing checks: diff-stat, tag gate, tsc, full Jest (Task 3)
+
+────────────────────────────────────────────────────────────────────────────────
+1. The write arms, enumerated from the tree
+────────────────────────────────────────────────────────────────────────────────
+
+The plan expected 39 arms in 30 files. The tree gives 39 arms in 33 files. The arm list
+matches the plan's list exactly; the plan's file count was wrong (clubs/[id], events/[id],
+events/[id]/rsvp, events/[id]/save, clubs/[id]/follow and users/[id]/follow each hold two arms,
+so 39 arms − 6 extra = 33 files). The tree wins; this is the only difference.
+
+DEC-34's "40 exported POST/PUT/PATCH/DELETE arms outside admin/ and cron/" counts
+recommendations/batch POST, which is admin-gated (verifyAdmin) and excluded here by the plan.
+39 + 1 = 40, so DEC-34 and this enumeration agree.
+
+The enumeration also checked for `export const POST = …` and `export { … as POST }` forms:
+none exist. src/app/api/auth-debug/route.ts exports GET only.
+
+$ node -e '<enumerate route.ts under src/app/api, skip admin/ cron/ recommendations/batch/, match export async function POST|PUT|PATCH|DELETE>'
+(script text, run as: node <file>)
+    const fs=require("fs"),path=require("path");const out=[];
+    function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(e.name==="route.ts")out.push(p);}}
+    walk("src/app/api");
+    const excl=[/^src\/app\/api\/admin\//,/^src\/app\/api\/cron\//,/^src\/app\/api\/recommendations\/batch\//];
+    const arms=[];const files=new Set();let otherForms=0;
+    for(const f of out.sort()){if(excl.some(r=>r.test(f)))continue;const s=fs.readFileSync(f,"utf8");
+     for(const m of s.matchAll(/export\s+(?:async\s+)?function\s+(POST|PUT|PATCH|DELETE)\b/g)){arms.push(f.replace("src/app/api/","").replace("/route.ts","")+" "+m[1]);files.add(f);}
+     otherForms+=(s.match(/export\s+const\s+(POST|PUT|PATCH|DELETE)\b|as\s+(POST|PUT|PATCH|DELETE)\s*[,}]/g)||[]).length;}
+    arms.forEach(a=>console.log(a));console.log("arms="+arms.length+" files="+files.size+" other-export-forms="+otherForms);
+
+output:
+clubs/[id]/appeal POST
+clubs/[id]/follow POST
+clubs/[id]/follow DELETE
+clubs/[id]/invites POST
+clubs/[id]/members/role PATCH
+clubs/[id]/members DELETE
+clubs/[id] PATCH
+clubs/[id] DELETE
+clubs/[id]/transfer POST
+clubs/banner POST
+clubs/logo POST
+clubs POST
+events/[id]/appeal POST
+events/[id]/invite POST
+events/[id]/report POST
+events/[id]/reviews POST
+events/[id] PATCH
+events/[id] DELETE
+events/[id]/rsvp POST
+events/[id]/rsvp DELETE
+events/[id]/save DELETE
+events/[id]/save POST
+events/create POST
+events/upload-image POST
+feedback POST
+interactions POST
+notifications/[id] PATCH
+notifications POST
+onboarding/complete POST
+organizer-requests POST
+profile/avatar POST
+profile/banner POST
+profile/inferred-tags DELETE
+profile/interests PUT
+recommendations/feedback POST
+user/engagement POST
+users/[id]/follow POST
+users/[id]/follow DELETE
+users/[id] PATCH
+arms=39 files=33 other-export-forms=0
+exit 0
+
+Descriptor table against the tree (the P0 test performs this comparison on every run):
+$ node -e <sorted WRITE_ARMS descriptor ids (id: "<route> <VERB>") vs sorted enumeration>
+table=39 tree=39 equal=true
+exit 0
+(The acceptance grep counts 40 matches of 'id: "' because CALLER's own id field also matches; 39 of them are descriptors.)
+
+────────────────────────────────────────────────────────────────────────────────
+2. Measured outcomes per arm and persona, before pinning
+────────────────────────────────────────────────────────────────────────────────
+
+Method. Before either suite existed, a temporary Jest file
+(src/__tests__/api/auth-ring/zz-measure-temp.test.ts, deleted after the run and never committed)
+used the same three mocks as the suites (@/lib/supabase/server and @/lib/supabase/service → the
+shared fake's client; next/headers → a cookies() stub) and called runArm() from
+writeHandlerTable.ts for every arm under every persona. It wrote one line per (persona, arm):
+persona | arm | status (or "threw") | JSON body | calls=<table.operation, in order>.
+
+$ MEASURE_OUT=<scratchpad>/measure.txt npx jest --ci src/__tests__/api/auth-ring/zz-measure-temp.test.ts
+PASS node src/__tests__/api/auth-ring/zz-measure-temp.test.ts
+  ✓ measure (195 ms)
+Tests:       1 passed, 1 total
+exit 0
+
+How to read "threw" and 500 rows. The fake has no upsert, ilike, contains or storage member. An
+arm that reaches one of those throws: with an outer catch it answers 500, without one the
+handler rejects and runArm() records "threw". Either way the caller got past every check the
+arm makes first, so for this characterization it is an admission. The suites never pin a 500
+or a throw as a PRESERVE value; the only exact bytes pinned are P1 (anonymous), P2 (banned on
+the legacy arms) and P3 (onboarding/complete 200).
+
+P1 derivation (anonymous rows below): 34 arms answer 401 {"error":"Unauthorized"}; events/[id]
+PATCH answers 401 {"error":"You must be signed in to edit an event"}; events/create POST answers
+401 {"error":"You must be signed in to create an event"}; recommendations/feedback POST answers
+401 {"error":"Unauthorized. Must be logged in to submit feedback."}; feedback POST is admitted
+with 200 {"success":true}; interactions POST is admitted with 201 {"success":true,…}. No
+anonymous row on a non-tolerant arm made any database call (calls= empty).
+
+P2 derivation (banned rows): the ten legacy arms each answer 403 {"error":"Account suspended"}
+with calls=users.select only (the helper's read).
+
+What the DEFECT file pins, as measured (F-088 / F-089):
+  banned: 12 of 39 arms reached an insert/update/delete/rpc:
+    clubs/[id]/follow DELETE; events/[id]/report POST; events/[id]/save DELETE; feedback POST; interactions POST; notifications/[id] PATCH; notifications POST; organizer-requests POST; profile/inferred-tags DELETE; profile/interests PUT; users/[id]/follow DELETE; users/[id] PATCH
+  noProfile: 16 of 39 arms reached an insert/update/delete/rpc:
+    clubs/[id]/follow DELETE; events/[id]/invite POST; events/[id]/report POST; events/[id]/rsvp POST; events/[id]/save DELETE; events/[id]/save POST; events/create POST; feedback POST; interactions POST; notifications/[id] PATCH; notifications POST; organizer-requests POST; profile/interests PUT; user/engagement POST; users/[id]/follow DELETE; users/[id] PATCH
+  unonboarded: 17 of 39 arms reached an insert/update/delete/rpc:
+    clubs/[id]/follow DELETE; events/[id]/invite POST; events/[id]/report POST; events/[id]/rsvp POST; events/[id]/save DELETE; events/[id]/save POST; events/create POST; feedback POST; interactions POST; notifications/[id] PATCH; notifications POST; organizer-requests POST; profile/inferred-tags DELETE; profile/interests PUT; user/engagement POST; users/[id]/follow DELETE; users/[id] PATCH
+  banned, on the 29 arms without the legacy helper: none answers 403 {"error":"Account suspended"}.
+  noProfile, on all 39 arms: none answers 403 {"error":"Profile not found"}. profile/inferred-tags
+    DELETE answers 404 {"error":"Profile not found"}: same text, different status, so the D2
+    today-shape holds and the fix changes its status from 404 to 403.
+  unonboarded, on the 37 non-exempt arms: none answers 403 {"error":"Onboarding required"}.
+
+Full measurement (verbatim, 234 lines = 6 personas × 39 arms):
+anonymous   | clubs/[id]/appeal POST           | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/[id]/follow POST           | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/[id]/follow DELETE         | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/[id]/invites POST          | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/[id]/members/role PATCH    | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/[id]/members DELETE        | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/[id] PATCH                 | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/[id] DELETE                | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/[id]/transfer POST         | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/banner POST                | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs/logo POST                  | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | clubs POST                       | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/[id]/appeal POST          | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/[id]/invite POST          | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/[id]/report POST          | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/[id]/reviews POST         | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/[id] PATCH                | 401   | {"error":"You must be signed in to edit an event"} | calls=
+anonymous   | events/[id] DELETE               | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/[id]/rsvp POST            | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/[id]/rsvp DELETE          | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/[id]/save DELETE          | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/[id]/save POST            | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | events/create POST               | 401   | {"error":"You must be signed in to create an event"} | calls=
+anonymous   | events/upload-image POST         | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | feedback POST                    | 200   | {"success":true} | calls=feedback.insert
+anonymous   | interactions POST                | 201   | {"success":true,"interaction_id":"fake-user_interactions-1","recorded_at":"2026-01-01T00:00:00.000Z"} | calls=events.select,user_interactions.insert
+anonymous   | notifications/[id] PATCH         | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | notifications POST               | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | onboarding/complete POST         | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | organizer-requests POST          | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | profile/avatar POST              | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | profile/banner POST              | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | profile/inferred-tags DELETE     | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | profile/interests PUT            | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | recommendations/feedback POST    | 401   | {"error":"Unauthorized. Must be logged in to submit feedback."} | calls=
+anonymous   | user/engagement POST             | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | users/[id]/follow POST           | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | users/[id]/follow DELETE         | 401   | {"error":"Unauthorized"} | calls=
+anonymous   | users/[id] PATCH                 | 401   | {"error":"Unauthorized"} | calls=
+active      | clubs/[id]/appeal POST           | 403   | {"error":"Forbidden"} | calls=users.select,clubs.select
+active      | clubs/[id]/follow POST           | 500   | {"error":"Failed to follow club"} | calls=
+active      | clubs/[id]/follow DELETE         | 200   | {"following":false} | calls=club_followers.delete
+active      | clubs/[id]/invites POST          | 403   | {"error":"Only the club owner can send invitations"} | calls=club_members.select
+active      | clubs/[id]/members/role PATCH    | 403   | {"error":"Only the club owner can change roles"} | calls=club_members.select
+active      | clubs/[id]/members DELETE        | 403   | {"error":"Only the club owner can remove members"} | calls=club_members.select
+active      | clubs/[id] PATCH                 | 403   | {"error":"Only the club owner can update club details"} | calls=club_members.select
+active      | clubs/[id] DELETE                | 403   | {"error":"Only the club owner can delete the club"} | calls=club_members.select
+active      | clubs/[id]/transfer POST         | 403   | {"error":"Only the club owner can transfer ownership"} | calls=club_members.select
+active      | clubs/banner POST                | 403   | {"error":"Only the club owner can upload a banner"} | calls=club_members.select
+active      | clubs/logo POST                  | 403   | {"error":"Only the club owner can upload a logo"} | calls=club_members.select
+active      | clubs POST                       | threw | "serviceClient.from(...).select(...).ilike is not a function" | calls=users.select
+active      | events/[id]/appeal POST          | 403   | {"error":"Forbidden"} | calls=users.select,events.select
+active      | events/[id]/invite POST          | 400   | {"error":"No valid friends to invite"} | calls=users.select,get_friends.rpc
+active      | events/[id]/report POST          | 201   | {"success":true} | calls=events.select,event_reports.insert
+active      | events/[id]/reviews POST         | 403   | {"error":"Only attendees who RSVP'd going can review"} | calls=events.select,rsvps.select
+active      | events/[id] PATCH                | 403   | {"error":"You do not have permission to edit this event"} | calls=events.select,users.select,club_members.select
+active      | events/[id] DELETE               | 403   | {"error":"You do not have permission to delete this event"} | calls=events.select,users.select,club_members.select
+active      | events/[id]/rsvp POST            | 201   | {"success":true,"message":"RSVP'd as going","rsvp":{"id":"fake-rsvps-1","status":"going","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z"}} | calls=users.select,users.select,events.select,rsvps.select,rsvps.insert
+active      | events/[id]/rsvp DELETE          | 404   | {"error":"No active RSVP found for this event"} | calls=users.select,rsvps.select
+active      | events/[id]/save DELETE          | 200   | {"saved":false} | calls=users.select,saved_events.delete
+active      | events/[id]/save POST            | 200   | {"saved":true} | calls=users.select,users.select,events.select,saved_events.select,saved_events.insert
+active      | events/create POST               | 201   | {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Ring Test Event","description":"An event created by the handler ring table","start_date":"2030-06-01T18:00:00.000Z","end_date":"2030-06-01T18:00:00.000Z","location":"Leacock 132","organizer":"Ring Caller","tags":["academic"],"image_url":null,"category":"academic","club_id":null,"status":"pending","created_by":"5eed0000-0000-4000-8000-0a3000000001","content_hash":"fcc8edee1d9b591737eebb2ba7316e7f16a214951edbf346f91cf13e870fed3e","is_free":true,"price":null,"rsvp_link":null},"message":"Event submitted for review"} | calls=users.select,users.select,events.select,events.select,events.insert
+active      | events/upload-image POST         | 500   | {"error":"Internal server error"} | calls=
+active      | feedback POST                    | 200   | {"success":true} | calls=feedback.insert
+active      | interactions POST                | 201   | {"success":true,"interaction_id":"fake-user_interactions-1","recorded_at":"2026-01-01T00:00:00.000Z"} | calls=events.select,user_interactions.insert
+active      | notifications/[id] PATCH         | 200   | {"success":true} | calls=notifications.update
+active      | notifications POST               | 200   | {"success":true} | calls=notifications.update
+active      | onboarding/complete POST         | 200   | {"success":true} | calls=
+active      | organizer-requests POST          | 201   | {"request":{"id":"fake-organizer_requests-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","user_id":"5eed0000-0000-4000-8000-0a3000000001","club_id":"5eed0000-0000-4000-8000-0a30000000c1","message":"I help run this club","club":null,"user":null}} | calls=clubs.select,organizer_requests.insert
+active      | profile/avatar POST              | 500   | {"error":"Internal server error"} | calls=
+active      | profile/banner POST              | 500   | {"error":"Internal server error"} | calls=
+active      | profile/inferred-tags DELETE     | 200   | {"success":true,"inferred_tags":[]} | calls=users.select,users.update
+active      | profile/interests PUT            | 200   | {"success":true,"data":{"id":"5eed0000-0000-4000-8000-0a3000000001","email":"ring.caller@mail.mcgill.ca","name":"Ring Caller","roles":["user"],"onboarding_completed":true,"banned_at":null,"ban_expires_at":null,"inferred_tags":["academic"],"interest_tags":["academic"],"updated_at":"2026-09-24T04:52:51.579Z"}} | calls=users.update
+active      | recommendations/feedback POST    | 500   | {"error":"Failed to submit feedback"} | calls=users.select
+active      | user/engagement POST             | 500   | {"error":"Failed to recalculate engagement"} | calls=users.select,update_user_engagement.rpc
+active      | users/[id]/follow POST           | 500   | {"error":"Failed to follow user"} | calls=users.select
+active      | users/[id]/follow DELETE         | 200   | {"following":false,"isFriend":false} | calls=user_follows.delete
+active      | users/[id] PATCH                 | 200   | {"success":true,"data":{"id":"5eed0000-0000-4000-8000-0a3000000001","email":"ring.caller@mail.mcgill.ca","name":"Ring Caller","roles":["user"],"onboarding_completed":true,"banned_at":null,"ban_expires_at":null,"inferred_tags":["academic"],"updated_at":"2026-09-24T04:52:51.580Z"}} | calls=users.update
+banned      | clubs/[id]/appeal POST           | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | clubs/[id]/follow POST           | 500   | {"error":"Failed to follow club"} | calls=
+banned      | clubs/[id]/follow DELETE         | 200   | {"following":false} | calls=club_followers.delete
+banned      | clubs/[id]/invites POST          | 403   | {"error":"Only the club owner can send invitations"} | calls=club_members.select
+banned      | clubs/[id]/members/role PATCH    | 403   | {"error":"Only the club owner can change roles"} | calls=club_members.select
+banned      | clubs/[id]/members DELETE        | 403   | {"error":"Only the club owner can remove members"} | calls=club_members.select
+banned      | clubs/[id] PATCH                 | 403   | {"error":"Only the club owner can update club details"} | calls=club_members.select
+banned      | clubs/[id] DELETE                | 403   | {"error":"Only the club owner can delete the club"} | calls=club_members.select
+banned      | clubs/[id]/transfer POST         | 403   | {"error":"Only the club owner can transfer ownership"} | calls=club_members.select
+banned      | clubs/banner POST                | 403   | {"error":"Only the club owner can upload a banner"} | calls=club_members.select
+banned      | clubs/logo POST                  | 403   | {"error":"Only the club owner can upload a logo"} | calls=club_members.select
+banned      | clubs POST                       | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | events/[id]/appeal POST          | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | events/[id]/invite POST          | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | events/[id]/report POST          | 201   | {"success":true} | calls=events.select,event_reports.insert
+banned      | events/[id]/reviews POST         | 403   | {"error":"Only attendees who RSVP'd going can review"} | calls=events.select,rsvps.select
+banned      | events/[id] PATCH                | 403   | {"error":"You do not have permission to edit this event"} | calls=events.select,users.select,club_members.select
+banned      | events/[id] DELETE               | 403   | {"error":"You do not have permission to delete this event"} | calls=events.select,users.select,club_members.select
+banned      | events/[id]/rsvp POST            | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | events/[id]/rsvp DELETE          | 404   | {"error":"No active RSVP found for this event"} | calls=users.select,rsvps.select
+banned      | events/[id]/save DELETE          | 200   | {"saved":false} | calls=users.select,saved_events.delete
+banned      | events/[id]/save POST            | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | events/create POST               | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | events/upload-image POST         | 500   | {"error":"Internal server error"} | calls=
+banned      | feedback POST                    | 200   | {"success":true} | calls=feedback.insert
+banned      | interactions POST                | 201   | {"success":true,"interaction_id":"fake-user_interactions-1","recorded_at":"2026-01-01T00:00:00.000Z"} | calls=events.select,user_interactions.insert
+banned      | notifications/[id] PATCH         | 200   | {"success":true} | calls=notifications.update
+banned      | notifications POST               | 200   | {"success":true} | calls=notifications.update
+banned      | onboarding/complete POST         | 200   | {"success":true} | calls=
+banned      | organizer-requests POST          | 201   | {"request":{"id":"fake-organizer_requests-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","user_id":"5eed0000-0000-4000-8000-0a3000000001","club_id":"5eed0000-0000-4000-8000-0a30000000c1","message":"I help run this club","club":null,"user":null}} | calls=clubs.select,organizer_requests.insert
+banned      | profile/avatar POST              | 500   | {"error":"Internal server error"} | calls=
+banned      | profile/banner POST              | 500   | {"error":"Internal server error"} | calls=
+banned      | profile/inferred-tags DELETE     | 200   | {"success":true,"inferred_tags":[]} | calls=users.select,users.update
+banned      | profile/interests PUT            | 200   | {"success":true,"data":{"id":"5eed0000-0000-4000-8000-0a3000000001","email":"ring.caller@mail.mcgill.ca","name":"Ring Caller","roles":["user"],"onboarding_completed":true,"banned_at":"2026-09-01T00:00:00+00:00","ban_expires_at":null,"inferred_tags":["academic"],"interest_tags":["academic"],"updated_at":"2026-09-24T04:52:51.582Z"}} | calls=users.update
+banned      | recommendations/feedback POST    | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | user/engagement POST             | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | users/[id]/follow POST           | 403   | {"error":"Account suspended"} | calls=users.select
+banned      | users/[id]/follow DELETE         | 200   | {"following":false,"isFriend":false} | calls=user_follows.delete
+banned      | users/[id] PATCH                 | 200   | {"success":true,"data":{"id":"5eed0000-0000-4000-8000-0a3000000001","email":"ring.caller@mail.mcgill.ca","name":"Ring Caller","roles":["user"],"onboarding_completed":true,"banned_at":"2026-09-01T00:00:00+00:00","ban_expires_at":null,"inferred_tags":["academic"],"updated_at":"2026-09-24T04:52:51.583Z"}} | calls=users.update
+expired     | clubs/[id]/appeal POST           | 403   | {"error":"Forbidden"} | calls=users.select,clubs.select
+expired     | clubs/[id]/follow POST           | 500   | {"error":"Failed to follow club"} | calls=
+expired     | clubs/[id]/follow DELETE         | 200   | {"following":false} | calls=club_followers.delete
+expired     | clubs/[id]/invites POST          | 403   | {"error":"Only the club owner can send invitations"} | calls=club_members.select
+expired     | clubs/[id]/members/role PATCH    | 403   | {"error":"Only the club owner can change roles"} | calls=club_members.select
+expired     | clubs/[id]/members DELETE        | 403   | {"error":"Only the club owner can remove members"} | calls=club_members.select
+expired     | clubs/[id] PATCH                 | 403   | {"error":"Only the club owner can update club details"} | calls=club_members.select
+expired     | clubs/[id] DELETE                | 403   | {"error":"Only the club owner can delete the club"} | calls=club_members.select
+expired     | clubs/[id]/transfer POST         | 403   | {"error":"Only the club owner can transfer ownership"} | calls=club_members.select
+expired     | clubs/banner POST                | 403   | {"error":"Only the club owner can upload a banner"} | calls=club_members.select
+expired     | clubs/logo POST                  | 403   | {"error":"Only the club owner can upload a logo"} | calls=club_members.select
+expired     | clubs POST                       | threw | "serviceClient.from(...).select(...).ilike is not a function" | calls=users.select
+expired     | events/[id]/appeal POST          | 403   | {"error":"Forbidden"} | calls=users.select,events.select
+expired     | events/[id]/invite POST          | 400   | {"error":"No valid friends to invite"} | calls=users.select,get_friends.rpc
+expired     | events/[id]/report POST          | 201   | {"success":true} | calls=events.select,event_reports.insert
+expired     | events/[id]/reviews POST         | 403   | {"error":"Only attendees who RSVP'd going can review"} | calls=events.select,rsvps.select
+expired     | events/[id] PATCH                | 403   | {"error":"You do not have permission to edit this event"} | calls=events.select,users.select,club_members.select
+expired     | events/[id] DELETE               | 403   | {"error":"You do not have permission to delete this event"} | calls=events.select,users.select,club_members.select
+expired     | events/[id]/rsvp POST            | 201   | {"success":true,"message":"RSVP'd as going","rsvp":{"id":"fake-rsvps-1","status":"going","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z"}} | calls=users.select,users.select,events.select,rsvps.select,rsvps.insert
+expired     | events/[id]/rsvp DELETE          | 404   | {"error":"No active RSVP found for this event"} | calls=users.select,rsvps.select
+expired     | events/[id]/save DELETE          | 200   | {"saved":false} | calls=users.select,saved_events.delete
+expired     | events/[id]/save POST            | 200   | {"saved":true} | calls=users.select,users.select,events.select,saved_events.select,saved_events.insert
+expired     | events/create POST               | 201   | {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Ring Test Event","description":"An event created by the handler ring table","start_date":"2030-06-01T18:00:00.000Z","end_date":"2030-06-01T18:00:00.000Z","location":"Leacock 132","organizer":"Ring Caller","tags":["academic"],"image_url":null,"category":"academic","club_id":null,"status":"pending","created_by":"5eed0000-0000-4000-8000-0a3000000001","content_hash":"fcc8edee1d9b591737eebb2ba7316e7f16a214951edbf346f91cf13e870fed3e","is_free":true,"price":null,"rsvp_link":null},"message":"Event submitted for review"} | calls=users.select,users.select,events.select,events.select,events.insert
+expired     | events/upload-image POST         | 500   | {"error":"Internal server error"} | calls=
+expired     | feedback POST                    | 200   | {"success":true} | calls=feedback.insert
+expired     | interactions POST                | 201   | {"success":true,"interaction_id":"fake-user_interactions-1","recorded_at":"2026-01-01T00:00:00.000Z"} | calls=events.select,user_interactions.insert
+expired     | notifications/[id] PATCH         | 200   | {"success":true} | calls=notifications.update
+expired     | notifications POST               | 200   | {"success":true} | calls=notifications.update
+expired     | onboarding/complete POST         | 200   | {"success":true} | calls=
+expired     | organizer-requests POST          | 201   | {"request":{"id":"fake-organizer_requests-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","user_id":"5eed0000-0000-4000-8000-0a3000000001","club_id":"5eed0000-0000-4000-8000-0a30000000c1","message":"I help run this club","club":null,"user":null}} | calls=clubs.select,organizer_requests.insert
+expired     | profile/avatar POST              | 500   | {"error":"Internal server error"} | calls=
+expired     | profile/banner POST              | 500   | {"error":"Internal server error"} | calls=
+expired     | profile/inferred-tags DELETE     | 200   | {"success":true,"inferred_tags":[]} | calls=users.select,users.update
+expired     | profile/interests PUT            | 200   | {"success":true,"data":{"id":"5eed0000-0000-4000-8000-0a3000000001","email":"ring.caller@mail.mcgill.ca","name":"Ring Caller","roles":["user"],"onboarding_completed":true,"banned_at":"2020-01-01T00:00:00+00:00","ban_expires_at":"2020-02-01T00:00:00+00:00","inferred_tags":["academic"],"interest_tags":["academic"],"updated_at":"2026-09-24T04:52:51.586Z"}} | calls=users.update
+expired     | recommendations/feedback POST    | 500   | {"error":"Failed to submit feedback"} | calls=users.select
+expired     | user/engagement POST             | 500   | {"error":"Failed to recalculate engagement"} | calls=users.select,update_user_engagement.rpc
+expired     | users/[id]/follow POST           | 500   | {"error":"Failed to follow user"} | calls=users.select
+expired     | users/[id]/follow DELETE         | 200   | {"following":false,"isFriend":false} | calls=user_follows.delete
+expired     | users/[id] PATCH                 | 200   | {"success":true,"data":{"id":"5eed0000-0000-4000-8000-0a3000000001","email":"ring.caller@mail.mcgill.ca","name":"Ring Caller","roles":["user"],"onboarding_completed":true,"banned_at":"2020-01-01T00:00:00+00:00","ban_expires_at":"2020-02-01T00:00:00+00:00","inferred_tags":["academic"],"updated_at":"2026-09-24T04:52:51.586Z"}} | calls=users.update
+unonboarded | clubs/[id]/appeal POST           | 403   | {"error":"Forbidden"} | calls=users.select,clubs.select
+unonboarded | clubs/[id]/follow POST           | 500   | {"error":"Failed to follow club"} | calls=
+unonboarded | clubs/[id]/follow DELETE         | 200   | {"following":false} | calls=club_followers.delete
+unonboarded | clubs/[id]/invites POST          | 403   | {"error":"Only the club owner can send invitations"} | calls=club_members.select
+unonboarded | clubs/[id]/members/role PATCH    | 403   | {"error":"Only the club owner can change roles"} | calls=club_members.select
+unonboarded | clubs/[id]/members DELETE        | 403   | {"error":"Only the club owner can remove members"} | calls=club_members.select
+unonboarded | clubs/[id] PATCH                 | 403   | {"error":"Only the club owner can update club details"} | calls=club_members.select
+unonboarded | clubs/[id] DELETE                | 403   | {"error":"Only the club owner can delete the club"} | calls=club_members.select
+unonboarded | clubs/[id]/transfer POST         | 403   | {"error":"Only the club owner can transfer ownership"} | calls=club_members.select
+unonboarded | clubs/banner POST                | 403   | {"error":"Only the club owner can upload a banner"} | calls=club_members.select
+unonboarded | clubs/logo POST                  | 403   | {"error":"Only the club owner can upload a logo"} | calls=club_members.select
+unonboarded | clubs POST                       | threw | "serviceClient.from(...).select(...).ilike is not a function" | calls=users.select
+unonboarded | events/[id]/appeal POST          | 403   | {"error":"Forbidden"} | calls=users.select,events.select
+unonboarded | events/[id]/invite POST          | 400   | {"error":"No valid friends to invite"} | calls=users.select,get_friends.rpc
+unonboarded | events/[id]/report POST          | 201   | {"success":true} | calls=events.select,event_reports.insert
+unonboarded | events/[id]/reviews POST         | 403   | {"error":"Only attendees who RSVP'd going can review"} | calls=events.select,rsvps.select
+unonboarded | events/[id] PATCH                | 403   | {"error":"You do not have permission to edit this event"} | calls=events.select,users.select,club_members.select
+unonboarded | events/[id] DELETE               | 403   | {"error":"You do not have permission to delete this event"} | calls=events.select,users.select,club_members.select
+unonboarded | events/[id]/rsvp POST            | 201   | {"success":true,"message":"RSVP'd as going","rsvp":{"id":"fake-rsvps-1","status":"going","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z"}} | calls=users.select,users.select,events.select,rsvps.select,rsvps.insert
+unonboarded | events/[id]/rsvp DELETE          | 404   | {"error":"No active RSVP found for this event"} | calls=users.select,rsvps.select
+unonboarded | events/[id]/save DELETE          | 200   | {"saved":false} | calls=users.select,saved_events.delete
+unonboarded | events/[id]/save POST            | 200   | {"saved":true} | calls=users.select,users.select,events.select,saved_events.select,saved_events.insert
+unonboarded | events/create POST               | 201   | {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Ring Test Event","description":"An event created by the handler ring table","start_date":"2030-06-01T18:00:00.000Z","end_date":"2030-06-01T18:00:00.000Z","location":"Leacock 132","organizer":"Ring Caller","tags":["academic"],"image_url":null,"category":"academic","club_id":null,"status":"pending","created_by":"5eed0000-0000-4000-8000-0a3000000001","content_hash":"fcc8edee1d9b591737eebb2ba7316e7f16a214951edbf346f91cf13e870fed3e","is_free":true,"price":null,"rsvp_link":null},"message":"Event submitted for review"} | calls=users.select,users.select,events.select,events.select,events.insert
+unonboarded | events/upload-image POST         | 500   | {"error":"Internal server error"} | calls=
+unonboarded | feedback POST                    | 200   | {"success":true} | calls=feedback.insert
+unonboarded | interactions POST                | 201   | {"success":true,"interaction_id":"fake-user_interactions-1","recorded_at":"2026-01-01T00:00:00.000Z"} | calls=events.select,user_interactions.insert
+unonboarded | notifications/[id] PATCH         | 200   | {"success":true} | calls=notifications.update
+unonboarded | notifications POST               | 200   | {"success":true} | calls=notifications.update
+unonboarded | onboarding/complete POST         | 200   | {"success":true} | calls=
+unonboarded | organizer-requests POST          | 201   | {"request":{"id":"fake-organizer_requests-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","user_id":"5eed0000-0000-4000-8000-0a3000000001","club_id":"5eed0000-0000-4000-8000-0a30000000c1","message":"I help run this club","club":null,"user":null}} | calls=clubs.select,organizer_requests.insert
+unonboarded | profile/avatar POST              | 500   | {"error":"Internal server error"} | calls=
+unonboarded | profile/banner POST              | 500   | {"error":"Internal server error"} | calls=
+unonboarded | profile/inferred-tags DELETE     | 200   | {"success":true,"inferred_tags":[]} | calls=users.select,users.update
+unonboarded | profile/interests PUT            | 200   | {"success":true,"data":{"id":"5eed0000-0000-4000-8000-0a3000000001","email":"ring.caller@mail.mcgill.ca","name":"Ring Caller","roles":["user"],"onboarding_completed":false,"banned_at":null,"ban_expires_at":null,"inferred_tags":["academic"],"interest_tags":["academic"],"updated_at":"2026-09-24T04:52:51.588Z"}} | calls=users.update
+unonboarded | recommendations/feedback POST    | 500   | {"error":"Failed to submit feedback"} | calls=users.select
+unonboarded | user/engagement POST             | 500   | {"error":"Failed to recalculate engagement"} | calls=users.select,update_user_engagement.rpc
+unonboarded | users/[id]/follow POST           | 500   | {"error":"Failed to follow user"} | calls=users.select
+unonboarded | users/[id]/follow DELETE         | 200   | {"following":false,"isFriend":false} | calls=user_follows.delete
+unonboarded | users/[id] PATCH                 | 200   | {"success":true,"data":{"id":"5eed0000-0000-4000-8000-0a3000000001","email":"ring.caller@mail.mcgill.ca","name":"Ring Caller","roles":["user"],"onboarding_completed":true,"banned_at":null,"ban_expires_at":null,"inferred_tags":["academic"],"updated_at":"2026-09-24T04:52:51.589Z"}} | calls=users.update
+noProfile   | clubs/[id]/appeal POST           | 403   | {"error":"Forbidden"} | calls=users.select,clubs.select
+noProfile   | clubs/[id]/follow POST           | 500   | {"error":"Failed to follow club"} | calls=
+noProfile   | clubs/[id]/follow DELETE         | 200   | {"following":false} | calls=club_followers.delete
+noProfile   | clubs/[id]/invites POST          | 403   | {"error":"Only the club owner can send invitations"} | calls=club_members.select
+noProfile   | clubs/[id]/members/role PATCH    | 403   | {"error":"Only the club owner can change roles"} | calls=club_members.select
+noProfile   | clubs/[id]/members DELETE        | 403   | {"error":"Only the club owner can remove members"} | calls=club_members.select
+noProfile   | clubs/[id] PATCH                 | 403   | {"error":"Only the club owner can update club details"} | calls=club_members.select
+noProfile   | clubs/[id] DELETE                | 403   | {"error":"Only the club owner can delete the club"} | calls=club_members.select
+noProfile   | clubs/[id]/transfer POST         | 403   | {"error":"Only the club owner can transfer ownership"} | calls=club_members.select
+noProfile   | clubs/banner POST                | 403   | {"error":"Only the club owner can upload a banner"} | calls=club_members.select
+noProfile   | clubs/logo POST                  | 403   | {"error":"Only the club owner can upload a logo"} | calls=club_members.select
+noProfile   | clubs POST                       | threw | "serviceClient.from(...).select(...).ilike is not a function" | calls=users.select
+noProfile   | events/[id]/appeal POST          | 403   | {"error":"Forbidden"} | calls=users.select,events.select
+noProfile   | events/[id]/invite POST          | 400   | {"error":"No valid friends to invite"} | calls=users.select,get_friends.rpc
+noProfile   | events/[id]/report POST          | 201   | {"success":true} | calls=events.select,event_reports.insert
+noProfile   | events/[id]/reviews POST         | 403   | {"error":"Only attendees who RSVP'd going can review"} | calls=events.select,rsvps.select
+noProfile   | events/[id] PATCH                | 403   | {"error":"You do not have permission to edit this event"} | calls=events.select,users.select,club_members.select
+noProfile   | events/[id] DELETE               | 403   | {"error":"You do not have permission to delete this event"} | calls=events.select,users.select,club_members.select
+noProfile   | events/[id]/rsvp POST            | 201   | {"success":true,"message":"RSVP'd as going","rsvp":{"id":"fake-rsvps-1","status":"going","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z"}} | calls=users.select,users.select,events.select,rsvps.select,rsvps.insert
+noProfile   | events/[id]/rsvp DELETE          | 404   | {"error":"No active RSVP found for this event"} | calls=users.select,rsvps.select
+noProfile   | events/[id]/save DELETE          | 200   | {"saved":false} | calls=users.select,saved_events.delete
+noProfile   | events/[id]/save POST            | 200   | {"saved":true} | calls=users.select,users.select,events.select,saved_events.select,saved_events.insert
+noProfile   | events/create POST               | 201   | {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"Ring Test Event","description":"An event created by the handler ring table","start_date":"2030-06-01T18:00:00.000Z","end_date":"2030-06-01T18:00:00.000Z","location":"Leacock 132","organizer":"ring.caller@mail.mcgill.ca","tags":["academic"],"image_url":null,"category":"academic","club_id":null,"status":"pending","created_by":"5eed0000-0000-4000-8000-0a3000000001","content_hash":"d76d94b94e063db3a531ba77c999f98b5189aa24e9f55931e48a82ddb5b808cf","is_free":true,"price":null,"rsvp_link":null},"message":"Event submitted for review"} | calls=users.select,users.select,events.select,events.select,events.insert
+noProfile   | events/upload-image POST         | 500   | {"error":"Internal server error"} | calls=
+noProfile   | feedback POST                    | 200   | {"success":true} | calls=feedback.insert
+noProfile   | interactions POST                | 201   | {"success":true,"interaction_id":"fake-user_interactions-1","recorded_at":"2026-01-01T00:00:00.000Z"} | calls=events.select,user_interactions.insert
+noProfile   | notifications/[id] PATCH         | 200   | {"success":true} | calls=notifications.update
+noProfile   | notifications POST               | 200   | {"success":true} | calls=notifications.update
+noProfile   | onboarding/complete POST         | 200   | {"success":true} | calls=
+noProfile   | organizer-requests POST          | 201   | {"request":{"id":"fake-organizer_requests-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","user_id":"5eed0000-0000-4000-8000-0a3000000001","club_id":"5eed0000-0000-4000-8000-0a30000000c1","message":"I help run this club","club":null,"user":null}} | calls=clubs.select,organizer_requests.insert
+noProfile   | profile/avatar POST              | 500   | {"error":"Internal server error"} | calls=
+noProfile   | profile/banner POST              | 500   | {"error":"Internal server error"} | calls=
+noProfile   | profile/inferred-tags DELETE     | 404   | {"error":"Profile not found"} | calls=users.select
+noProfile   | profile/interests PUT            | 500   | {"error":"Failed to update interests"} | calls=users.update
+noProfile   | recommendations/feedback POST    | 500   | {"error":"Failed to submit feedback"} | calls=users.select
+noProfile   | user/engagement POST             | 500   | {"error":"Failed to recalculate engagement"} | calls=users.select,update_user_engagement.rpc
+noProfile   | users/[id]/follow POST           | 500   | {"error":"Failed to follow user"} | calls=users.select
+noProfile   | users/[id]/follow DELETE         | 200   | {"following":false,"isFriend":false} | calls=user_follows.delete
+noProfile   | users/[id] PATCH                 | 500   | {"error":"Failed to update profile"} | calls=users.update
+
+────────────────────────────────────────────────────────────────────────────────
+3. The Task 1 suites on the unmodified tree
+────────────────────────────────────────────────────────────────────────────────
+
+$ npx jest --ci src/__tests__/api/auth-ring
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       175 passed, 175 total
+Snapshots:   0 total
+Time:        0.291 s, estimated 1 s
+Ran all test suites matching src/__tests__/api/auth-ring.
+exit 0
+
+$ npx jest --ci src/__tests__/api/auth-ring --verbose  (test names, for the mutation cycles)
+  ✓ GUARDED names only arms that exist in the table (1 ms)
+    ✓ F-088 D1 clubs/[id]/follow POST: banned caller (2 ms)
+    ✓ F-088 D1 clubs/[id]/follow DELETE: banned caller (1 ms)
+    ✓ F-088 D1 clubs/[id]/invites POST: banned caller (20 ms)
+    ✓ F-088 D1 clubs/[id]/members/role PATCH: banned caller (1 ms)
+    ✓ F-088 D1 clubs/[id]/members DELETE: banned caller (1 ms)
+    ✓ F-088 D1 clubs/[id] PATCH: banned caller
+    ✓ F-088 D1 clubs/[id] DELETE: banned caller (1 ms)
+    ✓ F-088 D1 clubs/[id]/transfer POST: banned caller
+    ✓ F-088 D1 clubs/banner POST: banned caller (4 ms)
+    ✓ F-088 D1 clubs/logo POST: banned caller (1 ms)
+    ✓ F-088 D1 events/[id]/report POST: banned caller (14 ms)
+    ✓ F-088 D1 events/[id]/reviews POST: banned caller
+    ✓ F-088 D1 events/[id] PATCH: banned caller (2 ms)
+    ✓ F-088 D1 events/[id] DELETE: banned caller
+    ✓ F-088 D1 events/[id]/rsvp DELETE: banned caller (2 ms)
+    ✓ F-088 D1 events/[id]/save DELETE: banned caller
+    ✓ F-088 D1 events/upload-image POST: banned caller (1 ms)
+    ✓ F-088 D1 feedback POST: banned caller (1 ms)
+    ✓ F-088 D1 interactions POST: banned caller
+    ✓ F-088 D1 notifications/[id] PATCH: banned caller
+    ✓ F-088 D1 notifications POST: banned caller (1 ms)
+    ✓ F-088 D1 onboarding/complete POST: banned caller
+    ✓ F-088 D1 organizer-requests POST: banned caller (1 ms)
+    ✓ F-088 D1 profile/avatar POST: banned caller
+    ✓ F-088 D1 profile/banner POST: banned caller (1 ms)
+    ✓ F-088 D1 profile/inferred-tags DELETE: banned caller (1 ms)
+    ✓ F-088 D1 profile/interests PUT: banned caller (1 ms)
+    ✓ F-088 D1 users/[id]/follow DELETE: banned caller
+    ✓ F-088 D1 users/[id] PATCH: banned caller (1 ms)
+    ✓ F-088 D2 clubs/[id]/appeal POST: no profile row (1 ms)
+    ✓ F-088 D2 clubs/[id]/follow POST: no profile row
+    ✓ F-088 D2 clubs/[id]/follow DELETE: no profile row
+    ✓ F-088 D2 clubs/[id]/invites POST: no profile row
+    ✓ F-088 D2 clubs/[id]/members/role PATCH: no profile row
+    ✓ F-088 D2 clubs/[id]/members DELETE: no profile row
+    ✓ F-088 D2 clubs/[id] PATCH: no profile row (1 ms)
+    ✓ F-088 D2 clubs/[id] DELETE: no profile row
+    ✓ F-088 D2 clubs/[id]/transfer POST: no profile row
+    ✓ F-088 D2 clubs/banner POST: no profile row
+    ✓ F-088 D2 clubs/logo POST: no profile row
+    ✓ F-088 D2 clubs POST: no profile row
+    ✓ F-088 D2 events/[id]/appeal POST: no profile row (1 ms)
+    ✓ F-088 D2 events/[id]/invite POST: no profile row
+    ✓ F-088 D2 events/[id]/report POST: no profile row
+    ✓ F-088 D2 events/[id]/reviews POST: no profile row (1 ms)
+    ✓ F-088 D2 events/[id] PATCH: no profile row
+    ✓ F-088 D2 events/[id] DELETE: no profile row
+    ✓ F-088 D2 events/[id]/rsvp POST: no profile row
+    ✓ F-088 D2 events/[id]/rsvp DELETE: no profile row
+    ✓ F-088 D2 events/[id]/save DELETE: no profile row (1 ms)
+    ✓ F-088 D2 events/[id]/save POST: no profile row
+    ✓ F-088 D2 events/create POST: no profile row (8 ms)
+    ✓ F-088 D2 events/upload-image POST: no profile row
+    ✓ F-088 D2 feedback POST: no profile row
+    ✓ F-088 D2 interactions POST: no profile row
+    ✓ F-088 D2 notifications/[id] PATCH: no profile row (1 ms)
+    ✓ F-088 D2 notifications POST: no profile row
+    ✓ F-088 D2 onboarding/complete POST: no profile row
+    ✓ F-088 D2 organizer-requests POST: no profile row
+    ✓ F-088 D2 profile/avatar POST: no profile row
+    ✓ F-088 D2 profile/banner POST: no profile row (1 ms)
+    ✓ F-088 D2 profile/inferred-tags DELETE: no profile row
+    ✓ F-088 D2 profile/interests PUT: no profile row
+    ✓ F-088 D2 recommendations/feedback POST: no profile row (1 ms)
+    ✓ F-088 D2 user/engagement POST: no profile row
+    ✓ F-088 D2 users/[id]/follow POST: no profile row
+    ✓ F-088 D2 users/[id]/follow DELETE: no profile row (1 ms)
+    ✓ F-088 D2 users/[id] PATCH: no profile row
+    ✓ F-089 D3 clubs/[id]/appeal POST: un-onboarded caller
+    ✓ F-089 D3 clubs/[id]/follow POST: un-onboarded caller
+    ✓ F-089 D3 clubs/[id]/follow DELETE: un-onboarded caller
+    ✓ F-089 D3 clubs/[id]/invites POST: un-onboarded caller
+    ✓ F-089 D3 clubs/[id]/members/role PATCH: un-onboarded caller
+    ✓ F-089 D3 clubs/[id]/members DELETE: un-onboarded caller (1 ms)
+    ✓ F-089 D3 clubs/[id] PATCH: un-onboarded caller
+    ✓ F-089 D3 clubs/[id] DELETE: un-onboarded caller
+    ✓ F-089 D3 clubs/[id]/transfer POST: un-onboarded caller
+    ✓ F-089 D3 clubs/banner POST: un-onboarded caller (2 ms)
+    ✓ F-089 D3 clubs/logo POST: un-onboarded caller
+    ✓ F-089 D3 clubs POST: un-onboarded caller
+    ✓ F-089 D3 events/[id]/appeal POST: un-onboarded caller (1 ms)
+    ✓ F-089 D3 events/[id]/invite POST: un-onboarded caller
+    ✓ F-089 D3 events/[id]/report POST: un-onboarded caller
+    ✓ F-089 D3 events/[id]/reviews POST: un-onboarded caller
+    ✓ F-089 D3 events/[id] PATCH: un-onboarded caller
+    ✓ F-089 D3 events/[id] DELETE: un-onboarded caller (1 ms)
+    ✓ F-089 D3 events/[id]/rsvp POST: un-onboarded caller
+    ✓ F-089 D3 events/[id]/rsvp DELETE: un-onboarded caller
+    ✓ F-089 D3 events/[id]/save DELETE: un-onboarded caller
+    ✓ F-089 D3 events/[id]/save POST: un-onboarded caller
+    ✓ F-089 D3 events/create POST: un-onboarded caller (1 ms)
+    ✓ F-089 D3 events/upload-image POST: un-onboarded caller
+    ✓ F-089 D3 feedback POST: un-onboarded caller
+    ✓ F-089 D3 interactions POST: un-onboarded caller (1 ms)
+    ✓ F-089 D3 notifications/[id] PATCH: un-onboarded caller
+    ✓ F-089 D3 notifications POST: un-onboarded caller
+    ✓ F-089 D3 organizer-requests POST: un-onboarded caller
+    ✓ F-089 D3 profile/avatar POST: un-onboarded caller
+    ✓ F-089 D3 profile/banner POST: un-onboarded caller (1 ms)
+    ✓ F-089 D3 profile/inferred-tags DELETE: un-onboarded caller
+    ✓ F-089 D3 profile/interests PUT: un-onboarded caller
+    ✓ F-089 D3 recommendations/feedback POST: un-onboarded caller
+    ✓ F-089 D3 user/engagement POST: un-onboarded caller
+    ✓ F-089 D3 users/[id]/follow POST: un-onboarded caller (1 ms)
+    ✓ F-089 D3 users/[id]/follow DELETE: un-onboarded caller
+    ✓ every write arm under src/app/api has exactly one descriptor (3 ms)
+    ✓ the ten legacy-ban arms are exactly the helper's callers
+    ✓ the two onboarding exemptions and the two anonymous-tolerant arms
+    ✓ the byte map covers every arm that is not anonymous-tolerant
+    ✓ P1 clubs/[id]/appeal POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 clubs/[id]/follow POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 clubs/[id]/follow DELETE: anonymous gets its exact bytes and writes nothing (1 ms)
+    ✓ P1 clubs/[id]/invites POST: anonymous gets its exact bytes and writes nothing (6 ms)
+    ✓ P1 clubs/[id]/members/role PATCH: anonymous gets its exact bytes and writes nothing
+    ✓ P1 clubs/[id]/members DELETE: anonymous gets its exact bytes and writes nothing
+    ✓ P1 clubs/[id] PATCH: anonymous gets its exact bytes and writes nothing
+    ✓ P1 clubs/[id] DELETE: anonymous gets its exact bytes and writes nothing
+    ✓ P1 clubs/[id]/transfer POST: anonymous gets its exact bytes and writes nothing (1 ms)
+    ✓ P1 clubs/banner POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 clubs/logo POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 clubs POST: anonymous gets its exact bytes and writes nothing (3 ms)
+    ✓ P1 events/[id]/appeal POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 events/[id]/invite POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 events/[id]/report POST: anonymous gets its exact bytes and writes nothing (1 ms)
+    ✓ P1 events/[id]/reviews POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 events/[id] PATCH: anonymous gets its exact bytes and writes nothing
+    ✓ P1 events/[id] DELETE: anonymous gets its exact bytes and writes nothing
+    ✓ P1 events/[id]/rsvp POST: anonymous gets its exact bytes and writes nothing (1 ms)
+    ✓ P1 events/[id]/rsvp DELETE: anonymous gets its exact bytes and writes nothing
+    ✓ P1 events/[id]/save DELETE: anonymous gets its exact bytes and writes nothing
+    ✓ P1 events/[id]/save POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 events/create POST: anonymous gets its exact bytes and writes nothing (1 ms)
+    ✓ P1 events/upload-image POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 notifications/[id] PATCH: anonymous gets its exact bytes and writes nothing
+    ✓ P1 notifications POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 onboarding/complete POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 organizer-requests POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 profile/avatar POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 profile/banner POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 profile/inferred-tags DELETE: anonymous gets its exact bytes and writes nothing
+    ✓ P1 profile/interests PUT: anonymous gets its exact bytes and writes nothing (1 ms)
+    ✓ P1 recommendations/feedback POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 user/engagement POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 users/[id]/follow POST: anonymous gets its exact bytes and writes nothing
+    ✓ P1 users/[id]/follow DELETE: anonymous gets its exact bytes and writes nothing
+    ✓ P1 users/[id] PATCH: anonymous gets its exact bytes and writes nothing
+    ✓ P1 feedback POST: anonymous is admitted with its measured status (1 ms)
+    ✓ P1 interactions POST: anonymous is admitted with its measured status
+    ✓ P2 clubs/[id]/appeal POST: 403 Account suspended, nothing written
+    ✓ P2 clubs POST: 403 Account suspended, nothing written
+    ✓ P2 events/[id]/appeal POST: 403 Account suspended, nothing written (1 ms)
+    ✓ P2 events/[id]/invite POST: 403 Account suspended, nothing written
+    ✓ P2 events/[id]/rsvp POST: 403 Account suspended, nothing written
+    ✓ P2 events/[id]/save POST: 403 Account suspended, nothing written
+    ✓ P2 events/create POST: 403 Account suspended, nothing written
+    ✓ P2 recommendations/feedback POST: 403 Account suspended, nothing written
+    ✓ P2 user/engagement POST: 403 Account suspended, nothing written (1 ms)
+    ✓ P2 users/[id]/follow POST: 403 Account suspended, nothing written
+    ✓ P3 onboarding/complete POST: admitted, not refused as un-onboarded
+    ✓ P3 users/[id] PATCH: admitted, not refused as un-onboarded
+    ✓ P3 onboarding/complete POST answers 200 {success:true}
+    ✓ P3 users/[id] PATCH (self) stores onboarding_completed true (1 ms)
+    ✓ P4 clubs/[id]/appeal POST: an expired suspension is not refused as suspended
+    ✓ P4 clubs POST: an expired suspension is not refused as suspended
+    ✓ P4 events/[id]/appeal POST: an expired suspension is not refused as suspended
+    ✓ P4 events/[id]/invite POST: an expired suspension is not refused as suspended
+    ✓ P4 events/[id]/rsvp POST: an expired suspension is not refused as suspended
+    ✓ P4 events/[id]/save POST: an expired suspension is not refused as suspended (3 ms)
+    ✓ P4 events/create POST: an expired suspension is not refused as suspended
+    ✓ P4 recommendations/feedback POST: an expired suspension is not refused as suspended (1 ms)
+    ✓ P4 user/engagement POST: an expired suspension is not refused as suspended
+    ✓ P4 users/[id]/follow POST: an expired suspension is not refused as suspended
+    ✓ P5 feedback POST: an active signed-in caller is admitted
+    ✓ P5 interactions POST: an active signed-in caller is admitted
+Tests:       175 passed, 175 total
+exit 0
+
+$ node scripts/check-characterization-tags.mjs src/__tests__/api/auth-ring/write-handlers-characterization.test.ts src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok 2 files
+exit 0
+
+$ grep -n "const GUARDED" src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+96:const GUARDED: ReadonlySet<string> = new Set<string>([]);
+exit 0
+
+$ npx tsc --noEmit
+exit 0
