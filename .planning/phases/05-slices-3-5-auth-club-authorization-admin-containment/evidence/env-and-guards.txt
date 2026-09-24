@@ -1,0 +1,156 @@
+Env and guards — plan 05-04
+**Plan:** 05-04 · **Phase:** 05 · **Recorded:** 2026-09-24T05:06:05Z
+HEAD at capture=8b5d240851d40417cd101d244d2a192578d1b0ac (the 05-03 head is 8b5d240; each task's changes are in the working tree and are committed with its block)
+
+Every block: the command, its verbatim output (Jest stack frames and blank lines filtered), then exit=<code>.
+
+==============================================================================
+TASK 1 — lazy validated config, four readers rewired, auth-debug deleted, census step one
+==============================================================================
+
+--- 1a. Baseline before any edit
+$ npx jest --ci
+Test Suites: 58 passed, 58 total
+Tests:       968 passed, 968 total
+$ node scripts/check-characterization-tags.mjs --all
+ok 26 files
+
+--- 1b. RED: env.test.ts before src/lib/env.ts exists (reproduced by moving env.ts aside, then restored; cmp identical)
+$ npx jest --ci src/lib/env.test.ts
+15     Cannot find module './env' from 'src/lib/env.test.ts'
+1     Rejected to value: [Error: Cannot find module './env' from 'src/lib/env.test.ts'·
+1 Tests:       16 failed, 16 total
+1 exit=1
+
+--- 1c. GREEN: env.test.ts against src/lib/env.ts
+$ npx jest --ci --verbose src/lib/env.test.ts
+PASS node src/lib/env.test.ts
+  src/lib/env.ts — import is side-effect free
+    ✓ importing with every Supabase and Upstash variable unset does not throw (1 ms)
+  MissingEnvError
+    ✓ has name MissingEnvError, is an Error, and names the variable
+  requireEnvValue
+    ✓ returns the value when set (1 ms)
+    ✓ throws MissingEnvError naming the variable when undefined (2 ms)
+    ✓ throws on the empty string and on whitespace only (1 ms)
+  supabaseUrl()
+    ✓ returns NEXT_PUBLIC_SUPABASE_URL when set
+    ✓ throws MissingEnvError naming NEXT_PUBLIC_SUPABASE_URL when unset
+    ✓ throws MissingEnvError naming NEXT_PUBLIC_SUPABASE_URL when whitespace only
+    ✓ reads NEXT_PUBLIC_SUPABASE_URL at call time, not at import time (1 ms)
+  supabaseAnonKey()
+    ✓ returns NEXT_PUBLIC_SUPABASE_ANON_KEY when set
+    ✓ throws MissingEnvError naming NEXT_PUBLIC_SUPABASE_ANON_KEY when unset
+    ✓ throws MissingEnvError naming NEXT_PUBLIC_SUPABASE_ANON_KEY when whitespace only
+    ✓ reads NEXT_PUBLIC_SUPABASE_ANON_KEY at call time, not at import time
+  isVercelProduction()
+    ✓ is true only when VERCEL_ENV is "production" (1 ms)
+    ✓ is false for VERCEL_ENV preview and development, and when unset
+    ✓ is false when NODE_ENV is "production" and VERCEL_ENV is unset
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        0.122 s, estimated 1 s
+Ran all test suites matching src/lib/env.test.ts.
+exit=0
+
+--- 1d. No caller of /api/auth-debug before deletion (the only hits are the census's own list)
+$ command grep -rn "auth-debug" src e2e
+src/lib/__tests__/env-assertions-defect.test.ts:72: * and auth-debug does too (route.ts:11 and :21).
+src/lib/__tests__/env-assertions-defect.test.ts:75:  "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+src/lib/__tests__/env-assertions-defect.test.ts:76:  "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+src/lib/__tests__/env-assertions-defect.test.ts:77:  "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+exit=0
+$ git rm src/app/api/auth-debug/route.ts ; test ! -e src/app/api/auth-debug/route.ts && echo ok
+ok
+.planning/audit/inventory/endpoints.json not touched (DEC-55: api.auth-debug row stays; route_ts_count=94 is the audit-time baseline).
+
+--- 1e. Ledger protocol for the F-003 census step
+Step 2 — fix applied, census suite run UNEDITED (old 15-entry list): red
+$ npx jest --ci src/lib/__tests__/env-assertions-defect.test.ts
+    ✕ F-003: the census equals today's 15 file:VARIABLE pairs exactly (9 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (2 ms)
+    - Expected  - 11
+    + Received  +  0
+    -   "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    -   "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+    -   "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+    -   "src/app/auth/signout/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    -   "src/app/auth/signout/route.ts:NEXT_PUBLIC_SUPABASE_URL",
+    -   "src/lib/supabase/client.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    -   "src/lib/supabase/client.ts:NEXT_PUBLIC_SUPABASE_URL",
+    -   "src/lib/supabase/server.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    -   "src/lib/supabase/server.ts:NEXT_PUBLIC_SUPABASE_URL",
+    -   "src/lib/supabase/service.ts:NEXT_PUBLIC_SUPABASE_URL",
+    -   "src/lib/supabase/service.ts:SUPABASE_SERVICE_ROLE_KEY",
+Tests:       1 failed, 1 passed, 2 total
+exit=1
+
+Step 3 — expected list moved to the callback's four entries: green
+$ npx jest --ci --verbose src/lib/__tests__/env-assertions-defect.test.ts
+    ✓ F-003: the census equals today's 4 file:VARIABLE pairs exactly (8 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (2 ms)
+Tests:       2 passed, 2 total
+exit=0
+
+Step 4 — pre-fix source (server.ts, client.ts, service.ts, signout/route.ts, auth-debug/route.ts) restored temporarily, new list: red; then fixed source restored
+$ npx jest --ci src/lib/__tests__/env-assertions-defect.test.ts   # pre-fix source restored, new list
+    ✕ F-003: the census equals today's 4 file:VARIABLE pairs exactly (7 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (3 ms)
+    - Expected  -  0
+    + Received  + 11
+Tests:       1 failed, 1 passed, 2 total
+exit=1
+cmp src/lib/supabase/server.ts identical
+cmp src/lib/supabase/client.ts identical
+cmp src/lib/supabase/service.ts identical
+cmp src/app/auth/signout/route.ts identical
+test ! -e src/app/api/auth-debug/route.ts: ok
+
+--- 1f. Targeted suites, lint, tsc
+$ npx jest --ci src/lib src/proxy.test.ts src/proxy-characterization.test.ts src/proxy-defect.test.ts src/server
+Test Suites: 24 passed, 24 total
+Tests:       446 passed, 446 total
+Snapshots:   0 total
+Time:        0.568 s, estimated 1 s
+Ran all test suites matching src/lib|src/proxy.test.ts|src/proxy-characterization.test.ts|src/proxy-defect.test.ts|src/server.
+exit=0
+
+$ npm run lint
+  123:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+
+$ npx tsc --noEmit   (first run, before the build: stale .next/dev/types from a 2026-09-16 next dev run; see build-ci-env.txt)
+.next/dev/types/validator.ts(656,39): error TS2307: Cannot find module '../../../src/app/api/auth-debug/route.js' or its corresponding type declarations.
+.next/types/validator.ts(656,39): error TS2307: Cannot find module '../../src/app/api/auth-debug/route.js' or its corresponding type declarations.
+exit=2
+(.next/types is regenerated by next build; .next/dev/types only by next dev. Both are gitignored generated output.)
+
+$ npx tsc --noEmit   (after removing the stale gitignored .next/dev/types)
+exit=0
+
+--- 1g. The service-key read this plan owns stays in its lint home; the browser client reads only NEXT_PUBLIC_*
+(The callback's two reads are 05-05's; calculate-popularity's is a legacy ratchet callsite for slice 5. Neither is touched here.)
+$ command grep -rn "process.env.SUPABASE_SERVICE_ROLE_KEY" src --exclude="*.test.ts"
+src/app/auth/callback/route.ts:124:        process.env.SUPABASE_SERVICE_ROLE_KEY!
+src/app/auth/callback/route.ts:162:  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+src/app/api/admin/calculate-popularity/route.ts:17:  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+src/lib/supabase/service.ts:17:    process.env.SUPABASE_SERVICE_ROLE_KEY
+$ command grep -n "process.env" src/lib/supabase/client.ts
+5: * The two reads stay literal `process.env.NEXT_PUBLIC_*` member accesses so
+19:      process.env.NEXT_PUBLIC_SUPABASE_URL
+23:      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+$ command grep -rn "process.env\[" src/lib/env.ts src/lib/supabase ; echo exit=$?   (no computed-key read)
+exit=1
+
+--- 1h. CI-env build: see build-ci-env.txt (exit=0)
+
+--- 1i. Full suite after Task 1
+$ npx jest --ci
+Test Suites: 59 passed, 59 total
+Tests:       984 passed, 984 total
+exit=0

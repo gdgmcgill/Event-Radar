@@ -67,30 +67,22 @@ function census(): string[] {
 }
 
 /**
- * Today's set, measured on a7b02a5 (the 05-01 head). Sorted, duplicates kept:
- * the callback asserts NEXT_PUBLIC_SUPABASE_URL twice (route.ts:61 and :123)
- * and auth-debug does too (route.ts:11 and :21).
+ * Today's set, after 05-04 (F-003 census step one). Sorted, duplicates kept:
+ * the callback asserts NEXT_PUBLIC_SUPABASE_URL twice (route.ts:61 and :123).
+ * 05-04 removed 11 pairs: the three Supabase factories and the sign-out route
+ * now read through the validated readers in src/lib/env.ts, and
+ * src/app/api/auth-debug/route.ts was deleted (F-027). The measured 05-01
+ * list of 15 is in evidence/defect-ledger.md. 05-05 empties this list.
  */
 const EXPECTED_TODAY = [
-  "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_URL",
-  "src/app/api/auth-debug/route.ts:NEXT_PUBLIC_SUPABASE_URL",
   "src/app/auth/callback/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "src/app/auth/callback/route.ts:NEXT_PUBLIC_SUPABASE_URL",
   "src/app/auth/callback/route.ts:NEXT_PUBLIC_SUPABASE_URL",
   "src/app/auth/callback/route.ts:SUPABASE_SERVICE_ROLE_KEY",
-  "src/app/auth/signout/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "src/app/auth/signout/route.ts:NEXT_PUBLIC_SUPABASE_URL",
-  "src/lib/supabase/client.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "src/lib/supabase/client.ts:NEXT_PUBLIC_SUPABASE_URL",
-  "src/lib/supabase/server.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "src/lib/supabase/server.ts:NEXT_PUBLIC_SUPABASE_URL",
-  "src/lib/supabase/service.ts:NEXT_PUBLIC_SUPABASE_URL",
-  "src/lib/supabase/service.ts:SUPABASE_SERVICE_ROLE_KEY",
 ];
 
 describe("process.env non-null assertions under src/ (DEFECT — F-003; OPEN until 05-05)", () => {
-  it("F-003: the census equals today's 15 file:VARIABLE pairs exactly", () => {
+  it("F-003: the census equals today's 4 file:VARIABLE pairs exactly", () => {
     expect(census()).toEqual(EXPECTED_TODAY);
   });
 
