@@ -582,3 +582,100 @@ exit 0
 
 $ npx tsc --noEmit
 exit 0
+
+────────────────────────────────────────────────────────────────────────────────
+4. F-028: measured anonymous bytes and the client callers
+────────────────────────────────────────────────────────────────────────────────
+
+Method. A temporary Jest file (src/__tests__/api/events/zz-measure-f028-temp.test.ts, deleted after
+the run, never committed) mocked @/lib/supabase/server with the shared fake and called each GET
+handler once with no user and once with a signed-in caller who has a users row.
+
+$ MEASURE_OUT=<scratchpad>/measure-f028.txt npx jest --ci src/__tests__/api/events/zz-measure-f028-temp.test.ts
+Tests:       1 passed, 1 total
+exit 0
+anonymous | GET /api/events/following          | 200 | {"events":[]} | calls=
+anonymous | GET /api/events/friends-activity   | 200 | {"events":[]} | calls=
+anonymous | GET /api/events/friends-organizing | 200 | {"events":[]} | calls=
+anonymous | GET /api/events/[id]/friends       | 200 | {"friends":[],"count":0} | calls=
+signed-in | GET /api/events/following          | 200 | {"events":[]} | calls=club_followers.select
+signed-in | GET /api/events/friends-activity   | 200 | {"events":[]} | calls=get_friends.rpc
+signed-in | GET /api/events/friends-organizing | 200 | {"events":[]} | calls=get_friends.rpc
+signed-in | GET /api/events/[id]/friends       | 200 | {"friends":[],"count":0} | calls=users.select,get_friends_going_to_event.rpc,user_follows.select,saved_events.select,user_follows.select
+
+The measured anonymous bytes equal research § B (following :20-21, friends-activity :14-15,
+friends-organizing :15-16, [id]/friends :17-18). No anonymous call touched the database.
+The signed-in rows answer 200 with an empty payload only because the fake holds no follows and
+no rpc result; what the suite pins for them is "200, not 401, and the route reached its first
+data read".
+
+Client callers (re-checked on this tree; research C7):
+$ grep -rnE '/api/events/(following|friends-activity|friends-organizing)|/api/events/\$\{[^}]+\}/friends' src --include='*.tsx' --include='*.ts' | grep -v "__tests__\|\.test\.\|src/app/api/"
+src/components/events/FollowedClubsEventsSection.tsx:27:        const res = await fetch("/api/events/following");
+src/components/events/FriendsGoing.tsx:14:        const res = await fetch(`/api/events/${eventId}/friends`);
+src/components/events/FriendsActivitySection.tsx:33:        const res = await fetch("/api/events/friends-activity");
+src/components/events/FriendsOrganizingSection.tsx:32:        const res = await fetch("/api/events/friends-organizing");
+exit 0
+
+$ grep -rn "<FollowedClubsEventsSection\|<FriendsOrganizingSection\|<FriendsGoing\|<FriendsActivitySection" src --include="*.tsx" | grep -v __tests__
+src/app/page.tsx:537:            {user && <FollowedClubsEventsSection onEventClick={handleEventClick} />}
+src/app/page.tsx:543:            {user && <FriendsActivitySection />}
+src/app/friends/page.tsx:239:        <FriendsActivitySection />
+src/app/friends/page.tsx:240:        <FriendsOrganizingSection />
+src/app/events/[id]/EventDetailClient.tsx:309:          {user && id && <FriendsGoing eventId={id} />}
+exit 0
+
+$ grep -n "if (!user) return\|if (!res.ok) return\|if (!user || " src/components/events/{FollowedClubsEventsSection,FriendsActivitySection,FriendsOrganizingSection,FriendsGoing}.tsx
+src/components/events/FriendsActivitySection.tsx:34:        if (!res.ok) return;
+src/components/events/FriendsOrganizingSection.tsx:33:        if (!res.ok) return;
+src/components/events/FollowedClubsEventsSection.tsx:23:    if (!user) return;
+src/components/events/FollowedClubsEventsSection.tsx:28:        if (!res.ok) return;
+src/components/events/FollowedClubsEventsSection.tsx:38:  if (!user || events.length === 0) return null;
+src/components/events/FriendsGoing.tsx:15:        if (!res.ok) return;
+exit 0
+
+$ node -e "<PROTECTED_ROUTES literal from src/proxy.ts>"
+"/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"
+exit 0
+
+| Route | Client caller | Signed-in guard | Non-ok response |
+|---|---|---|---|
+| GET /api/events/following | src/components/events/FollowedClubsEventsSection.tsx:27 | rendered as `{user && …}` at src/app/page.tsx:537; its own effect returns early `if (!user)` (:23) and it renders null `if (!user || …)` (:38) | ignored: `if (!res.ok) return;` (:28) |
+| GET /api/events/friends-activity | src/components/events/FriendsActivitySection.tsx:33 | rendered as `{user && …}` at src/app/page.tsx:543, and on src/app/friends/page.tsx:239 (`/friends` is in PROTECTED_ROUTES) | ignored: `if (!res.ok) return;` (:34) |
+| GET /api/events/friends-organizing | src/components/events/FriendsOrganizingSection.tsx:32 | rendered only on src/app/friends/page.tsx:240; `/friends` is in PROTECTED_ROUTES | ignored: `if (!res.ok) return;` (:33) |
+| GET /api/events/[id]/friends | src/components/events/FriendsGoing.tsx:14 | rendered as `{user && id && …}` at src/app/events/[id]/EventDetailClient.tsx:309 | ignored: `if (!res.ok) return;` (:15) |
+
+So a 401 on these four routes changes nothing a visitor sees: no anonymous render path calls them,
+and every caller already treats a non-ok response as "render nothing". This matches DEC-39.
+
+Related pin: src/__tests__/api/events/friends-defect.test.ts:308 ("an unauthenticated caller
+short-circuits before any of this") also asserts the anonymous 200 {"friends":[],"count":0} on
+events/[id]/friends. 05-06 must move that assertion along with A4 and record both in the ledger.
+
+$ npx jest --ci src/__tests__/api/events/anonymous-personalized-defect.test.ts src/__tests__/api/events/friends-defect.test.ts --verbose
+PASS node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+    ✓ F-028 GET /api/events/following: anonymous gets 200 and an empty payload today (2 ms)
+    ✓ F-028 GET /api/events/friends-activity: anonymous gets 200 and an empty payload today
+    ✓ F-028 GET /api/events/friends-organizing: anonymous gets 200 and an empty payload today
+    ✓ F-028 GET /api/events/[id]/friends: anonymous gets 200 and an empty payload today
+    ✓ F-028 GET /api/events/following: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/friends-activity: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/friends-organizing: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/[id]/friends: a signed-in caller with a users row is not refused (1 ms)
+PASS node src/__tests__/api/events/friends-defect.test.ts
+    ✓ the mechanism, kept as history: a PostgREST builder is not iterable, so Set() rejects it (5 ms)
+    ✓ the happy path is unaffected — when the RPC succeeds the fallback never runs (2 ms)
+    ✓ the fallback path passes .in() an array of the caller's followed ids (2 ms)
+    ✓ the fallback issues the reverse-follow query and answers with the mutual follows and a matching count (2 ms)
+    ✓ a caller who follows nobody passes an empty array and answers with nobody (2 ms)
+    ✓ an unauthenticated caller short-circuits before any of this (2 ms)
+Tests:       14 passed, 14 total
+exit 0
+
+$ node scripts/check-characterization-tags.mjs src/__tests__/api/events/anonymous-personalized-defect.test.ts
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok 1 files
+exit 0
+
+$ git diff --stat HEAD -- src/app/api/events   (before the Task 2 commit; the criterion runs HEAD~1 after it)
+exit 0
