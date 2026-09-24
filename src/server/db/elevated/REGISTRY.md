@@ -13,6 +13,9 @@ exception that nobody wrote down is indistinguishable from an oversight.
 | --------- | -------------- | ------------------------- | ----------- |
 | Delete the orphaned auth.users row of a rejected non-McGill sign-in (auth.admin.deleteUser) | `src/app/auth/callback/route.ts` | auth.users is owned by GoTrue; its admin API needs the service role and no RLS policy can grant it | 05 |
 | Upsert and read the signing-in user's own public.users row at sign-in | `src/app/auth/callback/route.ts` | The row may not exist yet, the upsert writes email (withheld from authenticated by the F-006 column grant) and INSERT on users is revoked from authenticated by DEC-47; the callback is the only writer | 05 |
+| Owner edits club details or soft-deletes the club | `src/app/api/clubs/[id]/route.ts` | clubs has no owner UPDATE policy; an owner policy needs status immutability and is deferred to Phase 7's per-table RLS work (DEC-41); the handler's column whitelist keeps status, created_by and id unwritable | 05 |
+| Owner changes a member's role or transfers ownership | `src/app/api/clubs/[id]/members/role/route.ts`, `src/app/api/clubs/[id]/transfer/route.ts` | club_members UPDATE is admin-only; an owner UPDATE policy is deferred with the clubs policy (DEC-41) | 05 |
+| Record a club deletion or ownership transfer in admin_audit_log | `src/app/api/clubs/[id]/route.ts`, `src/app/api/clubs/[id]/transfer/route.ts` | after F-007 no client role may insert audit rows; the door is the only writer | 05 |
 
 Rows added from Phase 5 (05-05 onward).
 
@@ -24,7 +27,10 @@ callsites not yet migrated stay held by the generated allow-list in
 `eslint.elevated-allowlist.mjs`, which may only shrink. Plan 05-05 migrated the
 auth callback (both of its service-role uses), so the ratchet counts one legacy
 entry fewer than the committed list; the list itself is regenerated once, in
-05-15 (DEC-49). `src/lib/audit.ts`, below, is still a legacy caller.
+05-15 (DEC-49). Plan 05-10 moved the club owner writes onto the door (F-087,
+DEC-41), retiring `src/app/api/clubs/[id]/route.ts` (its dynamic import of the
+service module) and `src/app/api/clubs/[id]/transfer/route.ts` from the live
+census, so the ratchet counts three entries fewer than the committed list. `src/lib/audit.ts`, below, is still a legacy caller.
 
 ### One pre-existing elevated caller, counted by both controls since plan 04-03
 

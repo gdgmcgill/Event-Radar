@@ -1,8 +1,9 @@
 /**
  * DEFECT characterization — F-087: owner club writes run on the cookie client, where RLS denies them
  *
- * Status: OPEN — D5's demotion filter moved in 05-10 Task 1 (DEC-40); D1, D2
- * and D4 move in 05-10 Task 3
+ * Status: FIXED in 05-10 — D5's demotion filter moved in 05-10 Task 1
+ * (DEC-40); D1, D2 and D4 moved to the elevated client in 05-10 Task 3
+ * (DEC-41). Ledger rows in `evidence/defect-ledger.md`.
  *
  * The defect, as registered (research C11, measured on the local stack):
  * `clubs` has no owner UPDATE policy and `club_members` UPDATE is admin-only.
@@ -162,17 +163,16 @@ describe("D1 PATCH /api/clubs/[id] as the owner", () => {
     );
   }
 
-  test("today: the clubs update is issued on the cookie client, not the elevated one", async () => {
+  test("fixed: the clubs update is issued on the elevated client, and the cookie client records none", async () => {
     const response = await patch();
-    // The fake has no RLS, so it answers 200; the real stack answers 500 (F-087).
     expect(response.status).toBe(200);
-    expect(updates(mockCookie.calls, "clubs")).toHaveLength(1);
-    expect(updates(mockElevated.calls, "clubs")).toHaveLength(0);
+    expect(updates(mockElevated.calls, "clubs")).toHaveLength(1);
+    expect(updates(mockCookie.calls, "clubs")).toHaveLength(0);
   });
 
-  test("today: the update is filtered to the club named in the path", async () => {
+  test("fixed: the elevated update is filtered to the club named in the path", async () => {
     await patch();
-    const [update] = updates(mockCookie.calls, "clubs");
+    const [update] = updates(mockElevated.calls, "clubs");
     expect(filters(update)).toEqual([{ op: "eq", column: "id", value: CLUB_ID }]);
   });
 
@@ -199,15 +199,15 @@ describe("D2 DELETE /api/clubs/[id] as the owner", () => {
     );
   }
 
-  test("today: the soft-delete update is issued on the cookie client", async () => {
+  test("fixed: the soft-delete update is issued on the elevated client, and the cookie client records none", async () => {
     const response = await remove();
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ success: true });
-    const onCookie = updates(mockCookie.calls, "clubs");
-    expect(onCookie).toHaveLength(1);
-    expect(onCookie[0].payload).toEqual({ status: "deleted" });
-    expect(filters(onCookie[0])).toEqual([{ op: "eq", column: "id", value: CLUB_ID }]);
-    expect(updates(mockElevated.calls, "clubs")).toHaveLength(0);
+    const onElevated = updates(mockElevated.calls, "clubs");
+    expect(onElevated).toHaveLength(1);
+    expect(onElevated[0].payload).toEqual({ status: "deleted" });
+    expect(filters(onElevated[0])).toEqual([{ op: "eq", column: "id", value: CLUB_ID }]);
+    expect(updates(mockCookie.calls, "clubs")).toHaveLength(0);
   });
 
   test("stays: the club_deleted audit row is inserted on the elevated client", async () => {
@@ -283,7 +283,7 @@ describe("D3 the caller's own membership is read on the cookie client", () => {
 // ─── D4 PATCH /api/clubs/[id]/members/role ─────────────────────────────────
 
 describe("D4 PATCH /api/clubs/[id]/members/role as the owner", () => {
-  test("today: the club_members update is issued on the cookie client", async () => {
+  test("fixed: the club_members update is issued on the elevated client, and the cookie client records none", async () => {
     const { PATCH } = await import("@/app/api/clubs/[id]/members/role/route");
     const response = await PATCH(
       json(`clubs/${CLUB_ID}/members/role`, "PATCH", {
@@ -292,15 +292,14 @@ describe("D4 PATCH /api/clubs/[id]/members/role as the owner", () => {
       }),
       id(CLUB_ID)
     );
-    // The fake has no RLS, so it answers 200; the real stack answers 500 (F-087).
     expect(response.status).toBe(200);
-    const onCookie = updates(mockCookie.calls, "club_members");
-    expect(onCookie).toHaveLength(1);
-    expect(onCookie[0].payload).toEqual({ role: "organizer" });
-    expect(filters(onCookie[0])).toEqual([
+    const onElevated = updates(mockElevated.calls, "club_members");
+    expect(onElevated).toHaveLength(1);
+    expect(onElevated[0].payload).toEqual({ role: "organizer" });
+    expect(filters(onElevated[0])).toEqual([
       { op: "eq", column: "id", value: ORGANIZER_MEMBERSHIP_ID },
     ]);
-    expect(updates(mockElevated.calls, "club_members")).toHaveLength(0);
+    expect(updates(mockCookie.calls, "club_members")).toHaveLength(0);
   });
 });
 
@@ -315,7 +314,7 @@ describe("D5 POST /api/clubs/[id]/transfer as the owner", () => {
     );
   }
 
-  test("today: every write is on the elevated client, none on the cookie client", async () => {
+  test("stays: every write is on the elevated client, none on the cookie client", async () => {
     const response = await transfer();
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ success: true });
@@ -335,7 +334,7 @@ describe("D5 POST /api/clubs/[id]/transfer as the owner", () => {
     ]);
   });
 
-  test("today: the promotion is filtered by the target's membership id", async () => {
+  test("stays: the promotion is filtered by the target's membership id", async () => {
     await transfer();
     const [promote] = updates(mockElevated.calls, "club_members");
     expect(promote.payload).toEqual({ role: "owner" });

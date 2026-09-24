@@ -12,10 +12,13 @@
  *     approved club, and the club's organizer on an owner-only route.
  *   - The allowed half: the owner reads invitations, members and analytics;
  *     the organizer reads members and analytics.
- *   - F-087 / DEC-41: the owner's own `PATCH /api/clubs/<id>` answers 500
- *     today, because the write runs on the cookie client and `clubs` has no
- *     owner UPDATE policy. The test titled "DEFECT F-087" pins that. 05-10
- *     moves the write to the elevated door, and the test flips to 200 then.
+ *   - F-087 / DEC-41: the owner's own `PATCH /api/clubs/<id>` answered 500
+ *     through 05-09, because the write ran on the cookie client and `clubs`
+ *     has no owner UPDATE policy. 05-10 moved the write to the elevated door
+ *     behind the owner gate and the handler's column whitelist. The test
+ *     titled "FIXED F-087" pins the 200, and pins that a `status` smuggled
+ *     into the body is still not written (the whitelist is the control that
+ *     replaces RLS on this path, T-05-10-03).
  *
  * EVERY 403 BODY WAS MEASURED ON THE FIRST RUN AND COMPARED WITH RESEARCH § C.
  *   The strings below are § C's "Deny bytes (keep)" column. The first run's
@@ -29,8 +32,10 @@
  *     text file where an image is required. So a gate that regressed would
  *     turn this file red without writing a row.
  *   - The organizer's owner-only PATCH is an empty body, for the same reason.
- *   - The owner's PATCH sends the club's CURRENT description, read first. When
- *     05-10 makes the write succeed, it rewrites the same value.
+ *   - The owner's PATCHes send the club's CURRENT description, read first, so
+ *     the write that now succeeds rewrites the same value; the smuggled
+ *     `status: "rejected"` is dropped by the whitelist, which the follow-up
+ *     read proves.
  *   The remaining calls are reads.
  */
 
@@ -198,22 +203,33 @@ test.describe("the club owner", () => {
     expect((await page.request.get(`${CLUB}/analytics`)).status()).toBe(200);
   });
 
-  test("DEFECT F-087: the owner's own club PATCH answers 500", async ({ page }) => {
+  test("FIXED F-087: the owner's own club PATCH answers 200, and status stays unwritable", async ({ page }) => {
+    type ClubBody = { club: { description: string; status: string } };
+
     const current = await page.request.get(CLUB);
     expect(current.status()).toBe(200);
-    const { club } = (await current.json()) as { club: { description: string } };
+    const { club } = (await current.json()) as ClubBody;
     expect(typeof club.description).toBe("string");
+    expect(club.status).toBe("approved");
 
-    // The same value back: nothing can change when 05-10 makes this succeed.
+    // The same value back: the write succeeds and nothing changes.
     const res = await page.request.patch(CLUB, {
       data: { description: club.description },
     });
-    expect(res.status()).toBe(500);
-    expect(await res.json()).toEqual({ error: "Failed to update club" });
+    expect(res.status()).toBe(200);
+    expect(((await res.json()) as ClubBody).club.description).toBe(
+      club.description
+    );
 
-    const after = (await (await page.request.get(CLUB)).json()) as {
-      club: { description: string };
-    };
+    // A status smuggled beside a whitelisted field: the whitelisted field is
+    // written, the status is not (self-approval stays impossible).
+    const smuggled = await page.request.patch(CLUB, {
+      data: { description: club.description, status: "rejected" },
+    });
+    expect(smuggled.status()).toBe(200);
+
+    const after = (await (await page.request.get(CLUB)).json()) as ClubBody;
+    expect(after.club.status).toBe("approved");
     expect(after.club.description).toBe(club.description);
   });
 });

@@ -3,6 +3,7 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
+import { getElevatedClient } from "@/server/db/elevated";
 
 export async function PATCH(
   request: NextRequest,
@@ -54,7 +55,12 @@ export async function PATCH(
     return NextResponse.json({ error: "Cannot change owner role. Use transfer ownership instead." }, { status: 400 });
   }
 
-  const { data: updated, error } = await supabase
+  // The owner's role change runs on the elevated door AFTER the owner gate
+  // (F-087, DEC-41): club_members UPDATE is admin-only under RLS. The only
+  // role this path can write is "organizer" (validated above), and the owner
+  // row and the caller's own row are refused above. REGISTRY.md row: "Owner
+  // changes a member's role or transfers ownership".
+  const { data: updated, error } = await getElevatedClient()
     .from("club_members")
     .update({ role })
     .eq("id", memberId)

@@ -1,9 +1,9 @@
-import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
+import { getElevatedClient } from "@/server/db/elevated";
 
 export async function POST(
   request: NextRequest,
@@ -47,8 +47,12 @@ export async function POST(
     return NextResponse.json({ error: "Target user is not a member of this club" }, { status: 400 });
   }
 
-  // Use service client for update (bypass RLS)
-  const serviceClient = createServiceClient();
+  // The elevated door, after the owner gate (DEC-41): club_members UPDATE is
+  // admin-only under RLS, and after F-007 no client role may insert audit
+  // rows. REGISTRY.md rows: "Owner changes a member's role or transfers
+  // ownership" and "Record a club deletion or ownership transfer in
+  // admin_audit_log".
+  const serviceClient = getElevatedClient();
 
   // Set new owner
   const { error: newOwnerError } = await serviceClient

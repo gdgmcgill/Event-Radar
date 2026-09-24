@@ -4,6 +4,8 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
+import { getElevatedClient } from "@/server/db/elevated";
+import type { TablesUpdate } from "@/lib/supabase/types";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -45,6 +47,13 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 /**
  * PATCH /api/clubs/[id]
  * Owner-only endpoint - updates club details.
+ *
+ * The write runs on the elevated door AFTER the owner gate (F-087, DEC-41):
+ * `clubs` has no owner UPDATE policy, so on the cookie client the update
+ * matched 0 rows and the owner got a 500. The control that replaces RLS here
+ * is the column whitelist: `updates` is built only from `allowedFields`, so
+ * `status`, `created_by` and `id` can never be written through this path.
+ * REGISTRY.md row: "Owner edits club details or soft-deletes the club".
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
@@ -83,7 +92,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       "contact_email",
     ] as const;
 
-    const updates: Record<string, string | null> = {};
+    // DI-25: typed with the generated update type. Only whitelisted columns.
+    const updates: TablesUpdate<"clubs"> = {};
     for (const field of allowedFields) {
       if (field in body) {
         const value = body[field];
@@ -122,7 +132,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const { data: club, error } = await supabase
+    const { data: club, error } = await getElevatedClient()
       .from("clubs")
       .update(updates)
       .eq("id", clubId)
@@ -149,6 +159,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  * DELETE /api/clubs/[id]
  * Owner-only endpoint - soft-deletes a club by setting status to "deleted".
  * Requires body: { confirmName: string }
+ *
+ * The soft-delete and its audit record run on the elevated door AFTER the
+ * owner gate (F-087, DEC-41). On the cookie client the update matched 0 rows
+ * and the handler still reported success. The payload is exactly
+ * `{ status: "deleted" }`. REGISTRY.md rows: "Owner edits club details or
+ * soft-deletes the club" and "Record a club deletion or ownership transfer in
+ * admin_audit_log".
  */
 export async function DELETE(
   request: NextRequest,
@@ -186,8 +203,10 @@ export async function DELETE(
     return NextResponse.json({ error: "Club name confirmation does not match" }, { status: 400 });
   }
 
+  const elevated = getElevatedClient();
+
   // Soft delete - set status to deleted
-  const { error } = await supabase
+  const { error } = await elevated
     .from("clubs")
     .update({ status: "deleted" })
     .eq("id", clubId);
@@ -196,16 +215,21 @@ export async function DELETE(
     return NextResponse.json({ error: "Failed to delete club" }, { status: 500 });
   }
 
-  // Audit log using service client
-  const { createServiceClient } = await import("@/lib/supabase/service");
-  const serviceClient = createServiceClient();
-  await serviceClient.from("admin_audit_log").insert({
+  // Audit log. A failed audit write does not undo the deletion, but it is
+  // never silent.
+  const { error: auditError } = await elevated.from("admin_audit_log").insert({
     admin_user_id: user.id,
     action: "club_deleted",
     target_type: "club",
     target_id: clubId,
     metadata: { club_name: club.name },
   });
+  if (auditError) {
+    console.error(
+      `[clubs/delete] audit insert failed (requestId ${ctx.requestId}):`,
+      auditError
+    );
+  }
 
   return NextResponse.json({ success: true });
 }

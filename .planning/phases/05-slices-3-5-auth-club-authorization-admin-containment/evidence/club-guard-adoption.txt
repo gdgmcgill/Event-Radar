@@ -292,3 +292,160 @@ $ git diff --stat c407515 -- 'src/__tests__/api/events/*-characterization.test.t
 (no output)
 $ grep -n 'includes("admin")' "src/app/api/events/[id]/route.ts" src/app/api/events/create/route.ts
 (no output) exit 1
+
+## Task 3 — owner club writes through the elevated door (F-087, DEC-41)
+
+### 3a. The writes that moved
+
+| Handler | Write | Before | After |
+|---------|-------|--------|-------|
+| clubs/[id] PATCH | clubs update (whitelisted columns only, typed TablesUpdate<"clubs">) | cookie client | getElevatedClient() |
+| clubs/[id] DELETE | clubs update { status: "deleted" } | cookie client | getElevatedClient() |
+| clubs/[id] DELETE | admin_audit_log insert club_deleted (same row shape) | dynamic import of the service module | getElevatedClient(); the insert's error is now console.error'd with ctx.requestId |
+| clubs/[id]/members/role PATCH | club_members update { role } | cookie client | getElevatedClient() |
+| clubs/[id]/transfer POST | promote, demote (club_id, user_id), rollback, audit insert | createServiceClient() | getElevatedClient() |
+
+Every write runs AFTER requireClubRole(..., ["owner"], <site message>) permits (Task 1). The reads
+(the caller's membership, the target member, the club name for confirmName) stay on the cookie
+client. Validation and every response body are unchanged.
+
+$ grep -c 'getElevatedClient()' "src/app/api/clubs/[id]/route.ts"; grep -c 'lib/supabase/service' "src/app/api/clubs/[id]/route.ts"
+2
+0
+$ grep -c 'getElevatedClient()' "src/app/api/clubs/[id]/members/role/route.ts"; grep -c 'lib/supabase/service' "src/app/api/clubs/[id]/members/role/route.ts"
+1
+0
+$ grep -c 'getElevatedClient()' "src/app/api/clubs/[id]/transfer/route.ts"; grep -c 'lib/supabase/service' "src/app/api/clubs/[id]/transfer/route.ts"
+1
+0
+$ grep -n 'TablesUpdate<"clubs">' "src/app/api/clubs/[id]/route.ts"
+96:    const updates: TablesUpdate<"clubs"> = {};
+
+### 3b. DEFECT D1, D2, D4 — ledger protocol, steps 2-4
+
+Step 2, the unedited DEFECT suite against the fixed source (red on exactly the four "today" rows):
+$ npx jest --ci src/__tests__/api/clubs
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/__tests__/api/clubs/club-gates-characterization.test.ts
+FAIL node src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+  ● D1 PATCH /api/clubs/[id] as the owner › today: the clubs update is issued on the cookie client, not the elevated one
+  ● D1 PATCH /api/clubs/[id] as the owner › today: the update is filtered to the club named in the path
+  ● D2 DELETE /api/clubs/[id] as the owner › today: the soft-delete update is issued on the cookie client
+  ● D4 PATCH /api/clubs/[id]/members/role as the owner › today: the club_members update is issued on the cookie client
+Tests:       4 failed, 121 passed, 125 total
+exit 1
+
+Step 3, the moved suite against the fixed source:
+$ npx jest --ci src/__tests__/api/clubs
+PASS node src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/__tests__/api/clubs/club-gates-characterization.test.ts
+Tests:       125 passed, 125 total
+exit 0
+
+Step 4, the moved suite against the three PRE-FIX route sources (git show HEAD:<file> for each, HEAD = d8cf84e), then restore:
+$ npx jest --ci src/__tests__/api/clubs
+FAIL node src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+  ● D1 PATCH /api/clubs/[id] as the owner › fixed: the clubs update is issued on the elevated client, and the cookie client records none
+  ● D1 PATCH /api/clubs/[id] as the owner › fixed: the elevated update is filtered to the club named in the path
+  ● D2 DELETE /api/clubs/[id] as the owner › fixed: the soft-delete update is issued on the elevated client, and the cookie client records none
+  ● D4 PATCH /api/clubs/[id]/members/role as the owner › fixed: the club_members update is issued on the elevated client, and the cookie client records none
+PASS node src/__tests__/api/clubs/club-gates-characterization.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+Tests:       4 failed, 121 passed, 125 total
+exit 1
+$ cp <saved fixed copy> <file>; cmp <saved fixed copy> <file>   # for each of the three
+cmp identical: src/app/api/clubs/[id]/route.ts
+cmp identical: src/app/api/clubs/[id]/members/role/route.ts
+cmp identical: src/app/api/clubs/[id]/transfer/route.ts
+
+### 3c. The ratchet
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=22 delta=-3
+retired=3 (the list shrank — this is the intended direction)
+  - src/app/api/clubs/\[id\]/route.ts
+  - src/app/api/clubs/\[id\]/transfer/route.ts
+  - src/app/auth/callback/route.ts
+PASS: the live census is a subset of the committed allow-list
+exit 0
+
+Live 24 -> 22: clubs/[id]/route.ts (its dynamic import of the service module) and clubs/[id]/transfer/route.ts
+(its static import) left the census. members/role never imported the service module, so it was never in
+the census. The committed list is NOT regenerated here (it may only shrink, and DEC-49 regenerates it
+once, in 05-15); the live census being a strict subset is the ratchet's pass condition.
+
+### 3d. Playwright — e2e/specs/club-authorization.spec.ts on a clean reset and seed
+
+Reset/seed output filtered for key/secret/token/password/jwt lines; none was present in the kept lines.
+$ lsof -i :3000
+(no output) exit 1
+$ supabase db reset --local
+Finished supabase db reset on branch main.
+reset exit 0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+seed exit 0
+$ npx playwright test e2e/specs/club-authorization.spec.ts
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (409ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (281ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (281ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (560ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (253ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (308ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (234ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (210ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (202ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (234ms)
+  ✓  11 [chromium] › e2e/specs/club-authorization.spec.ts:73:7 › the cross-club attacker on the approved club (REFAC-12) › cannot update the club (191ms)
+  ✓  12 [chromium] › e2e/specs/club-authorization.spec.ts:80:7 › the cross-club attacker on the approved club (REFAC-12) › cannot delete the club (148ms)
+  ✓  13 [chromium] › e2e/specs/club-authorization.spec.ts:87:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view invitations (105ms)
+  ✓  14 [chromium] › e2e/specs/club-authorization.spec.ts:94:7 › the cross-club attacker on the approved club (REFAC-12) › cannot send invitations (105ms)
+  ✓  15 [chromium] › e2e/specs/club-authorization.spec.ts:101:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view members (106ms)
+  ✓  16 [chromium] › e2e/specs/club-authorization.spec.ts:108:7 › the cross-club attacker on the approved club (REFAC-12) › cannot remove members (105ms)
+  ✓  17 [chromium] › e2e/specs/club-authorization.spec.ts:117:7 › the cross-club attacker on the approved club (REFAC-12) › cannot change member roles (103ms)
+  ✓  18 [chromium] › e2e/specs/club-authorization.spec.ts:126:7 › the cross-club attacker on the approved club (REFAC-12) › cannot transfer ownership (103ms)
+  ✓  19 [chromium] › e2e/specs/club-authorization.spec.ts:133:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view club analytics (108ms)
+  ✓  20 [chromium] › e2e/specs/club-authorization.spec.ts:140:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view the analytics of the club's event (106ms)
+  ✓  21 [chromium] › e2e/specs/club-authorization.spec.ts:147:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's banner (104ms)
+  ✓  22 [chromium] › e2e/specs/club-authorization.spec.ts:154:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's logo (107ms)
+  ✓  23 [chromium] › e2e/specs/club-authorization.spec.ts:165:7 › the club's organizer (not the owner) › cannot update the club (owner only) (104ms)
+  ✓  24 [chromium] › e2e/specs/club-authorization.spec.ts:172:7 › the club's organizer (not the owner) › can view members (106ms)
+  ✓  25 [chromium] › e2e/specs/club-authorization.spec.ts:179:7 › the club's organizer (not the owner) › can view club analytics (128ms)
+  ✓  26 [chromium] › e2e/specs/club-authorization.spec.ts:187:7 › the club owner › can view invitations (109ms)
+  ✓  27 [chromium] › e2e/specs/club-authorization.spec.ts:193:7 › the club owner › can view members (107ms)
+  ✓  28 [chromium] › e2e/specs/club-authorization.spec.ts:202:7 › the club owner › can view club analytics (104ms)
+  ✓  29 [chromium] › e2e/specs/club-authorization.spec.ts:206:7 › the club owner › FIXED F-087: the owner's own club PATCH answers 200, and status stays unwritable (177ms)
+  29 passed (15.9s)
+playwright exit 0
+
+The FIXED F-087 test asserts: the owner's PATCH of the current description -> 200 with club.description equal
+to the sent value; a PATCH carrying { description: <current>, status: "rejected" } -> 200; a follow-up GET
+shows status still "approved" and the description unchanged (T-05-10-03).
+
+Afterwards the stack was reset and seeded again, so it is left as 05-09 left it:
+reset exit 0
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+seed exit 0
+$ lsof -i :3000
+(no output) exit 1
+
+### 3e. Floor after Task 3
+
+$ npx jest --ci
+Test Suites: 65 passed, 65 total
+Tests:       1135 passed, 1135 total
+exit 0
+$ npx tsc --noEmit
+exit 0 (no output)
+$ npm run lint
+✖ 19 problems (0 errors, 19 warnings)
+exit 0 (warnings all in untouched files)
+$ node scripts/check-characterization-tags.mjs --all | tail -1
+ok 29 files
+$ git diff --stat c407515 -- src/__tests__/api/clubs/club-gates-characterization.test.ts 'src/__tests__/api/events/*-characterization.test.ts'
+(no output)
