@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
-stopped_at: Completed 05-05-PLAN.md
-last_updated: "2026-09-24T06:01:10.435Z"
+stopped_at: Completed 05-08-PLAN.md
+last_updated: "2026-09-24T20:15:09.199Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 62
-  completed_plans: 50
+  completed_plans: 51
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
-Plan: 8 of 19
+Plan: 9 of 19
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 05 execution started
 
@@ -103,6 +103,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P05 | 9min | 2 tasks | 11 files |
 | Phase 05 P06 | 10min | 2 tasks | 27 files |
 | Phase 05 P07 | 7min | 2 tasks | 31 files |
+| Phase 05 P08 | 11min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -262,6 +263,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-06: the Phase 4 ban asymmetry moved to ban-asymmetry-defect.test.ts (F-088); banned callers are refused on save and rsvp DELETE — DEC-34 INTENTIONAL BEHAVIOUR CHANGE; pins move out of PRESERVE in the fix commit
 - [Phase 05]: 05-07: anonymous-tolerant arms (interactions, feedback) guard only inside if (ctx.user) and keep user?.id || null via const user = ctx.user; the guard prologue runs ahead of body validation
 - [Phase 05]: 05-07: checkBanStatus deleted; its name removed from two PRESERVE docblocks by comment-only edits (no assertion, fixture or tag changed) so grep -rn checkBanStatus src prints nothing
+- [Phase 05]: 05-08: REFAC-11 recorded PARTIAL at the slice-3 close; 'middleware is advisory-only' is unmet only for the admin arms' ban decision (verifyAdmin/requireRole read roles only), routed to slice 5 as DI-48
+- [Phase 05]: 05-08: F-003, F-004, F-027, F-062, F-077, F-088, F-089 Fixed on met validation criteria; F-028 re-pointed to 06 (four of eight routes answer 401 in Phase 5)
 
 ### Pending Todos
 
@@ -313,7 +316,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T06:01:06.446Z
-Stopped at: Completed 05-05-PLAN.md
-Next: execute 05-06-PLAN.md (handler adoption of requireActiveUser/requireOnboarded, events arms). 05-05 made the proxy and callback fail closed: Jest 1012/1012, tag gate ok 26, ratchet committed=25 live=24, build exit 0 (evidence/proxy-refactor.txt, evidence/callback-refactor.txt). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
+Last session: 2026-09-24T20:15:09.193Z
+Stopped at: Completed 05-08-PLAN.md
+Next: execute 05-09-PLAN.md (slice 4 begins: club authorization characterization). Slice 3 closed green from a clean reset in 05-08: Jest 1013/0, Playwright 53/0, pgTAP 86/86, ratchet committed=25 live=24, env and legacy-ban censuses 0 (evidence/floor.slice-3-after.txt, evidence/slice-3-close.md). REFAC-11 is PARTIAL on one clause (admin arms' ban is proxy-only, DI-48, for 05-12/05-13). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
 Resume file: None
