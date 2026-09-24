@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
-stopped_at: Completed 05-12-PLAN.md
-last_updated: "2026-09-24T21:23:37.297Z"
+stopped_at: Completed 05-13-PLAN.md
+last_updated: "2026-09-24T21:37:19.801Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 62
-  completed_plans: 55
+  completed_plans: 56
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
-Plan: 13 of 19
+Plan: 14 of 19
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 05 execution started
 
@@ -108,6 +108,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P10 | 10min | 3 tasks | 23 files |
 | Phase 05 P11 | 20min | 3 tasks | 13 files |
 | Phase 05 P12 | 14min | 3 tasks | 10 files |
+| Phase 05 P13 | 11min | 3 tasks | 38 files |
 
 ## Accumulated Context
 
@@ -279,6 +280,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-11: F-087 Fixed; F-008 and F-016 stay Open with closes_in_phase 08 and local-proof resolutions (DEC-43, DEC-57); DI-49..DI-51 registered, next DI-52
 - [Phase 05]: 05-12: measurement overrides research § B. admin/clubs GET and admin/organizer-requests GET already answer a non-admin 403. Only recommendations/batch POST carries the F-061 non-admin-401 DEFECT row
 - [Phase 05]: 05-12: DI-48 (banned admin admitted) is pinned at all 35 admin arms through its own BAN_GUARDED_ARMS set, separate from FIXED_ARMS, so 05-13's requireRole swap does not have to decide DI-48
+- [Phase 05]: 05-13: DEC-58: every admin arm runs requireActiveUser(ctx) before requireRole(ctx, "admin"); a banned admin is refused by the handler at all 33 former helper arms (DI-48 33/35; the two calculate-popularity arms follow in 05-14, which must also add them to BAN_GUARDED_ARMS)
+- [Phase 05]: 05-13: F-061 fixed at 33 arms in 25 files (anonymous 401, non-admin 403); only recommendations/batch POST changed its non-admin status; src/lib/admin.ts deleted; admin and moderation layouts and moderation reviews decide through getRequestContext()/hasRole
 
 ### Pending Todos
 
@@ -330,7 +333,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T21:23:32.186Z
-Stopped at: Completed 05-12-PLAN.md
-Next: execute 05-13-PLAN.md (requireRole(ctx, "admin") at the 33 helper arms, src/lib/admin.ts deleted, FIXED_ARMS filled). 05-12 pinned the admin guard at 35 tree-derived arms (PRESERVE 73 / DEFECT 73: F-061 anonymous 403 at 30 arms, batch non-admin 401, F-001 calculate-popularity open, DI-48 banned admin admitted via its own BAN_GUARDED_ARMS set), plus F-091, F-005 (jsdom), F-086 and, on the real stack, F-061 and F-090 (admin-guard.spec, csrf-origin.spec 17/17 after a clean reset, no saved row left). Measured correction: admin/clubs GET and admin/organizer-requests GET already answer a non-admin 403; only recommendations/batch POST moves 401 -> 403 (05-13/05-19 behaviour-change text overstates this). Floor: Jest 1297/0 (70 suites), tag gate ok 34, tsc 0; no production file changed. Next DI id is DI-52 (05-12 candidate: the legacy-401 set correction). REFAC-11 stays PARTIAL until BAN_GUARDED_ARMS is filled (DI-48). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
+Last session: 2026-09-24T21:37:19.797Z
+Stopped at: Completed 05-13-PLAN.md
+Next: execute 05-14-PLAN.md (calculate-popularity fails closed, F-001; admin role changes land, F-091; audit writer; contract regen). 05-13 put createRequestContext() + requireActiveUser(ctx) + requireRole(ctx, "admin") at all 33 former helper arms in 25 files (90819ee, 9f0e5b5), moved the moderation reviews route and both admin layouts onto getRequestContext()/hasRole and deleted src/lib/admin.ts (b8e172e). F-061 fixed at those arms (anonymous 401, non-admin 403; only recommendations/batch POST changed its non-admin status). DEC-58 closes DI-48 for 33 of 35 arms: 05-14 must compose requireActiveUser ahead of requireRole at calculate-popularity too and add both ids to BAN_GUARDED_ARMS as well as FIXED_ARMS, after which 05-19 can flip REFAC-11. Floor: Jest 1298/0 (70 suites), tag gate ok 34, tsc 0, lint 0, ratchet committed 25 / live 22; Playwright admin-guard + admin-moderation-queue + admin-login-cookie-equivalence 17/17 after a clean reset. Candidates for 05-19: CLAUDE.md:67 and .claude/CLAUDE.md:327 still name verifyAdmin/src/lib/admin.ts; the layouts and moderation reviews admin path read the role only (ban proxy-enforced). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
 Resume file: None
