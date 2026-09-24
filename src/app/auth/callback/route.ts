@@ -8,24 +8,49 @@
  *
  * This is critical for Azure OAuth because Microsoft tokens are large and
  * Supabase chunks them into multiple cookies.
+ *
+ * Phase 05 · plan 05-05 · DEC-38 (F-004, F-077, FO-05):
+ *   - Sign-in grants no role. The environment allowlist and the admin grant
+ *     are deleted; roles change only through the admin users route.
+ *   - The profile sync fails closed. An upsert error, a read error, a missing
+ *     row or any throw (including MissingEnvError for the service key) signs
+ *     the user out and redirects to `/?error=profile_sync_failed`.
+ *   - `next` is honoured only when it stays on the request origin
+ *     (`safeNextPath`); anything else lands on `/`.
+ *   - Both service-role uses (deleting a rejected non-McGill auth user, and
+ *     the profile upsert and read) go through `getElevatedClient()`, with a
+ *     row each in `src/server/db/elevated/REGISTRY.md`.
  */
 
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
-import { createServiceClient } from "@/lib/supabase/service";
+import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
 import { isMcGillEmail } from "@/lib/utils";
+import { getElevatedClient } from "@/server/db/elevated";
 
-// Hardcoded admin emails — only these accounts can have the admin role
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-function isAdminEmail(email: string): boolean {
-  return ADMIN_EMAILS.includes(email.toLowerCase());
+/**
+ * The redirect target for `next`, or `/` when `next` could leave the origin
+ * (F-077). Accepted only when it starts with `/`, its second character is
+ * neither `/` nor a backslash (browsers read `/\host` as `//host`), and it
+ * resolves to the request origin. The origin check is the final word: it also
+ * catches forms the prefix rules miss, such as a tab the URL parser strips.
+ *
+ * @param next - the raw `next` query value, or null
+ * @param origin - the callback request's origin
+ * @returns a path (with its query and hash) on `origin`
+ */
+function safeNextPath(next: string | null, origin: string): string {
+  if (!next || !next.startsWith("/")) return "/";
+  if (next[1] === "/" || next[1] === "\\") return "/";
+  try {
+    const resolved = new URL(next, origin);
+    if (resolved.origin !== origin) return "/";
+    return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+  } catch {
+    return "/";
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -34,7 +59,10 @@ export async function GET(request: NextRequest) {
   stage = "parse_request";
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/";
+  const next = safeNextPath(
+    requestUrl.searchParams.get("next"),
+    requestUrl.origin
+  );
   const errorParam = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
 
@@ -58,8 +86,8 @@ export async function GET(request: NextRequest) {
   const allCookies = new Map<string, { name: string; value: string; options: Record<string, unknown> }>();
 
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl(),
+    supabaseAnonKey(),
     {
       cookies: {
         getAll() {
@@ -79,6 +107,15 @@ export async function GET(request: NextRequest) {
       },
     }
   );
+
+  /** A redirect on the request origin carrying every accumulated cookie. */
+  const redirectWithCookies = (url: URL) => {
+    const response = NextResponse.redirect(url);
+    for (const [, { name: cookieName, value, options }] of allCookies) {
+      response.cookies.set(cookieName, value, options);
+    }
+    return response;
+  };
 
   // Exchange the authorization code for a session
   stage = "exchange_code_for_session";
@@ -117,13 +154,9 @@ export async function GET(request: NextRequest) {
 
     // Delete the orphaned auth.users row — exchangeCodeForSession() already
     // created it before we could check the email. Service role is required
-    // because the anon client cannot call auth admin methods.
+    // because the anon client cannot call auth admin methods (REGISTRY.md).
     try {
-      const adminClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      );
-      await adminClient.auth.admin.deleteUser(user.id);
+      await getElevatedClient().auth.admin.deleteUser(user.id);
     } catch (err) {
       console.error("[Callback] Failed to delete non-McGill auth user:", err);
     }
@@ -142,9 +175,9 @@ export async function GET(request: NextRequest) {
     null;
   const avatarUrl = (metadata.avatar_url as string) ?? null;
 
-  // Upsert user profile into public.users table
-  // Use service client to bypass RLS — the anon client's upsert can fail
-  // silently under RLS, leaving no row for the onboarding PATCH to update.
+  // Upsert user profile into public.users table through the elevated door:
+  // the row may not exist yet, the payload writes email, and INSERT on users
+  // is not the caller's to make (REGISTRY.md).
   const upsertPayload: Database["public"]["Tables"]["users"]["Insert"] = {
     id: user.id,
     email,
@@ -153,49 +186,44 @@ export async function GET(request: NextRequest) {
     updated_at: new Date().toISOString(),
   };
 
-  // Check if user needs onboarding (no interest_tags set)
-  // Also fetch current roles for admin auto-assignment
+  // Check if user needs onboarding. The profile sync fails closed (FO-05): a
+  // user whose row could not be written or read is signed out, not admitted.
   stage = "profile_sync";
-  let needsOnboarding = false;
-  // Profile sync should never block login. If service key/config is missing,
-  // keep the user signed in and skip non-critical profile enrichment.
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const serviceClient = createServiceClient();
-      const { error: upsertError } = await serviceClient.from("users").upsert(
-        upsertPayload,
-        {
-          onConflict: "id",
-          ignoreDuplicates: false,
-        }
-      );
-
-      if (upsertError) {
-        console.error("[Callback] Profile upsert error:", upsertError.message);
+  let needsOnboarding: boolean;
+  try {
+    const elevated = getElevatedClient();
+    const { error: upsertError } = await elevated.from("users").upsert(
+      upsertPayload,
+      {
+        onConflict: "id",
+        ignoreDuplicates: false,
       }
+    );
 
-      const { data: profile } = await serviceClient
-        .from("users")
-        .select("onboarding_completed, roles")
-        .eq("id", user.id)
-        .single();
-
-      needsOnboarding = !profile?.onboarding_completed;
-
-      // Auto-assign admin role if email is in the hardcoded list
-      const currentRoles = (profile?.roles ?? ["user"]) as Database["public"]["Enums"]["user_role"][];
-      if (isAdminEmail(email) && !currentRoles.includes("admin")) {
-        const newRoles: Database["public"]["Enums"]["user_role"][] = [...currentRoles, "admin"];
-        await serviceClient
-          .from("users")
-          .update({ roles: newRoles })
-          .eq("id", user.id);
-      }
-    } catch (err) {
-      console.error("[Callback] Profile sync/onboarding check failed:", err);
+    if (upsertError) {
+      throw new Error(`profile upsert failed: ${upsertError.message}`);
     }
-  } else {
-    console.error("[Callback] SUPABASE_SERVICE_ROLE_KEY is missing; skipping profile sync");
+
+    // `roles` is read and unused; the column list is pinned (DEC-38 (e)).
+    const { data: profile, error: profileError } = await elevated
+      .from("users")
+      .select("onboarding_completed, roles")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error(
+        `profile read failed: ${profileError?.message ?? "no row"}`
+      );
+    }
+
+    needsOnboarding = !profile.onboarding_completed;
+  } catch (err) {
+    console.error("[Callback] Profile sync failed; signing out:", err);
+    await supabase.auth.signOut();
+    return redirectWithCookies(
+      new URL("/?error=profile_sync_failed", requestUrl.origin)
+    );
   }
 
   // Build the final redirect response and attach ALL accumulated cookies
@@ -207,11 +235,7 @@ export async function GET(request: NextRequest) {
   console.log("[Callback] Redirecting to:", redirectUrl.toString());
   console.log("[Callback] Accumulated cookies:", allCookies.size, [...allCookies.keys()]);
 
-  const response = NextResponse.redirect(redirectUrl);
-
-  for (const [, { name: cookieName, value, options }] of allCookies) {
-    response.cookies.set(cookieName, value, options);
-  }
+  const response = redirectWithCookies(redirectUrl);
 
   // Log cookie names in a runtime-safe way. `headers.getSetCookie()` is not
   // available in all server runtimes and can throw, which would break login.

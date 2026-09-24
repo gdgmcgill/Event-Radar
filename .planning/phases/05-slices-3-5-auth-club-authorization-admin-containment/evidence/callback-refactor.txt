@@ -1,0 +1,372 @@
+Callback refactor — plan 05-05 Task 2 (DEC-38; F-004, F-077, FO-05; F-003 census step two)
+**Plan:** 05-05 · **Phase:** 05 · **Recorded:** 2026-09-24T05:39:26Z
+HEAD at capture=e2d6d3a5c667960fcf88fcb6df0bb283603128fd (Task 1's proxy commit e2d6d3a; the 05-04 head is c14fdc8; Task 2's changes are in the working tree and are committed with this file)
+
+Every block: the command, its output filtered to PASS/FAIL, test lines, Expected/Received and counts (Jest stack frames dropped), then exit=<code>.
+
+==============================================================================
+1. Ledger protocol step 2 — the fixed callback, route-defect.test.ts UNEDITED: the three F-077 rows red, the control green
+==============================================================================
+$ git diff --quiet c14fdc8 -- src/app/auth/callback/route-defect.test.ts; echo $?
+0
+$ npx jest --ci --verbose src/app/auth/callback/route-defect.test.ts   # fixed callback, suite unedited
+FAIL node src/app/auth/callback/route-defect.test.ts
+    ✕ F-077: an absolute next (https://evil.test/x) redirects off-origin to https://evil.test (28 ms)
+    ✕ F-077: a protocol-relative next (//evil.test/x) redirects off-origin to host evil.test (12 ms)
+    ✕ F-077: a slash-backslash next (/\evil.test/x) redirects off-origin to host evil.test (8 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (9 ms)
+    Expected: "https://evil.test"
+    Received: "https://callback.test"
+    Expected: "evil.test"
+    Received: "callback.test"
+    Expected: "evil.test"
+    Received: "callback.test"
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 1 passed, 4 total
+exit=1
+
+==============================================================================
+2. Step 2 for the two moved PRESERVE tests — the 05-04-head route.test.ts, unedited, against the fixed callback
+   Tests 7 (F-004) and 8 (F-004/FO-05) go red: they are the pins that move. Test 4 goes red too, because the
+   orphan deletion now reaches the service factory through the door and the old service mock has no auth
+   member: that is the DEC-38 mock-seam change, not a behaviour change (test 4 is green after it, §3).
+==============================================================================
+--- the 05-04-head route.test.ts (git show c14fdc8:…) copied to a temporary sibling file and run against the fixed callback, then deleted
+$ npx jest --ci --verbose src/app/auth/callback/route-head-probe.test.ts   # fixed callback, 05-04-head PRESERVE bytes
+FAIL node src/app/auth/callback/route-head-probe.test.ts
+    ✓ passes an inbound provider error through without attempting an exchange (25 ms)
+    ✓ redirects with error=no_code when the code parameter is absent (11 ms)
+    ✓ redirects with error=auth_failed and the provider message when the exchange fails (9 ms)
+    ✕ rejects a non-McGill address, signs it out, and deletes the orphaned auth user (9 ms)
+    ✓ upserts the profile and routes a new McGill user to /onboarding (11 ms)
+    ✓ routes an already-onboarded McGill user to the next destination, with no onboarding cookie (8 ms)
+    ✕ appends admin to the existing roles for an address in ADMIN_EMAILS (8 ms)
+    ✕ skips profile sync entirely and still admits the user when the service key is absent (8 ms)
+    Expected: "u-non-mcgill"
+      280 |     expect(location(res).searchParams.get("error")).toBe("not_mcgill");
+    Expected: {"roles": ["user", "admin"]}
+    Expected number of calls: 0
+    Received number of calls: 1
+      360 |     // Admitted anyway: a real redirect to the destination, not an error page.
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 5 passed, 8 total
+exit=1
+$ rm src/app/auth/callback/route-head-probe.test.ts; git status --porcelain -- src/app/auth/callback/route-head-probe.test.ts
+exit=0
+
+==============================================================================
+3. Step 3 — moved rows green; the PRESERVE suite green with the DEC-38 seam edit; the six remaining it blocks byte-identical
+==============================================================================
+$ npx jest --ci --verbose src/app/auth/callback/route-defect.test.ts   # fixed callback, moved suite
+PASS node src/app/auth/callback/route-defect.test.ts
+    ✓ F-077: an absolute next (https://evil.test/x) lands on https://callback.test/ (27 ms)
+    ✓ F-077: a protocol-relative next (//evil.test/x) lands on https://callback.test/ (9 ms)
+    ✓ F-077: a slash-backslash next (/\evil.test/x) lands on https://callback.test/ (9 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (8 ms)
+    ✓ F-004: with the allowlist variable naming the signing-in address, no users update is issued (10 ms)
+    ✓ F-004: the elevated door throwing MissingEnvError for the service key signs the user out → /?error=profile_sync_failed, no onboarding cookie (7 ms)
+    ✓ FO-05: an upsert error signs the user out → /?error=profile_sync_failed, no onboarding cookie (8 ms)
+    ✓ FO-05: the failed-sync redirect carries the sign-out's clearing cookie, not the exchanged session (11 ms)
+    ✓ FO-05: a profile read returning no row ({ data: null }) signs the user out → /?error=profile_sync_failed, no onboarding cookie (9 ms)
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+exit=0
+$ npx jest --ci --verbose src/app/auth/callback/route.test.ts   # fixed callback, PRESERVE suite (six tests, DEC-38 mock-seam edit only)
+PASS node src/app/auth/callback/route.test.ts
+    ✓ passes an inbound provider error through without attempting an exchange (24 ms)
+    ✓ redirects with error=no_code when the code parameter is absent (15 ms)
+    ✓ redirects with error=auth_failed and the provider message when the exchange fails (9 ms)
+    ✓ rejects a non-McGill address, signs it out, and deletes the orphaned auth user (9 ms)
+    ✓ upserts the profile and routes a new McGill user to /onboarding (9 ms)
+    ✓ routes an already-onboarded McGill user to the next destination, with no onboarding cookie (9 ms)
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+exit=0
+
+$ node <scratchpad>/it-blocks.cjs   (script reproduced below the output)
+05-04 head (c14fdc8): 8 it blocks; working tree: 6 it blocks
+IDENTICAL  669 bytes  passes an inbound provider error through without attempting an exchange
+IDENTICAL  397 bytes  redirects with error=no_code when the code parameter is absent
+IDENTICAL  638 bytes  redirects with error=auth_failed and the provider message when the exchange fails
+IDENTICAL  652 bytes  rejects a non-McGill address, signs it out, and deletes the orphaned auth user
+IDENTICAL  877 bytes  upserts the profile and routes a new McGill user to /onboarding
+IDENTICAL  560 bytes  routes an already-onboarded McGill user to the next destination, with no onboarding cookie
+MOVED OUT  appends admin to the existing roles for an address in ADMIN_EMAILS
+MOVED OUT  skips profile sync entirely and still admits the user when the service key is absent
+RESULT: the six remaining blocks are byte-identical
+exit=0
+
+--- the scratchpad script, verbatim:
+// Extract every top-level `  it(` block (from the `  it(` line to its closing `  });`)
+// from the 05-04-head route.test.ts and the working tree, and compare byte for byte.
+const { execSync } = require("child_process");
+const fs = require("fs");
+const FILE = "src/app/auth/callback/route.test.ts";
+function blocks(src) {
+  const lines = src.split("\n");
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith("  it(")) {
+      let j = i;
+      while (lines[j] !== "  });") j++;
+      const text = lines.slice(i, j + 1).join("\n");
+      const title = /it\("([^"]+)"/.exec(lines[i])[1];
+      out.push({ title, text });
+      i = j;
+    }
+  }
+  return out;
+}
+const head = blocks(execSync(`git show c14fdc8:${FILE}`, { encoding: "utf8" }));
+const tree = blocks(fs.readFileSync(FILE, "utf8"));
+console.log(`05-04 head (c14fdc8): ${head.length} it blocks; working tree: ${tree.length} it blocks`);
+let bad = 0;
+for (const t of tree) {
+  const h = head.find((b) => b.title === t.title);
+  const same = h && h.text === t.text;
+  if (!same) bad++;
+  console.log(`${same ? "IDENTICAL" : "DIFFERENT"}  ${t.text.length} bytes  ${t.title}`);
+}
+for (const h of head) {
+  if (!tree.find((t) => t.title === h.title)) console.log(`MOVED OUT  ${h.title}`);
+}
+console.log(bad === 0 && tree.length === 6 ? "RESULT: the six remaining blocks are byte-identical" : "RESULT: MISMATCH");
+process.exit(bad === 0 && tree.length === 6 ? 0 : 1);
+
+--- the whole PRESERVE-file diff against the 05-04 head (bullets, the seam member, the two moved blocks; nothing else):
+$ git diff c14fdc8 -- src/app/auth/callback/route.test.ts
+diff --git a/src/app/auth/callback/route.test.ts b/src/app/auth/callback/route.test.ts
+index 43adc42..ac60773 100644
+--- a/src/app/auth/callback/route.test.ts
++++ b/src/app/auth/callback/route.test.ts
+@@ -15,8 +15,8 @@
+  *   - a non-McGill address: sign-out, orphaned auth user deleted by id, error=not_mcgill
+  *   - a new McGill user: profile upsert payload, /onboarding, needs_onboarding=1
+  *   - an already-onboarded McGill user routing to the `next` destination instead
+- *   - an ADMIN_EMAILS address having "admin" appended to its existing roles
+- *   - SUPABASE_SERVICE_ROLE_KEY absent: profile sync skipped, user still admitted
++ *   - the sign-in admin grant and the absent-service-key path: moved to
++ *     `route-defect.test.ts` in plan 05-05 (F-004), where they pin the fixed shapes
+  *
+  * WHY THE MOCK SEAMS ARE THESE THREE:
+  *   Read the subject's own import block (route.ts:13-18), not habit. The route
+@@ -219,7 +219,10 @@ describe("GET /auth/callback (PRESERVE — REFAC-08)", () => {
+       select: mockSelect,
+       update: mockUpdate,
+     });
+-    mockCreateServiceClient.mockReturnValue({ from: mockFrom });
++    mockCreateServiceClient.mockReturnValue({
++      from: mockFrom,
++      auth: { admin: { deleteUser: mockDeleteUser } },
++    });
+     mockSignOut.mockResolvedValue({ error: null });
+     mockDeleteUser.mockResolvedValue({ error: null });
+   });
+@@ -323,44 +326,4 @@ describe("GET /auth/callback (PRESERVE — REFAC-08)", () => {
+     expect(location(res).pathname).toBe("/my-events");
+     expect(res.cookies.get(ONBOARDING_COOKIE)).toBeUndefined();
+   });
+-
+-  // ── 7. Admin auto-assignment (route.ts:22-29, 186-193) ─────────────────────
+-  // DEFECT — F-004. This characterizes the grant so a later phase can remove it
+-  // deliberately rather than by accident. loadRoute() re-imports so that the
+-  // module-level ADMIN_EMAILS parse sees the value set on the line above it.
+-  it("appends admin to the existing roles for an address in ADMIN_EMAILS", async () => {
+-    process.env.ADMIN_EMAILS = ADMIN_EMAIL;
+-    signedInAs("u-admin", ADMIN_EMAIL);
+-    mockSingle.mockResolvedValue({
+-      data: { onboarding_completed: true, roles: ["user"] },
+-      error: null,
+-    });
+-    const GET = await loadRoute();
+-
+-    await GET(callbackRequest("?code=abc"));
+-
+-    expect(mockUpdate).toHaveBeenCalledWith({ roles: ["user", "admin"] });
+-    expect(mockUpdateEq).toHaveBeenCalledWith("id", "u-admin");
+-  });
+-
+-  // ── 8. Service key absent (route.ts:162, 197-199) ──────────────────────────
+-  // DEFECT — F-004/F-040. Profile sync fails OPEN: the user is admitted with no
+-  // row written and no onboarding redirect. F-040 records that this is the
+-  // configured production condition for ADMIN_EMAILS, not a hypothetical one.
+-  it("skips profile sync entirely and still admits the user when the service key is absent", async () => {
+-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+-    signedInAs("u-no-key", MCGILL_EMAIL);
+-    const GET = await loadRoute();
+-
+-    const res = await GET(callbackRequest("?code=abc"));
+-
+-    expect(mockCreateServiceClient).not.toHaveBeenCalled();
+-    expect(mockUpsert).not.toHaveBeenCalled();
+-    expect(mockUpdate).not.toHaveBeenCalled();
+-    // Admitted anyway: a real redirect to the destination, not an error page.
+-    expect(res.status).toBe(REDIRECT_STATUS);
+-    expect(location(res).pathname).toBe(DEFAULT_DESTINATION);
+-    expect(location(res).searchParams.get("error")).toBeNull();
+-    expect(res.cookies.get(ONBOARDING_COOKIE)).toBeUndefined();
+-  });
+ });
+
+==============================================================================
+4. Step 4 — the pre-fix callback (git show c14fdc8:src/app/auth/callback/route.ts) restored temporarily:
+   the moved rows go red (control stays green); the six PRESERVE tests stay green; then restored cmp-identical
+==============================================================================
+--- step 4: pre-fix callback (c14fdc8) restored temporarily
+$ npx jest --ci --verbose src/app/auth/callback/route-defect.test.ts   # PRE-FIX callback restored, moved suite
+FAIL node src/app/auth/callback/route-defect.test.ts
+    ✕ F-077: an absolute next (https://evil.test/x) lands on https://callback.test/ (33 ms)
+    ✕ F-077: a protocol-relative next (//evil.test/x) lands on https://callback.test/ (13 ms)
+    ✕ F-077: a slash-backslash next (/\evil.test/x) lands on https://callback.test/ (10 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (11 ms)
+    ✕ F-004: with the allowlist variable naming the signing-in address, no users update is issued (10 ms)
+    ✕ F-004: the elevated door throwing MissingEnvError for the service key signs the user out → /?error=profile_sync_failed, no onboarding cookie (9 ms)
+    ✕ FO-05: an upsert error signs the user out → /?error=profile_sync_failed, no onboarding cookie (11 ms)
+    ✕ FO-05: the failed-sync redirect carries the sign-out's clearing cookie, not the exchanged session (10 ms)
+    ✕ FO-05: a profile read returning no row ({ data: null }) signs the user out → /?error=profile_sync_failed, no onboarding cookie (10 ms)
+    Expected: "https://callback.test/"
+    Received: "https://evil.test/x"
+    Expected: "https://callback.test/"
+    Received: "https://evil.test/x"
+    Expected: "https://callback.test/"
+    Received: "https://evil.test/x"
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● GET /auth/callback (DEFECT — F-077, F-004; FIXED in 05-05) › F-004: the elevated door throwing MissingEnvError for the service key signs the user out → /?error=profile_sync_failed, no onboarding cookie
+    Expected number of calls: 1
+    Received number of calls: 0
+  ● GET /auth/callback (DEFECT — F-077, F-004; FIXED in 05-05) › FO-05: an upsert error signs the user out → /?error=profile_sync_failed, no onboarding cookie
+    Expected number of calls: 1
+    Received number of calls: 0
+    Expected number of calls: 1
+    Received number of calls: 0
+  ● GET /auth/callback (DEFECT — F-077, F-004; FIXED in 05-05) › FO-05: a profile read returning no row ({ data: null }) signs the user out → /?error=profile_sync_failed, no onboarding cookie
+    Expected number of calls: 1
+    Received number of calls: 0
+Test Suites: 1 failed, 1 total
+Tests:       8 failed, 1 passed, 9 total
+exit=1
+$ npx jest --ci --verbose src/app/auth/callback/route.test.ts   # PRE-FIX callback restored, PRESERVE suite (six tests) — stays green
+PASS node src/app/auth/callback/route.test.ts
+    ✓ passes an inbound provider error through without attempting an exchange (23 ms)
+    ✓ redirects with error=no_code when the code parameter is absent (9 ms)
+    ✓ redirects with error=auth_failed and the provider message when the exchange fails (15 ms)
+    ✓ rejects a non-McGill address, signs it out, and deletes the orphaned auth user (8 ms)
+    ✓ upserts the profile and routes a new McGill user to /onboarding (9 ms)
+    ✓ routes an already-onboarded McGill user to the next destination, with no onboarding cookie (8 ms)
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+exit=0
+$ cmp src/app/auth/callback/route.ts <fixed copy>
+cmp identical (exit=0)
+
+==============================================================================
+5. F-003 census step two — unedited census red against the fixed callback, emptied census green,
+   pre-fix callback restored red, fixed callback restored cmp-identical
+==============================================================================
+$ npx jest --ci --verbose src/lib/__tests__/env-assertions-defect.test.ts   # fixed callback, census unedited (expects the callback's 4 pairs)
+FAIL node src/lib/__tests__/env-assertions-defect.test.ts
+    ✕ F-003: the census equals today's 4 file:VARIABLE pairs exactly (8 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (3 ms)
+    - Expected  - 6
+    + Received  + 1
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+exit=1
+$ command grep -rnoE "process\.env\.[A-Z_]+!" src   # the census source
+exit=1
+(grep exit=1: no process.env.NAME! read anywhere under src/, tests included)
+$ npx jest --ci --verbose src/lib/__tests__/env-assertions-defect.test.ts   # fixed callback, census moved to empty
+PASS node src/lib/__tests__/env-assertions-defect.test.ts
+    ✓ F-003: the census is empty — no file:VARIABLE pair carries a non-null assertion (7 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (2 ms)
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+exit=0
+--- step 4: pre-fix callback restored temporarily under the empty census
+$ npx jest --ci --verbose src/lib/__tests__/env-assertions-defect.test.ts   # PRE-FIX callback restored, census moved to empty
+FAIL node src/lib/__tests__/env-assertions-defect.test.ts
+    ✕ F-003: the census is empty — no file:VARIABLE pair carries a non-null assertion (8 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (2 ms)
+    - Expected  - 1
+    + Received  + 6
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+exit=1
+$ cmp src/app/auth/callback/route.ts <fixed copy>
+cmp identical (exit=0)
+
+==============================================================================
+6. Plan verify: the auth suites and the census, the ratchet, lint, tsc
+==============================================================================
+$ npx jest --ci --verbose src/app/auth src/lib/__tests__/env-assertions-defect.test.ts   # Task 2 verify
+PASS node src/app/auth/callback/route-defect.test.ts
+    ✓ F-077: an absolute next (https://evil.test/x) lands on https://callback.test/ (48 ms)
+    ✓ F-077: a protocol-relative next (//evil.test/x) lands on https://callback.test/ (10 ms)
+    ✓ F-077: a slash-backslash next (/\evil.test/x) lands on https://callback.test/ (9 ms)
+    ✓ control: a same-origin next (/my-events) is honoured on callback.test (8 ms)
+    ✓ F-004: with the allowlist variable naming the signing-in address, no users update is issued (9 ms)
+    ✓ F-004: the elevated door throwing MissingEnvError for the service key signs the user out → /?error=profile_sync_failed, no onboarding cookie (7 ms)
+    ✓ FO-05: an upsert error signs the user out → /?error=profile_sync_failed, no onboarding cookie (7 ms)
+    ✓ FO-05: the failed-sync redirect carries the sign-out's clearing cookie, not the exchanged session (8 ms)
+    ✓ FO-05: a profile read returning no row ({ data: null }) signs the user out → /?error=profile_sync_failed, no onboarding cookie (9 ms)
+PASS node src/lib/__tests__/env-assertions-defect.test.ts
+    ✓ F-003: the census is empty — no file:VARIABLE pair carries a non-null assertion (8 ms)
+    ✓ F-003: the census walks production source only (sanity: it finds the Supabase factories) (2 ms)
+PASS node src/app/auth/callback/route.test.ts
+    ✓ passes an inbound provider error through without attempting an exchange (12 ms)
+    ✓ redirects with error=no_code when the code parameter is absent (11 ms)
+    ✓ redirects with error=auth_failed and the provider message when the exchange fails (10 ms)
+    ✓ rejects a non-McGill address, signs it out, and deletes the orphaned auth user (14 ms)
+    ✓ upserts the profile and routes a new McGill user to /onboarding (9 ms)
+    ✓ routes an already-onboarded McGill user to the next destination, with no onboarding cookie (8 ms)
+Test Suites: 3 passed, 3 total
+Tests:       17 passed, 17 total
+exit=0
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=24 delta=-1
+retired=1 (the list shrank — this is the intended direction)
+  - src/app/auth/callback/route.ts
+PASS: the live census is a subset of the committed allow-list
+exit=0
+$ npm run lint
+✖ 19 problems (0 errors, 19 warnings)
+(no line names a file this task touched)
+exit=0
+$ npx tsc --noEmit
+exit=0
+
+==============================================================================
+7. Acceptance greps and the full floor
+==============================================================================
+$ grep -c -F 'getElevatedClient()' src/app/auth/callback/route.ts
+3  (one docblock line, the orphan deletion, the profile sync)
+$ grep -c -F 'profile_sync_failed' src/app/auth/callback/route.ts
+2
+$ grep -c -F 'select("onboarding_completed, roles")' src/app/auth/callback/route.ts
+1
+$ grep -c -F 'isMcGillEmail' src/app/auth/callback/route.ts
+2
+$ grep -c -F 'not_mcgill' src/app/auth/callback/route.ts
+1
+$ grep -c '@supabase/supabase-js\|@/lib/supabase/service\|ADMIN_EMAILS\|SUPABASE_SERVICE_ROLE_KEY' src/app/auth/callback/route.ts   # expect 0
+0
+exit=1  (grep's no-match exit: the route imports neither module and names neither variable)
+$ grep -c "src/app/auth/callback/route.ts" src/server/db/elevated/REGISTRY.md; grep -c "_(none)_" src/server/db/elevated/REGISTRY.md
+2
+0
+$ npx jest --ci
+Test Suites: 62 passed, 62 total
+Tests:       1012 passed, 1012 total
+(1009 after Task 1, −2 moved out of route.test.ts, +5 in route-defect.test.ts: 4 → 9)
+exit=0
+$ node scripts/check-characterization-tags.mjs --all
+ok 26 files
+exit=0
+$ npm run build
+▲ Next.js 16.3.5 (Turbopack)
+✓ Compiled successfully in 1490ms
+  Finished TypeScript in 1574ms ...
+├ ƒ /auth/callback
+ƒ Proxy (Middleware)
+exit=0

@@ -1,38 +1,51 @@
 /**
- * DEFECT characterization — F-077 (and F-004 once 05-05 moves tests 7 and 8 here)
+ * DEFECT characterization — F-077 and F-004 (with FO-05, the profile sync's
+ * fail-open half)
  *
- * Subject: `GET /auth/callback` (`src/app/auth/callback/route.ts`), the final
- * redirect for an already-onboarded user.
+ * Subject: `GET /auth/callback` (`src/app/auth/callback/route.ts`): the final
+ * redirect target, the sign-in role grant, and the profile sync.
  *
- * The defect: the route reads `next` with no shape check (route.ts:37) and
- * builds the redirect as `new URL(next, requestUrl.origin)` (route.ts:205). By
- * WHATWG URL rules an absolute value ignores the base, a protocol-relative
- * value (`//host`) takes only the scheme from it, and a slash-backslash value
- * (`/\host`) is normalised to `//host` for special schemes. All three send the
- * freshly signed-in user off-origin, on the response that carries the new
- * session cookies. The values pinned below were measured with a node probe
- * before this file was written; the probe output is in
- * `evidence/slice-3-characterization-ring.txt`.
+ * The defects, as they stood before plan 05-05:
+ *   - F-077: the route read `next` with no shape check and built the redirect
+ *     as `new URL(next, requestUrl.origin)`. By WHATWG URL rules an absolute
+ *     value ignores the base, a protocol-relative value (`//host`) takes only
+ *     the scheme from it, and a slash-backslash value (`/\host`) is normalised
+ *     to `//host` for special schemes. All three sent the freshly signed-in
+ *     user off-origin, on the response that carries the new session cookies.
+ *     The values were measured with a node probe (plan 05-02,
+ *     `evidence/slice-3-characterization-ring.txt`).
+ *   - F-004: the route parsed an environment allowlist of addresses at module
+ *     load and appended "admin" to the roles of any listed address at sign-in.
+ *   - FO-05: when the service key was absent the profile sync was skipped and
+ *     the user admitted with no row written; an upsert error or a failed
+ *     profile read was logged and the user admitted anyway.
  *
- * What this file is and is not:
- *   It pins TODAY's off-origin redirects exactly, so the commit that adds the
- *   `/`-prefixed, not-`//` rule has to move these assertions visibly. The
- *   control case (a same-origin path honoured) must survive that fix; it is
- *   repeated here so the fix cannot be made by dropping `next` altogether,
- *   and it is also test 6 of `route.test.ts`, which this file does not edit.
+ * Status: FIXED in 05-05 (DEC-38) by the commit "fix(05-05): callback grants
+ * no roles, fails closed on profile sync, validates next"; its hash is
+ * recorded against each row in evidence/defect-ledger.md (a commit cannot
+ * name its own hash). F-077 and F-004 are both FIXED in 05-05.
  *
- * Registered as F-077 (Medium) in .planning/audit/findings.json. Closes in
- * Phase 5 (plan 05-05). F-004 (the ADMIN_EMAILS grant) is pinned today by
- * tests 7 and 8 of `route.test.ts`; 05-05 moves them into this file with a
- * defect-ledger row.
+ * What this file pins now (the fixed shapes):
+ *   - F-077: the three hostile `next` values land on `https://callback.test/`.
+ *     The control (a same-origin path honoured) stays, so the fix cannot have
+ *     been made by dropping `next`; it is also test 6 of `route.test.ts`.
+ *   - F-004: with the allowlist variable naming the signing-in address, no
+ *     `users` update is issued. This row moved here from `route.test.ts`
+ *     (its test 7) in the fixing commit, with a defect-ledger row.
+ *   - F-004 / FO-05: with the elevated door throwing MissingEnvError for the
+ *     service key, the user is signed out and sent to
+ *     `/?error=profile_sync_failed` with no onboarding cookie. This row moved
+ *     here from `route.test.ts` (its test 8).
+ *   - FO-05: an upsert error, and a profile read returning no row, each fail
+ *     closed the same way, and the failed-sync redirect carries the sign-out's
+ *     clearing cookie rather than the session the exchange had just set.
  *
- * Status: OPEN — assertions move in 05-05's callback commit
- *
- * The three mock seams and the helpers are copied from `route.test.ts`, not
- * imported from it, for the reasons its docblock gives: the route imports
- * `createServerClient` from "@supabase/ssr", an inline client from
- * "@supabase/supabase-js", and `createServiceClient` from
- * "@/lib/supabase/service". Every credential-shaped value is a literal
+ * The mock seams mirror `route.test.ts`: "@supabase/ssr" for the cookie
+ * client, and "@/lib/supabase/service" for the service factory, which the
+ * elevated door (`@/server/db/elevated`) wraps. The door now serves both
+ * service-role uses, so the service mock carries `auth.admin.deleteUser` as
+ * well as `from`. The route no longer imports "@supabase/supabase-js", so
+ * that module is not mocked. Every credential-shaped value is a literal
  * placeholder; `.env.local` is never read.
  *
  * The subject is imported and exercised only. This suite never modifies,
@@ -40,51 +53,57 @@
  */
 
 import { NextRequest } from "next/server";
+import { MissingEnvError } from "@/lib/env";
 
 // ─── Seam mocks ──────────────────────────────────────────────────────────────
 
-/** route.ts:87 — supabase.auth.exchangeCodeForSession(code) */
+/** supabase.auth.exchangeCodeForSession(code) */
 const mockExchangeCodeForSession = jest.fn();
 
-/** route.ts:101 — supabase.auth.getUser() */
+/** supabase.auth.getUser() */
 const mockGetUser = jest.fn();
 
-/** route.ts:116 — supabase.auth.signOut() on the non-McGill path */
+/** supabase.auth.signOut(): the non-McGill path and the failed profile sync */
 const mockSignOut = jest.fn();
 
-/** route.ts:126 — adminClient.auth.admin.deleteUser(user.id) */
+/** getElevatedClient().auth.admin.deleteUser(user.id) */
 const mockDeleteUser = jest.fn();
 
-/** route.ts:164 — createServiceClient() */
+/** createServiceClient(), reached through getElevatedClient() */
 const mockCreateServiceClient = jest.fn();
 
-/** route.ts:165 — serviceClient.from("users") */
+/** elevated.from("users") */
 const mockFrom = jest.fn();
 
-/** route.ts:165-171 — .upsert(payload, options) */
+/** .upsert(payload, options) */
 const mockUpsert = jest.fn();
 
-/** route.ts:178-181 — .select(cols).eq("id", …).single() */
+/** .select(cols).eq("id", …).single() */
 const mockSelect = jest.fn();
 const mockSelectEq = jest.fn();
 const mockSingle = jest.fn();
 
-/** route.ts:189-192 — .update({ roles }).eq("id", …) */
+/** .update(…).eq("id", …): must never be reached (F-004) */
 const mockUpdate = jest.fn();
 const mockUpdateEq = jest.fn();
 
-jest.mock("@supabase/ssr", () => ({
-  createServerClient: () => ({
-    auth: {
-      exchangeCodeForSession: mockExchangeCodeForSession,
-      getUser: mockGetUser,
-      signOut: mockSignOut,
-    },
-  }),
-}));
+/** The cookie adapter the route hands to createServerClient, captured per call. */
+type CookieAdapter = {
+  setAll(cookies: { name: string; value: string; options: object }[]): void;
+};
+let mockCookieAdapter: CookieAdapter | null = null;
 
-jest.mock("@supabase/supabase-js", () => ({
-  createClient: () => ({ auth: { admin: { deleteUser: mockDeleteUser } } }),
+jest.mock("@supabase/ssr", () => ({
+  createServerClient: (_url: string, _key: string, options: { cookies: CookieAdapter }) => {
+    mockCookieAdapter = options.cookies;
+    return {
+      auth: {
+        exchangeCodeForSession: mockExchangeCodeForSession,
+        getUser: mockGetUser,
+        signOut: mockSignOut,
+      },
+    };
+  },
 }));
 
 jest.mock("@/lib/supabase/service", () => ({
@@ -101,6 +120,9 @@ const REDIRECT_STATUS = 307;
 
 /** src/lib/utils.ts — /^[^@]+@(mail\.)?mcgill\.ca$/i */
 const MCGILL_EMAIL = "returning@mail.mcgill.ca";
+
+/** The onboarding hint cookie the success path sets for a new user. */
+const ONBOARDING_COOKIE = "needs_onboarding";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -123,7 +145,7 @@ function location(res: Response): URL {
   return new URL(header);
 }
 
-/** An already-onboarded McGill user: the branch that honours `next` (route.ts:203-205). */
+/** An already-onboarded McGill user: the branch that honours `next`. */
 function onboardedMcGillUser() {
   mockExchangeCodeForSession.mockResolvedValue({ error: null });
   mockGetUser.mockResolvedValue({
@@ -136,9 +158,22 @@ function onboardedMcGillUser() {
   });
 }
 
+/** A session cookie name; the value is a placeholder, never a real token. */
+const SESSION_COOKIE = "sb-placeholder-project-auth-token";
+
+/** The fail-closed shape every broken profile sync must produce. */
+function expectFailedClosed(res: Awaited<ReturnType<CallbackGet>>) {
+  expect(mockSignOut).toHaveBeenCalledTimes(1);
+  expect(res.status).toBe(REDIRECT_STATUS);
+  expect(location(res).origin).toBe(ORIGIN);
+  expect(location(res).pathname).toBe("/");
+  expect(location(res).searchParams.get("error")).toBe("profile_sync_failed");
+  expect(res.cookies.get(ONBOARDING_COOKIE)).toBeUndefined();
+}
+
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
-describe("GET /auth/callback next target (DEFECT — F-077; OPEN until 05-05)", () => {
+describe("GET /auth/callback (DEFECT — F-077, F-004; FIXED in 05-05)", () => {
   const savedEnv = { ...process.env };
   let consoleLog: jest.SpyInstance;
   let consoleError: jest.SpyInstance;
@@ -173,43 +208,32 @@ describe("GET /auth/callback next target (DEFECT — F-077; OPEN until 05-05)", 
       select: mockSelect,
       update: mockUpdate,
     });
-    mockCreateServiceClient.mockReturnValue({ from: mockFrom });
+    mockCreateServiceClient.mockReturnValue({
+      from: mockFrom,
+      auth: { admin: { deleteUser: mockDeleteUser } },
+    });
     mockSignOut.mockResolvedValue({ error: null });
     mockDeleteUser.mockResolvedValue({ error: null });
+    mockCookieAdapter = null;
 
     onboardedMcGillUser();
   });
 
-  it("F-077: an absolute next (https://evil.test/x) redirects off-origin to https://evil.test", async () => {
+  // ── F-077: the next target ────────────────────────────────────────────────
+  it.each([
+    ["an absolute next (https://evil.test/x)", "https%3A%2F%2Fevil.test%2Fx"],
+    ["a protocol-relative next (//evil.test/x)", "%2F%2Fevil.test%2Fx"],
+    ["a slash-backslash next (/\\evil.test/x)", "%2F%5Cevil.test%2Fx"],
+  ])("F-077: %s lands on https://callback.test/", async (_label, encodedNext) => {
     const GET = await loadRoute();
 
-    const res = await GET(callbackRequest("?code=abc&next=https%3A%2F%2Fevil.test%2Fx"));
+    const res = await GET(callbackRequest(`?code=abc&next=${encodedNext}`));
 
     expect(res.status).toBe(REDIRECT_STATUS);
-    expect(location(res).origin).toBe("https://evil.test");
-    expect(location(res).pathname).toBe("/x");
-  });
-
-  it("F-077: a protocol-relative next (//evil.test/x) redirects off-origin to host evil.test", async () => {
-    const GET = await loadRoute();
-
-    const res = await GET(callbackRequest("?code=abc&next=%2F%2Fevil.test%2Fx"));
-
-    expect(res.status).toBe(REDIRECT_STATUS);
-    expect(location(res).host).toBe("evil.test");
-    expect(location(res).origin).toBe("https://evil.test");
-    expect(location(res).pathname).toBe("/x");
-  });
-
-  it("F-077: a slash-backslash next (/\\evil.test/x) redirects off-origin to host evil.test", async () => {
-    const GET = await loadRoute();
-
-    const res = await GET(callbackRequest("?code=abc&next=%2F%5Cevil.test%2Fx"));
-
-    expect(res.status).toBe(REDIRECT_STATUS);
-    expect(location(res).host).toBe("evil.test");
-    expect(location(res).origin).toBe("https://evil.test");
-    expect(location(res).pathname).toBe("/x");
+    expect(res.headers.get("location")).toBe(`${ORIGIN}/`);
+    expect(location(res).origin).toBe(ORIGIN);
+    expect(location(res).pathname).toBe("/");
+    expect(mockSignOut).not.toHaveBeenCalled();
   });
 
   it("control: a same-origin next (/my-events) is honoured on callback.test", async () => {
@@ -220,5 +244,88 @@ describe("GET /auth/callback next target (DEFECT — F-077; OPEN until 05-05)", 
     expect(res.status).toBe(REDIRECT_STATUS);
     expect(location(res).host).toBe("callback.test");
     expect(location(res).pathname).toBe("/my-events");
+  });
+
+  // ── F-004: no role is granted at sign-in ──────────────────────────────────
+  // Moved from route.test.ts (test 7). loadRoute() re-imports after the
+  // variable is set, so a module-load parse of it would be seen.
+  it("F-004: with the allowlist variable naming the signing-in address, no users update is issued", async () => {
+    const adminAddress = "boss@mcgill.ca";
+    process.env.ADMIN_EMAILS = adminAddress;
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "u-admin", email: adminAddress, user_metadata: {} } },
+      error: null,
+    });
+    const GET = await loadRoute();
+
+    const res = await GET(callbackRequest("?code=abc"));
+
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
+    expect(location(res).origin).toBe(ORIGIN);
+    expect(location(res).pathname).toBe("/");
+    expect(location(res).searchParams.get("error")).toBeNull();
+  });
+
+  // ── F-004 / FO-05: the profile sync fails closed ──────────────────────────
+  // Moved from route.test.ts (test 8), where the absent key admitted the user.
+  it("F-004: the elevated door throwing MissingEnvError for the service key signs the user out → /?error=profile_sync_failed, no onboarding cookie", async () => {
+    mockCreateServiceClient.mockImplementation(() => {
+      throw new MissingEnvError("SUPABASE_SERVICE_ROLE_KEY");
+    });
+    const GET = await loadRoute();
+
+    const res = await GET(callbackRequest("?code=abc&next=%2Fmy-events"));
+
+    expect(mockUpsert).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expectFailedClosed(res);
+  });
+
+  it("FO-05: an upsert error signs the user out → /?error=profile_sync_failed, no onboarding cookie", async () => {
+    mockUpsert.mockResolvedValue({ error: { message: "permission denied for table users" } });
+    const GET = await loadRoute();
+
+    const res = await GET(callbackRequest("?code=abc&next=%2Fmy-events"));
+
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
+    expectFailedClosed(res);
+  });
+
+  it("FO-05: the failed-sync redirect carries the sign-out's clearing cookie, not the exchanged session", async () => {
+    mockExchangeCodeForSession.mockImplementation(async () => {
+      mockCookieAdapter?.setAll([
+        { name: SESSION_COOKIE, value: "placeholder-session", options: { path: "/" } },
+      ]);
+      return { error: null };
+    });
+    mockSignOut.mockImplementation(async () => {
+      mockCookieAdapter?.setAll([
+        { name: SESSION_COOKIE, value: "", options: { path: "/", maxAge: 0 } },
+      ]);
+      return { error: null };
+    });
+    mockUpsert.mockResolvedValue({ error: { message: "permission denied for table users" } });
+    const GET = await loadRoute();
+
+    const res = await GET(callbackRequest("?code=abc"));
+
+    expectFailedClosed(res);
+    expect(res.cookies.get(SESSION_COOKIE)?.value).toBe("");
+    const header = res.headers
+      .getSetCookie()
+      .find((h) => h.startsWith(`${SESSION_COOKIE}=`));
+    expect(header).toMatch(/Max-Age=0/i);
+  });
+
+  it("FO-05: a profile read returning no row ({ data: null }) signs the user out → /?error=profile_sync_failed, no onboarding cookie", async () => {
+    mockSingle.mockResolvedValue({ data: null });
+    const GET = await loadRoute();
+
+    const res = await GET(callbackRequest("?code=abc&next=%2Fmy-events"));
+
+    expect(mockSelect).toHaveBeenCalledWith("onboarding_completed, roles");
+    expectFailedClosed(res);
   });
 });

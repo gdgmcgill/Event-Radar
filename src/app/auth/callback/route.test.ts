@@ -15,8 +15,8 @@
  *   - a non-McGill address: sign-out, orphaned auth user deleted by id, error=not_mcgill
  *   - a new McGill user: profile upsert payload, /onboarding, needs_onboarding=1
  *   - an already-onboarded McGill user routing to the `next` destination instead
- *   - an ADMIN_EMAILS address having "admin" appended to its existing roles
- *   - SUPABASE_SERVICE_ROLE_KEY absent: profile sync skipped, user still admitted
+ *   - the sign-in admin grant and the absent-service-key path: moved to
+ *     `route-defect.test.ts` in plan 05-05 (F-004), where they pin the fixed shapes
  *
  * WHY THE MOCK SEAMS ARE THESE THREE:
  *   Read the subject's own import block (route.ts:13-18), not habit. The route
@@ -219,7 +219,10 @@ describe("GET /auth/callback (PRESERVE — REFAC-08)", () => {
       select: mockSelect,
       update: mockUpdate,
     });
-    mockCreateServiceClient.mockReturnValue({ from: mockFrom });
+    mockCreateServiceClient.mockReturnValue({
+      from: mockFrom,
+      auth: { admin: { deleteUser: mockDeleteUser } },
+    });
     mockSignOut.mockResolvedValue({ error: null });
     mockDeleteUser.mockResolvedValue({ error: null });
   });
@@ -321,46 +324,6 @@ describe("GET /auth/callback (PRESERVE — REFAC-08)", () => {
 
     expect(mockUpsert).toHaveBeenCalled();
     expect(location(res).pathname).toBe("/my-events");
-    expect(res.cookies.get(ONBOARDING_COOKIE)).toBeUndefined();
-  });
-
-  // ── 7. Admin auto-assignment (route.ts:22-29, 186-193) ─────────────────────
-  // DEFECT — F-004. This characterizes the grant so a later phase can remove it
-  // deliberately rather than by accident. loadRoute() re-imports so that the
-  // module-level ADMIN_EMAILS parse sees the value set on the line above it.
-  it("appends admin to the existing roles for an address in ADMIN_EMAILS", async () => {
-    process.env.ADMIN_EMAILS = ADMIN_EMAIL;
-    signedInAs("u-admin", ADMIN_EMAIL);
-    mockSingle.mockResolvedValue({
-      data: { onboarding_completed: true, roles: ["user"] },
-      error: null,
-    });
-    const GET = await loadRoute();
-
-    await GET(callbackRequest("?code=abc"));
-
-    expect(mockUpdate).toHaveBeenCalledWith({ roles: ["user", "admin"] });
-    expect(mockUpdateEq).toHaveBeenCalledWith("id", "u-admin");
-  });
-
-  // ── 8. Service key absent (route.ts:162, 197-199) ──────────────────────────
-  // DEFECT — F-004/F-040. Profile sync fails OPEN: the user is admitted with no
-  // row written and no onboarding redirect. F-040 records that this is the
-  // configured production condition for ADMIN_EMAILS, not a hypothetical one.
-  it("skips profile sync entirely and still admits the user when the service key is absent", async () => {
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-    signedInAs("u-no-key", MCGILL_EMAIL);
-    const GET = await loadRoute();
-
-    const res = await GET(callbackRequest("?code=abc"));
-
-    expect(mockCreateServiceClient).not.toHaveBeenCalled();
-    expect(mockUpsert).not.toHaveBeenCalled();
-    expect(mockUpdate).not.toHaveBeenCalled();
-    // Admitted anyway: a real redirect to the destination, not an error page.
-    expect(res.status).toBe(REDIRECT_STATUS);
-    expect(location(res).pathname).toBe(DEFAULT_DESTINATION);
-    expect(location(res).searchParams.get("error")).toBeNull();
     expect(res.cookies.get(ONBOARDING_COOKIE)).toBeUndefined();
   });
 });

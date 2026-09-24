@@ -11,16 +11,20 @@ exception that nobody wrote down is indistinguishable from an oversight.
 
 | Operation | Calling module | Why RLS cannot express it | Phase added |
 | --------- | -------------- | ------------------------- | ----------- |
-| _(none)_  | _(none)_       | _(none)_                  | _(none)_    |
+| Delete the orphaned auth.users row of a rejected non-McGill sign-in (auth.admin.deleteUser) | `src/app/auth/callback/route.ts` | auth.users is owned by GoTrue; its admin API needs the service role and no RLS policy can grant it | 05 |
+| Upsert and read the signing-in user's own public.users row at sign-in | `src/app/auth/callback/route.ts` | The row may not exist yet, the upsert writes email (withheld from authenticated by the F-006 column grant) and INSERT on users is revoked from authenticated by DEC-47; the callback is the only writer | 05 |
 
-**This register is empty in this phase, and that is the intended state.** Plan
-03-03 builds the seam and applies it to **zero** routes (REFAC-05, ROADMAP SC3),
-so no module calls `getElevatedClient()` yet. The twenty-four existing
-service-role callsites under `src/app/**` still import the service factory
-directly (plus `src/lib/audit.ts`, below — twenty-five entries since plan
-04-03); they are held by the generated allow-list in
-`eslint.elevated-allowlist.mjs`, which may only shrink, and Phases 4–6 migrate
-them here one at a time — each migration adding its row below.
+Rows added from Phase 5 (05-05 onward).
+
+**Rows are now added per migration.** Plan 03-03 built the seam and applied it
+to **zero** routes (REFAC-05, ROADMAP SC3), so the register was empty through
+Phases 3 and 4, by design. From Phase 5 each legacy service-role callsite that
+moves to `getElevatedClient()` adds its row above in the same commit, and the
+callsites not yet migrated stay held by the generated allow-list in
+`eslint.elevated-allowlist.mjs`, which may only shrink. Plan 05-05 migrated the
+auth callback (both of its service-role uses), so the ratchet counts one legacy
+entry fewer than the committed list; the list itself is regenerated once, in
+05-15 (DEC-49). `src/lib/audit.ts`, below, is still a legacy caller.
 
 ### One pre-existing elevated caller, counted by both controls since plan 04-03
 

@@ -12,8 +12,8 @@
  * import the service factory, and an ESLint boundary rule enforces that for
  * everything under `src/**` (widened from `src/app/**` by plan 04-03, DI-34).
  *
- * Every elevated operation added in a later phase gets a row in REGISTRY.md
- * stating why RLS cannot express it. The register is empty in this phase.
+ * Every elevated operation gets a row in REGISTRY.md stating why RLS cannot
+ * express it. Rows are added per migration from Phase 5 (05-05 onward).
  */
 
 import { createServiceClient, serviceRoleKey } from "@/lib/supabase/service";

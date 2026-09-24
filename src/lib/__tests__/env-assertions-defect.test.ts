@@ -23,7 +23,8 @@
  * Registered as F-003 (Medium) in .planning/audit/findings.json. Closes in
  * Phase 5.
  *
- * Status: OPEN — the expected set shrinks in 05-04 and empties in 05-05
+ * Status: FIXED in 05-05 — the expected set shrank in 05-04 and is empty since
+ * 05-05. The census stays: a new `!` on an environment read turns it red.
  *
  * The census only reads files. It modifies nothing under `src/`.
  */
@@ -67,22 +68,17 @@ function census(): string[] {
 }
 
 /**
- * Today's set, after 05-04 (F-003 census step one). Sorted, duplicates kept:
- * the callback asserts NEXT_PUBLIC_SUPABASE_URL twice (route.ts:61 and :123).
- * 05-04 removed 11 pairs: the three Supabase factories and the sign-out route
- * now read through the validated readers in src/lib/env.ts, and
- * src/app/api/auth-debug/route.ts was deleted (F-027). The measured 05-01
- * list of 15 is in evidence/defect-ledger.md. 05-05 empties this list.
+ * Today's set, after 05-05 (F-003 census step two): empty. 05-04 removed 11
+ * pairs (the three Supabase factories and the sign-out route moved to the
+ * validated readers in src/lib/env.ts, and src/app/api/auth-debug/route.ts was
+ * deleted, F-027). 05-05 removed the callback's last 4: it reads
+ * supabaseUrl()/supabaseAnonKey() and reaches the service key only through
+ * the elevated door. Both measured lists are in evidence/defect-ledger.md.
  */
-const EXPECTED_TODAY = [
-  "src/app/auth/callback/route.ts:NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "src/app/auth/callback/route.ts:NEXT_PUBLIC_SUPABASE_URL",
-  "src/app/auth/callback/route.ts:NEXT_PUBLIC_SUPABASE_URL",
-  "src/app/auth/callback/route.ts:SUPABASE_SERVICE_ROLE_KEY",
-];
+const EXPECTED_TODAY: string[] = [];
 
-describe("process.env non-null assertions under src/ (DEFECT — F-003; OPEN until 05-05)", () => {
-  it("F-003: the census equals today's 4 file:VARIABLE pairs exactly", () => {
+describe("process.env non-null assertions under src/ (DEFECT — F-003; FIXED in 05-05)", () => {
+  it("F-003: the census is empty — no file:VARIABLE pair carries a non-null assertion", () => {
     expect(census()).toEqual(EXPECTED_TODAY);
   });
 
