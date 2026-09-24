@@ -105,14 +105,50 @@ const TASK1_ARMS = [
   "admin/experiments POST",
 ];
 
-const FIXED_ARMS: ReadonlySet<string> = new Set<string>([...TASK1_ARMS]);
+const TASK2_ARMS = [
+  // FIXED in 05-13 Task 2: featured, organizer, report, stats, users,
+  // recommendations. With TASK1_ARMS, these are all 33 former helper arms.
+  "admin/featured/[id] PATCH",
+  "admin/featured/[id] DELETE",
+  "admin/featured GET",
+  "admin/featured POST",
+  "admin/organizer-requests/[id] PATCH",
+  "admin/organizer-requests GET",
+  "admin/organizers GET",
+  "admin/reports/[id] PATCH",
+  "admin/reports GET",
+  "admin/stats GET",
+  "admin/users/[id]/ban POST",
+  "admin/users/[id]/ban DELETE",
+  "admin/users/[id] PATCH",
+  "admin/users GET",
+  "recommendations/analytics GET",
+  "recommendations/batch POST",
+];
+
+const FIXED_ARMS: ReadonlySet<string> = new Set<string>([
+  ...TASK1_ARMS,
+  ...TASK2_ARMS,
+]);
 
 /**
  * The arms that compose `requireActiveUser(ctx)` ahead of the role check
  * (DI-48, DEC-58). Their banned-admin row has moved to the fixed shape.
  * FIXED in 05-13, in the same commits as the `requireRole` swap.
  */
-const BAN_GUARDED_ARMS: ReadonlySet<string> = new Set<string>([...TASK1_ARMS]);
+const BAN_GUARDED_ARMS: ReadonlySet<string> = new Set<string>([
+  ...TASK1_ARMS,
+  ...TASK2_ARMS,
+]);
+
+test("FIXED_ARMS and BAN_GUARDED_ARMS hold every one of the 33 former helper arms", () => {
+  const helperArms = ADMIN_ARMS.filter((arm) => !arm.machineKey).map(
+    (arm) => arm.id
+  );
+  expect(helperArms).toHaveLength(33);
+  expect(helperArms.filter((id) => !FIXED_ARMS.has(id))).toEqual([]);
+  expect(helperArms.filter((id) => !BAN_GUARDED_ARMS.has(id))).toEqual([]);
+});
 
 // ─── Environment and fakes ─────────────────────────────────────────────────
 

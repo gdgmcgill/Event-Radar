@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { verifyAdmin } from "@/lib/admin";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireRole } from "@/server/authz/requireRole";
 
 export async function POST() {
   try {
     // Protected: only admins can manually trigger batch scoring
-    const { isAdmin } = await verifyAdmin();
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const ctx = await createRequestContext();
+    const activeUser = requireActiveUser(ctx);
+    if (!activeUser.ok) return activeUser.response;
+    const auth = requireRole(ctx, "admin");
+    if (!auth.ok) return auth.response;
 
     const supabase = createServiceClient();
 

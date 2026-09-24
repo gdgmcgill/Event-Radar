@@ -225,3 +225,192 @@ $ git diff eb62980 -- src/__tests__/api/admin/admin-guard-characterization.test.
 - admin/clubs GET non-admins: 403 Forbidden before and after. The plan text says this arm moves
   from 401 to 403; 05-12 measured that it already answered 403 (PRESERVE P1). No change.
 - Admins: admitted exactly as before (PRESERVE P3 green, unedited).
+
+## Task 2 — featured, organizer, report, stats, users and recommendations (13 files, 16 arms)
+
+Base: 90819ee (Task 1).
+
+### 2a. The swap
+
+The same script and the same replacement as §1a.
+
+$ python3 swap.py <13 files>
+src/app/api/admin/featured/[id]/route.ts: 2 arm(s)
+src/app/api/admin/featured/route.ts: 2 arm(s)
+src/app/api/admin/organizer-requests/[id]/route.ts: 1 arm(s)
+src/app/api/admin/organizer-requests/route.ts: 1 arm(s)
+src/app/api/admin/organizers/route.ts: 1 arm(s)
+src/app/api/admin/reports/[id]/route.ts: 1 arm(s)
+src/app/api/admin/reports/route.ts: 1 arm(s)
+src/app/api/admin/stats/route.ts: 1 arm(s)
+src/app/api/admin/users/[id]/ban/route.ts: 2 arm(s)
+src/app/api/admin/users/[id]/route.ts: 1 arm(s)
+src/app/api/admin/users/route.ts: 1 arm(s)
+src/app/api/recommendations/analytics/route.ts: 1 arm(s)
+src/app/api/recommendations/batch/route.ts: 1 arm(s)
+exit=0
+
+One correction by hand afterwards: in admin/organizer-requests GET the script bound
+`const user = auth.user;` because it matched `user:users(*)` inside the select string. The
+binding was unused and was removed. A string-aware check then confirmed that every remaining
+`const user = auth.user;` and `const supabase = ctx.supabase;` binding in all 25 files is read
+by its arm ("checked 25 files", no UNUSED line). ESLint's config does not flag unused locals, so
+this check stands in for it.
+
+### 2b. Protocol step 2 — the DEFECT suite UNEDITED (Task 1 sets only) against the fixed source: red
+
+$ npx jest --ci src/__tests__/api/admin/admin-guard-defect.test.ts   (excerpt: the failing rows and the summary)
+    ✕ admin/featured/[id] PATCH (32 ms)
+    ✕ admin/featured/[id] DELETE
+    ✕ admin/featured GET (8 ms)
+    ✕ admin/featured POST
+    ✕ admin/organizer-requests/[id] PATCH (6 ms)
+    ✕ admin/organizers GET (5 ms)
+    ✕ admin/reports/[id] PATCH (4 ms)
+    ✕ admin/reports GET (4 ms)
+    ✕ admin/stats GET (3 ms)
+    ✕ admin/users/[id]/ban POST (8 ms)
+    ✕ admin/users/[id]/ban DELETE (1 ms)
+    ✕ admin/users/[id] PATCH (3 ms)
+    ✕ admin/users GET (3 ms)
+    ✕ recommendations/analytics GET (5 ms)
+    ✕ recommendations/batch POST (3 ms)
+    ✕ admin/featured/[id] PATCH
+    ✕ admin/featured/[id] DELETE
+    ✕ admin/featured GET
+    ✕ admin/featured POST
+    ✕ admin/organizer-requests/[id] PATCH
+    ✕ admin/organizer-requests GET (3 ms)
+    ✕ admin/organizers GET
+    ✕ admin/reports/[id] PATCH
+    ✕ admin/reports GET (1 ms)
+    ✕ admin/stats GET
+    ✕ admin/users/[id]/ban POST
+    ✕ admin/users/[id]/ban DELETE
+    ✕ admin/users/[id] PATCH (1 ms)
+    ✕ admin/users GET
+    ✕ recommendations/analytics GET
+    ✕ recommendations/batch POST
+Tests:       31 failed, 42 passed, 73 total
+exit=1
+
+Reading: 14 D1 rows (16 arms minus admin/organizer-requests GET and recommendations/batch POST,
+which already answered anonymous 401), 1 D2 row (recommendations/batch POST: non-admin 401 -> 403)
+and 16 D4 rows. The D2 failure, verbatim:
+
+  ● D2 (F-061): an authenticated non-admin where the arm answers 401 › recommendations/batch POST
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+        "body": Object {
+    -     "error": "Unauthorized",
+    +     "error": "Forbidden",
+        },
+    -   "status": 401,
+    +   "status": 403,
+      }
+
+      202 |       expect(outcome).toEqual({ status: 403, body: { error: "Forbidden" } });
+
+The PRESERVE file, the F-091 file and the analytics/users suite, unedited, against the fixed source:
+
+$ npx jest --ci src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/admin-users-patch-defect.test.ts src/app/api/admin
+Tests:       82 passed, 82 total
+exit=0
+
+### 2c. Protocol step 3 — rows moved: green
+
+The 16 Task 2 ids (TASK2_ARMS) joined FIXED_ARMS and BAN_GUARDED_ARMS. One test was added: every
+one of the 33 former helper arms is in both sets (a subset check, so 05-14 can add the two
+calculate-popularity ids without editing it). No existing assertion changed.
+
+$ npx jest --ci src/__tests__/api/admin src/app/api/admin
+PASS node src/__tests__/api/admin/admin-guard-defect.test.ts
+PASS node src/__tests__/api/admin/admin-guard-characterization.test.ts
+PASS node src/__tests__/api/admin/admin-users-patch-defect.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+Test Suites: 4 passed, 4 total
+Tests:       156 passed, 156 total
+exit=0
+
+### 2d. Protocol step 4 — the pre-fix sources put back: red; restored with cmp
+
+$ (copy the 13 90819ee sources over the fixed ones) && npx jest --ci src/__tests__/api/admin/admin-guard-defect.test.ts
+Tests:       31 failed, 43 passed, 74 total
+exit=1
+failing rows: 31   (the same 31: 14 D1, 1 D2 and 16 D4; the new subset test stays green because it reads the sets, not the source)
+
+$ (copy the fixed sources back) && for f in <13 files>; do cmp "$f" <fixed copy>; done
+cmp identical: src/app/api/admin/featured/[id]/route.ts
+cmp identical: src/app/api/admin/featured/route.ts
+cmp identical: src/app/api/admin/organizer-requests/[id]/route.ts
+cmp identical: src/app/api/admin/organizer-requests/route.ts
+cmp identical: src/app/api/admin/organizers/route.ts
+cmp identical: src/app/api/admin/reports/[id]/route.ts
+cmp identical: src/app/api/admin/reports/route.ts
+cmp identical: src/app/api/admin/stats/route.ts
+cmp identical: src/app/api/admin/users/[id]/ban/route.ts
+cmp identical: src/app/api/admin/users/[id]/route.ts
+cmp identical: src/app/api/admin/users/route.ts
+cmp identical: src/app/api/recommendations/analytics/route.ts
+cmp identical: src/app/api/recommendations/batch/route.ts
+cmp-loop exit=0
+
+### 2e. Gates
+
+$ npx tsc --noEmit
+exit=0
+
+$ npx eslint <15 changed files>
+eslint exit=0
+
+$ node scripts/check-characterization-tags.mjs --all   (excerpt)
+ok 34 files
+
+$ node scripts/check-elevated-ratchet.mjs   (excerpt)
+committed=25 live=22 delta=-3
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+$ command grep -rn "@/lib/admin" src | command grep -v "^src/lib/admin.ts"
+exit=1   (no importer left; the helper file itself is deleted in Task 3)
+
+$ for f in <13 files>; do verbs; requireRole(ctx, "admin"); @/lib/admin; done
+src/app/api/admin/featured/[id]/route.ts: verbs=2 requireRole=2 libadmin=0
+src/app/api/admin/featured/route.ts: verbs=2 requireRole=2 libadmin=0
+src/app/api/admin/organizer-requests/[id]/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/organizer-requests/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/organizers/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/reports/[id]/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/reports/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/stats/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/users/[id]/ban/route.ts: verbs=2 requireRole=2 libadmin=0
+src/app/api/admin/users/[id]/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/users/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/recommendations/analytics/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/recommendations/batch/route.ts: verbs=1 requireRole=1 libadmin=0
+
+$ git diff eb62980 -- src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/adminArmTable.ts | wc -c
+0
+
+### 2f. What changed on the wire (INTENTIONAL BEHAVIOUR CHANGE)
+
+- Anonymous callers at the 14 Task 2 arms that answered 403 Forbidden now get 401
+  {"error":"Unauthorized"} (F-061). admin/organizer-requests GET and recommendations/batch POST
+  already answered anonymous 401 and are unchanged.
+- recommendations/batch POST: an authenticated non-admin now gets 403 {"error":"Forbidden"} instead
+  of 401 {"error":"Unauthorized"} (F-061). This is the only non-admin status change in slice 5.
+- admin/organizer-requests GET non-admins: 403 Forbidden before and after. The plan says this route
+  moves from 401 to 403; 05-12 measured it was already 403 (PRESERVE P1). No change.
+- A banned admin at all 16 Task 2 arms now gets 403 {"error":"Account suspended"} from the handler
+  (DI-48, DEC-58); a caller with no profile row gets 403 {"error":"Profile not found"}.
+- admin/users/[id] PATCH keeps its write logic unchanged (05-14 fixes F-091); the F-091 file is green
+  and unedited.
+- Admins: admitted exactly as before (PRESERVE P3 green, unedited).
+
+After Task 2: FIXED_ARMS and BAN_GUARDED_ARMS each hold all 33 former helper arms. The two
+calculate-popularity arms (F-001 D3 and DI-48 D4) stay open for 05-14.
