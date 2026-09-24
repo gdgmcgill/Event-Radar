@@ -70,14 +70,12 @@ test("a student saves an event and it appears on their profile", async ({ page }
   await expect(unsave, "the save control must report the saved state").toBeVisible();
 
   // After a reload the saved state is no longer React state: EventDetailClient
-  // re-derives it from GET /api/users/saved-events. Wait for that response,
-  // check it carries this event, then check the control agrees with it.
-  const [savedList] = await Promise.all([
-    page.waitForResponse(
-      (r) => r.url().includes("/api/users/saved-events") && r.request().method() === "GET"
-    ),
-    page.reload(),
-  ]);
+  // re-derives it from GET /api/users/saved-events. Read that route directly
+  // after the reload, check it carries this event, then check the control
+  // agrees with it. (DI-38: intercepting the page's own GET raced the reload —
+  // a pre-reload response could satisfy the predicate and lose its body.)
+  await page.reload();
+  const savedList = await page.request.get("/api/users/saved-events");
   expect(savedList.status(), "GET /api/users/saved-events must succeed").toBe(200);
   expect(
     ((await savedList.json()) as { savedEventIds: string[] }).savedEventIds,
