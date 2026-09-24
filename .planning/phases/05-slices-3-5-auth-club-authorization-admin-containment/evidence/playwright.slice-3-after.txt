@@ -1,0 +1,73 @@
+Slice 3 Playwright evidence — plan 05-08
+**Plan:** 05-08 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24
+
+Part 1 (Task 1) is the targeted run of the two new specs. Part 2 (Task 3) is the full suite
+from a clean reset and is appended below it. Every run: port 3000 free before and after
+(lsof exit=1), a production build started by the webServer (never reused), the local stack
+at 127.0.0.1:54321 only. The production server's [WebServer] console lines are removed
+from the Playwright output, as in floor.before.txt block 13; every test line and the
+summary are verbatim. No key, token or password appears in this file.
+
+==============================================================================
+PART 1 — Task 1: the two new specs, on the uncommitted specs over HEAD f7502408b09fb5f5f630c22426bdea05bf354b86
+==============================================================================
+
+$ lsof -i :3000
+exit=1
+$ supabase db reset --local
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Finished supabase db reset on branch main.
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ npx playwright test e2e/specs/ban-and-onboarding-ring.spec.ts e2e/specs/no-profile-row.spec.ts
+
+Running 22 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (393ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (264ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (239ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (237ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (446ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (222ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (448ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (205ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (199ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (240ms)
+  ✓  11 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:57:7 › a permanently banned user (F-062, F-088) › gets a JSON 403 Account suspended on an API write (106ms)
+  ✓  12 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:61:7 › a permanently banned user (F-062, F-088) › gets the same JSON 403 on an API read (78ms)
+  ✓  13 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:65:7 › a permanently banned user (F-062, F-088) › is still sent to the ban page on a page request (149ms)
+  ✓  14 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:74:7 › a user whose suspension is still running (F-088) › gets a JSON 403 Account suspended on an API write (62ms)
+  ✓  15 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:82:7 › a user whose suspension has expired › reads their own saved events, because banned_at alone is not a ban (109ms)
+  ✓  16 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:91:7 › the mid-onboarding student (F-089, DEC-34) › is sent to onboarding from the home page (134ms)
+  ✓  17 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:96:7 › the mid-onboarding student (F-089, DEC-34) › is still sent to onboarding with the needs_onboarding cookie deleted (database truth) (137ms)
+  ✓  18 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:105:7 › the mid-onboarding student (F-089, DEC-34) › gets a JSON 403 Onboarding required on a direct API write (78ms)
+  ✓  19 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:109:7 › the mid-onboarding student (F-089, DEC-34) › can still make the wizard's self-update (exempt from the onboarding guard) (77ms)
+  ✓  20 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:116:7 › the mid-onboarding student (F-089, DEC-34) › can still complete onboarding (exempt from the onboarding guard) (76ms)
+  ✓  21 [chromium] › e2e/specs/no-profile-row.spec.ts:109:7 › a signed-in account with no profile row (DEC-35) › an API call gets a JSON 403 Profile not found (29ms)
+  ✓  22 [chromium] › e2e/specs/no-profile-row.spec.ts:116:7 › a signed-in account with no profile row (DEC-35) › a page request is signed out and sent to /?error=profile_sync_failed (105ms)
+
+  22 passed (11.7s)
+exit=0
+$ lsof -i :3000
+exit=1
+
+The run is 10 setup tests (the setup project is a dependency of every spec) plus the 12 new
+tests: 10 in ban-and-onboarding-ring.spec.ts and 2 in no-profile-row.spec.ts. First run, no retry.
+
+Cleanup proof (T-05-08-01). A service-client query run after the Playwright process exited
+(scratch script: auth.admin.listUsers filtered by email; public.users read by id):
+$ npx tsx <scratch>/authuser-query.ts
+auth.users rows with email p5-no-profile@mail.mcgill.ca: 0 (of 10 auth users)
+mid_onboarding_student onboarding_completed after the run: false
+exit=0
+
+So the temporary auth user is gone (10 auth users = the 10 seeded personas), and the wizard
+calls the spec makes left the persona un-onboarded: POST /api/onboarding/complete clears a
+cookie and writes no row, and the PATCH sent the persona's own seeded name back.
