@@ -26,9 +26,10 @@
  * (`{user && id && …}` in `EventDetailClient.tsx`).
  *
  * What this file pins:
- *   - A1..A4 (the defect): with no user, each route answers 200 and exactly
- *     the empty body above. These four assertions MOVE in 05-06 to 401
- *     `{"error":"Unauthorized"}`, with a ledger row.
+ *   - A1..A4 (the defect, now fixed): with no user, each route answers 401
+ *     and exactly `{"error":"Unauthorized"}`, never the empty body above.
+ *     Until 05-06 these rows pinned the 200 and the empty body; they moved in
+ *     the fixing commit, with a ledger row each.
  *   - S1..S4 (unchanged by the fix): a signed-in caller with a `users` row is
  *     not refused. Each route answers 200 and reaches its first data read
  *     (`club_followers` select, `get_friends` rpc, `get_friends` rpc,
@@ -36,11 +37,17 @@
  *     anonymous rows move.
  *
  * Related pin elsewhere: `src/__tests__/api/events/friends-defect.test.ts`
- * ("an unauthenticated caller short-circuits before any of this") also pins
- * the anonymous `{"friends":[],"count":0}` on `events/[id]/friends`. 05-06
- * moves that assertion too and records it in the ledger.
+ * ("an unauthenticated caller short-circuits before any of this") pinned
+ * the anonymous `{"friends":[],"count":0}` on `events/[id]/friends`. It moved
+ * to the 401 in the same commit, with its own ledger row.
  *
- * Status: OPEN — assertions move in 05-06
+ * Status: FIXED in 05-06 by the commit `fix(05-06): four personalized routes
+ * answer anonymous callers 401 (F-028)`. Each route now opens with
+ * `createRequestContext()` and `requireUser(ctx)`. The four anonymous rows
+ * went red against the fix before they moved, and the moved rows went red
+ * against the pre-fix routes (`evidence/defect-ledger.md`,
+ * `evidence/handler-adoption-events.txt` Task 2). The signed-in rows did not
+ * change.
  *
  * Mock: `@/lib/supabase/server` (createClient → the shared fake's client).
  * `events/[id]/friends` reaches the same factory through `createRequestContext`.
@@ -90,7 +97,8 @@ function setup(signedIn: boolean): FakeSupabase {
 interface Route {
   name: string;
   call: () => Promise<Response>;
-  anonymousBody: unknown;
+  /** The degraded 200 body an anonymous caller got before 05-06. */
+  degradedBody: unknown;
   firstRead: string;
 }
 
@@ -98,19 +106,19 @@ const ROUTES: Route[] = [
   {
     name: "GET /api/events/following",
     call: () => getFollowing(),
-    anonymousBody: { events: [] },
+    degradedBody: { events: [] },
     firstRead: "club_followers.select",
   },
   {
     name: "GET /api/events/friends-activity",
     call: () => getFriendsActivity(),
-    anonymousBody: { events: [] },
+    degradedBody: { events: [] },
     firstRead: "get_friends.rpc",
   },
   {
     name: "GET /api/events/friends-organizing",
     call: () => getFriendsOrganizing(),
-    anonymousBody: { events: [] },
+    degradedBody: { events: [] },
     firstRead: "get_friends.rpc",
   },
   {
@@ -120,7 +128,7 @@ const ROUTES: Route[] = [
         new NextRequest(`http://localhost:3000/api/events/${EVENT_ID}/friends`),
         { params: Promise.resolve({ id: EVENT_ID }) }
       ),
-    anonymousBody: { friends: [], count: 0 },
+    degradedBody: { friends: [], count: 0 },
     firstRead: "get_friends_going_to_event.rpc",
   },
 ];
@@ -133,14 +141,16 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("F-028 anonymous caller on four personalized routes (moves in 05-06)", () => {
+describe("F-028 anonymous caller on four personalized routes (fixed in 05-06)", () => {
   test.each(ROUTES.map((route) => [route.name, route] as const))(
-    "F-028 %s: anonymous gets 200 and an empty payload today",
+    "F-028 %s: anonymous gets 401 Unauthorized, not an empty payload",
     async (_name, route) => {
       setup(false);
       const response = await route.call();
-      expect(response.status).toBe(200);
-      expect(await response.json()).toEqual(route.anonymousBody);
+      expect(response.status).toBe(401);
+      const body = await response.json();
+      expect(body).toEqual({ error: "Unauthorized" });
+      expect(body).not.toEqual(route.degradedBody);
     }
   );
 });

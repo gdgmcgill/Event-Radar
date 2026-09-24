@@ -328,3 +328,138 @@ PASS: the live census is a subset of the committed allow-list
 exit=0
 
 Tag gate: ok 27 (26 + ban-asymmetry-defect.test.ts). Jest: 1012 (−2 moved out of the Phase 4 suites, +2 in the new DEFECT file).
+
+==============================================================================
+Task 2. F-028 — four personalized GETs answer anonymous callers 401 (DEC-39)
+Recorded: 2026-09-24T05:50:11Z · HEAD at capture=aa50ff6ce2f8ae0d95c51c0f090bf1da7ba6326c (Task 1 = aa50ff6); Task 2's changes in the working tree
+==============================================================================
+Routes: events/following, events/friends-activity, events/friends-organizing (createClient + getUser replaced
+by createRequestContext + requireUser), events/[id]/friends (its anonymous branch replaced by requireUser).
+No ban or onboarding guard on these GETs (DEC-34).
+
+Task 2 §1. Ledger step 2 — fixed routes, anonymous-personalized-defect.test.ts and friends-defect.test.ts UNEDITED: red
+$ npx jest --ci --verbose src/__tests__/api/events/anonymous-personalized-defect.test.ts src/__tests__/api/events/friends-defect.test.ts
+FAIL node src/__tests__/api/events/friends-defect.test.ts
+    ✓ the mechanism, kept as history: a PostgREST builder is not iterable, so Set() rejects it (29 ms)
+    ✓ the happy path is unaffected — when the RPC succeeds the fallback never runs (4 ms)
+    ✓ the fallback path passes .in() an array of the caller's followed ids (3 ms)
+    ✓ the fallback issues the reverse-follow query and answers with the mutual follows and a matching count (3 ms)
+    ✓ a caller who follows nobody passes an empty array and answers with nobody (4 ms)
+    ✕ an unauthenticated caller short-circuits before any of this (4 ms)
+    Expected: 200
+    Received: 401
+FAIL node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+    ✕ F-028 GET /api/events/following: anonymous gets 200 and an empty payload today
+    ✕ F-028 GET /api/events/friends-activity: anonymous gets 200 and an empty payload today
+    ✕ F-028 GET /api/events/friends-organizing: anonymous gets 200 and an empty payload today
+    ✕ F-028 GET /api/events/[id]/friends: anonymous gets 200 and an empty payload today
+    ✓ F-028 GET /api/events/following: a signed-in caller with a users row is not refused (1 ms)
+    ✓ F-028 GET /api/events/friends-activity: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/friends-organizing: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/[id]/friends: a signed-in caller with a users row is not refused
+    Expected: 200
+    Received: 401
+    Expected: 200
+    Received: 401
+    Expected: 200
+    Received: 401
+    Expected: 200
+    Received: 401
+Test Suites: 2 failed, 2 total
+Tests:       5 failed, 9 passed, 14 total
+exit=1
+
+Task 2 §2. Ledger step 3 — the four anonymous rows and friends-defect's unauthenticated case moved to 401 {"error":"Unauthorized"}: green
+$ npx jest --ci --verbose src/__tests__/api/events/anonymous-personalized-defect.test.ts src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+    ✓ the mechanism, kept as history: a PostgREST builder is not iterable, so Set() rejects it (6 ms)
+    ✓ the happy path is unaffected — when the RPC succeeds the fallback never runs (4 ms)
+    ✓ the fallback path passes .in() an array of the caller's followed ids (2 ms)
+    ✓ the fallback issues the reverse-follow query and answers with the mutual follows and a matching count (3 ms)
+    ✓ a caller who follows nobody passes an empty array and answers with nobody (2 ms)
+    ✓ an unauthenticated caller short-circuits before any of this (3 ms)
+PASS node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+    ✓ F-028 GET /api/events/following: anonymous gets 401 Unauthorized, not an empty payload (1 ms)
+    ✓ F-028 GET /api/events/friends-activity: anonymous gets 401 Unauthorized, not an empty payload
+    ✓ F-028 GET /api/events/friends-organizing: anonymous gets 401 Unauthorized, not an empty payload (1 ms)
+    ✓ F-028 GET /api/events/[id]/friends: anonymous gets 401 Unauthorized, not an empty payload
+    ✓ F-028 GET /api/events/following: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/friends-activity: a signed-in caller with a users row is not refused (1 ms)
+    ✓ F-028 GET /api/events/friends-organizing: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/[id]/friends: a signed-in caller with a users row is not refused
+Test Suites: 2 passed, 2 total
+Tests:       14 passed, 14 total
+exit=0
+
+Task 2 §3. Ledger step 4 — pre-fix routes restored (git show aa50ff6:<path>) under the moved suites: red; fixed routes restored cmp-identical
+$ npx jest --ci --verbose src/__tests__/api/events/anonymous-personalized-defect.test.ts src/__tests__/api/events/friends-defect.test.ts
+FAIL node src/__tests__/api/events/friends-defect.test.ts
+    ✓ the mechanism, kept as history: a PostgREST builder is not iterable, so Set() rejects it (7 ms)
+    ✓ the happy path is unaffected — when the RPC succeeds the fallback never runs (4 ms)
+    ✓ the fallback path passes .in() an array of the caller's followed ids (3 ms)
+    ✓ the fallback issues the reverse-follow query and answers with the mutual follows and a matching count (2 ms)
+    ✓ a caller who follows nobody passes an empty array and answers with nobody (3 ms)
+    ✕ an unauthenticated caller short-circuits before any of this (2 ms)
+    Expected: 401
+    Received: 200
+FAIL node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+    ✕ F-028 GET /api/events/following: anonymous gets 401 Unauthorized, not an empty payload (1 ms)
+    ✕ F-028 GET /api/events/friends-activity: anonymous gets 401 Unauthorized, not an empty payload
+    ✕ F-028 GET /api/events/friends-organizing: anonymous gets 401 Unauthorized, not an empty payload
+    ✕ F-028 GET /api/events/[id]/friends: anonymous gets 401 Unauthorized, not an empty payload (1 ms)
+    ✓ F-028 GET /api/events/following: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/friends-activity: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/friends-organizing: a signed-in caller with a users row is not refused
+    ✓ F-028 GET /api/events/[id]/friends: a signed-in caller with a users row is not refused (1 ms)
+    Expected: 401
+    Received: 200
+    Expected: 401
+    Received: 200
+    Expected: 401
+    Received: 200
+    Expected: 401
+    Received: 200
+Test Suites: 2 failed, 2 total
+Tests:       5 failed, 9 passed, 14 total
+exit=1
+cmp-identical src/app/api/events/following/route.ts
+cmp-identical src/app/api/events/friends-activity/route.ts
+cmp-identical src/app/api/events/friends-organizing/route.ts
+cmp-identical src/app/api/events/[id]/friends/route.ts
+
+Reading: the four signed-in rows (S1..S4) were green in all three runs and were not edited. The DEFECT file's
+only changes are the docblock (A-rows paragraph, related-pin paragraph, Status), the field rename
+anonymousBody -> degradedBody (kept to assert the old body is gone), and the A-row describe/test titles and assertions.
+
+Task 2 §4. Full suite and gates
+$ npx jest --ci
+Test Suites: 63 passed, 63 total
+Tests:       1012 passed, 1012 total
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ npm run lint | grep problems
+  77:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 19 problems (0 errors, 19 warnings)
+exit=0 (the 19 warnings are in files this plan did not touch)
+$ node scripts/check-characterization-tags.mjs --all | tail -1
+ok 27 files
+exit=0
+$ for f in <4 routes>; do grep -c "requireUser(ctx)" $f; done
+src/app/api/events/following/route.ts 1
+src/app/api/events/friends-activity/route.ts 1
+src/app/api/events/friends-organizing/route.ts 1
+src/app/api/events/[id]/friends/route.ts 1
+$ grep -nE "events: \[\] \}\);$|friends: \[\], count: 0 \}\);$" <4 routes>   # remaining empty-body returns are signed-in paths only
+src/app/api/events/following/route.ts:28:      return NextResponse.json({ events: [] });
+src/app/api/events/following/route.ts:45:      return NextResponse.json({ events: [] });
+src/app/api/events/following/route.ts:55:    return NextResponse.json({ events: [] });
+src/app/api/events/friends-activity/route.ts:23:      return NextResponse.json({ events: [] });
+src/app/api/events/friends-activity/route.ts:38:      return NextResponse.json({ events: [] });
+src/app/api/events/friends-activity/route.ts:86:    return NextResponse.json({ events: [] });
+src/app/api/events/friends-organizing/route.ts:24:      return NextResponse.json({ events: [] });
+src/app/api/events/friends-organizing/route.ts:43:      return NextResponse.json({ events: [] });
+src/app/api/events/friends-organizing/route.ts:59:    return NextResponse.json({ events: [] });
+src/app/api/events/[id]/friends/route.ts:78:      return NextResponse.json({ friends: [], count: 0 });
+src/app/api/events/[id]/friends/route.ts:87:    return NextResponse.json({ friends: [], count: 0 });

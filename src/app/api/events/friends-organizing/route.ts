@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
 import { NextResponse } from "next/server";
 import { getESTToday } from "@/lib/timezone";
 
@@ -7,14 +8,11 @@ import { getESTToday } from "@/lib/timezone";
  */
 export async function GET() {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ events: [] });
-    }
+    const ctx = await createRequestContext();
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const user = auth.user;
+    const supabase = ctx.supabase;
 
     // Get friend IDs (mutual follows)
     const { data: friends, error: friendsError } = await supabase.rpc(

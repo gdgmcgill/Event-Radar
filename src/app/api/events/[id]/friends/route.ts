@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,11 +14,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     const { id: eventId } = await params;
     const ctx = await createRequestContext();
 
-    // Anonymous-tolerant: no requireUser. An anonymous caller gets an empty list.
-    if (!ctx.user) {
-      return NextResponse.json({ friends: [], count: 0 });
-    }
-    const user = ctx.user;
+    // An anonymous caller is told so (401), not handed an empty list (F-028, DEC-39).
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const user = auth.user;
     const supabase = ctx.supabase;
 
     // Get friends (mutual follows) who saved this event

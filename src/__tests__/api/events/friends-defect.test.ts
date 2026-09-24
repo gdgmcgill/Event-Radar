@@ -50,6 +50,12 @@
  * not iterable) stays as a documented historical fact, and `postgrestIn` still
  * runs on every `.in()` argument, so a builder there would still throw. The
  * file keeps its tag and its F-071 citation so the history stays readable.
+ *
+ * One more assertion moved in 05-06, for a different finding: the
+ * unauthenticated case pinned the anonymous 200 `{ friends: [], count: 0 }`,
+ * and F-028 (DEC-39) makes it 401 `{"error":"Unauthorized"}`. It moved in
+ * the commit `fix(05-06): four personalized routes answer anonymous callers
+ * 401 (F-028)`, with a ledger row.
  */
 
 import { NextRequest } from "next/server";
@@ -311,8 +317,9 @@ describe("DEFECT F-071 (fixed in 04-05) — the fallback passes an array of foll
     const res = await GET(createRequest(), createRouteContext());
     const body = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(body).toEqual({ friends: [], count: 0 });
+    // Moved in 05-06 (F-028, DEC-39): was 200 { friends: [], count: 0 }.
+    expect(res.status).toBe(401);
+    expect(body).toEqual({ error: "Unauthorized" });
     expect(mockSupabase.rpc).not.toHaveBeenCalled();
   });
 });
