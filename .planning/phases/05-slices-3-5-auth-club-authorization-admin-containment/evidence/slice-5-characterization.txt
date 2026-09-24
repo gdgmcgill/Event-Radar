@@ -1,0 +1,405 @@
+# Slice 5 characterization — plan 05-12
+# base commit (05-11 head): 4e368b6143490fc60c10bf334a887cfc1b177a94
+# recorded: 2026-09-24T21:14:58Z
+
+================================================================================
+PART 1 — Task 1: the admin arm enumeration (T-05-12-01)
+================================================================================
+
+## 1.1 Command (node, over the tree; script body verbatim)
+$ node enum.cjs
+    const fs=require("fs"),path=require("path");
+    function walk(d){return fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):e.name==="route.ts"?[path.join(d,e.name)]:[])}
+    const files=[...walk("src/app/api/admin"),"src/app/api/recommendations/analytics/route.ts","src/app/api/recommendations/batch/route.ts"].sort();
+    let arms=[],helperArms=0,helperFiles=new Set();
+    for(const f of files){const s=fs.readFileSync(f,"utf8");const re=/export async function (GET|POST|PUT|PATCH|DELETE)\b/g;let m;const verbs=[];while((m=re.exec(s)))verbs.push(m[1]);
+     const calls=(s.match(/await verifyAdmin\(\)/g)||[]).length;
+     if(calls){helperArms+=calls;helperFiles.add(f)}
+     for(const v of verbs){const id=f.replace("src/app/api/","").replace("/route.ts","")+" "+v;arms.push(id);console.log(id.padEnd(48),calls?"verifyAdmin":"NO-HELPER (inline gate)")}}
+    console.log(`files=${files.length} arms=${arms.length} helper_callsites=${helperArms} helper_files=${helperFiles.size}`);
+
+## 1.2 Output (exit=0)
+admin/analytics/events GET                       verifyAdmin
+admin/analytics/users GET                        verifyAdmin
+admin/audit-log GET                              verifyAdmin
+admin/calculate-popularity POST                  NO-HELPER (inline gate)
+admin/calculate-popularity GET                   NO-HELPER (inline gate)
+admin/clubs/[id] PATCH                           verifyAdmin
+admin/clubs GET                                  verifyAdmin
+admin/events/[id]/edits PATCH                    verifyAdmin
+admin/events/[id] PUT                            verifyAdmin
+admin/events/[id] DELETE                         verifyAdmin
+admin/events/[id]/status PATCH                   verifyAdmin
+admin/events GET                                 verifyAdmin
+admin/events POST                                verifyAdmin
+admin/experiments/[id]/results GET               verifyAdmin
+admin/experiments/[id] GET                       verifyAdmin
+admin/experiments/[id] PATCH                     verifyAdmin
+admin/experiments/[id] DELETE                    verifyAdmin
+admin/experiments GET                            verifyAdmin
+admin/experiments POST                           verifyAdmin
+admin/featured/[id] PATCH                        verifyAdmin
+admin/featured/[id] DELETE                       verifyAdmin
+admin/featured GET                               verifyAdmin
+admin/featured POST                              verifyAdmin
+admin/organizer-requests/[id] PATCH              verifyAdmin
+admin/organizer-requests GET                     verifyAdmin
+admin/organizers GET                             verifyAdmin
+admin/reports/[id] PATCH                         verifyAdmin
+admin/reports GET                                verifyAdmin
+admin/stats GET                                  verifyAdmin
+admin/users/[id]/ban POST                        verifyAdmin
+admin/users/[id]/ban DELETE                      verifyAdmin
+admin/users/[id] PATCH                           verifyAdmin
+admin/users GET                                  verifyAdmin
+recommendations/analytics GET                    verifyAdmin
+recommendations/batch POST                       verifyAdmin
+files=26 arms=35 helper_callsites=33 helper_files=25
+exit=0
+
+Reading: 35 arms in 26 files. 33 arms in 25 files call the admin-verify helper
+(matches the before-floor census of 33 callsites); the 2 calculate-popularity arms
+gate on ADMIN_API_KEY alone. ADMIN_ARMS in adminArmTable.ts has 35 descriptors;
+PRESERVE P0 re-derives this list from the tree on every run.
+
+## 1.3 Measurement, before pinning (temporary harness zz-measure-temp.test.ts,
+##     run once then deleted, never committed). Personas: anonymous, student
+##     (onboarded, roles [user]), admin (roles [user,admin]), bannedAdmin
+##     (roles [user,admin], banned_at set, no expiry). ADMIN_API_KEY unset.
+##     Columns: arm, persona, status, body (first 90 chars), writes on the
+##     cookie fake A, writes on the elevated fake B, total calls on B.
+$ npx jest --ci src/__tests__/api/admin/zz-measure-temp.test.ts   (exit=0)
+admin/analytics/events GET               anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/analytics/events GET               student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/analytics/events GET               admin       200   {"dailyCreation":[{"date":"2026-08-25","count":0},{"date":"2026-08-26","count":0},{"date":  | cookieW=[] elevW=[] elevCalls=0
+admin/analytics/events GET               bannedAdmin 200   {"dailyCreation":[{"date":"2026-08-25","count":0},{"date":"2026-08-26","count":0},{"date":  | cookieW=[] elevW=[] elevCalls=0
+admin/analytics/users GET                anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/analytics/users GET                student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/analytics/users GET                admin       200   {"dailySignups":[{"date":"2026-08-25","count":0},{"date":"2026-08-26","count":0},{"date":"  | cookieW=[] elevW=[] elevCalls=0
+admin/analytics/users GET                bannedAdmin 200   {"dailySignups":[{"date":"2026-08-25","count":0},{"date":"2026-08-26","count":0},{"date":"  | cookieW=[] elevW=[] elevCalls=0
+admin/audit-log GET                      anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/audit-log GET                      student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/audit-log GET                      admin       200   {"entries":[],"total":0,"page":1,"totalPages":0}  | cookieW=[] elevW=[] elevCalls=0
+admin/audit-log GET                      bannedAdmin 200   {"entries":[],"total":0,"page":1,"totalPages":0}  | cookieW=[] elevW=[] elevCalls=0
+admin/calculate-popularity POST          anonymous   200   {"success":true,"message":"Processed 1 events","results":{"total":1,"success":1,"failed":0  | cookieW=[] elevW=[update_event_popularity.rpc] elevCalls=2
+admin/calculate-popularity POST          student     200   {"success":true,"message":"Processed 1 events","results":{"total":1,"success":1,"failed":0  | cookieW=[] elevW=[update_event_popularity.rpc] elevCalls=2
+admin/calculate-popularity POST          admin       200   {"success":true,"message":"Processed 1 events","results":{"total":1,"success":1,"failed":0  | cookieW=[] elevW=[update_event_popularity.rpc] elevCalls=2
+admin/calculate-popularity POST          bannedAdmin 200   {"success":true,"message":"Processed 1 events","results":{"total":1,"success":1,"failed":0  | cookieW=[] elevW=[update_event_popularity.rpc] elevCalls=2
+admin/calculate-popularity GET           anonymous   200   {"total_events":1,"events_with_scores":1,"events_without_scores":0,"oldest_calculation":"2  | cookieW=[] elevW=[] elevCalls=2
+admin/calculate-popularity GET           student     200   {"total_events":1,"events_with_scores":1,"events_without_scores":0,"oldest_calculation":"2  | cookieW=[] elevW=[] elevCalls=2
+admin/calculate-popularity GET           admin       200   {"total_events":1,"events_with_scores":1,"events_without_scores":0,"oldest_calculation":"2  | cookieW=[] elevW=[] elevCalls=2
+admin/calculate-popularity GET           bannedAdmin 200   {"total_events":1,"events_with_scores":1,"events_without_scores":0,"oldest_calculation":"2  | cookieW=[] elevW=[] elevCalls=2
+admin/clubs/[id] PATCH                   anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/clubs/[id] PATCH                   student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/clubs/[id] PATCH                   admin       threw "serviceClient.from(...).upsert is not a function"  | cookieW=[] elevW=[clubs.update,admin_audit_log.insert,users.update] elevCalls=5
+admin/clubs/[id] PATCH                   bannedAdmin threw "serviceClient.from(...).upsert is not a function"  | cookieW=[] elevW=[clubs.update,admin_audit_log.insert,users.update] elevCalls=5
+admin/clubs GET                          anonymous   401   {"error":"Unauthorized"}  | cookieW=[] elevW=[] elevCalls=0
+admin/clubs GET                          student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/clubs GET                          admin       200   {"clubs":[{"id":"5eed0000-0000-4000-8000-0a50000000c1","name":"Admin Ring Club","status":"  | cookieW=[] elevW=[] elevCalls=0
+admin/clubs GET                          bannedAdmin 200   {"clubs":[{"id":"5eed0000-0000-4000-8000-0a50000000c1","name":"Admin Ring Club","status":"  | cookieW=[] elevW=[] elevCalls=0
+admin/events/[id]/edits PATCH            anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events/[id]/edits PATCH            student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events/[id]/edits PATCH            admin       400   {"error":"This event has no pending edits"}  | cookieW=[] elevW=[] elevCalls=1
+admin/events/[id]/edits PATCH            bannedAdmin 400   {"error":"This event has no pending edits"}  | cookieW=[] elevW=[] elevCalls=1
+admin/events/[id] PUT                    anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events/[id] PUT                    student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events/[id] PUT                    admin       200   {"event":{"id":"5eed0000-0000-4000-8000-0a50000000e1","title":"Admin Ring Event","status":  | cookieW=[events.update] elevW=[admin_audit_log.insert] elevCalls=1
+admin/events/[id] PUT                    bannedAdmin 200   {"event":{"id":"5eed0000-0000-4000-8000-0a50000000e1","title":"Admin Ring Event","status":  | cookieW=[events.update] elevW=[admin_audit_log.insert] elevCalls=1
+admin/events/[id] DELETE                 anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events/[id] DELETE                 student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events/[id] DELETE                 admin       200   {"success":true}  | cookieW=[events.update] elevW=[admin_audit_log.insert] elevCalls=1
+admin/events/[id] DELETE                 bannedAdmin 200   {"success":true}  | cookieW=[events.update] elevW=[admin_audit_log.insert] elevCalls=1
+admin/events/[id]/status PATCH           anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events/[id]/status PATCH           student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events/[id]/status PATCH           admin       409   {"error":"Cannot transition from 'approved' to 'approved'"}  | cookieW=[] elevW=[] elevCalls=1
+admin/events/[id]/status PATCH           bannedAdmin 409   {"error":"Cannot transition from 'approved' to 'approved'"}  | cookieW=[] elevW=[] elevCalls=1
+admin/events GET                         anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events GET                         student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events GET                         admin       200   {"events":[{"id":"5eed0000-0000-4000-8000-0a50000000e1","title":"Admin Ring Event","status  | cookieW=[] elevW=[] elevCalls=0
+admin/events GET                         bannedAdmin 200   {"events":[{"id":"5eed0000-0000-4000-8000-0a50000000e1","title":"Admin Ring Event","status  | cookieW=[] elevW=[] elevCalls=0
+admin/events POST                        anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events POST                        student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/events POST                        admin       201   {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-  | cookieW=[events.insert] elevW=[admin_audit_log.insert] elevCalls=1
+admin/events POST                        bannedAdmin 201   {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-  | cookieW=[events.insert] elevW=[admin_audit_log.insert] elevCalls=1
+admin/experiments/[id]/results GET       anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id]/results GET       student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id]/results GET       admin       200   {"experiment":{"id":"5eed0000-0000-4000-8000-0a50000000a1","name":"admin-ring-existing","s  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id]/results GET       bannedAdmin 200   {"experiment":{"id":"5eed0000-0000-4000-8000-0a50000000a1","name":"admin-ring-existing","s  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id] GET               anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id] GET               student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id] GET               admin       200   {"experiment":{"id":"5eed0000-0000-4000-8000-0a50000000a1","name":"admin-ring-existing","s  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id] GET               bannedAdmin 200   {"experiment":{"id":"5eed0000-0000-4000-8000-0a50000000a1","name":"admin-ring-existing","s  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id] PATCH             anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id] PATCH             student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id] PATCH             admin       200   {"experiment":{"id":"5eed0000-0000-4000-8000-0a50000000a1","name":"admin-ring-existing","s  | cookieW=[experiments.update] elevW=[] elevCalls=0
+admin/experiments/[id] PATCH             bannedAdmin 200   {"experiment":{"id":"5eed0000-0000-4000-8000-0a50000000a1","name":"admin-ring-existing","s  | cookieW=[experiments.update] elevW=[] elevCalls=0
+admin/experiments/[id] DELETE            anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id] DELETE            student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments/[id] DELETE            admin       200   {"ok":true}  | cookieW=[experiments.delete] elevW=[] elevCalls=0
+admin/experiments/[id] DELETE            bannedAdmin 200   {"ok":true}  | cookieW=[experiments.delete] elevW=[] elevCalls=0
+admin/experiments GET                    anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments GET                    student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments GET                    admin       200   {"experiments":[{"id":"5eed0000-0000-4000-8000-0a50000000a1","name":"admin-ring-existing",  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments GET                    bannedAdmin 200   {"experiments":[{"id":"5eed0000-0000-4000-8000-0a50000000a1","name":"admin-ring-existing",  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments POST                   anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments POST                   student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/experiments POST                   admin       201   {"experiment":{"id":"fake-experiments-1","created_at":"2026-01-01T00:00:00.000Z","updated_  | cookieW=[experiments.insert,experiment_variants.insert] elevW=[] elevCalls=0
+admin/experiments POST                   bannedAdmin 201   {"experiment":{"id":"fake-experiments-1","created_at":"2026-01-01T00:00:00.000Z","updated_  | cookieW=[experiments.insert,experiment_variants.insert] elevW=[] elevCalls=0
+admin/featured/[id] PATCH                anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/featured/[id] PATCH                student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/featured/[id] PATCH                admin       200   {"featured":{"id":"5eed0000-0000-4000-8000-0a50000000f1","event_id":"5eed0000-0000-4000-80  | cookieW=[featured_events.update] elevW=[admin_audit_log.insert] elevCalls=1
+admin/featured/[id] PATCH                bannedAdmin 200   {"featured":{"id":"5eed0000-0000-4000-8000-0a50000000f1","event_id":"5eed0000-0000-4000-80  | cookieW=[featured_events.update] elevW=[admin_audit_log.insert] elevCalls=1
+admin/featured/[id] DELETE               anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/featured/[id] DELETE               student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/featured/[id] DELETE               admin       200   {"success":true}  | cookieW=[featured_events.delete] elevW=[admin_audit_log.insert] elevCalls=1
+admin/featured/[id] DELETE               bannedAdmin 200   {"success":true}  | cookieW=[featured_events.delete] elevW=[admin_audit_log.insert] elevCalls=1
+admin/featured GET                       anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/featured GET                       student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/featured GET                       admin       200   {"active":[],"upcoming":[{"id":"5eed0000-0000-4000-8000-0a50000000f1","event_id":"5eed0000  | cookieW=[] elevW=[] elevCalls=0
+admin/featured GET                       bannedAdmin 200   {"active":[],"upcoming":[{"id":"5eed0000-0000-4000-8000-0a50000000f1","event_id":"5eed0000  | cookieW=[] elevW=[] elevCalls=0
+admin/featured POST                      anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/featured POST                      student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/featured POST                      admin       201   {"featured":{"id":"fake-featured_events-1","created_at":"2026-01-01T00:00:00.000Z","update  | cookieW=[featured_events.insert] elevW=[admin_audit_log.insert] elevCalls=1
+admin/featured POST                      bannedAdmin 201   {"featured":{"id":"fake-featured_events-1","created_at":"2026-01-01T00:00:00.000Z","update  | cookieW=[featured_events.insert] elevW=[admin_audit_log.insert] elevCalls=1
+admin/organizer-requests/[id] PATCH      anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/organizer-requests/[id] PATCH      student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/organizer-requests/[id] PATCH      admin       threw "serviceClient.from(...).upsert is not a function"  | cookieW=[] elevW=[organizer_requests.update,admin_audit_log.insert,users.update] elevCalls=5
+admin/organizer-requests/[id] PATCH      bannedAdmin threw "serviceClient.from(...).upsert is not a function"  | cookieW=[] elevW=[organizer_requests.update,admin_audit_log.insert,users.update] elevCalls=5
+admin/organizer-requests GET             anonymous   401   {"error":"Unauthorized"}  | cookieW=[] elevW=[] elevCalls=0
+admin/organizer-requests GET             student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/organizer-requests GET             admin       200   {"requests":[{"id":"5eed0000-0000-4000-8000-0a50000000b1","user_id":"5eed0000-0000-4000-80  | cookieW=[] elevW=[] elevCalls=0
+admin/organizer-requests GET             bannedAdmin 200   {"requests":[{"id":"5eed0000-0000-4000-8000-0a50000000b1","user_id":"5eed0000-0000-4000-80  | cookieW=[] elevW=[] elevCalls=0
+admin/organizers GET                     anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/organizers GET                     student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/organizers GET                     admin       threw "supabase.from(...).select(...).contains is not a function"  | cookieW=[] elevW=[] elevCalls=0
+admin/organizers GET                     bannedAdmin threw "supabase.from(...).select(...).contains is not a function"  | cookieW=[] elevW=[] elevCalls=0
+admin/reports/[id] PATCH                 anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/reports/[id] PATCH                 student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/reports/[id] PATCH                 admin       200   {"success":true}  | cookieW=[] elevW=[event_reports.update,admin_audit_log.insert] elevCalls=3
+admin/reports/[id] PATCH                 bannedAdmin 200   {"success":true}  | cookieW=[] elevW=[event_reports.update,admin_audit_log.insert] elevCalls=3
+admin/reports GET                        anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/reports GET                        student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/reports GET                        admin       200   {"reports":[{"id":"5eed0000-0000-4000-8000-0a50000000d1","event_id":"5eed0000-0000-4000-80  | cookieW=[] elevW=[] elevCalls=2
+admin/reports GET                        bannedAdmin 200   {"reports":[{"id":"5eed0000-0000-4000-8000-0a50000000d1","event_id":"5eed0000-0000-4000-80  | cookieW=[] elevW=[] elevCalls=2
+admin/stats GET                          anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/stats GET                          student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/stats GET                          admin       200   {"totalEvents":1,"pendingEvents":0,"approvedEvents":1,"totalUsers":2,"engagedUsers":0,"las  | cookieW=[] elevW=[] elevCalls=0
+admin/stats GET                          bannedAdmin 200   {"totalEvents":1,"pendingEvents":0,"approvedEvents":1,"totalUsers":2,"engagedUsers":0,"las  | cookieW=[] elevW=[] elevCalls=0
+admin/users/[id]/ban POST                anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/users/[id]/ban POST                student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/users/[id]/ban POST                admin       200   {"success":true}  | cookieW=[] elevW=[users.update,notifications.insert,admin_audit_log.insert] elevCalls=4
+admin/users/[id]/ban POST                bannedAdmin 200   {"success":true}  | cookieW=[] elevW=[users.update,notifications.insert,admin_audit_log.insert] elevCalls=4
+admin/users/[id]/ban DELETE              anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/users/[id]/ban DELETE              student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/users/[id]/ban DELETE              admin       409   {"error":"User is not currently banned"}  | cookieW=[] elevW=[] elevCalls=1
+admin/users/[id]/ban DELETE              bannedAdmin 409   {"error":"User is not currently banned"}  | cookieW=[] elevW=[] elevCalls=1
+admin/users/[id] PATCH                   anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/users/[id] PATCH                   student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/users/[id] PATCH                   admin       200   {"user":{"id":"5eed0000-0000-4000-8000-0a5000000002","email":"admin.ring.target@mail.mcgil  | cookieW=[users.update] elevW=[] elevCalls=0
+admin/users/[id] PATCH                   bannedAdmin 200   {"user":{"id":"5eed0000-0000-4000-8000-0a5000000002","email":"admin.ring.target@mail.mcgil  | cookieW=[users.update] elevW=[] elevCalls=0
+admin/users GET                          anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/users GET                          student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+admin/users GET                          admin       200   {"users":[{"id":"5eed0000-0000-4000-8000-0a5000000001","email":"admin.ring.caller@mail.mcg  | cookieW=[] elevW=[] elevCalls=0
+admin/users GET                          bannedAdmin 200   {"users":[{"id":"5eed0000-0000-4000-8000-0a5000000001","email":"admin.ring.caller@mail.mcg  | cookieW=[] elevW=[] elevCalls=0
+recommendations/analytics GET            anonymous   403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+recommendations/analytics GET            student     403   {"error":"Forbidden"}  | cookieW=[] elevW=[] elevCalls=0
+recommendations/analytics GET            admin       200   {"period":"7d","since":"2026-09-17T21:13:01.284Z","metrics":{"impressions":0,"clicks":0,"s  | cookieW=[] elevW=[] elevCalls=0
+recommendations/analytics GET            bannedAdmin 200   {"period":"7d","since":"2026-09-17T21:13:01.284Z","metrics":{"impressions":0,"clicks":0,"s  | cookieW=[] elevW=[] elevCalls=0
+recommendations/batch POST               anonymous   401   {"error":"Unauthorized"}  | cookieW=[] elevW=[] elevCalls=0
+recommendations/batch POST               student     401   {"error":"Unauthorized"}  | cookieW=[] elevW=[] elevCalls=0
+recommendations/batch POST               admin       200   {"success":true,"message":"Batch scoring completed","timestamp":"2026-09-24T21:13:01.286Z"  | cookieW=[] elevW=[compute_user_scores.rpc] elevCalls=1
+recommendations/batch POST               bannedAdmin 200   {"success":true,"message":"Batch scoring completed","timestamp":"2026-09-24T21:13:01.286Z"  | cookieW=[] elevW=[compute_user_scores.rpc] elevCalls=1
+
+## 1.4 Measured deny bytes per arm (derived from 1.3)
+- anonymous: 403 {"error":"Forbidden"} at 30 helper arms; 401 {"error":"Unauthorized"} at
+  admin/clubs GET, admin/organizer-requests GET, recommendations/batch POST; 200 at both
+  calculate-popularity arms (F-001).
+- student: 403 {"error":"Forbidden"} at 32 arms, INCLUDING admin/clubs GET and
+  admin/organizer-requests GET; 401 {"error":"Unauthorized"} at recommendations/batch POST
+  only; 200 at both calculate-popularity arms (F-001).
+- admin: admitted at all 35 (200/201/400/409, or a throw on a fake gap: upsert at
+  admin/clubs/[id] PATCH and admin/organizer-requests/[id] PATCH, contains at
+  admin/organizers GET).
+- bannedAdmin: identical to admin at all 35 arms (DI-48: the helper reads roles only).
+
+## 1.5 Research § B correction (measurement wins)
+Research § B and DEC-44's evidence say admin/clubs GET and admin/organizer-requests GET answer
+401 to BOTH anonymous and non-admin callers. Source (route.ts:6-12 in both files) has an
+explicit '!user -> 401' branch followed by '!isAdmin -> 403'; the measurement confirms
+student -> 403 Forbidden. Only recommendations/batch POST answers 401 to a non-admin. So the
+F-061 non-admin row (D2) covers one arm, and the two GETs' student 403 is PRESERVE (it already
+equals endpoints.json onboarded_student 403).
+
+## 1.6 The suites against unmodified source
+$ npx jest --ci src/__tests__/api/admin --verbose
+PASS node src/__tests__/api/admin/admin-guard-defect.test.ts
+  D1 (F-061): an anonymous caller at a helper arm
+    ✓ covers 30 arms (1 ms)
+    ✓ admin/analytics/events GET (3 ms)
+    ✓ admin/analytics/users GET (1 ms)
+    ✓ admin/audit-log GET
+    ✓ admin/clubs/[id] PATCH (2 ms)
+    ✓ admin/events/[id]/edits PATCH (1 ms)
+    ✓ admin/events/[id] PUT
+    ✓ admin/events/[id] DELETE (1 ms)
+    ✓ admin/events/[id]/status PATCH
+    ✓ admin/events GET (14 ms)
+    ✓ admin/events POST (1 ms)
+    ✓ admin/experiments/[id]/results GET
+    ✓ admin/experiments/[id] GET (1 ms)
+    ✓ admin/experiments/[id] PATCH
+    ✓ admin/experiments/[id] DELETE (1 ms)
+    ✓ admin/experiments GET
+    ✓ admin/experiments POST
+    ✓ admin/featured/[id] PATCH (1 ms)
+    ✓ admin/featured/[id] DELETE
+    ✓ admin/featured GET (1 ms)
+    ✓ admin/featured POST
+    ✓ admin/organizer-requests/[id] PATCH (1 ms)
+    ✓ admin/organizers GET (2 ms)
+    ✓ admin/reports/[id] PATCH
+    ✓ admin/reports GET (1 ms)
+    ✓ admin/stats GET
+    ✓ admin/users/[id]/ban POST (1 ms)
+    ✓ admin/users/[id]/ban DELETE
+    ✓ admin/users/[id] PATCH (1 ms)
+    ✓ admin/users GET
+    ✓ recommendations/analytics GET (1 ms)
+  D2 (F-061): an authenticated non-admin where the arm answers 401
+    ✓ covers exactly recommendations/batch POST
+    ✓ recommendations/batch POST
+  D3 (F-001): calculate-popularity with ADMIN_API_KEY unset
+    ✓ covers both verbs
+    ✓ admin/calculate-popularity POST as anonymous (1 ms)
+    ✓ admin/calculate-popularity POST as student (1 ms)
+    ✓ admin/calculate-popularity GET as anonymous
+    ✓ admin/calculate-popularity GET as student
+  D4 (DI-48): an admin whose ban is in force
+    ✓ admin/analytics/events GET
+    ✓ admin/analytics/users GET (1 ms)
+    ✓ admin/audit-log GET
+    ✓ admin/calculate-popularity POST
+    ✓ admin/calculate-popularity GET
+    ✓ admin/clubs/[id] PATCH (1 ms)
+    ✓ admin/clubs GET
+    ✓ admin/events/[id]/edits PATCH
+    ✓ admin/events/[id] PUT
+    ✓ admin/events/[id] DELETE
+    ✓ admin/events/[id]/status PATCH
+    ✓ admin/events GET
+    ✓ admin/events POST (2 ms)
+    ✓ admin/experiments/[id]/results GET
+    ✓ admin/experiments/[id] GET
+    ✓ admin/experiments/[id] PATCH (1 ms)
+    ✓ admin/experiments/[id] DELETE
+    ✓ admin/experiments GET
+    ✓ admin/experiments POST
+    ✓ admin/featured/[id] PATCH
+    ✓ admin/featured/[id] DELETE
+    ✓ admin/featured GET (7 ms)
+    ✓ admin/featured POST (1 ms)
+    ✓ admin/organizer-requests/[id] PATCH
+    ✓ admin/organizer-requests GET
+    ✓ admin/organizers GET (1 ms)
+    ✓ admin/reports/[id] PATCH
+    ✓ admin/reports GET
+    ✓ admin/stats GET
+    ✓ admin/users/[id]/ban POST
+    ✓ admin/users/[id]/ban DELETE (1 ms)
+    ✓ admin/users/[id] PATCH
+    ✓ admin/users GET
+    ✓ recommendations/analytics GET
+    ✓ recommendations/batch POST
+PASS node src/__tests__/api/admin/admin-guard-characterization.test.ts
+  P0: the admin arm table equals the tree
+    ✓ holds exactly the exported verbs of the admin family (35 arms) (1 ms)
+    ✓ flags exactly the measured arms
+  P1: an authenticated non-admin gets 403 Forbidden and nothing is written
+    ✓ covers 32 arms
+    ✓ admin/analytics/events GET
+    ✓ admin/analytics/users GET (1 ms)
+    ✓ admin/audit-log GET
+    ✓ admin/clubs/[id] PATCH (1 ms)
+    ✓ admin/clubs GET
+    ✓ admin/events/[id]/edits PATCH
+    ✓ admin/events/[id] PUT (1 ms)
+    ✓ admin/events/[id] DELETE
+    ✓ admin/events/[id]/status PATCH (1 ms)
+    ✓ admin/events GET (4 ms)
+    ✓ admin/events POST
+    ✓ admin/experiments/[id]/results GET
+    ✓ admin/experiments/[id] GET
+    ✓ admin/experiments/[id] PATCH
+    ✓ admin/experiments/[id] DELETE
+    ✓ admin/experiments GET (1 ms)
+    ✓ admin/experiments POST
+    ✓ admin/featured/[id] PATCH
+    ✓ admin/featured/[id] DELETE
+    ✓ admin/featured GET
+    ✓ admin/featured POST (1 ms)
+    ✓ admin/organizer-requests/[id] PATCH
+    ✓ admin/organizer-requests GET
+    ✓ admin/organizers GET (1 ms)
+    ✓ admin/reports/[id] PATCH
+    ✓ admin/reports GET
+    ✓ admin/stats GET (1 ms)
+    ✓ admin/users/[id]/ban POST
+    ✓ admin/users/[id]/ban DELETE
+    ✓ admin/users/[id] PATCH (1 ms)
+    ✓ admin/users GET
+    ✓ recommendations/analytics GET
+  P2: an anonymous caller gets 401 Unauthorized at the three arms that answer it today
+    ✓ admin/clubs GET (1 ms)
+    ✓ admin/organizer-requests GET
+    ✓ recommendations/batch POST
+  P3: an admin is admitted at every arm (neither 401 nor 403)
+    ✓ admin/analytics/events GET (1 ms)
+    ✓ admin/analytics/users GET
+    ✓ admin/audit-log GET
+    ✓ admin/calculate-popularity POST (1 ms)
+    ✓ admin/calculate-popularity GET
+    ✓ admin/clubs/[id] PATCH
+    ✓ admin/clubs GET
+    ✓ admin/events/[id]/edits PATCH (1 ms)
+    ✓ admin/events/[id] PUT
+    ✓ admin/events/[id] DELETE
+    ✓ admin/events/[id]/status PATCH (1 ms)
+    ✓ admin/events GET
+    ✓ admin/events POST
+    ✓ admin/experiments/[id]/results GET (1 ms)
+    ✓ admin/experiments/[id] GET
+    ✓ admin/experiments/[id] PATCH
+    ✓ admin/experiments/[id] DELETE
+    ✓ admin/experiments GET (1 ms)
+    ✓ admin/experiments POST
+    ✓ admin/featured/[id] PATCH
+    ✓ admin/featured/[id] DELETE (1 ms)
+    ✓ admin/featured GET
+    ✓ admin/featured POST
+    ✓ admin/organizer-requests/[id] PATCH
+    ✓ admin/organizer-requests GET (1 ms)
+    ✓ admin/organizers GET
+    ✓ admin/reports/[id] PATCH
+    ✓ admin/reports GET (1 ms)
+    ✓ admin/stats GET
+    ✓ admin/users/[id]/ban POST
+    ✓ admin/users/[id]/ban DELETE (1 ms)
+    ✓ admin/users/[id] PATCH
+    ✓ admin/users GET
+    ✓ recommendations/analytics GET
+    ✓ recommendations/batch POST (1 ms)
+Test Suites: 2 passed, 2 total
+Tests:       146 passed, 146 total
+Snapshots:   0 total
+Time:        0.26 s, estimated 1 s
+Ran all test suites matching src/__tests__/api/admin.
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ node scripts/check-characterization-tags.mjs src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/admin-guard-defect.test.ts
+ok   PRESERVE src/__tests__/api/admin/admin-guard-characterization.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-guard-defect.test.ts (F-061, F-001, F-040)
+ok 2 files
+exit=0
+$ grep -c "^    id: \"" src/__tests__/api/admin/adminArmTable.ts
+35
