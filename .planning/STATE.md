@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-09-24T04:37:09.503Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-09-24T04:48:16.196Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 62
-  completed_plans: 44
+  completed_plans: 45
   percent: 50
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
-Plan: 2 of 19
+Plan: 3 of 19
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 05 execution started
 
-Progress: [███████░░░] 71%
+Progress: [███████░░░] 73%
 
 ## Performance Metrics
 
@@ -97,6 +97,7 @@ Progress: [███████░░░] 71%
 | Phase 04 P10 | 8min | 2 tasks | 14 files |
 | Phase 04 P11 | 11min | 3 tasks | 12 files |
 | Phase 05 P01 | 14min | 3 tasks | 10 files |
+| Phase 05 P02 | 9min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -242,6 +243,8 @@ Recent decisions affecting current work:
 - [Phase 05]: F-086..F-091 registered; the C16 re-pointing moved 41 findings to 06/07/08, leaving 22 owned by Phase 5; F-060/F-068 stay null (outside the map)
 - [Phase 05]: DEC-51 makes the Upstash install a BLOCKING package-legitimacy checkpoint in 05-18, overriding CONTEXT's rule-resolved 'not blocking'
 - [Phase 05]: DI-38 closed (4a9e272, 10/10 repeats); before-floor on 4a9e272 is Jest 744/0, pgTAP 86, Playwright 40/0
+- [Phase 05]: 05-02: the plan's diff-stat pathspec (src/app, src/lib) necessarily lists this plan's own new test files; no-production-change is proven with the same pathspec excluding *.test.ts(x) plus name-status showing A lines only
+- [Phase 05]: 05-02: F-077's register recommended_fix leaves a slash-backslash next off-origin (mutation cycle 6c); 05-05's plan already rejects a backslash second character and requires a same-origin result
 
 ### Pending Todos
 
@@ -293,7 +296,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T04:37:09.498Z
-Stopped at: Completed 05-01-PLAN.md
-Next: execute 05-02-PLAN.md (slice 3 characterization, the ring). Compare against `05-…/evidence/floor.before.txt` (base 4a9e272) and cite F-086..F-091. DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
+Last session: 2026-09-24T04:48:16.192Z
+Stopped at: Completed 05-02-PLAN.md
+Next: execute 05-03-PLAN.md (slice 3 characterization, the write handlers). 05-02's ring net is in place: tag gate ok 23, Jest 785/785 (evidence/slice-3-characterization-ring.txt). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
 Resume file: None
