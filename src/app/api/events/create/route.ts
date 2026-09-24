@@ -1,30 +1,30 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { validateEventDates } from "@/lib/dateValidation";
 import { sanitizeText } from "@/lib/sanitize";
 import { computeEventContentHash } from "@/lib/contentHash";
-import { checkBanStatus } from "@/lib/ban";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 
 export async function POST(request: NextRequest) {
   try {
-    const banResponse = await checkBanStatus();
-    if (banResponse) return banResponse;
+    const ctx = await createRequestContext();
 
-    const supabase = await createClient();
-
-    // Verify authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Keeps this arm's own anonymous bytes (DEC-34).
+    if (!ctx.user) {
       return NextResponse.json(
         { error: "You must be signed in to create an event" },
         { status: 401 }
       );
     }
+
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
+    const supabase = ctx.supabase;
 
     const body = await request.json();
     const { start_date, end_date, tags, image_url, category, is_free, price, rsvp_link } = body;

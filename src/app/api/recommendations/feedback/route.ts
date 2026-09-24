@@ -9,7 +9,9 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { checkBanStatus } from "@/lib/ban";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import type { NextRequest } from "next/server";
 import type { RecommendationFeedbackAction } from "@/types";
 import type { Database } from "@/lib/supabase/types";
@@ -86,13 +88,25 @@ export async function GET(request: NextRequest) {
 /** POST: thumbs (event_id + feedback) or analytics (event_id + recommendation_rank + action) */
 export async function POST(request: NextRequest) {
   try {
-    const banResponse = await checkBanStatus();
-    if (banResponse) return banResponse;
+    const ctx = await createRequestContext();
 
-    const supabase = await createClient();
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
+    // Keeps this arm's own anonymous bytes (DEC-34). Because an anonymous
+    // caller stops here, the body `user_id` fallbacks below are unreachable:
+    // a request with no session can no longer write feedback attributed to a
+    // user id it names.
+    if (!ctx.user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Must be logged in to submit feedback." },
+        { status: 401 }
+      );
+    }
+
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const authUser = active.user;
+    const supabase = ctx.supabase;
 
     const body = (await request.json()) as ThumbsBody | AnalyticsBody;
 

@@ -8,9 +8,9 @@
  */
 
 import { NextResponse } from "next/server";
-import { checkBanStatus } from "@/lib/ban";
 import { createRequestContext } from "@/server/context";
-import { requireUser } from "@/server/authz/requireUser";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { notFound, serverError } from "@/server/errors";
 import { ok } from "@/server/http";
 import type { NextRequest } from "next/server";
@@ -23,12 +23,14 @@ interface RouteContext {
 
 export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   try {
-    const { id: eventId } = await params;
     const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
 
-    const auth = requireUser(ctx);
-    if (!auth.ok) return auth.response;
-    const user = auth.user;
+    const { id: eventId } = await params;
 
     const { error: deleteError } = await ctx.supabase
       .from("saved_events")
@@ -50,16 +52,15 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
 
 export async function POST(_request: NextRequest, { params }: RouteContext) {
   try {
-    const banResponse = await checkBanStatus();
-    if (banResponse) return banResponse;
+    const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
+    const supabase = ctx.supabase;
 
     const { id: eventId } = await params;
-    const ctx = await createRequestContext();
-
-    const auth = requireUser(ctx);
-    if (!auth.ok) return auth.response;
-    const user = auth.user;
-    const supabase = ctx.supabase;
 
     // Check if event exists
     const { data: eventExists, error: eventError } = await supabase

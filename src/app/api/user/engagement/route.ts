@@ -5,7 +5,9 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { checkBanStatus } from "@/lib/ban";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 
 /**
  * @swagger
@@ -117,27 +119,13 @@ export async function GET() {
  */
 export async function POST() {
   try {
-    const banResponse = await checkBanStatus();
-    if (banResponse) return banResponse;
-
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    // Supabase returns an auth error when no session exists; that should be a 401.
-    if (authError || !user) {
-      if (authError) {
-        console.warn("Unauthenticated request to /api/user/engagement:", authError);
-      }
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
+    const supabase = ctx.supabase;
 
     // Call the database function to recalculate engagement
     // Using type assertion since the function isn't in generated types yet

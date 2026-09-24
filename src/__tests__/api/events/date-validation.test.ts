@@ -105,9 +105,19 @@ beforeEach(async () => {
   mockAuthError = null;
 
   // Reset default Supabase mock to return a valid profile with admin role
-  mockSupabase.from.mockImplementation(() =>
+  mockSupabase.from.mockImplementation((table?: string) =>
     createMockChain({
-      data: { id: "evt-1", club_id: null, roles: ["admin"], name: "Daniel" },
+      data: {
+        id: "evt-1",
+        club_id: null,
+        roles: ["admin"],
+        name: "Daniel",
+        // 05-06: the caller's profile row is active and onboarded (the request
+        // context reads it for the ban and onboarding guards)
+        ...(table === "users"
+          ? { onboarding_completed: true, banned_at: null, ban_expires_at: null }
+          : {}),
+      },
       error: null,
     })
   );

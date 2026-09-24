@@ -5,6 +5,9 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { transformEventFromDB } from "@/lib/tagMapping";
 import type { NextRequest } from "next/server";
 import { validateEventDates, isValidISODate } from "@/lib/dateValidation";
@@ -159,21 +162,24 @@ export async function PATCH(
   { params }: RouteParams
 ) {
   try {
-    const { id } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
 
-    // Verify authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Keeps this arm's own anonymous bytes (DEC-34).
+    if (!ctx.user) {
       return NextResponse.json(
         { error: "You must be signed in to edit an event" },
         { status: 401 }
       );
     }
+
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
+    const supabase = ctx.supabase;
+
+    const { id } = await params;
 
     // Fetch the event to check ownership / club
     const { data: event, error: eventError } = await supabase
@@ -352,17 +358,15 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
+    const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
+    const supabase = ctx.supabase;
+
     const { id } = await params;
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     // Fetch event
     const { data: event, error: eventError } = await supabase

@@ -446,19 +446,3 @@ describe("DELETE /api/events/[id]/rsvp — cancel", () => {
     expect(callerRows(fake).map((r) => r.status)).toEqual(["going"]);
   });
 });
-
-describe("ban asymmetry — pinned for Phase 5 (DEC-24)", () => {
-  it("honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled", async () => {
-    const mine = callerRow(EVENT_ID, "going");
-    const fake = setup({
-      tables: withTables({
-        users: [profile({ banned_at: "2026-01-01T00:00:00+00:00" })],
-        rsvps: [...crowd(), mine],
-      }),
-    });
-    const res = await DELETE(bodyRequest("DELETE", { user_id: CALLER.id }), context());
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true, message: "RSVP cancelled" });
-    expect(callerRows(fake).map((r) => r.status)).toEqual(["cancelled"]);
-  });
-});

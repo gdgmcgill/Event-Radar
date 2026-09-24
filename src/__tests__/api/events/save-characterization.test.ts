@@ -340,18 +340,3 @@ describe("POST /api/events/[id]/save — toggle", () => {
     expect(await res.json()).toEqual({ error: "Internal server error" });
   });
 });
-
-describe("ban asymmetry — pinned for Phase 5 (DEC-24)", () => {
-  it("honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed", async () => {
-    const fake = setup({
-      tables: withTables({
-        users: [profile({ banned_at: "2026-01-01T00:00:00+00:00" })],
-        saved_events: [{ id: "s1", user_id: CALLER.id, event_id: EVENT_ID }],
-      }),
-    });
-    const res = await DELETE(request("DELETE"), context());
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ saved: false });
-    expect(savedRows(fake)).toEqual([]);
-  });
-});

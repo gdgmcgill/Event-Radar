@@ -1,0 +1,330 @@
+Handler adoption, events family — plan 05-06 (DEC-34, DEC-39; F-088, F-089, F-062, F-028)
+**Plan:** 05-06 · **Phase:** 05 · **Recorded:** 2026-09-24T05:47:42Z
+HEAD at capture=9c33617ba666015a1a108fd8bbf34065a8572075 (the 05-05 head is 9c33617; Task 1's changes are in the working tree and are committed with this file)
+
+Every block: the command, its output filtered to PASS/FAIL, the failing test titles (●), Expected/Received and counts (Jest stack frames dropped), then exit=<code>.
+
+==============================================================================
+Task 1 §1. Ledger step 2 — fixed handlers, DEFECT rows and the two moved blocks UNEDITED: red
+==============================================================================
+The 11 route files carry the guards; write-handlers-ring-defect.test.ts has GUARDED empty; the two
+"ban asymmetry — pinned for Phase 5 (DEC-24)" blocks are still in the two Phase 4 suites.
+$ npx jest --ci src/__tests__/api/auth-ring src/__tests__/api/events/save-characterization.test.ts src/__tests__/api/events/rsvp-characterization.test.ts
+FAIL node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id]/report POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id]/reviews POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id] PATCH: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id] DELETE: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id]/rsvp DELETE: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id]/save DELETE: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/upload-image POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/appeal POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/invite POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/report POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/reviews POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id] PATCH: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id] DELETE: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/rsvp POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/rsvp DELETE: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/save DELETE: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/save POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/create POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/upload-image POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 recommendations/feedback POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 user/engagement POST: no profile row
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/appeal POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/invite POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/report POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/reviews POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id] PATCH: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id] DELETE: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/rsvp POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/rsvp DELETE: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/save DELETE: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/save POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/create POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/upload-image POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 recommendations/feedback POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 user/engagement POST: un-onboarded caller
+    Expected: false
+    Received: true
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+FAIL node src/__tests__/api/events/save-characterization.test.ts
+  ● ban asymmetry — pinned for Phase 5 (DEC-24) › honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed
+    Expected: 200
+    Received: 403
+FAIL node src/__tests__/api/events/rsvp-characterization.test.ts
+  ● ban asymmetry — pinned for Phase 5 (DEC-24) › honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled
+    Expected: 200
+    Received: 403
+Test Suites: 3 failed, 1 passed, 4 total
+Tests:       37 failed, 179 passed, 216 total
+exit=1
+
+Reading: 7 D1 rows (the events-family arms without the legacy helper) + 14 D2 rows + 14 D3 rows = 35,
+plus the 2 ban-asymmetry cases = 37 red, exactly the rows this plan flips. write-handlers-characterization.test.ts
+(the P0..P5 bytes, including the 3 own-text anonymous 401s and the P2 legacy 403s) stayed green unedited.
+
+==============================================================================
+Task 1 §2. Ledger step 3 — moved: 14 ids in GUARDED, blocks moved to ban-asymmetry-defect.test.ts: green
+==============================================================================
+$ npx jest --ci src/__tests__/api/auth-ring src/__tests__/api/events/save-characterization.test.ts src/__tests__/api/events/rsvp-characterization.test.ts src/__tests__/api/events/ban-asymmetry-defect.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/ban-asymmetry-defect.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+Test Suites: 5 passed, 5 total
+Tests:       216 passed, 216 total
+exit=0
+
+==============================================================================
+Task 1 §3. Ledger step 4 — pre-fix sources restored (git show 9c33617:<path>) under the moved suites: red; fixed sources restored cmp-identical
+==============================================================================
+$ for f in <the 11 route files>; do cp "$f" scratch/; git show "9c33617:$f" > "$f"; done
+$ npx jest --ci src/__tests__/api/auth-ring src/__tests__/api/events/ban-asymmetry-defect.test.ts
+FAIL node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id]/report POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id]/reviews POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id] PATCH: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id] DELETE: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id]/rsvp DELETE: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/[id]/save DELETE: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 events/upload-image POST: banned caller
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/appeal POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/invite POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/report POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/reviews POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id] PATCH: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id] DELETE: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/rsvp POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/rsvp DELETE: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/save DELETE: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/[id]/save POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/create POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 events/upload-image POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 recommendations/feedback POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 user/engagement POST: no profile row
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/appeal POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/invite POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/report POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/reviews POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id] PATCH: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id] DELETE: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/rsvp POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/rsvp DELETE: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/save DELETE: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/[id]/save POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/create POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 events/upload-image POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 recommendations/feedback POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 user/engagement POST: un-onboarded caller
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+FAIL node src/__tests__/api/events/ban-asymmetry-defect.test.ts
+  ● F-088 save DELETE: a permanently banned caller › is refused with 403 Account suspended and the saved row is still present
+    Expected: 403
+    Received: 200
+  ● F-088 rsvp DELETE: a permanently banned caller › is refused with 403 Account suspended and the RSVP is not cancelled
+    Expected: 403
+    Received: 200
+Test Suites: 2 failed, 1 passed, 3 total
+Tests:       37 failed, 140 passed, 177 total
+exit=1
+cmp-identical src/app/api/events/[id]/save/route.ts
+cmp-identical src/app/api/events/[id]/rsvp/route.ts
+cmp-identical src/app/api/events/create/route.ts
+cmp-identical src/app/api/events/[id]/invite/route.ts
+cmp-identical src/app/api/events/[id]/appeal/route.ts
+cmp-identical src/app/api/events/[id]/report/route.ts
+cmp-identical src/app/api/events/[id]/reviews/route.ts
+cmp-identical src/app/api/events/[id]/route.ts
+cmp-identical src/app/api/events/upload-image/route.ts
+cmp-identical src/app/api/recommendations/feedback/route.ts
+cmp-identical src/app/api/user/engagement/route.ts
+
+Reading: the same 35 GUARDED rows and the 2 moved cases are red against the pre-fix handlers, so each moved
+assertion pins the fix. All 11 fixed files restored byte-identical.
+
+==============================================================================
+Task 1 §4. Legacy untagged suites (rsvp.test.ts, reviews.test.ts, date-validation.test.ts)
+==============================================================================
+Before the fixture rows (fixed handlers):
+$ npx jest --ci src/__tests__/api/events/rsvp.test.ts src/__tests__/api/events/reviews.test.ts src/__tests__/api/events/date-validation.test.ts
+FAIL node src/__tests__/api/events/date-validation.test.ts
+FAIL node src/__tests__/api/events/rsvp.test.ts
+FAIL node src/__tests__/api/events/reviews.test.ts
+Test Suites: 3 failed, 3 total
+Tests:       37 failed, 12 passed, 49 total
+exit=1
+Received values across all failures (sorted, counted):
+   1     Received string:    "Profile not found"
+   2     Received: "Profile not found"
+  34     Received: 403
+
+Every failure is the guard answering 403 ("Profile not found" for the two mocks whose users read returns
+null; "Onboarding required" for date-validation, whose users row had no onboarding_completed). No other
+cause. After adding a users row (onboarding_completed true, banned_at null, ban_expires_at null) to each
+fixture, per evidence/slice-3-fixture-completions.md:
+$ npx jest --ci src/__tests__/api/events/rsvp.test.ts src/__tests__/api/events/reviews.test.ts src/__tests__/api/events/date-validation.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+Test Suites: 3 passed, 3 total
+Tests:       49 passed, 49 total
+exit=0
+$ git diff 9c33617 -- src/__tests__/api/events/rsvp.test.ts src/__tests__/api/events/reviews.test.ts src/__tests__/api/events/date-validation.test.ts | grep -E '^[-+].*expect\('; echo "grep-exit=$?"
+grep-exit=1
+
+==============================================================================
+Task 1 §5. PRESERVE files: the two moved blocks only
+==============================================================================
+$ git diff --stat 9c33617 -- 'src/__tests__/api/events/*-characterization.test.ts' src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ src/__tests__/api/events/rsvp-characterization.test.ts | 16 ----------------
+ src/__tests__/api/events/save-characterization.test.ts | 15 ---------------
+ 2 files changed, 31 deletions(-)
+$ git diff 9c33617 -- 'src/__tests__/api/events/*-characterization.test.ts' src/__tests__/api/auth-ring/write-handlers-characterization.test.ts | grep -c '^+[^+]'   # added lines
+0
+$ git diff 9c33617 -- src/__tests__/api/events/save-characterization.test.ts src/__tests__/api/events/rsvp-characterization.test.ts | grep '^-[^-]'
+--- a/src/__tests__/api/events/rsvp-characterization.test.ts
+-
+-describe("ban asymmetry — pinned for Phase 5 (DEC-24)", () => {
+-  it("honours a banned caller's DELETE: 200 'RSVP cancelled' and the row cancelled", async () => {
+-    const mine = callerRow(EVENT_ID, "going");
+-    const fake = setup({
+-      tables: withTables({
+-        users: [profile({ banned_at: "2026-01-01T00:00:00+00:00" })],
+-        rsvps: [...crowd(), mine],
+-      }),
+-    });
+-    const res = await DELETE(bodyRequest("DELETE", { user_id: CALLER.id }), context());
+-    expect(res.status).toBe(200);
+-    expect(await res.json()).toEqual({ success: true, message: "RSVP cancelled" });
+-    expect(callerRows(fake).map((r) => r.status)).toEqual(["cancelled"]);
+-  });
+-});
+--- a/src/__tests__/api/events/save-characterization.test.ts
+-
+-describe("ban asymmetry — pinned for Phase 5 (DEC-24)", () => {
+-  it("honours a permanently banned caller's DELETE: 200 { saved: false } and the row removed", async () => {
+-    const fake = setup({
+-      tables: withTables({
+-        users: [profile({ banned_at: "2026-01-01T00:00:00+00:00" })],
+-        saved_events: [{ id: "s1", user_id: CALLER.id, event_id: EVENT_ID }],
+-      }),
+-    });
+-    const res = await DELETE(request("DELETE"), context());
+-    expect(res.status).toBe(200);
+-    expect(await res.json()).toEqual({ saved: false });
+-    expect(savedRows(fake)).toEqual([]);
+-  });
+-});
+
+Reading: deletions only; each file loses its describe block and the one blank separator line above it.
+
+==============================================================================
+Task 1 §6. Guard adoption per file
+==============================================================================
+$ for f in <11 files>; do echo "$f $(grep -c "requireActiveUser(ctx)" $f) $(grep -c "requireOnboarded(ctx)" $f)"; done
+src/app/api/events/[id]/save/route.ts 2 2
+src/app/api/events/[id]/rsvp/route.ts 2 2
+src/app/api/events/create/route.ts 1 1
+src/app/api/events/[id]/invite/route.ts 1 1
+src/app/api/events/[id]/appeal/route.ts 1 1
+src/app/api/events/[id]/report/route.ts 1 1
+src/app/api/events/[id]/reviews/route.ts 1 1
+src/app/api/events/[id]/route.ts 2 2
+src/app/api/events/upload-image/route.ts 1 1
+src/app/api/recommendations/feedback/route.ts 1 1
+src/app/api/user/engagement/route.ts 1 1
+$ grep -l "checkBanStatus" <11 files>; echo "exit=$?"
+exit=1
+
+==============================================================================
+Task 1 §7. Full suite, type-check, lint, tag gate, ratchet
+==============================================================================
+$ npx jest --ci
+Test Suites: 63 passed, 63 total
+Tests:       1012 passed, 1012 total
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ npm run lint   # summary line; no warning is in a file this plan touched
+✖ 19 problems (0 errors, 19 warnings)
+exit=0
+$ node scripts/check-characterization-tags.mjs --all | tail -1
+ok 27 files
+exit=0
+$ node scripts/check-elevated-ratchet.mjs | tail -1
+committed=25 live=24 delta=-1
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+Tag gate: ok 27 (26 + ban-asymmetry-defect.test.ts). Jest: 1012 (−2 moved out of the Phase 4 suites, +2 in the new DEFECT file).

@@ -93,7 +93,23 @@ jest.mock("next/headers", () => ({
  * Arm ids whose guards have landed. Empty on the unmodified tree; the fixing
  * commits add ids here, one row per arm, with a ledger row each.
  */
-const GUARDED: ReadonlySet<string> = new Set<string>([]);
+const GUARDED: ReadonlySet<string> = new Set<string>([
+  // 05-06: the events family, plus recommendations/feedback and user/engagement
+  "events/[id]/save POST",
+  "events/[id]/save DELETE",
+  "events/[id]/rsvp POST",
+  "events/[id]/rsvp DELETE",
+  "events/create POST",
+  "events/[id]/invite POST",
+  "events/[id]/appeal POST",
+  "events/[id]/report POST",
+  "events/[id]/reviews POST",
+  "events/[id] PATCH",
+  "events/[id] DELETE",
+  "events/upload-image POST",
+  "recommendations/feedback POST",
+  "user/engagement POST",
+]);
 
 beforeEach(() => {
   jest.spyOn(console, "error").mockImplementation(() => undefined);

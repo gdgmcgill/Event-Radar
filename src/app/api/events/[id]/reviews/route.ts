@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import type { Review } from "@/types";
 
 interface RouteContext {
@@ -13,14 +16,14 @@ interface RouteContext {
  */
 export async function POST(request: Request, context: RouteContext) {
   try {
-    const supabase = await createClient();
-    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const supabase = ctx.supabase;
 
-    if (authError || !authData.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = authData.user.id;
+    const userId = active.user.id;
     const { id: eventId } = await context.params;
 
     // Parse body

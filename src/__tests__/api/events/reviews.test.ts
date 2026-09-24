@@ -101,6 +101,12 @@ beforeEach(async () => {
     data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
     error: null,
   });
+  // Default: the caller's profile row, active and onboarded (05-06: the
+  // request context reads it for the ban and onboarding guards)
+  mockQueryResults.set("users", {
+    data: { onboarding_completed: true, banned_at: null, ban_expires_at: null },
+    error: null,
+  });
 
   const routeModule = await import("@/app/api/events/[id]/reviews/route");
   GET = routeModule.GET;

@@ -89,6 +89,12 @@ beforeEach(async () => {
   mockQueryResults.set("events", { data: { id: "test-event-id" }, error: null });
   // Default: no existing RSVPs
   mockQueryResults.set("rsvps", { data: null, error: null });
+  // Default: the caller's profile row, active and onboarded (05-06: the
+  // request context reads it for the ban and onboarding guards)
+  mockQueryResults.set("users", {
+    data: { onboarding_completed: true, banned_at: null, ban_expires_at: null },
+    error: null,
+  });
 
   const routeModule = await import("@/app/api/events/[id]/rsvp/route");
   GET = routeModule.GET;
