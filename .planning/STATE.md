@@ -6,14 +6,14 @@ current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
 stopped_at: Completed 05-10-PLAN.md
-last_updated: "2026-09-24T20:43:14.703Z"
+last_updated: "2026-09-24T21:07:54.382Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 62
-  completed_plans: 53
+  completed_plans: 54
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
-Plan: 11 of 19
+Plan: 12 of 19
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 05 execution started
 
@@ -106,6 +106,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P08 | 11min | 3 tasks | 13 files |
 | Phase 05 P09 | 12min | 3 tasks | 6 files |
 | Phase 05 P10 | 10min | 3 tasks | 23 files |
+| Phase 05 P11 | 20min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -272,6 +273,9 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-10: requireClubRole at all 17 § C sites with CLUB_ROLES or ["owner"] and each site's own 403 message; no admin bypass; an unexpected stored club role is a deny (DEC-40)
 - [Phase 05]: 05-10: F-087 fixed — owner club edit, soft-delete, role change and transfer write on getElevatedClient() after the owner gate; whitelist keeps status/created_by/id unwritable; three REGISTRY rows; ratchet live 24 -> 22 (DEC-41)
 - [Phase 05]: 05-10: hasRole takes Pick<User, "roles">, so hasRole(ctx.profile, "admin") replaces the inline admin checks in events/[id] and events/create
+- [Phase 05]: 05-11: F-008 events INSERT policy is DEC-42's shape (admin arm; created_by = caller; approved only for a member of an approved club; pending may name any club), local-only until DI-23; pgTAP 060 proven by two mutations (removal turns allow rows red, WITH CHECK (true) turns deny rows red)
+- [Phase 05]: 05-11: REFAC-12 Complete: 18 requireClubRole call sites, 0 gate-site membership reads, 12 e2e attacker 403s, RLS ring proven by 060; the events half reaches production with DI-23
+- [Phase 05]: 05-11: F-087 Fixed; F-008 and F-016 stay Open with closes_in_phase 08 and local-proof resolutions (DEC-43, DEC-57); DI-49..DI-51 registered, next DI-52
 
 ### Pending Todos
 
@@ -323,7 +327,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T20:43:14.699Z
+Last session: 2026-09-24T21:07:43.934Z
 Stopped at: Completed 05-10-PLAN.md
 Next: execute 05-11-PLAN.md (F-008 events INSERT policy fix-forward, pgTAP 060 club tenant isolation, club-invitation-acceptance spec). 05-10 delivered REFAC-12: requireClubRole at all 17 § C sites (CLUB_ROLES / ["owner"], exact 403 bytes, no admin bypass), hasRole(ctx.profile, "admin") at the events inline admin checks, and F-087 fixed (owner club writes on getElevatedClient() behind the owner gate and whitelist; three REGISTRY rows; e2e FIXED F-087 29/0). Floor: Jest 1135/0, tag gate ok 29, ratchet committed 25 / live 22. pgTAP 060 must still show a direct owner UPDATE clubs affecting 0 rows. Candidate DIs for 05-11 to register: organizer's GET members truncated by club_members SELECT RLS (05-09 slice-4-characterization.txt §4), and the transfer POST's no-op rollback (05-10-SUMMARY Deferred items). REFAC-11 is PARTIAL on one clause (admin arms' ban is proxy-only, DI-48, for 05-12/05-13). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
 Resume file: None
