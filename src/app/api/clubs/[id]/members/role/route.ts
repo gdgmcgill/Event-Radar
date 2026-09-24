@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { requireClubRole } from "@/server/authz/requireClubRole";
 
 export async function PATCH(
   request: NextRequest,
@@ -18,16 +19,14 @@ export async function PATCH(
   const { id: clubId } = await params;
 
   // Only owner can change roles
-  const { data: currentMember } = await supabase
-    .from("club_members")
-    .select("role")
-    .eq("club_id", clubId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!currentMember || currentMember.role !== "owner") {
-    return NextResponse.json({ error: "Only the club owner can change roles" }, { status: 403 });
-  }
+  const gate = await requireClubRole(
+    supabase,
+    clubId,
+    user.id,
+    ["owner"],
+    "Only the club owner can change roles"
+  );
+  if (!gate.ok) return gate.response;
 
   const { memberId, role } = await request.json();
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { requireClubRole } from "@/server/authz/requireClubRole";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB — banners are larger than logos
@@ -33,20 +34,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify ownership
-    const { data: membership } = await supabase
-      .from("club_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("club_id", clubId)
-      .eq("role", "owner")
-      .maybeSingle();
-
-    if (!membership) {
-      return NextResponse.json(
-        { error: "Only the club owner can upload a banner" },
-        { status: 403 }
-      );
-    }
+    const gate = await requireClubRole(
+      supabase,
+      clubId,
+      user.id,
+      ["owner"],
+      "Only the club owner can upload a banner"
+    );
+    if (!gate.ok) return gate.response;
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(

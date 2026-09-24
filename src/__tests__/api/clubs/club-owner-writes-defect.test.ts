@@ -1,7 +1,8 @@
 /**
  * DEFECT characterization — F-087: owner club writes run on the cookie client, where RLS denies them
  *
- * Status: OPEN — assertions move in 05-10
+ * Status: OPEN — D5's demotion filter moved in 05-10 Task 1 (DEC-40); D1, D2
+ * and D4 move in 05-10 Task 3
  *
  * The defect, as registered (research C11, measured on the local stack):
  * `clubs` has no owner UPDATE policy and `club_members` UPDATE is admin-only.
@@ -343,12 +344,13 @@ describe("D5 POST /api/clubs/[id]/transfer as the owner", () => {
     ]);
   });
 
-  test("today: the demotion is filtered by the caller's membership id (moves to club_id, user_id per DEC-40)", async () => {
+  test("fixed (DEC-40): the demotion is filtered by (club_id, user_id), not the caller's membership id", async () => {
     await transfer();
     const demote = updates(mockElevated.calls, "club_members")[1];
     expect(demote.payload).toEqual({ role: "organizer" });
     expect(filters(demote)).toEqual([
-      { op: "eq", column: "id", value: OWNER_MEMBERSHIP_ID },
+      { op: "eq", column: "club_id", value: CLUB_ID },
+      { op: "eq", column: "user_id", value: OWNER.id },
     ]);
   });
 

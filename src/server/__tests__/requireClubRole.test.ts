@@ -9,7 +9,12 @@
  */
 
 import type { ServerSupabaseClient } from "../context";
-import { requireClubRole } from "../authz/requireClubRole";
+import {
+  CLUB_ROLES,
+  isClubRole,
+  requireClubRole,
+  type ClubRole,
+} from "../authz/requireClubRole";
 
 type QueryResult = { data: { role: string } | null; error: unknown };
 
@@ -48,7 +53,7 @@ describe("requireClubRole", () => {
   });
 
   it("denies a member whose role is outside the accepted set", async () => {
-    const supabase = makeSupabase({ data: { role: "member" }, error: null });
+    const supabase = makeSupabase({ data: { role: "organizer" }, error: null });
 
     const result = await requireClubRole(supabase, "club-1", "user-1", [
       "owner",
@@ -60,14 +65,47 @@ describe("requireClubRole", () => {
   });
 
   it("reports the actual role on the deny arm", async () => {
-    const supabase = makeSupabase({ data: { role: "member" }, error: null });
+    const supabase = makeSupabase({ data: { role: "organizer" }, error: null });
 
     const result = await requireClubRole(supabase, "club-1", "user-1", [
       "owner",
     ]);
 
     if (result.ok) throw new Error("expected the deny arm");
+    expect(result.actualRole).toBe("organizer");
+  });
+
+  it("denies a stored role the schema does not admit, and reports it (DEC-40)", async () => {
+    // club_members_role_check admits only owner and organizer. A row holding
+    // anything else is a deny, even when a caller's accepted set (forced past
+    // the type here) names that value.
+    const supabase = makeSupabase({ data: { role: "member" }, error: null });
+    const forcedSet = ["owner", "member"] as unknown as readonly ClubRole[];
+
+    const result = await requireClubRole(
+      supabase,
+      "club-1",
+      "user-1",
+      forcedSet,
+      "Only the club owner can do this"
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("an unexpected stored role must be denied");
     expect(result.actualRole).toBe("member");
+    expect(result.response.status).toBe(403);
+    expect(await result.response.json()).toEqual({
+      error: "Only the club owner can do this",
+    });
+  });
+
+  it("CLUB_ROLES is exactly the schema's two roles, and isClubRole admits nothing else", () => {
+    expect(CLUB_ROLES).toEqual(["owner", "organizer"]);
+    expect(isClubRole("owner")).toBe(true);
+    expect(isClubRole("organizer")).toBe(true);
+    expect(isClubRole("member")).toBe(false);
+    expect(isClubRole("admin")).toBe(false);
+    expect(isClubRole("")).toBe(false);
   });
 
   it("permits a member whose role is in the accepted set and reports it", async () => {
@@ -83,14 +121,18 @@ describe("requireClubRole", () => {
   });
 
   it("accepts a set of roles rather than a single hard-coded one", async () => {
-    const officer = makeSupabase({ data: { role: "officer" }, error: null });
+    const organizer = makeSupabase({ data: { role: "organizer" }, error: null });
 
-    const result = await requireClubRole(officer, "club-1", "user-1", [
-      "owner",
-      "officer",
-    ]);
+    const result = await requireClubRole(
+      organizer,
+      "club-1",
+      "user-1",
+      CLUB_ROLES
+    );
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected the permit arm");
+    expect(result.role).toBe("organizer");
   });
 
   it("denies when the accepted set is empty", async () => {

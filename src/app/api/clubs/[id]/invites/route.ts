@@ -1,9 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
 import { isMcGillEmail } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { requireClubRole } from "@/server/authz/requireClubRole";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -19,30 +20,20 @@ export async function GET(
 ) {
   try {
     const { id: clubId } = await params;
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const ctx = await createRequestContext();
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const supabase = ctx.supabase;
 
     // Verify caller is owner
-    const { data: callerMembership } = await supabase
-      .from("club_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("club_id", clubId)
-      .eq("role", "owner")
-      .maybeSingle();
-
-    if (!callerMembership) {
-      return NextResponse.json(
-        { error: "Only the club owner can view invitations" },
-        { status: 403 }
-      );
-    }
+    const gate = await requireClubRole(
+      supabase,
+      clubId,
+      auth.user.id,
+      ["owner"],
+      "Only the club owner can view invitations"
+    );
+    if (!gate.ok) return gate.response;
 
     const { data: invites, error } = await supabase
       .from("club_invitations")
@@ -83,20 +74,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { id: clubId } = await params;
 
     // Verify caller is owner
-    const { data: callerMembership } = await supabase
-      .from("club_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("club_id", clubId)
-      .eq("role", "owner")
-      .maybeSingle();
-
-    if (!callerMembership) {
-      return NextResponse.json(
-        { error: "Only the club owner can send invitations" },
-        { status: 403 }
-      );
-    }
+    const gate = await requireClubRole(
+      supabase,
+      clubId,
+      user.id,
+      ["owner"],
+      "Only the club owner can send invitations"
+    );
+    if (!gate.ok) return gate.response;
 
     const body = await request.json();
     const { email } = body as { email: string };

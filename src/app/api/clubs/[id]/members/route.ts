@@ -1,8 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -15,29 +16,20 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id: clubId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const supabase = ctx.supabase;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify caller is a member of this club
-    const { data: callerMembership } = await supabase
-      .from("club_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("club_id", clubId)
-      .maybeSingle();
-
-    if (!callerMembership) {
-      return NextResponse.json(
-        { error: "You must be a member of this club to view members" },
-        { status: 403 }
-      );
-    }
+    // Verify caller is a member of this club (owner or organizer)
+    const gate = await requireClubRole(
+      supabase,
+      clubId,
+      auth.user.id,
+      CLUB_ROLES,
+      "You must be a member of this club to view members"
+    );
+    if (!gate.ok) return gate.response;
 
     // Fetch members - query club_members then fetch user details separately
     // since Supabase generated types don't define the relationship
@@ -98,20 +90,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { id: clubId } = await params;
 
     // Verify caller is owner
-    const { data: callerMembership } = await supabase
-      .from("club_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("club_id", clubId)
-      .eq("role", "owner")
-      .maybeSingle();
-
-    if (!callerMembership) {
-      return NextResponse.json(
-        { error: "Only the club owner can remove members" },
-        { status: 403 }
-      );
-    }
+    const gate = await requireClubRole(
+      supabase,
+      clubId,
+      user.id,
+      ["owner"],
+      "Only the club owner can remove members"
+    );
+    if (!gate.ok) return gate.response;
 
     const body = await request.json();
     const { memberId } = body as { memberId: string };

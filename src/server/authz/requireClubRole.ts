@@ -18,19 +18,45 @@
  *
  * This guard reads `club_members` and no other table. That is the mechanical
  * reason it cannot be bypassed: it never learns anything else about the caller.
+ *
+ * The role vocabulary is closed (research C1, DEC-40): the schema's
+ * `club_members_role_check` admits only `owner` and `organizer`, so
+ * `CLUB_ROLES` lists exactly those two and `ClubRole` is derived from it. A
+ * stored value outside that set (a constraint dropped, a row written by hand)
+ * is a DENY that reports the value, never a permit: `isClubRole` narrows the
+ * row before the accepted-set comparison. Each call site passes exactly the
+ * set it accepted before this guard existed, `["owner"]` or `CLUB_ROLES`, and
+ * its own 403 message, so the deny bytes do not move (DEC-40). The guard's
+ * result carries the role and nothing else; a caller that needs the membership
+ * row's id filters by `(club_id, user_id)` instead (the ownership transfer).
  */
 
 import type { NextResponse } from "next/server";
-import type { Tables } from "@/lib/supabase/types";
 import type { ServerSupabaseClient } from "../context";
 import { forbidden } from "../errors";
 
-/** The membership role, as the schema declares it. */
-export type ClubRole = Tables<"club_members">["role"];
+/**
+ * Every role `club_members.role` admits (`club_members_role_check`,
+ * `supabase/migrations/20260915214553_baseline.sql`). The generated row type
+ * says `string`, so the closed set lives here.
+ */
+export const CLUB_ROLES = ["owner", "organizer"] as const;
 
+/** The membership role, narrowed to the values the schema admits. */
+export type ClubRole = (typeof CLUB_ROLES)[number];
+
+/** True only for a value in `CLUB_ROLES`. */
+export function isClubRole(value: string): value is ClubRole {
+  return (CLUB_ROLES as readonly string[]).includes(value);
+}
+
+/**
+ * On the deny arm `actualRole` is the stored value verbatim, which is a
+ * `ClubRole` unless the row holds something the schema should not admit.
+ */
 export type ClubRoleGuardResult =
   | { ok: true; role: ClubRole }
-  | { ok: false; response: NextResponse; actualRole: ClubRole | null };
+  | { ok: false; response: NextResponse; actualRole: string | null };
 
 /**
  * @param supabase      - The request-scoped client from the context.
@@ -62,13 +88,15 @@ export async function requireClubRole(
     return { ok: false, response: forbidden(message), actualRole: null };
   }
 
-  if (!acceptedRoles.includes(membership.role)) {
+  // An unexpected stored value is a deny, never a permit.
+  const role: string = membership.role;
+  if (!isClubRole(role) || !acceptedRoles.includes(role)) {
     return {
       ok: false,
       response: forbidden(message),
-      actualRole: membership.role,
+      actualRole: role,
     };
   }
 
-  return { ok: true, role: membership.role };
+  return { ok: true, role };
 }

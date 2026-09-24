@@ -1,0 +1,185 @@
+# Club guard adoption — plan 05-10 (REFAC-12, DEC-40, DEC-41, F-087)
+
+Recorded 2026-09-24 on the local tree. Base: c407515 (05-09 head). Every command below is quoted
+with its exit code; outputs are verbatim unless marked as an excerpt.
+
+## Task 1 — CLUB_ROLES, and requireClubRole at the nine club-route files
+
+### 1a. Census BEFORE (c407515): every from("club_members") in the nine files
+
+$ for f in <nine files>; do git show c407515:"$f" | grep -n 'from("club_members")'; done
+src/app/api/clubs/[id]/analytics/route.ts:
+  30:      .from("club_members")
+src/app/api/clubs/[id]/events/route.ts:
+  31:        .from("club_members")
+src/app/api/clubs/[id]/invites/route.ts:
+  33:      .from("club_members")
+  87:      .from("club_members")
+  129:        .from("club_members")
+src/app/api/clubs/[id]/members/role/route.ts:
+  22:    .from("club_members")
+  40:    .from("club_members")
+  59:    .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:
+  29:      .from("club_members")
+  45:      .from("club_members")
+  102:      .from("club_members")
+  128:      .from("club_members")
+  156:      .from("club_members")
+src/app/api/clubs/[id]/route.ts:
+  62:      .from("club_members")
+  174:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:
+  23:    .from("club_members")
+  41:    .from("club_members")
+  56:    .from("club_members")
+  66:    .from("club_members")
+  73:      .from("club_members")
+src/app/api/clubs/banner/route.ts:
+  37:      .from("club_members")
+src/app/api/clubs/logo/route.ts:
+  37:      .from("club_members")
+
+Total: 22 reads. Gate-site reads (a membership decision about the CALLER): 12 —
+  analytics:29 (#1), events:30 (#2, flag), invites:32 (#3) and :86 (#4), members/role:21 (#5),
+  members:28 (#6) and :101 (#7), clubs/[id]:61 (#8) and :173 (#9), transfer:22 (#10),
+  banner:36 (#11), logo:36 (#12).
+Non-gate reads and writes (research § C "Not authorization decisions"): 10 —
+  invites:128 (existing-member target read), members/role:39 (target read) and :58 (role update),
+  members:44 (listing), :127 (target read) and :155 (delete), transfer:40 (target read),
+  :55 (promote), :65 (demote) and :72 (rollback).
+
+### 1b. Census AFTER Task 1
+
+src/app/api/clubs/[id]/analytics/route.ts: club_members=0 requireClubRole(=1
+src/app/api/clubs/[id]/events/route.ts: club_members=0 requireClubRole(=1
+src/app/api/clubs/[id]/invites/route.ts: club_members=1 requireClubRole(=2
+  114:        .from("club_members")
+src/app/api/clubs/[id]/members/role/route.ts: club_members=2 requireClubRole(=1
+  39:    .from("club_members")
+  58:    .from("club_members")
+src/app/api/clubs/[id]/members/route.ts: club_members=3 requireClubRole(=2
+  37:      .from("club_members")
+  114:      .from("club_members")
+  142:      .from("club_members")
+src/app/api/clubs/[id]/route.ts: club_members=0 requireClubRole(=2
+src/app/api/clubs/[id]/transfer/route.ts: club_members=4 requireClubRole(=1
+  40:    .from("club_members")
+  55:    .from("club_members")
+  66:    .from("club_members")
+  74:      .from("club_members")
+src/app/api/clubs/banner/route.ts: club_members=0 requireClubRole(=1
+src/app/api/clubs/logo/route.ts: club_members=0 requireClubRole(=1
+
+Total: 10 reads, all non-gate (the 10 listed above, at their new line numbers). Gate-site reads: 12 -> 0.
+requireClubRole( call sites in the nine files: 12 (one per gate/flag, § C rows 1-12).
+
+### 1c. Role sets and messages adopted (§ C rows 1-12)
+
+| # | Site | Accepted set | 403 message |
+|---|------|--------------|-------------|
+| 1 | clubs/[id]/analytics GET | CLUB_ROLES | You must be a club member to view analytics |
+| 2 | clubs/[id]/events GET (flag, gate.ok) | CLUB_ROLES | — (anonymous skips the guard) |
+| 3 | clubs/[id]/invites GET | ["owner"] | Only the club owner can view invitations |
+| 4 | clubs/[id]/invites POST | ["owner"] | Only the club owner can send invitations |
+| 5 | clubs/[id]/members/role PATCH | ["owner"] | Only the club owner can change roles |
+| 6 | clubs/[id]/members GET | CLUB_ROLES | You must be a member of this club to view members |
+| 7 | clubs/[id]/members DELETE | ["owner"] | Only the club owner can remove members |
+| 8 | clubs/[id] PATCH | ["owner"] | Only the club owner can update club details |
+| 9 | clubs/[id] DELETE | ["owner"] | Only the club owner can delete the club |
+| 10 | clubs/[id]/transfer POST | ["owner"] | Only the club owner can transfer ownership |
+| 11 | clubs/banner POST | ["owner"] | Only the club owner can upload a banner |
+| 12 | clubs/logo POST | ["owner"] | Only the club owner can upload a logo |
+
+The four GET arms (#1, #2, #3, #6) moved from a bare createClient() + auth.getUser() onto
+createRequestContext(); #1, #3 and #6 use requireUser(ctx), whose 401 body {"error":"Unauthorized"}
+is byte-equal to the inline one. #2 keeps anonymous access (no guard without a user).
+Transfer (#10): the demotion now filters .eq("club_id", clubId).eq("user_id", user.id) (DEC-40);
+its writes stay on the service factory until Task 3.
+
+### 1d. No-bypass property (executable code of requireClubRole.ts references no admin / .roles)
+
+$ node -e 'const s=require("fs").readFileSync("src/server/authz/requireClubRole.ts","utf8").replace(/\/\*[\s\S]*?\*\//g,"").replace(/\/\/.*$/gm,"");process.exit(/admin|\.roles/.test(s)?1:0)'
+exit 0
+
+### 1e. DEFECT D5 (transfer demotion filter) — ledger protocol, steps 2-4
+
+Step 2, the unedited DEFECT suite against the fixed source (red on exactly the D5 row), excerpt:
+$ npx jest --ci src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+  ● D5 POST /api/clubs/[id]/transfer as the owner › today: the demotion is filtered by the caller's membership id (moves to club_id, user_id per DEC-40)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 7
+
+      Array [
+        Object {
+    -     "column": "id",
+    +     "column": "club_id",
+    +     "op": "eq",
+    +     "value": "5eed0000-0000-4000-8000-0c91000000c1",
+    +   },
+    +   Object {
+    +     "column": "user_id",
+          "op": "eq",
+    -     "value": "5eed0000-0000-4000-8000-0c91000000b1",
+    +     "value": "5eed0000-0000-4000-8000-0c9100000001",
+        },
+      ]
+
+      348 |     const demote = updates(mockElevated.calls, "club_members")[1];
+      349 |     expect(demote.payload).toEqual({ role: "organizer" });
+    > 350 |     expect(filters(demote)).toEqual([
+          |                             ^
+      351 |       { op: "eq", column: "id", value: OWNER_MEMBERSHIP_ID },
+      352 |     ]);
+      353 |   });
+
+      at Object.<anonymous> (src/__tests__/api/clubs/club-owner-writes-defect.test.ts:350:29)
+Tests:       1 failed, 12 passed, 13 total
+exit 1
+
+Step 3, the moved suite against the fixed source:
+$ npx jest --ci src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+Tests:       13 passed, 13 total
+exit 0
+
+Step 4, the moved suite against the PRE-FIX transfer source (git show c407515:<transfer route>), then restore:
+$ git show HEAD:"src/app/api/clubs/[id]/transfer/route.ts" > "src/app/api/clubs/[id]/transfer/route.ts"; npx jest --ci src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+  ● D5 POST /api/clubs/[id]/transfer as the owner › fixed (DEC-40): the demotion is filtered by (club_id, user_id), not the caller's membership id
+Tests:       1 failed, 12 passed, 13 total
+exit 1
+$ cp <saved fixed copy> "src/app/api/clubs/[id]/transfer/route.ts"; cmp <saved fixed copy> "src/app/api/clubs/[id]/transfer/route.ts"
+cmp identical (exit 0)
+
+### 1f. Floor after Task 1
+
+$ npx jest --ci src/__tests__/api/clubs src/server
+Test Suites: 13 passed, 13 total / Tests: 190 passed, 190 total (after the D5 move); exit 0
+$ npx jest --ci
+Test Suites: 65 passed, 65 total
+Tests:       1135 passed, 1135 total
+exit 0
+$ npx tsc --noEmit
+exit 0 (no output)
+$ npm run lint
+✖ 19 problems (0 errors, 19 warnings)
+exit 0 (all 19 warnings are in files this plan does not touch)
+$ node scripts/check-characterization-tags.mjs --all | tail -1
+ok 29 files
+exit 0
+$ git diff --quiet c407515 -- src/__tests__/api/clubs/club-gates-characterization.test.ts; echo $?
+0
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=24 delta=-1
+retired=1 (the list shrank — this is the intended direction)
+  - src/app/auth/callback/route.ts
+PASS: the live census is a subset of the committed allow-list
+exit 0
+
+Jest count: 1133 -> 1135 (+2 seam rows in src/server/__tests__/requireClubRole.test.ts: the unexpected
+stored role, and CLUB_ROLES/isClubRole). Two existing seam rows used roles the schema does not admit
+("member", "officer") and no longer type-check against the narrowed ClubRole; they now use
+"organizer" and CLUB_ROLES with the same assertions. That file is a seam unit test, not a
+characterization suite (no PRESERVE/DEFECT tag).

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { requireClubRole } from "@/server/authz/requireClubRole";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -58,20 +59,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { id: clubId } = await params;
 
     // Verify ownership
-    const { data: membership } = await supabase
-      .from("club_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("club_id", clubId)
-      .eq("role", "owner")
-      .maybeSingle();
-
-    if (!membership) {
-      return NextResponse.json(
-        { error: "Only the club owner can update club details" },
-        { status: 403 }
-      );
-    }
+    const gate = await requireClubRole(
+      supabase,
+      clubId,
+      user.id,
+      ["owner"],
+      "Only the club owner can update club details"
+    );
+    if (!gate.ok) return gate.response;
 
     const body = await request.json();
     const allowedFields = [
@@ -170,16 +165,14 @@ export async function DELETE(
   const { id: clubId } = await params;
 
   // Verify owner
-  const { data: membership } = await supabase
-    .from("club_members")
-    .select("role")
-    .eq("club_id", clubId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!membership || membership.role !== "owner") {
-    return NextResponse.json({ error: "Only the club owner can delete the club" }, { status: 403 });
-  }
+  const gate = await requireClubRole(
+    supabase,
+    clubId,
+    user.id,
+    ["owner"],
+    "Only the club owner can delete the club"
+  );
+  if (!gate.ok) return gate.response;
 
   // Verify confirmation name
   const body = await request.json();

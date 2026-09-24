@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext } from "@/server/context";
+import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -18,25 +19,16 @@ interface RsvpRow {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id: clubId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
+    const supabase = ctx.supabase;
 
-    // Check if the current user is a member of this club
+    // A flag, not a gate: anonymous callers and non-members see the public
+    // listing. Any club member (owner or organizer) sees the full listing.
     let isOrganizer = false;
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (user) {
-      const { data: membership } = await supabase
-        .from("club_members")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("club_id", clubId)
-        .single();
-
-      if (membership) {
-        isOrganizer = true;
-      }
+    if (ctx.user) {
+      isOrganizer = (
+        await requireClubRole(supabase, clubId, ctx.user.id, CLUB_ROLES)
+      ).ok;
     }
 
     // Build the query based on membership

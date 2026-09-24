@@ -1,7 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { format, eachDayOfInterval, subDays, parseISO } from "date-fns";
 import type { EventAnalytics } from "@/types";
+import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
+import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -15,30 +17,20 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id: clubId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
+    const auth = requireUser(ctx);
+    if (!auth.ok) return auth.response;
+    const supabase = ctx.supabase;
 
-    // Auth check
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Authorization: verify user is a club member
-    const { data: membership } = await supabase
-      .from("club_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("club_id", clubId)
-      .maybeSingle();
-
-    if (!membership) {
-      return NextResponse.json(
-        { error: "You must be a club member to view analytics" },
-        { status: 403 }
-      );
-    }
+    // Authorization: any club member (owner or organizer)
+    const gate = await requireClubRole(
+      supabase,
+      clubId,
+      auth.user.id,
+      CLUB_ROLES,
+      "You must be a club member to view analytics"
+    );
+    if (!gate.ok) return gate.response;
 
     // ── Follower Growth (last 30 days, cumulative) ─────────────────────────
     const thirtyDaysAgo = subDays(new Date(), 30);

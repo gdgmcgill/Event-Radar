@@ -28,3 +28,13 @@ After Task 2 the full `npx jest --ci` passed 1013/1013 with no fixture edit. No 
 exercises the Task 2 arms directly: the only suites that invoke them are the two auth-ring suites,
 whose personas already carry a complete `users` row. Evidence: `evidence/handler-adoption-rest.txt`
 Task 1 §4 and Task 2 §4.
+
+## Slice 4 (05-10)
+
+### Task 1 — none needed
+
+After the nine club-route files adopted `requireClubRole`, `src/__tests__/api/clubs/analytics.test.ts`
+(untagged, mock-chain style) passed with no edit: its `club_members` result already carries
+`role: "owner"`, which the guard's `CLUB_ROLES` set admits, and its `users` result defaults to
+`null`, which `createRequestContext` tolerates (the GET arm reads only `requireUser`). Full
+`npx jest --ci` 1135/1135 with no fixture edit. Evidence: `evidence/club-guard-adoption.txt` §1f.

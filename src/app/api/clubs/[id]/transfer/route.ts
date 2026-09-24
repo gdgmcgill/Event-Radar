@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { requireClubRole } from "@/server/authz/requireClubRole";
 
 export async function POST(
   request: NextRequest,
@@ -19,16 +20,14 @@ export async function POST(
   const { id: clubId } = await params;
 
   // Verify current user is owner
-  const { data: currentMember } = await supabase
-    .from("club_members")
-    .select("id, role")
-    .eq("club_id", clubId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!currentMember || currentMember.role !== "owner") {
-    return NextResponse.json({ error: "Only the club owner can transfer ownership" }, { status: 403 });
-  }
+  const gate = await requireClubRole(
+    supabase,
+    clubId,
+    user.id,
+    ["owner"],
+    "Only the club owner can transfer ownership"
+  );
+  if (!gate.ok) return gate.response;
 
   const { newOwnerId } = await request.json();
 
@@ -61,11 +60,13 @@ export async function POST(
     return NextResponse.json({ error: "Failed to set new owner" }, { status: 500 });
   }
 
-  // Demote current owner to organizer
+  // Demote current owner to organizer. The guard reports the role only, so
+  // the caller's own membership is addressed by (club_id, user_id) (DEC-40).
   const { error: demoteError } = await serviceClient
     .from("club_members")
     .update({ role: "organizer" })
-    .eq("id", currentMember.id);
+    .eq("club_id", clubId)
+    .eq("user_id", user.id);
 
   if (demoteError) {
     // Rollback: restore original owner
