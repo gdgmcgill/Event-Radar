@@ -679,3 +679,146 @@ exit 0
 
 $ git diff --stat HEAD -- src/app/api/events   (before the Task 2 commit; the criterion runs HEAD~1 after it)
 exit 0
+
+────────────────────────────────────────────────────────────────────────────────
+5. Closing checks: diff-stat, tag gate, tsc, full Jest
+────────────────────────────────────────────────────────────────────────────────
+
+The 05-01 head is a7b02a5 (docs(05-01): complete register-measure-decide plan). Recorded after the
+mutation driver finished and restored every file (evidence/slice-3-mutation-check-handlers.txt).
+HEAD at capture=567d506bb443e4f05295a1becbdc67c216ae8871
+
+$ git diff --stat a7b02a5 -- src/app src/lib src/server
+ src/app/auth/callback/route-defect.test.ts      | 224 ++++++++++++++++++++++++
+ src/lib/__tests__/env-assertions-defect.test.ts | 105 +++++++++++
+ src/server/__tests__/getsession-gate.test.ts    |  75 ++++++++
+ 3 files changed, 404 insertions(+)
+exit 0
+(Not empty, and cannot be: 05-02 added two test files under src/app and src/lib and one under
+ src/server. None of the three is a 05-03 file, and none is production source. The two commands
+ below prove the criterion's intent.)
+
+$ git diff --stat a7b02a5 -- src/app src/lib src/server ':(exclude)*.test.ts' ':(exclude)*.test.tsx'
+exit 0
+
+$ git diff --stat 0c265a4 -- src/app src/lib src/server   (this plan's base)
+exit 0
+
+$ git diff --name-status a7b02a5 -- src/ supabase/
+A	src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+A	src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+A	src/__tests__/api/auth-ring/writeHandlerTable.ts
+A	src/__tests__/api/events/anonymous-personalized-defect.test.ts
+A	src/app/auth/callback/route-defect.test.ts
+A	src/lib/__tests__/env-assertions-defect.test.ts
+A	src/proxy-characterization.test.ts
+A	src/proxy-defect.test.ts
+A	src/server/__tests__/getsession-gate.test.ts
+exit 0
+
+$ git status --porcelain -- src/app src/lib src/server supabase/
+exit 0
+
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 26 files
+exit 0
+
+$ npx tsc --noEmit
+exit 0
+
+$ npx jest --ci   (full suite; the PASS lines are kept, the summary is verbatim)
+PASS jsdom src/components/ErrorBoundary.test.tsx
+PASS jsdom src/components/events/EventFilters.test.tsx
+PASS jsdom src/components/events/FilterSidebar.test.tsx
+PASS jsdom src/hooks/useEvents.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+PASS node src/__tests__/lib/tag-coercion-defect.test.ts
+PASS node src/__tests__/moderation/audit-shape.test.ts
+PASS node src/__tests__/seed/env-override.test.ts
+PASS node src/__tests__/seed/guard.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS node src/app/api/events/export/route.test.ts
+PASS node src/app/api/events/route.test.ts
+PASS node src/app/auth/callback/route-defect.test.ts
+PASS node src/app/auth/callback/route.test.ts
+PASS node src/lib/__tests__/ban.test.ts
+PASS node src/lib/__tests__/env-assertions-defect.test.ts
+PASS node src/lib/__tests__/recommendations.test.ts
+PASS node src/lib/classifier.test.ts
+PASS node src/lib/dateValidation.test.ts
+PASS node src/lib/diversity.test.ts
+PASS node src/lib/eventCursor.test.ts
+PASS node src/lib/eventTags.test.ts
+PASS node src/lib/experiments.test.ts
+PASS node src/lib/exportUtils.test.ts
+PASS node src/lib/sanitize.test.ts
+PASS node src/lib/searchFilter.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/proxy-characterization.test.ts
+PASS node src/proxy-defect.test.ts
+PASS node src/proxy.test.ts
+PASS node src/server/__tests__/context.test.ts
+PASS node src/server/__tests__/elevated.test.ts
+PASS node src/server/__tests__/errors.test.ts
+PASS node src/server/__tests__/getsession-gate.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+
+Test Suites: 58 passed, 58 total
+Tests:       968 passed, 968 total
+Snapshots:   0 total
+Time:        2.024 s
+Ran all test suites in 2 projects.
+exit 0
+
+Floor comparison: evidence/floor.before.txt row 1 is 744 passed / 50 suites; 05-02 raised it to 785.
+Now 968 passed, 0 failed, 58 suites: +183 tests and +3 suites from this plan (175 in the two
+auth-ring suites, 8 in anonymous-personalized-defect). 968 >= 744 and >= 785.

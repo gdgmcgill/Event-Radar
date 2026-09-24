@@ -1,0 +1,404 @@
+Slice 3 handler-ring mutation cycles — plan 05-03
+**Plan:** 05-03 · **Phase:** 05 · **Recorded:** 2026-09-24T04:58:49Z
+HEAD at capture=567d506bb443e4f05295a1becbdc67c216ae8871 (Tasks 1-2 committed: de4388e, 567d506)
+
+Format follows evidence/slice-3-mutation-check-ring.txt (05-02). Each cycle: the mutation (the first
+occurrence of the exact text, asserted present; the driver aborts rather than guess), `git diff` of the
+mutated SOURCE file (never a test), the named suites run under the mutation, the restore with
+`git checkout --`, `git diff --exit-code` (git_diff_exit=0 means byte-identical), and the green re-run.
+jest_exit is Jest's own exit code, taken from PIPESTATUS under bash.
+
+One difference from 05-02's format, to keep this file readable: the suites here hold 175 tests (the two
+auth-ring suites) and 8 (the F-028 suite), so the run under the mutation keeps only the ✕ lines and the
+summary, and the restored run keeps only the summary. "Tests: 1 failed, 174 passed, 175 total" plus the
+✕ line is the complete statement of which test went red. NOTE: each "$ npx jest … | grep -E "✕|…"" line
+quotes the grep pattern, so it contains one ✕ glyph itself; the failing tests are the indented ✕ lines.
+
+The plan's five named cycles are 1, 2, 3, 4 and 5. Three CONTROLS apply a fix-shaped mutation and expect
+every PRESERVE assertion to stay GREEN while exactly one DEFECT row goes red:
+  2b  the D1 shape: a suspended-403 AFTER authentication on events/[id]/save DELETE
+  2c  the D2 shape: no users row → 403 {"error":"Profile not found"} on users/[id]/follow DELETE
+  4b  the D3 shape: onboarding_completed !== true → 403 {"error":"Onboarding required"} on notifications POST
+That is the claim "no slice-3 guard can move a PRESERVE assertion", observed rather than asserted, for one
+arm per DEFECT family. (Cycles 2 and 4 put their 403 BEFORE the anonymous branch, as the plan words them,
+so they also redden the P1 row for their arm; that is expected and noted in their "expected" lines.)
+
+MEASUREMENT M1 is a TEST-side edit, not a source mutation: GUARDED gains "events/[id]/save DELETE"
+against the unmodified handler. The three fixed-shape assertions for that arm (D1, D2, D3) go red, which
+proves the fixed-shape branch is not vacuous: it asserts something today's handler does not do. The test
+file is restored with git checkout -- and git diff --exit-code 0 like every other cycle.
+
+Summary. Every cycle went red under its mutation, exactly as predicted, and was restored with
+git_diff_exit=0:
+  | Cycle | Mutated file | Red under the mutation | PRESERVE red? |
+  |---|---|---|---|
+  | 1  | events/[id]/save/route.ts (POST)      | P2 events/[id]/save POST                                            | yes (the named pin) |
+  | 2  | events/[id]/save/route.ts (DELETE)    | F-088 D1 events/[id]/save DELETE; P1 events/[id]/save DELETE        | P1 only (403 before the anonymous branch) |
+  | 2b | events/[id]/save/route.ts (DELETE)    | F-088 D1 events/[id]/save DELETE                                    | no — CONTROL, 174 of 175 green |
+  | 2c | users/[id]/follow/route.ts (DELETE)   | F-088 D2 users/[id]/follow DELETE                                   | no — CONTROL, 174 of 175 green |
+  | 3  | notifications/[id]/route.ts           | P1 notifications/[id] PATCH                                         | yes (the named pin) |
+  | 4  | onboarding/complete/route.ts          | P3 onboarding/complete POST (both rows); P1 onboarding/complete POST | yes (the named pins) |
+  | 4b | notifications/route.ts                | F-089 D3 notifications POST                                         | no — CONTROL, 174 of 175 green |
+  | 5  | events/following/route.ts             | F-028 GET /api/events/following (anonymous row)                     | n/a; the signed-in row stayed green |
+  | M1 | write-handlers-ring-defect.test.ts    | F-088 D1, F-088 D2, F-089 D3 for events/[id]/save DELETE            | n/a (test-side measurement) |
+  restore lines with git_diff_exit=0: 10 (8 source cycles, M1, and the FINAL check over all seven files)
+  FINAL: git status --porcelain -- src/app src/lib src/server prints nothing.
+
+Driver (scratchpad, not committed):
+/private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/d6f0f2c2-0ba5-4efb-b3ce-b5d843e8e77d/scratchpad/mutate-05-03.cjs
+$ node <scratchpad>/mutate-05-03.cjs > <scratchpad>/mutation-05-03.txt 2>&1; echo "driver exit $?"
+driver exit 0
+
+Driver output, verbatim:
+
+==============================================================================
+CYCLE 1 — save POST: delete the legacy ban helper call
+==============================================================================
+expected: RED — P2 events/[id]/save POST (the banned caller is no longer refused)
+# mutation applied: first of 1 occurrence(s) replaced in src/app/api/events/[id]/save/route.ts
+
+$ git diff -- 'src/app/api/events/[id]/save/route.ts'; echo "exit=$?"
+diff --git a/src/app/api/events/[id]/save/route.ts b/src/app/api/events/[id]/save/route.ts
+index d0e1e5f..57fe7ee 100644
+--- a/src/app/api/events/[id]/save/route.ts
++++ b/src/app/api/events/[id]/save/route.ts
+@@ -50,9 +50,6 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+ 
+ export async function POST(_request: NextRequest, { params }: RouteContext) {
+   try {
+-    const banResponse = await checkBanStatus();
+-    if (banResponse) return banResponse;
+-
+     const { id: eventId } = await params;
+     const ctx = await createRequestContext();
+ 
+exit=0
+
+$ npx jest --ci --verbose src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ P2 events/[id]/save POST: 403 Account suspended, nothing written (2 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 68 passed, 69 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/events/[id]/save/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/api/events/[id]/save/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       69 passed, 69 total
+jest_exit=0
+
+==============================================================================
+CYCLE 2 — save DELETE: an early 403 {error:"Account suspended"} for every caller
+==============================================================================
+expected: RED — DEFECT F-088 D1 events/[id]/save DELETE (the today-shape assertion). Also RED: PRESERVE P1 for the same arm, because the 403 is sent to the anonymous caller too (the plan's wording, 'for every caller')
+# mutation applied: first of 1 occurrence(s) replaced in src/app/api/events/[id]/save/route.ts
+
+$ git diff -- 'src/app/api/events/[id]/save/route.ts'; echo "exit=$?"
+diff --git a/src/app/api/events/[id]/save/route.ts b/src/app/api/events/[id]/save/route.ts
+index d0e1e5f..dfda610 100644
+--- a/src/app/api/events/[id]/save/route.ts
++++ b/src/app/api/events/[id]/save/route.ts
+@@ -23,6 +23,7 @@ interface RouteContext {
+ 
+ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+   try {
++    if (_request) return NextResponse.json({ error: "Account suspended" }, { status: 403 });
+     const { id: eventId } = await params;
+     const ctx = await createRequestContext();
+ 
+exit=0
+
+$ npx jest --ci --verbose src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-088 D1 events/[id]/save DELETE: banned caller (26 ms)
+    ✕ P1 events/[id]/save DELETE: anonymous gets its exact bytes and writes nothing (1 ms)
+Test Suites: 2 failed, 2 total
+Tests:       2 failed, 173 passed, 175 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/events/[id]/save/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/api/events/[id]/save/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+Test Suites: 2 passed, 2 total
+Tests:       175 passed, 175 total
+jest_exit=0
+
+==============================================================================
+CYCLE 2b — save DELETE: CONTROL — the D1 fix shape (suspended-403 after authentication)
+==============================================================================
+expected: RED — DEFECT F-088 D1 events/[id]/save DELETE only; CONTROL: all PRESERVE tests stay GREEN (anonymous 401 unchanged)
+# mutation applied: first of 1 occurrence(s) replaced in src/app/api/events/[id]/save/route.ts
+
+$ git diff -- 'src/app/api/events/[id]/save/route.ts'; echo "exit=$?"
+diff --git a/src/app/api/events/[id]/save/route.ts b/src/app/api/events/[id]/save/route.ts
+index d0e1e5f..9d43f02 100644
+--- a/src/app/api/events/[id]/save/route.ts
++++ b/src/app/api/events/[id]/save/route.ts
+@@ -29,6 +29,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+     const auth = requireUser(ctx);
+     if (!auth.ok) return auth.response;
+     const user = auth.user;
++    if (user) return NextResponse.json({ error: "Account suspended" }, { status: 403 });
+ 
+     const { error: deleteError } = await ctx.supabase
+       .from("saved_events")
+exit=0
+
+$ npx jest --ci --verbose src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-088 D1 events/[id]/save DELETE: banned caller (24 ms)
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       1 failed, 174 passed, 175 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/events/[id]/save/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/api/events/[id]/save/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+Test Suites: 2 passed, 2 total
+Tests:       175 passed, 175 total
+jest_exit=0
+
+==============================================================================
+CYCLE 2c — users/[id]/follow DELETE: CONTROL — the D2 fix shape (no users row → 403 Profile not found)
+==============================================================================
+expected: RED — DEFECT F-088 D2 users/[id]/follow DELETE only; CONTROL: all PRESERVE tests stay GREEN
+# mutation applied: first of 1 occurrence(s) replaced in src/app/api/users/[id]/follow/route.ts
+
+$ git diff -- 'src/app/api/users/[id]/follow/route.ts'; echo "exit=$?"
+diff --git a/src/app/api/users/[id]/follow/route.ts b/src/app/api/users/[id]/follow/route.ts
+index c3d4d2f..6dfdea1 100644
+--- a/src/app/api/users/[id]/follow/route.ts
++++ b/src/app/api/users/[id]/follow/route.ts
+@@ -112,6 +112,9 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+     }
+ 
++    const { data: guardProfile } = await supabase.from("users").select("id").eq("id", user.id).maybeSingle();
++    if (!guardProfile) return NextResponse.json({ error: "Profile not found" }, { status: 403 });
++
+     const { error } = await supabase
+       .from("user_follows")
+       .delete()
+exit=0
+
+$ npx jest --ci --verbose src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-088 D2 users/[id]/follow DELETE: no profile row (1 ms)
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       1 failed, 174 passed, 175 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/users/[id]/follow/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/api/users/[id]/follow/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+Test Suites: 2 passed, 2 total
+Tests:       175 passed, 175 total
+jest_exit=0
+
+==============================================================================
+CYCLE 3 — notifications/[id] PATCH: the anonymous 401 body text changes
+==============================================================================
+expected: RED — P1 notifications/[id] PATCH
+# mutation applied: first of 1 occurrence(s) replaced in src/app/api/notifications/[id]/route.ts
+
+$ git diff -- 'src/app/api/notifications/[id]/route.ts'; echo "exit=$?"
+diff --git a/src/app/api/notifications/[id]/route.ts b/src/app/api/notifications/[id]/route.ts
+index 3c5f61b..dd3c2b0 100644
+--- a/src/app/api/notifications/[id]/route.ts
++++ b/src/app/api/notifications/[id]/route.ts
+@@ -18,7 +18,7 @@ export async function PATCH(
+     } = await supabase.auth.getUser();
+ 
+     if (authError || !user) {
+-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
++      return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+     }
+ 
+     const { error } = await supabase
+exit=0
+
+$ npx jest --ci --verbose src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ P1 notifications/[id] PATCH: anonymous gets its exact bytes and writes nothing (24 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 68 passed, 69 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/notifications/[id]/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/api/notifications/[id]/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       69 passed, 69 total
+jest_exit=0
+
+==============================================================================
+CYCLE 4 — onboarding/complete POST: return 403 {error:"Onboarding required"} first
+==============================================================================
+expected: RED — P3 onboarding/complete POST (both P3 rows for that arm). Also RED: P1 for the same arm, because the 403 precedes the anonymous branch
+# mutation applied: first of 1 occurrence(s) replaced in src/app/api/onboarding/complete/route.ts
+
+$ git diff -- 'src/app/api/onboarding/complete/route.ts'; echo "exit=$?"
+diff --git a/src/app/api/onboarding/complete/route.ts b/src/app/api/onboarding/complete/route.ts
+index 1239b44..2a49a99 100644
+--- a/src/app/api/onboarding/complete/route.ts
++++ b/src/app/api/onboarding/complete/route.ts
+@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
+ import { createClient } from "@/lib/supabase/server";
+ 
+ export async function POST() {
++  if (Date.now() > 0) return NextResponse.json({ error: "Onboarding required" }, { status: 403 });
+   const supabase = await createClient();
+   const {
+     data: { user },
+exit=0
+
+$ npx jest --ci --verbose src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ P1 onboarding/complete POST: anonymous gets its exact bytes and writes nothing (20 ms)
+    ✕ P3 onboarding/complete POST: admitted, not refused as un-onboarded
+    ✕ P3 onboarding/complete POST answers 200 {success:true} (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 66 passed, 69 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/onboarding/complete/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/api/onboarding/complete/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       69 passed, 69 total
+jest_exit=0
+
+==============================================================================
+CYCLE 4b — notifications POST: CONTROL — the D3 fix shape (onboarding_completed !== true → 403 after authentication)
+==============================================================================
+expected: RED — DEFECT F-089 D3 notifications POST only; CONTROL: all PRESERVE tests stay GREEN
+# mutation applied: first of 1 occurrence(s) replaced in src/app/api/notifications/route.ts
+
+$ git diff -- 'src/app/api/notifications/route.ts'; echo "exit=$?"
+diff --git a/src/app/api/notifications/route.ts b/src/app/api/notifications/route.ts
+index 3a75171..7bb1073 100644
+--- a/src/app/api/notifications/route.ts
++++ b/src/app/api/notifications/route.ts
+@@ -81,6 +81,8 @@ export async function POST(request: NextRequest) {
+       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+     }
+ 
++    const { data: guardProfile } = await supabase.from("users").select("onboarding_completed").eq("id", user.id).maybeSingle();
++    if (guardProfile?.onboarding_completed !== true) return NextResponse.json({ error: "Onboarding required" }, { status: 403 });
+     const action = request.nextUrl.searchParams.get("action");
+ 
+     if (action === "mark-all-read") {
+exit=0
+
+$ npx jest --ci --verbose src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-089 D3 notifications POST: un-onboarded caller (1 ms)
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       1 failed, 174 passed, 175 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/notifications/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/api/notifications/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts src/__tests__/api/auth-ring/write-handlers-characterization.test.ts 2>&1 | grep -E "Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+Test Suites: 2 passed, 2 total
+Tests:       175 passed, 175 total
+jest_exit=0
+
+==============================================================================
+CYCLE 5 — events/following GET: anonymous gets 401 {error:"Unauthorized"}
+==============================================================================
+expected: RED — F-028 GET /api/events/following anonymous row only; the signed-in row stays GREEN
+# mutation applied: first of 1 occurrence(s) replaced in src/app/api/events/following/route.ts
+
+$ git diff -- 'src/app/api/events/following/route.ts'; echo "exit=$?"
+diff --git a/src/app/api/events/following/route.ts b/src/app/api/events/following/route.ts
+index 3b6d93b..e2bc50d 100644
+--- a/src/app/api/events/following/route.ts
++++ b/src/app/api/events/following/route.ts
+@@ -18,7 +18,7 @@ export async function GET() {
+     } = await supabase.auth.getUser();
+ 
+     if (authError || !user) {
+-      return NextResponse.json({ events: [] });
++      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+     }
+ 
+     // Get club IDs the user follows
+exit=0
+
+$ npx jest --ci --verbose src/__tests__/api/events/anonymous-personalized-defect.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MUTATION
+    ✕ F-028 GET /api/events/following: anonymous gets 200 and an empty payload today (2 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/events/following/route.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/app/api/events/following/route.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci src/__tests__/api/events/anonymous-personalized-defect.test.ts 2>&1 | grep -E "Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+jest_exit=0
+
+==============================================================================
+MEASUREMENT M1 — GUARDED gains "events/[id]/save DELETE" against UNMODIFIED source (test-side, restored)
+==============================================================================
+expected: RED — F-088 D1, F-088 D2 and F-089 D3 for events/[id]/save DELETE (the fixed shape is not what the handler does today)
+$ git diff -- 'src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts'; echo "exit=$?"
+diff --git a/src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts b/src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+index cc69915..c1b9f57 100644
+--- a/src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
++++ b/src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+@@ -93,7 +93,7 @@ jest.mock("next/headers", () => ({
+  * Arm ids whose guards have landed. Empty on the unmodified tree; the fixing
+  * commits add ids here, one row per arm, with a ledger row each.
+  */
+-const GUARDED: ReadonlySet<string> = new Set<string>([]);
++const GUARDED: ReadonlySet<string> = new Set<string>(["events/[id]/save DELETE"]);
+ 
+ beforeEach(() => {
+   jest.spyOn(console, "error").mockImplementation(() => undefined);
+exit=0
+
+$ npx jest --ci --verbose src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # UNDER THE MEASUREMENT
+    ✕ F-088 D1 events/[id]/save DELETE: banned caller (1 ms)
+    ✕ F-088 D2 events/[id]/save DELETE: no profile row (1 ms)
+    ✕ F-089 D3 events/[id]/save DELETE: un-onboarded caller (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 103 passed, 106 total
+jest_exit=1
+
+$ git checkout -- 'src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts'; echo "exit=$?"
+exit=0
+$ git diff --exit-code -- 'src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts'; echo "git_diff_exit=$?"   # restore proof
+git_diff_exit=0
+
+$ npx jest --ci src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts 2>&1 | grep -E "Tests:|Test Suites:"; echo "jest_exit=${PIPESTATUS[0]}"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       106 passed, 106 total
+jest_exit=0
+
+==============================================================================
+FINAL — every mutated file byte-identical to HEAD
+==============================================================================
+$ git diff --exit-code -- 'src/app/api/events/[id]/save/route.ts' 'src/app/api/notifications/[id]/route.ts' 'src/app/api/notifications/route.ts' 'src/app/api/onboarding/complete/route.ts' 'src/app/api/events/following/route.ts' 'src/app/api/users/[id]/follow/route.ts' 'src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts'; echo "git_diff_exit=$?"
+git_diff_exit=0
+$ git status --porcelain -- src/app src/lib src/server; echo "porcelain_exit=$?"
+porcelain_exit=0
