@@ -1,0 +1,386 @@
+Slice 4 characterization mutation cycles — plan 05-09
+**Plan:** 05-09 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24T20:28:13Z
+HEAD at capture=64a9361667e78308cffbdbf628384c955de692b7 (Tasks 1-2 committed)
+
+Format follows Phase 4's slice-2-mutation-check.txt. Each cycle records:
+  - the mutation, whose exact target text the driver asserts occurs exactly once (it aborts rather
+    than guess);
+  - `git diff` of the mutated source;
+  - the pinned suite run under the mutation. The ✕ lines name the failing tests, and jest_exit is
+    jest's own exit code;
+  - the restore with `git checkout --`;
+  - `git diff --exit-code` (exit=0 means byte-identical);
+  - the green re-run.
+Only SOURCE is edited; no test file is touched. The grep pattern shown in each "$ npx jest …" line
+quotes a ✕ glyph itself; the failing tests are the indented ✕ lines below it.
+
+Cycles 1-5 are the plan's five named mutations. 3b is a CONTROL. It applies cycle 3's mutation,
+05-10's direction (DEC-41), to the PRESERVE suite and expects it to stay GREEN. That is the claim
+"moving the owner write to the elevated door moves no PRESERVE assertion", observed rather than
+asserted.
+
+| Cycle | Source mutation | Named red test(s) | Restore |
+|-------|-----------------|-------------------|---------|
+| 1 | invites POST drops .eq("role","owner") | P3 "#4 clubs/[id]/invites POST answers 403 with its exact body and writes nothing" | exit 0 |
+| 2 | members GET deny text changed | P2 "#6 clubs/[id]/members GET answers 403 …"; P4 "#6 … answers the same 403 as any non-member" | exit 0 |
+| 3 | clubs/[id] PATCH update on the service factory | D1 "today: the clubs update is issued on the cookie client, not the elevated one"; D1 "today: the update is filtered to the club named in the path" | exit 0 |
+| 3b | (control) cycle 3 against PRESERVE | none: 107/107 green | exit 0 |
+| 4 | events/create inserts status "approved" | P6 #17 "a non-member creating for someone else's approved club gets pending", "a member of their own pending club gets pending", "a member creating with no club gets pending" | exit 0 |
+| 5 | members DELETE admin bypass | P4 "#7 clubs/[id]/members DELETE answers the same 403 as any non-member" | exit 0 |
+
+Driver (scratchpad, not committed): /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/d6f0f2c2-0ba5-4efb-b3ce-b5d843e8e77d/scratchpad/mutate.cjs
+$ node …/scratchpad/mutate.cjs
+
+==============================================================================
+CYCLE 1 — invites POST: the .eq("role", "owner") filter is dropped (the accepted set widens to any member)
+==============================================================================
+suite: src/__tests__/api/clubs/club-gates-characterization.test.ts
+expected: exactly one red: P3 wrong role #4 clubs/[id]/invites POST (the organizer is admitted)
+# mutation applied by the scratchpad driver: the single occurrence replaced
+
+$ git diff -- 'src/app/api/clubs/[id]/invites/route.ts'
+diff --git a/src/app/api/clubs/[id]/invites/route.ts b/src/app/api/clubs/[id]/invites/route.ts
+index 08a9a95..461bb9e 100644
+--- a/src/app/api/clubs/[id]/invites/route.ts
++++ b/src/app/api/clubs/[id]/invites/route.ts
+@@ -88,7 +88,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
+       .select("role")
+       .eq("user_id", user.id)
+       .eq("club_id", clubId)
+-      .eq("role", "owner")
+       .maybeSingle();
+ 
+     if (!callerMembership) {
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ #4 clubs/[id]/invites POST answers 403 with its exact body and writes nothing (2 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 106 passed, 107 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/clubs/[id]/invites/route.ts'
+exit=0
+$ git diff --exit-code -- 'src/app/api/clubs/[id]/invites/route.ts'
+exit=0   # 0 = restored byte-identical
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       107 passed, 107 total
+jest_exit=0
+
+==============================================================================
+CYCLE 2 — members GET: the deny message text changes
+==============================================================================
+suite: src/__tests__/api/clubs/club-gates-characterization.test.ts
+expected: P2 non-member #6 and P4 admin #6 red (P0 compares the table with section C, not the source, so it stays green)
+# mutation applied by the scratchpad driver: the single occurrence replaced
+
+$ git diff -- 'src/app/api/clubs/[id]/members/route.ts'
+diff --git a/src/app/api/clubs/[id]/members/route.ts b/src/app/api/clubs/[id]/members/route.ts
+index a2792b5..4fb7d35 100644
+--- a/src/app/api/clubs/[id]/members/route.ts
++++ b/src/app/api/clubs/[id]/members/route.ts
+@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
+ 
+     if (!callerMembership) {
+       return NextResponse.json(
+-        { error: "You must be a member of this club to view members" },
++        { error: "You must be a member of this club to view its members" },
+         { status: 403 }
+       );
+     }
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ #6 clubs/[id]/members GET answers 403 with its exact body and writes nothing (1 ms)
+    ✕ #6 clubs/[id]/members GET answers the same 403 as any non-member
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 105 passed, 107 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/clubs/[id]/members/route.ts'
+exit=0
+$ git diff --exit-code -- 'src/app/api/clubs/[id]/members/route.ts'
+exit=0   # 0 = restored byte-identical
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       107 passed, 107 total
+jest_exit=0
+
+==============================================================================
+CYCLE 3 — clubs/[id] PATCH: the clubs update is constructed on the service factory instead of the cookie client
+==============================================================================
+suite: src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+expected: D1 'today: the clubs update is issued on the cookie client…' and D1 'today: the update is filtered…' red; D1 'stays: the whitelist…' green
+# mutation applied by the scratchpad driver: the single occurrence replaced
+
+$ git diff -- 'src/app/api/clubs/[id]/route.ts'
+diff --git a/src/app/api/clubs/[id]/route.ts b/src/app/api/clubs/[id]/route.ts
+index 493d78c..92bbdcd 100644
+--- a/src/app/api/clubs/[id]/route.ts
++++ b/src/app/api/clubs/[id]/route.ts
+@@ -127,7 +127,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
+       );
+     }
+ 
+-    const { data: club, error } = await supabase
++    const { data: club, error } = await (await import("@/lib/supabase/service"))
++      .createServiceClient()
+       .from("clubs")
+       .update(updates)
+       .eq("id", clubId)
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-owner-writes-defect.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ today: the clubs update is issued on the cookie client, not the elevated one (35 ms)
+    ✕ today: the update is filtered to the club named in the path (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 11 passed, 13 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/clubs/[id]/route.ts'
+exit=0
+$ git diff --exit-code -- 'src/app/api/clubs/[id]/route.ts'
+exit=0   # 0 = restored byte-identical
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-owner-writes-defect.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       13 passed, 13 total
+jest_exit=0
+
+==============================================================================
+CYCLE 3b — CONTROL: cycle 3's mutation (05-10's direction) against the PRESERVE suite
+==============================================================================
+suite: src/__tests__/api/clubs/club-gates-characterization.test.ts
+expected: GREEN: moving the owner write to the elevated client moves no PRESERVE assertion
+# mutation applied by the scratchpad driver: the single occurrence replaced
+
+$ git diff -- 'src/app/api/clubs/[id]/route.ts'
+diff --git a/src/app/api/clubs/[id]/route.ts b/src/app/api/clubs/[id]/route.ts
+index 493d78c..92bbdcd 100644
+--- a/src/app/api/clubs/[id]/route.ts
++++ b/src/app/api/clubs/[id]/route.ts
+@@ -127,7 +127,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
+       );
+     }
+ 
+-    const { data: club, error } = await supabase
++    const { data: club, error } = await (await import("@/lib/supabase/service"))
++      .createServiceClient()
+       .from("clubs")
+       .update(updates)
+       .eq("id", clubId)
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # UNDER THE MUTATION
+Test Suites: 1 passed, 1 total
+Tests:       107 passed, 107 total
+jest_exit=0
+
+$ git checkout -- 'src/app/api/clubs/[id]/route.ts'
+exit=0
+$ git diff --exit-code -- 'src/app/api/clubs/[id]/route.ts'
+exit=0   # 0 = restored byte-identical
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       107 passed, 107 total
+jest_exit=0
+
+==============================================================================
+CYCLE 4 — events/create: the inserted status is forced to approved
+==============================================================================
+suite: src/__tests__/api/clubs/club-gates-characterization.test.ts
+expected: P6 #17 rows expecting pending red (non-member for another club, member of own pending club, no club)
+# mutation applied by the scratchpad driver: the single occurrence replaced
+
+$ git diff -- 'src/app/api/events/create/route.ts'
+diff --git a/src/app/api/events/create/route.ts b/src/app/api/events/create/route.ts
+index 4dd6364..4630e4e 100644
+--- a/src/app/api/events/create/route.ts
++++ b/src/app/api/events/create/route.ts
+@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
+         image_url: image_url || null,
+         category: category || tags[0] || null,
+         club_id: body.club_id || null,
+-        status,
++        status: "approved",
+         created_by: user.id,
+         content_hash: contentHash,
+         is_free: is_free ?? true,
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ a non-member creating for someone else's approved club gets pending (1 ms)
+    ✕ a member of their own pending club gets pending
+    ✕ a member creating with no club gets pending (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 104 passed, 107 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/events/create/route.ts'
+exit=0
+$ git diff --exit-code -- 'src/app/api/events/create/route.ts'
+exit=0   # 0 = restored byte-identical
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       107 passed, 107 total
+jest_exit=0
+
+==============================================================================
+CYCLE 5 — members DELETE: a site-wide roles.includes("admin") bypass in front of the owner check
+==============================================================================
+suite: src/__tests__/api/clubs/club-gates-characterization.test.ts
+expected: exactly one red: P4 admin #7 clubs/[id]/members DELETE (the admin with no membership is admitted)
+# mutation applied by the scratchpad driver: the single occurrence replaced
+
+$ git diff -- 'src/app/api/clubs/[id]/members/route.ts'
+diff --git a/src/app/api/clubs/[id]/members/route.ts b/src/app/api/clubs/[id]/members/route.ts
+index a2792b5..9ee64b2 100644
+--- a/src/app/api/clubs/[id]/members/route.ts
++++ b/src/app/api/clubs/[id]/members/route.ts
+@@ -106,7 +106,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
+       .eq("role", "owner")
+       .maybeSingle();
+ 
+-    if (!callerMembership) {
++    if (!callerMembership && !(ctx.profile?.roles ?? []).includes("admin")) {
+       return NextResponse.json(
+         { error: "Only the club owner can remove members" },
+         { status: 403 }
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # UNDER THE MUTATION
+    ✕ #7 clubs/[id]/members DELETE answers the same 403 as any non-member (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 106 passed, 107 total
+jest_exit=1
+
+$ git checkout -- 'src/app/api/clubs/[id]/members/route.ts'
+exit=0
+$ git diff --exit-code -- 'src/app/api/clubs/[id]/members/route.ts'
+exit=0   # 0 = restored byte-identical
+
+$ npx jest --ci --verbose src/__tests__/api/clubs/club-gates-characterization.test.ts 2>&1 | grep -E "✕|Tests:|Test Suites:"   # RESTORED
+Test Suites: 1 passed, 1 total
+Tests:       107 passed, 107 total
+jest_exit=0
+
+==============================================================================
+FINAL — tag gate, types, full Jest, unmodified source
+==============================================================================
+
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/events/ban-asymmetry-defect.test.ts (F-088, F-062, F-089)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071, F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 29 files
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ npx jest --ci
+PASS jsdom src/components/ErrorBoundary.test.tsx
+PASS jsdom src/components/events/EventFilters.test.tsx
+PASS jsdom src/components/events/FilterSidebar.test.tsx
+PASS jsdom src/hooks/useEvents.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/__tests__/api/clubs/club-gates-characterization.test.ts
+PASS node src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+PASS node src/__tests__/api/events/ban-asymmetry-defect.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+PASS node src/__tests__/lib/tag-coercion-defect.test.ts
+PASS node src/__tests__/moderation/audit-shape.test.ts
+PASS node src/__tests__/seed/env-override.test.ts
+PASS node src/__tests__/seed/guard.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS node src/app/api/events/export/route.test.ts
+PASS node src/app/api/events/route.test.ts
+PASS node src/app/auth/callback/route-defect.test.ts
+PASS node src/app/auth/callback/route.test.ts
+PASS node src/instrumentation.test.ts
+PASS node src/lib/__tests__/ban.test.ts
+PASS node src/lib/__tests__/env-assertions-defect.test.ts
+PASS node src/lib/__tests__/recommendations.test.ts
+PASS node src/lib/classifier.test.ts
+PASS node src/lib/dateValidation.test.ts
+PASS node src/lib/diversity.test.ts
+PASS node src/lib/env.test.ts
+PASS node src/lib/eventCursor.test.ts
+PASS node src/lib/eventTags.test.ts
+PASS node src/lib/experiments.test.ts
+PASS node src/lib/exportUtils.test.ts
+PASS node src/lib/sanitize.test.ts
+PASS node src/lib/searchFilter.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/proxy-characterization.test.ts
+PASS node src/proxy-defect.test.ts
+PASS node src/proxy.test.ts
+PASS node src/server/__tests__/context.test.ts
+PASS node src/server/__tests__/elevated.test.ts
+PASS node src/server/__tests__/errors.test.ts
+PASS node src/server/__tests__/getsession-gate.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/requireActiveUser.test.ts
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/server/__tests__/requireOnboarded.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+Test Suites: 65 passed, 65 total
+Tests:       1133 passed, 1133 total
+Snapshots:   0 total
+exit=0
+
+$ git diff --stat f1ab6a1 -- src/app src/lib src/server   # f1ab6a1 = 05-08 head
+(empty) exit=0
+$ git diff --exit-code -- src/app src/lib src/server
+(empty) exit=0
+$ git status --porcelain -- src/app src/lib src/server supabase/
+(empty) exit=0
+
+Floor movement: Jest 1013 → 1133 passed (+120 = 107 PRESERVE + 13 DEFECT), 0 failed; suites 63 →
+65; tag gate ok 27 → ok 29; tsc exit 0. No file under src/app, src/lib, src/server or supabase/
+differs from 05-08's head.
