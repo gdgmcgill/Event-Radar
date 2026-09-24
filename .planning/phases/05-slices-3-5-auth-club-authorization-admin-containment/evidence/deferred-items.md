@@ -237,7 +237,82 @@ DI-47 with where they closed, so none is dropped silently.
 
 ---
 
-**Next new item id: DI-49.**
+## Slice 4 (05-09, 05-10), registered by 05-11
+
+The 05-09 and 05-10 SUMMARYs each list "Deferred items found" for 05-11 to register. There are
+three: two named candidates, and one research § D row that says "register as a note" and was not
+registered anywhere (`grep -i 'non-creator'` over this file and `findings.json` exits 1 before
+this edit). 05-11 changes no handler, so each item below is the state on the slice-4 floor.
+
+## DI-49 — The club member list is shaped by RLS: truncated for organizers, nameless for owners
+
+- **Found by:** part 1 by 05-09 (`evidence/slice-4-characterization.txt` §4, read-only and rolled
+  back); part 2 by 05-11, on the first run of `e2e/specs/club-invitation-acceptance.spec.ts`.
+- **What it is.** `GET /api/clubs/[id]/members` admits owners and organizers (`CLUB_ROLES`, gate #6),
+  then answers from the cookie client, so RLS shapes the answer without an error.
+  (1) The listing: the `club_members` SELECT policies are `Club owners can view all club members`
+  (`is_club_owner`) and `Users see own memberships`, so an organizer receives only their own row.
+  club_member sees 1 of the approved club's 3 memberships.
+  (2) The enrichment: each member's `user` is read from `users`, whose SELECT policies are
+  `Users can read own profile` and `Admins can view all profiles`. So even the OWNER gets `user: null`
+  for every member but themselves, and the dashboard renders "User" (`ClubDashboard.tsx:175`) or the
+  raw `user_id` (`ClubSettingsTab.tsx:716`) for them. Measured by 05-11: after the invitee joined, the
+  owner's list carried their row (`user_id`, `role: "organizer"`) with `user` absent.
+- **Why deferred.** Two fixes are possible, and they differ in product terms. (a) Policies: a
+  `club_members` SELECT policy for members of the same club, plus a narrow name-and-avatar read
+  of `users` (a view or an RPC). A public `users` SELECT would expose email and ban columns, which is
+  also why 05-15's appeal and review name reads go through the door. Being migrations, these are
+  local-only until DI-23. (b) An elevated read behind the gate: a new REGISTRY row, and a service-role
+  widening. Slice 4's scope was the authz ring, F-087 and F-008, and no slice-4 plan was allowed to
+  widen a read.
+- **Why not cosmetic.** A Validated organizer workflow (PROJECT.md "manage member roles") shows the
+  organizer an incomplete roster and the owner a roster of unnamed members, with no error. The
+  Playwright test "the club's organizer › can view members" asserts only the organizer's own row, and
+  the F-016 spec asserts `user_id` and `role` only (its comment says why). So nothing pins either part,
+  in either direction.
+- **Owner:** the phase owner, to choose (a) or (b). (a) travels with DI-23 (Phase 8). (b) would be a
+  Phase 6 REGISTRY row. It is recorded in `slice-4-close.md` § 4.
+
+## DI-50 — The ownership-transfer rollback does not restore the target's previous role
+
+- **Found by:** 05-10 (SUMMARY "Deferred items found"), reading
+  `src/app/api/clubs/[id]/transfer/route.ts`.
+- **What it is.** The transfer promotes the target (`role = 'owner'` by the target's membership id),
+  then demotes the caller (`role = 'organizer'` by `(club_id, user_id)`). If the demotion fails, the
+  "rollback" sets the target's role to `owner` again, which it already is. It does not restore the
+  target's original role (`targetMember.role`, already read). A failed demotion therefore leaves
+  the club with **two owners**, and the handler returns 500.
+- **Why deferred.** It is pre-existing, and 05-10 preserved it byte for byte: that plan moved only the
+  writing client and the demotion filter (DEC-40). The fix is a behaviour change on an error path, and it
+  needs its own DEFECT pin (the fake's elevated client failing the second update) before it moves.
+- **Why not cosmetic.** Two owners is an authorization state. Both can then transfer, delete the club
+  and change roles, and nothing in the product removes the extra owner except an admin.
+- **Owner:** Phase 6 (the elevated-door services work). Pin it with a DEFECT row in
+  `club-owner-writes-defect.test.ts`'s family, then restore `targetMember.role` in the rollback. The
+  better fix is to do both updates in one statement or one RPC.
+
+## DI-51 — Non-creator club members pass the events/[id] PATCH and DELETE gates that RLS then refuses
+
+- **Found by:** 05-RESEARCH.md § D ("events UPDATE … a handler/RLS mismatch for non-creator members →
+  500", Phase 5 action "pin; register as a note (not widened)"), and observed again by 05-09.
+- **What it is.** The composite gates in `src/app/api/events/[id]/route.ts` PATCH and DELETE admit
+  the creator, an admin, or a member of the event's club (`requireClubRole(…, CLUB_ROLES, …)` since
+  05-10). The `events` UPDATE policies are `Organizers can update own events` (`created_by`) and
+  `Admins can update any event`. So on the real stack a club member who did not create the event
+  gets a 500 from PATCH (the update matches 0 rows and `.single()` errors), and the DELETE soft-delete
+  (`update({ deleted_at })`, no `.select()`) matches 0 rows and reports success without deleting.
+  05-09 pinned only the authz-ring half, in the fake.
+- **Why deferred.** It is the events-side twin of F-087. The fix is the same choice, the elevated door
+  behind the member gate or an UPDATE policy for club members, and the policy route is local-only
+  until DI-23. No slice-4 plan names it. Research § D said not to widen it.
+- **Why not cosmetic.** The DELETE arm reports a false success to the organizer, the same
+  data-integrity shape that raised F-087 to Medium.
+- **Owner:** the phase owner, to register as a finding with F-087's shape in 05-19's final register
+  pass, or to record that event editing is creator-only by design and narrow the gate to match.
+
+---
+
+**Next new item id: DI-52.**
 
 *Phase: 05-slices-3-5-auth-club-authorization-admin-containment*
 *Plan: 05-01*

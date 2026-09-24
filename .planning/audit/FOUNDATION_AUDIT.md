@@ -46,8 +46,8 @@
 
 | Status | Count |
 |---|---:|
-| Open | 66 |
-| Fixed | 25 |
+| Open | 65 |
+| Fixed | 26 |
 
 ---
 
@@ -325,7 +325,7 @@
 
 ### F-008 — Event INSERT policy carries WITH CHECK (true), permitting a self-approved event with a forged created_by
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Requires authentication but crosses the moderation trust boundary: a signed-in user can insert an event with status already 'approved' and created_by set to someone else, bypassing the pending-to-approved pipeline entirely. No compensating control exists for the direct PostgREST write path — the moderation check lives in handlers the attacker simply does not use.
 
@@ -344,6 +344,8 @@
 **Recommended fix.** Replace the policy with `WITH CHECK (auth.uid() = created_by AND status = 'pending')`. Approval then has no path except the moderation handler, which is the control the product actually intends.
 
 **Validation criterion.** A pgTAP test asserting that an authenticated INSERT with status 'approved' is rejected, that an INSERT with a created_by other than auth.uid() is rejected, and that an INSERT with status 'pending' and created_by = auth.uid() succeeds.
+
+**Resolution.** **Fixed and proven on the local stack in Phase 5 (plan 05-11, `5d9c22e`, INTENTIONAL BEHAVIOUR CHANGE). Production closes with the DI-23 migration repair, so the status stays Open with `closes_in_phase` "08" (DEC-57).** `supabase/migrations/20260923120000_events_insert_club_scope.sql` replaces `WITH CHECK (true)` with DEC-42's policy: `is_admin() OR (created_by = auth.uid() AND (status = 'pending' OR (status = 'approved' AND club_id IS NOT NULL AND is_club_member(club_id) AND the club is approved)))`. That refines the recommended fix (pending only), because the product auto-approves a member of an approved club (`src/app/api/events/create/route.ts`) and `POST /api/admin/events` inserts with no creator. A pending event may still name any club (DEC-42). The validation criterion, clause by clause, in `supabase/tests/database/060-club-tenant-isolation.test.sql`: an approved INSERT by a non-member is rejected with 42501 (tests 4 and 5; also into a pending club, test 11, and with no club, test 10); an INSERT with a `created_by` other than `auth.uid()` is rejected with 42501 (tests 4 and 6); an INSERT with status 'pending' and `created_by = auth.uid()` passes RLS (tests 7 and 12, where 23503 means it reached the auth.users foreign key). In the allow direction, a member's approved insert and the admin arm pass (tests 8, 9, 13 and 14). All green unseeded and seeded (Files=7, Tests=116). Removing the policy turns 060 red, and re-creating it as `WITH CHECK (true)` turns tests 4-6 and 10-11 red (`evidence/schema-push-slice-4.txt` blocks 10 and 10b). The 05-09 before-probes P1 and P2 (`INSERT 0 1`) now raise 42501 on the seeded stack (block 6b). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-4-close.md` section 4.
 
 **Related.** [F-022](#f-022)
 
@@ -950,7 +952,7 @@
 
 ### F-016 — Club-invitation acceptance is broken in production because the invitee policies exist only in an unapplied migration
 
-**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** A live functional break, not a security defect: an invitee can neither see nor accept their invitation because club_invitations has exactly two live policies, both is_club_owner(club_id). /api/clubs/[id]/invites is RLS-reliant, so nothing masks it. Held at Medium because it denies rather than grants access, and because the fix already exists in the repository unapplied — the compensating control is that the correct policy is written, just not deployed.
 
@@ -970,6 +972,8 @@
 **Recommended fix.** Apply the existing migration. It cannot be applied by a plain replay because the migration history aborts (F-043), so this is sequenced behind that fix or applied as a targeted reconciliation statement with the same content.
 
 **Validation criterion.** An integration test where user A invites user B to a club, user B lists their invitations and sees it, and user B accepts it and becomes a member.
+
+**Resolution.** **Fixed and proven on the local stack in Phase 5 (plan 05-11, `9903671`, `e2e/specs/club-invitation-acceptance.spec.ts`). Production closes with the DI-23 migration repair, so the status stays Open with `closes_in_phase` "08" (DEC-43, DEC-57).** The invitee policies are in `supabase/migrations/20260916000000_invitation_policy_fixes.sql`, which production has not applied. The validation criterion on the local stack, through the product path: club_owner creates an invitation for onboarded_student with `POST /api/clubs/<approvedClub>/invites` (201, a token). onboarded_student opens `/invites/<token>` (200, the welcome heading; no 'Wrong Account', 'Something Went Wrong' or 'Invalid Invitation' card). That page reads the invitation under 'Invitees can view their own invitations' and accepts it: the membership INSERT and the status UPDATE both run on the invitee's own cookie client under RLS. The owner then sees the invitation `accepted` and the student listed as an organizer. The criterion's middle step, 'user B lists their invitations', has no invitee list surface in the product. The invitee's read of their own invitation is the page's token lookup, proven by the page rendering past the 'Invalid Invitation' card and by pgTAP 020's 'the invitee can read the invitation addressed to them'. Green in the slice-4 full run, 76/0 (`evidence/playwright.slice-4-after.txt` Part 2, tests 51-54). The membership is restored afterwards (`evidence/floor.slice-4-after.txt` block 13c). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-4-close.md` section 4.
 
 **Related.** [F-012](#f-012), [F-043](#f-043)
 
@@ -1847,7 +1851,7 @@
 
 ### F-087 — Club owners cannot edit or delete their club or change member roles: clubs has no owner UPDATE policy and club_members UPDATE is admin-only, so PATCH returns 500, DELETE returns success without deleting and writes an audit row, and the role change returns 500
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Exposure-adjusted to Medium. The RLS ring denies in the safe direction - nothing is exposed and no boundary is crossed, because only the verified owner reaches the write and the database refuses it - which rules out High. It is not Low because it breaks a Validated organizer workflow in both environments and the DELETE arm reports false success: the owner is told the club was deleted, the club stays live, and an admin_audit_log row records a deletion that never happened, a data-integrity defect in the moderation record. The compensating control is that no row is corrupted.
 
@@ -1869,6 +1873,8 @@
 **Recommended fix.** After requireClubRole(..., ["owner"]), perform the three writes through getElevatedClient() with the handler's existing column whitelist, so status, created_by and id are never writable through the owner path (DEC-41), each with a REGISTRY row. Keep the RLS ring denying direct owner writes; an owner UPDATE policy needs status immutability and is deferred to Phase 7.
 
 **Validation criterion.** src/__tests__/api/clubs/club-owner-writes-defect.test.ts's assertions MOVE when the fix lands; e2e/specs/club-authorization.spec.ts's "DEFECT F-087" test flips to 200; supabase/tests/database/060-club-tenant-isolation.test.sql asserts a direct owner UPDATE on clubs still affects 0 rows.
+
+**Resolution.** **Fixed in Phase 5: plan 05-10 (`4531ee2`, INTENTIONAL BEHAVIOUR CHANGE; `a6fd637` moved the transfer demotion to `(club_id, user_id)`, DEC-40), closed out by plan 05-11.** After `requireClubRole(…, ["owner"], …)`, the club edit, the soft-delete, the member role change and the ownership transfer write on `getElevatedClient()`. The edit payload is built from the handler's column whitelist typed `TablesUpdate<"clubs">`, so `status`, `created_by` and `id` stay unwritable through the owner path (DEC-41). Each operation family has a `src/server/db/elevated/REGISTRY.md` row. No owner UPDATE policy was added: the RLS ring still denies direct owner writes. Validation criterion met on all three clauses. (1) `src/__tests__/api/clubs/club-owner-writes-defect.test.ts` rows D1 ×2, D2, D4 and D5 moved with the fix (`evidence/defect-ledger.md`, the 05-10 rows; Status line `FIXED in 05-10`). (2) `e2e/specs/club-authorization.spec.ts` 'FIXED F-087: the owner's own club PATCH answers 200, and status stays unwritable' is green in the slice-4 full run, 76/0 (`evidence/playwright.slice-4-after.txt` Part 2). (3) `supabase/tests/database/060-club-tenant-isolation.test.sql` asserts that a direct owner UPDATE on `clubs` affects 0 rows (test 17) and a direct owner role change on `club_members` affects 0 rows (test 19), green unseeded and seeded (`evidence/floor.slice-4-after.txt` blocks 10 and 12). The door needs no migration, so this holds in production on deploy. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-4-close.md` section 4.
 
 **Related.** [F-016](#f-016), [F-022](#f-022)
 

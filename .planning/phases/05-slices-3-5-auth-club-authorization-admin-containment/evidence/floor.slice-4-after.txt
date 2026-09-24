@@ -1,0 +1,640 @@
+head=9903671b8f96941c19913ccc2352affd5eec58f7
+
+Slice 4 after-floor: every slice-3 floor command, re-run after slice 4 from a clean reset
+**Plan:** 05-11 Task 3 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24
+
+Line 1 is the commit every block below ran on. 9903671, `test(05-11): F-016 invitation acceptance
+through the product API`, is the last code-bearing commit of slice 4. It sits on 5d9c22e (the F-008
+migration, 060, the types) and on 05-09/05-10's work. Nothing under `src/`, `e2e/` or `supabase/`
+changes after it: this plan's Task 3 commit adds evidence and register edits only. Every row came
+from running the command in this working tree on 2026-09-24 (Node 24, Supabase CLI 2.115.0, local
+stack only), from one bash script, so each exit code is the command's own. Nothing is transcribed.
+The "Before" column is `evidence/floor.slice-3-after.txt` (head 6b9a721).
+
+SUMMARY
+| # | Command | Before (slice 3 after, 6b9a721) | After (head 9903671) | Verdict |
+|---|---------|---------------------------------|----------------------|---------|
+| 1 | npx jest --ci | 1013 passed, 0 failed; 63 suites; exit 0 | 1135 passed, 0 failed, 0 skipped; 65 of 65 suites; exit 0 | at or above (+122: 05-09's 107 PRESERVE + 13 DEFECT, 05-10's +2 seam rows) |
+| 2 | npm run lint | 0 errors, 19 warnings; exit 0 | 0 errors, 19 warnings; exit 0 | equal |
+| 3 | npx tsc --noEmit | exit 0 | exit 0 (the new spec and the regenerated types included) | equal |
+| 4 | npm audit --audit-level=high --omit=dev | 0 critical, 0 high, 2 moderate (dompurify, yaml); exit 0 | the same; exit 0 | equal |
+| 5 | node scripts/check-elevated-ratchet.mjs | committed=25 live=24; exit 0 | committed=25 live=22 delta=-3 (retired: clubs/[id], clubs/[id]/transfer, the callback); exit 0 | as required (05-10's live 22) |
+| 6 | node scripts/check-migration-filenames.mjs | 4 parse; exit 0 | 5 parse; exit 0 | +1: 20260923120000_events_insert_club_scope.sql |
+| 7 | node scripts/check-characterization-tags.mjs --all | ok 27; exit 0 | ok 29; exit 0 | at or above (+2: club-gates PRESERVE, club-owner-writes DEFECT) |
+| 8 | node .planning/audit/tools/validate.mjs --quick | 118 passed, 2 failed, 1 skipped; exit 1 | 118 passed, 2 failed, 1 skipped; exit 1 | equal; the same two by-design schema-snapshot FAILs and the same SKIP |
+| 8b | node .planning/audit/tools/validate.mjs --check endpoints | 5 passed; exit 0 | 5 passed; exit 0 | equal |
+| 9 | supabase db reset --local | exit 0; 4 migrations | exit 0; 5 migrations | the new migration applies from zero |
+| 10 | pgTAP, UNSEEDED | Files=6 Tests=86 PASS; exit 0 | Files=7 Tests=116 PASS; exit 0 | +1 file, +30 tests (060) |
+| 11 | npx tsx scripts/seed/load.ts | 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved; exit 0 | identical; exit 0 | equal (DEC-54) |
+| 12 | pgTAP, SEEDED | Files=6 Tests=86 PASS; exit 0 | Files=7 Tests=116 PASS; exit 0 | +1 file, +30 tests |
+| 13 | npx playwright test (after a second reset + seed) | 53 passed, 0 failed; exit 0 | 76 passed, 0 failed (10 setup + 66 spec); exit 0; first run, no retry | at or above (53 + 19 club-authorization + 4 club-invitation-acceptance) |
+| 13c | F-016 membership restored (T-05-11-05) | — | onboarded_student in approvedClub: 0 rows; club_members total 6 (the seed's); 1 accepted invitation remains | restored |
+| 14 | census: env non-null assertions | 0 | 0 (grep exit 1) | held at 0 |
+| 15 | census: getSession( calls | 1 production call (api/health:160) | the same one call | unchanged, as required |
+| 16 | census: verifyAdmin() lines, non-test | 34 | 34, identical | equal; slice 5 (05-12/05-13) owns this census |
+| 17 | census: checkBanStatus() | 0 | 0 (grep exit 1) | held at 0 |
+| 18 | census: from("club_members") in src/app, src/lib | 42 lines | 24 lines | slice 4 drove it down by 18: 12 reads left the nine club-route files (22 → 10, club-guard-adoption.txt §1a and §1b) and 6 left the four events-side files (events/[id] 3, events/[id]/analytics 1, reviews 1, create 1 → 0, measured against 6b9a721) |
+| 19 | census: (supabase as any) | 3 lines, 1 code site | the same | equal; slice 5 owns F-072 |
+| 20 | census: requireClubRole( call sites under src/app/api (new) | 0 production call sites | 18 call sites = the 17 § C sites (#15's PATCH composite has two arms: the membership arm and the isClubMember moderation flag) | REFAC-12's collapse, measured |
+| 21 | census: from("club_members") in the 13 gate files (new) | 22 in the nine club files (05-10 §1a) plus 6 in the four events-side files | 10, every one a non-gate read or write per research § C and club-guard-adoption.txt §1a: transfer 40 (target read), 59 (promote), 70 (demote), 78 (rollback); members/role 40 (target read), 64 (role update); members 37 (listing), 114 (target read), 142 (delete); invites 114 (existing-member target read) | 0 gate-site membership reads remain |
+
+Required by the plan, each met:
+- pgTAP rows show 7 files PASS unseeded (block 10) and seeded (block 12). Met.
+- Playwright 0 failed, exit 0, from a clean reset, including club-invitation-acceptance.spec.ts
+  (tests 51-54 of the run). Met.
+- Jest 0 failed. Met.
+- After the run, a query shows onboarded_student has no membership in approvedClub (block 13c). Met.
+- One flake re-run was allowed; none was needed.
+
+NOTES
+- Order: blocks 9-12 (reset, unseeded pgTAP, seed, seeded pgTAP), then a second reset and seed
+  (13a, 13b), then Playwright (13) and the membership check (13c), then blocks 1-8b and the censuses
+  (14-21), then a final reset and seed (22), because the Playwright run writes a save, an RSVP, an
+  accepted invitation and a temporary auth user. The stack is left reset and seeded.
+- Reset, seed and pgTAP output was piped through a key/secret/token/password filter, and the
+  Supabase CLI's update nag was dropped.
+- Block 13's Playwright output has the production server's [WebServer] lines removed. Every test
+  line and the summary are verbatim. The same run is in `evidence/playwright.slice-4-after.txt`
+  Part 2.
+- Block 1's output is cut to its summary. The full run printed 65 PASS suite lines and no FAIL line.
+- Block 2's grep also caught two warning lines whose text contains "problems"; the count line is the
+  verdict.
+- Block 21's label says "the five events-side files". The command lists four paths (events/[id]/route.ts,
+  events/[id]/analytics, events/[id]/reviews, events/create), which hold the five events-side sites
+  (#13-#17); the table counts files, which is 9 + 4 = 13. Its `clubs/[id]` path also covers the
+  appeal and follow routes, which have no club_members read.
+- Port 3000: free before the Playwright run, after it, and at the end (lsof exit=1 each time).
+- Every DB command targeted the local stack (127.0.0.1:54321). The linked-project flag was not used.
+- Block 8 ran before this plan's findings edit. Its FAILs are the by-design schema-snapshot checks
+  (schema/staging.schema.sql and schema/local.schema.sql), and its SKIP is
+  `endpoints-signals :: placeholders-permitted`, the same as at the slice-3 close.
+
+==============================================================================
+RAW BLOCKS — invoking command, verbatim output tail, exit code
+==============================================================================
+------------------------------------------------------------------------------
+[9 · reset (LOCAL)]
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+------------------------------------------------------------------------------
+[10 · pgTAP, UNSEEDED]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql .. ok
+All tests successful.
+Files=7, Tests=116,  0 wallclock secs ( 0.01 usr  0.02 sys +  0.02 cusr  0.01 csys =  0.06 CPU)
+Result: PASS
+exit=0
+------------------------------------------------------------------------------
+[11 · seed]
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+------------------------------------------------------------------------------
+[12 · pgTAP, SEEDED]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql .. ok
+All tests successful.
+Files=7, Tests=116,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.05 CPU)
+Result: PASS
+exit=0
+------------------------------------------------------------------------------
+[13a · second reset (clean harness start)]
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+------------------------------------------------------------------------------
+[13b · second seed]
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+------------------------------------------------------------------------------
+[13 · playwright]
+$ lsof -i :3000
+exit=1
+$ npx playwright test   (full log: playwright log; [WebServer] lines removed below)
+
+Running 76 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (375ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (258ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (247ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (483ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (227ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (251ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (245ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (206ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (194ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (226ms)
+  ✓  11 [chromium] › e2e/specs/admin-login-cookie-equivalence.spec.ts:40:5 › the cookie shim emits the same cookie names the real sign-in page does (516ms)
+  ✓  12 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (484ms)
+  ✓  13 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  14 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (264ms)
+  ✓  15 [chromium] › e2e/specs/anonymous-browse.spec.ts:31:5 › an anonymous visitor browses the event feed and sees only approved events (321ms)
+  ✓  16 [chromium] › e2e/specs/anonymous-browse.spec.ts:50:5 › an anonymous visitor searches, and the search narrows the feed (628ms)
+  ✓  17 [chromium] › e2e/specs/anonymous-browse.spec.ts:63:5 › an anonymous visitor browses public club content (255ms)
+  ✓  18 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:60:7 › a permanently banned user (F-062, F-088) › gets a JSON 403 Account suspended on an API write (85ms)
+  ✓  19 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:64:7 › a permanently banned user (F-062, F-088) › gets the same JSON 403 on an API read (78ms)
+  ✓  20 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:68:7 › a permanently banned user (F-062, F-088) › is still sent to the ban page on a page request (143ms)
+  ✓  21 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:77:7 › a user whose suspension is still running (F-088) › gets a JSON 403 Account suspended on an API write (60ms)
+  ✓  22 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:85:7 › a user whose suspension has expired › reads their own saved events, because banned_at alone is not a ban (104ms)
+  ✓  23 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:94:7 › the mid-onboarding student (F-089, DEC-34) › is sent to onboarding from the home page (132ms)
+  ✓  24 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:99:7 › the mid-onboarding student (F-089, DEC-34) › is still sent to onboarding with the needs_onboarding cookie deleted (database truth) (139ms)
+  ✓  25 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:108:7 › the mid-onboarding student (F-089, DEC-34) › gets a JSON 403 Onboarding required on a direct API write (79ms)
+  ✓  26 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:112:7 › the mid-onboarding student (F-089, DEC-34) › can still make the wizard's self-update (exempt from the onboarding guard) (78ms)
+  ✓  27 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:119:7 › the mid-onboarding student (F-089, DEC-34) › can still complete onboarding (exempt from the onboarding guard) (76ms)
+  ✓  28 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:129:7 › the deleted debug route (F-027) › answers 404 in the production build (60ms)
+  ✓  29 [chromium] › e2e/specs/banned-redirect.spec.ts:37:7 › a permanently banned user › is redirected away from a protected path, to the ban page (128ms)
+  ✓  30 [chromium] › e2e/specs/banned-redirect.spec.ts:50:7 › a user whose suspension is still running › is redirected away from a protected path, to the ban page (126ms)
+  ✓  31 [chromium] › e2e/specs/banned-redirect.spec.ts:63:7 › a user whose suspension has expired › reaches the protected path, because banned_at alone is not a ban (165ms)
+  ✓  32 [chromium] › e2e/specs/club-authorization.spec.ts:73:7 › the cross-club attacker on the approved club (REFAC-12) › cannot update the club (105ms)
+  ✓  33 [chromium] › e2e/specs/club-authorization.spec.ts:80:7 › the cross-club attacker on the approved club (REFAC-12) › cannot delete the club (105ms)
+  ✓  34 [chromium] › e2e/specs/club-authorization.spec.ts:87:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view invitations (104ms)
+  ✓  35 [chromium] › e2e/specs/club-authorization.spec.ts:94:7 › the cross-club attacker on the approved club (REFAC-12) › cannot send invitations (112ms)
+  ✓  36 [chromium] › e2e/specs/club-authorization.spec.ts:101:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view members (106ms)
+  ✓  37 [chromium] › e2e/specs/club-authorization.spec.ts:108:7 › the cross-club attacker on the approved club (REFAC-12) › cannot remove members (104ms)
+  ✓  38 [chromium] › e2e/specs/club-authorization.spec.ts:117:7 › the cross-club attacker on the approved club (REFAC-12) › cannot change member roles (106ms)
+  ✓  39 [chromium] › e2e/specs/club-authorization.spec.ts:126:7 › the cross-club attacker on the approved club (REFAC-12) › cannot transfer ownership (104ms)
+  ✓  40 [chromium] › e2e/specs/club-authorization.spec.ts:133:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view club analytics (103ms)
+  ✓  41 [chromium] › e2e/specs/club-authorization.spec.ts:140:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view the analytics of the club's event (106ms)
+  ✓  42 [chromium] › e2e/specs/club-authorization.spec.ts:147:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's banner (113ms)
+  ✓  43 [chromium] › e2e/specs/club-authorization.spec.ts:154:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's logo (110ms)
+  ✓  44 [chromium] › e2e/specs/club-authorization.spec.ts:165:7 › the club's organizer (not the owner) › cannot update the club (owner only) (105ms)
+  ✓  45 [chromium] › e2e/specs/club-authorization.spec.ts:172:7 › the club's organizer (not the owner) › can view members (111ms)
+  ✓  46 [chromium] › e2e/specs/club-authorization.spec.ts:179:7 › the club's organizer (not the owner) › can view club analytics (116ms)
+  ✓  47 [chromium] › e2e/specs/club-authorization.spec.ts:187:7 › the club owner › can view invitations (104ms)
+  ✓  48 [chromium] › e2e/specs/club-authorization.spec.ts:193:7 › the club owner › can view members (106ms)
+  ✓  49 [chromium] › e2e/specs/club-authorization.spec.ts:202:7 › the club owner › can view club analytics (108ms)
+  ✓  50 [chromium] › e2e/specs/club-authorization.spec.ts:206:7 › the club owner › FIXED F-087: the owner's own club PATCH answers 200, and status stays unwritable (173ms)
+  ✓  51 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:118:7 › club invitation acceptance (F-016, DEC-43) › the club owner invites the student by email (39ms)
+  ✓  52 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:130:7 › club invitation acceptance (F-016, DEC-43) › the student opens the invitation and it is accepted (448ms)
+  ✓  53 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:159:7 › club invitation acceptance (F-016, DEC-43) › the owner sees the invitation accepted (42ms)
+  ✓  54 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:176:7 › club invitation acceptance (F-016, DEC-43) › the student is now a member of the club, as an organizer (33ms)
+  ✓  55 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:40:7 › the club owner › is routed from /my-clubs to the multi-club surface and sees the approved club (1.1s)
+  ✓  56 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:54:7 › the club owner › opens the club dashboard and sees the club's own events (514ms)
+  ✓  57 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:68:7 › a member of a different club › does not see the approved club on their own surface (329ms)
+  ✓  58 [chromium] › e2e/specs/event-read-path.spec.ts:84:5 › PRESERVE: GET /api/events?limit=1 returns 200 with the approved event first and total 2 (7ms)
+  ✓  59 [chromium] › e2e/specs/event-read-path.spec.ts:95:5 › PRESERVE: GET /api/events?search=Music Night returns exactly the second approved event (10ms)
+  ✓  60 [chromium] › e2e/specs/event-read-path.spec.ts:104:5 › PRESERVE: typing a,b into the search box shows the No events found state (557ms)
+  ✓  61 [chromium] › e2e/specs/event-read-path.spec.ts:117:5 › PRESERVE: the approved event's detail page renders its title (219ms)
+  ✓  62 [chromium] › e2e/specs/event-read-path.spec.ts:149:5 › PRESERVE: limit=1 then its nextCursor traverses both approved events in start_date order, total 2 on each page (15ms)
+  ✓  64 [chromium] › e2e/specs/event-read-path.spec.ts:174:5 › PRESERVE: cursor=not-a-valid-cursor is a 400 with Invalid cursor (1ms)
+  ✓  65 [chromium] › e2e/specs/event-read-path.spec.ts:182:5 › DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix) (205ms)
+  ✓  66 [chromium] › e2e/specs/event-read-path.spec.ts:203:5 › DEFECT F-081: the feed files the academic+tech event under a Social row, and there is no Tech row (moves only if 04-11 ships the identity mappings) (349ms)
+  ✓  67 [chromium] › e2e/specs/event-read-path.spec.ts:226:5 › FIXED F-082: search=a,b is a 200 with an empty events list (moved in 04-08) (11ms)
+  ✓  68 [chromium] › e2e/specs/event-read-path.spec.ts:238:5 › FIXED F-082: search=% matches only a literal percent, so no seeded event (moved in 04-08) (9ms)
+  ✓  69 [chromium] › e2e/specs/event-read-path.spec.ts:250:5 › FIXED F-083: the list body carries a nextCursor when more rows remain (moved in 04-09) (7ms)
+  ✓  70 [chromium] › e2e/specs/no-profile-row.spec.ts:109:7 › a signed-in account with no profile row (DEC-35) › an API call gets a JSON 403 Profile not found (26ms)
+  ✓  71 [chromium] › e2e/specs/no-profile-row.spec.ts:116:7 › a signed-in account with no profile row (DEC-35) › a page request is signed out and sent to /?error=profile_sync_failed (106ms)
+  ✓  72 [chromium] › e2e/specs/protected-route-redirect.spec.ts:35:7 › an anonymous visitor › is redirected from every protected path to the sign-in prompt, carrying the destination (220ms)
+  ✓  73 [chromium] › e2e/specs/protected-route-redirect.spec.ts:66:7 › a signed-in student › reaches every protected path without a redirect (966ms)
+  ✓  74 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (1.2s)
+  ✓  75 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (1.0s)
+  ✓  76 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (438ms)
+
+  76 passed (26.2s)
+exit=0
+$ lsof -i :3000
+exit=1
+------------------------------------------------------------------------------
+[13c · F-016 membership restored (T-05-11-05)]
+$ psql: SELECT count(*) FROM club_members WHERE user_id = onboarded_student AND club_id = approvedClub; and the approvedClub invitations for that email
+ onboarded_student_memberships_in_approvedclub 
+-----------------------------------------------
+                                             0
+(1 row)
+
+        invitee_email        |  status  
+-----------------------------+----------
+ seed.student@mail.mcgill.ca | accepted
+(1 row)
+
+ club_members_total 
+--------------------
+                  6
+(1 row)
+
+exit=0
+------------------------------------------------------------------------------
+[1 · jest full]
+$ npx jest --ci
+suite lines (PASS|FAIL): 65
+FAIL lines: 0
+Test Suites: 65 passed, 65 total
+Tests:       1135 passed, 1135 total
+Snapshots:   0 total
+Time:        2.455 s
+Ran all test suites in 2 projects.
+exit=0
+------------------------------------------------------------------------------
+[2 · lint]
+$ npm run lint
+  77:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+exit=0
+------------------------------------------------------------------------------
+[3 · tsc]
+$ npx tsc --noEmit
+exit=0
+------------------------------------------------------------------------------
+[4 · audit]
+$ npm audit --audit-level=high --omit=dev
+dompurify  <=3.4.12
+Severity: moderate
+yaml  1.0.0 - 1.10.2 || 2.0.0 - 2.8.2
+Severity: moderate
+2 moderate severity vulnerabilities
+exit=0
+------------------------------------------------------------------------------
+[5 · elevated ratchet]
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=22 delta=-3
+retired=3 (the list shrank — this is the intended direction)
+  - src/app/api/clubs/\[id\]/route.ts
+  - src/app/api/clubs/\[id\]/transfer/route.ts
+  - src/app/auth/callback/route.ts
+PASS: the live census is a subset of the committed allow-list
+exit=0
+------------------------------------------------------------------------------
+[6 · migration filenames]
+$ node scripts/check-migration-filenames.mjs
+PASS: 5 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql
+exit=0
+------------------------------------------------------------------------------
+[7 · characterization tag gate]
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/events/ban-asymmetry-defect.test.ts (F-088, F-062, F-089)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071, F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 29 files
+exit=0
+------------------------------------------------------------------------------
+[8 · validate quick]
+$ node .planning/audit/tools/validate.mjs --quick
+PASS schema-snapshots :: dump-is-non-trivial :: schema/prod.schema.sql is 117359 bytes
+PASS schema-snapshots :: dump-contains-create-table :: schema/prod.schema.sql
+PASS schema-snapshots :: dump-is-non-trivial :: schema/staging.schema.sql is 2690 bytes
+FAIL schema-snapshots :: dump-contains-create-table :: schema/staging.schema.sql
+PASS schema-snapshots :: dump-is-non-trivial :: schema/local.schema.sql is 2228 bytes
+FAIL schema-snapshots :: dump-contains-create-table :: schema/local.schema.sql
+PASS drift :: columns-non-empty :: 243 column rows
+PASS drift :: drift-non-empty :: 288 drift rows
+PASS drift :: every-live-table-has-a-drift-row :: all covered
+PASS drift :: all-three-status-columns-set :: all set
+PASS endpoints :: is-an-array :: array
+PASS endpoints :: row-count-matches-baseline :: baseline/versions.txt route_ts_count is 94, inventory has 94
+PASS endpoints :: schema-valid :: all rows valid
+PASS endpoints :: ids-unique :: all ids distinct
+PASS endpoints :: no-residual-placeholders :: fully classified
+PASS endpoints-signals :: row-count-matches-baseline :: baseline/versions.txt route_ts_count is 94, inventory has 94
+PASS endpoints-signals :: schema-valid :: all rows valid
+PASS endpoints-signals :: signals-present-on-every-row :: every row carries signals
+SKIP endpoints-signals :: placeholders-permitted :: this gate runs before hand classification; use --check endpoints afterwards
+PASS pages :: row-count-matches-baseline :: baseline/versions.txt page_tsx_count is 43, inventory has 43
+PASS pages :: schema-valid :: all rows valid
+PASS pages :: no-residual-placeholders :: fully classified
+PASS pages :: every-build-route-is-inventoried :: 140 build routes all covered
+PASS rls :: pg-policies-non-empty :: 101 policy rows read from the live catalog
+PASS rls :: review-addresses-rls-disabled-tables :: rls-disabled-tables
+PASS rls :: review-addresses-rls-enabled-with-no-policy :: rls-enabled-with-no-policy
+PASS rls :: review-addresses-using-true-policies :: using-true-policies
+PASS rls :: review-addresses-policies-with-no-to-clause :: policies-with-no-to-clause
+PASS heatmap :: row-count-equals-tables-times-commands :: 38 distinct tables times 4 commands is 152, csv has 152
+PASS heatmap :: every-cell-is-allow-deny-or-none :: all cells in the permitted set
+PASS service-role :: row-count-equals-callsite-count :: 22 route handlers with signals.uses_service_client true plus 3 non-route callsites is 25, register has 25
+PASS service-role :: callsite-count-agrees-with-baseline :: baseline/versions.txt service_client_file_count is 25, derived count is 25
+PASS service-role :: all-four-justifications-answered :: every row answers all four questions
+PASS cache :: every-personalized-endpoint-is-probed :: all personalized routes carry a verdict
+PASS cache :: positive-control-row-exists :: a run where nothing ever cached proves nothing about personalized routes
+PASS cache :: positive-control-recorded-a-hit :: control cached at least once
+PASS authz-registers :: every-getsession-callsite-is-registered :: 1 callsites registered
+PASS authz-registers :: getsession-rows-carry-a-classification :: each row must read authorization-gating or non-gating with a reason
+PASS authz-registers :: every-env-gated-check-is-registered :: 2 env-gated routes registered
+PASS authz-registers :: fail-open-register-non-empty :: register must list the reachable route for each env-gated check
+PASS cron :: covers-pg-cron-jobs :: pg_cron
+PASS cron :: covers-api-cron-handlers :: /api/cron/
+PASS cron :: covers-vercel-json-crons :: vercel.json
+PASS cron :: covers-supabase-edge-function :: edge function
+PASS cron :: covers-apify-instagram-webhook :: apify
+PASS cron :: covers-supabase-auth-hooks :: auth hook
+PASS cron :: each-source-carries-an-explicit-verdict :: 8 verdict markers for 6 named sources
+PASS deps :: npm-audit-parses :: production-only audit json
+PASS deps :: every-high-or-critical-has-a-reachability-row :: 24 high or critical advisories judged
+PASS deps :: report-states-reachability :: a reachability judgment is required, not just a severity
+PASS deps :: swagger-and-redoc-question-answered :: both answered
+PASS baseline :: baseline-file-non-empty :: baseline/jest.txt
+PASS baseline :: baseline-file-non-empty :: baseline/tsc.txt
+PASS baseline :: baseline-file-non-empty :: baseline/lint.txt
+PASS baseline :: baseline-file-non-empty :: baseline/build.txt
+PASS baseline :: baseline-file-non-empty :: baseline/versions.txt
+PASS baseline :: jest-records-a-pass-count :: pass count present
+PASS baseline :: jest-records-a-skip-count :: skip count present
+PASS baseline :: a-reason-exists-per-skipped-suite :: 5 skipped suites, 6 reason bullets in baseline/test-runner-decision.md
+PASS baseline :: test-runner-decision-cites-the-mock-call-evidence :: the jest versus vitest mock-call counts must be recorded
+PASS observability :: quantity-routes_without_try_catch-is-an-integer :: 22
+PASS observability :: quantity-routes_leaking_internal_error_text-is-an-integer :: 22
+PASS observability :: quantity-catch_any_count-is-an-integer :: 5
+PASS observability :: quantity-console_call_count-is-an-integer :: 162
+PASS observability :: quantity-request_correlation_callsite_count-is-an-integer :: 0
+PASS dead-code :: knip-output-parses :: knip json
+PASS dead-code :: explicit-disposition-for-each-named-target :: all dispositioned
+PASS dead-code :: stale-docs-list-dispositioned :: stale docs list
+PASS bundle-sweep :: count-recorded-for-service_role :: 0
+PASS bundle-sweep :: count-recorded-for-ADMIN_EMAILS :: 0
+PASS bundle-sweep :: count-recorded-for-jwt-shape :: 0
+PASS threat-models :: exactly-three-threat-models :: threat-model-anonymous.md, threat-model-escalation.md, threat-model-tenant.md
+PASS threat-models :: stays-within-one-page :: threat-model-anonymous.md is 71 lines, cap is 120
+PASS threat-models :: stride-table-populated :: threat-model-anonymous.md has 28 table lines
+PASS threat-models :: stays-within-one-page :: threat-model-escalation.md is 69 lines, cap is 120
+PASS threat-models :: stride-table-populated :: threat-model-escalation.md has 27 table lines
+PASS threat-models :: stays-within-one-page :: threat-model-tenant.md is 69 lines, cap is 120
+PASS threat-models :: stride-table-populated :: threat-model-tenant.md has 28 table lines
+PASS storage :: buckets-non-empty :: 4 buckets returned from the live catalog
+PASS storage :: bucket-avatars-answers-read-visibility :: read-visibility
+PASS storage :: bucket-avatars-answers-path-prefix-ownership :: path-prefix-ownership
+PASS storage :: bucket-avatars-answers-size-and-mime-limits :: size-and-mime-limits
+PASS storage :: bucket-banners-answers-read-visibility :: read-visibility
+PASS storage :: bucket-banners-answers-path-prefix-ownership :: path-prefix-ownership
+PASS storage :: bucket-banners-answers-size-and-mime-limits :: size-and-mime-limits
+PASS storage :: bucket-club-logos-answers-read-visibility :: read-visibility
+PASS storage :: bucket-club-logos-answers-path-prefix-ownership :: path-prefix-ownership
+PASS storage :: bucket-club-logos-answers-size-and-mime-limits :: size-and-mime-limits
+PASS storage :: bucket-event-images-answers-read-visibility :: read-visibility
+PASS storage :: bucket-event-images-answers-path-prefix-ownership :: path-prefix-ownership
+PASS storage :: bucket-event-images-answers-size-and-mime-limits :: size-and-mime-limits
+PASS dates :: both-candidate-column-pairs-named :: all four candidate columns named
+PASS dates :: authoritative-columns-declared :: an explicit verdict is required
+PASS dates :: cites-the-live-catalog-artifact :: the answer comes from information_schema.columns, never from the types file
+PASS findings :: schema-valid :: all findings valid
+PASS findings :: ids-match-the-stable-id-pattern :: all ids well formed
+PASS findings :: ids-unique :: all ids distinct
+PASS findings :: ten-required-fields-present-and-non-empty :: 91 findings complete
+PASS findings :: critical-and-high-carry-line-numbers :: every critical and high is pinned to lines
+PASS findings :: evidence-resolves-and-is-never-inline :: all evidence paths resolve
+PASS findings :: expired-risk-acceptance-reverts-to-open :: no expired or over-long acceptances
+PASS findings :: report-and-json-agree-on-finding-count :: FOUNDATION_AUDIT.md references 91 ids, findings.json has 91
+PASS sla :: severity-critical-has-a-table-row :: Critical
+PASS sla :: severity-critical-names-a-deadline :: The first Stage 3 slice that owns the affected layer. **No C
+PASS sla :: severity-high-has-a-table-row :: High
+PASS sla :: severity-high-names-a-deadline :: **Before Phase 7 (Certification Datasets and Persona Coverag
+PASS sla :: severity-medium-has-a-table-row :: Medium
+PASS sla :: severity-medium-names-a-deadline :: Within Stage 3, in the slice that touches the affected file.
+PASS sla :: severity-low-has-a-table-row :: Low
+PASS sla :: severity-low-names-a-deadline :: Opportunistically. No deadline.
+PASS sla :: exception-register-defined :: the Risk-accepted status must be defined
+PASS sla :: exception-requires-owner-date-expiry-and-rationale :: all four attributes required
+PASS sla :: expiry-capped-at-ninety-days :: 90 day cap stated
+PASS sla :: expired-acceptance-reverts-to-open :: enforced by --check findings
+PASS sla :: cvss-position-stated :: severity is exposure-adjusted; CVSS is not assigned to application-logic findings
+PASS sla :: severity-is-exposure-adjusted :: each level needs an exposure-adjusted definition
+--- 118 passed, 2 failed, 1 skipped
+exit=1
+------------------------------------------------------------------------------
+[8b · validate endpoints]
+$ node .planning/audit/tools/validate.mjs --check endpoints
+PASS endpoints :: is-an-array :: array
+PASS endpoints :: row-count-matches-baseline :: baseline/versions.txt route_ts_count is 94, inventory has 94
+PASS endpoints :: schema-valid :: all rows valid
+PASS endpoints :: ids-unique :: all ids distinct
+PASS endpoints :: no-residual-placeholders :: fully classified
+--- 5 passed, 0 failed, 0 skipped
+exit=0
+------------------------------------------------------------------------------
+[14 · census: env non-null assertions]
+$ command grep -rnoE 'process\.env\.[A-Z_]+!' src
+exit=1
+count=0
+------------------------------------------------------------------------------
+[15 · census: getSession( calls]
+$ command grep -rn 'getSession(' src
+src/app/api/health/route.ts:160:    const { data, error } = await supabase.auth.getSession();
+src/server/__tests__/getsession-gate.test.ts:7: * Why: `auth.getSession()` reads the session from the cookie without asking
+src/server/__tests__/getsession-gate.test.ts:15: *   - the set of files containing a `getSession(` call is exactly
+src/server/__tests__/getsession-gate.test.ts:21: * adds a `getSession(` call or removes either `getUser(` call. If Phase 6
+src/server/__tests__/getsession-gate.test.ts:60:  it("the only production file calling getSession( is the non-gating api/health route", () => {
+src/server/__tests__/getsession-gate.test.ts:62:      .filter((file) => fs.readFileSync(file, "utf8").includes("getSession("))
+exit=0
+count=6
+------------------------------------------------------------------------------
+[16 · census: verifyAdmin() callsites (non-test)]
+$ command grep -rn 'verifyAdmin()' src | command grep -v '\.test\.'
+src/app/api/admin/clubs/route.ts:6:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/clubs/[id]/route.ts:12:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/route.ts:6:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/route.ts:68:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/[id]/results/route.ts:20:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/[id]/route.ts:10:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/[id]/route.ts:74:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/[id]/route.ts:116:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/audit-log/route.ts:6:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/organizer-requests/route.ts:6:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/organizer-requests/[id]/route.ts:11:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/users/route.ts:5:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/users/[id]/route.ts:9:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/users/[id]/ban/route.ts:13:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/users/[id]/ban/route.ts:249:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/featured/route.ts:9:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/featured/route.ts:41:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/featured/[id]/route.ts:12:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/featured/[id]/route.ts:78:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/route.ts:23:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/route.ts:112:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/[id]/status/route.ts:12:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/[id]/route.ts:10:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/[id]/route.ts:77:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/[id]/edits/route.ts:12:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/organizers/route.ts:6:  const { isAdmin } = await verifyAdmin();
+src/app/api/admin/stats/route.ts:5:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/analytics/users/route.ts:5:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/analytics/events/route.ts:5:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/reports/route.ts:7:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/reports/[id]/route.ts:11:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/recommendations/batch/route.ts:8:    const { isAdmin } = await verifyAdmin();
+src/app/api/recommendations/analytics/route.ts:16:    const { supabase, isAdmin } = await verifyAdmin();
+src/lib/admin.ts:3:export async function verifyAdmin() {
+exit=0
+count=34
+------------------------------------------------------------------------------
+[17 · census: checkBanStatus() (legacy ban helper)]
+$ command grep -rn 'checkBanStatus()' src
+exit=1
+count=0
+------------------------------------------------------------------------------
+[18 · census: from("club_members") in src/app, src/lib]
+$ command grep -rn 'from("club_members")' src/app src/lib
+src/app/clubs/[id]/page.tsx:58:      .from("club_members")
+src/app/my-clubs/page.tsx:18:    .from("club_members")
+src/app/profile/page.tsx:29:      .from("club_members")
+src/app/users/[id]/page.tsx:115:      .from("club_members")
+src/app/api/clubs/route.ts:133:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:40:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:59:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:70:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:78:      .from("club_members")
+src/app/api/clubs/[id]/members/role/route.ts:40:    .from("club_members")
+src/app/api/clubs/[id]/members/role/route.ts:64:    .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:37:      .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:114:      .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:142:      .from("club_members")
+src/app/api/clubs/[id]/invites/route.ts:114:        .from("club_members")
+src/app/api/my-clubs/route.ts:21:      .from("club_members")
+src/app/api/my-clubs/route.ts:45:          .from("club_members")
+src/app/api/admin/clubs/[id]/route.ts:175:      await serviceClient.from("club_members").upsert(
+src/app/api/admin/organizer-requests/[id]/route.ts:94:    await serviceClient.from("club_members").upsert(
+src/app/api/admin/organizers/route.ts:60:    .from("club_members")
+src/app/api/users/me/suggestions/route.ts:46:      .from("club_members")
+src/app/api/users/me/suggestions/route.ts:90:        .from("club_members")
+src/app/invites/[token]/page.tsx:103:    .from("club_members")
+src/app/invites/[token]/page.tsx:138:    supabase.from("club_members").insert({
+exit=0
+count=24
+------------------------------------------------------------------------------
+[19 · census: (supabase as any)]
+$ command grep -rn '(supabase as any)' src
+src/app/moderation/page.tsx:78:      (supabase as any)
+src/__tests__/api/events/friends-defect.test.ts:8: * where an array of ids is required. `(supabase as any)` erased the client type
+src/__tests__/moderation/audit-shape.test.ts:12: * How the casts hid it. `(supabase as any)` erased the client type, so the
+exit=0
+count=3
+------------------------------------------------------------------------------
+[20 · census: requireClubRole( call sites under src/app/api (the gate sites)]
+$ command grep -rn 'requireClubRole(' src/app/api
+src/app/api/clubs/logo/route.ts:37:    const gate = await requireClubRole(
+src/app/api/clubs/[id]/transfer/route.ts:23:  const gate = await requireClubRole(
+src/app/api/clubs/[id]/route.ts:71:    const gate = await requireClubRole(
+src/app/api/clubs/[id]/route.ts:185:  const gate = await requireClubRole(
+src/app/api/clubs/[id]/members/role/route.ts:23:  const gate = await requireClubRole(
+src/app/api/clubs/[id]/members/route.ts:25:    const gate = await requireClubRole(
+src/app/api/clubs/[id]/members/route.ts:93:    const gate = await requireClubRole(
+src/app/api/clubs/[id]/events/route.ts:30:        await requireClubRole(supabase, clubId, ctx.user.id, CLUB_ROLES)
+src/app/api/clubs/[id]/invites/route.ts:29:    const gate = await requireClubRole(
+src/app/api/clubs/[id]/invites/route.ts:77:    const gate = await requireClubRole(
+src/app/api/clubs/[id]/analytics/route.ts:26:    const gate = await requireClubRole(
+src/app/api/clubs/banner/route.ts:37:    const gate = await requireClubRole(
+src/app/api/events/[id]/route.ts:214:      const membership = await requireClubRole(
+src/app/api/events/[id]/route.ts:227:        await requireClubRole(supabase, event.club_id, user.id, CLUB_ROLES)
+src/app/api/events/[id]/route.ts:378:        await requireClubRole(supabase, event.club_id, user.id, CLUB_ROLES)
+src/app/api/events/[id]/analytics/route.ts:50:    const gate = await requireClubRole(
+src/app/api/events/[id]/reviews/route.ts:153:        await requireClubRole(supabase, event.club_id, userId, CLUB_ROLES)
+src/app/api/events/create/route.ts:155:        const membership = await requireClubRole(
+exit=0
+count=18
+------------------------------------------------------------------------------
+[21 · census: from("club_members") in the nine club-route files and the five events-side files (gate files)]
+$ command grep -rn 'from("club_members")' 'src/app/api/clubs/[id]' src/app/api/clubs/banner src/app/api/clubs/logo 'src/app/api/events/[id]/route.ts' 'src/app/api/events/[id]/analytics' 'src/app/api/events/[id]/reviews' src/app/api/events/create
+src/app/api/clubs/[id]/transfer/route.ts:40:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:59:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:70:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:78:      .from("club_members")
+src/app/api/clubs/[id]/members/role/route.ts:40:    .from("club_members")
+src/app/api/clubs/[id]/members/role/route.ts:64:    .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:37:      .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:114:      .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:142:      .from("club_members")
+src/app/api/clubs/[id]/invites/route.ts:114:        .from("club_members")
+exit=0
+count=10
+------------------------------------------------------------------------------
+[22 · final reset + seed (stack left clean)]
+------------------------------------------------------------------------------
+[22a · reset]
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+------------------------------------------------------------------------------
+[22b · seed]
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ lsof -i :3000
+exit=1
