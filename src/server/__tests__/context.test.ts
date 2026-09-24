@@ -86,7 +86,7 @@ describe("createRequestContext", () => {
     expect(ctx.user).toEqual(AUTHENTICATED_USER);
   });
 
-  it("reads the three-column profile slice from the users table", async () => {
+  it("reads the five-column profile slice from the users table", async () => {
     const ctx = await createRequestContext();
 
     expect(lastTable).toBe("users");
@@ -95,6 +95,8 @@ describe("createRequestContext", () => {
       "id",
       "roles",
       "onboarding_completed",
+      "banned_at",
+      "ban_expires_at",
     ]);
     expect(ctx.profile).toEqual(PROFILE_ROW);
   });

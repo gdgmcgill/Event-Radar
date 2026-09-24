@@ -28,33 +28,31 @@ export type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
 /**
  * The profile slice read once per request.
  *
- * These three columns are the row's key (`id`), what the role guard reads
- * (`roles`, in `requireRole`) and what the onboarding guard will read
- * (`onboarding_completed`). `requireClubRole` reads no profile column — it
- * reads `club_members`. Reading the slice once is the whole point of a
- * per-request context.
+ * These five columns are the row's key (`id`), what the role guard reads
+ * (`roles`, in `requireRole`), what the onboarding guard reads
+ * (`onboarding_completed`, in `requireOnboarded`) and what the ban guard reads
+ * (`banned_at` and `ban_expires_at`, in `requireActiveUser`). `requireClubRole`
+ * reads no profile column. It reads `club_members`. Reading the slice once is
+ * the whole point of a per-request context: one query serves every guard.
  *
- * THE SEAM PERFORMS NO BAN CHECK. `requireUser`, `requireRole` and
- * `requireClubRole` establish authentication and role membership only; a
- * handler that adopts them gets no ban enforcement from them. Ban enforcement
- * today is:
- *   - the proxy ring (`src/proxy.ts`), which reads the caller's ban columns on
- *     every matched request but FAILS OPEN: the whole ring is skipped when its
- *     environment is unbound (F-003), its outer catch passes the request
- *     through on any error, and a failed ban read counts as "not banned". It
- *     also answers a JSON API call with a redirect to an HTML page (F-062);
- *   - `checkBanStatus()` (`src/lib/ban.ts`), called by individual write
- *     handlers — among them save POST and rsvp POST, but not their DELETE
- *     arms, an asymmetry the characterization suites pin.
+ * THE BAN AND ONBOARDING GUARDS NOW EXIST (plan 05-04, DEC-34, DEC-35).
+ * `requireActiveUser` refuses an anonymous caller (401), a signed-in caller
+ * with no profile row (403 "Profile not found") and a suspended caller (403
+ * "Account suspended"). `requireOnboarded` refuses a signed-in caller who has
+ * not finished onboarding (403 "Onboarding required"). Both read this slice
+ * and issue no query of their own. The ban columns come back into the slice
+ * together with the guard that reads them, as DEC-24 required, and that closes
+ * DI-35: the slice no longer implies a check nobody performs.
  *
- * A seam ban guard that fails closed is REFAC-11, Phase 5. It will re-add
- * `banned_at` and `ban_expires_at` to this slice knowingly, alongside the guard
- * that reads them (DEC-24). Until then, selecting them here would only imply a
- * check nobody performs (DI-35).
+ * Adopting the guards is the handlers' job, and this plan adopts none of them.
+ * Until 05-06 and 05-07 move each write arm onto them, ban enforcement at a
+ * handler is still the legacy helper `checkBanStatus()` in `src/lib/ban.ts`
+ * (save POST, rsvp POST and the other callers the 05-03 net pins), plus the
+ * proxy ring, which 05-05 makes fail closed (F-003, F-062).
  */
 export type RequestProfile = Pick<
   Tables<"users">,
-  "id" | "roles" | "onboarding_completed"
+  "id" | "roles" | "onboarding_completed" | "banned_at" | "ban_expires_at"
 >;
 
 export type RequestContext = {
@@ -65,7 +63,7 @@ export type RequestContext = {
 };
 
 const PROFILE_COLUMNS =
-  "id, roles, onboarding_completed";
+  "id, roles, onboarding_completed, banned_at, ban_expires_at";
 
 /**
  * Builds the request context.

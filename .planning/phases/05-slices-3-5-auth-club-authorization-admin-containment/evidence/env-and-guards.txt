@@ -154,3 +154,129 @@ $ npx jest --ci
 Test Suites: 59 passed, 59 total
 Tests:       984 passed, 984 total
 exit=0
+
+==============================================================================
+TASK 3 — requireActiveUser, requireOnboarded, profile slice widened to the ban columns
+Recorded: 2026-09-24T05:26:29Z · HEAD at capture=6e716fb1b5b8a19f92fc749a30201a000688ff7b (Task 2 commit; Task 3 in the working tree)
+==============================================================================
+
+--- 3a. RED: the two guard suites before either guard existed
+$ npx jest --ci src/server/__tests__/requireActiveUser.test.ts src/server/__tests__/requireOnboarded.test.ts
+    Cannot find module '../authz/requireOnboarded' from 'src/server/__tests__/requireOnboarded.test.ts'
+    Cannot find module '../authz/requireActiveUser' from 'src/server/__tests__/requireActiveUser.test.ts'
+Test Suites: 2 failed, 2 total
+Tests:       0 total
+exit=1
+
+--- 3b. The context seam test's column assertion (a seam unit test, NOT a characterization suite; it
+carries no PRESERVE/DEFECT tag, and the tag gate does not list it). It moved from the three-column slice to
+the five-column slice in this task: the test title changed from 'three-column' to 'five-column', and
+"banned_at", "ban_expires_at" were appended to the expected array. RED against the unwidened context:
+$ npx jest --ci src/server/__tests__/context.test.ts
+    ✕ reads the five-column profile slice from the users table (1 ms)
+Tests:       1 failed, 10 passed, 11 total
+exit=1
+
+--- 3c. GREEN
+$ npx jest --ci --verbose src/server/__tests__/requireActiveUser.test.ts src/server/__tests__/requireOnboarded.test.ts src/server/__tests__/context.test.ts
+PASS node src/server/__tests__/requireActiveUser.test.ts
+    ✓ denies an anonymous request with 401 {"error":"Unauthorized"} (2 ms)
+    ✓ denies an anonymous request with 401 even when a profile is somehow present (1 ms)
+    ✓ denies a signed-in user with no profile row: 403 {"error":"Profile not found"} (DEC-35)
+    ✓ denies a permanent ban (banned_at set, ban_expires_at null): 403 {"error":"Account suspended"}
+    ✓ denies a ban whose expiry is in the future: 403 Account suspended
+    ✓ permits a ban whose expiry is in the past, carrying the user
+    ✓ permits a user who was never banned (banned_at null), carrying the user
+    ✓ does not read onboarding: an un-onboarded, unbanned user is permitted
+PASS node src/server/__tests__/requireOnboarded.test.ts
+    ✓ passes an anonymous request: authentication is another guard's job
+    ✓ denies a signed-in user with no profile row: 403 {"error":"Profile not found"} (DEC-35)
+    ✓ denies onboarding_completed false: 403 {"error":"Onboarding required"}
+    ✓ denies onboarding_completed null: 403 Onboarding required (only true admits)
+    ✓ passes onboarding_completed true (1 ms)
+    ✓ does not read the ban: a banned, onboarded user passes this guard
+PASS node src/server/__tests__/context.test.ts
+    ✓ returns the client produced by the existing server factory
+    ✓ reads the revalidating user accessor rather than a session (1 ms)
+    ✓ carries the authenticated user
+    ✓ reads the five-column profile slice from the users table
+    ✓ scopes the profile read to the authenticated user's id
+    ✓ returns a null user and a null profile for an anonymous request
+    ✓ never reaches the profile table for an anonymous request
+    ✓ returns a null profile when the row is missing rather than throwing
+    ✓ stamps a distinct request id on each call
+    ✓ is callable and produces the same context shape (1 ms)
+    ✓ falls back to the un-memoized function on a React without `cache`
+Tests:       25 passed, 25 total
+exit=0
+
+$ command grep -n "PROFILE_COLUMNS =" -A1 src/server/context.ts
+65:const PROFILE_COLUMNS =
+66-  "id, roles, onboarding_completed, banned_at, ban_expires_at";
+$ command grep -c "await result.response.json()" src/server/__tests__/requireActiveUser.test.ts src/server/__tests__/requireOnboarded.test.ts
+src/server/__tests__/requireActiveUser.test.ts:1
+src/server/__tests__/requireOnboarded.test.ts:1
+(each file asserts bodies through one expectDenied helper, which every deny case calls: requireActiveUser 5 deny cases, requireOnboarded 3)
+
+--- 3d. Gates
+$ npx jest --ci src/server
+Test Suites: 10 passed, 10 total
+Tests:       63 passed, 63 total
+exit=0
+$ npx jest --ci
+Test Suites: 62 passed, 62 total
+Tests:       1008 passed, 1008 total
+exit=0
+Floor: before 968 (05-03 head) → after Task 1 984 (+16 env) → after Task 2 994 (+10 instrumentation) → after Task 3 1008 (+8 requireActiveUser, +6 requireOnboarded).
+No handler adopts either guard in this plan. The wider select is served by the fakes' full rows, and every suite passes.
+$ npx tsc --noEmit
+exit=0
+$ npm run lint
+  77:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 19 problems (0 errors, 19 warnings)
+exit=0
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 26 files
+exit=0
+
+--- 3e. PRESERVE suites unedited since the 05-03 head
+$ git diff --stat 8b5d240 -- 'src/__tests__/api/events/*-characterization.test.ts' src/proxy-characterization.test.ts src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+exit=0  (prints nothing)
+$ git diff --stat 8b5d240 -- <every file the tag gate lists as PRESERVE (13)>
+exit=0  (prints nothing)
+$ git diff --stat 8b5d240 -- <every file the tag gate lists as DEFECT (12)>
+ src/lib/__tests__/env-assertions-defect.test.ts | 22 +++++++---------------
+ 1 file changed, 7 insertions(+), 15 deletions(-)
+exit=0  (only the F-003 census, ledgered in Task 1)
+
+$ git status --porcelain -- src/proxy.ts src/app/auth/callback/route.ts   (not modified by this plan)
+exit=0
+$ git diff --stat 8b5d240 -- src/__tests__/api/events/pagination-contract-defect.test.ts   (the one PRESERVE+DEFECT file, outside both lists above)
+exit=0  (prints nothing)
