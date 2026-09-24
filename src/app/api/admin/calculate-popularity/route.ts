@@ -2,31 +2,18 @@
  * POST /api/admin/calculate-popularity
  * Recalculate popularity scores for all events
  *
- * This endpoint should be called periodically (e.g., via cron job)
- * to keep popularity scores up to date.
+ * Admin only. Both verbs decide admin through the request context
+ * (requireActiveUser, then requireRole), and the recompute runs on the
+ * elevated door. The former machine-key gate admitted every caller when its
+ * environment variable was unset (F-001, FO-01, fixed in 05-14).
  */
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/types";
-
-// Create admin client with service role key
-function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Missing Supabase environment variables");
-  }
-
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireRole } from "@/server/authz/requireRole";
+import { getElevatedClient } from "@/server/db/elevated";
 
 /**
  * @swagger
@@ -47,28 +34,26 @@ function createAdminClient() {
  *       200:
  *         description: Popularity scores recalculated successfully
  *       401:
- *         description: Unauthorized - requires API key
+ *         description: Unauthorized - not signed in
+ *       403:
+ *         description: Forbidden - not an admin, or the account is suspended
  *       500:
  *         description: Internal server error
  */
 export async function POST(request: NextRequest) {
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+
   try {
-    // Simple API key authentication for admin endpoints
-    const authHeader = request.headers.get("authorization");
-    const expectedKey = process.env.ADMIN_API_KEY;
-
-    // If ADMIN_API_KEY is set, require it; otherwise allow in development
-    if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const searchParams = request.nextUrl.searchParams;
     const specificEventId = searchParams.get("event_id");
 
-    const supabase = createAdminClient();
+    // The recompute writes event_popularity_scores, which are service-role
+    // only by design (F-010). REGISTRY.md row: popularity recompute.
+    const supabase = getElevatedClient();
 
     let eventIds: string[] = [];
     let results = {
@@ -110,10 +95,9 @@ export async function POST(request: NextRequest) {
         batch.map(async (eventId) => {
           try {
             // Call the database function to update popularity
-            // Using raw SQL via rpc since the function signature isn't in types yet
             const { error: rpcError } = await supabase.rpc(
-              "update_event_popularity" as never,
-              { p_event_id: eventId } as never
+              "update_event_popularity",
+              { p_event_id: eventId }
             );
 
             if (rpcError) {
@@ -162,19 +146,16 @@ export async function POST(request: NextRequest) {
  * GET /api/admin/calculate-popularity
  * Get statistics about popularity score calculations
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+
   try {
-    const authHeader = request.headers.get("authorization");
-    const expectedKey = process.env.ADMIN_API_KEY;
-
-    if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const supabase = createAdminClient();
+    // Same door as POST: the scores table is service-role only (F-010).
+    const supabase = getElevatedClient();
 
     // Get statistics about popularity scores
     interface PopularityStats {

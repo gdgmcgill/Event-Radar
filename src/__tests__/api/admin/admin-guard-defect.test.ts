@@ -1,10 +1,10 @@
 /**
  * DEFECT characterization — F-061, F-001 (and DI-48)
  *
- * Status: PARTLY FIXED in 05-13 (the helper arms' F-061 and DI-48 rows; the
- * two calculate-popularity arms stay open until 05-14). 05-13 adds the 33 helper arms
- * to `FIXED_ARMS` as each file adopts `requireRole(ctx, "admin")` (DEC-44);
- * 05-14 adds the two calculate-popularity arms (DEC-44, F-001). The banned
+ * Status: FIXED in 05-14. 05-13 fixed the 33 helper arms' F-061 and DI-48
+ * rows as each file adopted `requireRole(ctx, "admin")` (DEC-44); 05-14 added
+ * the two calculate-popularity arms to both sets (F-001, DEC-44, DEC-58), so
+ * every one of the 35 arms now sits in `FIXED_ARMS` and `BAN_GUARDED_ARMS`. The banned
  * admin rows move through their own set, `BAN_GUARDED_ARMS`, when an arm
  * composes `requireActiveUser(ctx)` ahead of the role check (DI-48's owner
  * note); they are kept apart so that the F-061 swap does not have to decide
@@ -126,19 +126,32 @@ const TASK2_ARMS = [
   "recommendations/batch POST",
 ];
 
+/**
+ * FIXED in 05-14 Task 1: calculate-popularity decides admin through the
+ * request context (requireActiveUser, then requireRole) on both verbs, and the
+ * ADMIN_API_KEY gate is gone (F-001, FO-01).
+ */
+const CALCULATE_POPULARITY_ARMS = [
+  "admin/calculate-popularity POST",
+  "admin/calculate-popularity GET",
+];
+
 const FIXED_ARMS: ReadonlySet<string> = new Set<string>([
   ...TASK1_ARMS,
   ...TASK2_ARMS,
+  ...CALCULATE_POPULARITY_ARMS,
 ]);
 
 /**
  * The arms that compose `requireActiveUser(ctx)` ahead of the role check
  * (DI-48, DEC-58). Their banned-admin row has moved to the fixed shape.
- * FIXED in 05-13, in the same commits as the `requireRole` swap.
+ * FIXED in 05-13 for the helper arms, in the same commits as the
+ * `requireRole` swap, and in 05-14 for calculate-popularity.
  */
 const BAN_GUARDED_ARMS: ReadonlySet<string> = new Set<string>([
   ...TASK1_ARMS,
   ...TASK2_ARMS,
+  ...CALCULATE_POPULARITY_ARMS,
 ]);
 
 test("FIXED_ARMS and BAN_GUARDED_ARMS hold every one of the 33 former helper arms", () => {
@@ -148,6 +161,15 @@ test("FIXED_ARMS and BAN_GUARDED_ARMS hold every one of the 33 former helper arm
   expect(helperArms).toHaveLength(33);
   expect(helperArms.filter((id) => !FIXED_ARMS.has(id))).toEqual([]);
   expect(helperArms.filter((id) => !BAN_GUARDED_ARMS.has(id))).toEqual([]);
+});
+
+test("FIXED_ARMS and BAN_GUARDED_ARMS hold all 35 arms, calculate-popularity included", () => {
+  const allArms = ADMIN_ARMS.map((arm) => arm.id);
+  expect(allArms).toHaveLength(35);
+  expect(allArms.filter((id) => !FIXED_ARMS.has(id))).toEqual([]);
+  expect(allArms.filter((id) => !BAN_GUARDED_ARMS.has(id))).toEqual([]);
+  expect(FIXED_ARMS.size).toBe(35);
+  expect(BAN_GUARDED_ARMS.size).toBe(35);
 });
 
 // ─── Environment and fakes ─────────────────────────────────────────────────

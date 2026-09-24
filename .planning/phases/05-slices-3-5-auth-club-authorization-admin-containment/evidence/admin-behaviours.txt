@@ -1,0 +1,141 @@
+# Admin behaviours — plan 05-14 Task 1 (REFAC-13, F-001/FO-01, F-091, DEC-45, DEC-58, DI-48)
+
+Recorded 2026-09-24 on the local tree. Base: f349ee9 (05-13 head). Every command is quoted with
+its exit code; outputs are verbatim unless marked as an excerpt. Scratch outputs were written
+outside the repository and are quoted here. Floor before (05-13 SUMMARY): Jest 1298/1298, tag
+gate ok 34, ratchet committed=25 live=22.
+
+## 1. The fixes
+
+calculate-popularity (both verbs): the inline service-key client factory, the
+`@supabase/supabase-js` import and both machine-key gates are deleted. Each verb opens with
+`createRequestContext()`, `requireActiveUser(ctx)`, `requireRole(ctx, "admin")` (the DEC-58
+preamble every other admin arm uses) and then runs on `getElevatedClient()`. The rpc call's two
+`as never` casts are removed: the generated types carry
+`update_event_popularity: { Args: { p_event_id: string }; Returns: undefined }`, and tsc exits 0.
+Success and error bodies are otherwise byte-identical. GET's unused request parameter is renamed
+`_request` (the arm table calls `GET(r)` typed against the handler, so the parameter stays).
+
+admin/users/[id] PATCH: `updateData` is `TablesUpdate<"users">`. With `roles` in the body, every
+value must be a `user_role` enum member (read from the generated `Constants`), else
+400 {"error":"Invalid role","field":"roles"}; a roles change on `auth.user.id` is
+403 {"error":"You cannot change your own roles"}; `admin` is no longer stripped; `user` is still
+added when absent. The update runs on `getElevatedClient()`. `{ user: data }` and the 500
+{"error":"Internal server error"} bytes are unchanged. After a successful roles change,
+`logAdminAction({ adminUserId, action: "updated", targetType: "user", targetId, metadata: { roles } })`.
+A name-only edit is not audited (the plan scopes the audit row to the roles change).
+
+## 2. Protocol step 2 — both DEFECT suites UNEDITED against the fixed source: red
+
+$ npx jest --ci src/__tests__/api/admin/admin-guard-defect.test.ts src/__tests__/api/admin/admin-users-patch-defect.test.ts   (excerpt: failing rows and summary)
+  ● D3 (F-001): calculate-popularity with ADMIN_API_KEY unset › admin/calculate-popularity GET as anonymous
+  ● D3 (F-001): calculate-popularity with ADMIN_API_KEY unset › admin/calculate-popularity GET as student
+  ● D3 (F-001): calculate-popularity with ADMIN_API_KEY unset › admin/calculate-popularity POST as anonymous
+  ● D3 (F-001): calculate-popularity with ADMIN_API_KEY unset › admin/calculate-popularity POST as student
+  ● D4 (DI-48): an admin whose ban is in force › admin/calculate-popularity GET
+  ● D4 (DI-48): an admin whose ban is in force › admin/calculate-popularity POST
+  ● F-091 today: PATCH /api/admin/users/[id] › R1: another user's +admin change is written on the cookie client with admin stripped, 500s, and is not audited
+  ● F-091 today: PATCH /api/admin/users/[id] › R2: the organizer toggle for another user 500s on the cookie client
+  ● F-091 today: PATCH /api/admin/users/[id] › R3: a roles change on the caller's own id is admitted, and the strip demotes the admin
+  ● F-091 today: PATCH /api/admin/users/[id] › R4: an unknown role value is not validated; the update is attempted with it
+Tests:       10 failed, 70 passed, 80 total
+exit=1
+
+Exactly the ten predicted rows: D3 x4 and D4 x2 for calculate-popularity, R1..R4 for F-091.
+
+## 3. Protocol step 3 — rows moved (both calculate-popularity ids added to FIXED_ARMS and BAN_GUARDED_ARMS, plus one all-35 subset test; R1..R4 moved to the fixed shape): green
+
+$ npx jest --ci src/__tests__/api/admin/admin-guard-defect.test.ts src/__tests__/api/admin/admin-users-patch-defect.test.ts   (excerpt)
+Tests:       81 passed, 81 total
+exit=0
+
+## 4. Protocol step 4 — pre-fix route sources (git show HEAD:<path>) put back, moved suites run: red; fixed sources restored
+
+$ npx jest --ci <same two suites>   (excerpt: failing rows and summary)
+  ● D3 (F-001): calculate-popularity with ADMIN_API_KEY unset › admin/calculate-popularity GET as anonymous
+  ● D3 (F-001): calculate-popularity with ADMIN_API_KEY unset › admin/calculate-popularity GET as student
+  ● D3 (F-001): calculate-popularity with ADMIN_API_KEY unset › admin/calculate-popularity POST as anonymous
+  ● D3 (F-001): calculate-popularity with ADMIN_API_KEY unset › admin/calculate-popularity POST as student
+  ● D4 (DI-48): an admin whose ban is in force › admin/calculate-popularity GET
+  ● D4 (DI-48): an admin whose ban is in force › admin/calculate-popularity POST
+  ● F-091 fixed: PATCH /api/admin/users/[id] › R1: another user's +admin change is written on the elevated client, keeps admin, 200s, and is audited once
+  ● F-091 fixed: PATCH /api/admin/users/[id] › R2: the organizer toggle for another user lands on the elevated client
+  ● F-091 fixed: PATCH /api/admin/users/[id] › R3: a roles change on the caller's own id is refused 403 and nothing is updated
+  ● F-091 fixed: PATCH /api/admin/users/[id] › R4: an unknown role value is refused 400 and nothing is updated
+Tests:       10 failed, 71 passed, 81 total
+exit=1
+$ cmp <route> <saved fixed copy>  (both files)
+cmp identical
+exit=0
+(After this check the calculate-popularity docblock was reworded so it no longer names the
+machine-key variable; comment-only, see § 6.)
+
+## 5. The admin suites, PRESERVE unedited
+
+$ git diff --exit-code HEAD -- src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/adminArmTable.ts
+exit=0
+
+$ npx jest --ci src/__tests__/api/admin   (excerpt)
+Test Suites: 3 passed, 3 total
+Tests:       154 passed, 154 total
+exit=0
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=21 delta=-4
+retired=4 (the list shrank — this is the intended direction)
+  - src/app/api/admin/calculate-popularity/route.ts
+  - src/app/api/clubs/\[id\]/route.ts
+  - src/app/api/clubs/\[id\]/transfer/route.ts
+  - src/app/auth/callback/route.ts
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ npm run lint   (excerpt: the summary; every warning is in a file this task does not touch)
+  77:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+exit=0
+
+## 6. Acceptance criteria
+
+$ grep -c 'requireRole(ctx, "admin")' src/app/api/admin/calculate-popularity/route.ts
+2
+exit=0
+$ grep -c "requireActiveUser(ctx)" src/app/api/admin/calculate-popularity/route.ts
+2
+exit=0
+$ grep -c "getElevatedClient()" src/app/api/admin/calculate-popularity/route.ts
+2
+exit=0
+$ grep -c "@supabase/supabase-js" src/app/api/admin/calculate-popularity/route.ts
+0
+exit=1
+$ node -e (ADMIN_API_KEY absent from src/app/api/admin/calculate-popularity/route.ts)   [second run: the first read exit=1 because the new docblock named the variable; the sentence was reworded]
+exit=0
+$ grep -c "as never" src/app/api/admin/calculate-popularity/route.ts
+0
+exit=1
+$ grep -c 'Invalid role' src/app/api/admin/users/[id]/route.ts
+1
+exit=0
+$ grep -c 'You cannot change your own roles' src/app/api/admin/users/[id]/route.ts
+1
+exit=0
+$ grep -c 'getElevatedClient()' src/app/api/admin/users/[id]/route.ts
+1
+exit=0
+$ grep -c 'logAdminAction(' src/app/api/admin/users/[id]/route.ts
+1
+exit=0
+$ grep -c 'TablesUpdate<"users">' src/app/api/admin/users/[id]/route.ts
+1
+exit=0
+$ grep -n "calculate-popularity\|admin/users/\[id\]/route" src/server/db/elevated/REGISTRY.md
+19:| Recompute event popularity scores (rpc update_event_popularity) | `src/app/api/admin/calculate-popularity/route.ts` | writes event_popularity_scores, which are service-role-only by design (F-010); invoked on behalf of an admin, not a row owner | 05 |
+20:| Change another user's roles or name as an admin | `src/app/api/admin/users/[id]/route.ts` | users has no admin UPDATE policy and the F-006 column grant withholds roles from authenticated; the change is an audited admin action (F-004, F-091) | 05 |
+36:05-14 moved `src/app/api/admin/calculate-popularity/route.ts` onto the door
+exit=0

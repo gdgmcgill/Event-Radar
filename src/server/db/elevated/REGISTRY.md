@@ -16,6 +16,8 @@ exception that nobody wrote down is indistinguishable from an oversight.
 | Owner edits club details or soft-deletes the club | `src/app/api/clubs/[id]/route.ts` | clubs has no owner UPDATE policy; an owner policy needs status immutability and is deferred to Phase 7's per-table RLS work (DEC-41); the handler's column whitelist keeps status, created_by and id unwritable | 05 |
 | Owner changes a member's role or transfers ownership | `src/app/api/clubs/[id]/members/role/route.ts`, `src/app/api/clubs/[id]/transfer/route.ts` | club_members UPDATE is admin-only; an owner UPDATE policy is deferred with the clubs policy (DEC-41) | 05 |
 | Record a club deletion or ownership transfer in admin_audit_log | `src/app/api/clubs/[id]/route.ts`, `src/app/api/clubs/[id]/transfer/route.ts` | after F-007 no client role may insert audit rows; the door is the only writer | 05 |
+| Recompute event popularity scores (rpc update_event_popularity) | `src/app/api/admin/calculate-popularity/route.ts` | writes event_popularity_scores, which are service-role-only by design (F-010); invoked on behalf of an admin, not a row owner | 05 |
+| Change another user's roles or name as an admin | `src/app/api/admin/users/[id]/route.ts` | users has no admin UPDATE policy and the F-006 column grant withholds roles from authenticated; the change is an audited admin action (F-004, F-091) | 05 |
 
 Rows added from Phase 5 (05-05 onward).
 
@@ -30,7 +32,10 @@ entry fewer than the committed list; the list itself is regenerated once, in
 05-15 (DEC-49). Plan 05-10 moved the club owner writes onto the door (F-087,
 DEC-41), retiring `src/app/api/clubs/[id]/route.ts` (its dynamic import of the
 service module) and `src/app/api/clubs/[id]/transfer/route.ts` from the live
-census, so the ratchet counts three entries fewer than the committed list. `src/lib/audit.ts`, below, is still a legacy caller.
+census, so the ratchet counts three entries fewer than the committed list. Plan
+05-14 moved `src/app/api/admin/calculate-popularity/route.ts` onto the door
+(its inline service-key client is deleted, F-001), so the ratchet counts four
+entries fewer. `src/lib/audit.ts`, below, is still a legacy caller.
 
 ### One pre-existing elevated caller, counted by both controls since plan 04-03
 

@@ -231,6 +231,11 @@ DI-47 with where they closed, so none is dropped silently.
   REFAC-11. Not covered by DI-48's wording and left proxy-enforced: the two admin page layouts and the
   admin path of `GET /api/moderation/reviews/[targetType]/[targetId]` read the role only (05-13 moved
   them to the request context without adding a ban read); recorded in 05-13-SUMMARY.md for 05-19.
+- **Status (05-14): 35 of 35 arms fixed; closed for the `/api/admin/*` surface DI-48 names.**
+  `admin/calculate-popularity` POST and GET now open with `createRequestContext()`,
+  `requireActiveUser(ctx)`, `requireRole(ctx, "admin")` (05-14 Task 1); both ids joined
+  `FIXED_ARMS` and `BAN_GUARDED_ARMS`, which each hold all 35 arms (a subset test pins it).
+  REFAC-11's flip is 05-19's. The layouts and the moderation reviews admin path above are unchanged.
 
 **Observations already acted on (no DI):**
 - *`src/server/context.ts` docblock names the legacy helper* (05-06): rewritten by 05-07. The header

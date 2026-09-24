@@ -1,7 +1,8 @@
 /**
  * DEFECT characterization — F-091: admin role changes cannot land, strip admin, and are not audited
  *
- * Status: OPEN — every row below moves in 05-14 (DEC-45).
+ * Status: FIXED in 05-14 — R1..R4 moved to their fixed shape (DEC-45); N1 and
+ * N2 did not move.
  *
  * Subject: `PATCH /api/admin/users/[id]` (`src/app/api/admin/users/[id]/route.ts`),
  * written against the unmodified route at plan 05-12's base commit (4e368b6).
@@ -143,76 +144,88 @@ function idFilter(call: FakeCall): unknown {
   return call.filters.find((f) => f.op === "eq" && f.column === "id")?.value;
 }
 
-// ─── Moves in 05-14 ────────────────────────────────────────────────────────
+// ─── Moved in 05-14 ────────────────────────────────────────────────────────
 
-describe("F-091 today: PATCH /api/admin/users/[id]", () => {
-  it("R1: another user's +admin change is written on the cookie client with admin stripped, 500s, and is not audited", async () => {
+function auditInsertsOn(fake: FakeSupabase): FakeCall[] {
+  return fake.calls.filter(
+    (call) => call.table === "admin_audit_log" && call.operation === "insert"
+  );
+}
+
+describe("F-091 fixed: PATCH /api/admin/users/[id]", () => {
+  it("R1: another user's +admin change is written on the elevated client, keeps admin, 200s, and is audited once", async () => {
     setUp();
     const result = await patch(TARGET_ID, { roles: ["user", "admin"] });
 
-    expect(result).toEqual({
-      status: 500,
-      body: { error: "Internal server error" },
+    expect(result.status).toBe(200);
+    expect((result.body as { user: { id: string; roles: string[] } }).user).toMatchObject({
+      id: TARGET_ID,
+      roles: ["user", "admin"],
     });
 
-    const onCookie = updates(mockCookie);
-    expect(onCookie).toHaveLength(1);
-    expect(idFilter(onCookie[0])).toBe(TARGET_ID);
-    const payload = onCookie[0].payload as { roles?: string[] };
-    expect(payload.roles).toEqual(["user"]);
-    expect(payload.roles).not.toContain("admin");
+    expect(updates(mockCookie)).toEqual([]);
+    const onElevated = updates(mockElevated);
+    expect(onElevated).toHaveLength(1);
+    expect(idFilter(onElevated[0])).toBe(TARGET_ID);
+    const payload = onElevated[0].payload as { roles?: string[] };
+    expect(payload.roles).toEqual(["user", "admin"]);
 
-    expect(mockElevated.calls).toEqual([]);
-    expect(auditInserts()).toEqual([]);
+    const audits = auditInsertsOn(mockElevated);
+    expect(audits).toHaveLength(1);
+    expect(auditInsertsOn(mockCookie)).toEqual([]);
+    expect(audits[0].payload).toMatchObject({
+      admin_user_id: ADMIN.id,
+      action: "updated",
+      target_type: "user",
+      target_id: TARGET_ID,
+      metadata: { roles: ["user", "admin"] },
+    });
   });
 
-  it("R2: the organizer toggle for another user 500s on the cookie client", async () => {
+  it("R2: the organizer toggle for another user lands on the elevated client", async () => {
     setUp();
     const result = await patch(TARGET_ID, { roles: ["user", "club_organizer"] });
-
-    expect(result).toEqual({
-      status: 500,
-      body: { error: "Internal server error" },
-    });
-    const onCookie = updates(mockCookie);
-    expect(onCookie).toHaveLength(1);
-    expect((onCookie[0].payload as { roles?: string[] }).roles).toEqual([
-      "user",
-      "club_organizer",
-    ]);
-    expect(updates(mockElevated)).toEqual([]);
-    expect(auditInserts()).toEqual([]);
-  });
-
-  it("R3: a roles change on the caller's own id is admitted, and the strip demotes the admin", async () => {
-    setUp();
-    const result = await patch(ADMIN.id, { roles: ["user", "admin"] });
 
     expect(result.status).toBe(200);
     expect((result.body as { user: { roles: string[] } }).user.roles).toEqual([
       "user",
+      "club_organizer",
     ]);
-    const onCookie = updates(mockCookie);
-    expect(onCookie).toHaveLength(1);
-    expect(idFilter(onCookie[0])).toBe(ADMIN.id);
-    expect(mockCookie.tables.users[0].roles).toEqual(["user"]);
+    expect(updates(mockCookie)).toEqual([]);
+    const onElevated = updates(mockElevated);
+    expect(onElevated).toHaveLength(1);
+    expect((onElevated[0].payload as { roles?: string[] }).roles).toEqual([
+      "user",
+      "club_organizer",
+    ]);
+    expect(auditInserts()).toHaveLength(1);
+  });
+
+  it("R3: a roles change on the caller's own id is refused 403 and nothing is updated", async () => {
+    setUp();
+    const result = await patch(ADMIN.id, { roles: ["user", "admin"] });
+
+    expect(result).toEqual({
+      status: 403,
+      body: { error: "You cannot change your own roles" },
+    });
+    expect(updates(mockCookie)).toEqual([]);
+    expect(updates(mockElevated)).toEqual([]);
+    expect(mockElevated.tables.users[0].roles).toEqual(["user", "admin"]);
     expect(auditInserts()).toEqual([]);
   });
 
-  it("R4: an unknown role value is not validated; the update is attempted with it", async () => {
+  it("R4: an unknown role value is refused 400 and nothing is updated", async () => {
     setUp();
     const result = await patch(TARGET_ID, { roles: ["user", "superuser"] });
 
     expect(result).toEqual({
-      status: 500,
-      body: { error: "Internal server error" },
+      status: 400,
+      body: { error: "Invalid role", field: "roles" },
     });
-    const onCookie = updates(mockCookie);
-    expect(onCookie).toHaveLength(1);
-    expect((onCookie[0].payload as { roles?: string[] }).roles).toEqual([
-      "user",
-      "superuser",
-    ]);
+    expect(updates(mockCookie)).toEqual([]);
+    expect(updates(mockElevated)).toEqual([]);
+    expect(auditInserts()).toEqual([]);
   });
 });
 
