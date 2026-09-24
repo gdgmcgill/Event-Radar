@@ -250,3 +250,346 @@ GUARDED ids: 26
 $ git diff c1ed6ba --stat -- src/__tests__ (only the GUARDED edit)
  .../api/auth-ring/write-handlers-ring-defect.test.ts        | 13 +++++++++++++
  1 file changed, 13 insertions(+)
+
+==============================================================================
+Task 2 §1. Ledger step 2 — the twelve remaining route files fixed, DEFECT rows UNEDITED: red
+==============================================================================
+GUARDED holds the 26 ids from 05-06 and Task 1; the 13 arms of this task are not in it yet.
+$ npx jest --ci src/__tests__/api/auth-ring
+FAIL node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 feedback POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 interactions POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 notifications/[id] PATCH: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 notifications POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 onboarding/complete POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 organizer-requests POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 profile/avatar POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 profile/banner POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 profile/inferred-tags DELETE: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 profile/interests PUT: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 users/[id]/follow DELETE: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 users/[id] PATCH: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 feedback POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 interactions POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 notifications/[id] PATCH: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 notifications POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 onboarding/complete POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 organizer-requests POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 profile/avatar POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 profile/banner POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 profile/inferred-tags DELETE: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 profile/interests PUT: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 users/[id]/follow POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 users/[id]/follow DELETE: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 users/[id] PATCH: no profile row
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 feedback POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 interactions POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 notifications/[id] PATCH: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 notifications POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 organizer-requests POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 profile/avatar POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 profile/banner POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 profile/inferred-tags DELETE: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 profile/interests PUT: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 users/[id]/follow POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 users/[id]/follow DELETE: un-onboarded caller
+    Expected: false
+    Received: true
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       36 failed, 139 passed, 175 total
+exit=1
+
+==============================================================================
+Task 2 §2. Ledger step 3 — 13 ids added to GUARDED (39 total), completeness test added, Status FIXED: green
+==============================================================================
+$ npx jest --ci src/__tests__/api/auth-ring
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+Test Suites: 2 passed, 2 total
+Tests:       176 passed, 176 total
+exit=0
+
+==============================================================================
+Task 2 §3. Ledger step 4 — pre-fix sources of the twelve files restored from c1ed6ba, moved suite: red
+==============================================================================
+$ git show c1ed6ba:<file> > <file> for the twelve route files (temporary)
+$ npx jest --ci src/__tests__/api/auth-ring
+FAIL node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 feedback POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 interactions POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 notifications/[id] PATCH: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 notifications POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 onboarding/complete POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 organizer-requests POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 profile/avatar POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 profile/banner POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 profile/inferred-tags DELETE: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 profile/interests PUT: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 users/[id]/follow DELETE: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 users/[id] PATCH: banned caller
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 feedback POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 interactions POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 notifications/[id] PATCH: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 notifications POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 onboarding/complete POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 organizer-requests POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 profile/avatar POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 profile/banner POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 profile/inferred-tags DELETE: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 profile/interests PUT: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 users/[id]/follow POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 users/[id]/follow DELETE: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 users/[id] PATCH: no profile row
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 feedback POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 interactions POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 notifications/[id] PATCH: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 notifications POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 organizer-requests POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 profile/avatar POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 profile/banner POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 profile/inferred-tags DELETE: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 profile/interests PUT: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 users/[id]/follow POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 users/[id]/follow DELETE: un-onboarded caller
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       36 failed, 140 passed, 176 total
+exit=1
+$ fixed sources restored; cmp against the saved fixed copies:
+cmp src/app/api/users/[id]/follow/route.ts exit=0
+cmp src/app/api/users/[id]/route.ts exit=0
+cmp src/app/api/profile/avatar/route.ts exit=0
+cmp src/app/api/profile/banner/route.ts exit=0
+cmp src/app/api/profile/inferred-tags/route.ts exit=0
+cmp src/app/api/profile/interests/route.ts exit=0
+cmp src/app/api/notifications/[id]/route.ts exit=0
+cmp src/app/api/notifications/route.ts exit=0
+cmp src/app/api/organizer-requests/route.ts exit=0
+cmp src/app/api/onboarding/complete/route.ts exit=0
+cmp src/app/api/interactions/route.ts exit=0
+cmp src/app/api/feedback/route.ts exit=0
+
+==============================================================================
+Task 2 §3b. The completeness test is not vacuous — "feedback POST" removed from GUARDED (temporary): red
+==============================================================================
+$ sed -i '' '/^  "feedback POST",$/d' src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+$ npx jest --ci src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts -t complete
+FAIL node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+  ● GUARDED holds every arm in the table: the handler ring is complete
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 104 skipped, 2 passed, 107 total
+exit=1
+$ restored; cmp write-handlers-ring-defect.test.ts exit=0
+
+==============================================================================
+Task 2 §4. The legacy helper deleted; the plan's full verify
+==============================================================================
+$ npx jest --ci 
+PASS node src/__tests__/api/events/get-events.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/app/auth/callback/route-defect.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS node src/__tests__/moderation/audit-shape.test.ts
+PASS jsdom src/components/ErrorBoundary.test.tsx
+PASS jsdom src/components/events/FilterSidebar.test.tsx
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/app/auth/callback/route.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/lib/__tests__/env-assertions-defect.test.ts
+PASS node src/lib/env.test.ts
+PASS node src/lib/sanitize.test.ts
+PASS node src/proxy.test.ts
+PASS node src/proxy-characterization.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/proxy-defect.test.ts
+PASS node src/lib/__tests__/ban.test.ts
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+PASS node src/instrumentation.test.ts
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+PASS jsdom src/components/events/EventFilters.test.tsx
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS node src/app/api/events/route.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+PASS node src/__tests__/seed/guard.test.ts
+PASS node src/server/__tests__/getsession-gate.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS node src/lib/classifier.test.ts
+PASS node src/lib/eventTags.test.ts
+PASS node src/__tests__/api/events/ban-asymmetry-defect.test.ts
+PASS node src/server/__tests__/requireActiveUser.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/lib/dateValidation.test.ts
+PASS node src/lib/experiments.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+PASS node src/server/__tests__/context.test.ts
+PASS node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+PASS node src/lib/__tests__/recommendations.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/server/__tests__/requireOnboarded.test.ts
+PASS node src/server/__tests__/errors.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/lib/searchFilter.test.ts
+PASS node src/server/__tests__/elevated.test.ts
+PASS node src/lib/diversity.test.ts
+PASS node src/app/api/events/export/route.test.ts
+PASS node src/lib/eventCursor.test.ts
+PASS node src/__tests__/seed/env-override.test.ts
+PASS node src/__tests__/lib/tag-coercion-defect.test.ts
+PASS node src/lib/exportUtils.test.ts
+PASS jsdom src/hooks/useEvents.test.ts
+Test Suites: 63 passed, 63 total
+Tests:       1013 passed, 1013 total
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ npm run lint (summary line)
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+exit=0 (re-run standalone for the exit code; zsh has no PIPESTATUS)
+$ node scripts/check-characterization-tags.mjs --all (last line)
+ok 27 files
+exit=0 (re-run standalone)
+$ node scripts/check-elevated-ratchet.mjs
+  - src/app/auth/callback/route.ts
+PASS: the live census is a subset of the committed allow-list
+exit=0 (re-run standalone)
+
+==============================================================================
+Task 2 §5. Acceptance checks
+==============================================================================
+$ command grep -rn "checkBanStatus" src
+exit=1 (1 = no occurrence)
+$ command grep -nE "^export" src/lib/ban.ts
+6:export function isBanned(user: BanStatus): boolean {
+$ command grep -nE "supabase|NextResponse|^import" src/lib/ban.ts
+exit=1 (1 = nothing that reads Supabase)
+src/app/api/users/[id]/route.ts requireActiveUser(ctx)=1 requireOnboarded(=0
+src/app/api/onboarding/complete/route.ts requireActiveUser(ctx)=1 requireOnboarded(=0
+src/app/api/interactions/route.ts 'if (ctx.user)'=1
+src/app/api/feedback/route.ts 'if (ctx.user)'=1
+src/app/api/users/[id]/follow/route.ts requireActiveUser=2 requireOnboarded=2
+src/app/api/profile/avatar/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/profile/banner/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/profile/inferred-tags/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/profile/interests/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/notifications/[id]/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/notifications/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/organizer-requests/route.ts requireActiveUser=1 requireOnboarded=1
+$ grep -n "completeness\|handler ring is complete" write-handlers-ring-defect.test.ts
+170:test("GUARDED holds every arm in the table: the handler ring is complete", () => {
+GUARDED ids: 39
+$ git diff c1ed6ba -- src/__tests__/api/auth-ring/write-handlers-characterization.test.ts src/__tests__/api/auth-ring/writeHandlerTable.ts | wc -l
+0
+$ git diff -U0 c1ed6ba -- the two Phase 4 PRESERVE suites: every changed line is a docblock comment line
+exit=1 (1 = no non-comment line changed)
+$ npx eslint on the 22 route files, ban.ts and context.ts
+exit=0
+
+$ SUPABASE_SERVICE_ROLE_KEY= NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key npm run build (CI-env build; tail)
+✓ Compiled successfully in 2.1s
+  Finished TypeScript in 1532ms ...
+  Generating static pages using 9 workers (0/100) ...
+  Generating static pages using 9 workers (25/100) 
+  Generating static pages using 9 workers (50/100) 
+(node:60856) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+exit=0
+
+==============================================================================
+Task 2 §6. Comment-only edits outside the route files (the helper's name removed from src/)
+==============================================================================
+The plan requires `grep -rn "checkBanStatus" src` to print nothing and names the context.ts
+docblock. Two Phase 4 PRESERVE suites also named the helper in their leading docblocks. Those lines
+were rewritten as prose only. No assertion, fixture, import or tag word changed: the `-U0` diff
+check in §5 shows every changed line starts with ` *`, and the tag gate still reports ok 27. The
+same two docblocks also lost the stale "ban asymmetry, pinned for Phase 5" bullet that 05-06 left
+behind (that block moved to ban-asymmetry-defect.test.ts in aa50ff6).
+  - src/server/context.ts: the "until 05-06 and 05-07 ..." paragraph now names requireActiveUser
+  - src/server/authz/requireActiveUser.ts: the helper is described in the past tense
+  - src/__tests__/api/events/save-characterization.test.ts: docblock only
+  - src/__tests__/api/events/rsvp-characterization.test.ts: docblock only
+Not edited: write-handlers-characterization.test.ts and writeHandlerTable.ts still say "legacy ban
+helper" in prose (not the name). The plan requires them unedited; the `legacyBan` flag keeps its
+meaning as a record of which arms called the helper before 05-06/05-07.

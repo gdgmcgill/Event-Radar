@@ -44,11 +44,12 @@ export type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
  * together with the guard that reads them, as DEC-24 required, and that closes
  * DI-35: the slice no longer implies a check nobody performs.
  *
- * Adopting the guards is the handlers' job, and this plan adopts none of them.
- * Until 05-06 and 05-07 move each write arm onto them, ban enforcement at a
- * handler is still the legacy helper `checkBanStatus()` in `src/lib/ban.ts`
- * (save POST, rsvp POST and the other callers the 05-03 net pins), plus the
- * proxy ring, which 05-05 makes fail closed (F-003, F-062).
+ * Adopting the guards is the handlers' job. Plans 05-06 and 05-07 moved every
+ * state-changing, non-admin write arm onto them, so ban enforcement at a
+ * handler is `requireActiveUser(ctx)` reading this slice, followed by
+ * `requireOnboarded(ctx)` except on DEC-34's two onboarding exemptions. The
+ * proxy ring, which 05-05 made fail closed (F-003, F-062), is advisory on top
+ * of that. `src/lib/ban.ts` now exports only the `isBanned` predicate.
  */
 export type RequestProfile = Pick<
   Tables<"users">,

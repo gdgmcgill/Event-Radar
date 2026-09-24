@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { VALID_INTEREST_TAGS } from "@/lib/constants";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
@@ -10,19 +11,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    // Onboarding exemption (DEC-34, research C2): the onboarding wizard calls
+    // this self-update before onboarding is complete, so requireOnboarded is
+    // deliberately not called here. The self-only 403 below still applies.
+    const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const user = active.user;
 
     const { id } = await params;
 

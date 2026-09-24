@@ -21,10 +21,10 @@
  *   - banned (isBanned)  → 403 {"error":"Account suspended"}     (the legacy helper's bytes)
  *   - otherwise          → the permit arm, carrying the user
  *
- *   A missing profile row is DENIED. The legacy helper in `src/lib/ban.ts`
- *   reads a null profile as "not banned" and admits the caller, which is the
- *   fail-open shape F-088 registers. Absence of a row is not evidence of good
- *   standing.
+ *   A missing profile row is DENIED. The legacy helper that used to live in
+ *   `src/lib/ban.ts` (deleted in 05-07) read a null profile as "not banned"
+ *   and admitted the caller, which is the fail-open shape F-088 registers.
+ *   Absence of a row is not evidence of good standing.
  *
  * ONE READ, NOT TWO
  *   The guard reads `ctx.profile`, the single `users` read the request context

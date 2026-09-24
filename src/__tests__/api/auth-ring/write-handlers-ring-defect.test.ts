@@ -43,11 +43,15 @@
  * is added, the today-shape assertion goes red against the fix, which is the
  * proof the row pinned something real.
  *
- * Status: OPEN — rows flip as 05-06 and 05-07 guard each arm
+ * Status: FIXED in 05-06 and 05-07. 05-06 guarded the 14 events-family
+ * arms; the other 25 were FIXED in 05-07, which also added the completeness
+ * test below: `GUARDED` now equals the set of `WRITE_ARMS` ids, so an arm
+ * added to the table without a guard turns this file red.
  *
  * Mocks: `@/lib/supabase/server` and `@/lib/supabase/service` (both return
  * the shared fake's client, so every read and write lands in one call log)
- * and `next/headers` (a cookies() stub). The legacy ban helper is not mocked.
+ * and `next/headers` (a cookies() stub). The legacy ban helper was deleted
+ * in 05-07; every arm now reads the ban through `requireActiveUser`.
  *
  * Mutation evidence: `evidence/slice-3-mutation-check-handlers.txt` cycle 2
  * adds an early suspended-403 to `events/[id]/save` DELETE and shows the D1
@@ -122,6 +126,21 @@ const GUARDED: ReadonlySet<string> = new Set<string>([
   "clubs/[id]/transfer POST",
   "clubs/banner POST",
   "clubs/logo POST",
+  // 05-07 Task 2: users, profile, notifications, organizer requests,
+  // onboarding completion and the two anonymous-tolerant writers
+  "users/[id]/follow POST",
+  "users/[id]/follow DELETE",
+  "users/[id] PATCH",
+  "profile/avatar POST",
+  "profile/banner POST",
+  "profile/inferred-tags DELETE",
+  "profile/interests PUT",
+  "notifications/[id] PATCH",
+  "notifications POST",
+  "organizer-requests POST",
+  "onboarding/complete POST",
+  "interactions POST",
+  "feedback POST",
 ]);
 
 beforeEach(() => {
@@ -146,6 +165,10 @@ function rows(filter: (arm: WriteArm) => boolean): [string, WriteArm][] {
 test("GUARDED names only arms that exist in the table", () => {
   const ids = new Set(WRITE_ARMS.map((arm) => arm.id));
   expect([...GUARDED].filter((armId) => !ids.has(armId))).toEqual([]);
+});
+
+test("GUARDED holds every arm in the table: the handler ring is complete", () => {
+  expect([...GUARDED].sort()).toEqual(WRITE_ARMS.map((arm) => arm.id).sort());
 });
 
 describe("F-088 D1 banned caller on arms without the legacy ban helper", () => {

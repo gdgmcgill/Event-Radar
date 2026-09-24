@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
 
 export async function POST() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // Onboarding exemption (DEC-34, research C2): this is the step that
+  // completes onboarding, so requireOnboarded is deliberately not called.
+  const ctx = await createRequestContext();
+  const active = requireActiveUser(ctx);
+  if (!active.ok) return active.response;
 
   const cookieStore = await cookies();
 

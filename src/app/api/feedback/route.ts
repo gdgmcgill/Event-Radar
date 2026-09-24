@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 
 export async function POST(request: Request) {
   try {
+    // Anonymous feedback stays open (DEC-34): the guards apply only when a
+    // user is present.
+    const ctx = await createRequestContext();
+    if (ctx.user) {
+      const active = requireActiveUser(ctx);
+      if (!active.ok) return active.response;
+      const onboarded = requireOnboarded(ctx);
+      if (!onboarded.ok) return onboarded.response;
+    }
+    const user = ctx.user;
+    const supabase = ctx.supabase;
+
     const { type, subject, message } = await request.json();
 
     if (!message || typeof message !== "string" || !message.trim()) {
@@ -19,13 +33,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    const supabase = await createClient();
-
-    // Get user if authenticated (feedback can be anonymous)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
     const { error } = await supabase.from("feedback").insert({
       type: type || "general",

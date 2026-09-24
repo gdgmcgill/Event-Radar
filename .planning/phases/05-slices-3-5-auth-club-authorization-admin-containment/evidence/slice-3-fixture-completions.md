@@ -18,3 +18,13 @@ The rule applied: add a `users` row with `onboarding_completed: true`, `banned_a
 | `src/__tests__/api/events/rsvp.test.ts` | `beforeEach` defaults in `mockQueryResults` | Added `mockQueryResults.set("users", { data: { onboarding_completed: true, banned_at: null, ban_expires_at: null }, error: null })`. The mock's `from()` ignores filters, so this is the row every `users` read receives. | The mock returned `{ data: null }` for `users`, so the context's profile was null and the rsvp POST and DELETE guards answered 403 `Profile not found` on every authenticated test. Before 05-06 the legacy helper read a null profile as "not banned". |
 | `src/__tests__/api/events/reviews.test.ts` | `beforeEach` defaults in `mockQueryResults` | Same `users` entry as above. | Same cause on reviews POST. The GET arm is unguarded and does not read `users` through the context, so its tests were unaffected. |
 | `src/__tests__/api/events/date-validation.test.ts` | the `mockSupabase.from.mockImplementation(...)` in `beforeEach` | The implementation now takes the table name. For `users` only, it spreads `onboarding_completed: true, banned_at: null, ban_expires_at: null` into the same row it already returned (`id`, `club_id: null`, `roles: ["admin"]`, `name`). Every other table gets the unchanged row. | The single table-agnostic row had no `onboarding_completed`, so `requireOnboarded` answered 403 `Onboarding required` on events/create POST and events/[id] PATCH. The `roles: ["admin"]` and `name` the create and PATCH handlers read from `users` are unchanged. |
+
+## 05-07 — none needed
+
+Neither task needed a fixture completion. After Task 1 (the twelve clubs-family arms) the plan's
+verify `npx jest --ci src/__tests__/api src/app/api` passed 456/456 with no untagged suite touched,
+`src/__tests__/api/clubs/analytics.test.ts` included (it exercises the unguarded analytics GET).
+After Task 2 the full `npx jest --ci` passed 1013/1013 with no fixture edit. No legacy mock suite
+exercises the Task 2 arms directly: the only suites that invoke them are the two auth-ring suites,
+whose personas already carry a complete `users` row. Evidence: `evidence/handler-adoption-rest.txt`
+Task 1 §4 and Task 2 §4.

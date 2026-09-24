@@ -37,8 +37,8 @@
  *   - DELETE soft-cancels the caller's active row (status → cancelled, other
  *     rows untouched); no active row 404; mismatched body `user_id` 403 with
  *     nothing cancelled
- *   - The ban asymmetry, pinned for Phase 5 (DEC-24, REFAC-11): the banned
- *     caller whose POST is refused has their DELETE honoured
+ *   - (The ban-asymmetry cases once pinned here moved out with their fix in
+ *     05-06; they live in `ban-asymmetry-defect.test.ts`.)
  *
  * The 16 error-path tests in `rsvp.test.ts` (401s, 400 validation, the
  * existing 403/404 cases) are not repeated here; 04-06 owns that file.
@@ -47,9 +47,11 @@
  *   The route imports `createClient` from "@/lib/supabase/server" today, and
  *   `createRequestContext()` in `src/server/context.ts` awaits the very same
  *   factory after 04-05 adopts the seam, so the seam this suite mocks does not
- *   move under the refactor. `@/lib/ban` is deliberately NOT mocked: the real
- *   `checkBanStatus()` reads `users.banned_at, ban_expires_at` from the same
- *   fake (`../../helpers/fakeSupabase.ts`), so the ban tests pin the real rule.
+ *   move under the refactor. `@/lib/ban` is deliberately NOT mocked: the ban
+ *   check (since 05-06, `requireActiveUser`) applies the real `isBanned()` to
+ *   the `users.banned_at, ban_expires_at` the request context reads from the
+ *   same fake (`../../helpers/fakeSupabase.ts`), so the ban tests pin the real
+ *   rule.
  *
  * Deliberately NOT pinned: the `console.error`/`console.warn` context strings
  *   (silenced), and nothing here involves the club shape (F-080) or an upcoming

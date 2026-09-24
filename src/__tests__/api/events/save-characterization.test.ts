@@ -19,17 +19,18 @@
  *     existing-row check error 500; the toggle — not saved → insert exactly one
  *     row with the caller's id → `{ saved: true }`, already saved → remove it →
  *     `{ saved: false }`; insert, toggle-delete and thrown errors each their 500
- *   - The ban asymmetry, pinned for Phase 5 (DEC-24, REFAC-11): the same banned
- *     caller whose POST is refused has their DELETE honoured
+ *   - (The ban-asymmetry cases once pinned here moved out with their fix in
+ *     05-06; they live in `ban-asymmetry-defect.test.ts`.)
  *
  * WHY THE MOCK SEAM IS THE SERVER FACTORY:
  *   The route imports `createClient` from "@/lib/supabase/server" today, and
  *   `createRequestContext()` in `src/server/context.ts` awaits the very same
  *   factory after 04-05 adopts the seam, so the seam this suite mocks does not
- *   move under the refactor. `@/lib/ban` is deliberately NOT mocked: the real
- *   `checkBanStatus()` builds its own client from the same factory and reads
- *   `users.banned_at, ban_expires_at` from the same fake, so the ban tests pin
- *   the real rule, not a stub's return value. The fake (`../../helpers/
+ *   move under the refactor. `@/lib/ban` is deliberately NOT mocked: the ban
+ *   check (since 05-06, `requireActiveUser`) applies the real `isBanned()` to
+ *   the `users.banned_at, ban_expires_at` the request context reads from the
+ *   same fake, so the ban tests pin the real rule, not a stub's return value.
+ *   The fake (`../../helpers/
  *   fakeSupabase.ts`) evaluates filters against rows it holds, so a handler
  *   that stopped scoping its delete by `user_id` would delete the other user's
  *   row below and go red.
