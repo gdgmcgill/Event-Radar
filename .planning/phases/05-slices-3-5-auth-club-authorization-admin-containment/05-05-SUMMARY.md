@@ -48,7 +48,7 @@ key-decisions:
 patterns-established:
   - "The DEFECT Status line names the fixing commit by its message, and the ledger carries the hash, backfilled by the next commit"
 
-requirements-completed: [REFAC-11]
+requirements-completed: []  # REFAC-11 is partly delivered here (the proxy and callback clauses and validated config). Its handler-ring clause ("the onboarding guard cannot be bypassed by direct API calls") closes in 05-06 and 05-07
 
 # Metrics
 duration: 9min
@@ -129,6 +129,8 @@ status: complete
 **2. Census file edit scope.** The plan says "the expected list becomes empty". The comment over the list, the first test's title ("today's 4" became "is empty"), the describe title and the Status line were also updated, because leaving them unchanged would make them false. 05-04 set this precedent, and the ledger row records the scope.
 
 **3. The DEFECT Status lines cite the fixing commit by message, not by hash.** A commit cannot contain its own hash. The ledger carries both hashes: `e2d6d3a` was backfilled in the Task 2 commit, and `077a081` in the metadata commit.
+
+**4. REFAC-11 is not marked complete.** The plan's frontmatter lists REFAC-11, and the state protocol marks listed requirements complete. The requirement also says "the onboarding guard cannot be bypassed by direct API calls", which is the handler ring that 05-06 and 05-07 deliver (their plans name REFAC-11 too). The `requirements.mark-complete` call was reverted. The REFAC-11 traceability row now reads Partial, naming what 05-04 and 05-05 delivered and what remains.
 
 ### Auto-fixed Issues
 

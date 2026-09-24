@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-09-24T05:28:46.222Z"
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-09-24T05:41:03.094Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 62
-  completed_plans: 47
+  completed_plans: 48
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
-Plan: 5 of 19
+Plan: 6 of 19
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 05 execution started
 
@@ -100,6 +100,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P02 | 9min | 3 tasks | 7 files |
 | Phase 05 P03 | 11min | 3 tasks | 6 files |
 | Phase 05 P04 | 25min | 3 tasks | 21 files |
+| Phase 05 P05 | 9min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -253,6 +254,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-04: the register() boot check refuses to serve (a 500 per request and one log line naming the variable) rather than exiting, because Next 16.3.5 runs register() lazily on the first request (measured)
 - [Phase 05]: 05-04: research A1 closed by measurement: the CI-env build exits 0 even without the NEXT_PHASE guard; the guard is kept per DEC-37
 - [Phase 05]: 05-04: requireActiveUser and requireOnboarded read ctx.profile only (one users read); a null profile gets 403 Profile not found; only onboarding_completed === true admits
+- [Phase 05]: 05-05: the proxy is advisory and fails closed (500 on its own errors, JSON under /api/); one users read serves no-row, ban and database-truth onboarding; BAN_EXEMPT paths stay read-free
+- [Phase 05]: 05-05: the callback grants no roles, signs out on any profile-sync failure (the redirect carries the sign-out's clearing cookies), accepts only same-origin next, and uses getElevatedClient() for both service-role uses
 
 ### Pending Todos
 
@@ -304,7 +307,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T05:28:36.746Z
-Stopped at: Completed 05-02-PLAN.md
-Next: execute 05-03-PLAN.md (slice 3 characterization, the write handlers). 05-02's ring net is in place: tag gate ok 23, Jest 785/785 (evidence/slice-3-characterization-ring.txt). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
+Last session: 2026-09-24T05:41:03.089Z
+Stopped at: Completed 05-05-PLAN.md
+Next: execute 05-06-PLAN.md (handler adoption of requireActiveUser/requireOnboarded, events arms). 05-05 made the proxy and callback fail closed: Jest 1012/1012, tag gate ok 26, ratchet committed=25 live=24, build exit 0 (evidence/proxy-refactor.txt, evidence/callback-refactor.txt). DI-42 (provision Upstash with both env-name pairs) is an owner action required before any push to `main`.
 Resume file: None
