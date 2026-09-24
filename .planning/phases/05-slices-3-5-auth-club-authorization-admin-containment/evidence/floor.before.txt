@@ -1,0 +1,434 @@
+base=4a9e2723d0d84ae402b92dcfbe55f2f44a4f40a2
+
+Phase 5 before-floor — every command every later Phase 5 plan compares against
+**Plan:** 05-01 Task 1 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24
+
+Line 1 is the commit every block below ran on: 4a9e272, `test(05-01): re-read saved state after
+reload through page.request (DI-38)`. So the DI-38 fix is already in the harness this floor
+measures. Every row was produced by running the command in this working tree on 2026-09-24
+(Node 24, Supabase CLI 2.115.0, local stack only). Nothing is transcribed. The research column
+is 05-RESEARCH.md § Validation Architecture "Measured floors (2026-09-23)".
+
+SUMMARY
+| # | Command | Measured now (base 4a9e272) | Research value (2026-09-23) | Delta |
+|---|---------|-----------------------------|-----------------------------|-------|
+| 1 | npx jest --ci | 744 passed, 0 skipped, 744 total; 50 passed of 50 suites; exit 0 | 744 passed / 0 skipped / 50 suites | 0 |
+| 2 | npm run lint | 0 errors, 19 warnings; exit 0 | (not stated; Phase 4 after-floor: 0 errors, 19 warnings) | 0 against Phase 4 |
+| 3 | npx tsc --noEmit | exit 0, no output (test files included) | (not stated; Phase 4 after-floor: exit 0) | 0 |
+| 4 | npm audit --audit-level=high --omit=dev | 0 critical, 0 high, 2 moderate (dompurify, yaml); exit 0 | (not stated; Phase 4 after-floor: same) | 0 |
+| 5 | node scripts/check-elevated-ratchet.mjs | committed=25 live=25 delta=0; exit 0 | committed=25 live=25 | 0 |
+| 6 | node scripts/check-migration-filenames.mjs | 4 parse; exit 0 | (not stated; Phase 4: 4 parse) | 0 |
+| 7 | node scripts/check-characterization-tags.mjs --all | ok 18 files; exit 0 | ok 18 | 0 |
+| 8 | node .planning/audit/tools/validate.mjs --quick | 118 passed, 2 failed, 1 skipped; exit 1 | (not stated; Phase 4: 118 / 2 / 1, exit 1) | 0; the two FAILs are the by-design schema-snapshot checks (below) |
+| 9 | supabase db reset --local | exit 0; 4 migrations applied | — | — |
+| 10 | pgTAP, UNSEEDED | Files=6 Tests=86 PASS; exit 0 | Files=6 Tests=86 | 0 |
+| 11 | npx tsx scripts/seed/load.ts | 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved; exit 0 | (Phase 4: identical) | 0 |
+| 12 | pgTAP, SEEDED | Files=6 Tests=86 PASS; exit 0 | Files=6 Tests=86 PASS | 0 |
+| 13 | npx playwright test (after a second reset + seed) | 40 passed, 0 failed (10 setup + 30 spec); exit 0; single run | 40 / 0 | 0 |
+| 14 | census: env non-null assertions | 15 occurrences in 6 files | research § A lists the same 6 files | — (Phase 5 drives this to 0) |
+| 15 | census: getSession( calls | 1 (src/app/api/health/route.ts:160, REFAC-22's) | 1, in api/health | 0 |
+| 16 | census: verifyAdmin() callsites, non-test | 34 lines = 33 callsites in 25 files + the definition in src/lib/admin.ts:3 | 33 callsites in 25 files (research § E) | 0 (Phase 5 drives this to 0) |
+| 17 | census: checkBanStatus() lines | 14 lines = 10 callsites + the definition (src/lib/ban.ts:20) + 3 doc-comment mentions | 10 callers (research § A) | 0 on callsites (Phase 5 drives this to 0) |
+| 18 | census: from("club_members") in src/app, src/lib | 42 lines | 42 read sites across 19 API route files and 5 pages (CONTEXT) | 0 |
+| 19 | census: (supabase as any) | 3 lines: 1 code site (src/app/moderation/page.tsx:78, F-072) + 2 doc comments in tests | (Phase 4 after-floor: 3 lines, 1 code site) | 0 |
+
+NOTES
+- Order: blocks 1-8 on the base commit, then reset (9) -> unseeded pgTAP (10) -> seed (11) ->
+  seeded pgTAP (12) -> a second reset and seed (13a, 13b) so the harness starts clean ->
+  Playwright (13) -> the six censuses (14-19) -> a final reset and seed (20), because the
+  Playwright run writes a save and an RSVP. The stack is left reset and seeded.
+- pgTAP prints Tests=86 on both an unseeded and a seeded database: a TAP SKIP is still a
+  counted test (Phase 4 register, Part 3 method note). This floor does not repeat Phase 4's
+  per-assertion probe; a later capture that needs to prove the 21 seed-coverage assertions ran
+  rather than skipped uses that probe.
+- Block 8's two FAILs are the by-design schema-snapshot checks
+  (`schema-snapshots :: dump-contains-create-table` on schema/staging.schema.sql and
+  schema/local.schema.sql), the same two Phase 4 recorded. Its one SKIP is
+  `endpoints-signals :: placeholders-permitted`, which `--quick` skips by design. Block 8 ran
+  before this plan's findings edit, so it measures the register at 85 findings.
+- Block 13 is a single run with no retry: 40 passed, 0 failed. The DI-38 test (#38,
+  save-and-rsvp.spec.ts:53) passed. Its Playwright output has the production server's
+  `[WebServer]` console lines removed (F-081's "Unmapped tags rendered as Social" log);
+  every test line and the summary are kept verbatim.
+- Jest's output is cut to its summary; the full list printed 50 PASS/FAIL suite lines and no
+  FAIL line (block 1 prints the count and greps for FAIL).
+- Port 3000: free before and after the Playwright run and at the end (lsof exit=1).
+- Every DB command targeted the local stack (127.0.0.1:54321). No --linked flag was used.
+  Reset and seed output is piped through a key/secret/token filter; each exit is the command's
+  own (bash PIPESTATUS).
+- Census counts are floors that Phase 5 exists to lower: 14 (env `!`) to 0 outside the browser
+  client's literal reads, 16 (admin-verify helper) to 0, 17 (legacy ban helper) to 0.
+
+==============================================================================
+RAW BLOCKS — invoking command, verbatim output tail, exit code
+==============================================================================
+
+------------------------------------------------------------------------------
+[1 · jest full]
+$ npx jest --ci
+suite lines (PASS|FAIL): 50
+PASS jsdom src/components/events/EventFilters.test.tsx
+PASS jsdom src/hooks/useEvents.test.ts
+
+Test Suites: 50 passed, 50 total
+Tests:       744 passed, 744 total
+Snapshots:   0 total
+Time:        2.196 s
+Ran all test suites in 2 projects.
+exit=0
+------------------------------------------------------------------------------
+[2 · lint]
+$ npm run lint
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/onboarding/OnboardingWizard.tsx
+  123:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+exit=0
+------------------------------------------------------------------------------
+[3 · tsc]
+$ npx tsc --noEmit
+exit=0
+------------------------------------------------------------------------------
+[4 · audit]
+$ npm audit --audit-level=high --omit=dev
+DOMPurify: Prototype Pollution to XSS Bypass via CUSTOM_ELEMENT_HANDLING Fallback - https://github.com/advisories/GHSA-v9jr-rg53-9pgp
+DOMPurify: Cross-realm IN_PLACE sanitization leaves executable markup intact via realm-bound `instanceof` checks - https://github.com/advisories/GHSA-hpcv-96wg-7vj8
+DOMPurify: IN_PLACE mode preserves attributes of a clobbered root element, allowing XSS via attacker-controlled root DOM - https://github.com/advisories/GHSA-r47g-fvhr-h676
+DOMPurify IN_PLACE Sanitization Bypass via Attached Shadow Root Inside <template>.content - https://github.com/advisories/GHSA-rp9w-3fw7-7cwq
+DOMPurify: `CUSTOM_ELEMENT_HANDLING` bypasses `afterSanitizeElements` for allowed custom elements. - https://github.com/advisories/GHSA-c2j3-45gr-mqc4
+DOMPurify: Permanent `ALLOWED_ATTR` pollution via `setConfig()` bypassing the hook clone-guard (incomplete fix of the 3.4.7 hook-pollution patch) - https://github.com/advisories/GHSA-cmwh-pvxp-8882
+DOMPurify: Trusted Types policy survives `clearConfig()` and can poison later `RETURN_TRUSTED_TYPE` output - https://github.com/advisories/GHSA-vxr8-fq34-vvx9
+DOMPurify: SAFE_FOR_TEMPLATES bypass - template expressions survive sanitization inside <template> content when using DOM output modes - https://github.com/advisories/GHSA-gvmj-g25r-r7wr
+DOMPurify: `IN_PLACE` mode trusts attacker-controlled `nodeName` on live non-form nodes, allowing script retention and XSS via attacker-supplied DOM objects - https://github.com/advisories/GHSA-x4vx-rjvf-j5p4
+DOMPurify: Hook mutation of `data.allowedTags` / `data.allowedAttributes` permanently pollutes `DEFAULT_ALLOWED_TAGS` / `DEFAULT_ALLOWED_ATTR` - https://github.com/advisories/GHSA-76mc-f452-cxcm
+DOMPurify's ADD_TAGS function form bypasses FORBID_TAGS due to short-circuit evaluation - https://github.com/advisories/GHSA-39q2-94rc-95cp
+DOMPurify: IN_PLACE hook removal leaves a detached subtree executable, causing XSS - https://github.com/advisories/GHSA-55q2-fjhq-7xh7
+fix available via `npm audit fix`
+node_modules/dompurify
+
+yaml  1.0.0 - 1.10.2 || 2.0.0 - 2.8.2
+Severity: moderate
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+fix available via `npm audit fix`
+node_modules/oas-linter/node_modules/yaml
+node_modules/oas-resolver/node_modules/yaml
+node_modules/oas-validator/node_modules/yaml
+node_modules/swagger2openapi/node_modules/yaml
+node_modules/yaml
+
+2 moderate severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+exit=0
+------------------------------------------------------------------------------
+[5 · elevated ratchet]
+$ node scripts/check-elevated-ratchet.mjs
+committed=25 live=25 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+------------------------------------------------------------------------------
+[6 · migration filenames]
+$ node scripts/check-migration-filenames.mjs
+PASS: 4 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql
+exit=0
+------------------------------------------------------------------------------
+[7 · characterization tag gate]
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy.test.ts
+ok 18 files
+exit=0
+------------------------------------------------------------------------------
+[8 · validate quick]
+$ node .planning/audit/tools/validate.mjs --quick
+FAIL schema-snapshots :: dump-contains-create-table :: schema/staging.schema.sql
+FAIL schema-snapshots :: dump-contains-create-table :: schema/local.schema.sql
+SKIP endpoints-signals :: placeholders-permitted :: this gate runs before hand classification; use --check endpoints afterwards
+PASS sla :: expiry-capped-at-ninety-days :: 90 day cap stated
+PASS sla :: expired-acceptance-reverts-to-open :: enforced by --check findings
+PASS sla :: cvss-position-stated :: severity is exposure-adjusted; CVSS is not assigned to application-logic findings
+PASS sla :: severity-is-exposure-adjusted :: each level needs an exposure-adjusted definition
+--- 118 passed, 2 failed, 1 skipped
+exit=1
+------------------------------------------------------------------------------
+[9 · reset]
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+------------------------------------------------------------------------------
+[10 · pgTAP, UNSEEDED]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+All tests successful.
+Files=6, Tests=86,  1 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.02 csys =  0.06 CPU)
+Result: PASS
+exit=0
+------------------------------------------------------------------------------
+[11 · seed]
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+------------------------------------------------------------------------------
+[12 · pgTAP, SEEDED]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......... ok
+All tests successful.
+Files=6, Tests=86,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.01 cusr  0.00 csys =  0.03 CPU)
+Result: PASS
+exit=0
+------------------------------------------------------------------------------
+[13a · second reset (clean harness start)]
+$ supabase db reset --local
+Finished supabase db reset on branch main.
+exit=0
+------------------------------------------------------------------------------
+[13b · second seed]
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+------------------------------------------------------------------------------
+[13 · playwright]
+$ lsof -i :3000
+exit=1
+$ npx playwright test   (output below has [WebServer] console lines removed)
+
+Running 40 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (394ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (279ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (221ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (245ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (232ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (445ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (243ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (201ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (196ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (438ms)
+  ✓  11 [chromium] › e2e/specs/admin-login-cookie-equivalence.spec.ts:40:5 › the cookie shim emits the same cookie names the real sign-in page does (465ms)
+  ✓  12 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (476ms)
+  ✓  13 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  14 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (232ms)
+  ✓  15 [chromium] › e2e/specs/anonymous-browse.spec.ts:31:5 › an anonymous visitor browses the event feed and sees only approved events (390ms)
+  ✓  16 [chromium] › e2e/specs/anonymous-browse.spec.ts:50:5 › an anonymous visitor searches, and the search narrows the feed (587ms)
+  ✓  17 [chromium] › e2e/specs/anonymous-browse.spec.ts:63:5 › an anonymous visitor browses public club content (987ms)
+  ✓  18 [chromium] › e2e/specs/banned-redirect.spec.ts:37:7 › a permanently banned user › is redirected away from a protected path, to the ban page (135ms)
+  ✓  19 [chromium] › e2e/specs/banned-redirect.spec.ts:50:7 › a user whose suspension is still running › is redirected away from a protected path, to the ban page (126ms)
+  ✓  20 [chromium] › e2e/specs/banned-redirect.spec.ts:63:7 › a user whose suspension has expired › reaches the protected path, because banned_at alone is not a ban (152ms)
+  ✓  21 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:40:7 › the club owner › is routed from /my-clubs to the multi-club surface and sees the approved club (1.2s)
+  ✓  22 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:54:7 › the club owner › opens the club dashboard and sees the club's own events (421ms)
+  ✓  23 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:68:7 › a member of a different club › does not see the approved club on their own surface (332ms)
+  ✓  24 [chromium] › e2e/specs/event-read-path.spec.ts:84:5 › PRESERVE: GET /api/events?limit=1 returns 200 with the approved event first and total 2 (9ms)
+  ✓  25 [chromium] › e2e/specs/event-read-path.spec.ts:95:5 › PRESERVE: GET /api/events?search=Music Night returns exactly the second approved event (7ms)
+  ✓  26 [chromium] › e2e/specs/event-read-path.spec.ts:104:5 › PRESERVE: typing a,b into the search box shows the No events found state (601ms)
+  ✓  27 [chromium] › e2e/specs/event-read-path.spec.ts:117:5 › PRESERVE: the approved event's detail page renders its title (209ms)
+  ✓  28 [chromium] › e2e/specs/event-read-path.spec.ts:149:5 › PRESERVE: limit=1 then its nextCursor traverses both approved events in start_date order, total 2 on each page (16ms)
+  ✓  29 [chromium] › e2e/specs/event-read-path.spec.ts:163:5 › PRESERVE: the same cursor traversal with search=Seed yields the same two pages (the search or() and the keyset or() are both applied) (20ms)
+  ✓  30 [chromium] › e2e/specs/event-read-path.spec.ts:174:5 › PRESERVE: cursor=not-a-valid-cursor is a 400 with Invalid cursor (3ms)
+  ✓  31 [chromium] › e2e/specs/event-read-path.spec.ts:182:5 › DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix) (205ms)
+  ✓  32 [chromium] › e2e/specs/event-read-path.spec.ts:203:5 › DEFECT F-081: the feed files the academic+tech event under a Social row, and there is no Tech row (moves only if 04-11 ships the identity mappings) (426ms)
+  ✓  33 [chromium] › e2e/specs/event-read-path.spec.ts:226:5 › FIXED F-082: search=a,b is a 200 with an empty events list (moved in 04-08) (14ms)
+  ✓  34 [chromium] › e2e/specs/event-read-path.spec.ts:238:5 › FIXED F-082: search=% matches only a literal percent, so no seeded event (moved in 04-08) (13ms)
+  ✓  35 [chromium] › e2e/specs/event-read-path.spec.ts:250:5 › FIXED F-083: the list body carries a nextCursor when more rows remain (moved in 04-09) (9ms)
+  ✓  36 [chromium] › e2e/specs/protected-route-redirect.spec.ts:35:7 › an anonymous visitor › is redirected from every protected path to the sign-in prompt, carrying the destination (703ms)
+  ✓  37 [chromium] › e2e/specs/protected-route-redirect.spec.ts:66:7 › a signed-in student › reaches every protected path without a redirect (2.0s)
+  ✓  38 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (1.2s)
+  ✓  39 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (1.2s)
+  ✓  40 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (434ms)
+
+  40 passed (24.0s)
+exit=0
+$ lsof -i :3000
+exit=1
+------------------------------------------------------------------------------
+[14 · census: env non-null assertions]
+$ command grep -rnoE 'process\.env\.[A-Z_]+!' src
+src/app/auth/signout/route.ts:11:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/auth/signout/route.ts:12:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/app/auth/callback/route.ts:61:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/auth/callback/route.ts:62:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/app/auth/callback/route.ts:123:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/auth/callback/route.ts:124:process.env.SUPABASE_SERVICE_ROLE_KEY!
+src/app/api/auth-debug/route.ts:11:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/api/auth-debug/route.ts:21:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/app/api/auth-debug/route.ts:22:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/lib/supabase/client.ts:11:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/lib/supabase/client.ts:12:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/lib/supabase/server.ts:14:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/lib/supabase/server.ts:15:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+src/lib/supabase/service.ts:11:process.env.NEXT_PUBLIC_SUPABASE_URL!
+src/lib/supabase/service.ts:12:process.env.SUPABASE_SERVICE_ROLE_KEY!
+exit=0
+count=15
+------------------------------------------------------------------------------
+[15 · census: getSession( calls]
+$ command grep -rn 'getSession(' src
+src/app/api/health/route.ts:160:    const { data, error } = await supabase.auth.getSession();
+exit=0
+count=1
+------------------------------------------------------------------------------
+[16 · census: verifyAdmin() callsites (non-test)]
+$ command grep -rn 'verifyAdmin()' src | command grep -v '\.test\.'
+src/app/api/admin/clubs/route.ts:6:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/clubs/[id]/route.ts:12:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/route.ts:6:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/route.ts:68:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/[id]/results/route.ts:20:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/[id]/route.ts:10:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/[id]/route.ts:74:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/experiments/[id]/route.ts:116:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/audit-log/route.ts:6:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/organizer-requests/route.ts:6:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/organizer-requests/[id]/route.ts:11:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/users/route.ts:5:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/users/[id]/route.ts:9:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/users/[id]/ban/route.ts:13:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/users/[id]/ban/route.ts:249:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/featured/route.ts:9:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/featured/route.ts:41:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/featured/[id]/route.ts:12:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/featured/[id]/route.ts:78:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/route.ts:23:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/route.ts:112:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/[id]/status/route.ts:12:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/[id]/route.ts:10:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/[id]/route.ts:77:  const { supabase, user, isAdmin } = await verifyAdmin();
+src/app/api/admin/events/[id]/edits/route.ts:12:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/organizers/route.ts:6:  const { isAdmin } = await verifyAdmin();
+src/app/api/admin/stats/route.ts:5:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/analytics/users/route.ts:5:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/analytics/events/route.ts:5:  const { supabase, isAdmin } = await verifyAdmin();
+src/app/api/admin/reports/route.ts:7:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/admin/reports/[id]/route.ts:11:  const { user, isAdmin } = await verifyAdmin();
+src/app/api/recommendations/batch/route.ts:8:    const { isAdmin } = await verifyAdmin();
+src/app/api/recommendations/analytics/route.ts:16:    const { supabase, isAdmin } = await verifyAdmin();
+src/lib/admin.ts:3:export async function verifyAdmin() {
+exit=0
+count=34
+------------------------------------------------------------------------------
+[17 · census: checkBanStatus() callsites]
+$ command grep -rn 'checkBanStatus()' src
+src/app/api/clubs/route.ts:42:  const banResponse = await checkBanStatus();
+src/app/api/clubs/[id]/appeal/route.ts:11:  const banResponse = await checkBanStatus();
+src/app/api/user/engagement/route.ts:120:    const banResponse = await checkBanStatus();
+src/app/api/recommendations/feedback/route.ts:89:    const banResponse = await checkBanStatus();
+src/app/api/users/[id]/follow/route.ts:14:    const banResponse = await checkBanStatus();
+src/app/api/events/[id]/invite/route.ts:15:    const banResponse = await checkBanStatus();
+src/app/api/events/[id]/rsvp/route.ts:202:    const banResponse = await checkBanStatus();
+src/app/api/events/[id]/appeal/route.ts:11:  const banResponse = await checkBanStatus();
+src/app/api/events/[id]/save/route.ts:53:    const banResponse = await checkBanStatus();
+src/app/api/events/create/route.ts:11:    const banResponse = await checkBanStatus();
+src/server/context.ts:46: *   - `checkBanStatus()` (`src/lib/ban.ts`), called by individual write
+src/__tests__/api/events/save-characterization.test.ts:30: *   `checkBanStatus()` builds its own client from the same factory and reads
+src/__tests__/api/events/rsvp-characterization.test.ts:51: *   `checkBanStatus()` reads `users.banned_at, ban_expires_at` from the same
+src/lib/ban.ts:20:export async function checkBanStatus(): Promise<NextResponse | null> {
+exit=0
+count=14
+------------------------------------------------------------------------------
+[18 · census: club_members reads]
+$ command grep -rn 'from("club_members")' src/app src/lib
+src/app/clubs/[id]/page.tsx:58:      .from("club_members")
+src/app/my-clubs/page.tsx:18:    .from("club_members")
+src/app/profile/page.tsx:29:      .from("club_members")
+src/app/users/[id]/page.tsx:115:      .from("club_members")
+src/app/api/clubs/logo/route.ts:36:      .from("club_members")
+src/app/api/clubs/route.ts:134:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:19:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:37:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:52:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:62:    .from("club_members")
+src/app/api/clubs/[id]/transfer/route.ts:69:      .from("club_members")
+src/app/api/clubs/[id]/route.ts:59:      .from("club_members")
+src/app/api/clubs/[id]/route.ts:169:    .from("club_members")
+src/app/api/clubs/[id]/members/role/route.ts:18:    .from("club_members")
+src/app/api/clubs/[id]/members/role/route.ts:36:    .from("club_members")
+src/app/api/clubs/[id]/members/role/route.ts:55:    .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:26:      .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:42:      .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:99:      .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:125:      .from("club_members")
+src/app/api/clubs/[id]/members/route.ts:153:      .from("club_members")
+src/app/api/clubs/[id]/events/route.ts:31:        .from("club_members")
+src/app/api/clubs/[id]/invites/route.ts:30:      .from("club_members")
+src/app/api/clubs/[id]/invites/route.ts:84:      .from("club_members")
+src/app/api/clubs/[id]/invites/route.ts:126:        .from("club_members")
+src/app/api/clubs/[id]/analytics/route.ts:30:      .from("club_members")
+src/app/api/clubs/banner/route.ts:36:      .from("club_members")
+src/app/api/my-clubs/route.ts:21:      .from("club_members")
+src/app/api/my-clubs/route.ts:45:          .from("club_members")
+src/app/api/admin/clubs/[id]/route.ts:175:      await serviceClient.from("club_members").upsert(
+src/app/api/admin/organizer-requests/[id]/route.ts:94:    await serviceClient.from("club_members").upsert(
+src/app/api/admin/organizers/route.ts:60:    .from("club_members")
+src/app/api/users/me/suggestions/route.ts:46:      .from("club_members")
+src/app/api/users/me/suggestions/route.ts:90:        .from("club_members")
+src/app/api/events/[id]/route.ts:222:        .from("club_members")
+src/app/api/events/[id]/route.ts:234:        .from("club_members")
+src/app/api/events/[id]/route.ts:393:        .from("club_members")
+src/app/api/events/[id]/analytics/route.ts:53:      .from("club_members")
+src/app/api/events/[id]/reviews/route.ts:149:        .from("club_members")
+src/app/api/events/create/route.ts:155:          .from("club_members")
+src/app/invites/[token]/page.tsx:103:    .from("club_members")
+src/app/invites/[token]/page.tsx:138:    supabase.from("club_members").insert({
+exit=0
+count=42
+------------------------------------------------------------------------------
+[19 · census: (supabase as any)]
+$ command grep -rn '(supabase as any)' src
+src/app/moderation/page.tsx:78:      (supabase as any)
+src/__tests__/api/events/friends-defect.test.ts:8: * where an array of ids is required. `(supabase as any)` erased the client type
+src/__tests__/moderation/audit-shape.test.ts:12: * How the casts hid it. `(supabase as any)` erased the client type, so the
+exit=0
+count=3
+------------------------------------------------------------------------------
+[20 · leave the stack reset and seeded (the Playwright run wrote a save and an RSVP)]
+$ supabase db reset --local
+Finished supabase db reset on branch main.
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ lsof -i :3000
+exit=1
