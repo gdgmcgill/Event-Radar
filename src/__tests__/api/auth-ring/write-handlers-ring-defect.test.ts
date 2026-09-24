@@ -109,6 +109,19 @@ const GUARDED: ReadonlySet<string> = new Set<string>([
   "events/upload-image POST",
   "recommendations/feedback POST",
   "user/engagement POST",
+  // 05-07 Task 1: the clubs family
+  "clubs POST",
+  "clubs/[id]/appeal POST",
+  "clubs/[id]/follow POST",
+  "clubs/[id]/follow DELETE",
+  "clubs/[id]/invites POST",
+  "clubs/[id]/members/role PATCH",
+  "clubs/[id]/members DELETE",
+  "clubs/[id] PATCH",
+  "clubs/[id] DELETE",
+  "clubs/[id]/transfer POST",
+  "clubs/banner POST",
+  "clubs/logo POST",
 ]);
 
 beforeEach(() => {

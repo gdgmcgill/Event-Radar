@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -44,15 +47,15 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id: clubId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
+    const supabase = ctx.supabase;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { id: clubId } = await params;
 
     // Verify ownership
     const { data: membership } = await supabase
@@ -156,13 +159,15 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: clubId } = await params;
-  const supabase = await createClient();
+  const ctx = await createRequestContext();
+  const active = requireActiveUser(ctx);
+  if (!active.ok) return active.response;
+  const onboarded = requireOnboarded(ctx);
+  if (!onboarded.ok) return onboarded.response;
+  const user = active.user;
+  const supabase = ctx.supabase;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { id: clubId } = await params;
 
   // Verify owner
   const { data: membership } = await supabase

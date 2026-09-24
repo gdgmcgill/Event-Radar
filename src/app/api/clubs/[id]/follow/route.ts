@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -43,15 +46,15 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
  */
 export async function POST(_request: NextRequest, { params }: RouteParams) {
   try {
-    const { id: clubId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
+    const supabase = ctx.supabase;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { id: clubId } = await params;
 
     const { error } = await supabase.from("club_followers").upsert(
       { user_id: user.id, club_id: clubId },
@@ -80,15 +83,15 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const { id: clubId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
+    const supabase = ctx.supabase;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { id: clubId } = await params;
 
     const { error } = await supabase
       .from("club_followers")

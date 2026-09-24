@@ -1,0 +1,252 @@
+Handler adoption, the remaining write arms — plan 05-07 (DEC-34; F-088, F-089, F-062)
+**Plan:** 05-07 · **Phase:** 05 · **Recorded:** 2026-09-24T05:55:18Z
+HEAD at capture=c1ed6ba56a7277d76f8b3978b4b66188762b5a57 (the 05-06 head is c1ed6ba; each task's changes are in the working tree and are committed with this file)
+
+Every block: the command, its output filtered to PASS/FAIL, the failing test titles (●), Expected/Received and counts (Jest stack frames dropped), then exit=<code>.
+
+==============================================================================
+Task 1 §1. Ledger step 2 — fixed clubs handlers, DEFECT rows UNEDITED: red
+==============================================================================
+The ten clubs route files carry the guards; write-handlers-ring-defect.test.ts GUARDED still holds
+only the 14 ids 05-06 added.
+$ npx jest --ci src/__tests__/api/auth-ring
+FAIL node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/follow POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/follow DELETE: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/invites POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/members/role PATCH: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/members DELETE: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id] PATCH: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id] DELETE: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/transfer POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/banner POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/logo POST: banned caller
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/appeal POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/follow POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/follow DELETE: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/invites POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/members/role PATCH: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/members DELETE: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id] PATCH: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id] DELETE: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/transfer POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/banner POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/logo POST: no profile row
+    Expected: false
+    Received: true
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs POST: no profile row
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/appeal POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/follow POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/follow DELETE: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/invites POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/members/role PATCH: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/members DELETE: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id] PATCH: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id] DELETE: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/transfer POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/banner POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/logo POST: un-onboarded caller
+    Expected: false
+    Received: true
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs POST: un-onboarded caller
+    Expected: false
+    Received: true
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       34 failed, 141 passed, 175 total
+exit=1
+
+==============================================================================
+Task 1 §2. Ledger step 3 — the 12 clubs ids added to GUARDED (26 total): green
+==============================================================================
+$ npx jest --ci src/__tests__/api/auth-ring
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+Test Suites: 2 passed, 2 total
+Tests:       175 passed, 175 total
+exit=0
+
+==============================================================================
+Task 1 §3. Ledger step 4 — pre-fix clubs sources restored from c1ed6ba, moved suite: red
+==============================================================================
+$ git show c1ed6ba:<file> > <file> for the ten clubs route files (temporary)
+$ npx jest --ci src/__tests__/api/auth-ring
+FAIL node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/follow POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/follow DELETE: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/invites POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/members/role PATCH: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/members DELETE: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id] PATCH: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id] DELETE: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/[id]/transfer POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/banner POST: banned caller
+  ● F-088 D1 banned caller on arms without the legacy ban helper › F-088 D1 clubs/logo POST: banned caller
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/appeal POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/follow POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/follow DELETE: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/invites POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/members/role PATCH: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/members DELETE: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id] PATCH: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id] DELETE: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/[id]/transfer POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/banner POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs/logo POST: no profile row
+  ● F-088 D2 signed-in caller with no users row › F-088 D2 clubs POST: no profile row
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/appeal POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/follow POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/follow DELETE: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/invites POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/members/role PATCH: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/members DELETE: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id] PATCH: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id] DELETE: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/[id]/transfer POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/banner POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs/logo POST: un-onboarded caller
+  ● F-089 D3 un-onboarded caller on every non-exempt arm › F-089 D3 clubs POST: un-onboarded caller
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       34 failed, 141 passed, 175 total
+exit=1
+$ fixed sources restored; cmp against the saved fixed copies:
+cmp src/app/api/clubs/route.ts exit=0
+cmp src/app/api/clubs/[id]/appeal/route.ts exit=0
+cmp src/app/api/clubs/[id]/follow/route.ts exit=0
+cmp src/app/api/clubs/[id]/invites/route.ts exit=0
+cmp src/app/api/clubs/[id]/members/role/route.ts exit=0
+cmp src/app/api/clubs/[id]/members/route.ts exit=0
+cmp src/app/api/clubs/[id]/route.ts exit=0
+cmp src/app/api/clubs/[id]/transfer/route.ts exit=0
+cmp src/app/api/clubs/banner/route.ts exit=0
+cmp src/app/api/clubs/logo/route.ts exit=0
+
+==============================================================================
+Task 1 §4. The plan's verify — the API suites and tsc
+==============================================================================
+$ npx jest --ci src/__tests__/api src/app/api
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/app/api/events/export/route.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/ban-asymmetry-defect.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+PASS node src/app/api/events/route.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+Test Suites: 25 passed, 25 total
+Tests:       456 passed, 456 total
+exit=0
+$ npx tsc --noEmit
+exit=0
+
+==============================================================================
+Task 1 §5. Acceptance checks
+==============================================================================
+$ for each clubs file: grep -c "requireActiveUser(ctx)" / grep -c "requireOnboarded(ctx)"
+src/app/api/clubs/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/clubs/[id]/appeal/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/clubs/[id]/follow/route.ts requireActiveUser=2 requireOnboarded=2
+src/app/api/clubs/[id]/invites/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/clubs/[id]/members/role/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/clubs/[id]/members/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/clubs/[id]/route.ts requireActiveUser=2 requireOnboarded=2
+src/app/api/clubs/[id]/transfer/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/clubs/banner/route.ts requireActiveUser=1 requireOnboarded=1
+src/app/api/clubs/logo/route.ts requireActiveUser=1 requireOnboarded=1
+(follow and clubs/[id] hold two write arms each; the other eight hold one)
+
+$ git diff c1ed6ba -- src/__tests__/api/auth-ring/write-handlers-characterization.test.ts | wc -l
+0
+
+$ git diff c1ed6ba -- 'src/app/api/clubs' | command grep -E '^[-+].*from\("club_members"\)'
+exit=1 (1 = no match: no club_members line added or removed)
+
+$ git diff c1ed6ba -- 'src/app/api/clubs' | command grep -E '^[-+].*(createServiceClient|serviceClient)'
+exit=1 (1 = no service-client line moved)
+
+$ node -e (GUARDED size)
+GUARDED ids: 26
+
+$ git diff c1ed6ba --stat -- src/__tests__ (only the GUARDED edit)
+ .../api/auth-ring/write-handlers-ring-defect.test.ts        | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)

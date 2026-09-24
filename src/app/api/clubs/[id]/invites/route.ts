@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { isMcGillEmail } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireOnboarded } from "@/server/authz/requireOnboarded";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -69,15 +72,15 @@ export async function GET(
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id: clubId } = await params;
-    const supabase = await createClient();
+    const ctx = await createRequestContext();
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+    const onboarded = requireOnboarded(ctx);
+    if (!onboarded.ok) return onboarded.response;
+    const user = active.user;
+    const supabase = ctx.supabase;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { id: clubId } = await params;
 
     // Verify caller is owner
     const { data: callerMembership } = await supabase
