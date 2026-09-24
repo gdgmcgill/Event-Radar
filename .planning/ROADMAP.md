@@ -246,7 +246,7 @@ Plans:
   4. Rate limiting runs from a distributed store so it holds across serverless instances and now covers `/api/admin/*`; CSRF exposure is assessed against Supabase cookie SameSite behavior and protection added on state-changing routes wherever exposure remains.
   5. After each of the three slices the Playwright specs pass and the Validated workflow list is re-confirmed — in particular every persona can still sign in, non-McGill sign-in is still rejected, banned users are still blocked, and organizers still reach their club surfaces.
 
-**Plans**: 5/19 plans executed
+**Plans**: 6/19 plans executed
 
 Plans:
 **Wave 1**
@@ -268,7 +268,7 @@ Plans:
 
 **Wave 5**
 
-- [ ] 05-06-PLAN.md — Guards on the events-family write arms (ban asymmetry closed); F-028's four routes answer 401
+- [x] 05-06-PLAN.md — Guards on the events-family write arms (ban asymmetry closed); F-028's four routes answer 401
 
 **Wave 6**
 
@@ -392,7 +392,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 11/11 | Complete   | 2026-09-23 |
-| 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 5/19 | In Progress|  |
+| 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 6/19 | In Progress|  |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |
 | 7. Certification Datasets and Persona Coverage | 0/TBD | Not started | - |
 | 8. Operational Certification and Sign-Off | 0/TBD | Not started | - |
