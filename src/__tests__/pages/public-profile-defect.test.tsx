@@ -1,7 +1,9 @@
 /**
  * DEFECT characterization — F-005: the public profile page shows a private profile to an anonymous reader, and reads email
  *
- * Status: OPEN — the private-profile rows move in 05-15 (DEC-48).
+ * Status: FIXED in 05-15 (DEC-48). The three private-profile rows below were
+ * moved to the fixed shape in the fix commit; the pre-fix pins are recorded in
+ * `evidence/defect-ledger.md`.
  *
  * Subject: `src/app/users/[id]/page.tsx`, both exports, written against the
  * unmodified page at plan 05-12's base commit (4e368b6).
@@ -24,10 +26,13 @@
  *   P2  the page for a private target, anonymous: `notFound()` is NOT called
  *       and the page returns an element whose markup carries the name.
  *   P3  the page's `users` select column string contains `email`.
- * Fixed (05-15, DEC-48): P1 `notFound()` (or a not-found title) for an
- * anonymous viewer of a private profile; P2 `notFound()`; P3 the select is
- * narrowed to `id, name, avatar_url, banner_url, pronouns, year, faculty,
- * visibility, interest_tags, created_at` with no `email`.
+ * Fixed (05-15, DEC-48), and pinned below in that shape: P1 `generateMetadata`
+ * calls `notFound()` for an anonymous viewer of a private profile, after
+ * reading the session once; P2 the page calls `notFound()` and returns no
+ * markup; P3 the page's single users select is narrowed to `id, name,
+ * avatar_url, banner_url, pronouns, year, faculty, visibility, interest_tags,
+ * created_at` with no `email`, and the metadata reads the same list. One
+ * loader serves both exports, so the gate cannot drift between them.
  *
  * Does NOT move: a PUBLIC target viewed anonymously renders (no `notFound()`),
  * and its metadata title carries the name.
@@ -191,33 +196,44 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
-// ─── Moves in 05-15 ────────────────────────────────────────────────────────
+// ─── Moved in 05-15 (FIXED) ────────────────────────────────────────────────
 
-describe("F-005 today: a private profile, viewed anonymously", () => {
-  it("P1: generateMetadata puts the private target's name in the title without reading the session", async () => {
+const NARROWED_COLUMNS =
+  "id, name, avatar_url, banner_url, pronouns, year, faculty, visibility, interest_tags, created_at";
+
+describe("F-005 fixed: a private profile, viewed anonymously", () => {
+  it("P1: generateMetadata calls notFound() after reading the session, and reads no email", async () => {
     targetRow = target("private");
     const mod = await load();
-    const metadata = await mod.generateMetadata(params());
+    const { notFound } = jest.requireMock<{ notFound: jest.Mock }>("next/navigation");
 
-    expect(metadata.title).toBe("Private Person | UNI-VERSE");
-    expect(sessionReads).toBe(0);
-    expect(serviceCalls.map((c) => [c.table, c.select])).toEqual([["users", "name"]]);
+    let thrown: string | null = null;
+    try {
+      await mod.generateMetadata(params());
+    } catch (error) {
+      thrown = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(thrown).toBe(NOT_FOUND);
+    expect(notFound).toHaveBeenCalledTimes(1);
+    expect(sessionReads).toBe(1);
+    expect(serviceCalls.map((c) => [c.table, c.select])).toEqual([["users", NARROWED_COLUMNS]]);
   });
 
-  it("P2: the page renders instead of calling notFound()", async () => {
+  it("P2: the page calls notFound() and renders nothing", async () => {
     targetRow = target("private");
     const mod = await load();
     const { notFound } = jest.requireMock<{ notFound: jest.Mock }>("next/navigation");
     const { element, thrown } = await renderPage(mod);
 
-    expect(thrown).toBeNull();
-    expect(thrown).not.toBe(NOT_FOUND);
-    expect(notFound).not.toHaveBeenCalled();
-    expect(element).not.toBeNull();
-    expect(textOf(element)).toContain("Private Person");
+    expect(thrown).toBe(NOT_FOUND);
+    expect(notFound).toHaveBeenCalledTimes(1);
+    expect(element).toBeNull();
+    // Nothing about the target is read after the gate refuses.
+    expect(serviceCalls.map((c) => c.table)).toEqual(["users"]);
   });
 
-  it("P3: the page's users select reads email", async () => {
+  it("P3: the page's users select is the narrowed list, without email", async () => {
     targetRow = target("private");
     const mod = await load();
     await renderPage(mod);
@@ -226,10 +242,8 @@ describe("F-005 today: a private profile, viewed anonymously", () => {
       .filter((c) => c.table === "users")
       .map((c) => c.select ?? "");
     expect(usersSelects).toHaveLength(1);
-    expect(usersSelects[0]).toContain("email");
-    expect(usersSelects[0]).toBe(
-      "id, name, avatar_url, banner_url, email, pronouns, year, faculty, visibility, interest_tags, created_at"
-    );
+    expect(usersSelects[0]).not.toContain("email");
+    expect(usersSelects[0]).toBe(NARROWED_COLUMNS);
   });
 });
 

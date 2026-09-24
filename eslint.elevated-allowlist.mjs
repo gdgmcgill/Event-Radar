@@ -33,7 +33,7 @@
  * dynamic segment like [id] is read as a CHARACTER CLASS matching one of 'i'
  * or 'd' — so an unescaped entry matches NOTHING and the file silently stays
  * under the rule. Measured on this tree: unescaped -> 12 errors leak through;
- * escaped -> 0. 13 of the 25 entries below are dynamic routes, so this is
+ * escaped -> 0. 0 of the 2 entries below are dynamic routes, so this is
  * the majority case, not an edge case.
  *
  * The header carries no timestamp on purpose: a generated file that
@@ -42,29 +42,6 @@
  * .planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/elevated-callsite-census.txt
  */
 export const LEGACY_ELEVATED_CALLSITES = [
-  "src/app/api/admin/calculate-popularity/route.ts",
-  "src/app/api/admin/clubs/\\[id\\]/route.ts",
-  "src/app/api/admin/events/\\[id\\]/edits/route.ts",
-  "src/app/api/admin/events/\\[id\\]/status/route.ts",
-  "src/app/api/admin/organizer-requests/\\[id\\]/route.ts",
-  "src/app/api/admin/organizers/route.ts",
-  "src/app/api/admin/reports/\\[id\\]/route.ts",
-  "src/app/api/admin/reports/route.ts",
-  "src/app/api/admin/users/\\[id\\]/ban/route.ts",
-  "src/app/api/clubs/\\[id\\]/appeal/route.ts",
-  "src/app/api/clubs/\\[id\\]/route.ts",
-  "src/app/api/clubs/\\[id\\]/transfer/route.ts",
-  "src/app/api/clubs/route.ts",
   "src/app/api/cron/send-feedback-requests/route.ts",
   "src/app/api/cron/send-reminders/route.ts",
-  "src/app/api/events/\\[id\\]/appeal/route.ts",
-  "src/app/api/moderation/reviews/\\[targetType\\]/\\[targetId\\]/route.ts",
-  "src/app/api/profile/avatar/route.ts",
-  "src/app/api/profile/banner/route.ts",
-  "src/app/api/recommendations/batch/route.ts",
-  "src/app/api/users/\\[id\\]/route.ts",
-  "src/app/api/users/me/suggestions/route.ts",
-  "src/app/auth/callback/route.ts",
-  "src/app/users/\\[id\\]/page.tsx",
-  "src/lib/audit.ts",
 ];

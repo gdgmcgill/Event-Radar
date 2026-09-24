@@ -1,0 +1,274 @@
+# F-005 and the allow-list regeneration — plan 05-15 Task 3 (DEC-48, DEC-49)
+
+Phase: 05-slices-3-5-auth-club-authorization-admin-containment · Plan: 05-15 · Recorded: 2026-09-24
+Every exit= is the command's own (no pipe), unless stated.
+
+## 1. F-005: the public profile page (DEC-48), ledger protocol
+
+Fix: src/app/users/[id]/page.tsx has one module-level loader, loadProfileTarget(targetId, viewer),
+used by generateMetadata and the page. The viewer comes from getRequestContext(). The loader reads
+the target through getElevatedClient() selecting exactly
+  id, name, avatar_url, banner_url, pronouns, year, faculty, visibility, interest_tags, created_at
+and returns null when the target is missing, or when the viewer is anonymous and visibility is
+"private". Both callers call notFound() on null. The target's saved_events, events, get_friends,
+club_members and rsvps reads go through the same door; the follow-state reads stay on the cookie
+client; the self-view redirect to /profile and isPublic are unchanged. The service-module import
+is gone.
+
+$ node -e 'const s=require("fs").readFileSync("src/app/users/[id]/page.tsx","utf8");process.exit(/select\([^)]*email/.test(s)?1:0)'
+exit=0
+$ grep -c "getElevatedClient()" src/app/users/[id]/page.tsx   → 2 (the loader, and the target's rows)
+$ grep -c "notFound()" src/app/users/[id]/page.tsx            → 3 (metadata, page, and the loader docblock)
+
+Step 2 — the DEFECT suite UNEDITED against the fixed page:
+$ npx jest --ci src/__tests__/pages
+    ✕ P1: generateMetadata puts the private target's name in the title without reading the session (80 ms)
+    ✕ P2: the page renders instead of calling notFound() (1 ms)
+    ✕ P3: the page's users select reads email (1 ms)
+    ✓ renders, and notFound() is not called (18 ms)
+    ✓ its metadata title carries the name
+    ✓ a missing target calls notFound()
+Tests:       3 failed, 3 passed, 6 total
+exit=1
+Red on exactly P1–P3 (P1 now throws the notFound sentinel); the three rows that do not move stay
+green unedited.
+
+Step 3 — P1–P3 moved to the fixed shape (Status: FIXED in 05-15):
+$ npx jest --ci src/__tests__/pages
+    ✓ P1: generateMetadata calls notFound() after reading the session, and reads no email (85 ms)
+    ✓ P2: the page calls notFound() and renders nothing
+    ✓ P3: the page's users select is the narrowed list, without email
+    ✓ renders, and notFound() is not called (21 ms)
+    ✓ its metadata title carries the name
+    ✓ a missing target calls notFound()
+Tests:       6 passed, 6 total
+exit=0
+
+Step 4 — the pre-fix page (git show HEAD:src/app/users/[id]/page.tsx) put back temporarily:
+$ npx jest --ci src/__tests__/pages
+    ✕ P1: generateMetadata calls notFound() after reading the session, and reads no email (45 ms)
+    ✕ P2: the page calls notFound() and renders nothing (8 ms)
+    ✕ P3: the page's users select is the narrowed list, without email (1 ms)
+    ✓ renders, and notFound() is not called (10 ms)
+    ✓ its metadata title carries the name
+    ✓ a missing target calls notFound()
+Tests:       3 failed, 3 passed, 6 total
+exit=1
+Fixed page restored: cmp identical ("restored, cmp identical").
+
+## 2. What "404" means on /users/[id] (measured; a deviation from the plan's wording)
+
+src/app/loading.tsx wraps every page in a Suspense boundary. The response therefore starts
+streaming with HTTP 200 before the page component runs, and notFound() renders the not-found UI
+into the stream with <meta name="robots" content="noindex"/>. This is Next's documented behaviour
+(node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/loading.md, "Status Codes":
+"When streaming, a 200 status code will be returned ... Because the response headers have already
+been sent to the client, the status code of the response cannot be updated."). A profile id with
+no users row has always answered this way.
+
+Probe against the built app (next start on :3000, local stack), anonymous curl:
+  missing status=200   (id 5eed0000-0000-4000-8000-00000000dead)
+  public status=200
+  private status=200   (onboarded_student set private with psql, then restored to public)
+  == missing: name=0 email=0 noindex=2 pagenotfound=1
+  == public:  name=2 email=0 noindex=0 pagenotfound=1
+  == private: name=0 email=0 noindex=2 pagenotfound=1
+  <title>: missing and private both "UNI-VERSE | McGill Campus Events"; public "Seed Onboarded Student | UNI-VERSE | UNI-VERSE"
+("Page Not Found" is present in every response's RSC payload, so it is not a discriminator; the
+noindex meta and the absent name are.)
+
+So public-profile-privacy.spec.ts asserts the property a reader cares about: the anonymous
+response for a private profile is the same not-found response a missing profile gets (same status,
+same title, the noindex meta), and carries neither the owner's name nor their email. A hard HTTP
+404 would need the check before streaming, i.e. in the proxy or by removing the root loading
+boundary; neither is in this plan's scope. Candidate deferred item for 05-19.
+
+## 3. public-profile-privacy.spec.ts on the real stack (clean reset and seed)
+
+$ supabase db reset --local
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ npx playwright test      (the whole suite; the lines for this plan's two specs, and the total)
+  ✓  20 [chromium] › e2e/specs/admin-write-paths.spec.ts:222:7 › admin writes through their split clients (DEC-49) › approving a pending club: approved, owner membership, organizer role, notification (123ms)
+  ✓  21 [chromium] › e2e/specs/admin-write-paths.spec.ts:252:7 › admin writes through their split clients (DEC-49) › resolving a report: status and reviewer change (105ms)
+  ✓  22 [chromium] › e2e/specs/admin-write-paths.spec.ts:267:7 › admin writes through their split clients (DEC-49) › approving an organizer request: approved, organizer membership, notification (113ms)
+  ✓  23 [chromium] › e2e/specs/admin-write-paths.spec.ts:298:7 › admin writes through their split clients (DEC-49) › banning with suspend_content: banned, own club suspended with a review, notification (126ms)
+  ✓  24 [chromium] › e2e/specs/admin-write-paths.spec.ts:335:7 › admin writes through their split clients (DEC-49) › unbanning: banned_at and ban_expires_at are cleared (108ms)
+  ✓  88 [chromium] › e2e/specs/public-profile-privacy.spec.ts:71:7 › public profile privacy (F-005) › private: the not-found response to an anonymous reader, the page to a signed-in viewer; public again: the page, never the email (165ms)
+  91 passed (29.5s)
+exit=0
+
+The first full run (before the spec was corrected) asserted a literal 404 and failed on it,
+90 passed / 1 failed: "Expected: 404 Received: 200" at the anonymous request. That failure is what
+led to the measurement in § 2. The corrected spec was then run on a fresh reset and seed (above).
+
+onboarded_student's visibility after the run (docker exec psql):
+5eed0000-0000-4000-8000-000000000001|public
+exit=0
+Fixture residue after the run (same query as service-role-migration.txt § 4):
+auth.users = 0
+public.users = 0
+clubs = 0
+event_reports (non-seed) = 0
+organizer_requests = 0
+notifications = 0
+moderation_reviews = 0
+club_members = 6
+admin_audit_log = 0
+exit=0
+
+Red check: the pre-fix page put back temporarily, the spec alone:
+$ npx playwright test e2e/specs/public-profile-privacy.spec.ts
+    >  98 |       expect(anonymousHtml).toContain(NOINDEX);
+  1 failed
+  10 passed (12.5s)
+exit=1
+(the private profile rendered to the anonymous reader, so the noindex assertion failed; the
+finally block restored visibility = public; the fixed page was restored, cmp identical.)
+
+## 4. The allow-list regeneration (DEC-49) — the one sanctioned shrink
+
+Before (committed list, 25 entries):
+  src/app/api/admin/calculate-popularity/route.ts
+  src/app/api/admin/clubs/\[id\]/route.ts
+  src/app/api/admin/events/\[id\]/edits/route.ts
+  src/app/api/admin/events/\[id\]/status/route.ts
+  src/app/api/admin/organizer-requests/\[id\]/route.ts
+  src/app/api/admin/organizers/route.ts
+  src/app/api/admin/reports/\[id\]/route.ts
+  src/app/api/admin/reports/route.ts
+  src/app/api/admin/users/\[id\]/ban/route.ts
+  src/app/api/clubs/\[id\]/appeal/route.ts
+  src/app/api/clubs/\[id\]/route.ts
+  src/app/api/clubs/\[id\]/transfer/route.ts
+  src/app/api/clubs/route.ts
+  src/app/api/cron/send-feedback-requests/route.ts
+  src/app/api/cron/send-reminders/route.ts
+  src/app/api/events/\[id\]/appeal/route.ts
+  src/app/api/moderation/reviews/\[targetType\]/\[targetId\]/route.ts
+  src/app/api/profile/avatar/route.ts
+  src/app/api/profile/banner/route.ts
+  src/app/api/recommendations/batch/route.ts
+  src/app/api/users/\[id\]/route.ts
+  src/app/api/users/me/suggestions/route.ts
+  src/app/auth/callback/route.ts
+  src/app/users/\[id\]/page.tsx
+  src/lib/audit.ts
+
+$ node scripts/check-elevated-ratchet.mjs          (before --write)
+committed=25 live=2 delta=-23
+retired=23 (the list shrank — this is the intended direction)
+PASS: the live census is a subset of the committed allow-list
+pre exit=0
+$ node scripts/check-elevated-ratchet.mjs --write
+wrote 2 entries to eslint.elevated-allowlist.mjs
+write exit=0
+$ node scripts/check-elevated-ratchet.mjs          (after)
+committed=2 live=2 delta=0
+PASS: the live census is a subset of the committed allow-list
+post exit=0
+
+After (2 entries, Phase 6 owns both):
+  src/app/api/cron/send-feedback-requests/route.ts
+  src/app/api/cron/send-reminders/route.ts
+
+$ git diff eslint.elevated-allowlist.mjs
+diff --git a/eslint.elevated-allowlist.mjs b/eslint.elevated-allowlist.mjs
+index b394cc3..6072f61 100644
+--- a/eslint.elevated-allowlist.mjs
++++ b/eslint.elevated-allowlist.mjs
+@@ -33,7 +33,7 @@
+  * dynamic segment like [id] is read as a CHARACTER CLASS matching one of 'i'
+  * or 'd' — so an unescaped entry matches NOTHING and the file silently stays
+  * under the rule. Measured on this tree: unescaped -> 12 errors leak through;
+- * escaped -> 0. 13 of the 25 entries below are dynamic routes, so this is
++ * escaped -> 0. 0 of the 2 entries below are dynamic routes, so this is
+  * the majority case, not an edge case.
+  *
+  * The header carries no timestamp on purpose: a generated file that
+@@ -42,29 +42,6 @@
+  * .planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/elevated-callsite-census.txt
+  */
+ export const LEGACY_ELEVATED_CALLSITES = [
+-  "src/app/api/admin/calculate-popularity/route.ts",
+-  "src/app/api/admin/clubs/\\[id\\]/route.ts",
+-  "src/app/api/admin/events/\\[id\\]/edits/route.ts",
+-  "src/app/api/admin/events/\\[id\\]/status/route.ts",
+-  "src/app/api/admin/organizer-requests/\\[id\\]/route.ts",
+-  "src/app/api/admin/organizers/route.ts",
+-  "src/app/api/admin/reports/\\[id\\]/route.ts",
+-  "src/app/api/admin/reports/route.ts",
+-  "src/app/api/admin/users/\\[id\\]/ban/route.ts",
+-  "src/app/api/clubs/\\[id\\]/appeal/route.ts",
+-  "src/app/api/clubs/\\[id\\]/route.ts",
+-  "src/app/api/clubs/\\[id\\]/transfer/route.ts",
+-  "src/app/api/clubs/route.ts",
+   "src/app/api/cron/send-feedback-requests/route.ts",
+   "src/app/api/cron/send-reminders/route.ts",
+-  "src/app/api/events/\\[id\\]/appeal/route.ts",
+-  "src/app/api/moderation/reviews/\\[targetType\\]/\\[targetId\\]/route.ts",
+-  "src/app/api/profile/avatar/route.ts",
+-  "src/app/api/profile/banner/route.ts",
+-  "src/app/api/recommendations/batch/route.ts",
+-  "src/app/api/users/\\[id\\]/route.ts",
+-  "src/app/api/users/me/suggestions/route.ts",
+-  "src/app/auth/callback/route.ts",
+-  "src/app/users/\\[id\\]/page.tsx",
+-  "src/lib/audit.ts",
+ ];
+$ git diff --numstat eslint.elevated-allowlist.mjs
+1	24	eslint.elevated-allowlist.mjs
+Every entry change is a removal. The one non-removal line is the header sentence the script
+generates from the list ("13 of the 25 entries ..." → "0 of the 2 entries ..."); the file was not
+hand-edited. That generated sentence now reads "0 of the 2 entries below are dynamic routes, so
+this is the majority case", which is stale prose in scripts/check-elevated-ratchet.mjs's template
+(outside this plan's file list; noted for 05-19).
+
+$ npm run lint
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+exit=0
+
+$ command grep -rln "@/lib/supabase/service" src --include='*.ts' --include='*.tsx' | command grep -v -E '\.test\.tsx?$|__tests__'
+src/app/api/cron/send-feedback-requests/route.ts
+src/app/api/cron/send-reminders/route.ts
+src/server/db/elevated/index.ts
+exit=0
+(src/lib/supabase/service.ts defines the factory and does not import itself; the door and the two
+cron routes are the only importers.)
+
+Negative probe (T-05-15-01): a throwaway src/app/api/zz-probe-0515/route.ts importing the service
+factory, removed straight after:
+$ npx eslint src/app/api/zz-probe-0515/route.ts
+  1:1  error  '@/lib/supabase/service' import is restricted from being used by a pattern. Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md  @typescript-es
+✖ 1 problem (1 error, 0 warnings)
+exit=1
+$ node scripts/check-elevated-ratchet.mjs
+committed=2 live=3 delta=1
+FAIL: 1 callsite(s) are NOT in the committed allow-list:
+  + src/app/api/zz-probe-0515/route.ts
+exit=1
+`git status --short src/app/api` after removal: empty.
+
+## 5. Task 3 verify block
+
+$ npx jest --ci src/__tests__/pages
+Tests:       6 passed, 6 total
+exit=0
+$ npx jest --ci
+Test Suites: 71 passed, 71 total
+Tests:       1325 passed, 1325 total
+exit=0
+$ node scripts/check-elevated-ratchet.mjs
+committed=2 live=2 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ node scripts/check-characterization-tags.mjs --all
+ok 34 files
+exit=0

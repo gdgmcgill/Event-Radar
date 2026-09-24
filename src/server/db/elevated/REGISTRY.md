@@ -28,6 +28,7 @@ exception that nobody wrote down is indistinguishable from an oversight.
 | Create a club with its owner membership and the creator's organizer role | `src/app/api/clubs/route.ts` (POST) | clubs INSERT is admin-only, club_members has no self-owner insert, and roles is withheld by the F-006 grant | 05 |
 | Batch score computation (rpc compute_user_scores) | `src/app/api/recommendations/batch/route.ts` | a privileged batch write over every user (F-075 revokes its public EXECUTE in Phase 6) | 05 |
 | Friend suggestions read other users' profiles, memberships and RSVPs | `src/app/api/users/me/suggestions/route.ts` | users has own-row and admin reads only, and club_members shows another user's membership only to that club's owner; the RSVP-mates read stays with them because its events(title) embed names events the events SELECT policy hides from non-creators. The caller's own rows and the world-readable follow tables are read on the cookie client | 05 |
+| Public profile of another user | `src/app/users/[id]/page.tsx` | users has no public-read policy; adding one would expose email, roles and ban columns at row level; the select is narrowed and anonymous viewers of private profiles get 404 (DEC-48). The target's saved events, created events, friends, memberships and RSVPs are read through the same door, because each is readable under RLS only by the target | 05 |
 
 Rows added from Phase 5 (05-05 onward).
 
@@ -53,7 +54,10 @@ columns); `admin/organizers`, `admin/reports` and `admin/reports/[id]` need no
 door at all. The same plan moved the non-admin sites: `profile/avatar`,
 `profile/banner` and the `users/[id]` self-update run on the cookie client
 only, and the appeals, club creation, review listing, batch scoring and friend
-suggestions keep only the rows above on the door.
+suggestions keep only the rows above on the door. The public profile page
+reads through the door with a narrowed column list and one visibility gate
+(F-005). The allow-list was then regenerated once (DEC-49) to exactly the two
+cron routes Phase 6 owns.
 
 ### The audit writer
 

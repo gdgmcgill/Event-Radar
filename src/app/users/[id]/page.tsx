@@ -1,6 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { redirect, notFound } from "next/navigation";
+import type { User as AuthUser } from "@supabase/supabase-js";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -25,49 +24,71 @@ import { EVENT_CATEGORIES, QUICK_FILTER_CATEGORIES } from "@/lib/constants";
 import type { EventTag, Event } from "@/types";
 import FollowUserButton from "@/components/users/FollowUserButton";
 import type { Metadata } from "next";
+import { getRequestContext } from "@/server/context";
+import { getElevatedClient } from "@/server/db/elevated";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
-  const serviceClient = createServiceClient();
-  const { data: user } = await serviceClient
+/**
+ * The only columns a profile page reads for its target. `email` is not one of
+ * them, and neither are roles or the ban columns (F-005, DEC-48).
+ */
+const PUBLIC_PROFILE_COLUMNS =
+  "id, name, avatar_url, banner_url, pronouns, year, faculty, visibility, interest_tags, created_at";
+
+/**
+ * The one visibility gate, shared by generateMetadata and the page.
+ *
+ * users has own-row and admin SELECT policies only, so another user's row is
+ * read through the elevated door (REGISTRY.md row: "Public profile of another
+ * user"). Returns null when the target does not exist, and when the viewer is
+ * anonymous and the profile is private: both callers answer notFound(), so an
+ * anonymous reader cannot tell a private profile from a missing one.
+ */
+async function loadProfileTarget(targetId: string, viewer: AuthUser | null) {
+  const { data: target, error } = await getElevatedClient()
     .from("users")
-    .select("name")
-    .eq("id", id)
+    .select(PUBLIC_PROFILE_COLUMNS)
+    .eq("id", targetId)
     .single();
 
-  if (!user) return { title: "User Not Found" };
+  if (error || !target) return null;
+  if (viewer === null && target.visibility === "private") return null;
+  return target;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const ctx = await getRequestContext();
+  const target = await loadProfileTarget(id, ctx.user);
+
+  if (!target) notFound();
 
   return {
-    title: `${user.name ?? "User"} | UNI-VERSE`,
-    description: `View ${user.name ?? "this user"}'s profile on UNI-VERSE`,
+    title: `${target.name ?? "User"} | UNI-VERSE`,
+    description: `View ${target.name ?? "this user"}'s profile on UNI-VERSE`,
   };
 }
 
 export default async function UserProfilePage({ params }: PageProps) {
   const { id: targetId } = await params;
-  const supabase = await createClient();
-
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
+  const ctx = await getRequestContext();
+  const supabase = ctx.supabase;
+  const authUser = ctx.user;
 
   if (authUser?.id === targetId) {
     redirect("/profile");
   }
 
-  // Use service client to bypass RLS for reading public profile data
-  const serviceClient = createServiceClient();
-  const { data: target, error } = await serviceClient
-    .from("users")
-    .select("id, name, avatar_url, banner_url, email, pronouns, year, faculty, visibility, interest_tags, created_at")
-    .eq("id", targetId)
-    .single();
+  const target = await loadProfileTarget(targetId, authUser);
+  if (!target) notFound();
 
-  if (error || !target) notFound();
+  // The target's own activity rows (saved events, created events, friends,
+  // memberships, RSVPs) are readable under RLS only by the target, so they are
+  // read through the same door as the profile row.
+  const elevated = getElevatedClient();
 
   const now = new Date().toISOString();
 
@@ -98,25 +119,25 @@ export default async function UserProfilePage({ params }: PageProps) {
           .eq("following_id", authUser.id)
           .maybeSingle()
       : { data: null },
-    // Use service client for target user's data (bypasses RLS)
-    serviceClient
+    // The target's own rows, through the door (see above)
+    elevated
       .from("saved_events")
       .select("id, events!inner(start_date)", { count: "exact", head: true })
       .eq("user_id", targetId)
       .lt("events.start_date", now),
-    serviceClient
+    elevated
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("created_by", targetId)
       .eq("status", "approved")
       .is("deleted_at", null),
-    serviceClient.rpc("get_friends", { target_user_id: targetId }).limit(20),
-    serviceClient
+    elevated.rpc("get_friends", { target_user_id: targetId }).limit(20),
+    elevated
       .from("club_members")
       .select("id, role, clubs (id, name, logo_url, category)")
       .eq("user_id", targetId)
       .order("created_at", { ascending: false }),
-    serviceClient
+    elevated
       .from("rsvps")
       .select("id, status, events!inner(*, club:clubs(id, name, logo_url))")
       .eq("user_id", targetId)
@@ -126,7 +147,7 @@ export default async function UserProfilePage({ params }: PageProps) {
       .eq("events.status", "approved")
       .order("created_at", { ascending: false })
       .limit(6),
-    serviceClient
+    elevated
       .from("rsvps")
       .select("id, status, events!inner(*, club:clubs(id, name, logo_url))")
       .eq("user_id", targetId)
