@@ -1,0 +1,165 @@
+# Contract regeneration, slice 5 — plan 05-14 Task 3 (DEC-55, F-001/FO-01, F-061)
+
+Recorded 2026-09-24 on the local tree. Base: b689b3b (05-14 F-086 fix). endpoints.json is changed
+only through `.planning/audit/tools/classify-inventory.mjs`; classification-rules.md is updated in
+the same commit. Every command is quoted with its exit code; outputs are verbatim unless marked.
+
+## 1. The verdict edits
+
+- `VIA_ADMIN` (the admin mechanism text every admin row's `role_required` carries) now reads
+  `admin (requireRole(ctx, "admin") in src/server/authz/requireRole.ts → users.roles includes "admin", after requireActiveUser(ctx))`.
+  It named `src/lib/admin.ts verifyAdmin()`, which 05-13 deleted.
+- `api.admin.calculate-popularity` moves from the machine verdict
+  (`A('machine', 'machine secret ADMIN_API_KEY …', 'bypassed', false, 'machine', 'FO-01 Critical …')`)
+  to `A('admin', VIA_ADMIN, 'bypassed', false, 'admin', 'FO-01 fixed in 05-14 (F-001) …')`.
+- classification-rules.md mirrors both: § 0 status note, A1 (admin mechanism; machine is now two
+  rows), A2, A3, the machine-credential table, § 6 D-1 status (fixed 05-14) and D-4 status (fixed
+  05-13; the rows name the seam since this regeneration).
+- Not changed: `api.moderation.reviews.targetType.targetId`'s own mechanism text ("inline roles
+  check on the service client … not verifyAdmin()") is not the admin mechanism constant and is not
+  in this plan's allowed set; 05-13 moved that route to the request context, so the text is stale.
+  Recorded for 05-19.
+
+## 2. Drift before the edit (the unedited classifier against the current tree)
+
+The real run was taken to measure the field-level change, then endpoints.json was restored from a
+copy before the classifier was edited.
+
+$ node .planning/audit/tools/classify-inventory.mjs --dry-run   (unedited classifier)
+endpoints: 94 rows, 1 changed (phase 3, dry-run)
+endpoints: 1 row(s) retained unchanged, handler file deleted: api.auth-debug
+pages: 43 rows, 0 changed
+exit=0
+
+$ node .planning/audit/tools/classify-inventory.mjs && node <field diff> before.json endpoints.json   (unedited classifier; then restored)
+api.admin.users.id
+  input_validation: "none" -> "manual"
+changed rows: 1
+
+Reading: the one pre-edit change is 05-14 Task 1's: PATCH /api/admin/users/[id] gained a 400 path
+(Invalid role), so rule V1 reads manual validation. It is an admin row in the allowed set.
+
+## 3. After the edit: dry run, then the real run
+
+$ node .planning/audit/tools/classify-inventory.mjs --dry-run
+endpoints: 94 rows, 26 changed (phase 3, dry-run)
+endpoints: 1 row(s) retained unchanged, handler file deleted: api.auth-debug
+pages: 43 rows, 0 changed
+exit=0
+
+$ node .planning/audit/tools/classify-inventory.mjs
+endpoints: 94 rows, 26 changed (phase 3)
+endpoints: 1 row(s) retained unchanged, handler file deleted: api.auth-debug
+pages: 43 rows, 0 changed
+exit=0
+
+## 4. Every changed row and field (before = the committed endpoints.json at b689b3b)
+
+$ node <field diff> before.json .planning/audit/inventory/endpoints.json
+api.admin.analytics.events
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.analytics.users
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.audit-log
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.calculate-popularity
+  auth_requirement: "machine" -> "admin"
+  role_required: "machine secret ADMIN_API_KEY (Authorization: Bearer <secret>); NOT verifyAdmin() despite the /api/admin/ path" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+  expected_status.onboarded_student: 401 -> 403
+  expected_status.mid_onboarding_student: 401 -> 403
+  expected_status.club_member: 401 -> 403
+  expected_status.club_owner: 401 -> 403
+  expected_status.multi_club_organizer: 401 -> 403
+  expected_status.cross_club_attacker: 401 -> 403
+  expected_status.admin: 401 -> 200
+  expected_status.suspension_expired: 401 -> 403
+api.admin.clubs.id
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.clubs
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.events.id.edits
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.events.id
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.events.id.status
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.events
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.experiments.id.results
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.experiments.id
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.experiments
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.featured.id
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.featured
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.organizer-requests.id
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.organizer-requests
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.organizers
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.reports.id
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.reports
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.stats
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.users.id.ban
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.admin.users.id
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+  input_validation: "none" -> "manual"
+api.admin.users
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.recommendations.analytics
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+api.recommendations.batch
+  role_required: "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")" -> "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))"
+changed rows: 26
+
+Reading, against the allowed set:
+- 25 rows change `role_required` (the new mechanism text): the 23 `api.admin.*` rows other than
+  calculate-popularity, and `api.recommendations.analytics` and `api.recommendations.batch`.
+  These are exactly the rows whose verdict used VIA_ADMIN before the edit. 24 of them change
+  nothing else.
+- `api.admin.users.id` also changes `input_validation` none → manual (§ 2; Task 1's 400 path).
+- `api.admin.calculate-popularity` changes `auth_requirement` machine → admin, `role_required`,
+  and `expected_status`: anonymous 401 (unchanged), every student persona 401 → 403, admin 401 →
+  200, `machine_no_credential` 401 (unchanged, R14 now via anonymous), banned 403 (unchanged).
+- No row outside the admin family changed; pages.json is byte-identical.
+
+## 5. Idempotence, validators, acceptance
+
+$ node .planning/audit/tools/classify-inventory.mjs --dry-run   (idempotence: second run)
+endpoints: 94 rows, 0 changed (phase 3, dry-run)
+endpoints: 1 row(s) retained unchanged, handler file deleted: api.auth-debug
+pages: 43 rows, 0 changed
+exit=0
+
+$ node .planning/audit/tools/validate.mjs --check endpoints
+PASS endpoints :: is-an-array :: array
+PASS endpoints :: row-count-matches-baseline :: baseline/versions.txt route_ts_count is 94, inventory has 94
+PASS endpoints :: schema-valid :: all rows valid
+PASS endpoints :: ids-unique :: all ids distinct
+PASS endpoints :: no-residual-placeholders :: fully classified
+--- 5 passed, 0 failed, 0 skipped
+exit=0
+
+$ node .planning/audit/tools/validate.mjs --quick
+FAIL schema-snapshots :: dump-contains-create-table :: schema/staging.schema.sql
+FAIL schema-snapshots :: dump-contains-create-table :: schema/local.schema.sql
+SKIP endpoints-signals :: placeholders-permitted :: this gate runs before hand classification; use --check endpoints afterwards
+--- 118 passed, 2 failed, 1 skipped
+exit=1
+
+$ node -e '<calculate-popularity expected_status: anonymous 401, onboarded_student 403, admin 200>'
+exit=0
+$ node -e '<machine_no_credential>'
+401
+exit=0
+
+Reading: --check endpoints passes 5/5. --quick is 118 passed, 2 failed, 1 skipped, identical to the
+slice-3 regeneration and the before-floor (the two by-design schema-snapshot FAILs and the SKIP).

@@ -107,14 +107,17 @@ const DEAD_HANDLERS = {
  * scope: global | self | club | club-owner | admin | machine — drives the
  *       club_member / club_owner / cross_club_attacker persona columns.
  */
-const VIA_ADMIN = 'admin (src/lib/admin.ts verifyAdmin() → users.roles includes "admin")';
+// Since Phase 5 slice 5 (05-13, DEC-44/DEC-58): every admin arm opens with
+// createRequestContext(), requireActiveUser(ctx), requireRole(ctx, "admin").
+// src/lib/admin.ts (verifyAdmin) was deleted by 05-13.
+const VIA_ADMIN = 'admin (requireRole(ctx, "admin") in src/server/authz/requireRole.ts → users.roles includes "admin", after requireActiveUser(ctx))';
 const VIA_CLUB = 'club membership (club_members lookup on the cookie client)';
 const VIA_CLUB_OWNER = 'club owner (club_members.role === "owner")';
 
 const A = (auth, role, rls, pers, scope, note) => ({ auth, role, rls, pers, scope, note });
 
 const VERDICTS = {
-  /* ---- admin surface: verifyAdmin() is the only gate, 22 rows ------------ */
+  /* ---- admin surface: requireRole(ctx, "admin") is the only gate --------- */
   'api.admin.analytics.events': A('admin', VIA_ADMIN, 'partial', false, 'admin'),
   'api.admin.analytics.users': A('admin', VIA_ADMIN, 'partial', false, 'admin'),
   'api.admin.audit-log': A('admin', VIA_ADMIN, 'partial', false, 'admin'),
@@ -141,15 +144,16 @@ const VERDICTS = {
   'api.recommendations.analytics': A('admin', VIA_ADMIN, 'partial', false, 'admin'),
   'api.recommendations.batch': A('admin', VIA_ADMIN, 'bypassed', false, 'admin'),
 
-  /* ---- machine surface: a shared secret compared to an env var ----------- */
   'api.admin.calculate-popularity': A(
-    'machine',
-    'machine secret ADMIN_API_KEY (Authorization: Bearer <secret>); NOT verifyAdmin() despite the /api/admin/ path',
+    'admin',
+    VIA_ADMIN,
     'bypassed',
     false,
-    'machine',
-    'FO-01 Critical: the gate is `if (expectedKey && ...)`, so it vanishes entirely when ADMIN_API_KEY is unset — which raw/vercel/env-names.json confirms it is in production. Anonymous service-role write.'
+    'admin',
+    'FO-01 fixed in 05-14 (F-001): the machine-secret gate, which vanished when its env var was unset, is gone; both verbs decide admin through the seam and the recompute runs on getElevatedClient() (REGISTRY row: popularity recompute).'
   ),
+
+  /* ---- machine surface: a shared secret compared to an env var ----------- */
   'api.cron.send-reminders': A(
     'machine',
     'machine secret CRON_SECRET (Authorization: Bearer ${CRON_SECRET})',

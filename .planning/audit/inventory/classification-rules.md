@@ -28,6 +28,9 @@ plan's own model.
 Concretely: `/api/admin/calculate-popularity` has `machine_no_credential: 401` even though it
 returns **200 to an anonymous caller in production right now**, because `ADMIN_API_KEY` is unset
 and the gate is `if (expectedKey && ...)`. The 401 is the contract; the 200 is finding FO-01.
+**Status (Phase 5, 05-14, F-001):** FO-01 is fixed. The route now decides admin through the seam
+on both verbs, so its verdict is `admin` and its row reads anonymous 401, students 403, admin 200
+and `machine_no_credential` 401 (R14 falls back to `anonymous`); see A1.
 
 ### The four human verdicts everything else is derived from
 
@@ -46,20 +49,23 @@ exactly.
 
 Four values: `anonymous`, `authenticated`, `admin`, `machine`.
 
-- `admin` — the handler calls `verifyAdmin()` (`src/lib/admin.ts`, `users.roles` includes
-  `"admin"`) **or** performs an equivalent inline roles-membership check, and returns before
-  acting when it fails.
+- `admin` — the handler calls `requireRole(ctx, "admin")` (`src/server/authz/requireRole.ts`,
+  `users.roles` includes `"admin"`, after `requireActiveUser(ctx)`; DEC-44, DEC-58) **or**
+  performs an equivalent inline roles-membership check, and returns before acting when it
+  fails. Until 05-13 the mechanism was `verifyAdmin()` in `src/lib/admin.ts`, which 05-13
+  replaced at every callsite and deleted.
 - `machine` — the handler's only gate is a shared secret compared against an environment
-  variable. Three rows: `/api/admin/calculate-popularity` (`ADMIN_API_KEY`) and both
-  `/api/cron/*` (`CRON_SECRET`).
+  variable. Two rows: both `/api/cron/*` (`CRON_SECRET`). `/api/admin/calculate-popularity`
+  (`ADMIN_API_KEY`) was the third until 05-14 fixed FO-01 (F-001) and made it `admin`.
 - `authenticated` — the handler reads a verified user and has an unauthenticated branch that
   refuses (a `401` return).
 - `anonymous` — everything else, **including handlers that call `getUser()` but never refuse.**
 
 A handler under `/api/admin/` that never verifies a role is `authenticated`-at-best and is a
-finding, not an `admin` route. `/api/admin/calculate-popularity` is the live instance: it sits
-under the admin path prefix and is classified `machine`, because `ADMIN_API_KEY` is the only
-thing it ever checks.
+finding, not an `admin` route. `/api/admin/calculate-popularity` was the instance: it sat under
+the admin path prefix and was classified `machine`, because `ADMIN_API_KEY` was the only thing
+it checked. Since 05-14 both verbs call `requireActiveUser(ctx)` and `requireRole(ctx, "admin")`,
+and the verdict is `admin`.
 
 ### A5 — a route's `auth_requirement` is its **weakest** method
 
@@ -73,9 +79,10 @@ trade for an audit: an attacker reads the weakest method too.
 
 ### A2 — `role_required` names the mechanism, not just the role
 
-`null`, or a string naming both the role and how it is enforced — `verifyAdmin()`, an inline
-roles check, a `club_members` lookup, or a `club_members.role === "owner"` lookup. Two handlers
-enforce an admin role **without** `verifyAdmin()`
+`null`, or a string naming both the role and how it is enforced — `requireRole(ctx, "admin")`
+(`verifyAdmin()` until 05-13), an inline roles check, a `club_members` lookup, or a
+`club_members.role === "owner"` lookup. Two handlers enforce an admin role **without**
+`verifyAdmin()`
 (`/api/moderation/reviews/[targetType]/[targetId]` uses an inline check on the service client);
 naming the mechanism is what makes that visible.
 
@@ -88,8 +95,10 @@ per `rls/rls-heatmap.csv`, or the handler touches no table), `bypassed` (service
 **`bypassed` is asserted, not chosen.** The script forces `rls_reliance = "bypassed"` whenever
 `signals.uses_service_client` is true, so a verdict table typo cannot understate a bypass.
 `/api/admin/calculate-popularity` is `bypassed` via the verdict table instead, because it
-constructs its client with an inline `createAdminClient()` rather than importing
-`createServiceClient()` — which is also why it is absent from the 01-07 register.
+constructed its client with an inline `createAdminClient()` rather than importing
+`createServiceClient()` — which is also why it is absent from the 01-07 register. Since 05-14 it
+runs on `getElevatedClient()` (REGISTRY row: popularity recompute); its audit-time signals are
+not regenerated here, so the verdict table still carries the bypass.
 
 Caveat carried forward from plan 01-09: `partial` and `primary` describe *the handler's
 posture*, not the strength of the policy behind it. `rls/rls-review.md` records that `anon`
@@ -267,7 +276,7 @@ recorded here because CERT-06 needs them.
 | case | expected | in production today |
 |---|---|---|
 | valid credential | `S` (200) | **unreachable** — `raw/vercel/env-names.json` shows only three variables configured, and neither `ADMIN_API_KEY` nor `CRON_SECRET` is among them, so no valid credential exists to present |
-| invalid credential | **401** | `/api/admin/calculate-popularity`: **200** (gate skipped, FO-01). `/api/cron/send-reminders`: 401 unless the attacker sends the literal `Bearer undefined`, which succeeds (FO-02). `/api/cron/send-feedback-requests`: 500 before the comparison (FO-04, fail-closed) |
+| invalid credential | **401** | `/api/admin/calculate-popularity`: **200** (gate skipped, FO-01; fixed in 05-14, the route is no longer a machine route). `/api/cron/send-reminders`: 401 unless the attacker sends the literal `Bearer undefined`, which succeeds (FO-02). `/api/cron/send-feedback-requests`: 500 before the comparison (FO-04, fail-closed) |
 | absent credential (`machine_no_credential`) | **401** | same as the invalid row: 200, 401-or-bypass, and 500 respectively |
 
 **All three secrets are absent in production, so the fail-open is live, not hypothetical.**
@@ -340,10 +349,10 @@ Each is a finding candidate; none is fixed, and `git diff --exit-code -- src/` i
 
 | # | Divergence | Rows | Expected | Current | Evidence |
 |---|---|---|---|---|---|
-| **D-1** | **Machine routes fail open.** `machine_no_credential` should be 401. | `/api/admin/calculate-popularity` | 401 | **200 on both GET and POST** — `if (expectedKey && ...)` skips entirely when `ADMIN_API_KEY` is unset, then constructs a service-role client | `authz/fail-open-register.md` FO-01; `raw/vercel/env-names.json` |
+| **D-1** | **Machine routes fail open.** `machine_no_credential` should be 401. | `/api/admin/calculate-popularity` | 401 | **200 on both GET and POST** — `if (expectedKey && ...)` skips entirely when `ADMIN_API_KEY` is unset, then constructs a service-role client | `authz/fail-open-register.md` FO-01; `raw/vercel/env-names.json`. **Status (Phase 5, F-001):** fixed in 05-14. Both verbs decide admin through `requireActiveUser(ctx)` and `requireRole(ctx, "admin")`, and the verdict is `admin`: anonymous 401, students 403, admin 200, `machine_no_credential` 401 since the 05-14 regeneration (`evidence/contract-regen-slice-5.txt` in the Phase 5 directory) |
 | **D-2** | Same, weaker form | `/api/cron/send-reminders` | 401 | compares against the fixed literal `Bearer undefined`; a caller who sends that string is admitted to a service-role write | FO-02 |
 | **D-3** | Same, fail-closed | `/api/cron/send-feedback-requests` | 401 | **500 to every caller**, unconditionally — the route cannot execute at all | FO-04 |
-| **D-4** | **Admin routes conflate 401 and 403.** `verifyAdmin()` returns `isAdmin: false` for an anonymous caller, so the handlers return 403 where the contract says 401. | 22 of the 25 admin rows | `anonymous: 401` | 403 | `src/lib/admin.ts` has no `user == null` branch distinct from the role failure |
+| **D-4** | **Admin routes conflate 401 and 403.** `verifyAdmin()` returns `isAdmin: false` for an anonymous caller, so the handlers return 403 where the contract says 401. | 22 of the 25 admin rows | `anonymous: 401` | 403 | `src/lib/admin.ts` has no `user == null` branch distinct from the role failure. **Status (Phase 5, F-061):** fixed in 05-13, which replaced `verifyAdmin()` with `requireRole(ctx, "admin")` at every callsite and deleted `src/lib/admin.ts`; the admin rows' `role_required` names the seam since the 05-14 regeneration |
 | **D-5** | **The ban ring redirects rather than refusing, on API routes.** | 92 rows | 403 | `NextResponse.redirect("/banned")` — a **307 to an HTML page** in answer to a JSON API call | `src/middleware.ts:105-108` |
 | **D-6** | **Eight personalized routes return 200 to anonymous callers instead of 401**, with a degraded body, and carry the blanket `s-maxage=60` shared-cache header. | the § P1 list | 401 *or* `private, no-store` | 200 + shared-cacheable | `signals.calls_get_user` true, no `401` path. **Status (Phase 5, F-028, DEC-39):** four routes answer anonymous callers 401 since 05-06 (`7ff08c1`): `/api/events/following`, `/api/events/friends-activity`, `/api/events/friends-organizing`, `/api/events/[id]/friends`. Their verdicts are `authenticated` and their `anonymous` and `machine_no_credential` cells are 401 since the 05-08 regeneration. `GET /api/events/[id]/rsvp`, `/api/clubs/[id]/events` and `/api/notifications/count` stay anonymous and move with REFAC-19 in Phase 6, because they feed public UI. `/api/auth-debug` (D-7) was deleted by 05-04 (F-027). Its row stays in the inventory (DEC-55) |
 | **D-7** | **`/api/auth-debug` echoes the caller's own id and email with no gate**, under the blanket shared-cache header. | 1 | 401, or the route deleted | 200 to anyone | `src/app/api/auth-debug/route.ts:35-44` |

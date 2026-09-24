@@ -33,7 +33,7 @@
       "loc": 109
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -92,7 +92,7 @@
       "loc": 83
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -151,7 +151,7 @@
       "loc": 40
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -215,8 +215,8 @@
       ],
       "loc": 240
     },
-    "auth_requirement": "machine",
-    "role_required": "machine secret ADMIN_API_KEY (Authorization: Bearer <secret>); NOT verifyAdmin() despite the /api/admin/ path",
+    "auth_requirement": "admin",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": null,
     "personalized": false,
@@ -227,16 +227,16 @@
     "dead_or_duplicate": false,
     "expected_status": {
       "anonymous": 401,
-      "onboarded_student": 401,
-      "mid_onboarding_student": 401,
-      "club_member": 401,
-      "club_owner": 401,
-      "multi_club_organizer": 401,
-      "cross_club_attacker": 401,
-      "admin": 401,
+      "onboarded_student": 403,
+      "mid_onboarding_student": 403,
+      "club_member": 403,
+      "club_owner": 403,
+      "multi_club_organizer": 403,
+      "cross_club_attacker": 403,
+      "admin": 200,
       "banned_permanent": 403,
       "suspended_active": 403,
-      "suspension_expired": 401,
+      "suspension_expired": 403,
       "non_mcgill_signin": "n/a",
       "machine_no_credential": 401
     },
@@ -281,7 +281,7 @@
       "loc": 229
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": "justified",
     "personalized": false,
@@ -340,7 +340,7 @@
       "loc": 35
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -402,7 +402,7 @@
       "loc": 149
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": "justified",
     "personalized": false,
@@ -464,7 +464,7 @@
       "loc": 111
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -527,7 +527,7 @@
       "loc": 202
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": "justified",
     "personalized": false,
@@ -588,7 +588,7 @@
       "loc": 188
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -652,7 +652,7 @@
       "loc": 148
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -717,7 +717,7 @@
       "loc": 154
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -779,7 +779,7 @@
       "loc": 132
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -841,7 +841,7 @@
       "loc": 111
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -901,7 +901,7 @@
       "loc": 105
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -966,7 +966,7 @@
       "loc": 130
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": "justified",
     "personalized": false,
@@ -1025,7 +1025,7 @@
       "loc": 37
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -1086,7 +1086,7 @@
       "loc": 104
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": "justified",
     "personalized": false,
@@ -1147,7 +1147,7 @@
       "loc": 71
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": "justified",
     "personalized": false,
@@ -1206,7 +1206,7 @@
       "loc": 72
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": "justified",
     "personalized": false,
@@ -1266,7 +1266,7 @@
       "loc": 41
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -1332,7 +1332,7 @@
       "loc": 322
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": "justified",
     "personalized": false,
@@ -1393,13 +1393,13 @@
       "loc": 44
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
     "cache_policy_today": "s-maxage=60, stale-while-revalidate=300",
     "cache_policy_target": "no-store",
-    "input_validation": "none",
+    "input_validation": "manual",
     "test_present": false,
     "dead_or_duplicate": false,
     "expected_status": {
@@ -1452,7 +1452,7 @@
       "loc": 21
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -4887,7 +4887,7 @@
       "loc": 124
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "partial",
     "service_role_justified": null,
     "personalized": false,
@@ -4944,7 +4944,7 @@
       "loc": 38
     },
     "auth_requirement": "admin",
-    "role_required": "admin (src/lib/admin.ts verifyAdmin() → users.roles includes \"admin\")",
+    "role_required": "admin (requireRole(ctx, \"admin\") in src/server/authz/requireRole.ts → users.roles includes \"admin\", after requireActiveUser(ctx))",
     "rls_reliance": "bypassed",
     "service_role_justified": "justified",
     "personalized": false,
