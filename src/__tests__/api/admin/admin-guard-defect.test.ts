@@ -1,7 +1,8 @@
 /**
  * DEFECT characterization — F-061, F-001 (and DI-48)
  *
- * Status: OPEN — rows move in 05-13 and 05-14. 05-13 adds the 33 helper arms
+ * Status: PARTLY FIXED in 05-13 (the helper arms' F-061 and DI-48 rows; the
+ * two calculate-popularity arms stay open until 05-14). 05-13 adds the 33 helper arms
  * to `FIXED_ARMS` as each file adopts `requireRole(ctx, "admin")` (DEC-44);
  * 05-14 adds the two calculate-popularity arms (DEC-44, F-001). The banned
  * admin rows move through their own set, `BAN_GUARDED_ARMS`, when an arm
@@ -79,11 +80,39 @@ jest.mock("@supabase/supabase-js", () => ({
 
 // ─── The ledger sets ───────────────────────────────────────────────────────
 
-/** Arms whose F-061 / F-001 rows have moved to the fixed shape. */
-const FIXED_ARMS: ReadonlySet<string> = new Set<string>([]);
+/**
+ * The arms that decide admin through `requireRole(ctx, "admin")` (DEC-44).
+ * Their F-061 / F-001 rows have moved to the fixed shape.
+ */
+const TASK1_ARMS = [
+  // FIXED in 05-13 Task 1: analytics, audit-log, clubs, events, experiments.
+  "admin/analytics/events GET",
+  "admin/analytics/users GET",
+  "admin/audit-log GET",
+  "admin/clubs/[id] PATCH",
+  "admin/clubs GET",
+  "admin/events/[id]/edits PATCH",
+  "admin/events/[id] PUT",
+  "admin/events/[id] DELETE",
+  "admin/events/[id]/status PATCH",
+  "admin/events GET",
+  "admin/events POST",
+  "admin/experiments/[id]/results GET",
+  "admin/experiments/[id] GET",
+  "admin/experiments/[id] PATCH",
+  "admin/experiments/[id] DELETE",
+  "admin/experiments GET",
+  "admin/experiments POST",
+];
 
-/** Arms whose DI-48 banned-admin row has moved to the fixed shape. */
-const BAN_GUARDED_ARMS: ReadonlySet<string> = new Set<string>([]);
+const FIXED_ARMS: ReadonlySet<string> = new Set<string>([...TASK1_ARMS]);
+
+/**
+ * The arms that compose `requireActiveUser(ctx)` ahead of the role check
+ * (DI-48, DEC-58). Their banned-admin row has moved to the fixed shape.
+ * FIXED in 05-13, in the same commits as the `requireRole` swap.
+ */
+const BAN_GUARDED_ARMS: ReadonlySet<string> = new Set<string>([...TASK1_ARMS]);
 
 // ─── Environment and fakes ─────────────────────────────────────────────────
 

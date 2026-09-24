@@ -1,4 +1,4 @@
-# Phase 5 decision record — DEC-33 through DEC-57
+# Phase 5 decision record — DEC-33 through DEC-58
 
 **Plan:** 05-01 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-24
 
@@ -535,3 +535,34 @@ would then claim a production state that was never measured, and the Critical ga
 
 **Executed by:** 05-01 (registration and re-pointing), each fixing plan (resolution text), 05-19
 (final states).
+
+## DEC-58 — A banned admin is refused at the handler (DI-48)
+
+*Appended by 05-13, which executes it. Not one of the 05-01 defaults: it is a rule-resolved
+decision taken during execution, under DI-48's owner note.*
+
+**Decision.** Every admin arm composes `requireActiveUser(ctx)` ahead of `requireRole(ctx, "admin")`,
+as its first statements after `createRequestContext()`. The deny bytes, in order: anonymous
+`401 {"error":"Unauthorized"}`; no profile row `403 {"error":"Profile not found"}`; banned
+`403 {"error":"Account suspended"}`; not an admin `403 {"error":"Forbidden"}`. `requireRole` itself is
+unchanged: it stays a pure role check, and the ban is read by the one guard that already reads it.
+INTENTIONAL BEHAVIOUR CHANGE: a banned admin is refused by the handler, not only by the proxy; a
+signed-in caller with no profile row gets `Profile not found` instead of `Forbidden` at the handler.
+On the real stack the proxy already answers both callers on `/api/*` with the same bytes (F-062,
+05-05 row d-api), so the change is where the refusal is decided, not what a browser sees.
+
+**Evidence.** DI-48 (`deferred-items.md`, registered by 05-08): REFAC-11's clause "middleware is
+advisory-only" is unmet only on the admin arms, because the helper and `requireRole` read `roles`
+alone. 05-12 pinned it at all 35 arms (`admin-guard-defect.test.ts` D4) through `BAN_GUARDED_ARMS`.
+DEC-34 already puts `requireActiveUser` in front of every non-admin write arm; this extends the same
+guard, not a new one, to the admin surface. 05-13 touches all 33 helper arms anyway, so composing it
+there avoids a second pass over 25 files.
+
+**Alternative rejected.** (a) Making `requireRole` read the ban columns. That gives the role guard a
+second responsibility and changes it for every future caller, including page layouts that redirect
+rather than answer JSON. (b) Leaving the admin ban to the proxy. That keeps REFAC-11 PARTIAL and the
+proxy load-bearing for authz, which CONTEXT Area 1 rules out.
+
+**Executed by:** 05-13 (the 33 helper arms). 05-14 applies it to the two calculate-popularity arms
+when they adopt `requireRole` (their D4 rows move through `BAN_GUARDED_ARMS` then). 05-19 flips
+REFAC-11 once `BAN_GUARDED_ARMS` holds all 35.

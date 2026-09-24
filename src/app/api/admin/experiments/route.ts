@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyAdmin } from "@/lib/admin";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireRole } from "@/server/authz/requireRole";
 
 export async function GET(_request: NextRequest) {
-  const { supabase, isAdmin } = await verifyAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+  const supabase = ctx.supabase;
 
   const { data: experiments, error } = await supabase
     .from("experiments")
@@ -65,10 +69,12 @@ export async function GET(_request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { supabase, isAdmin } = await verifyAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+  const supabase = ctx.supabase;
 
   const body = await request.json();
   const { name, description, target_metric, start_date, end_date, variants } =

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyAdmin } from "@/lib/admin";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireRole } from "@/server/authz/requireRole";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAdminAction } from "@/lib/audit";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
@@ -9,10 +11,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { user, isAdmin } = await verifyAdmin();
-  if (!isAdmin || !user) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+  const user = auth.user;
 
   const { id } = await params;
   const body = await request.json();

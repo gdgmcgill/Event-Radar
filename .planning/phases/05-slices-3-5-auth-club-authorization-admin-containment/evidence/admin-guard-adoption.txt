@@ -1,0 +1,227 @@
+# Admin guard adoption — plan 05-13 (REFAC-13, DEC-44, DEC-58, F-061, DI-48)
+
+Recorded 2026-09-24 on the local tree. Base: eb62980 (05-12 head). Every command below is quoted
+with its exit code; outputs are verbatim unless marked as an excerpt. Scratch outputs were written
+outside the repository and are quoted here.
+
+## 0. Floor before (eb62980)
+
+$ npx jest --ci   (excerpt: the summary)
+
+Test Suites: 70 passed, 70 total
+Tests:       1297 passed, 1297 total
+Snapshots:   0 total
+Time:        2.088 s
+Ran all test suites in 2 projects.
+exit=0
+
+## Task 1 — analytics, audit-log, clubs, events and experiments (12 files, 17 arms)
+
+### 1a. The swap
+
+Each arm's helper call and its deny branch(es) were replaced by a script (not committed) with,
+as the first statements:
+
+    const ctx = await createRequestContext();
+    const activeUser = requireActiveUser(ctx);
+    if (!activeUser.ok) return activeUser.response;
+    const auth = requireRole(ctx, "admin");
+    if (!auth.ok) return auth.response;
+    const user = auth.user;          (only where the arm reads `user` afterwards)
+    const supabase = ctx.supabase;   (only where the arm reads `supabase` afterwards)
+
+The helper import became the three seam imports. No other line changed: service-client uses,
+logAdminAction calls (still passing adminEmail until 05-14) and bodies are untouched. The
+requireActiveUser line is DEC-58 (DI-48): a banned admin is refused at the handler, not only by
+the proxy. `ctx.supabase` is the same cookie client the helper returned (`createClient()` from
+`@/lib/supabase/server`), so every handler read stays on the same client.
+
+$ python3 swap.py <12 files>
+src/app/api/admin/analytics/events/route.ts: 1 arm(s)
+src/app/api/admin/analytics/users/route.ts: 1 arm(s)
+src/app/api/admin/audit-log/route.ts: 1 arm(s)
+src/app/api/admin/clubs/[id]/route.ts: 1 arm(s)
+src/app/api/admin/clubs/route.ts: 1 arm(s)
+src/app/api/admin/events/[id]/edits/route.ts: 1 arm(s)
+src/app/api/admin/events/[id]/route.ts: 2 arm(s)
+src/app/api/admin/events/[id]/status/route.ts: 1 arm(s)
+src/app/api/admin/events/route.ts: 2 arm(s)
+src/app/api/admin/experiments/[id]/results/route.ts: 1 arm(s)
+src/app/api/admin/experiments/[id]/route.ts: 3 arm(s)
+src/app/api/admin/experiments/route.ts: 2 arm(s)
+exit=0
+
+### 1b. Protocol step 2 — the DEFECT suite UNEDITED against the fixed source: red
+
+$ npx jest --ci src/__tests__/api/admin/admin-guard-defect.test.ts   (excerpt: the failing rows and the summary)
+    ✕ admin/analytics/events GET (34 ms)
+    ✕ admin/analytics/users GET (7 ms)
+    ✕ admin/audit-log GET (5 ms)
+    ✕ admin/clubs/[id] PATCH (9 ms)
+    ✕ admin/events/[id]/edits PATCH (6 ms)
+    ✕ admin/events/[id] PUT (7 ms)
+    ✕ admin/events/[id] DELETE
+    ✕ admin/events/[id]/status PATCH (6 ms)
+    ✕ admin/events GET (20 ms)
+    ✕ admin/events POST (1 ms)
+    ✕ admin/experiments/[id]/results GET (6 ms)
+    ✕ admin/experiments/[id] GET (7 ms)
+    ✕ admin/experiments/[id] PATCH
+    ✕ admin/experiments/[id] DELETE
+    ✕ admin/experiments GET (6 ms)
+    ✕ admin/experiments POST
+    ✕ admin/analytics/events GET
+    ✕ admin/analytics/users GET
+    ✕ admin/audit-log GET
+    ✕ admin/clubs/[id] PATCH
+    ✕ admin/clubs GET (4 ms)
+    ✕ admin/events/[id]/edits PATCH
+    ✕ admin/events/[id] PUT
+    ✕ admin/events/[id] DELETE (1 ms)
+    ✕ admin/events/[id]/status PATCH
+    ✕ admin/events GET
+    ✕ admin/events POST
+    ✕ admin/experiments/[id]/results GET
+    ✕ admin/experiments/[id] GET (1 ms)
+    ✕ admin/experiments/[id] PATCH
+    ✕ admin/experiments/[id] DELETE
+    ✕ admin/experiments GET
+    ✕ admin/experiments POST
+Tests:       33 failed, 40 passed, 73 total
+exit=1
+
+Reading: 16 D1 rows (the 17 arms minus admin/clubs GET, which has no D1 row because it already
+answered anonymous 401) and 17 D4 rows. Representative failure, verbatim:
+
+  ● D1 (F-061): an anonymous caller at a helper arm › admin/audit-log GET
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+        "body": Object {
+    -     "error": "Forbidden",
+    +     "error": "Unauthorized",
+        },
+    -   "status": 403,
+    +   "status": 401,
+      }
+
+      152 |       expect(outcome).toEqual({ status: 401, body: { error: "Unauthorized" } });
+
+The PRESERVE file and the F-091 file, unedited, against the fixed source:
+
+$ npx jest --ci src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/admin-users-patch-defect.test.ts
+Tests:       79 passed, 79 total
+exit=0
+
+### 1c. The untagged analytics/users suite, rewired
+
+`src/app/api/admin/analytics/users/route.test.ts` mocked the helper module. It now mocks
+`@/lib/supabase/server` with a client whose `auth.getUser()` returns a caller and whose first
+`from()` call is the request context's profile read (roles with or without `admin`, no ban);
+every later `from()` call goes to the test's own `mockSupabase`. The three
+`(verifyAdmin as jest.Mock).mockResolvedValue({ supabase, isAdmin })` setups became
+`mockCaller({ supabase, isAdmin })` with the same arguments.
+
+$ git diff eb62980 -- src/app/api/admin/analytics/users/route.test.ts | command grep -E '^[-+].*expect\('
+exit=1   (no expect( line changed)
+
+### 1d. Protocol step 3 — rows moved: green
+
+The Task 1 arm ids were added to FIXED_ARMS and to BAN_GUARDED_ARMS (one list, TASK1_ARMS, feeds
+both sets). No assertion changed.
+
+$ npx jest --ci src/__tests__/api/admin src/app/api/admin
+PASS node src/__tests__/api/admin/admin-guard-defect.test.ts
+PASS node src/__tests__/api/admin/admin-guard-characterization.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS node src/__tests__/api/admin/admin-users-patch-defect.test.ts
+Test Suites: 4 passed, 4 total
+Tests:       155 passed, 155 total
+exit=0
+
+### 1e. Protocol step 4 — the pre-fix sources put back: the moved suite goes red; restored with cmp
+
+$ (copy the 12 eb62980 sources over the fixed ones) && npx jest --ci src/__tests__/api/admin/admin-guard-defect.test.ts
+Tests:       33 failed, 40 passed, 73 total
+exit=1
+failing rows: 33   (the same 33: 16 D1 and 17 D4)
+
+Representative failures, verbatim (excerpt):
+  ● D4 (DI-48): an admin whose ban is in force › admin/audit-log GET
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 5
+
+      Object {
+        "body": Object {
+    -     "error": "Account suspended",
+    +     "entries": Array [],
+    +     "page": 1,
+    +     "total": 0,
+
+$ (copy the fixed sources back) && for f in <12 files>; do cmp "$f" <fixed copy>; done
+cmp identical: src/app/api/admin/analytics/events/route.ts
+cmp identical: src/app/api/admin/analytics/users/route.ts
+cmp identical: src/app/api/admin/audit-log/route.ts
+cmp identical: src/app/api/admin/clubs/[id]/route.ts
+cmp identical: src/app/api/admin/clubs/route.ts
+cmp identical: src/app/api/admin/events/[id]/edits/route.ts
+cmp identical: src/app/api/admin/events/[id]/route.ts
+cmp identical: src/app/api/admin/events/[id]/status/route.ts
+cmp identical: src/app/api/admin/events/route.ts
+cmp identical: src/app/api/admin/experiments/[id]/results/route.ts
+cmp identical: src/app/api/admin/experiments/[id]/route.ts
+cmp identical: src/app/api/admin/experiments/route.ts
+cmp-loop exit=0
+
+### 1f. Gates
+
+$ npx tsc --noEmit
+exit=0
+
+$ npx eslint <14 changed files>
+eslint exit=0
+
+$ node scripts/check-characterization-tags.mjs --all   (excerpt)
+ok 34 files
+
+$ node scripts/check-elevated-ratchet.mjs   (excerpt)
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+$ for f in <12 files>; do verbs; requireRole(ctx, "admin"); @/lib/admin; done
+src/app/api/admin/analytics/events/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/analytics/users/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/audit-log/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/clubs/[id]/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/clubs/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/events/[id]/edits/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/events/[id]/route.ts: verbs=2 requireRole=2 libadmin=0
+src/app/api/admin/events/[id]/status/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/events/route.ts: verbs=2 requireRole=2 libadmin=0
+src/app/api/admin/experiments/[id]/results/route.ts: verbs=1 requireRole=1 libadmin=0
+src/app/api/admin/experiments/[id]/route.ts: verbs=3 requireRole=3 libadmin=0
+src/app/api/admin/experiments/route.ts: verbs=2 requireRole=2 libadmin=0
+
+$ git diff eb62980 -- src/__tests__/api/admin/admin-guard-characterization.test.ts src/__tests__/api/admin/adminArmTable.ts | wc -c
+0
+
+### 1g. What changed on the wire (INTENTIONAL BEHAVIOUR CHANGE)
+
+- Anonymous callers at the 16 Task 1 arms that answered 403 Forbidden now get 401
+  {"error":"Unauthorized"} (F-061). admin/clubs GET already answered 401 and is unchanged.
+- A banned admin at all 17 Task 1 arms now gets 403 {"error":"Account suspended"} from the handler
+  (DI-48, DEC-58). On the real stack the proxy already refused them with the same bytes (F-062),
+  so the observable change is at the handler, where the ban is no longer proxy-only.
+- A signed-in caller with no profile row now gets 403 {"error":"Profile not found"} rather than
+  403 {"error":"Forbidden"} (the active-user guard runs first). The proxy already answers /api/*
+  with those bytes for that caller (05-05 row d-api).
+- admin/clubs GET non-admins: 403 Forbidden before and after. The plan text says this arm moves
+  from 401 to 403; 05-12 measured that it already answered 403 (PRESERVE P1). No change.
+- Admins: admitted exactly as before (PRESERVE P3 green, unedited).

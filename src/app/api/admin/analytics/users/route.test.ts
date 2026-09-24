@@ -1,9 +1,54 @@
 import { GET } from "./route";
-import { verifyAdmin } from "@/lib/admin";
+import { createClient } from "@/lib/supabase/server";
 
-jest.mock("@/lib/admin", () => ({
-  verifyAdmin: jest.fn(),
+jest.mock("@/lib/supabase/server", () => ({
+  createClient: jest.fn(),
 }));
+
+/**
+ * The route decides admin through the request context (05-13, DEC-44), which
+ * reads the caller with `auth.getUser()` and then the caller's profile row on
+ * the cookie client. This builds that client: the first `from()` call is the
+ * context's profile read (roles carry `admin` or not, no ban), and every later
+ * `from()` call goes to the handler's own reads on `supabase`.
+ */
+function mockCaller({
+  supabase,
+  isAdmin,
+}: {
+  supabase: { from?: (table: string) => unknown };
+  isAdmin: boolean;
+}): void {
+  const profile = {
+    id: "analytics-caller",
+    roles: isAdmin ? ["user", "admin"] : ["user"],
+    onboarding_completed: true,
+    banned_at: null,
+    ban_expires_at: null,
+  };
+  const profileRead = {
+    select: jest.fn().mockReturnValue({
+      eq: jest.fn().mockReturnValue({
+        single: jest.fn().mockResolvedValue({ data: profile, error: null }),
+      }),
+    }),
+  };
+  let fromCalls = 0;
+  (createClient as jest.Mock).mockResolvedValue({
+    auth: {
+      getUser: jest.fn().mockResolvedValue({
+        data: { user: { id: "analytics-caller" } },
+        error: null,
+      }),
+    },
+    from: jest.fn((table: string) => {
+      fromCalls++;
+      if (fromCalls === 1) return profileRead;
+      if (!supabase.from) throw new Error(`unexpected read of ${table}`);
+      return supabase.from(table);
+    }),
+  });
+}
 
 describe("GET /api/admin/analytics/users", () => {
   beforeEach(() => {
@@ -11,7 +56,7 @@ describe("GET /api/admin/analytics/users", () => {
   });
 
   it("returns 403 when user is not admin", async () => {
-    (verifyAdmin as jest.Mock).mockResolvedValue({
+    mockCaller({
       supabase: {},
       isAdmin: false,
     });
@@ -91,7 +136,7 @@ describe("GET /api/admin/analytics/users", () => {
       }),
     };
 
-    (verifyAdmin as jest.Mock).mockResolvedValue({
+    mockCaller({
       supabase: mockSupabase,
       isAdmin: true,
     });
@@ -188,7 +233,7 @@ describe("GET /api/admin/analytics/users", () => {
       }),
     };
 
-    (verifyAdmin as jest.Mock).mockResolvedValue({
+    mockCaller({
       supabase: mockSupabase,
       isAdmin: true,
     });

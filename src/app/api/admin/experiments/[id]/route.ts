@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyAdmin } from "@/lib/admin";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireRole } from "@/server/authz/requireRole";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
-  const { supabase, isAdmin } = await verifyAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+  const supabase = ctx.supabase;
 
   const { id } = await params;
 
@@ -71,10 +75,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const { supabase, isAdmin } = await verifyAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+  const supabase = ctx.supabase;
 
   const { id } = await params;
   const body = await request.json();
@@ -113,10 +119,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
-  const { supabase, isAdmin } = await verifyAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+  const supabase = ctx.supabase;
 
   const { id } = await params;
 

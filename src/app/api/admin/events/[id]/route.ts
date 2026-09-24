@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyAdmin } from "@/lib/admin";
+import { createRequestContext } from "@/server/context";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { supabase, user, isAdmin } = await verifyAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+  const user = auth.user;
+  const supabase = ctx.supabase;
 
   const { id } = await params;
   const body = await request.json();
@@ -74,10 +79,13 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { supabase, user, isAdmin } = await verifyAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const ctx = await createRequestContext();
+  const activeUser = requireActiveUser(ctx);
+  if (!activeUser.ok) return activeUser.response;
+  const auth = requireRole(ctx, "admin");
+  if (!auth.ok) return auth.response;
+  const user = auth.user;
+  const supabase = ctx.supabase;
 
   const { id } = await params;
 
