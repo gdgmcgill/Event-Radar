@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/server";
+import { hasRole } from "@/lib/roles";
+import { getRequestContext } from "@/server/context";
 import { ModerationNav } from "./ModerationNav";
 import { Bell, Settings, Shield } from "lucide-react";
 
@@ -9,26 +10,25 @@ export default async function ModerationLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const ctx = await getRequestContext();
+  const user = ctx.user;
 
   if (!user) {
     redirect("/admin-login");
   }
 
-  // Check admin role — also fetch name and avatar
-  const { data: profile } = await supabase
-    .from("users")
-    .select("roles, email, name, avatar_url")
-    .eq("id", user.id)
-    .single();
-
-  const roles: string[] = profile?.roles ?? [];
-  if (!roles.includes("admin")) {
+  // The admin decision reads the request context's profile slice.
+  if (ctx.profile === null || !hasRole(ctx.profile, "admin")) {
     redirect("/");
   }
+
+  // A display read, not an authorization decision: the header's name and
+  // avatar. Same client and same row as before; `roles` is no longer read here.
+  const { data: profile } = await ctx.supabase
+    .from("users")
+    .select("email, name, avatar_url")
+    .eq("id", user.id)
+    .single();
 
   const displayName = profile?.name ?? user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Admin";
   const avatarUrl = profile?.avatar_url ?? (user.user_metadata?.avatar_url as string | undefined) ?? null;

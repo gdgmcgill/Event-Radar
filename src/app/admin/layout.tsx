@@ -1,24 +1,17 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { hasRole } from "@/lib/roles";
+import { getRequestContext } from "@/server/context";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const ctx = await getRequestContext();
 
-  if (!user) redirect("/");
+  if (!ctx.user) redirect("/");
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("roles")
-    .eq("id", user.id)
-    .single();
-
-  const roles: string[] = profile?.roles ?? [];
-  if (!roles.includes("admin")) redirect("/");
+  if (ctx.profile === null || !hasRole(ctx.profile, "admin")) redirect("/");
 
   return <>{children}</>;
 }

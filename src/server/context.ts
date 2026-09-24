@@ -2,10 +2,11 @@
  * The per-request context — one call per request produces the client, the
  * authenticated user, the profile slice every guard needs, and a request id.
  *
- * This is `src/lib/admin.ts` widened. That file is already the correct shape:
- * it reads the REVALIDATING user accessor rather than a session, it reads the
- * profile, and it returns a bare object instead of throwing. The only changes
- * here are the width of the profile selection and the addition of a request id.
+ * This is the old admin-verify helper (`src/lib/admin.ts`, deleted in 05-13)
+ * widened. That helper already had the correct shape: it read the REVALIDATING
+ * user accessor rather than a session, it read the profile, and it returned a
+ * bare object instead of throwing. The only changes here are the width of the
+ * profile selection and the addition of a request id.
  *
  * It is NOT a fourth Supabase client factory. The client comes from awaiting
  * the existing server factory in `@/lib/supabase/server`.

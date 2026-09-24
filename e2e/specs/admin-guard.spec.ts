@@ -5,11 +5,11 @@
  * Phase 05-slices-3-5-auth-club-authorization-admin-containment · plan 05-12
  *
  * WHAT IS PINNED, AND WHERE IT MOVES
- *   - DEFECT F-061: an anonymous caller at `GET /api/admin/stats` gets 403
- *     `{"error":"Forbidden"}` today, where the contract (`endpoints.json`)
- *     says 401. 05-13 replaces the admin-verify helper with
- *     `requireRole(ctx, "admin")` and flips this test to 401
- *     `{"error":"Unauthorized"}`.
+ *   - FIXED F-061 (05-13): an anonymous caller at `GET /api/admin/stats` gets
+ *     401 `{"error":"Unauthorized"}`, as the contract (`endpoints.json`) says.
+ *     Before 05-13 it got 403 `{"error":"Forbidden"}` from the admin-verify
+ *     helper; 05-13 replaced the helper with `requireRole(ctx, "admin")` and
+ *     flipped this test.
  *   - PRESERVE: `onboarded_student` gets 403 `{"error":"Forbidden"}`, and the
  *     admin gets 200. Both survive 05-13 unchanged.
  *
@@ -40,14 +40,16 @@ async function expectJson(
 }
 
 test.describe("an anonymous caller", () => {
-  test("DEFECT F-061: anonymous admin call answers 403", async ({
+  test("FIXED F-061: anonymous admin call answers 401", async ({
     playwright,
     baseURL,
   }) => {
     // A fresh request context with no storage state: no cookie, no session.
     const anonymous = await playwright.request.newContext({ baseURL });
     try {
-      await expectJson(await anonymous.get(STATS), 403, { error: "Forbidden" });
+      await expectJson(await anonymous.get(STATS), 401, {
+        error: "Unauthorized",
+      });
     } finally {
       await anonymous.dispose();
     }

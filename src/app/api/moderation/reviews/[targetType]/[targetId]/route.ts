@@ -1,20 +1,18 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { hasRole } from "@/lib/roles";
+import { createRequestContext } from "@/server/context";
+import { requireUser } from "@/server/authz/requireUser";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ targetType: string; targetId: string }> }
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await createRequestContext();
+  const auth = requireUser(ctx);
+  if (!auth.ok) return auth.response;
+  const user = auth.user;
 
   const { targetType, targetId } = await params;
 
@@ -24,13 +22,9 @@ export async function GET(
 
   const serviceClient = createServiceClient();
 
-  const { data: profile } = await serviceClient
-    .from("users")
-    .select("roles")
-    .eq("id", user.id)
-    .single();
-
-  const isAdmin = profile?.roles?.includes("admin");
+  // The admin decision reads the request context's profile slice, the same
+  // one read every admin guard uses; the creator path below is unchanged.
+  const isAdmin = ctx.profile !== null && hasRole(ctx.profile, "admin");
 
   if (!isAdmin) {
     const table = targetType === "event" ? "events" : "clubs";

@@ -223,6 +223,14 @@ DI-47 with where they closed, so none is dropped silently.
   columns it already has in the context row), pin it with an admin-arm DEFECT row, and then flip
   REFAC-11 to Complete. If the phase owner decides a banned admin is out of scope, record that as a
   decision and close this item.
+- **Status (05-13): 33 of 35 arms fixed; open for the two calculate-popularity arms.** DEC-58 composes
+  `requireActiveUser(ctx)` ahead of `requireRole(ctx, "admin")` at all 33 former helper arms
+  (05-13 `90819ee`, `9f0e5b5`); `BAN_GUARDED_ARMS` in `admin-guard-defect.test.ts` holds those 33.
+  `admin/calculate-popularity` POST and GET have no user gate yet (F-001); 05-14 gives them one and,
+  under DEC-58, composes the same guard, after which `BAN_GUARDED_ARMS` holds all 35 and 05-19 can flip
+  REFAC-11. Not covered by DI-48's wording and left proxy-enforced: the two admin page layouts and the
+  admin path of `GET /api/moderation/reviews/[targetType]/[targetId]` read the role only (05-13 moved
+  them to the request context without adding a ban read); recorded in 05-13-SUMMARY.md for 05-19.
 
 **Observations already acted on (no DI):**
 - *`src/server/context.ts` docblock names the legacy helper* (05-06): rewritten by 05-07. The header

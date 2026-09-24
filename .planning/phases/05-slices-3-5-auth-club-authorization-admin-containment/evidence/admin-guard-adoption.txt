@@ -414,3 +414,162 @@ $ git diff eb62980 -- src/__tests__/api/admin/admin-guard-characterization.test.
 
 After Task 2: FIXED_ARMS and BAN_GUARDED_ARMS each hold all 33 former helper arms. The two
 calculate-popularity arms (F-001 D3 and DI-48 D4) stay open for 05-14.
+
+## Task 3 — the moderation reviews route and both layouts through the context; the helper deleted; the e2e pin flipped
+
+Base: 9f0e5b5 (Task 2).
+
+### 3a. What changed
+
+- `src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts`: `createRequestContext()` once,
+  `requireUser(ctx)` for the anonymous 401 (same bytes, `{"error":"Unauthorized"}`), and
+  `isAdmin = ctx.profile !== null && hasRole(ctx.profile, "admin")` in place of the inline
+  service-client `users.select("roles")` read. The 400 for a bad target type, the non-admin creator
+  path (service-client `created_by` read, 403 `{"error":"Forbidden"}`), the reviews read, the author
+  enrichment and the 500 body are unchanged. The admin read moves from the service client to the
+  cookie client's own-row read inside the context; the file keeps its other service-client reads
+  (05-15 owns those).
+- `src/app/admin/layout.tsx`: `getRequestContext()`; no user → `redirect("/")`; no profile or not
+  admin → `redirect("/")`. The same redirects as before (a null profile read as roles `[]`).
+- `src/app/moderation/layout.tsx`: `getRequestContext()`; no user → `redirect("/admin-login")`; no
+  profile or not admin → `redirect("/")`. The display read of `email, name, avatar_url` stays, on
+  `ctx.supabase` (the same cookie client), after the decision; it no longer selects `roles`.
+  `src/app/admin-login/page.tsx` is a client page and is unchanged.
+- `src/lib/admin.ts` deleted (`git rm`), after the grep below showed no importer.
+- `src/server/context.ts`: comment only; its docblock named the deleted file in the present tense.
+- `e2e/specs/admin-guard.spec.ts`: `DEFECT F-061: anonymous admin call answers 403` became
+  `FIXED F-061: anonymous admin call answers 401` with body `{ error: "Unauthorized" }`; the docblock
+  bullet says so. The two PRESERVE tests are unchanged.
+
+### 3b. Acceptance checks
+
+$ test ! -e src/lib/admin.ts; echo exit=$?
+exit=0
+
+$ command grep -rn "@/lib/admin" src; echo exit=$?
+exit=1
+
+$ command grep -n -e "getRequestContext()" -e "hasRole(" src/app/admin/layout.tsx src/app/moderation/layout.tsx
+src/app/admin/layout.tsx:10:  const ctx = await getRequestContext();
+src/app/admin/layout.tsx:14:  if (ctx.profile === null || !hasRole(ctx.profile, "admin")) redirect("/");
+src/app/moderation/layout.tsx:13:  const ctx = await getRequestContext();
+src/app/moderation/layout.tsx:21:  if (ctx.profile === null || !hasRole(ctx.profile, "admin")) {
+exit=0
+
+$ command grep -n -e "createRequestContext()" -e "hasRole(" -e "requireUser(" "src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts"
+12:  const ctx = await createRequestContext();
+13:  const auth = requireUser(ctx);
+27:  const isAdmin = ctx.profile !== null && hasRole(ctx.profile, "admin");
+exit=0
+
+$ git grep -c 'requireRole(ctx, "admin")' -- src/app/api | wc -l   (files)
+25
+$ git grep -h -c 'requireRole(ctx, "admin")' -- src/app/api | paste -sd+ - | bc   (arms)
+33
+
+$ npx jest --ci   (excerpt: the summary)
+
+Test Suites: 70 passed, 70 total
+Tests:       1298 passed, 1298 total
+Snapshots:   0 total
+Time:        2.65 s
+Ran all test suites in 2 projects.
+exit=0
+
+One test more than the floor (1297 → 1298): the Task 2 subset test in admin-guard-defect.test.ts.
+
+$ npx tsc --noEmit
+exit=0
+
+$ npm run lint   (excerpt)
+  77:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 19 problems (0 errors, 19 warnings)
+exit=0
+None of the 19 warnings is in a file this plan changed; the files carrying them:
+load-tests/k6-onboarding.js
+load-tests/k6-online-users.js
+src/app/calendar/page.tsx
+src/app/contributors/page.tsx
+src/app/events/[id]/EventDetailClient.tsx
+src/app/moderation/organizers/page.tsx
+src/app/moderation/page.tsx
+src/app/my-events/page.tsx
+src/app/page.tsx
+src/components/auth/SignOutButton.tsx
+src/components/clubs/ClubDiscoveryCard.tsx
+src/components/clubs/ClubSettingsTab.tsx
+src/components/clubs/FollowButton.tsx
+src/components/onboarding/OnboardingWizard.tsx
+
+### 3c. Playwright after a clean reset and seed
+
+Each exit= below is the command's own (no pipe). The reset output is trimmed to its last lines
+(the migration list is omitted); the seed output is whole; the Playwright output is filtered to
+drop the build's route table only. The build itself: `Creating an optimized production build ...`
+then `✓ Compiled successfully in 1719ms` (webServer runs `npm run build && npm run start`).
+
+$ supabase db reset --local
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+$ npx playwright test e2e/specs/admin-guard.spec.ts e2e/specs/admin-moderation-queue.spec.ts e2e/specs/admin-login-cookie-equivalence.spec.ts
+[WebServer] ▲ Next.js 16.3.5
+[WebServer] - Local:         http://localhost:3000
+[WebServer] - Network:       http://10.121.205.78:3000
+[WebServer] ✓ Ready in 49ms
+[WebServer] ✓ Running next.config.js took 5ms
+Running 17 tests using 1 worker
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (403ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (295ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (238ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (248ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (258ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (250ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (471ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (207ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (201ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (249ms)
+  ✓  11 [chromium] › e2e/specs/admin-guard.spec.ts:43:7 › an anonymous caller › FIXED F-061: anonymous admin call answers 401 (22ms)
+  ✓  12 [chromium] › e2e/specs/admin-guard.spec.ts:62:7 › an onboarded student › PRESERVE: a non-admin gets 403 Forbidden (150ms)
+  ✓  13 [chromium] › e2e/specs/admin-guard.spec.ts:70:7 › an admin › PRESERVE: the admin gets 200 with the stats body (118ms)
+[WebServer] ⨯ Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '3371026682'
+[WebServer] }
+  ✓  14 [chromium] › e2e/specs/admin-login-cookie-equivalence.spec.ts:40:5 › the cookie shim emits the same cookie names the real sign-in page does (408ms)
+  ✓  15 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (451ms)
+  ✓  16 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  17 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (231ms)
+  17 passed (15.1s)
+exit=0
+
+Reading: the three specs pass, 7 of 7 spec tests plus 10 setup tests. admin-moderation-queue proves
+the moderation layout still admits the admin and still keeps a student out; admin-login-cookie-equivalence
+proves the admin sign-in cookie path is unchanged. The `[WebServer] ⨯ Error: The destination stream
+closed early.` line is a streamed page response aborted by the client; it appears in Phase 4 runs
+(`04-.../evidence/playwright.escaping.txt` and others) before this plan, and no test failed on it.
+
+$ lsof -iTCP:3000 -sTCP:LISTEN   (after the run)
+(no output: port 3000 is free)
