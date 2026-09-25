@@ -348,7 +348,79 @@ Plans:
   4. Server code emits structured JSON logs with levels and a request correlation id on both Node and middleware runtimes, a deliberately triggered error appears in Sentry carrying that correlation id (Turbopack-aware setup, source maps, environment and release tagging, PII scrubbing decided before install), and `/api/health` reports DB, auth, storage, pg_cron freshness, and last webhook receipt in a documented shape without using `getSession()` for access control.
   5. After the final slice the Playwright happy-path specs pass and every Validated workflow in PROJECT.md is re-confirmed, with each slice landing as one reviewable change naming the finding IDs it closes and any intentional behavior change logged.
 
-**Plans**: TBD
+**Plans:** 18 plans (executed sequentially on the main tree; one plan per wave). Slice 6 is 06-02..06-06 and closes before slice 7 (06-07..06-18) starts.
+
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — Register, measure, decide: before-floor and Phase 6 censuses, F-093/F-094 and re-pointing, zod and Sentry legitimacy bundles, DEC-60..DEC-81, DI-60..DI-81 dispositions, defect ledger
+
+**Wave 2**
+
+- [ ] 06-02-PLAN.md — Slice 6 characterization: recommendations input → ranked output, family 400s, F-017/F-028/F-092/F-094 pinned as DEFECT, webhook and cron source characterization
+
+**Wave 3**
+
+- [ ] 06-03-PLAN.md — Dead cron routes deleted with the ESLint override and an empty ratchet (F-002, F-037); zod 4.6.5; webhook contract, verifySignature, handleWebhook and replay dedupe (F-039)
+
+**Wave 4**
+
+- [ ] 06-04-PLAN.md — parseBody/parseQuery and the contracts census gate; slice-6 contracts; notifications/count 401; F-017 assignment through the door; F-092 reports list; async-edge e2e
+
+**Wave 5**
+
+- [ ] 06-05-PLAN.md — Definer-hardening migration (cron jobs, revokes, search_path, subject-bound friends RPCs, F-093 filter, cron_job_status), pgTAP 031/070 both directions, [BLOCKING] local schema push, mutation check
+
+**Wave 6**
+
+- [ ] 06-06-PLAN.md — Slice 6 close: floor from a clean reset, Validated re-confirmation, register
+
+**Wave 7**
+
+- [ ] 06-07-PLAN.md — Slice 7 characterization: every slice-7 400 pinned; F-025/026/029/054/055/058/059/094 pinned as DEFECT; console-coupled test inventory
+
+**Wave 8**
+
+- [ ] 06-08-PLAN.md — Contracts: parseForm and the events and calendar family
+
+**Wave 9**
+
+- [ ] 06-09-PLAN.md — Contracts: clubs, organizer-requests, users and profile; one club link rule (DI-66)
+
+**Wave 10**
+
+- [ ] 06-10-PLAN.md — Contracts: admin and moderation; DI-53 TablesUpdate retypes; canonical ids (DI-64); contracts census at zero
+
+**Wave 11**
+
+- [ ] 06-11-PLAN.md — Client reuse (REFAC-16): hooks typed from contracts with development-only checks; client mutation bodies typed; --client census
+
+**Wave 12**
+
+- [ ] 06-12-PLAN.md — JSON logger, withRoute and named cache classes; proxy request id through the context; server-console and cache censuses
+
+**Wave 13**
+
+- [ ] 06-13-PLAN.md — Route sweep A: admin, moderation, clubs on withRoute and the logger; generic error bodies
+
+**Wave 14**
+
+- [ ] 06-14-PLAN.md — Route sweep B: every remaining route; vercel.json blanket s-maxage removed; census at zero; full Playwright
+
+**Wave 15**
+
+- [ ] 06-15-PLAN.md — Endpoint contract regenerated from the classes (DI-58); shared-cache stand-in; cross-user cache test; live header sweep
+
+**Wave 16**
+
+- [ ] 06-16-PLAN.md — Sentry 10.75.3 with scrubbing decided before install and request-id tags; token-less build; CSP without unsafe-eval; harness with bypassCSP false
+
+**Wave 17**
+
+- [ ] 06-17-PLAN.md — /api/health liveness and documented diagnostics without the session accessor; docs/health.md; admin-only /docs and /health; banned admins refused on admin pages
+
+**Wave 18**
+
+- [ ] 06-18-PLAN.md — F-085, then @supabase/supabase-js 2.116.0 as the last code change; phase after-floor; slice 7 close; PHASE-6-COMPLETION.md with Phase 8 deploy prerequisites; requirement states
 
 ### Phase 7: Certification Datasets and Persona Coverage
 
@@ -405,7 +477,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 11/11 | Complete   | 2026-09-23 |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 19/19 | Complete    | 2026-09-25 |
-| 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |
+| 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/18 | Planned | - |
 | 7. Certification Datasets and Persona Coverage | 0/TBD | Not started | - |
 | 8. Operational Certification and Sign-Off | 0/TBD | Not started | - |
 
