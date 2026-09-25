@@ -6,14 +6,14 @@ current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: executing
 stopped_at: Completed 05-16-PLAN.md
-last_updated: "2026-09-25T23:04:38.392Z"
+last_updated: "2026-09-25T23:20:23.897Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 80
-  completed_plans: 62
+  completed_plans: 63
   percent: 63
 ---
 
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 06 (Slices 6–7 — Async Edge, Contracts, Caching, Observability) — EXECUTING
-Plan: 1 of 18
-Status: Executing Phase 06
+Plan: 2 of 18
+Status: Ready to execute
 Last activity: 2026-09-25 — Phase 06 execution started
 
 Progress: [███████░░░] 73%
@@ -116,6 +116,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P17 | 15min | 2 tasks | 15 files |
 | Phase 05 P18 | 16min | 3 tasks | 14 files |
 | Phase 05 P19 | 18min | 3 tasks | 12 files |
+| Phase 06 P01 | 14min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -302,6 +303,9 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-19: DI-25 not bumped: four admin payloads fail tsc on supabase-js 2.116.0 (DI-53, Phase 6)
 - [Phase 05]: 05-19: REFAC-18 recorded PARTIAL (works across serverless instances unproven until Upstash is provisioned); REFAC-13 PARTIAL on the cron routes; REFAC-11 Complete
 - [Phase 05]: 05-19: CLAUDE.md not edited by the executor; stale facts recorded in DI-46 for the owner
+- [Phase 06]: DEC-60/61: zod 4.6.5 and @sentry/nextjs 10.75.3 exact pins, installed only if the live integrity equals the bundle INTEGRITY line; Sentry with SENTRYCLI_SKIP_DOWNLOAD=1 (06-01)
+- [Phase 06]: Phase 6 floor on f186621: Playwright 97/0 (not 91; +6 from 86fd2a2), Jest 1651+1 skipped, pgTAP 11/200 (06-01)
+- [Phase 06]: F-093 and F-094 registered; F-084 to 07, F-078/F-038/F-041 to 08; DI-60 vacant, DI-61..DI-77 disposed, next DI-82 (06-01)
 
 ### Pending Todos
 
@@ -354,7 +358,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-25T06:22:35.423Z
+Last session: 2026-09-25T23:20:10.256Z
 Stopped at: Completed 05-16-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None
