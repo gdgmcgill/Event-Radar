@@ -47,7 +47,7 @@ All three are typed with `Database` from `lib/supabase/types.ts`.
 - **AuthProvider** wraps the app and calls `useAuthStore.initialize()` once
 - **useAuthStore** (Zustand) is the single source of truth for current user state client-side — it listens to `onAuthStateChange` and enriches with profile data from the `users` table
 - Sign-out goes through `/auth/signout` (server route) to properly clear cookies
-- Protected routes — all **eight**, read from the `PROTECTED_ROUTES` array at `src/proxy.ts:114`, which is the only authority: `/my-events`, `/create-event`, `/notifications`, `/profile`, `/settings`, `/my-clubs`, `/invites`, `/friends`. Re-derive rather than trust this list:
+- Protected routes — all **eight**, read from the `PROTECTED_ROUTES` array in `src/proxy.ts` (a single-line literal; the line number moves, so re-derive it with the command below), which is the only authority: `/my-events`, `/create-event`, `/notifications`, `/profile`, `/settings`, `/my-clubs`, `/invites`, `/friends`. Re-derive rather than trust this list:
 
   ```bash
   node -e "const s=require('fs').readFileSync('src/proxy.ts','utf8');console.log(s.match(/PROTECTED_ROUTES\s*=\s*\[([^\]]*)\]/)[1])"
@@ -64,7 +64,7 @@ All three are typed with `Database` from `lib/supabase/types.ts`.
 
 ### Admin & Moderation
 
-- Admin verification via `verifyAdmin()` in `lib/admin.ts` — checks `roles` array in the `users` table
+- Admin verification via the seam: handlers call `createRequestContext()`, then `requireActiveUser(ctx)` and `requireRole(ctx, "admin")` from `src/server/authz/` (anonymous → 401, banned → 403 `Account suspended`, non-admin → 403). `lib/admin.ts` and `verifyAdmin()` were deleted in Phase 5
 - Audit logging via `logAdminAction()` in `lib/audit.ts` — writes to `admin_audit_log` table using service client
 - Role helpers in `lib/roles.ts`: `isAdmin()`, `isOrganizer()`, `hasRole()`
 - User roles: `"user"`, `"admin"`, `"club_organizer"`
@@ -87,7 +87,7 @@ All three are typed with `Database` from `lib/supabase/types.ts`.
 ## Key Patterns
 
 - **Path alias**: `@/` maps to `src/`
-- **API routes**: Return `NextResponse`, use `verifyAdmin()` for admin endpoints
+- **API routes**: Return `NextResponse`; admin endpoints use `requireActiveUser` + `requireRole(ctx, "admin")` from `src/server/authz/`; state-changing user endpoints use `requireActiveUser` + `requireOnboarded`
 - **Event status flow**: `pending` → `approved` | `rejected` (moderation pipeline)
 - **Club status flow**: Same as events — clubs must be approved before becoming visible
 - **Tags**: Use the `EventTag` enum from `src/types/index.ts`, not raw strings

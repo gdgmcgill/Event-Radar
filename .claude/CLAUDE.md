@@ -324,8 +324,8 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 - Pattern: Pure functions with confidence scoring (0-1), partitioned into auto_pending/manual_review/auto_discard
 - Pipeline: Apify output -> normalize -> classifyBatch -> partitionByAction -> webhook
 - Purpose: Guard admin-only API routes
-- File: `src/lib/admin.ts`
-- Pattern: `verifyAdmin()` returns `{ supabase, user, isAdmin }` - caller checks `isAdmin`
+- File: `src/server/authz/requireRole.ts` (with `requireActiveUser.ts`, `requireOnboarded.ts`, `requireClubRole.ts`)
+- Pattern: `requireRole(ctx, "admin")` returns `{ ok: true, user }` or `{ ok: false, response }` - caller returns `response` on the deny arm; `src/lib/admin.ts` / `verifyAdmin()` were deleted in Phase 5
 - Purpose: Check user roles (user, admin, club_organizer)
 - File: `src/lib/roles.ts`
 - Pattern: Pure helper functions `hasRole()`, `isAdmin()`, `isOrganizer()` operating on `User` type
@@ -343,7 +343,7 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 - Responsibilities: Event discovery hub - search, filters, happening now, popular/recommended events, paginated event grid
 - Location: `src/app/auth/callback/route.ts`
 - Triggers: OAuth redirect from Supabase/Azure
-- Responsibilities: Session exchange, McGill email enforcement, user profile upsert, admin auto-assignment, onboarding redirect
+- Responsibilities: Session exchange, McGill email enforcement, user profile upsert through the elevated door (fails closed), validated `next` redirect, onboarding redirect from database truth (no role assignment at sign-in since Phase 5)
 - Location: `src/app/auth/signout/route.ts`
 - Triggers: POST from `useAuthStore.signOut()`
 - Responsibilities: Server-side sign out to properly clear cookies
