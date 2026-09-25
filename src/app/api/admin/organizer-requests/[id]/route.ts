@@ -55,17 +55,30 @@ export async function PATCH(
     );
   }
 
-  const { error: updateError } = await supabase
+  // Conditional on the row still being pending (REVIEW-05 WR-07): two
+  // moderators, or a double click, both pass the read above. Only the one
+  // whose update changes the row goes on to the side effects (the roles
+  // write, the membership upsert, the notification, the audit row).
+  const { data: updated, error: updateError } = await supabase
     .from("organizer_requests")
     .update({
       status,
       reviewed_by: user.id,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id");
 
   if (updateError) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  if (!updated || updated.length === 0) {
+    return NextResponse.json(
+      { error: "This request has already been reviewed" },
+      { status: 409 }
+    );
   }
 
   // Log audit action

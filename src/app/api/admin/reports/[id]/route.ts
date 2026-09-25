@@ -46,17 +46,28 @@ export async function PATCH(
     );
   }
 
-  const { error: updateError } = await supabase
+  // Conditional on the report still being pending (REVIEW-05 WR-07), so a
+  // concurrent second action changes nothing and writes no second audit row.
+  const { data: updated, error: updateError } = await supabase
     .from("event_reports")
     .update({
       status,
       reviewed_by: user.id,
       reviewed_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id");
 
   if (updateError) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  if (!updated || updated.length === 0) {
+    return NextResponse.json(
+      { error: "Report has already been actioned" },
+      { status: 409 }
+    );
   }
 
   try {

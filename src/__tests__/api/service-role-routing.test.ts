@@ -411,6 +411,8 @@ describe("admin/organizer-requests/[id] PATCH", () => {
       "organizer_requests.select": {
         data: { id: REQUEST_ID, user_id: OTHER, club_id: CLUB_ID, status: "pending" },
       },
+      // The conditional update returns the row it changed (REVIEW-05 WR-07).
+      "organizer_requests.update": { data: [{ id: REQUEST_ID }] },
       "users.select": { data: { roles: ["user"] } },
       "clubs.select": { data: { name: "Routing Club" } },
     });
@@ -478,6 +480,8 @@ describe("admin/reports/[id] PATCH", () => {
   it("read and update on the cookie client; only the audit writer through the door", async () => {
     asAdmin({
       "event_reports.select": { data: { id: REPORT_ID, event_id: EVENT_ID, status: "pending" } },
+      // The conditional update returns the row it changed (REVIEW-05 WR-07).
+      "event_reports.update": { data: [{ id: REPORT_ID }] },
     });
     const { PATCH }: Route = await import("@/app/api/admin/reports/[id]/route");
     const res = await PATCH(
