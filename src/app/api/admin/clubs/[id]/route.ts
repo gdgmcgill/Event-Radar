@@ -6,6 +6,7 @@ import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
+import { readJsonObject } from "@/server/body";
 
 export async function PATCH(
   request: NextRequest,
@@ -19,7 +20,9 @@ export async function PATCH(
   const user = auth.user;
 
   const { id } = await params;
-  const body = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const { status, category, message: rejectionMessage } = body;
 
   if (!["approved", "rejected", "suspended"].includes(status)) {

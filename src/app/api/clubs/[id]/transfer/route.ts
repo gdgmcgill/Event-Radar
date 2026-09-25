@@ -4,6 +4,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
+import { readJsonObject } from "@/server/body";
 
 export async function POST(
   request: NextRequest,
@@ -29,7 +30,9 @@ export async function POST(
   );
   if (!gate.ok) return gate.response;
 
-  const { newOwnerId } = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const { newOwnerId } = parsedBody.body;
 
   if (!newOwnerId) {
     return NextResponse.json({ error: "newOwnerId is required" }, { status: 400 });

@@ -4,6 +4,7 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { readJsonObject } from "@/server/body";
 
 export async function POST(
   request: NextRequest,
@@ -17,7 +18,9 @@ export async function POST(
   const user = active.user;
 
   const { id } = await params;
-  const body = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const { message } = body;
 
   if (!message?.trim()) {

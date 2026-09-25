@@ -4,6 +4,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
+import { readJsonObject } from "@/server/body";
 
 /** PostgREST's code when `.single()` matches no row. */
 const NO_ROW = "PGRST116";
@@ -32,7 +33,9 @@ export async function PATCH(
   );
   if (!gate.ok) return gate.response;
 
-  const { memberId, role } = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const { memberId, role } = parsedBody.body;
 
   if (!memberId || role !== "organizer") {
     return NextResponse.json({ error: "Invalid request. Role must be 'organizer'." }, { status: 400 });

@@ -6,6 +6,7 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import type { TablesUpdate } from "@/lib/supabase/types";
+import { readJsonObject } from "@/server/body";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -192,7 +193,9 @@ export async function DELETE(
   if (!gate.ok) return gate.response;
 
   // Verify confirmation name
-  const body = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const { data: club } = await supabase
     .from("clubs")
     .select("name")

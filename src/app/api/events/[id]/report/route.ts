@@ -5,6 +5,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { sanitizeText } from "@/lib/sanitize";
 import { REJECTION_CATEGORIES } from "@/types";
+import { readJsonObject } from "@/server/body";
 
 export async function POST(
   request: NextRequest,
@@ -19,7 +20,9 @@ export async function POST(
   const supabase = ctx.supabase;
 
   const { id: eventId } = await params;
-  const body = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const { category, message } = body;
 
   // Validate category

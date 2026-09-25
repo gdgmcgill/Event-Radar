@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { readJsonObject } from "@/server/body";
 
 /**
  * GET /api/clubs
@@ -48,7 +49,9 @@ export async function POST(request: NextRequest) {
   if (!onboarded.ok) return onboarded.response;
   const user = active.user;
 
-  const body = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const { contact_email, logo_url, instagram_handle, website_url, discord_url, twitter_url, linkedin_url } = body;
 
   // Sanitize text inputs to prevent XSS

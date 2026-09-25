@@ -5,6 +5,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
+import { readJsonObject } from "@/server/body";
 
 /**
  * The fields PATCH /api/events/[id] routes through pending_edits (its
@@ -25,7 +26,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const user = auth.user;
 
   const { id } = await params;
-  const body = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const { action, reason } = body;
 
   if (!action || !["approve", "reject"].includes(action)) {

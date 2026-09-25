@@ -4,6 +4,7 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
+import { readJsonObject } from "@/server/body";
 
 export async function PATCH(
   request: NextRequest,
@@ -17,7 +18,9 @@ export async function PATCH(
   const user = auth.user;
 
   const { id } = await params;
-  const body = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const { status } = body;
 
   if (!["reviewed", "dismissed"].includes(status)) {

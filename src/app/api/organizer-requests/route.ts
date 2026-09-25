@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { readJsonObject } from "@/server/body";
 
 export async function POST(request: NextRequest) {
   const ctx = await createRequestContext();
@@ -14,7 +15,9 @@ export async function POST(request: NextRequest) {
   const user = active.user;
   const supabase = ctx.supabase;
 
-  const body = await request.json();
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const { club_id, message } = body;
 
   if (!club_id) {
