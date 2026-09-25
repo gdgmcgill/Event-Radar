@@ -100,9 +100,16 @@ SUPABASE_CMD=${SUPABASE_CMD:-"npx supabase"}
 # 05-11 adds the F-008 events INSERT policy (asserted by 060). The baseline also
 # creates that policy name but is not listed: the new file DROPs it first, so
 # commenting out the new CREATE removes the policy entirely.
+# 05-16 adds the F-006 own-row users UPDATE policy, re-created TO authenticated
+# with a WITH CHECK (asserted by 050). The same reasoning applies: the baseline
+# also creates "Users can update own profile" and is not listed, and the new
+# file DROPs it first. That file's grants and REVOKEs are not policies, so this
+# harness cannot mutate them; 05-16 proved those by hand
+# (evidence/schema-push-slice-5.txt).
 POLICY_MIGRATION_GLOBS="supabase/migrations/*_fk_indexes_and_policy_gaps.sql
 supabase/migrations/*_invitation_policy_fixes.sql
-supabase/migrations/*_events_insert_club_scope.sql"
+supabase/migrations/*_events_insert_club_scope.sql
+supabase/migrations/*_users_grants_audit_log_insert.sql"
 
 MIGRATIONS=()
 while IFS= read -r glob; do
