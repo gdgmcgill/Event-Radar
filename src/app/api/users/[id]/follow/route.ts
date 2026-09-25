@@ -27,17 +27,21 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Cannot follow yourself" }, { status: 400 });
     }
 
-    // Insert follow
-    const { error } = await supabase
+    // Insert follow. ON CONFLICT DO NOTHING RETURNING yields a row only when
+    // the follow is new, which is what gates the notifications below.
+    const { data: inserted, error } = await supabase
       .from("user_follows")
       .upsert(
         { follower_id: user.id, following_id: targetId },
         { onConflict: "follower_id,following_id", ignoreDuplicates: true }
-      );
+      )
+      .select("id");
 
     if (error) {
       return NextResponse.json({ error: "Failed to follow user" }, { status: 500 });
     }
+
+    const isNewFollow = (inserted?.length ?? 0) > 0;
 
     // Check if mutual follow (friendship)
     const { data: reverseFollow } = await supabase
@@ -48,6 +52,14 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       .maybeSingle();
 
     const isFriend = !!reverseFollow;
+
+    // A repeat follow changes nothing, so it notifies nobody (REVIEW-05 iter3
+    // WR-05). Rows without an event_id fall outside notifications_dedup_idx,
+    // so before this check every repeated call delivered another "started
+    // following you" (or two "New Friend!" rows). The body is unchanged.
+    if (!isNewFollow) {
+      return NextResponse.json({ following: true, isFriend }, { status: 201 });
+    }
 
     // Fetch target user name for notification
     const { data: targetUser } = await supabase

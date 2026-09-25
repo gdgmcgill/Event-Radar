@@ -215,8 +215,12 @@ describe("POST /api/users/[id]/follow", () => {
     return POST(jsonRequest(`users/${OTHER}/follow`, "POST"), idParams(OTHER));
   }
 
+  // A new follow row comes back from ON CONFLICT DO NOTHING RETURNING.
+  const NEW_FOLLOW = { "user_follows.upsert": { data: [{ id: "follow-new" }] } };
+
   it("a new follower is notified through the door", async () => {
     asStudent({
+      ...NEW_FOLLOW,
       "user_follows.select": { data: null },
       "users.select": { data: { name: "Follower" } },
     });
@@ -237,6 +241,7 @@ describe("POST /api/users/[id]/follow", () => {
 
   it("a mutual follow notifies both users through the door", async () => {
     asStudent({
+      ...NEW_FOLLOW,
       "user_follows.select": { data: { id: "f1" } },
       "users.select": { data: { name: "Friend" } },
     });
@@ -251,7 +256,11 @@ describe("POST /api/users/[id]/follow", () => {
 
   it("a failed notification does not undo the follow, and is logged", async () => {
     asStudent(
-      { "user_follows.select": { data: null }, "users.select": { data: { name: "F" } } },
+      {
+        ...NEW_FOLLOW,
+        "user_follows.select": { data: null },
+        "users.select": { data: { name: "F" } },
+      },
       { "notifications.insert": { error: { message: "boom" } } }
     );
     const res = await follow();
@@ -259,6 +268,33 @@ describe("POST /api/users/[id]/follow", () => {
     expect(
       errorSpy.mock.calls.some((c) => String(c[0]).includes("follow notifications"))
     ).toBe(true);
+  });
+
+  // REVIEW-05 iter3 WR-05: a repeat follow inserts no row (the upsert
+  // ignores duplicates), so it must not notify again. Rows without an
+  // event_id fall outside notifications_dedup_idx, so nothing else dedups.
+  it("iter3 WR-05: a repeat follow answers the same body and notifies nobody", async () => {
+    asStudent({
+      "user_follows.upsert": { data: [] },
+      "user_follows.select": { data: null },
+      "users.select": { data: { name: "Follower" } },
+    });
+    const res = await follow();
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual({ following: true, isFriend: false });
+    expect(callsTo(mockElevated, "notifications", "insert")).toHaveLength(0);
+    expect(callsTo(mockCookie, "notifications", "insert")).toHaveLength(0);
+  });
+
+  it("iter3 WR-05: a repeat follow of a friend keeps isFriend and notifies nobody", async () => {
+    asStudent({
+      "user_follows.upsert": { data: [] },
+      "user_follows.select": { data: { id: "f1" } },
+    });
+    const res = await follow();
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual({ following: true, isFriend: true });
+    expect(callsTo(mockElevated, "notifications", "insert")).toHaveLength(0);
   });
 });
 
