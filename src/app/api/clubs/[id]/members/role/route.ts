@@ -5,6 +5,9 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
 
+/** PostgREST's code when `.single()` matches no row. */
+const NO_ROW = "PGRST116";
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -60,12 +63,27 @@ export async function PATCH(
   // role this path can write is "organizer" (validated above), and the owner
   // row and the caller's own row are refused above. REGISTRY.md row: "Owner
   // changes a member's role or transfers ownership".
+  //
+  // The write is scoped on its own (REVIEW-05 WR-03): the checks above ran on
+  // a separate read, so the elevated update re-states them as filters. It can
+  // touch only a row of THIS club that is not, at the moment of the write, an
+  // owner row. If a concurrent transfer made the target the owner, nothing
+  // matches and the route answers 409 rather than demoting the new owner.
   const { data: updated, error } = await getElevatedClient()
     .from("club_members")
     .update({ role })
     .eq("id", memberId)
+    .eq("club_id", clubId)
+    .neq("role", "owner")
     .select()
     .single();
+
+  if (error?.code === NO_ROW) {
+    return NextResponse.json(
+      { error: "Member changed concurrently. Please refresh and try again." },
+      { status: 409 }
+    );
+  }
 
   if (error) {
     return NextResponse.json({ error: "Failed to update role" }, { status: 500 });

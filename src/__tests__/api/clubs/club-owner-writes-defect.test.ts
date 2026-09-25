@@ -3,7 +3,9 @@
  *
  * Status: FIXED in 05-10 — D5's demotion filter moved in 05-10 Task 1
  * (DEC-40); D1, D2 and D4 moved to the elevated client in 05-10 Task 3
- * (DEC-41). Ledger rows in `evidence/defect-ledger.md`.
+ * (DEC-41). D4's filter set moved again in the REVIEW-05 WR-03 fix (the
+ * elevated write is scoped to the club and to non-owner rows). Ledger rows
+ * in `evidence/defect-ledger.md`.
  *
  * The defect, as registered (research C11, measured on the local stack):
  * `clubs` has no owner UPDATE policy and `club_members` UPDATE is admin-only.
@@ -296,8 +298,12 @@ describe("D4 PATCH /api/clubs/[id]/members/role as the owner", () => {
     const onElevated = updates(mockElevated.calls, "club_members");
     expect(onElevated).toHaveLength(1);
     expect(onElevated[0].payload).toEqual({ role: "organizer" });
+    // Moved in the REVIEW-05 WR-03 fix: the elevated write re-states the club
+    // scope and the not-an-owner rule as filters (defect-ledger row).
     expect(filters(onElevated[0])).toEqual([
       { op: "eq", column: "id", value: ORGANIZER_MEMBERSHIP_ID },
+      { op: "eq", column: "club_id", value: CLUB_ID },
+      { op: "neq", column: "role", value: "owner" },
     ]);
     expect(updates(mockCookie.calls, "club_members")).toHaveLength(0);
   });
