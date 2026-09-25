@@ -80,7 +80,7 @@ Constraint for every REFAC requirement: characterize current behavior with a tes
 - [ ] **REFAC-15**: Every handler validates input with a zod schema at its boundary and returns a consistent 400 shape on malformed input; schemas live in `src/contracts/`
 - [ ] **REFAC-16**: zod contracts are exported and reused by client hooks so client and handler cannot drift
 - [x] **REFAC-17**: CSRF exposure is assessed (SameSite on Supabase cookies) and protection is added on state-changing routes where exposure remains
-- [ ] **REFAC-18**: Rate limiting is moved to a distributed store (e.g. Upstash) so it works across serverless instances
+- [x] **REFAC-18**: Rate limiting is moved to a distributed store (e.g. Upstash) so it works across serverless instances
 - [ ] **REFAC-19**: Slice 7 (close-out): the blanket `s-maxage=60` on `/api/*` is removed from `vercel.json`, personalized routes return `private, no-store`, public routes opt in explicitly, and a cross-user cache regression test passes
 - [ ] **REFAC-20**: A structured JSON logger with levels and a request correlation id replaces `console.*` calls in server code, working on both Node and middleware runtimes
 - [ ] **REFAC-21**: Sentry is installed with a Turbopack-aware setup, source maps, environment and release tagging, and PII scrubbing rules decided before install; a deliberately triggered error appears in Sentry with the correlation id
@@ -216,7 +216,7 @@ No phase crosses a stage boundary.
 | REFAC-15 | Phase 6 | Pending |
 | REFAC-16 | Phase 6 | Pending |
 | REFAC-17 | Phase 5 | Complete |
-| REFAC-18 | Phase 5 | Pending |
+| REFAC-18 | Phase 5 | Complete |
 | REFAC-19 | Phase 6 | Pending |
 | REFAC-20 | Phase 6 | Pending |
 | REFAC-21 | Phase 6 | Pending |

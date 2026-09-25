@@ -89,7 +89,15 @@ and an owner, so no Phase 5 plan executes on an assumption nobody is holding.
   never touched:
   1. **Provision Upstash on Vercel, with both env-name pairs** (`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`
      and the Marketplace's `KV_REST_API_URL`/`KV_REST_API_TOKEN`), **before any push to `main`**.
-     Vercel deploys `main`, and by DEC-50 a production boot with no store configured fails.
+     ~~Vercel deploys `main`, and by DEC-50 a production boot with no store configured fails.~~
+     **Amended by DEC-59 Part 2, as built in 05-18:** a production boot with no store no longer
+     fails. It logs one `[RateLimit] no distributed store is configured in production` error and
+     rate-limits per instance from the memory store (the pre-Phase-5 behaviour). Co-locate the
+     database with Vercel `iad1`. **Step 1b, after provisioning:** set
+     `RATE_LIMIT_REQUIRE_DISTRIBUTED=true` in the production environment, which makes a missing
+     store a boot failure again (DEC-50's intent, now opt-in). **Step 1c:** countersign the 05-18
+     package verdict ("use 2.0.8": `@upstash/ratelimit` 2.0.8, `@upstash/redis` 1.38.2), which the
+     autonomous orchestrator recorded by rule (DEC-59), from `evidence/upstash-legitimacy.txt`.
   2. **A read-only count** of production users with `onboarding_completed` false or null, and of
      auth users with no `public.users` row (assumption A6). After the DEC-36 proxy ships, the
      first group is redirected to onboarding and the second is signed out (DEC-35).
@@ -98,11 +106,13 @@ and an owner, so no Phase 5 plan executes on an assumption nobody is holding.
      Critical, and they stay open in production until one of the two happens.
 - **Why deferred.** Each needs production credentials or creates a billable resource. Orchestrator
   decision 3 forbids both.
-- **Why not cosmetic.** Item 1 is a deploy blocker: skipping it takes production down on the next
-  push. Items 2 and 3 set the blast radius of Phase 5's fail-closed changes and the exposure window
+- **Why not cosmetic.** Item 1 is no longer a deploy blocker (DEC-59), but until it is done
+  production rate limiting is per instance, so budgets do not hold across serverless instances
+  (REFAC-18's goal is unmet in production). Items 2 and 3 set the blast radius of Phase 5's fail-closed changes and the exposure window
   of two Criticals.
-- **Owner:** the phase owner. It must be done before the first push to `main` that carries
-  05-18's boot requirement. Phase 8 re-checks it as a deploy prerequisite.
+- **Owner:** the phase owner. Item 1 should be done before the first push to `main` that carries
+  05-18's store selection; skipping it degrades rate limiting rather than taking the site down.
+  Phase 8 re-checks it as a deploy prerequisite.
 
 ## DI-43 — `@supabase/ssr` 0.7 → 0.12, the major
 
