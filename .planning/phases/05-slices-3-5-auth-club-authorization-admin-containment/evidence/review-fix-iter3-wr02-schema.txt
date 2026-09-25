@@ -1,0 +1,156 @@
+# REVIEW-05 iter3 WR-02 — schema task evidence
+
+## 1. RED: pgTAP with 066 present, against the database BEFORE 20260925130000 is applied
+$ supabase test db --local
+(started 20:38:38Z, HEAD 86ec29f, migration file present but not applied)
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/065-events-moderated-update.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql ..... 
+# Failed test 1: "events_guard_moderated_update requires the appeal to raise appeal_count by one"
+# Failed test 4: "creator: rejected → pending without raising appeal_count is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 5: "creator: an uncounted reset that also rewrites the content is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 6: "creator: suspended → pending without raising appeal_count is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 7: "creator: an appeal reset that raises appeal_count by two is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 8: "creator: the appeal route's write (rejected → pending, appeal_count + 1) is allowed"
+#     Results differ beginning at row 1:
+#         have: NULL
+#         want: (pending|1)
+# Failed test 9: "creator: the appeal route's write (suspended → pending, appeal_count + 1) is allowed"
+#     Results differ beginning at row 1:
+#         have: NULL
+#         want: (pending|3)
+# Failed test 11: "a3 kept its rejected status, its counter and its title"
+#     Results differ beginning at row 1:
+#         have: ("pending|2|T066 a3")
+#         want: ("rejected|0|T066 a3")
+# Failed test 12: "a1 and a2 moved only by their counted appeals; the refused rewrite left a1's content"
+#     Results differ beginning at row 1:
+#         have: ("00000000-0000-4000-8000-0000000066e1|pending|0|T066 a1 rewritten|new")
+#         want: ("00000000-0000-4000-8000-0000000066e1|pending|1|T066 a1|d1")
+# Looks like you failed 9 tests of 12
+Failed 9/12 subtests 
+
+Test Summary Report
+-------------------
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql   (Wstat: 0 Tests: 12 Failed: 9)
+  Failed tests:  1, 4-9, 11-12
+Files=11, Tests=200,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.04 cusr  0.02 csys =  0.09 CPU)
+Result: FAIL
+error running container: exit 1
+exit=1
+
+## 2. The [BLOCKING] local schema task, with 20260925130000 applied
+
+$ supabase --version
+(started 20:38:46Z, HEAD 86ec29f)
+2.115.0
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ supabase db reset --local
+(started 20:38:46Z, HEAD 86ec29f)
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+Applying migration 20260923130000_users_grants_audit_log_insert.sql...
+Applying migration 20260925120000_events_guard_moderated_update.sql...
+Applying migration 20260925130000_events_guard_appeal_increment.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ supabase gen types typescript --local --schema public > src/lib/supabase/types.ts
+Connecting to db 5432
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ git diff --exit-code --stat src/lib/supabase/types.ts
+(started 20:39:15Z, HEAD 86ec29f)
+exit=0
+
+(unseeded)
+
+$ supabase test db --local
+(started 20:39:19Z, HEAD 86ec29f)
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/065-events-moderated-update.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql ..... ok
+All tests successful.
+Files=11, Tests=200,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.03 cusr  0.01 csys =  0.07 CPU)
+Result: PASS
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ npx tsx scripts/seed/load.ts
+(started 20:39:21Z, HEAD 86ec29f)
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+(seeded)
+
+$ supabase test db --local
+(started 20:39:23Z, HEAD 86ec29f)
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/065-events-moderated-update.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql ..... ok
+All tests successful.
+Files=11, Tests=200,  0 wallclock secs ( 0.02 usr  0.00 sys +  0.03 cusr  0.01 csys =  0.06 CPU)
+Result: PASS
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
