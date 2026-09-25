@@ -21,7 +21,8 @@
 --     column did not move.
 --   * Another user's row → is_empty(UPDATE … RETURNING) plus an integrity read:
 --     the USING clause filters silently.
---   * An allowed write → results_eq on RETURNING, never lives_ok alone.
+--   * An allowed write → results_eq on RETURNING, or lives_ok followed by an
+--     integrity read as the table owner; never lives_ok alone.
 --   * The saved-events counter (C3) is read back as the table owner after the
 --     save and after the unsave: the trigger now runs as its definer, and a
 --     SECURITY INVOKER trigger would raise 42501 on the save instead.
@@ -267,35 +268,36 @@ SELECT tests.act_as('00000000-0000-4000-8000-000000005001');
 
 -- 20. The counter trigger runs inside this INSERT. As SECURITY INVOKER under
 -- the column grant it raised "permission denied for table users" (measured).
-SELECT results_eq(
+-- lives_ok, not results_eq, so that raise is reported as this row failing
+-- rather than aborting the file; the integrity read in 21 is the allow proof.
+SELECT lives_ok(
   $q$INSERT INTO public.saved_events (user_id, event_id)
-     VALUES ('00000000-0000-4000-8000-000000005001', '00000000-0000-4000-8000-0000000050e1')
-     RETURNING event_id$q$,
-  ARRAY['00000000-0000-4000-8000-0000000050e1'::uuid],
-  'student: saving an event is accepted');
+     VALUES ('00000000-0000-4000-8000-000000005001', '00000000-0000-4000-8000-0000000050e1')$q$,
+  'student: saving an event is accepted — the counter trigger does not raise');
 
 SELECT tests.act_as_owner();
 
--- 21. The save moved the counter up.
+-- 21. INTEGRITY for 20: the saved row exists and the counter moved up.
 SELECT results_eq(
-  $q$SELECT saved_events_count FROM public.users WHERE id = '00000000-0000-4000-8000-000000005001'$q$,
-  ARRAY[1],
-  'with RLS bypassed: S''s saved_events_count is 1 after the save');
+  $q$SELECT (SELECT saved_events_count FROM public.users WHERE id = '00000000-0000-4000-8000-000000005001'),
+            (SELECT count(*)::int FROM public.saved_events
+              WHERE user_id = '00000000-0000-4000-8000-000000005001'
+                AND event_id = '00000000-0000-4000-8000-0000000050e1')$q$,
+  $q$VALUES (1, 1)$q$,
+  'with RLS bypassed: S''s saved row exists and saved_events_count is 1 after the save');
 
 SELECT tests.act_as('00000000-0000-4000-8000-000000005001');
 
 -- 22. Unsaving runs the same trigger's DELETE arm.
-SELECT results_eq(
+SELECT lives_ok(
   $q$DELETE FROM public.saved_events
       WHERE user_id = '00000000-0000-4000-8000-000000005001'
-        AND event_id = '00000000-0000-4000-8000-0000000050e1'
-      RETURNING event_id$q$,
-  ARRAY['00000000-0000-4000-8000-0000000050e1'::uuid],
-  'student: unsaving the event is accepted');
+        AND event_id = '00000000-0000-4000-8000-0000000050e1'$q$,
+  'student: unsaving the event is accepted — the counter trigger does not raise');
 
 SELECT tests.act_as_owner();
 
--- 23. ...and moved it back down.
+-- 23. INTEGRITY for 22: the row is gone and the counter moved back down.
 SELECT results_eq(
   $q$SELECT (SELECT saved_events_count FROM public.users WHERE id = '00000000-0000-4000-8000-000000005001'),
             (SELECT count(*)::int FROM public.saved_events WHERE user_id = '00000000-0000-4000-8000-000000005001')$q$,
