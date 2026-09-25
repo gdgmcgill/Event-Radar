@@ -138,6 +138,28 @@ for m in "${MIGRATIONS[@]}"; do
   fi
 done
 
+# ---------------------------------------------------------------------------
+# Restore on ANY exit (REVIEW-05 WR-06). The loop below restores each mutation
+# in its own body, but a Ctrl-C, a closed terminal or a CI timeout during one
+# of the ~2N+1 resets would otherwise leave a migration on disk with a
+# security policy commented out, and the end-of-run clean check would never
+# run. The check above guarantees these files were clean at start, so
+# `git checkout --` discards only the harness's own mutation. Installed before
+# the first mutation. The local database may still hold the mutated schema
+# after an interrupt; the message says to reset it.
+# ---------------------------------------------------------------------------
+restore_migrations() {
+  git checkout -- "${MIGRATIONS[@]}"
+}
+on_interrupt() {
+  restore_migrations
+  echo "INTERRUPTED — migrations restored from git. The local database may hold a" >&2
+  echo "              mutated schema: run 'supabase db reset --local' before use." >&2
+  exit 130
+}
+trap on_interrupt INT TERM HUP
+trap restore_migrations EXIT
+
 fail=0
 
 # ---------------------------------------------------------------------------

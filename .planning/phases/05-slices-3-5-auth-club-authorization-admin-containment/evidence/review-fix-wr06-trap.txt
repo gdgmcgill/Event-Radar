@@ -1,0 +1,25 @@
+REVIEW-05 WR-06 — pgtap-mutation-check.sh restores migrations on interrupt
+recorded 2026-09-25T19:47:05Z
+
+Method: SUPABASE_CMD pointed at a stub (sleep 2; print 'Tests: 1 Failed: 1'; exit 1)
+so no database is touched. The harness runs in the background; once
+'git status --porcelain supabase/migrations/' is non-empty (a policy is
+commented out) the harness receives SIGTERM.
+
+$ bash -n scripts/pgtap-mutation-check.sh
+exit=0
+
+== PRE-FIX script (git stash of the fix) ==
+harness exit=143
+after: M supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql
+       M supabase/migrations/20260916000000_invitation_policy_fixes.sql
+(restored by hand with git checkout -- supabase/migrations/)
+
+== FIXED script ==
+mutated at 1s: M ..._fk_indexes_and_policy_gaps.sql, M ..._invitation_policy_fixes.sql
+harness exit=130
+after: git status --porcelain supabase/migrations/ -> (empty)
+tail of harness output:
+mutation_lines_commented=15
+INTERRUPTED — migrations restored from git. The local database may hold a
+              mutated schema: run 'supabase db reset --local' before use.
