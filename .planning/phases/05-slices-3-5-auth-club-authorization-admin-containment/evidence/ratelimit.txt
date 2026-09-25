@@ -1,0 +1,224 @@
+Rate limiting behind a store interface, with /api/admin/* budgets (plan 05-17 Task 1)
+**Plan:** 05-17 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-25
+
+REFAC-13 (the rate-limit clause), REFAC-18 (the first half: the interface), DEC-50, F-058's
+rate-limit clause. Base: 687d332 (05-16 head). Local tree only; no package installed, no database
+touched by this task. Every command is quoted with its exit code. Outputs are verbatim or marked as
+an excerpt.
+
+SUMMARY
+| # | Step | Result | Verdict |
+|---|------|--------|---------|
+| 1 | new suites before the implementation (RED) | 2 suites failed to load (modules absent), exit 1 | tests first |
+| 2 | targeted suites after the implementation | 6 suites, 91 tests passed, exit 0 | green |
+| 3 | PRESERVE files unedited | git diff 687d332 on the three files: empty, exit 0 | unedited |
+| 4 | full Jest | 73 suites, 1356 tests passed (floor 1325 + 31 new), exit 0 | green |
+| 5 | npx tsc --noEmit | exit 0, no output | green |
+| 6 | npm run lint | 0 errors, 18 warnings, none in a file this task touched; exit 0 | green |
+| 7 | tag gate | ok 34 files | unchanged |
+| 8 | mutation check of the new tests | M1 red 2/25, M2 red 7/32; both restored cmp-identical; green after | the tests bite |
+| 9 | budget literals | 300 and 30 in policy.ts only; grep of middlewareRateLimit.ts exit 1 | one copy |
+| 10 | /moderation fan-out count | below | the admin budget's input |
+
+## 1. What changed
+
+New, under src/server/ratelimit/:
+- types.ts: `RateDecision = { allowed, limit, resetAtMs }` and `interface RateLimitStore {
+  consume(key, limit, windowMs): Promise<RateDecision> }`.
+- policy.ts: `WINDOW_MS = 60_000`; `PUBLIC_BUDGETS = { GET: 300, mutation: 30,
+  highFrequencyMutation: 300 }` (moved unchanged); `HIGH_FREQUENCY_POST_PREFIXES`;
+  `ADMIN_PREFIX`; `ADMIN_BUDGETS = { GET: 600, mutation: 120 }` with DEC-50's rationale in the
+  comment; `clientIp(req)` (x-real-ip, then the first x-forwarded-for hop, then "unknown");
+  `rateLimitPolicy(req)` returning `{ key, limit, windowMs, scope }` or null outside /api/; and
+  `tooManyRequests(limit, resetAtMs, nowMs)`, the existing 429 body and four headers.
+- memoryStore.ts: the globalThis `__uni_verse_mw_rate_limit__` bucket map (same key), the same
+  prune-then-fixed-window-from-first-hit counting as `consumeSync(key, limit, windowMs, nowMs)`,
+  and `MemoryRateLimitStore` (its `consume` resolves `consumeSync` on a late-bound clock).
+- index.ts: `applyRateLimit(req, store): Promise<NextResponse | null>` (policy, consume, 429 or
+  null) and `getRateLimitStore()` returning one module-level MemoryRateLimitStore. 05-18 adds the
+  distributed store's selection here and nowhere else.
+
+Rewritten: src/middlewareRateLimit.ts. `applyApiRateLimit(req)` keeps its name, its synchronous
+signature and its comment header. It returns null outside /api/ and for the admin scope, and
+otherwise runs `rateLimitPolicy`, `consumeSync` and `tooManyRequests`. No budget literal remains in
+the file.
+
+src/proxy.ts: the first statements are now
+    const rateLimitResponse = await applyRateLimit(request, getRateLimitStore());
+    if (rateLimitResponse) return rateLimitResponse;
+imported from "@/server/ratelimit". Nothing else in the proxy moved in this task.
+
+## 2. Behaviour changes (INTENTIONAL BEHAVIOUR CHANGE in the commit body)
+
+a) /api/admin/* is now rate limited: 600 GET and 120 non-GET per IP, per path, per 60 s, with the
+   same 429 body and headers as the public budget. Before, the admin prefix was excluded.
+b) The client address prefers x-real-ip over x-forwarded-for (research A5, DEC-50). Before,
+   x-forwarded-for was read first. The two differ only when a request carries both and they
+   disagree. Every PRESERVE suite sends x-forwarded-for alone and is unaffected.
+Public budgets, the 429 body, every rate-limit header and the non-/api pass-through are unchanged
+(equivalence test, §4).
+
+## 3. RED: the new suites before any implementation
+
+$ npx jest --ci src/server/ratelimit          (excerpt)
+    Cannot find module './policy' from 'src/server/ratelimit/policy.test.ts'
+Test Suites: 2 failed, 2 total
+Tests:       0 total
+exit=1
+
+## 4. Targeted suites after the implementation
+
+$ npx jest --ci --verbose src/server/ratelimit src/middlewareRateLimit.test.ts src/proxy-characterization.test.ts src/proxy-defect.test.ts src/proxy.test.ts
+exit=0     (excerpt: the two new suites in full, the PRESERVE rate-limit suite, the summary)
+
+PASS node src/server/ratelimit/policy.test.ts
+  rateLimitPolicy
+    ✓ returns null for a path outside /api/ (1 ms)
+    ✓ gives public GETs 300 and public mutations 30 per 60 s window (1 ms)
+    ✓ gives /api/interactions the high-frequency write budget of 300
+    ✓ gives /api/recommendations/feedback the high-frequency write budget of 300
+    ✓ gives /api/admin/* GETs 600 and admin mutations 120 per 60 s window (1 ms)
+    ✓ keys the bucket by method, path and client address
+  clientIp
+    ✓ prefers x-real-ip over x-forwarded-for
+    ✓ falls back to the first x-forwarded-for hop, trimmed
+    ✓ answers 'unknown' when neither header carries an address
+  tooManyRequests
+    ✓ builds the existing 429 body and the four rate-limit headers (1 ms)
+    ✓ says 'second' in the singular and never advertises less than one
+  applyRateLimit with the memory store
+    ✓ getRateLimitStore returns one memory store instance
+    ✓ passes a non-/api request without consulting the store (1 ms)
+    ✓ builds the 429 from the store's decision
+    ✓ the 601st admin GET from one IP to one path is answered 429 with X-RateLimit-Limit 600 (13 ms)
+    ✓ the 121st admin POST from one IP to one path is answered 429 with X-RateLimit-Limit 120 (2 ms)
+    ✓ the synchronous wrapper still exempts /api/admin/* while the async path limits it (3 ms)
+  the async path and the synchronous wrapper decide identically on public requests
+    ✓ GET /api/events: the same decision and headers on every call up to budget + 2 (7 ms)
+    ✓ POST /api/events/x/save: the same decision and headers on every call up to budget + 2 (1 ms)
+    ✓ DELETE /api/events/x/save: the same decision and headers on every call up to budget + 2 (1 ms)
+    ✓ PATCH /api/users/u1: the same decision and headers on every call up to budget + 2 (1 ms)
+    ✓ HEAD /api/events/x/rsvp: the same decision and headers on every call up to budget + 2 (1 ms)
+    ✓ POST /api/interactions: the same decision and headers on every call up to budget + 2 (6 ms)
+    ✓ POST /api/recommendations/feedback: the same decision and headers on every call up to budget + 2 (6 ms)
+    ✓ POST /profile: the same decision and headers on every call up to budget + 2 (1 ms)
+
+PASS node src/middlewareRateLimit.test.ts
+  applyApiRateLimit (PRESERVE — must behave identically after the proxy rename)
+    ✓ returns 429 with a Retry-After header once the POST budget is exceeded
+    ✓ exempts /api/admin/* from the public budget entirely
+    ✓ gives /api/interactions the larger high-frequency write budget
+    ✓ gives /api/recommendations/feedback the larger high-frequency write budget
+    ✓ never rate-limits a non-/api path (GET /profile) (1 ms)
+    ✓ never rate-limits a non-/api path (POST /profile) (2 ms)
+PASS node src/server/ratelimit/memoryStore.test.ts
+  consumeSync
+    ✓ allows `limit` hits in one window and denies the next with resetAtMs = first hit + window
+    ✓ opens a new window at resetAtMs, anchored on that hit
+    ✓ keeps keys independent
+    ✓ shares its bucket map with the synchronous wrapper through globalThis
+  MemoryRateLimitStore
+    ✓ resolves the same decisions as consumeSync, on its injected clock (1 ms)
+    ✓ defaults its clock to Date.now
+PASS node src/proxy.test.ts
+PASS node src/proxy-characterization.test.ts
+    ✓ 8. the 31st POST from one IP to /api/events/x/save is answered 429 before a Supabase client is built (1 ms)
+PASS node src/proxy-defect.test.ts
+
+Test Suites: 6 passed, 6 total
+Tests:       91 passed, 91 total
+
+The equivalence test freezes Date.now, runs the same table of eight requests (seven public /api
+shapes plus one non-/api path) budget + 2 times through each path with distinct addresses, and
+compares status, JSON body and all four headers on every call.
+
+A defect found while writing it, fixed before the commit: the first MemoryRateLimitStore captured
+the `Date.now` function reference as its default clock, so a spied clock never reached it. The
+store now defaults to `() => Date.now()`, which reads the clock at call time.
+
+## 5. PRESERVE files unedited
+
+$ git diff 687d332 --stat -- src/middlewareRateLimit.test.ts src/proxy-characterization.test.ts src/proxy.test.ts
+(no output)
+exit=0
+
+## 6. Full suite, type check, lint, tag gate
+
+$ npx jest --ci
+Test Suites: 73 passed, 73 total
+Tests:       1356 passed, 1356 total
+exit=0
+
+$ npx tsc --noEmit
+exit=0 (no output)
+
+$ npm run lint
+✖ 18 problems (0 errors, 18 warnings)
+exit=0
+The 18 warnings are in load-tests/k6-*.js and 11 files under src/app and src/components that this
+task did not touch.
+
+$ node scripts/check-characterization-tags.mjs --all      (last line)
+ok 34 files
+
+## 7. Mutation check of the new tests
+
+M1: policy.ts `ADMIN_BUDGETS.GET` 600 -> 601
+$ npx jest --ci src/server/ratelimit/policy.test.ts
+    ✕ gives /api/admin/* GETs 600 and admin mutations 120 per 60 s window (2 ms)
+    ✕ the 601st admin GET from one IP to one path is answered 429 with X-RateLimit-Limit 600 (16 ms)
+Tests:       2 failed, 23 passed, 25 total
+exit=1       restored from a copy; cmp identical
+
+M2: middlewareRateLimit.ts advertises `decision.limit + 1` in its 429 (budget drift between paths)
+$ npx jest --ci src/server/ratelimit/policy.test.ts src/middlewareRateLimit.test.ts
+Tests:       7 failed, 25 passed, 32 total
+exit=1       (the seven public /api rows of the equivalence table)  restored from a copy; cmp identical
+
+After both restores:
+$ npx jest --ci src/server/ratelimit src/middlewareRateLimit.test.ts
+Tests:       38 passed, 38 total
+exit=0
+
+## 8. One copy of the budgets
+
+$ grep -n "300\|\b30\b" src/middlewareRateLimit.ts
+exit=1 (no match)
+$ grep -n "300\|: 30,\|600\|120" src/server/ratelimit/policy.ts      (code lines)
+24:  GET: 300,
+25:  mutation: 30,
+26:  highFrequencyMutation: 300,
+59:  GET: 600,
+60:  mutation: 120,
+
+## 9. The admin budget's input: /api GETs one moderation page load issues
+
+Counted from the `fetch(` calls in src/app/moderation/**/page.tsx. A GET is a fetch without a
+`method` option that runs on mount. The key is method:pathname:ip; the query string is not part
+of it, so `?page=2` shares a bucket with page 1.
+
+| Page | GETs on load | Distinct paths | Other fetches (mutations) |
+|------|--------------|----------------|---------------------------|
+| /moderation (dashboard) | 0 | 0 (server component; reads Supabase directly) | 0 |
+| /moderation/pending | 0 | 0 (browser Supabase client read) | 7 |
+| /moderation/users | 1 | /api/admin/users | 3 |
+| /moderation/organizer-requests | 1 | /api/admin/organizer-requests | 1 |
+| /moderation/audit-log | 1 (again per page turn) | /api/admin/audit-log | 0 |
+| /moderation/clubs | 1 | /api/admin/clubs | 4 |
+| /moderation/organizers | 1 | /api/admin/organizers | 2 |
+| /moderation/events | 1 | /api/admin/events | 5 |
+| /moderation/appeals | 2 | /api/admin/events, /api/admin/clubs | 2 |
+| /moderation/featured | 1, then 1 per search | /api/admin/featured; /api/admin/events per search | 1 |
+| /moderation/reports | 1 | /api/admin/reports | 1 |
+| /moderation/stats | 3 | /api/admin/stats, /api/admin/analytics/users, /api/admin/analytics/events | 0 |
+
+So a page load reaches any one admin path at most once. The widest page, /moderation/stats,
+reaches three paths once each. The busiest single key in interactive use is GET /api/admin/events
+from the featured picker's search-as-you-type. At 600 a minute (10 a second on one path), an
+admin would have to reload one moderation page ten times a second for a minute to meet the
+budget.
+
+Admin mutations are keyed per path, and the paths carry the target id
+(/api/admin/events/<id>/status), so each event, club or user has its own 120-a-minute bucket.
+A moderator batch-approving a queue spends one hit per item, each against a different key. The
+budget bounds a script hammering one target to two writes a second per address.

@@ -44,7 +44,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import * as env from "@/lib/env";
 import { isBanned } from "@/lib/ban";
-import { applyApiRateLimit } from "./middlewareRateLimit";
+import { applyRateLimit, getRateLimitStore } from "@/server/ratelimit";
 
 /** PostgREST's code when `.single()` finds no row. */
 const NO_PROFILE_ROW = "PGRST116";
@@ -57,8 +57,9 @@ type RingProfile = {
 };
 
 export async function proxy(request: NextRequest) {
-  // Apply public API rate limits before any auth work
-  const rateLimitResponse = applyApiRateLimit(request);
+  // Rate limit every /api/* path, /api/admin/* included, before any auth
+  // work (DEC-50). The budgets live in src/server/ratelimit/policy.ts.
+  const rateLimitResponse = await applyRateLimit(request, getRateLimitStore());
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
