@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Dependency and Runtime Stabilization** - Pin, patch, and make the tree reproducible; make the test suite gate changes (completed 2026-09-15)
 - [x] **Phase 3: Refactor Foundations — Schema Truth and the Seam Kit** - Reconcile schema, generate types, build the server seam, the persona harness, and the seed (completed 2026-09-16)
 - [x] **Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path** - Prove the seam on the two highest-traffic workflows and settle the event data shape (completed 2026-09-23)
-- [ ] **Phase 5: Slices 3–5 — Auth, Club Authorization, Admin Containment** - One fails-closed authorization ring; cross-tenant and escalation paths denied twice
+- [x] **Phase 5: Slices 3–5 — Auth, Club Authorization, Admin Containment** - One fails-closed authorization ring; cross-tenant and escalation paths denied twice (completed 2026-09-25)
 - [ ] **Phase 6: Slices 6–7 — Async Edge, Contracts, Caching, Observability** - Credential the edge, validate every input, kill the shared cache on personalized routes, make failures visible
 - [ ] **Phase 7: Certification Datasets and Persona Coverage** - Three datasets and a 13-persona matrix proving what is allowed and what is denied
 - [ ] **Phase 8: Operational Certification and Sign-Off** - Load, rollback, restore, alerting, chaos — then the written certification
@@ -258,7 +258,7 @@ Plans:
 - F-006, F-007, F-008 and F-016 are closed only on the local stack, and each waits for DI-23.
 - See `evidence/PHASE-5-COMPLETION.md` (§ 8 lists the owner actions).
 
-**Plans**: 18/19 plans executed
+**Plans**: 19/19 plans complete
 
 Plans:
 **Wave 1**
@@ -332,7 +332,7 @@ Plans:
 
 **Wave 18**
 
-- [ ] 05-19-PLAN.md — `@supabase/supabase-js` 2.116.0 (DI-25) as the last code change, phase after-floor, slice 5 close, `PHASE-5-COMPLETION.md`, requirement states
+- [x] 05-19-PLAN.md — `@supabase/supabase-js` 2.116.0 (DI-25) as the last code change, phase after-floor, slice 5 close, `PHASE-5-COMPLETION.md`, requirement states
 
 ### Phase 6: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 
@@ -404,7 +404,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 11/11 | Complete   | 2026-09-23 |
-| 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 18/19 | In Progress|  |
+| 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 19/19 | Complete   | 2026-09-25 |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |
 | 7. Certification Datasets and Persona Coverage | 0/TBD | Not started | - |
 | 8. Operational Certification and Sign-Off | 0/TBD | Not started | - |

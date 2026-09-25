@@ -4,17 +4,17 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
-status: executing
-stopped_at: Completed 05-16-PLAN.md
-last_updated: "2026-09-25T06:00:49.112Z"
+status: verifying
+stopped_at: Completed 05-19-PLAN.md
+last_updated: "2026-09-25T06:22:52.551Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 62
-  completed_plans: 61
-  percent: 50
+  completed_plans: 62
+  percent: 63
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
 Plan: 19 of 19
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-24 — Phase 05 execution started
 
 Progress: [███████░░░] 73%
@@ -114,6 +114,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P16 | 29min | 2 tasks | 6 files |
 | Phase 05 P17 | 15min | 2 tasks | 15 files |
 | Phase 05 P18 | 16min | 3 tasks | 14 files |
+| Phase 05 P19 | 18min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -297,6 +298,9 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-17: the CSRF check compares Origin with x-forwarded-host (first entry), else host, else nextUrl.host; null or unparseable Origin refused; header-less requests pass (DEC-52)
 - [Phase 05]: 05-18: Upstash store installed as @upstash/ratelimit 2.0.8 + @upstash/redis 1.38.2 exact (DEC-59 'use 2.0.8', countersignature carried to 05-19); production without a store logs one error and serves from memory; RATE_LIMIT_REQUIRE_DISTRIBUTED=true restores the fail-closed boot
 - [Phase 05]: 05-18: a store timeout or store error allows the request and logs the key (fail-open per DEC-50); upstashConfig() takes whole UPSTASH_* then KV_* pairs and never throws
+- [Phase 05]: 05-19: DI-25 not bumped: four admin payloads fail tsc on supabase-js 2.116.0 (DI-53, Phase 6)
+- [Phase 05]: 05-19: REFAC-18 recorded PARTIAL (works across serverless instances unproven until Upstash is provisioned); REFAC-13 PARTIAL on the cron routes; REFAC-11 Complete
+- [Phase 05]: 05-19: CLAUDE.md not edited by the executor; stale facts recorded in DI-46 for the owner
 
 ### Pending Todos
 
@@ -330,6 +334,7 @@ None yet.
 - ~~**`.mcp.json` is untracked but NOT gitignored, and it contains the production project ref in cleartext.**~~ **RESOLVED 2026-09-16** — gitignored in `b9f9bcb` (`.gitignore:84`, verified with `git check-ignore`). Original note: A `git add -A` would commit a value `.planning/audit/REDACTION.md` forbids in committed artifacts. Its `read_only=true` parameter is simultaneously the standing server-side control behind every Phase 3 production read and must not be removed. Unblock: add `.mcp.json` to `.gitignore` (a one-line owner decision).
 - **The production database password should be rotated** — it transited a chat session during plan 03-04. No committed file contains it (asserted by every plan's pre-commit credential grep), so rotation affects nothing in this repository. Update the macOS keychain item "Event-Radar DB password" afterwards. This is human step 1 in `evidence/FOUNDATION-READINESS.md` § 10.
 - ~~`.claude/CLAUDE.md`'s correction is still gitignored and a fresh clone does not carry it.~~ **RESOLVED 2026-09-16 (quick 260916-nst, `33f5783`): the owner chose to track the file; `.claude/*` stays ignored, `!.claude/CLAUDE.md` is versioned, and the false zustand claim is corrected. DI-28 closed.** Original note: Assigned to Phase 3 by Phase 2 and **not resolved** — overriding a deliberate `.gitignore` is the repository owner's call, and Phase 3 held the same line Phase 2 did. It has now crossed two phases undecided. DI-28, owner: the phase owner.
+- Owner actions before any push to main: countersign the Upstash pins, provision Upstash and set RATE_LIMIT_REQUIRE_DISTRIBUTED=true, read-only onboarding count (A6); see Phase 5 PHASE-5-COMPLETION.md section 8
 
 ### Quick Tasks Completed
 
@@ -348,7 +353,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-25T06:00:40.105Z
+Last session: 2026-09-25T06:22:35.423Z
 Stopped at: Completed 05-16-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None
