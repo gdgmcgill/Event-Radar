@@ -566,3 +566,56 @@ proxy load-bearing for authz, which CONTEXT Area 1 rules out.
 **Executed by:** 05-13 (the 33 helper arms). 05-14 applies it to the two calculate-popularity arms
 when they adopt `requireRole` (their D4 rows move through `BAN_GUARDED_ARMS` then). 05-19 flips
 REFAC-11 once `BAN_GUARDED_ARMS` holds all 35.
+
+## DEC-59 — The 05-18 legitimacy checkpoint is resolved by rule on registry facts; production degrades loudly without a store
+
+**Recorded by:** the autonomous orchestrator, 2026-09-25, with no owner present. This is the kind of
+rule-resolved checkpoint CONTEXT Area 4 anticipates; the owner may reverse it (see "Reversing").
+
+**Part 1 — the pins.** DEC-51 asked a human to verify `@upstash/ratelimit@2.1.0` and
+`@upstash/redis@1.38.4` before install, or to choose the ">30 days" fallback. The registry facts,
+read on 2026-09-25 without installing anything:
+
+| Package | Version | Published | Age (days) | Maintainers | Install scripts |
+|---|---|---|---|---|---|
+| `@upstash/ratelimit` | 2.1.0 (proposed) | 2026-09-14 | 10 | Upstash org accounts (`*@upstash.com`, `upstashnpm`) | none |
+| `@upstash/ratelimit` | **2.0.8 (chosen)** | 2026-01-12 | 255 | same | none |
+| `@upstash/ratelimit` | 2.2.0 (latest) | 2026-09-23 | 1 | same | — |
+| `@upstash/redis` | 1.38.4 (proposed) | 2026-09-04 | 20 | Upstash org accounts | none |
+| `@upstash/redis` | **1.38.2 (chosen)** | 2026-08-04 | 51 | same | none |
+| `@upstash/redis` | 1.39.0 (latest) | 2026-09-21 | 3 | same | — |
+| `@upstash/core-analytics` | 0.0.10 (transitive) | 2024-07-19 | 797 | Upstash org accounts | none |
+
+The research's [SUS] reason was the one-to-two-day age of the *latest* tags; the proposed pins were
+already older, and the chosen pins satisfy the research's own 30-day rule. `@upstash/ratelimit@2.0.8`
+peer-depends on `@upstash/redis@^1.34.3`, which 1.38.2 satisfies (1.38.3 is 29 days old, one short).
+No package declares an `install`/`postinstall` script; the dependency graph is `core-analytics` and
+`uncrypto` only. Verdict, in the checkpoint's own vocabulary: **"use 2.0.8"** — install
+`@upstash/ratelimit@2.0.8` and `@upstash/redis@1.38.2`, exact. The human countersignature is carried
+as a human-verify item in the completion note; nothing about the install is irreversible.
+
+**Part 2 — production without a store.** DEC-50 required the Upstash variables at boot when
+`VERCEL_ENV` is `production`. 05-04 measured that on Next 16.3.5 a failed boot check means every
+request answers 500, and Vercel deploys `main` automatically, so a push before the owner provisions
+Upstash (DI-42) would take production down because of a *rate limiter*. Rate limiting is not an
+authorization control (DEC-50 already says availability wins on a store timeout). Decision: in
+production with no store configured, the boot check logs one error naming the four variable names and
+the request path degrades to the per-instance memory store — today's behaviour — and the
+`getRateLimitStore()` selection is observable (the Phase 6 health route reports it). The fail-closed
+boot that DEC-50 intended is available by opting in: `RATE_LIMIT_REQUIRE_DISTRIBUTED=true` makes a
+missing store a boot failure. DI-42 gains that variable as the second step after provisioning.
+
+**Alternatives rejected.** (a) Stopping the autonomous run at the checkpoint: the plan's gate exists
+to make a human read the facts before install; the facts are recorded above and the install is a
+lockfile diff reversible by `npm uninstall`, so blocking phases 5–8 on it is disproportionate.
+(b) Approving the proposed 2.1.0/1.38.4: legitimate on the facts, but the older pins cost nothing and
+satisfy the research's rule. (c) Keeping the hard boot requirement: an outage risk with no security
+benefit.
+
+**Reversing this decision.** `npm uninstall @upstash/ratelimit @upstash/redis`, delete
+`src/server/ratelimit/upstashStore.ts` and its tests, restore `getRateLimitStore()` to the memory
+store — REFAC-18 then reverts to PARTIAL (DI-42's reject path). To restore DEC-50's hard boot
+requirement, set `RATE_LIMIT_REQUIRE_DISTRIBUTED=true` in the production environment.
+
+**Executed by:** 05-18 (records the verdict verbatim at the end of `evidence/upstash-legitimacy.txt`,
+installs the chosen pins, implements the degrade-loudly selection with the opt-in enforcement).
