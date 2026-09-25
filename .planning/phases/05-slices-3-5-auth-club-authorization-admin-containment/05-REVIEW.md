@@ -1,438 +1,330 @@
 ---
 phase: 05-slices-3-5-auth-club-authorization-admin-containment
-reviewed: 2026-09-25T06:34:50Z
+reviewed: 2026-09-25T20:31:56Z
 depth: standard
-files_reviewed: 88
+iteration: 2
+files_reviewed: 28
 files_reviewed_list:
   - scripts/pgtap-mutation-check.sh
-  - src/app/admin/layout.tsx
-  - src/app/api/admin/calculate-popularity/route.ts
   - src/app/api/admin/clubs/[id]/route.ts
   - src/app/api/admin/events/[id]/edits/route.ts
   - src/app/api/admin/events/[id]/status/route.ts
   - src/app/api/admin/organizer-requests/[id]/route.ts
-  - src/app/api/admin/organizers/route.ts
   - src/app/api/admin/reports/[id]/route.ts
-  - src/app/api/admin/reports/route.ts
   - src/app/api/admin/users/[id]/ban/route.ts
   - src/app/api/admin/users/[id]/route.ts
-  - src/app/api/clubs/[id]/analytics/route.ts
   - src/app/api/clubs/[id]/appeal/route.ts
-  - src/app/api/clubs/[id]/events/route.ts
-  - src/app/api/clubs/[id]/follow/route.ts
-  - src/app/api/clubs/[id]/invites/route.ts
   - src/app/api/clubs/[id]/members/role/route.ts
-  - src/app/api/clubs/[id]/members/route.ts
   - src/app/api/clubs/[id]/route.ts
   - src/app/api/clubs/[id]/transfer/route.ts
-  - src/app/api/clubs/banner/route.ts
-  - src/app/api/clubs/logo/route.ts
   - src/app/api/clubs/route.ts
-  - src/app/api/events/[id]/analytics/route.ts
   - src/app/api/events/[id]/appeal/route.ts
-  - src/app/api/events/[id]/friends/route.ts
   - src/app/api/events/[id]/invite/route.ts
   - src/app/api/events/[id]/report/route.ts
-  - src/app/api/events/[id]/reviews/route.ts
-  - src/app/api/events/[id]/route.ts
-  - src/app/api/events/[id]/rsvp/route.ts
-  - src/app/api/events/[id]/save/route.ts
   - src/app/api/events/create/route.ts
-  - src/app/api/events/following/route.ts
-  - src/app/api/events/friends-activity/route.ts
-  - src/app/api/events/friends-organizing/route.ts
-  - src/app/api/events/upload-image/route.ts
-  - src/app/api/feedback/route.ts
-  - src/app/api/interactions/route.ts
-  - src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts
-  - src/app/api/notifications/[id]/route.ts
-  - src/app/api/notifications/route.ts
-  - src/app/api/onboarding/complete/route.ts
   - src/app/api/organizer-requests/route.ts
-  - src/app/api/profile/avatar/route.ts
-  - src/app/api/profile/banner/route.ts
-  - src/app/api/profile/inferred-tags/route.ts
-  - src/app/api/profile/interests/route.ts
-  - src/app/api/recommendations/batch/route.ts
-  - src/app/api/recommendations/feedback/route.ts
-  - src/app/api/user/engagement/route.ts
   - src/app/api/users/[id]/follow/route.ts
-  - src/app/api/users/[id]/route.ts
-  - src/app/api/users/me/suggestions/route.ts
-  - src/app/auth/callback/route.ts
-  - src/app/auth/signout/route.ts
-  - src/app/moderation/audit-log/page.tsx
-  - src/app/moderation/layout.tsx
-  - src/app/moderation/page.tsx
-  - src/app/users/[id]/page.tsx
   - src/instrumentation.ts
-  - src/lib/audit.ts
-  - src/lib/ban.ts
   - src/lib/env.ts
-  - src/lib/roles.ts
-  - src/lib/supabase/client.ts
-  - src/lib/supabase/server.ts
-  - src/lib/supabase/service.ts
-  - src/lib/supabase/types.ts
-  - src/middlewareRateLimit.ts
+  - src/lib/sanitize.ts
   - src/proxy.ts
-  - src/server/authz/requireActiveUser.ts
-  - src/server/authz/requireClubRole.ts
-  - src/server/authz/requireOnboarded.ts
-  - src/server/context.ts
-  - src/server/csrf.ts
-  - src/server/db/elevated/index.ts
+  - src/server/body.ts
+  - src/server/db/elevated/REGISTRY.md
   - src/server/ratelimit/index.ts
-  - src/server/ratelimit/memoryStore.ts
-  - src/server/ratelimit/policy.ts
-  - src/server/ratelimit/types.ts
-  - src/server/ratelimit/upstashStore.ts
-  - supabase/migrations/20260923120000_events_insert_club_scope.sql
-  - supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
-  - supabase/tests/database/050-users-privilege-escalation.test.sql
-  - supabase/tests/database/055-admin-audit-log-insert.test.sql
-  - supabase/tests/database/060-club-tenant-isolation.test.sql
+  - supabase/migrations/20260925120000_events_guard_moderated_update.sql
+  - supabase/tests/database/065-events-moderated-update.test.sql
 findings:
-  critical: 2
-  warning: 10
-  info: 15
-  total: 27
+  critical: 0
+  warning: 8
+  info: 26
+  total: 34
 status: issues_found
 ---
 
-# Phase 5: Code Review Report
+# Phase 5: Code Review Report (iteration 2, re-review of the REVIEW-05 fixes)
 
-**Reviewed:** 2026-09-25T06:34:50Z
+**Reviewed:** 2026-09-25T20:31:56Z
 **Depth:** standard
-**Files Reviewed:** 88
+**Files Reviewed:** 28 (the files commits `21d01a6..HEAD` changed)
 **Status:** issues_found
 
 ## Narrative Findings (AI reviewer)
 
 ## Summary
 
-I reviewed every file in scope against the intended behaviour changes in `evidence/PHASE-5-COMPLETION.md`, and did not report any of them as regressions. The guard seam holds up well. `requireUser`, `requireActiveUser`, `requireOnboarded`, `requireRole` and `requireClubRole` all fail closed. Every admin arm in scope opens with `requireActiveUser` and then `requireRole(ctx, "admin")`. Every elevated write I traced runs after its gate. No handler takes identity from the request body where it matters: `rsvp` compares the body id to `ctx.user`, and the recommendation-feedback fallback is dead code, as DI-44 already records.
+I checked every original finding against the code as it is now, not against `05-REVIEW-FIX.md`. For each one I asked two things: is it actually fixed, and did the fix add a new bug or a fail-open path. Two facts were checked on the local stack, each inside a rolled-back transaction: Postgres cannot infer a partial unique index in `ON CONFLICT`, and uuid comparison ignores case.
 
-The two blockers are both in areas this phase claims to have closed:
+**Verdict on the original findings**
 
-1. **CR-01.** The events INSERT policy (F-008) can be bypassed through the untouched `events` UPDATE policy. A creator inserts a pending event, then PATCHes `status` and `club_id` directly through PostgREST. The same hole lets a creator reverse admin suspensions and rejections, and skip the title/image moderation. No pgTAP row covers it.
-2. **CR-02.** Building the Upstash store can throw before the proxy's `try` block. One malformed or whitespace-padded Upstash URL then makes every request, pages included, answer 500. The boot check still passes, because it only checks that the variables are present. This contradicts the "availability over limiting" contract the store documents.
+| ID | Verdict | Notes |
+|---|---|---|
+| CR-01 | **Fixed** | `SECURITY INVOKER` plus `current_user` is the right discriminator. PostgREST runs `SET LOCAL ROLE authenticated` (or `anon`, or `service_role`) for each request, so `current_user` is the API role, and under DEFINER it would always be `postgres`. No SECURITY DEFINER function updates `events`, so no caller slips past the guard through an owner-run path. `is_admin()` and `is_club_member()` are both SECURITY DEFINER, granted to authenticated and anon, and keyed on `auth.uid()`. The appeal route's write (`status: pending`, `appeal_count + 1`) passes, and so do the PATCH, the soft DELETE and every admin write. `EDITABLE_FIELDS` carries no guarded column. `appeal_count` is `NOT NULL`, so there is no NULL bypass of the `<`/`<>` checks. One residual: the appeal arm does not *require* the increment (WR-02). |
+| CR-02 | **Fixed** | Values are trimmed. `upstashConfigProblem()` mirrors the client's URL regex and also requires `https:`. `select()` cannot throw, since both the problem arm and the constructor `catch` fall back to memory. The proxy's limiter call has its own fail-open `try`, and a 429 still passes through. The boot check throws `InvalidEnvError` under `RATE_LIMIT_REQUIRE_DISTRIBUTED=true` and names the variables, not the value, and `register()` rethrows it. Minor residuals are in IN-05. |
+| WR-01 | **Fixed** | Only `title` and `image_url` are copied, via `hasOwnProperty`. A residual TOCTOU is in IN-07. |
+| WR-02 | **Partially fixed** | The self-transfer guard compares strings. A non-canonical encoding of the caller's own UUID gets past it, and the promotion's row count is not checked (WR-01 below). The rollback and audit parts are fixed. |
+| WR-03 | **Fixed** | `.eq("club_id").neq("role","owner")` plus `.single()`, and PGRST116 maps to 409. |
+| WR-04 | **Accepted skip** | Listed as IN-01, owner DI-61. |
+| WR-05 | **Fixed** | `isBanned()` is used, with `ban_expires_at` selected. |
+| WR-06 | **Fixed** | Both traps are installed after the clean check, and the EXIT trap keeps the original status. A minor SIGTERM residual is in IN-06. |
+| WR-07 | **Fixed** | The conditional `UPDATE … WHERE status = 'pending'` is race-safe under READ COMMITTED: the second writer re-checks the updated row and matches nothing. 409 is returned before any side effect. |
+| WR-08 | **Mostly fixed** | `readJsonObject()` rejects nothing a handler previously accepted with a success, apart from a top-level array body. That was previously a no-op 200 at most, for example `admin/users/[id]` with `[]`. `admin/users/[id]/ban` was not converted and still throws an HTML 500 on a `null` body (WR-08 below). Field-level typing (DI-64) is IN-02. |
+| WR-09 | **Fixed** | PATCH requires an absolute http(s) URL on all six link fields and a string or null on every field. POST refuses non-http(s) schemes. The asymmetry that remains is IN-04. |
+| WR-10 | **Fixed, with new defects** | All three inserts use the elevated door, and each runs after that handler's own authorization decision. But delivering notifications for real exposed four problems: invite batches fail wholesale on the dedup index (WR-03), invite has no event-visibility gate (WR-04), follow notifies on every repeat call (WR-05), and the club fanout is fire-and-forget on serverless (WR-06). The same dedup index also breaks the admin approval notification in a file in scope (WR-07). |
 
-The warnings cover:
-
-- admin approval of pending edits copying arbitrary keys onto the event
-- the club ownership transfer, which a self-transfer can leave with no owner
-- unscoped elevated writes
-- per-path rate-limit keys, which do not bound a stolen admin session
-- the pgTAP mutation harness leaving migrations mutated if interrupted
-- notification writes that silently fail on the cookie client
-
-## Critical Issues
-
-### CR-01: F-008 is still bypassable at the RLS ring via the unchanged `events` UPDATE policy (and admin moderation is reversible by the creator)
-
-**File:** `supabase/migrations/20260923120000_events_insert_club_scope.sql:111-135` (no UPDATE counterpart); baseline policy `supabase/migrations/20260915214553_baseline.sql:2157`; missing coverage in `supabase/tests/database/060-club-tenant-isolation.test.sql`
-
-**Issue:** The migration restricts INSERT so that only a member of an approved club can insert `status = 'approved'`. But the baseline policy `"Organizers can update own events" FOR UPDATE TO authenticated USING (auth.uid() = created_by) WITH CHECK (auth.uid() = created_by)` has no column or transition limit. `events` also still has `GRANT ALL … TO authenticated`. Any signed-in user can therefore, with their own anon-key JWT:
-
-1. `POST /rest/v1/events {"title":…,"created_by":"<me>","status":"pending","club_id":"<victim club>"}`. DEC-42 allows this, and 060 test 7 pins it as allowed.
-2. `PATCH /rest/v1/events?id=eq.<that id> {"status":"approved"}`. USING and WITH CHECK only compare `created_by`, so the update passes.
-
-The result is exactly what F-008 describes: an approved event published under a club the caller does not belong to, with no moderation.
-
-The same policy also lets a creator:
-
-- set `status` from `suspended` or `rejected` back to `approved`, undoing admin moderation done through `admin/events/[id]/status`;
-- clear `deleted_at` on an event an admin or club member soft-deleted;
-- write `title` and `image_url` directly, skipping the `MODERATED_FIELDS` / `pending_edits` flow in `src/app/api/events/[id]/route.ts:258-268`;
-- move an approved event into another club with `club_id`.
-
-The completion note's "a forged or cross-club approved event is refused by the database" is therefore not true of the ring as built. Nothing in 060 exercises UPDATE on `events`.
-
-**Fix:** Add a fix-forward migration with a BEFORE UPDATE trigger that stops non-admin callers from changing moderated columns. The one transition the appeal route needs (rejected or suspended → pending) stays allowed. Then add 060 rows for each denied transition (42501) and for the permitted appeal reset.
-
-```sql
-CREATE OR REPLACE FUNCTION public.events_guard_moderated_update()
-  RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path = '' AS $$
-BEGIN
-  IF (SELECT auth.role()) = 'authenticated' AND NOT public.is_admin() THEN
-    IF NEW.status IS DISTINCT FROM OLD.status
-       AND NOT (OLD.status IN ('rejected','suspended') AND NEW.status = 'pending') THEN
-      RAISE EXCEPTION 'events.status is moderated' USING ERRCODE = '42501';
-    END IF;
-    IF NEW.club_id IS DISTINCT FROM OLD.club_id
-       OR (OLD.deleted_at IS NOT NULL AND NEW.deleted_at IS NULL) THEN
-      RAISE EXCEPTION 'events.club_id / undelete is moderated' USING ERRCODE = '42501';
-    END IF;
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE TRIGGER events_guard_moderated_update BEFORE UPDATE ON public.events
-  FOR EACH ROW EXECUTE FUNCTION public.events_guard_moderated_update();
-```
-
-Also decide whether direct `title` and `image_url` writes on an approved event should be refused unless the caller is a member of the event's club, to match the handler's `needsModeration` rule. Record the decision.
-
-### CR-02: A malformed Upstash URL makes the proxy throw outside its `try`, so every request (pages included) answers 500 while the boot check passes
-
-**File:** `src/proxy.ts:64`; `src/server/ratelimit/index.ts:34-47`; `src/server/ratelimit/upstashStore.ts:43-45`; `src/lib/env.ts:114-145`; `src/instrumentation.ts:76-80`
-
-**Issue:** The proxy's first statement, `applyRateLimit(request, getRateLimitStore())`, sits outside the `try/catch`. `getRateLimitStore()` builds `new UpstashRateLimitStore(config)`, which calls `new Redis({ url, token })`. `@upstash/redis` throws `UrlError` synchronously when the URL does not match `/^https?:\/\/[^\s#$./?].\S*$/` (`node_modules/@upstash/redis/nodejs.js:136-138`). Two things make that likely:
-
-- `upstashConfig()` checks the variables with `present()`, which trims, but returns the untrimmed values.
-- The boot check only asks whether a pair is present.
-
-So any of the following passes `register()`:
-
-- a value with a trailing space or newline, a common paste artefact;
-- a `rediss://…` TCP URL copied instead of the REST URL;
-- the Marketplace's `KV_URL` value pasted into `KV_REST_API_URL`.
-
-Once one of those is set:
-
-- every proxy invocation throws;
-- `selected` is never assigned, so the throw repeats on every request;
-- Next answers every matched route with a 500, including `/` and the landing page.
-
-The module's own contract says the opposite: "A store outage therefore slows no request by more than a second and fails none" (`upstashStore.ts:16-21`). Owner action (a)(2) walks the owner directly onto this path before the first push.
-
-**Fix:** Trim and validate in `upstashConfig()`, refuse at boot, and make selection unable to throw at request time:
-
-```ts
-// env.ts
-const url = upstashUrl?.trim(); const token = upstashToken?.trim();
-if (url && token) {
-  if (!/^https:\/\/\S+$/.test(url)) throw new InvalidEnvError("UPSTASH_REDIS_REST_URL", "an https REST URL");
-  return { url, token };
-}
-// index.ts select()
-try { selected = { kind: "upstash", store: new UpstashRateLimitStore(config) }; }
-catch (err) {
-  console.error("[RateLimit] Upstash store construction failed; using memory store", err);
-  selected = { kind: "memory", store: memoryStore };
-}
-```
-
-Also move the rate-limit call inside the proxy's `try`, or give it its own fail-open `try`, so that no rate-limit fault can ever answer 500.
+Nothing reaches BLOCKER. The new warnings are all in the paths the fixes turned on or narrowed.
 
 ## Warnings
 
-### WR-01: Approving pending edits copies every key the creator stored in `pending_edits` onto the event, with admin privileges
+### WR-01: The self-transfer guard can be bypassed with a non-canonical UUID, and the promotion's row count is never checked; both still leave the club with no owner
 
-**File:** `src/app/api/admin/events/[id]/edits/route.ts:64-79`
+**File:** `src/app/api/clubs/[id]/transfer/route.ts:43, 51-56, 70-85`
+**Issue:**
 
-**Issue:** `liveUpdates` is built from every key in `pending_edits` except `submitted_at`. The handler only writes `title` and `image_url` into `pending_edits`, but the creator can write the column directly through PostgREST under the same UPDATE policy as CR-01. An example payload is `{"title":"x","created_by":"<victim>","club_id":"<other club>","status":"approved"}`. When an admin clicks "approve edits", the update runs on the admin's cookie client under "Admins can update any event". Every key is applied, including a `created_by` reassignment that the creator's own WITH CHECK would refuse. The audit row's `approved_fields` would list the forged keys, but the moderation UI may not show them.
+*The guard.* `newOwnerId === user.id` is a JavaScript string comparison. The lookup `.eq("user_id", newOwnerId)` casts to `uuid` in Postgres, and that cast ignores case and formatting. I verified on the local stack that `'ABCDEF00-…'::uuid = 'abcdef00-…'::uuid` is true. Postgres also accepts brace-wrapped and unhyphenated forms. So `{"newOwnerId": "<caller id in upper case>"}` passes the WR-02 guard, and the rest runs exactly as the original finding described:
 
-**Fix:** Whitelist the moderated fields:
+1. `targetMember` is the caller's own owner row.
+2. The promotion does nothing.
+3. The demotion turns that same row into `organizer`.
+4. The club has no owner, and only an admin can recover it.
 
-```ts
-const MODERATED = ["title", "image_url"] as const;
-for (const key of MODERATED) if (key in pendingEdits) liveUpdates[key] = pendingEdits[key];
-```
+*The promotion.* The promotion `.update({role:"owner"}).eq("id", targetMember.id)` never checks whether it matched a row. Suppose the target leaves between the cookie-client read and the elevated write (`DELETE /api/clubs/[id]/members` exists). The promotion then matches 0 rows with no error, the demotion runs anyway, and the club again has no owner.
 
-### WR-02: Transferring ownership to yourself leaves the club with no owner; the rollback restores the wrong role; the audit write is unchecked
-
-**File:** `src/app/api/clubs/[id]/transfer/route.ts:32-91`
-
-**Issue:** A self-transfer runs as follows:
-
-1. With `newOwnerId === user.id`, `targetMember` is the caller's own owner row.
-2. Line 58 sets it to `owner`, which changes nothing.
-3. Lines 69-73 demote `(clubId, user.id)`, the same row, to `organizer`.
-4. The club now has no owner, so every owner-gated route (PATCH, DELETE, invites, members, role, transfer) answers 403. Only an admin can recover it.
-
-The elevated door made this reachable: F-087 and DEC-41 now route the write through it, and it used to 500. Two smaller problems:
-
-- The rollback on line 77-80 sets the target back to `owner` rather than to its original `targetMember.role`. A failed demotion therefore leaves two owners.
-- The audit insert on lines 85-91 ignores its error, unlike the DELETE arm. That contradicts F-073's "never silent".
-
-**Fix:** Refuse `newOwnerId === user.id` with a 400 before any write. Roll back to `targetMember.role`. Check and log the audit `error` as `clubs/[id]` DELETE does. Better still, do the swap in a single SQL function inside one transaction.
-
-### WR-03: Elevated role write in `members/role` is not scoped to the club or to non-owner rows, and the endpoint is a functional no-op
-
-**File:** `src/app/api/clubs/[id]/members/role/route.ts:32-68`
-
-**Issue:** The service-role update filters only on `.eq("id", memberId)`. The club scope and the "not the owner" rule rest on an earlier read on the cookie client, which is a check-then-act on an RLS-bypassing write. For example, a transfer that lands between the read and the write gets its new owner demoted to organizer, and the club ends up ownerless. Separately, the guard admits only `role === "organizer"`, and `CLUB_ROLES` is `owner | organizer`. Since the target can never be the owner, it is always already an organizer, so the route can only perform a no-op.
-
-**Fix:** Scope the elevated write so it cannot touch an owner or another club's row:
+**Fix:** Compare identities the database returned, and require that the promotion changed exactly one row:
 
 ```ts
-.update({ role }).eq("id", memberId).eq("club_id", clubId).neq("role", "owner")
+const { data: targetMember } = await supabase
+  .from("club_members").select("id, role, user_id")
+  .eq("club_id", clubId).eq("user_id", newOwnerId).single();
+if (!targetMember) return /* 400 */;
+if (targetMember.user_id === user.id || targetMember.role === "owner") {
+  return NextResponse.json({ error: "You already own this club" }, { status: 400 });
+}
+const { data: promoted, error: newOwnerError } = await serviceClient
+  .from("club_members").update({ role: "owner" })
+  .eq("id", targetMember.id).eq("club_id", clubId).neq("role", "owner")
+  .select("id");
+if (newOwnerError) return /* 500 */;
+if (!promoted || promoted.length !== 1) return /* 409, before the demotion */;
 ```
 
-Then check that exactly one row changed. Decide whether this route should exist at all while there is only one non-owner role.
+The single-transaction SQL function (DI-62) remains the durable fix.
 
-### WR-04: Rate-limit keys include the full pathname, so the admin budget does not bound a stolen admin session or script, and `x-real-ip` is trusted unconditionally
+### WR-02: The trigger's appeal arm does not require `appeal_count` to rise, so a creator can send a rejected event back to the ordinary pending queue with no appeal on record
 
-**File:** `src/server/ratelimit/policy.ts:45-56, 81-92, 123`
+**File:** `supabase/migrations/20260925120000_events_guard_moderated_update.sql:111-125`
+**Issue:** `v_is_appeal` admits any `rejected|suspended → pending` update, and the counter check only refuses a *decrease*, or a change outside an appeal. A creator can therefore skip `POST /api/events/[id]/appeal` and send `PATCH /rest/v1/events?id=eq.<id> {"status":"pending"}` directly. In one statement they can also rewrite `title`, `image_url` and `description`, since the title guard only covers `OLD.status = 'approved'`. The result:
 
-**Issue:** The key is `${method}:${pathname}:${ip}`, so every id-bearing path gets its own bucket. A script holding an admin cookie can call `POST /api/admin/users/<id>/ban` at 120 per minute for each user id, with no cap across ids. That contradicts the ADMIN_BUDGETS rationale ("bounds a stolen admin session or a runaway script"). The same applies to public writes such as `/api/events/<id>/report` and `/api/users/<id>/follow`.
+- no `moderation_reviews` appeal row is written;
+- `appeal_count` is unchanged;
+- no admin notification is sent;
+- the moderation dashboard sorts appeals with `.gt("appeal_count", 0)` (`src/app/moderation/page.tsx:69,74`), so a previously rejected event reappears as a first-time pending submission, with its rejection history out of view;
+- this can be repeated without limit.
 
-`clientIp` also prefers `x-real-ip` on every deployment. Off Vercel (local `next start`, the Playwright harness, any self-host), that header is client-supplied, so a caller can rotate it and get a fresh bucket on every request.
+pgTAP 065 pins only the `+1` case (rows 22 and 23), and no row covers the unchanged-counter appeal.
 
-**Fix:** Add a second, coarser bucket per IP and scope (for example `admin-mutation:${ip}`, 300 per minute) checked alongside the per-path bucket. Read `x-real-ip` only when `process.env.VERCEL === "1"`, and otherwise fall back to the socket or first-hop address.
+**Fix:** Make the increment part of the permitted transition, and add a 065 row that asserts `SET status = 'pending'` alone throws 42501:
 
-### WR-05: An admin cannot re-ban a user whose temporary ban has expired
+```sql
+IF v_is_appeal AND NEW.appeal_count <> OLD.appeal_count + 1 THEN
+  RAISE EXCEPTION 'events: an appeal must raise appeal_count by exactly one'
+    USING ERRCODE = '42501';
+END IF;
+```
 
-**File:** `src/app/api/admin/users/[id]/ban/route.ts:84-90`
+Optionally, also forbid moderated-field changes inside the appeal statement, so the content an admin rejected is the content they re-review.
 
-**Issue:** The "already banned" check is `if (targetUser.banned_at)`. Expiry never clears `banned_at`, since only the DELETE arm does. After a 7-day ban lapses, `isBanned()` is false and the user is active again, but a new ban returns 409 "User is already banned" until an admin first "unbans" a user who is not banned.
+### WR-03: The invite notification batch fails as a whole whenever one invitee already has an `event_invite` notification for that event
 
-**Fix:** Select `ban_expires_at` too and test `isBanned(targetUser)` from `@/lib/ban` instead of the raw column.
+**File:** `src/app/api/events/[id]/invite/route.ts:86-107`
+**Issue:** The fix notifies "only the newly inserted invites", on the grounds that `notifications_dedup_idx` would refuse a repeat. But that index is `(user_id, event_id, type)`. It does not include the inviter, while `event_invites` is unique on `(inviter_id, invitee_id, event_id)`. Two cases produce a new invite row whose notification collides with an existing one:
 
-### WR-06: The pgTAP mutation harness has no signal trap, so an interrupted run leaves a security policy commented out in a migration
+- inviter B invites X after inviter A already invited X to the same event;
+- A re-invites X after X deleted the invite ("Users can delete invites sent to them") but kept the notification.
 
-**File:** `scripts/pgtap-mutation-check.sh:84, 240-281`
+A multi-row `INSERT` is atomic, so a single 23505 drops every notification in the batch. If B invites `[X, Y]`, Y is never notified either. The route still answers `{ sent: 2 }`, and only a log line records the failure.
 
-**Issue:** The script rewrites migrations in place, for example commenting out `"Users can update own profile"` or `"Authenticated users can insert events"`. It restores them only in the normal loop body, via `git checkout --` at line 281. `set -e` is off by design and no `trap` exists. A Ctrl-C, a terminal close, or a CI timeout during the roughly 2N+1 `db reset` rounds therefore leaves a migration with its policy removed, and the end-of-run clean check (lines 313-319) never runs. Any later `db push` or commit of that tree ships the table without its policy.
+**Fix:** Do not let one row fail the batch. Either:
+
+- insert through a SQL function that uses `ON CONFLICT DO NOTHING`, since PostgREST's `on_conflict` cannot target the partial index (see WR-07); or
+- insert per invitee with `Promise.allSettled`; or
+- first read the existing `event_invite` notifications for `(event_id, user_id IN newlyInvited)` on the elevated client, and insert only the remainder.
+
+### WR-04: The invite route's elevated notification has no event-visibility gate: it delivers unmoderated pending titles and notifications for events the caller cannot see
+
+**File:** `src/app/api/events/[id]/invite/route.ts:46-61, 91-107`
+**Issue:** The only authorization before the elevated insert is "invitee is a mutual friend". The event read (line 47) does not check `status` or `deleted_at`, and its result is used only for the title. Now that the insert goes through the service role, two things are newly possible:
+
+- A creator can invite friends to their own **pending or rejected** event. The notification text `${inviterName} invited you to "${eventTitle}"` then carries a title no admin has approved. That bypasses moderation through the notification channel, which is the same class of problem CR-01 closed on the event row.
+- Any user can post an arbitrary `eventId`: someone else's pending event, or a soft-deleted one. The FK is satisfied, the invite row is written, and friends get an "an event" notification pointing at an event they cannot open.
+
+**Fix:** Before inserting invites, require a visible, live, approved event, and answer 404 otherwise:
+
+```ts
+const { data: event } = await supabase.from("events").select("title")
+  .eq("id", eventId).eq("status", "approved").is("deleted_at", null).maybeSingle();
+if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
+```
+
+### WR-05: Every repeated `POST /api/users/[id]/follow` now delivers another notification to the target
+
+**File:** `src/app/api/users/[id]/follow/route.ts:31-36, 67-102`
+**Issue:** The follow write is an upsert with `ignoreDuplicates: true`, so a repeat call succeeds whether or not a row was inserted. The notification insert then runs unconditionally. Rows without an `event_id` fall outside `notifications_dedup_idx`, so nothing dedups them. Before WR-10 these inserts always failed silently. Now they go through the service role and are delivered. A caller who is already following someone can therefore send "X started following you" (or, once friends, two "New Friend!" rows) on every call, up to the per-path rate limit. The per-path key (WR-04 / DI-61) means that limit is not a meaningful cap per target.
+
+**Fix:** Notify only when the follow row is new:
+
+```ts
+const { data: inserted, error } = await supabase.from("user_follows")
+  .upsert({ follower_id: user.id, following_id: targetId },
+          { onConflict: "follower_id,following_id", ignoreDuplicates: true })
+  .select("id");
+if (error) return /* 500 */;
+const isNewFollow = (inserted?.length ?? 0) > 0;
+// … build notifications only when isNewFollow
+```
+
+### WR-06: The club-follower fanout is fire-and-forget and can be dropped on serverless
+
+**File:** `src/app/api/events/create/route.ts:198-245` (`fanout();` with no `await`)
+**Issue:** The fanout now does real work: two cookie reads and an elevated insert. But it runs as a detached promise after the handler has returned its response. On Vercel, the function instance can be frozen or reclaimed once the response is sent, so the elevated insert may never run and nothing is logged. The WR-10 fix claims the fanout now delivers, but it does so only when the instance stays warm long enough. The gate itself is correct: the fanout runs only when `status === "approved"`, which requires admin or membership of an approved club.
+
+**Fix:** Schedule it with Next's post-response API, which the platform keeps alive (`node_modules/next/server.d.ts` exports `after`):
+
+```ts
+import { after } from "next/server";
+// …
+after(fanout);
+```
+
+### WR-07: Every admin "Event Approved!" notification fails with 42P10, and a re-rejection or re-suspension after an appeal is silently deduplicated away
+
+**File:** `src/app/api/admin/events/[id]/status/route.ts:170-208`
+**Issue:**
+
+*Approvals.* The approval arm runs `.upsert(…, { onConflict: "user_id,event_id,type" })`. The only matching index, `notifications_dedup_idx`, is partial (`WHERE event_id IS NOT NULL`). PostgREST emits `ON CONFLICT (user_id, event_id, type)` with no predicate, so Postgres cannot infer the index. I verified this on the local stack in a rolled-back transaction: the statement fails with `there is no unique or exclusion constraint matching the ON CONFLICT specification`. supabase-js returns that error rather than throwing it, and nothing reads it, so no approval notification has ever been delivered and nothing is logged. `05-REVIEW-FIX.md` raised this as DI-65 "not verified". It is now verified.
+
+*Re-rejections and re-suspensions.* The `insert` arms for `event_rejected` and `event_suspended` collide with the same index when an event goes rejected → appeal → pending → rejected again, or through a second suspension. That second notification is refused (23505) and also goes unread. The CR-01 fix deliberately keeps this appeal cycle.
+
+This file is in scope (WR-08 touched it). The club arm in `src/app/api/admin/clubs/[id]/route.ts` should be checked for the same pattern.
+
+**Fix:** Read the `error` of every notification write and `console.error` it. Then choose one:
+
+- replace the partial index with a non-partial unique index or constraint, so `onConflict` can infer it (NULL `event_id` values do not collide in a plain unique index anyway);
+- drop `type` uniqueness for the moderation types;
+- write these notifications through a SQL function that uses `ON CONFLICT (user_id, event_id, type) WHERE event_id IS NOT NULL DO UPDATE …`.
+
+Add a local-stack or pgTAP check that an approval notification is actually written.
+
+### WR-08: `POST /api/admin/users/[id]/ban` still answers an HTML 500 on a `null` body
+
+**File:** `src/app/api/admin/users/[id]/ban/route.ts:25-36`
+**Issue:** This handler was not converted to `readJsonObject()`. Its own `try` only catches a parse failure, and `JSON.parse("null")` succeeds. `const { reason, duration_days, suspend_content } = body` then throws `TypeError` outside any `try`, and the framework answers an HTML 500 with no context. That is exactly the class WR-08 set out to close, and this file was edited in this iteration (WR-05).
 
 **Fix:**
 
-```bash
-restore() { git checkout -- "${MIGRATIONS[@]}"; }
-trap 'restore; exit 130' INT TERM
-trap 'restore' EXIT
+```ts
+const parsedBody = await readJsonObject(request);
+if (!parsedBody.ok) return parsedBody.response;
+const { reason, duration_days, suspend_content } = parsedBody.body;
 ```
-
-Install this right after `MIGRATIONS` is built and before the first mutation.
-
-### WR-07: Check-then-update without a conditional filter in admin review routes allows double processing
-
-**File:** `src/app/api/admin/organizer-requests/[id]/route.ts:51-65`; `src/app/api/admin/reports/[id]/route.ts:42-56`
-
-**Issue:** Both routes read `status === "pending"` and then update with only `.eq("id", id)`. Two moderators, or a double click, both pass the read. For organizer requests, that duplicates the elevated roles write (a read-modify-write that can drop a concurrently granted role), the membership upsert, the notification and the audit row. The edits route (`.not("pending_edits","is",null)` plus a row count) and the appeal routes (`.eq("status", …)`) already do this correctly.
-
-**Fix:** Add `.eq("status", "pending").select("id")` to the update and answer 409 when no row changed, before any side effect.
-
-### WR-08: Guarded handlers throw on malformed or non-object bodies and return Next's HTML 500 instead of a JSON 400
-
-**File:** `src/app/api/admin/users/[id]/route.ts:29-36, 59-61`; `src/app/api/admin/clubs/[id]/route.ts:22`; `src/app/api/admin/events/[id]/status/route.ts:22`; `src/app/api/admin/events/[id]/edits/route.ts:22`; `src/app/api/admin/organizer-requests/[id]/route.ts:21`; `src/app/api/admin/reports/[id]/route.ts:20`; `src/app/api/clubs/[id]/route.ts:195`; `src/app/api/clubs/[id]/transfer/route.ts:32`; `src/app/api/clubs/[id]/members/role/route.ts:32`; `src/app/api/clubs/route.ts:51, 121-125`; `src/app/api/organizer-requests/route.ts:17`; `src/app/api/events/[id]/appeal/route.ts:20`; `src/app/api/clubs/[id]/appeal/route.ts:20`; `src/app/api/events/[id]/report/route.ts:22`
-
-**Issue:** These arms have no surrounding `try`. Either of the following throws to the framework, which answers with an HTML 500 and no `console.error` context:
-
-- `await request.json()` on an invalid body;
-- `"roles" in body` or `body.x?.trim()` on `null`, a string, or a number.
-
-In `admin/users/[id]`, `updateData.name = body.name` also writes any JSON type through the elevated door, and name changes are not audited.
-
-**Fix:** Parse bodies with `try { body = await request.json() } catch { return badRequest("Invalid JSON body") }` and reject anything that is not a plain object. `rsvp` and `reviews` already do this. Validate `name` as a trimmed string of 2-50 characters and include it in the audit metadata.
-
-### WR-09: Club link fields accept `javascript:` and non-string values on the elevated write path
-
-**File:** `src/app/api/clubs/[id]/route.ts:96-118`; `src/app/api/clubs/route.ts:113-128`
-
-**Issue:** `new URL(value)` accepts `javascript:alert(1)`, so `website_url`, `discord_url`, `twitter_url` and `linkedin_url` pass validation. `src/app/clubs/[id]/page.tsx:247-280` renders them as `href`. `logo_url` and `banner_url` are not validated at all. Non-string values of any JSON type pass straight through `updates[field] = value` to a service-role write, and the handler's own comment calls the whitelist "the control that replaces RLS". React 19's `javascript:` URL blocking in the App Router probably stops script execution, but the server should not rely on the renderer. `events/create` already enforces `http:`/`https:` for `rsvp_link`.
-
-**Fix:** For each URL field, require `typeof value === "string"` and `["http:", "https:"].includes(new URL(value).protocol)`. Reject non-string values for every whitelisted field.
-
-### WR-10: Notifications inserted on the cookie client always fail silently
-
-**File:** `src/app/api/events/create/route.ts:213-229`; `src/app/api/events/[id]/invite/route.ts:69-87`; `src/app/api/users/[id]/follow/route.ts:66-90`
-
-**Issue:** `notifications` INSERT is `TO service_role` only (baseline line 2173, which other handlers' comments in this phase restate). These three handlers insert on `ctx.supabase` and ignore the returned `error`:
-
-- `invite` reports `{ sent: N }` even when both the invite upsert and the notifications fail;
-- the club follower fanout never delivers;
-- friend and new-follower notifications never deliver.
-
-DEC-49 moved every other cross-user notification to the elevated door and missed these three. That leaves Validated workflow 13 partially broken with nothing in the logs.
-
-**Fix:** Route these inserts through `getElevatedClient()` with a REGISTRY row, the same "Notify another user" row the admin routes use. Check `error` on both the invite upsert and the notification insert, and do not report `sent` for rows that were not written.
 
 ## Info
 
-### IN-01: The proxy matcher skips any path ending in an image extension, including `/api/**`
+### IN-01: WR-04 (per-path rate-limit keys; `x-real-ip` trusted unconditionally) — accepted skip
 
-**File:** `src/proxy.ts:241`
-**Issue:** `.*\.(?:svg|png|jpg|jpeg|gif|webp)$` is not anchored away from `/api/`, so a request like `POST /api/<segment>.png` skips both the CSRF check and the rate limiter. No state-changing route in scope takes a free-form final segment today, so this is latent.
-**Fix:** Prefix the exclusion with a negative lookahead for `api/`, or exclude only static folders.
+**File:** `src/server/ratelimit/policy.ts:45-56, 81-92, 123`
+**Issue:** This is still open by design. It is deferred to **DI-61** (proposed: Phase 6 rate-limit hardening), pending a decision on per-scope budgets and the trusted-proxy model. WR-05 above shows one concrete way the per-path key weakens a cap.
+**Fix:** Register DI-61 and resolve it in Phase 6.
 
-### IN-02: The `getRequestContext` rationale is factually wrong under the App Router
+### IN-02: A non-string value in a field a handler `.trim()`s still throws an HTML 500 (DI-64 residual)
 
-**File:** `src/server/context.ts:97-122`
-**Issue:** The App Router resolves `react` to Next's vendored canary, and `node_modules/next/dist/compiled/react/cjs/react.react-server.production.js` does export `cache`. So memoization is active in layouts, pages and `generateMetadata`. That is safe, but the comment says it never happens.
-**Fix:** Correct the comment so nobody later "fixes" behaviour on the basis of it.
+**File:** `src/app/api/events/[id]/appeal/route.ts:26`; `src/app/api/clubs/[id]/appeal/route.ts:26`; `src/app/api/admin/events/[id]/status/route.ts:68, 84`; `src/app/api/admin/clubs/[id]/route.ts:36, 51`
+**Issue:** `{"message": 5}` makes `message?.trim()` throw outside any `try`. `readJsonObject()` deliberately leaves field typing to the handlers (`src/server/body.ts:10-12`).
+**Fix:** Check `typeof message === "string"` in each handler, or add a small `readString(body, key)` helper. Track this under DI-64.
 
-### IN-03: Dead production exports
+### IN-03: `clubs/[id]` PATCH and the invite route still answer a JSON 500, not a 400, for malformed or non-object bodies
 
-**File:** `src/middlewareRateLimit.ts:37`; `src/server/ratelimit/index.ts:55`
-**Issue:** Only tests call `applyApiRateLimit`, and nothing calls `rateLimitStoreKind()`.
-**Fix:** Mark both as test and health scaffolding, or remove them.
+**File:** `src/app/api/clubs/[id]/route.ts:81` (`"name" in null` or `"name" in "str"` throws inside the `try`); `src/app/api/events/[id]/invite/route.ts:27-28`
+**Issue:** The response is JSON, so this is not a regression. But it reports a 500 ("Failed to update club" or "Failed to send invites") for what is a client error, which is inconsistent with the other 14 handlers.
+**Fix:** Adopt `readJsonObject()` in both.
 
-### IN-04: `ADMIN_PREFIX` has no trailing slash
+### IN-04: Club links: POST accepts values PATCH refuses, so the settings form cannot save
 
-**File:** `src/server/ratelimit/policy.ts:36, 107`
-**Issue:** `/api/adminfoo` would be budgeted as admin.
-**Fix:** Test `pathname === "/api/admin" || pathname.startsWith("/api/admin/")`.
+**File:** `src/app/api/clubs/route.ts:57-87`; `src/app/api/clubs/[id]/route.ts:119-137`; `src/components/clubs/ClubSettingsTab.tsx:170-181`
+**Issue:** POST keeps any unparseable link, such as `myclub.com`. PATCH requires an absolute http(s) URL, and `ClubSettingsTab` resends every link on each save. An owner who created a club with `myclub.com` therefore cannot save *any* setting until they rewrite that link. The asymmetry predates this iteration for the four social links, and WR-09 kept it deliberately.
+**Fix:** Normalize at the input, by prefixing `https://` when there is no scheme, in the form or in both handlers. Then apply `isHttpUrl` in POST too.
 
-### IN-05: The CSRF origin comparison ignores the scheme and does not normalize default ports in `Host`
+### IN-05: CR-02 residuals in store selection
 
-**File:** `src/server/csrf.ts:40-60`
-**Issue:** `http://host` passes against an https request. A `Host: example.com:443` header would not match the browser's `example.com` Origin, which would be a false 403.
-**Fix:** Compare `new URL(origin).origin` against `${proto}://${host}`, using `x-forwarded-proto`, after normalizing default ports.
+**File:** `src/lib/env.ts:139-150`; `src/server/ratelimit/index.ts:44-65`; `src/instrumentation.ts:92-113`
+**Issue:**
 
-### IN-06: The onboarding guard can be satisfied by the user with one direct call
+1. A broken `UPSTASH_*` pair shadows a valid `KV_REST_API_*` pair, so both boot and runtime drop to memory instead of using KV.
+2. The constructor-failure fallback in `select()` ignores `RATE_LIMIT_REQUIRE_DISTRIBUTED=true`. It is not reachable with today's URL check, but it would degrade silently.
+3. The token is only trimmed. Interior whitespace or newlines would surface at request time, where the failure is open.
 
-**File:** `src/app/api/users/[id]/route.ts:160-169`; `supabase/migrations/20260923130000_users_grants_audit_log_insert.sql:105`
-**Issue:** `PATCH /api/users/<me> {"onboarding_completed":true}` is exempt from the guard and sets the flag. So does PostgREST under the F-006 grant. "Cannot be bypassed by direct API calls" is true only in a narrow sense.
-**Fix:** Treat onboarding as UX, not a control, and say so in the evidence. Alternatively, set the flag only in `POST /api/onboarding/complete` after validating that interests exist, and remove the column from the grant.
+**Fix:** Try the KV pair when the Upstash pair has a problem. Validate the token as a single header-safe token. Document that the runtime fallback is best-effort.
 
-### IN-07: Raw database error messages are returned to clients
+### IN-06: WR-06 residual: the trap is deferred while `supabase db reset` runs
 
-**File:** `src/app/api/events/[id]/route.ts:106, 331, 401`; `src/app/api/events/create/route.ts:194`; `src/app/api/clubs/[id]/appeal/route.ts:69, 86`; `src/app/api/events/[id]/appeal/route.ts:74, 89`; `src/app/api/events/[id]/report/route.ts:70`; `src/app/api/organizer-requests/route.ts:56, 81`; `src/app/api/notifications/route.ts:44, 95`; `src/app/api/notifications/[id]/route.ts:32`; `src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts:55`
-**Issue:** These responses leak schema and policy detail, contrary to the convention in `src/server/errors.ts`.
-**Fix:** Log the error, then return `serverError("<action>")`.
+**File:** `scripts/pgtap-mutation-check.sh:151-161, 171`
+**Issue:** Bash runs a trap only after the foreground child (the `$(...)` reset) exits. A SIGTERM sent only to the bash PID, as a CI timeout does, therefore waits for the reset to finish, and a later SIGKILL skips the restore. Also, SIGTERM exits with 130 instead of 143.
+**Fix:** Run the reset in the background and `wait` for it, so the trap fires at once and can kill the child. Exit `128 + signal number`.
 
-### IN-08: 050 does not pin the complete UPDATE column set
+### IN-07: Approving pending edits is not bound to the version the admin reviewed
 
-**File:** `supabase/tests/database/050-users-privilege-escalation.test.sql:63-83`
-**Issue:** Only `roles`, `email`, `saved_events_count`, `banned_at` and `ban_expires_at` are asserted as denied. A later GRANT that widens to `ban_reason`, `banned_by` or `pinned_contracts` would stay green.
-**Fix:** Assert exact equality of `information_schema.column_privileges` for `grantee = 'authenticated' AND privilege_type = 'UPDATE' AND table_name = 'users'` against the eleven granted columns.
+**File:** `src/app/api/admin/events/[id]/edits/route.ts:55-94`
+**Issue:** `pending_edits` stays creator-writable, and the CR-01 trigger allows that on purpose. The approval copies whatever the column holds at request time. A creator who swaps it after an admin opened the queue gets the new values applied.
+**Fix:** Have the client send the `submitted_at` it displayed, and add `.eq("pending_edits->>submitted_at", submittedAt)` to the update. Answer 409 on no match.
 
-### IN-09: The proxy's header comment misstates how `getUser()` fails
+### IN-08: Organizer-request approval side effects are unchecked after the status commits
 
-**File:** `src/proxy.ts:21-22, 112-114`; `src/server/context.ts:80-82`
-**Issue:** `auth.getUser()` returns `{ user: null, error }` on network or auth errors. It does not reject, so an auth outage takes the anonymous path. The outcome still fails closed, because handlers return 401 and protected pages redirect, but the comment describes a throw that does not happen.
-**Fix:** Correct the comment, or check `error` and throw deliberately.
+**File:** `src/app/api/admin/organizer-requests/[id]/route.ts:101-130`
+**Issue:** The elevated roles write and the `club_members` upsert ignore their `error`. After WR-07 the request is already marked `approved`, so a failed side effect cannot be retried through the route (it returns 409). The user is left approved but has neither the role nor the membership.
+**Fix:** Check both errors and log them. Consider a SQL function that does all three writes in one transaction.
 
-### IN-10: The events appeal elevated pre-read is an existence oracle and ignores `deleted_at`
+### IN-09: The other self-checks also compare UUIDs as strings
 
-**File:** `src/app/api/events/[id]/appeal/route.ts:37-53`
-**Issue:** Any onboarded user can tell whether a rejected or suspended event id exists (403) or not (404). Soft-deleted events can also be appealed.
-**Fix:** Add `.is("deleted_at", null)`, and return 404 for both non-creator and missing.
+**File:** `src/app/api/admin/users/[id]/route.ts:56`; `src/app/api/admin/users/[id]/ban/route.ts:65`
+**Issue:** This has the same root cause as WR-01. An upper-cased own id gets past "You cannot change your own roles". The impact is limited to the admin changing their own roles. The ban self-check is also bypassed, but the admin-target 403 still holds.
+**Fix:** Canonicalize route UUIDs once (`id.toLowerCase()` after a UUID format check) in a shared helper, or compare against the row the database returned.
 
-### IN-11: The moderation reviews listing exposes admins' email local parts to creators
+### IN-10: `PATCH /api/clubs/[id]/members/role` can only rewrite organizer to organizer (DI-63)
 
-**File:** `src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts:64-72`
-**Issue:** When an admin's `name` is null, the fallback `a.email?.split("@")[0]` is sent to a non-admin creator.
-**Fix:** Fall back to "Moderator" for admin authors.
+**File:** `src/app/api/clubs/[id]/members/role/route.ts:40`
+**Issue:** The write is now correctly scoped (WR-03), but the endpoint still performs no real change.
+**Fix:** Decide under DI-63.
 
-### IN-12: `POST /auth/signout` is outside `/api/`, so the CSRF check does not cover it
+### IN-11: Two concurrent transfers by the same owner can produce two owners (DI-62)
 
-**File:** `src/app/auth/signout/route.ts:6`; `src/server/csrf.ts:49`
-**Issue:** Logout CSRF is guarded only by SameSite=Lax.
-**Fix:** Add `/auth/signout` to the origin-checked set, or record it as a Low residual next to DI-41.
+**File:** `src/app/api/clubs/[id]/transfer/route.ts:69-102`
+**Issue:** The promotion and the demotion are separate statements with no transaction and no row-count checks.
+**Fix:** Use the DI-62 single-transaction function.
 
-### IN-13: Private profiles still expose header data and counts to any signed-in non-friend
+### Carried forward from iteration 1 (out of the fixer's scope, still open)
 
-**File:** `src/app/users/[id]/page.tsx:81-178, 288-350`
-**Issue:** The elevated reads run before `canSeeDetails`. Faculty, year, pronouns, event, club and friend counts, and the Organizer badge are rendered for a private profile to any signed-in viewer. F-005 closed only the anonymous case.
-**Fix:** Confirm this matches product intent. If not, skip the elevated activity reads and the stats when `!canSeeDetails`.
+Each of these was re-checked where its file is in this iteration's scope, and all are unchanged.
 
-### IN-14: `isBanned` treats an unparseable `ban_expires_at` as not banned
-
-**File:** `src/lib/ban.ts:9`
-**Issue:** `new Date("garbage") > new Date()` is false, which is fail-open. It is only reachable through a direct database write.
-**Fix:** Return `true` when `Number.isNaN(Date.parse(user.ban_expires_at))`.
-
-### IN-15: Non-admin club owners write `admin_audit_log` rows with actions outside `AuditAction`
-
-**File:** `src/app/api/clubs/[id]/route.ts:220-226`; `src/app/api/clubs/[id]/transfer/route.ts:85-91`
-**Issue:** `club_deleted` and `club_ownership_transferred` bypass the typed writer `logAdminAction`. Their `admin_user_id` is a club owner, so Recent Activity presents owners as moderation actors.
-**Fix:** Either extend `AuditAction` and `logAdminAction` with an actor-kind field, or log owner actions to a separate table.
+| New ID | Iter-1 ID | Summary | Where |
+|---|---|---|---|
+| IN-12 | IN-01 | The proxy matcher skips `/api/**` paths that end in an image extension, which bypasses both CSRF and the rate limit | `src/proxy.ts:252` |
+| IN-13 | IN-02 | The `getRequestContext` rationale misstates `cache` availability | `src/server/context.ts:97-122` |
+| IN-14 | IN-03 | Dead production exports: `applyApiRateLimit`, `rateLimitStoreKind` | `src/middlewareRateLimit.ts:37`; `src/server/ratelimit/index.ts:80` |
+| IN-15 | IN-04 | `ADMIN_PREFIX` has no trailing slash | `src/server/ratelimit/policy.ts:36, 107` |
+| IN-16 | IN-05 | The CSRF origin check ignores the scheme and default ports | `src/server/csrf.ts:40-60` |
+| IN-17 | IN-06 | The onboarding flag can be set by the user directly | `src/app/api/users/[id]/route.ts:160-169` |
+| IN-18 | IN-07 | Raw DB error messages are returned to clients. CR-01's trigger messages now reach these paths too, for example the events PATCH 500 | `src/app/api/events/[id]/report/route.ts:73`; `src/app/api/clubs/[id]/appeal/route.ts:72, 89`; `src/app/api/events/[id]/appeal/route.ts:77, 92`; `src/app/api/organizer-requests/route.ts:59, 84`; `src/app/api/events/create/route.ts:195`; and the others listed in iteration 1 |
+| IN-19 | IN-08 | 050 does not pin the full UPDATE column set on `users` | `supabase/tests/database/050-users-privilege-escalation.test.sql:63-83` |
+| IN-20 | IN-09 | The proxy comment misstates how `getUser()` fails | `src/proxy.ts:21-22` |
+| IN-21 | IN-10 | The events appeal elevated pre-read is an existence oracle and ignores `deleted_at`. CR-01's trigger does not stop appealing a soft-deleted event either, because the appeal leaves `deleted_at` untouched | `src/app/api/events/[id]/appeal/route.ts:44-56` |
+| IN-22 | IN-11 | The moderation reviews listing exposes admins' email local parts | `src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts:64-72` |
+| IN-23 | IN-12 | `POST /auth/signout` is not covered by the CSRF check | `src/app/auth/signout/route.ts:6` |
+| IN-24 | IN-13 | Private profiles still expose header data and counts to signed-in non-friends | `src/app/users/[id]/page.tsx:81-178` |
+| IN-25 | IN-14 | `isBanned` treats an unparseable `ban_expires_at` as not banned. WR-05 now depends on it for the 409 | `src/lib/ban.ts:9` |
+| IN-26 | IN-15 | Club owners write `admin_audit_log` rows with actions outside `AuditAction` | `src/app/api/clubs/[id]/route.ts:241-247`; `src/app/api/clubs/[id]/transfer/route.ts:106-112` |
 
 ---
 
-_Reviewed: 2026-09-25T06:34:50Z_
+_Reviewed: 2026-09-25T20:31:56Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_Iteration: 2_
