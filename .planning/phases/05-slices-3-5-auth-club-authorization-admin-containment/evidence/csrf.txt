@@ -1,0 +1,248 @@
+The CSRF origin check in the proxy, its e2e flip, and the written assessment (plan 05-17 Task 2)
+**Plan:** 05-17 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-25
+
+REFAC-17, F-090, DEC-52. Base: 408064d (05-17 Task 1). The only database was the local Docker
+stack (supabase_db_Event-Radar, 127.0.0.1:54321). Supabase CLI 2.115.0. No command used the linked
+flag or the push subcommand, and no production host was read or written. Each long command ran in
+the background with its output captured to a file and a bounded wait. No interactive psql session
+was opened. Output is verbatim or marked as an excerpt. The CLI's update notice and the web
+server's "[tags] Unmapped tags" log lines are filtered out.
+
+SUMMARY
+| # | Step | Result | Verdict |
+|---|------|--------|---------|
+| 1 | csrf.test.ts before src/server/csrf.ts existed (RED) | 1 suite failed to load, 0 tests, exit 1 | tests first |
+| 2 | csrf.test.ts after | 41 passed, exit 0 | green |
+| 3 | mutation check, six source mutations | each red (7, 7, 4, 2, 2, 4 failures of 41); each restored cmp-identical | the tests bite |
+| 4 | proxy order: applyRateLimit < isCrossSiteMutation < supabaseUrl() < createServerClient( | ordered: true | placement as planned |
+| 5 | proxy PRESERVE and DEFECT suites unedited | git diff 687d332 empty; 132 targeted tests passed | unedited |
+| 6 | full Jest / tsc / lint / tag gate | 74 suites, 1397 passed / exit 0 / 0 errors / ok 34 | green |
+| 7 | reset + seed; csrf-origin + save-and-rsvp | 17 passed (10 setup + 4 + 3), exit 0; residue 0 | FIXED F-090 green |
+| 8 | fresh reset + seed; full Playwright | 91 passed, exit 0 | equal to the 05-16 floor |
+| 9 | ledger protocol step 2: the 05-12 spec unedited against the fixed proxy | 2 failed (exactly the two DEFECT tests: expected 200, received 403), 12 passed | red for the right reason |
+| 10 | ledger protocol step 4: the flipped spec against the proxy without the check | 2 failed (exactly the two FIXED tests: expected 403, received 200), 12 passed | red for the right reason |
+| 11 | reset + seed; csrf-origin + save-and-rsvp (rebuilds .next from the fixed source) | 17 passed, exit 0; residue 0 | green |
+| 12 | final reset + seed; port 3000 | reset exit 0, seed exit 0; no listener (lsof exit 1) | stack left reset and seeded |
+| 13 | no Server Actions; no prior Sec-Fetch-Site reader | `grep -rn '"use server"' src` exit 1 | route handlers had no origin check |
+
+## 1. What changed
+
+- src/server/csrf.ts (new): `isCrossSiteMutation(req)` and `crossSiteBlocked()`, with a docblock
+  citing DEC-52, F-090 and Next's Server Action origin rule. The request's host is
+  `x-forwarded-host` (first entry), else `host`, else `nextUrl.host`, lower-cased. The origin is
+  parsed with `new URL(origin).host` inside try/catch; there is no regex.
+- src/proxy.ts: immediately after the rate-limit statements, before the env reads and client
+  creation:
+      if (isCrossSiteMutation(request)) return crossSiteBlocked();
+  The docblock's first line now lists the check. PROTECTED_ROUTES stays a one-line literal and the
+  matcher is unchanged. Nothing was added between createServerClient and getUser.
+- src/server/__tests__/csrf.test.ts (new, 41 cases).
+- e2e/specs/csrf-origin.spec.ts: the two `DEFECT F-090` tests are now `FIXED F-090` and assert
+  403 `{"error":"Cross-site request blocked"}` with no saved row (a new `postAndExpectBlocked`
+  helper, with the same unsave-before and unsave-in-finally discipline). The docblock says what is
+  fixed. The two PRESERVE tests and their helper are unchanged.
+- evidence/csrf-assessment.md (new): REFAC-17's written assessment.
+- evidence/defect-ledger.md: two F-090 rows.
+
+## 2. RED, then green
+
+$ npx jest --ci src/server/__tests__/csrf.test.ts        (before src/server/csrf.ts existed)
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+exit=1
+
+$ npx jest --ci --verbose src/server/__tests__/csrf.test.ts
+  isCrossSiteMutation
+    ✓ never treats GET as a mutation, whatever the headers say (1 ms)
+    ✓ never treats HEAD as a mutation, whatever the headers say
+    ✓ never treats OPTIONS as a mutation, whatever the headers say
+    ✓ never checks a path outside /api/ (/profile)
+    ✓ never checks a path outside /api/ (/auth/signout) (1 ms)
+    ✓ never checks a path outside /api/ (/api)
+    ✓ never checks a path outside /api/ (/apix/events)
+    ✓ refuses POST /api/* with Sec-Fetch-Site: cross-site
+    ✓ refuses PUT /api/* with Sec-Fetch-Site: cross-site
+    ✓ refuses PATCH /api/* with Sec-Fetch-Site: cross-site
+    ✓ refuses DELETE /api/* with Sec-Fetch-Site: cross-site
+    ✓ refuses patch /api/* with Sec-Fetch-Site: cross-site
+    ✓ refuses Sec-Fetch-Site: cross-site even when the Origin matches
+    ✓ refuses a foreign Origin against the URL's host when no host header is set
+    ✓ refuses an Origin that differs from the host header
+    ✓ refuses an Origin on another port of the same host name
+    ✓ prefers x-forwarded-host over host: an Origin matching only host is refused
+    ✓ refuses the unparseable or opaque Origin "null"
+    ✓ refuses the unparseable or opaque Origin "not a url"
+    ✓ refuses the unparseable or opaque Origin "://" (1 ms)
+    ✓ refuses the unparseable or opaque Origin "evil.example"
+    ✓ passes a same-origin Origin against the URL's host
+    ✓ passes a same-origin Origin against the host header, case-insensitively
+    ✓ passes when x-forwarded-host names the same host as the Origin
+    ✓ passes Sec-Fetch-Site same-origin with a matching Origin
+    ✓ passes Sec-Fetch-Site none with a matching Origin
+    ✓ passes Sec-Fetch-Site same-site with a matching Origin
+    ✓ passes Sec-Fetch-Site same-origin with no Origin
+    ✓ passes Sec-Fetch-Site none with no Origin
+    ✓ refuses Sec-Fetch-Site same-site when the Origin is a sibling host
+    ✓ passes POST carrying neither Origin nor Sec-Fetch-Site (machine callers) (1 ms)
+    ✓ passes PUT carrying neither Origin nor Sec-Fetch-Site (machine callers)
+    ✓ passes PATCH carrying neither Origin nor Sec-Fetch-Site (machine callers)
+    ✓ passes DELETE carrying neither Origin nor Sec-Fetch-Site (machine callers)
+  crossSiteBlocked
+    ✓ answers 403 with the JSON error body (1 ms)
+  the proxy runs the check after the rate limiter and before session work
+    ✓ answers 403 to a cross-site POST {"origin": "https://evil.example"} without building a Supabase client (1 ms)
+    ✓ answers 403 to a cross-site POST {"sec-fetch-site": "cross-site"} without building a Supabase client
+    ✓ does not answer a missing environment first: the check needs no env
+    ✓ lets a same-origin or header-less POST {"origin": "https://uni-verse.test"} through to session work (1 ms)
+    ✓ lets a same-origin or header-less POST {} through to session work
+    ✓ answers the rate limit before the origin check (1 ms)
+Tests:       41 passed, 41 total
+exit=0
+
+A type error in the first draft of the proxy cases (two `it.each` tables inferred as a union with
+optional keys, which is not assignable to Record<string, string>) was caught by tsc. It was fixed
+by typing the tables `it.each<Record<string, string>>` before the commit.
+
+## 3. Mutation check (each restored from a copy; cmp identical)
+
+$ npx jest --ci src/server/__tests__/csrf.test.ts   per mutation
+C1 drop the Sec-Fetch-Site arm                exit=1  Tests: 7 failed, 34 passed, 41 total
+C2 block header-less callers                  exit=1  Tests: 7 failed, 34 passed, 41 total
+C3 pass a null or unparseable Origin          exit=1  Tests: 4 failed, 37 passed, 41 total
+C4 treat only GET as safe                     exit=1  Tests: 2 failed, 39 passed, 41 total
+C5 ignore x-forwarded-host                    exit=1  Tests: 2 failed, 39 passed, 41 total
+C6 remove the proxy's isCrossSiteMutation call exit=1  Tests: 4 failed, 37 passed, 41 total
+after restore: Tests: 41 passed, 41 total
+
+## 4. Placement, and the suites that must not move
+
+$ node -e "const s=require('fs').readFileSync('src/proxy.ts','utf8');const a=s.indexOf('applyRateLimit(request, getRateLimitStore())'),c=s.indexOf('isCrossSiteMutation(request)'),u=s.indexOf('supabaseUrl()'),k=s.indexOf('createServerClient(');console.log({applyRateLimit:a,isCrossSiteMutation:c,supabaseUrl:u,createServerClient:k,ordered:a>=0&&a<c&&c<u&&u<k})"
+{
+  applyRateLimit: 3182,
+  isCrossSiteMutation: 3500,
+  supabaseUrl: 3747,
+  createServerClient: 3995,
+  ordered: true
+}
+exit=0
+
+$ node -e "const s=require('fs').readFileSync('src/proxy.ts','utf8');console.log(s.match(/PROTECTED_ROUTES\s*=\s*\[([^\]]*)\]/)[1])"
+"/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"
+
+$ git diff 687d332 --stat -- src/middlewareRateLimit.test.ts src/proxy-characterization.test.ts src/proxy.test.ts src/proxy-defect.test.ts
+(no output)
+exit=0
+
+$ npx jest --ci src/server/__tests__/csrf.test.ts src/proxy-characterization.test.ts src/proxy-defect.test.ts src/proxy.test.ts src/middlewareRateLimit.test.ts src/server/ratelimit
+PASS node src/proxy.test.ts
+PASS node src/server/ratelimit/policy.test.ts
+PASS node src/server/__tests__/csrf.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/proxy-characterization.test.ts
+PASS node src/server/ratelimit/memoryStore.test.ts
+PASS node src/proxy-defect.test.ts
+Tests:       132 passed, 132 total
+exit=0
+
+$ npx jest --ci
+Test Suites: 74 passed, 74 total
+Tests:       1397 passed, 1397 total
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ npm run lint
+✖ 18 problems (0 errors, 18 warnings)      (the same 18 pre-existing warnings as Task 1; none in a touched file)
+exit=0
+$ node scripts/check-characterization-tags.mjs --all     (last line)
+ok 34 files
+
+$ command grep -rn '"use server"' src
+(no output)
+exit=1
+
+## 5. The browser runs
+
+5.1 Clean reset and seed, then the two plan specs
+$ supabase db reset --local        reset_exit=0
+$ npx tsx scripts/seed/load.ts     seed_exit=0
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+$ npx playwright test e2e/specs/csrf-origin.spec.ts e2e/specs/save-and-rsvp.spec.ts     (excerpt)
+Running 17 tests using 1 worker
+  ✓   1..10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as <each of the ten personas>
+  ✓  11 [chromium] › e2e/specs/csrf-origin.spec.ts:88:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Origin https://evil.example is refused with 403 and writes no row (272ms)
+  ✓  12 [chromium] › e2e/specs/csrf-origin.spec.ts:94:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Sec-Fetch-Site cross-site is refused with 403 and writes no row (197ms)
+  ✓  13 [chromium] › e2e/specs/csrf-origin.spec.ts:104:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with the application's own Origin is accepted (260ms)
+  ✓  14 [chromium] › e2e/specs/csrf-origin.spec.ts:112:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted (241ms)
+  ✓  15 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (1.2s)
+  ✓  16 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (959ms)
+  ✓  17 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (434ms)
+  17 passed (14.8s)
+exit=0
+
+T-05-12-02 residue (onboarded_student x secondApprovedEvent):
+$ docker exec supabase_db_Event-Radar psql -U postgres -d postgres -tAc "SELECT count(*) FROM public.saved_events WHERE user_id = '5eed0000-0000-4000-8000-000000000001' AND event_id = '5eed0000-0000-4000-8000-0000000000e2';"
+0
+exit=0
+(The whole table held 1 row: seed.student x event ...e1, written by save-and-rsvp.spec.ts's real
+Chromium save through the UI. That spec does not unsave, as before 05-17. It is the same-origin
+browser POST that the check must pass, and it did.)
+
+5.2 Fresh reset and seed, then the full suite (every other spec unedited)
+$ supabase db reset --local        reset_exit=0
+$ npx tsx scripts/seed/load.ts     seed_exit=0
+$ npx playwright test
+Running 91 tests using 1 worker
+  91 passed (28.6s)
+exit=0
+
+5.3 Ledger protocol step 2: the 05-12 spec, unedited (`git show HEAD:e2e/specs/csrf-origin.spec.ts`), against the fixed proxy
+$ npx playwright test e2e/specs/csrf-origin.spec.ts     (excerpt)
+  ✘  11 [chromium] › e2e/specs/csrf-origin.spec.ts:69:7 › an onboarded student's session, from another site › DEFECT F-090: a POST carrying Origin https://evil.example is accepted (211ms)
+  ✘  12 [chromium] › e2e/specs/csrf-origin.spec.ts:75:7 › an onboarded student's session, from another site › DEFECT F-090: a POST carrying Sec-Fetch-Site cross-site is accepted (202ms)
+  ✓  13 [chromium] › e2e/specs/csrf-origin.spec.ts:85:7 › ... › PRESERVE: a POST with the application's own Origin is accepted (340ms)
+  ✓  14 [chromium] › e2e/specs/csrf-origin.spec.ts:93:7 › ... › PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted (253ms)
+    Error: expect(received).toBe(expected) // Object.is equality
+    Expected: 200
+    Received: 403
+    Error: expect(received).toBe(expected) // Object.is equality
+    Expected: 200
+    Received: 403
+  2 failed
+  12 passed (13.1s)
+exit=1
+spec restored from the copy: cmp identical
+
+5.4 Ledger protocol step 4: the flipped spec against the pre-fix proxy (the `isCrossSiteMutation` line replaced by a comment)
+$ npx playwright test e2e/specs/csrf-origin.spec.ts     (excerpt)
+  ✘  11 [chromium] › e2e/specs/csrf-origin.spec.ts:88:7 › ... › FIXED F-090: a POST carrying Origin https://evil.example is refused with 403 and writes no row (241ms)
+  ✘  12 [chromium] › e2e/specs/csrf-origin.spec.ts:94:7 › ... › FIXED F-090: a POST carrying Sec-Fetch-Site cross-site is refused with 403 and writes no row (227ms)
+  ✓  13 [chromium] › ... › PRESERVE: a POST with the application's own Origin is accepted (333ms)
+  ✓  14 [chromium] › ... › PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted (246ms)
+    Error: expect(received).toBe(expected) // Object.is equality
+    Expected: 403
+    Received: 200
+    Error: expect(received).toBe(expected) // Object.is equality
+    Expected: 403
+    Received: 200
+  2 failed
+  12 passed (13.0s)
+exit=1
+proxy restored from the copy: cmp identical
+Residue after both protocol runs (the helpers' finally blocks unsave): the pair count above = 0.
+
+5.5 Clean reset and seed, then the two plan specs again (rebuilds .next from the fixed source)
+$ supabase db reset --local        reset3_exit=0
+$ npx tsx scripts/seed/load.ts     seed3_exit=0
+$ npx playwright test e2e/specs/csrf-origin.spec.ts e2e/specs/save-and-rsvp.spec.ts
+  17 passed (13.4s)      (the same 17 titles as 5.1, all ✓)
+exit=0
+pair residue: 0
+
+5.6 Leave the stack
+$ supabase db reset --local        reset4_exit=0
+$ npx tsx scripts/seed/load.ts     seed4_exit=0
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+$ lsof -iTCP:3000 -sTCP:LISTEN
+(no output)
+exit=1      port 3000 free

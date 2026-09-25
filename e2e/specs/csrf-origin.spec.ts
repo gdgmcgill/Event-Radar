@@ -3,16 +3,18 @@
  * that says it came from another site, through a real session, a production
  * build and the seeded local database.
  *
- * Phase 05-slices-3-5-auth-club-authorization-admin-containment · plan 05-12
+ * Phase 05-slices-3-5-auth-club-authorization-admin-containment · plan 05-12,
+ * flipped by plan 05-17
  *
- * WHAT IS PINNED, AND WHERE IT MOVES
- *   - DEFECT F-090: no route and no proxy branch reads `Origin` or
- *     `Sec-Fetch-Site`, so a signed-in POST carrying `Origin:
- *     https://evil.example`, or `Sec-Fetch-Site: cross-site`, is accepted and
- *     the event is saved. The only barrier today is the `SameSite=Lax` default
- *     on the session cookie. 05-17 adds the proxy's origin check (DEC-52) and
- *     flips both tests to 403 `{"error":"Cross-site request blocked"}` with no
- *     row written.
+ * WHAT IS PINNED
+ *   - FIXED F-090 (05-17, DEC-52): the proxy refuses a state-changing `/api/*`
+ *     request that carries `Sec-Fetch-Site: cross-site`, or an `Origin` whose
+ *     host is not the request's host, with 403
+ *     `{"error":"Cross-site request blocked"}`, before any session work. A
+ *     signed-in POST carrying `Origin: https://evil.example`, or
+ *     `Sec-Fetch-Site: cross-site`, writes no row. Until 05-17 both were
+ *     accepted and the event was saved (the DEFECT pins 05-12 wrote; the
+ *     move is a row in `evidence/defect-ledger.md`).
  *   - PRESERVE: a same-origin POST (`Origin: http://127.0.0.1:3000`, the
  *     harness's own origin) and a POST carrying neither header (curl, cron,
  *     server-to-server) are accepted. DEC-52 keeps both.
@@ -23,7 +25,8 @@
  * POSTs, and a `finally` block DELETEs again whatever the assertions did. The
  * run is followed by a database check that `saved_events` holds no row for
  * this persona and event (T-05-12-02), recorded in
- * `evidence/slice-5-characterization.txt`.
+ * `evidence/slice-5-characterization.txt` (05-12) and `evidence/csrf.txt`
+ * (05-17).
  */
 
 import { expect, test, type APIRequestContext } from "@playwright/test";
@@ -63,19 +66,35 @@ async function postAndExpectSaved(
   expect(await isSaved(request), "the restore must leave no saved row").toBe(false);
 }
 
+async function postAndExpectBlocked(
+  request: APIRequestContext,
+  headers: Record<string, string>
+): Promise<void> {
+  await unsave(request);
+  try {
+    const res = await request.post(SAVE, { headers });
+    expect(res.status()).toBe(403);
+    expect(await res.json()).toEqual({ error: "Cross-site request blocked" });
+    expect(await isSaved(request), "no saved row may be written").toBe(false);
+  } finally {
+    await unsave(request);
+  }
+  expect(await isSaved(request), "the restore must leave no saved row").toBe(false);
+}
+
 test.describe("an onboarded student's session, from another site", () => {
   test.use({ storageState: storageStateFor("onboarded_student") });
 
-  test("DEFECT F-090: a POST carrying Origin https://evil.example is accepted", async ({
+  test("FIXED F-090: a POST carrying Origin https://evil.example is refused with 403 and writes no row", async ({
     page,
   }) => {
-    await postAndExpectSaved(page.request, { Origin: "https://evil.example" });
+    await postAndExpectBlocked(page.request, { Origin: "https://evil.example" });
   });
 
-  test("DEFECT F-090: a POST carrying Sec-Fetch-Site cross-site is accepted", async ({
+  test("FIXED F-090: a POST carrying Sec-Fetch-Site cross-site is refused with 403 and writes no row", async ({
     page,
   }) => {
-    await postAndExpectSaved(page.request, { "Sec-Fetch-Site": "cross-site" });
+    await postAndExpectBlocked(page.request, { "Sec-Fetch-Site": "cross-site" });
   });
 });
 

@@ -1,6 +1,7 @@
 /**
- * proxy.ts — the page-level ring: the API rate limiter, the session refresh,
- * the ban and onboarding redirects, and the anonymous sign-in redirect.
+ * proxy.ts — the page-level ring: the API rate limiter, the CSRF origin
+ * check, the session refresh, the ban and onboarding redirects, and the
+ * anonymous sign-in redirect.
  *
  * Phase 05 · plan 05-05 · DEC-36 (with DEC-35 and DEC-37). Fixes F-003,
  * F-062, F-088 and F-089.
@@ -45,6 +46,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import * as env from "@/lib/env";
 import { isBanned } from "@/lib/ban";
 import { applyRateLimit, getRateLimitStore } from "@/server/ratelimit";
+import { crossSiteBlocked, isCrossSiteMutation } from "@/server/csrf";
 
 /** PostgREST's code when `.single()` finds no row. */
 const NO_PROFILE_ROW = "PGRST116";
@@ -61,6 +63,11 @@ export async function proxy(request: NextRequest) {
   // work (DEC-50). The budgets live in src/server/ratelimit/policy.ts.
   const rateLimitResponse = await applyRateLimit(request, getRateLimitStore());
   if (rateLimitResponse) return rateLimitResponse;
+
+  // Refuse a state-changing /api/* request from another site (DEC-52, F-090)
+  // before any env read or session work. Requests carrying neither Origin nor
+  // Sec-Fetch-Site (curl, cron, server-to-server) pass.
+  if (isCrossSiteMutation(request)) return crossSiteBlocked();
 
   try {
   // Validated reads (DEC-37). A missing variable throws MissingEnvError into
