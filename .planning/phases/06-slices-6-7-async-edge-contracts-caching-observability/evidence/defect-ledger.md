@@ -1,0 +1,45 @@
+# Defect ledger — Phase 6
+
+**Plan:** 06-01 · **Phase:** 06-slices-6-7-async-edge-contracts-caching-observability · **Recorded:** 2026-09-25
+
+Opened by plan 06-01, before any Phase 6 fix exists. There is one row per DEFECT assertion that moved
+because the defect it pinned was deliberately fixed. Each row's assertions move in the same commit as
+the fix. The finding's status and resolution in `.planning/audit/findings.json` are edited by the
+fixing plan or its slice-close plan (DEC-72, extending DEC-57), not here.
+
+**Characterization tags are file-level** (`scripts/check-characterization-tags.mjs` reads only the
+leading docblock). So a pin that must change and lives in a PRESERVE file is first **moved** into a new
+`<name>-defect.test.ts` whose docblock says `DEFECT` and cites its F-nnn. The move happens in the same
+commit as the fix, and it gets a row below with "moved out of PRESERVE" in the Old assertion cell. A
+PRESERVE file is never edited to make it pass.
+
+**Which finding a move cites in Phase 6.**
+- A 400 whose bytes move because a contract now parses the input (an invalid or non-object body, a
+  non-string field, a canonicalized UUID, the one club-link rule) cites **F-094** (DEC-65, DEC-66).
+- A console assertion whose shape moves because the line now goes through the JSON logger, and a 500
+  body that becomes `{ "error": "Failed to <action>" }` on an uncaught throw, cite **F-058** (DEC-73,
+  DEC-74). Exact-argument console assertions in plain (untagged) tests are edited in place and need no
+  row.
+- A response body that stops carrying a caught error's text cites **F-059** (DEC-75).
+- A Cache-Control header that changes cites **F-025** or **F-026** (DEC-73); a CSP header cites
+  **F-055** (DEC-77); the health shape cites **F-029** (DEC-78); a page gate cites **F-054** (DEC-79);
+  the webhook's 401 on a wrong-length signature cites **F-039** (DEC-64); the reminder filters cite
+  **F-093** (DEC-70); the others cite the finding their fix commit names.
+
+Protocol followed for every row:
+
+1. Apply the fix.
+2. Run the DEFECT suite unedited. It must go **red**: the before-assertions fail against the fixed
+   code.
+3. Move the assertions to the fixed shape. The suite must go **green**.
+4. Put the pre-fix source back temporarily and run the moved suite. It must go **red**: the
+   after-assertions fail against the defect. Then restore the fixed source and prove it is
+   byte-identical with `cmp`.
+5. The PRESERVE suites covering the same surface pass **unedited** throughout.
+
+Commit hashes are filled in by the commit that follows each fix, because a commit cannot name its own
+hash. Every row belongs to an `INTENTIONAL BEHAVIOUR CHANGE` commit, and that commit's body carries the
+same words.
+
+| F-nnn | Suite | Old assertion | New assertion | Commit | Plan |
+|---|---|---|---|---|---|
