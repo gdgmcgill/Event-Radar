@@ -1,0 +1,511 @@
+Upstash package-legitimacy bundle — plan 05-18 Task 1 (DEC-51, DEC-59, threat T-05-18-SC)
+**Plan:** 05-18 · **Phase:** 05 · **Recorded:** 2026-09-25T05:44Z (registry read on this date; ages are whole days to 2026-09-25T00:00Z)
+npm 11.13.0 · node v24.16.0 · registry https://registry.npmjs.org/
+
+What this is: the registry facts a human needs to verify the two Upstash packages and their
+transitive dependencies before either enters package-lock.json, readable from this one file without
+running anything. It covers BOTH the pins the plan proposed (@upstash/ratelimit 2.1.0,
+@upstash/redis 1.38.4) AND the older pins DEC-59 chose (@upstash/ratelimit 2.0.8,
+@upstash/redis 1.38.2), so the reason for the older pair is visible.
+
+How it was produced: every command below ran from the session scratchpad directory, never from the
+repo root. `npm view` reads metadata only. `npm pack --dry-run` lists tarball contents only. Section 6
+fetched the six tarballs into the scratchpad with `npm pack <spec>` (a download, not an install),
+extracted them there, and inspected package.json and the file tree. Nothing was installed, and nothing
+was written into the project:
+
+$ git status --porcelain -- package.json package-lock.json      (run from the repo root after the bundle)
+(no output)
+exit=0
+
+Each command appears above its verbatim output and exit code.
+
+==============================================================================
+REGISTRY OUTPUT (verbatim)
+==============================================================================
+
+------------------------------------------------------------------------------
+1. Direct packages: the plan's proposed pins (2.1.0 / 1.38.4)
+------------------------------------------------------------------------------
+$ npm view @upstash/ratelimit@2.1.0 name version repository.url maintainers _npmUser dependencies peerDependencies scripts dist.integrity dist.attestations
+name = '@upstash/ratelimit'
+version = '2.1.0'
+repository.url = 'git+https://github.com/upstash/ratelimit-js.git'
+maintainers = [
+  'mdogan <mehmet@upstash.com>',
+  'buggyhunter <bill@upstash.com>',
+  'cahidarda <cahidardaooz@gmail.com>',
+  'fahreddin.ozcan <fahreddin@upstash.com>',
+  'upstashnpm <enes@upstash.com>',
+  'joshtc <hello@joshtriedcoding.com>',
+  'burak-ups <burak@upstash.com>',
+  'shannonr <shannon@upstash.com>'
+]
+_npmUser = 'GitHub Actions <npm-oidc-no-reply@github.com>'
+dependencies = { '@upstash/core-analytics': '^0.0.10' }
+peerDependencies = { '@upstash/redis': '^1.38.2' }
+scripts = {
+  fmt: 'prettier --write .',
+  lint: 'eslint "src/**/*.{js,ts,tsx}" --quiet --fix',
+  test: 'bun test src --coverage',
+  build: 'tsup'
+}
+dist.integrity = 'sha512-a0bpet6HkEfLaTldcBgIgUCe7ELfnpudrruNDye/W1Oknz+ekB9PthUbqFSWRNZnV0y/EbK8YXYfhLG5KU8DYw=='
+dist.attestations = {
+  url: 'https://registry.npmjs.org/-/npm/v1/attestations/@upstash%2fratelimit@2.1.0',
+  provenance: { predicateType: 'https://slsa.dev/provenance/v1' }
+}
+exit=0
+
+$ npm view @upstash/redis@1.38.4 name version repository.url maintainers _npmUser dependencies peerDependencies scripts dist.integrity dist.attestations
+name = '@upstash/redis'
+version = '1.38.4'
+repository.url = 'git+ssh://git@github.com/upstash/redis-js.git'
+maintainers = [
+  'mdogan <mehmet@upstash.com>',
+  'buggyhunter <bill@upstash.com>',
+  'cahidarda <cahidardaooz@gmail.com>',
+  'fahreddin.ozcan <fahreddin@upstash.com>',
+  'upstashnpm <enes@upstash.com>',
+  'joshtc <hello@joshtriedcoding.com>',
+  'burak-ups <burak@upstash.com>',
+  'shannonr <shannon@upstash.com>'
+]
+_npmUser = 'GitHub Actions <npm-oidc-no-reply@github.com>'
+dependencies = { uncrypto: '^0.1.3' }
+scripts = {
+  test: 'bun test pkg --bail --timeout 20000',
+  build: 'tsup && cp package.json README.md ../../LICENSE dist/',
+  'check-exports': 'bun run build && cd dist && attw -P'
+}
+dist.integrity = 'sha512-ZX69mKReun/yieyHYLoBg0eSiF6hjCQjd8zUKkJ5eCHehDV6P8S8oZOHxGSfkH1spfOhGZk0EGerBrfUsXow8g=='
+dist.attestations = {
+  url: 'https://registry.npmjs.org/-/npm/v1/attestations/@upstash%2fredis@1.38.4',
+  provenance: { predicateType: 'https://slsa.dev/provenance/v1' }
+}
+exit=0
+
+------------------------------------------------------------------------------
+2. Direct packages: the chosen pins per DEC-59 (2.0.8 / 1.38.2)
+------------------------------------------------------------------------------
+$ npm view @upstash/ratelimit@2.0.8 name version repository.url maintainers _npmUser dependencies peerDependencies scripts dist.integrity dist.attestations
+name = '@upstash/ratelimit'
+version = '2.0.8'
+repository.url = 'git+https://github.com/upstash/ratelimit-js.git'
+maintainers = [
+  'mdogan <mehmet@upstash.com>',
+  'buggyhunter <bill@upstash.com>',
+  'cahidarda <cahidardaooz@gmail.com>',
+  'fahreddin.ozcan <fahreddin@upstash.com>',
+  'upstashnpm <enes@upstash.com>',
+  'joshtc <hello@joshtriedcoding.com>',
+  'burak-ups <burak@upstash.com>',
+  'shannonr <shannon@upstash.com>'
+]
+_npmUser = 'cahidarda <cahidardaooz@gmail.com>'
+dependencies = { '@upstash/core-analytics': '^0.0.10' }
+peerDependencies = { '@upstash/redis': '^1.34.3' }
+scripts = {
+  fmt: 'prettier --write .',
+  lint: 'eslint "src/**/*.{js,ts,tsx}" --quiet --fix',
+  test: 'bun test src --coverage',
+  build: 'tsup'
+}
+dist.integrity = 'sha512-YSTMBJ1YIxsoPkUMX/P4DDks/xV5YYCswWMamU8ZIfK9ly6ppjRnVOyBhMDXBmzjODm4UQKcxsJPvaeFAijp5w=='
+exit=0
+
+$ npm view @upstash/redis@1.38.2 name version repository.url maintainers _npmUser dependencies peerDependencies scripts dist.integrity dist.attestations
+name = '@upstash/redis'
+version = '1.38.2'
+repository.url = 'git+ssh://git@github.com/upstash/redis-js.git'
+maintainers = [
+  'mdogan <mehmet@upstash.com>',
+  'buggyhunter <bill@upstash.com>',
+  'cahidarda <cahidardaooz@gmail.com>',
+  'fahreddin.ozcan <fahreddin@upstash.com>',
+  'upstashnpm <enes@upstash.com>',
+  'joshtc <hello@joshtriedcoding.com>',
+  'burak-ups <burak@upstash.com>',
+  'shannonr <shannon@upstash.com>'
+]
+_npmUser = 'GitHub Actions <npm-oidc-no-reply@github.com>'
+dependencies = { uncrypto: '^0.1.3' }
+scripts = {
+  test: 'bun test pkg --bail --timeout 20000',
+  build: 'tsup && cp package.json README.md ../../LICENSE dist/',
+  'check-exports': 'bun run build && cd dist && attw -P'
+}
+dist.integrity = 'sha512-RZ+JaRCVIS+ZTGnjOnDMr+/0aqDxsBb5rV6aW+Pys4SGELwr5lwE3UbLHRCHqMQ5Ulxj0b/CFBHfbmE175Otog=='
+dist.attestations = {
+  url: 'https://registry.npmjs.org/-/npm/v1/attestations/@upstash%2fredis@1.38.2',
+  provenance: { predicateType: 'https://slsa.dev/provenance/v1' }
+}
+exit=0
+
+------------------------------------------------------------------------------
+3. Publish dates (npm view <pkg> time --json, reduced to the relevant versions)
+------------------------------------------------------------------------------
+$ npm view @upstash/ratelimit time --json | node -e '<reduce to created, the pins, 2.0.8/1.38.x, latest>'
+  created   2022-05-06T13:34:44.589Z
+  2.0.8     2026-01-12T13:30:54.186Z age_days=255
+  2.1.0     2026-09-14T07:48:44.126Z age_days=10
+  2.2.0     2026-09-23T15:08:13.042Z age_days=1
+exit=0
+$ npm view @upstash/ratelimit dist-tags --json
+{
+  "next": "0.4.3-canary.0",
+  "canary": "2.1.0-rc",
+  "latest": "2.2.0",
+  "ci": "0.0.0-ci.fccd840d6e0f893f50bc677107fba4d913a414e3-20260925003829"
+}
+exit=0
+
+$ npm view @upstash/redis time --json | node -e '<reduce to created, the pins, 2.0.8/1.38.x, latest>'
+  created   2021-10-22T08:42:27.033Z
+  1.38.2    2026-08-04T14:14:26.921Z age_days=51
+  1.38.3    2026-08-26T09:50:18.529Z age_days=29
+  1.38.4    2026-09-04T11:00:05.232Z age_days=20
+  1.39.0    2026-09-21T08:01:15.152Z age_days=3
+exit=0
+$ npm view @upstash/redis dist-tags --json
+{
+  "next": "1.35.0-canary",
+  "canary": "1.39.0-canary-20260826110341-795a33599494ef4034259bd4f7d36db70c44f368",
+  "latest": "1.39.0",
+  "ci": "0.0.0-ci.6b2772753067e7d1aa103de25a3ee37bfd98093a-20260925004129"
+}
+exit=0
+
+------------------------------------------------------------------------------
+4. Transitive dependencies
+------------------------------------------------------------------------------
+$ npm view @upstash/core-analytics@0.0.10 name version maintainers _npmUser repository dependencies scripts dist.integrity dist.attestations
+name = '@upstash/core-analytics'
+version = '0.0.10'
+maintainers = [
+  'fahreddin.ozcan <fahreddin@upstash.com>',
+  'hezarfen <ogzhan11@gmail.com>',
+  'buggyhunter <bill@upstash.com>',
+  'upstashnpm <enes@upstash.com>',
+  'ademilter-upstash <adem@upstash.com>',
+  'mdogan <mehmet@upstash.com>'
+]
+_npmUser = 'hezarfen <ogzhan11@gmail.com>'
+dependencies = { '@upstash/redis': '^1.28.3' }
+scripts = {
+  fmt: 'bunx rome check . --apply-suggested && bunx rome format . --write',
+  test: 'jest --collect-coverage',
+  build: 'tsup'
+}
+dist.integrity = 'sha512-7qJHGxpQgQr9/vmeS1PktEwvNAF7TI4iJDi8Pu2CFZ9YUGHZH4fOP5TfYlZ4aVxfopnELiE4BS4FBjyK7V1/xQ=='
+exit=0
+
+$ npm view @upstash/core-analytics time --json | node -e '<created, 0.0.10>'
+  created   2023-02-09T09:08:41.130Z
+  0.0.10    2024-07-19T09:54:53.845Z age_days=797
+exit=0
+
+$ npm view uncrypto@0.1.3 name version repository.url maintainers _npmUser dependencies scripts dist.integrity
+name = 'uncrypto'
+version = '0.1.3'
+repository.url = 'git+https://github.com/unjs/uncrypto.git'
+maintainers = 'pi0 <pyapar@gmail.com>'
+_npmUser = 'pi0 <pyapar@gmail.com>'
+scripts = {
+  build: 'unbuild',
+  dev: 'vitest dev',
+  lint: 'eslint --cache --ext .ts,.js,.mjs,.cjs . && prettier -c src test',
+  'lint:fix': 'eslint --cache --ext .ts,.js,.mjs,.cjs . --fix && prettier -c src test -w',
+  prepack: 'pnpm run build',
+  release: 'pnpm test && changelogen --release && npm publish && git push --follow-tags',
+  test: 'pnpm lint && vitest run --coverage'
+}
+dist.integrity = 'sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q=='
+exit=0
+
+$ npm view uncrypto time --json | node -e '<created, 0.1.3>'
+  created   2023-02-06T20:26:38.333Z
+  0.1.3     2023-06-06T20:31:02.475Z age_days=1206
+exit=0
+
+------------------------------------------------------------------------------
+5. Dry-run pack listings (from the scratchpad; nothing installed, nothing written to the repo)
+------------------------------------------------------------------------------
+$ npm pack --dry-run @upstash/ratelimit@2.1.0
+npm notice
+npm notice 📦  @upstash/ratelimit@2.1.0
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 3.8kB README.md
+npm notice 29.4kB dist/index.d.mts
+npm notice 29.4kB dist/index.d.ts
+npm notice 63.0kB dist/index.js
+npm notice 126.3kB dist/index.js.map
+npm notice 62.0kB dist/index.mjs
+npm notice 125.8kB dist/index.mjs.map
+npm notice 847B package.json
+npm notice Tarball Details
+npm notice name: @upstash/ratelimit
+npm notice version: 2.1.0
+npm notice filename: upstash-ratelimit-2.1.0.tgz
+npm notice package size: 81.2 kB
+npm notice unpacked size: 441.8 kB
+npm notice shasum: 7c5e284c80ee8ff9ecaa9e48a64bbf3487170e73
+npm notice integrity: sha512-a0bpet6HkEfLa[...]XYfhLG5KU8DYw==
+npm notice total files: 9
+npm notice
+upstash-ratelimit-2.1.0.tgz
+exit=0
+
+$ npm pack --dry-run @upstash/redis@1.38.4
+npm notice
+npm notice 📦  @upstash/redis@1.38.4
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 3.5kB README.md
+npm notice 159.2kB chunk-2JFYL2VL.mjs
+npm notice 5.8kB cloudflare.d.mts
+npm notice 5.8kB cloudflare.d.ts
+npm notice 163.8kB cloudflare.js
+npm notice 3.9kB cloudflare.mjs
+npm notice 179.6kB error-8y4qG0W2.d.mts
+npm notice 179.6kB error-8y4qG0W2.d.ts
+npm notice 5.5kB fastly.d.mts
+npm notice 5.5kB fastly.d.ts
+npm notice 162.0kB fastly.js
+npm notice 2.1kB fastly.mjs
+npm notice 11.5kB nodejs.d.mts
+npm notice 11.5kB nodejs.d.ts
+npm notice 168.8kB nodejs.js
+npm notice 8.9kB nodejs.mjs
+npm notice 1.8kB package.json
+npm notice Tarball Details
+npm notice name: @upstash/redis
+npm notice version: 1.38.4
+npm notice filename: upstash-redis-1.38.4.tgz
+npm notice package size: 169.9 kB
+npm notice unpacked size: 1.1 MB
+npm notice shasum: 50010c27c7afff07fea7e1174729d73932509d47
+npm notice integrity: sha512-ZX69mKReun/yi[...]GerBrfUsXow8g==
+npm notice total files: 18
+npm notice
+upstash-redis-1.38.4.tgz
+exit=0
+
+$ npm pack --dry-run @upstash/ratelimit@2.0.8
+npm notice
+npm notice 📦  @upstash/ratelimit@2.0.8
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 3.3kB README.md
+npm notice 28.8kB dist/index.d.mts
+npm notice 28.8kB dist/index.d.ts
+npm notice 61.7kB dist/index.js
+npm notice 122.2kB dist/index.js.map
+npm notice 60.8kB dist/index.mjs
+npm notice 121.7kB dist/index.mjs.map
+npm notice 626B package.json
+npm notice Tarball Details
+npm notice name: @upstash/ratelimit
+npm notice version: 2.0.8
+npm notice filename: upstash-ratelimit-2.0.8.tgz
+npm notice package size: 77.8 kB
+npm notice unpacked size: 428.8 kB
+npm notice shasum: 8bc4213aeaa732db849cdd461330f45a2a0f0a6e
+npm notice integrity: sha512-YSTMBJ1YIxsoP[...]sJPvaeFAijp5w==
+npm notice total files: 9
+npm notice
+upstash-ratelimit-2.0.8.tgz
+exit=0
+
+$ npm pack --dry-run @upstash/redis@1.38.2
+npm notice
+npm notice 📦  @upstash/redis@1.38.2
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 3.4kB README.md
+npm notice 159.0kB chunk-K7RP6Y36.mjs
+npm notice 5.8kB cloudflare.d.mts
+npm notice 5.8kB cloudflare.d.ts
+npm notice 163.7kB cloudflare.js
+npm notice 3.9kB cloudflare.mjs
+npm notice 179.6kB error-8y4qG0W2.d.mts
+npm notice 179.6kB error-8y4qG0W2.d.ts
+npm notice 5.5kB fastly.d.mts
+npm notice 5.5kB fastly.d.ts
+npm notice 161.9kB fastly.js
+npm notice 2.1kB fastly.mjs
+npm notice 11.5kB nodejs.d.mts
+npm notice 11.5kB nodejs.d.ts
+npm notice 168.7kB nodejs.js
+npm notice 8.9kB nodejs.mjs
+npm notice 1.8kB package.json
+npm notice Tarball Details
+npm notice name: @upstash/redis
+npm notice version: 1.38.2
+npm notice filename: upstash-redis-1.38.2.tgz
+npm notice package size: 169.8 kB
+npm notice unpacked size: 1.1 MB
+npm notice shasum: c0928250695d5ddef86f8859085ded14c0bbdd8f
+npm notice integrity: sha512-RZ+JaRCVIS+ZT[...]BHfbmE175Otog==
+npm notice total files: 18
+npm notice
+upstash-redis-1.38.2.tgz
+exit=0
+
+$ npm pack --dry-run @upstash/core-analytics@0.0.10
+npm notice
+npm notice 📦  @upstash/core-analytics@0.0.10
+npm notice Tarball Contents
+npm notice 2.3kB README.md
+npm notice 4.3kB dist/index.d.mts
+npm notice 4.3kB dist/index.d.ts
+npm notice 6.1kB dist/index.js
+npm notice 5.6kB dist/index.mjs
+npm notice 752B package.json
+npm notice Tarball Details
+npm notice name: @upstash/core-analytics
+npm notice version: 0.0.10
+npm notice filename: upstash-core-analytics-0.0.10.tgz
+npm notice package size: 5.6 kB
+npm notice unpacked size: 23.4 kB
+npm notice shasum: e686a313ec2279d5a8d53e6c215085f1c0f5ab4b
+npm notice integrity: sha512-7qJHGxpQgQr9/[...]S4FBjyK7V1/xQ==
+npm notice total files: 6
+npm notice
+upstash-core-analytics-0.0.10.tgz
+exit=0
+
+$ npm pack --dry-run uncrypto@0.1.3
+npm notice
+npm notice 📦  uncrypto@0.1.3
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 2.4kB README.md
+npm notice 737B dist/crypto.node.cjs
+npm notice 246B dist/crypto.node.d.ts
+npm notice 380B dist/crypto.node.mjs
+npm notice 487B dist/crypto.web.cjs
+npm notice 246B dist/crypto.web.d.ts
+npm notice 348B dist/crypto.web.mjs
+npm notice 2.0kB package.json
+npm notice Tarball Details
+npm notice name: uncrypto
+npm notice version: 0.1.3
+npm notice filename: uncrypto-0.1.3.tgz
+npm notice package size: 2.9 kB
+npm notice unpacked size: 7.9 kB
+npm notice shasum: e1288d609226f2d02d8d69ee861fa20d8348ef2b
+npm notice integrity: sha512-Ql87qFHB3s/De[...]sUIepeQfw8J8Q==
+npm notice total files: 9
+npm notice
+uncrypto-0.1.3.tgz
+exit=0
+
+------------------------------------------------------------------------------
+6. Native binaries and lifecycle scripts inside the tarballs (fetched to the scratchpad, extracted, inspected)
+------------------------------------------------------------------------------
+$ @upstash/ratelimit@2.1.0 (upstash-ratelimit-2.1.0.tgz): install-time lifecycle scripts in package/package.json; *.node / binding.gyp / prebuilds files
+  lifecycle install scripts: none
+  native artefacts: 0
+  computed sha512 of the fetched tarball: sha512-a0bpet6HkEfLaTldcBgIgUCe7ELfnpudrruNDye/W1Oknz+ekB9PthUbqFSWRNZnV0y/EbK8YXYfhLG5KU8DYw==
+  registry dist.integrity:                sha512-a0bpet6HkEfLaTldcBgIgUCe7ELfnpudrruNDye/W1Oknz+ekB9PthUbqFSWRNZnV0y/EbK8YXYfhLG5KU8DYw==
+  integrity: MATCH
+
+$ @upstash/redis@1.38.4 (upstash-redis-1.38.4.tgz): install-time lifecycle scripts in package/package.json; *.node / binding.gyp / prebuilds files
+  lifecycle install scripts: none
+  native artefacts: 0
+  computed sha512 of the fetched tarball: sha512-ZX69mKReun/yieyHYLoBg0eSiF6hjCQjd8zUKkJ5eCHehDV6P8S8oZOHxGSfkH1spfOhGZk0EGerBrfUsXow8g==
+  registry dist.integrity:                sha512-ZX69mKReun/yieyHYLoBg0eSiF6hjCQjd8zUKkJ5eCHehDV6P8S8oZOHxGSfkH1spfOhGZk0EGerBrfUsXow8g==
+  integrity: MATCH
+
+$ @upstash/ratelimit@2.0.8 (upstash-ratelimit-2.0.8.tgz): install-time lifecycle scripts in package/package.json; *.node / binding.gyp / prebuilds files
+  lifecycle install scripts: none
+  native artefacts: 0
+  computed sha512 of the fetched tarball: sha512-YSTMBJ1YIxsoPkUMX/P4DDks/xV5YYCswWMamU8ZIfK9ly6ppjRnVOyBhMDXBmzjODm4UQKcxsJPvaeFAijp5w==
+  registry dist.integrity:                sha512-YSTMBJ1YIxsoPkUMX/P4DDks/xV5YYCswWMamU8ZIfK9ly6ppjRnVOyBhMDXBmzjODm4UQKcxsJPvaeFAijp5w==
+  integrity: MATCH
+
+$ @upstash/redis@1.38.2 (upstash-redis-1.38.2.tgz): install-time lifecycle scripts in package/package.json; *.node / binding.gyp / prebuilds files
+  lifecycle install scripts: none
+  native artefacts: 0
+  computed sha512 of the fetched tarball: sha512-RZ+JaRCVIS+ZTGnjOnDMr+/0aqDxsBb5rV6aW+Pys4SGELwr5lwE3UbLHRCHqMQ5Ulxj0b/CFBHfbmE175Otog==
+  registry dist.integrity:                sha512-RZ+JaRCVIS+ZTGnjOnDMr+/0aqDxsBb5rV6aW+Pys4SGELwr5lwE3UbLHRCHqMQ5Ulxj0b/CFBHfbmE175Otog==
+  integrity: MATCH
+
+$ @upstash/core-analytics@0.0.10 (upstash-core-analytics-0.0.10.tgz): install-time lifecycle scripts in package/package.json; *.node / binding.gyp / prebuilds files
+  lifecycle install scripts: none
+  native artefacts: 0
+  computed sha512 of the fetched tarball: sha512-7qJHGxpQgQr9/vmeS1PktEwvNAF7TI4iJDi8Pu2CFZ9YUGHZH4fOP5TfYlZ4aVxfopnELiE4BS4FBjyK7V1/xQ==
+  registry dist.integrity:                sha512-7qJHGxpQgQr9/vmeS1PktEwvNAF7TI4iJDi8Pu2CFZ9YUGHZH4fOP5TfYlZ4aVxfopnELiE4BS4FBjyK7V1/xQ==
+  integrity: MATCH
+
+$ uncrypto@0.1.3 (uncrypto-0.1.3.tgz): install-time lifecycle scripts in package/package.json; *.node / binding.gyp / prebuilds files
+  lifecycle install scripts: none
+  native artefacts: 0
+  computed sha512 of the fetched tarball: sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==
+  registry dist.integrity:                sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==
+  integrity: MATCH
+
+------------------------------------------------------------------------------
+7. Code-surface scan of the four packages that would be installed (chosen pins), from the extracted tarballs
+------------------------------------------------------------------------------
+$ find <pkg>/package -name '*.js' -o -name '*.mjs' -o -name '*.cjs' | xargs grep -ohE "https?://..." | grep -v redis.io/commands | sort | uniq -c
+  @upstash/ratelimit 2.0.8   2 https://raw.githubusercontent.com/stamparm/ipsum/master/levels
+                             (the deny-list feature; fetched only when `enableProtection: true`, which
+                             this code never sets. RatelimitConfig.enableProtection, dist/index.d.ts:245)
+  @upstash/redis 1.38.2      redis.io command documentation links (JSDoc) and 18x https://upstash.com/start-redis
+                             (an error-message hint). The client talks only to the url it is given.
+  @upstash/core-analytics    none
+  uncrypto 0.1.3             none
+$ ... | xargs grep -lE "child_process|[^a-zA-Z_.]eval\(|new Function\("
+  @upstash/ratelimit 2.0.8   none
+  @upstash/redis 1.38.2      nodejs.js, cloudflare.js, fastly.js, chunk-K7RP6Y36.mjs. Every hit is the
+                             Redis EVAL command wrapper, e.g. nodejs.js:4380 `async eval(keys, args) {`,
+                             which sends a Lua script to the server. No child_process, no new Function.
+  @upstash/core-analytics    none
+  uncrypto 0.1.3             none
+Telemetry: @upstash/redis 1.38.2 exposes `enableTelemetry?: boolean` (error-8y4qG0W2.d.ts:27); the
+store will construct `new Redis({ url, token, enableTelemetry: false })`. Ratelimit analytics stays
+`analytics: false`, so @upstash/core-analytics is loaded but never writes.
+
+==============================================================================
+SUMMARY TABLE (from sections 1-6 above)
+==============================================================================
+
+| Package | Version | Role | Published (UTC) | Age on 2026-09-25 (days) | Publisher (_npmUser) | Repository | Install scripts | Native files | Provenance attestation | Tarball sha512 = dist.integrity |
+|---|---|---|---|---|---|---|---|---|---|---|
+| @upstash/ratelimit | 2.1.0 | plan's proposed pin | 2026-09-14T07:48:44Z | 10 | GitHub Actions (npm OIDC) | github.com/upstash/ratelimit-js | none | 0 | yes (SLSA v1) | MATCH |
+| @upstash/ratelimit | **2.0.8** | **chosen pin (DEC-59)** | 2026-01-12T13:30:54Z | 255 | cahidarda <cahidardaooz@gmail.com> (a listed maintainer) | github.com/upstash/ratelimit-js | none | 0 | **no** (manual publish) | MATCH |
+| @upstash/ratelimit | 2.2.0 | latest tag, not used | 2026-09-23T15:08:13Z | 1 | — | — | — | — | — | — |
+| @upstash/redis | 1.38.4 | plan's proposed pin | 2026-09-04T11:00:05Z | 20 | GitHub Actions (npm OIDC) | github.com/upstash/redis-js | none | 0 | yes (SLSA v1) | MATCH |
+| @upstash/redis | **1.38.2** | **chosen pin (DEC-59)** | 2026-08-04T14:14:26Z | 51 | GitHub Actions (npm OIDC) | github.com/upstash/redis-js | none | 0 | yes (SLSA v1) | MATCH |
+| @upstash/redis | 1.38.3 | not used (29 days, one short of 30) | 2026-08-26T09:50:18Z | 29 | — | — | — | — | — | — |
+| @upstash/redis | 1.39.0 | latest tag, not used | 2026-09-21T08:01:15Z | 3 | — | — | — | — | — | — |
+| @upstash/core-analytics | 0.0.10 | transitive (ratelimit dep `^0.0.10`) | 2024-07-19T09:54:53Z | 797 | hezarfen <ogzhan11@gmail.com> (a listed maintainer) | **none listed** | none | 0 | no | MATCH |
+| uncrypto | 0.1.3 | transitive (redis dep `^0.1.3`) | 2023-06-06T20:31:02Z | 1206 | pi0 <pyapar@gmail.com> (unjs maintainer) | github.com/unjs/uncrypto | none (`prepack` runs only when packing from source) | 0 | no | MATCH |
+
+Maintainer lists: @upstash/ratelimit and @upstash/redis carry the same eight maintainers, six with
+@upstash.com addresses plus `cahidarda` and `joshtc`. @upstash/core-analytics carries six, five with
+@upstash.com addresses plus `hezarfen`. uncrypto has one maintainer, `pi0` (the unjs organisation).
+
+Dependency graph (the chosen pins): @upstash/ratelimit 2.0.8 → @upstash/core-analytics ^0.0.10 →
+@upstash/redis ^1.28.3; @upstash/ratelimit 2.0.8 peer → @upstash/redis ^1.34.3 (1.38.2 satisfies it;
+2.1.0 would require ^1.38.2); @upstash/redis 1.38.2 → uncrypto ^0.1.3. core-analytics' @upstash/redis
+range is satisfied by 1.38.2, so npm should dedupe to one copy of @upstash/redis. The expected lockfile
+additions are exactly four packages: @upstash/ratelimit, @upstash/redis, @upstash/core-analytics,
+uncrypto.
+
+Points for the human countersignature (facts, not a verdict):
+1. The research's [SUS] "too-new" reason applied to the LATEST tags (2.2.0 at 1 day, 1.39.0 at 3 days).
+   Both chosen pins are older than 30 days (255 and 51), which meets the research's own rule. The
+   proposed pins are 10 and 20 days old.
+2. Trade-off of the older ratelimit pin: 2.1.0 was published from GitHub Actions with an SLSA
+   provenance attestation; 2.0.8 was published manually by `cahidarda`, a listed maintainer on every
+   Upstash package, with no attestation. The tarball's integrity matches the registry either way.
+   Both redis pins carry provenance.
+3. @upstash/core-analytics lists no repository (the research's [SUS] reason). It is 797 days old,
+   published by a listed Upstash-package maintainer, 6 files / 23.4 kB, no install script, and it
+   never writes while ratelimit analytics is false.
+4. No package in the set declares preinstall/install/postinstall/prepare, and none ships a native
+   binary.
