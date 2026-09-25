@@ -1,6 +1,7 @@
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { getElevatedClient } from "@/server/db/elevated";
 import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
@@ -66,24 +67,46 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       event_id: eventId,
     }));
 
-    await supabase
+    // The invite rows are the record: if they were not written, nothing was
+    // sent (REVIEW-05 WR-10). The returned rows are the NEW invites only
+    // (ON CONFLICT DO NOTHING returns no row for an existing invite).
+    const { data: inserted, error: inviteError } = await supabase
       .from("event_invites")
       .upsert(inviteRows, {
         onConflict: "inviter_id,invitee_id,event_id",
         ignoreDuplicates: true,
-      });
+      })
+      .select("invitee_id");
 
-    // Create notifications for each invitee
-    const notifications = validInvitees.map((inviteeId) => ({
-      user_id: inviteeId,
-      type: "event_invite",
-      title: "Event Invitation",
-      message: `${inviterName} invited you to "${eventTitle}"`,
-      event_id: eventId,
-    }));
+    if (inviteError) {
+      console.error("Error inserting event invites:", inviteError);
+      return NextResponse.json({ error: "Failed to send invites" }, { status: 500 });
+    }
 
-    await supabase.from("notifications").insert(notifications);
+    // Notify only the newly invited: an existing invite already notified its
+    // invitee, and notifications_dedup_idx (user_id, event_id, type) would
+    // refuse the whole batch on a repeat. notifications INSERT is granted to
+    // service_role only, so on the cookie client these never delivered.
+    // REGISTRY.md row: "Notify another user (notifications insert)".
+    const newlyInvited = (inserted ?? []).map((row) => row.invitee_id);
+    if (newlyInvited.length > 0) {
+      const notifications = newlyInvited.map((inviteeId) => ({
+        user_id: inviteeId,
+        type: "event_invite",
+        title: "Event Invitation",
+        message: `${inviterName} invited you to "${eventTitle}"`,
+        event_id: eventId,
+      }));
 
+      const { error: notifyError } = await getElevatedClient()
+        .from("notifications")
+        .insert(notifications);
+      if (notifyError) {
+        console.error("Error inserting invite notifications:", notifyError);
+      }
+    }
+
+    // Every valid invitee now holds an invite (new or pre-existing).
     return NextResponse.json({ sent: validInvitees.length });
   } catch {
     return NextResponse.json({ error: "Failed to send invites" }, { status: 500 });

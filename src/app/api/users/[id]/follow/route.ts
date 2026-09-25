@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { getElevatedClient } from "@/server/db/elevated";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -63,30 +64,41 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 
     const followerName = currentUser?.name ?? "Someone";
 
-    if (isFriend) {
-      // Notify both users about the new friendship
-      await supabase.from("notifications").insert([
-        {
-          user_id: targetId,
-          type: "new_friend",
-          title: "New Friend!",
-          message: `You and ${followerName} are now friends.`,
-        },
-        {
-          user_id: user.id,
-          type: "new_friend",
-          title: "New Friend!",
-          message: `You and ${targetUser?.name ?? "someone"} are now friends.`,
-        },
-      ]);
-    } else {
-      // Notify target about the new follower
-      await supabase.from("notifications").insert({
-        user_id: targetId,
-        type: "new_follower",
-        title: "New Follower",
-        message: `${followerName} started following you.`,
-      });
+    // notifications INSERT is granted to service_role only, so on the cookie
+    // client these never delivered (REVIEW-05 WR-10). A failed notification
+    // does not undo the follow, but it is logged. REGISTRY.md row: "Notify
+    // another user (notifications insert)".
+    const notifications = isFriend
+      ? [
+          // Notify both users about the new friendship
+          {
+            user_id: targetId,
+            type: "new_friend",
+            title: "New Friend!",
+            message: `You and ${followerName} are now friends.`,
+          },
+          {
+            user_id: user.id,
+            type: "new_friend",
+            title: "New Friend!",
+            message: `You and ${targetUser?.name ?? "someone"} are now friends.`,
+          },
+        ]
+      : [
+          // Notify target about the new follower
+          {
+            user_id: targetId,
+            type: "new_follower",
+            title: "New Follower",
+            message: `${followerName} started following you.`,
+          },
+        ];
+
+    const { error: notifyError } = await getElevatedClient()
+      .from("notifications")
+      .insert(notifications);
+    if (notifyError) {
+      console.error("Error inserting follow notifications:", notifyError);
     }
 
     return NextResponse.json({ following: true, isFriend }, { status: 201 });

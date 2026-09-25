@@ -8,6 +8,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 import { hasRole } from "@/lib/roles";
+import { getElevatedClient } from "@/server/db/elevated";
 
 export async function POST(request: NextRequest) {
   try {
@@ -216,16 +217,24 @@ export async function POST(request: NextRequest) {
             .eq("club_id", body.club_id);
 
           if (followers && followers.length > 0) {
-            await supabase.from("notifications").insert(
-              followers.map((f: { user_id: string }) => ({
-                user_id: f.user_id,
-                type: "new_event",
-                title: "New Event",
-                message: `${clubName} published: ${title}`,
-                event_id: data.id,
-                read: false,
-              }))
-            );
+            // notifications INSERT is granted to service_role only, so on the
+            // cookie client this fanout never delivered (REVIEW-05 WR-10).
+            // REGISTRY.md row: "Notify another user (notifications insert)".
+            const { error: notifyError } = await getElevatedClient()
+              .from("notifications")
+              .insert(
+                followers.map((f: { user_id: string }) => ({
+                  user_id: f.user_id,
+                  type: "new_event",
+                  title: "New Event",
+                  message: `${clubName} published: ${title}`,
+                  event_id: data.id,
+                  read: false,
+                }))
+              );
+            if (notifyError) {
+              console.error("Notification fanout insert failed:", notifyError);
+            }
           }
         } catch (err) {
           console.error("Notification fanout error:", err);
