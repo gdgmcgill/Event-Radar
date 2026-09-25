@@ -1,0 +1,281 @@
+rls-privilege-before.txt — plan 05-16 Task 1
+Phase 05-slices-3-5-auth-club-authorization-admin-containment · F-006 · F-007 · C3 · DEC-47
+head=a64a60c373446ff87efcd45f0ebd7dced0b5ee41 (before any 05-16 commit)
+LOCAL ONLY. Every command targets the local stack (supabase_db_Event-Radar, CLI 2.115.0).
+
+=============================================================================
+§ 1  GRANT AUDIT — every application write to public.users, and which client
+=============================================================================
+
+Command:
+  for f in $(grep -rl 'from("users")' src | grep -v '.test.'); do
+    awk '/from\(.users.\)/{n=NR} n && NR-n<=8 && /\.(update|upsert|insert|delete)\(/{print FILENAME":"NR": "$0; n=0}' "$f"
+  done
+(plus the plan's `grep -rn -A3 'from("users")' src/app src/lib | grep "\.update("`,
+ which finds the same sites; and a grep of src/store, src/hooks, src/components
+ and the client pages: none of them writes users.)
+
+Planned grant (DEC-47): name, avatar_url, banner_url, pronouns, year, faculty,
+visibility, interest_tags, inferred_tags, onboarding_completed, updated_at
+
+Cookie-client writes (must fit the grant):
+| Site                                         | Op     | Columns the payload can carry                                                                 | All in grant? |
+|----------------------------------------------|--------|-----------------------------------------------------------------------------------------------|---------------|
+| src/app/api/users/[id]/route.ts:183 (PATCH)  | update | updated_at always; name, avatar_url, banner_url, interest_tags, pronouns, year, faculty, visibility, onboarding_completed when present (lines 31-176; the destructure at :31 names exactly these nine) | yes |
+| src/app/api/profile/avatar/route.ts:85       | update | avatar_url, updated_at                                                                         | yes |
+| src/app/api/profile/banner/route.ts:78       | update | banner_url, updated_at                                                                         | yes |
+| src/app/api/profile/interests/route.ts:51    | update | interest_tags, updated_at                                                                      | yes |
+| src/app/api/profile/inferred-tags/route.ts:42| update | inferred_tags, updated_at (C3: the reason inferred_tags is in the grant)                       | yes |
+
+Elevated-door writes (service role; unaffected by the grant):
+| Site                                                | Op     | Columns                                              |
+|-----------------------------------------------------|--------|------------------------------------------------------|
+| src/app/auth/callback/route.ts:195                  | upsert | first sign-in profile sync (the only users INSERT)   |
+| src/app/api/clubs/route.ts:152                      | update | roles (creator becomes club_organizer)               |
+| src/app/api/admin/clubs/[id]/route.ts:181           | update | roles, updated_at                                    |
+| src/app/api/admin/organizer-requests/[id]/route.ts:99 | update | roles, updated_at                                  |
+| src/app/api/admin/users/[id]/route.ts:69            | update | roles, name                                          |
+| src/app/api/admin/users/[id]/ban/route.ts:106       | update | banned_at, ban_expires_at, ban_reason, banned_by     |
+| src/app/api/admin/users/[id]/ban/route.ts:295       | update | banned_at, ban_expires_at                            |
+
+Database functions that write users:
+| Function                          | Security      | Effect of the grant                                                            |
+|-----------------------------------|---------------|--------------------------------------------------------------------------------|
+| public.compute_user_scores()      | DEFINER       | none (writes inferred_tags as its owner)                                       |
+| public.update_saved_events_count()| INVOKER today | BREAKS every save under the grant (C3, measured) → becomes DEFINER in 05-16    |
+
+Seed (scripts/seed/load.ts) and e2e fixtures write users and admin_audit_log
+with the local service-role client only (grep of e2e/ for rest/v1/users,
+rest/v1/admin_audit_log and non-service writes: none).
+
+Result: every column a cookie-client users write can carry is in the planned
+grant. No site needs an ungranted column, so the plan continues (no stop).
+
+admin_audit_log writers: src/lib/audit.ts:51, src/app/api/clubs/[id]/route.ts:220,
+src/app/api/clubs/[id]/transfer/route.ts:85 — all getElevatedClient(). No
+cookie-client writer exists.
+
+=============================================================================
+§ 2  PRIVILEGES AND POLICIES BEFORE (live local stack, read-only probe)
+=============================================================================
+Command: docker exec -i supabase_db_Event-Radar psql -U postgres -v ON_ERROR_STOP=1 -f - < probe1.sql
+exit=0
+  sql> SELECT grantee, privilege_type FROM information_schema.role_table_grants WHERE table_schema='public' AND table_name IN ('users','admin_audit_log') AND grantee IN ('anon','authenticated') ORDER BY 1,2;
+  sql> SELECT polname, polcmd, polroles::regrole[], pg_get_expr(polqual, polrelid) AS using_, pg_get_expr(polwithcheck, polrelid) AS check_ FROM pg_policy WHERE polrelid IN ('public.users'::regclass,'public.admin_audit_log'::regclass) ORDER BY 1;
+  sql> SELECT prosecdef, proconfig FROM pg_proc WHERE oid='public.update_saved_events_count()'::regprocedure;
+
+    grantee    | privilege_type 
+---------------+----------------
+ anon          | DELETE
+ anon          | DELETE
+ anon          | INSERT
+ anon          | INSERT
+ anon          | REFERENCES
+ anon          | REFERENCES
+ anon          | SELECT
+ anon          | SELECT
+ anon          | TRIGGER
+ anon          | TRIGGER
+ anon          | TRUNCATE
+ anon          | TRUNCATE
+ anon          | UPDATE
+ anon          | UPDATE
+ authenticated | DELETE
+ authenticated | DELETE
+ authenticated | INSERT
+ authenticated | INSERT
+ authenticated | REFERENCES
+ authenticated | REFERENCES
+ authenticated | SELECT
+ authenticated | SELECT
+ authenticated | TRIGGER
+ authenticated | TRIGGER
+ authenticated | TRUNCATE
+ authenticated | TRUNCATE
+ authenticated | UPDATE
+ authenticated | UPDATE
+(28 rows)
+
+              polname              | polcmd |    polroles     |                                  using_                                  |      check_       
+-----------------------------------+--------+-----------------+--------------------------------------------------------------------------+-------------------
+ Admins can insert audit log       | a      | {-}             |                                                                          | true
+ Admins can read audit log         | r      | {-}             | (EXISTS ( SELECT 1                                                      +| 
+                                   |        |                 |    FROM users u                                                         +| 
+                                   |        |                 |   WHERE ((u.id = auth.uid()) AND ('admin'::user_role = ANY (u.roles))))) | 
+ Admins can view all profiles      | r      | {authenticated} | is_admin()                                                               | 
+ Service role can insert audit log | a      | {-}             |                                                                          | true
+ Users can insert own profile      | a      | {-}             |                                                                          | (auth.uid() = id)
+ Users can read own profile        | r      | {-}             | (auth.uid() = id)                                                        | 
+ Users can update own profile      | w      | {-}             | (auth.uid() = id)                                                        | 
+(7 rows)
+
+ prosecdef | proconfig 
+-----------+-----------
+ f         | 
+(1 row)
+
+
+Reading: anon and authenticated hold every table privilege on both tables,
+TRUNCATE included (each row appears twice: one per table). The two audit
+INSERT policies and the three users policies apply to PUBLIC ({-}); the
+own-row UPDATE policy has no WITH CHECK; the counter trigger is INVOKER.
+
+=============================================================================
+§ 3  RED RUN — 050 and 055 against today's schema (migration file absent)
+=============================================================================
+$ ls supabase/migrations/
+20260915214553_baseline.sql
+20260915230000_fk_indexes_and_policy_gaps.sql
+20260915230100_cron_compute_user_scores.sql
+20260916000000_invitation_policy_fixes.sql
+20260923120000_events_insert_club_scope.sql
+_archive_pre_baseline
+
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. 
+# Failed test 1: "update_saved_events_count is SECURITY DEFINER with an empty search_path (C3)"
+# Failed test 2: "update_saved_events_count: neither anon nor authenticated can call it directly"
+# Failed test 3: "the own-row UPDATE policy is TO authenticated and carries a WITH CHECK"
+# Failed test 5: "student (F-006): setting their own roles to {user,admin} is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 6: "student: setting their own saved_events_count is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 7: "student: rewriting their own email is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 9: "banned user (F-006): clearing their own banned_at is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 10: "banned user: back-dating their own ban expiry is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 11: "with RLS bypassed: S is still {user} with its email and a zero counter, B is still banned with no expiry, B's name is untouched"
+#     Results differ beginning at row 1:
+#         have: (00000000-0000-4000-8000-000000005001,"{user,admin}",pgtap-050-hijack@mail.mcgill.ca,999,"T050 Student S",f,t)
+#         want: (00000000-0000-4000-8000-000000005001,{user},pgtap-050-student@mail.mcgill.ca,0,"T050 Student S",f,t)
+# Failed test 15: "with RLS bypassed: S's profile columns hold the new values and roles is still {user}"
+#     Results differ beginning at row 1:
+#         have: ("T050 Student Renamed",private,t,"{academic,tech}",{music},"{user,admin}")
+#         want: ("T050 Student Renamed",private,t,"{academic,tech}",{music},{user})
+# Failed test 16: "newcomer with no profile row: inserting their own row with {user,admin} is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 18: "with RLS bypassed: neither inserted users row exists"
+#     Unexpected records:
+#         (00000000-0000-4000-8000-000000005003)
+# Failed test 19: "anonymous: any UPDATE of users is refused outright"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 21: "with RLS bypassed: S's saved_events_count is 1 after the save"
+#     Results differ beginning at row 1:
+#         have: (1000)
+#         want: (1)
+# Failed test 23: "with RLS bypassed: after S unsaves, the saved_events row is gone and the counter is back to 0"
+#     Results differ beginning at row 1:
+#         have: (999,0)
+#         want: (0,0)
+# Looks like you failed 15 tests of 23
+Failed 15/23 subtests 
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... 
+# Failed test 1: "admin_audit_log has no INSERT, UPDATE, DELETE or ALL policy left"
+#         have: 2
+#         want: 0
+# Failed test 2: "anon and authenticated hold none of INSERT, UPDATE, DELETE, TRUNCATE on admin_audit_log"
+# Failed test 6: "admin (F-007): a direct audit insert is refused — the record cannot be written by the actor it records"
+#       caught: 23503: insert or update on table "admin_audit_log" violates foreign key constraint "admin_audit_log_admin_user_id_fkey"
+#       wanted: 42501
+# Failed test 7: "admin: an UPDATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 8: "admin: a DELETE from the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 9: "student (F-007): forging an audit row in the admin's name is refused"
+#       caught: 23503: insert or update on table "admin_audit_log" violates foreign key constraint "admin_audit_log_admin_user_id_fkey"
+#       wanted: 42501
+# Failed test 10: "student: an UPDATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 11: "student: a DELETE from the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 12: "anonymous (F-007, § D): a forged audit insert without RETURNING is refused"
+#       caught: 23503: insert or update on table "admin_audit_log" violates foreign key constraint "admin_audit_log_admin_user_id_fkey"
+#       wanted: 42501
+# Failed test 13: "anonymous: an UPDATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 14: "anonymous: a DELETE from the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 15: "anonymous: TRUNCATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Looks like you failed 12 tests of 17
+Failed 12/17 subtests 
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+
+Test Summary Report
+-------------------
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 0 Tests: 23 Failed: 15)
+  Failed tests:  1-3, 5-7, 9-11, 15-16, 18-19, 21, 23
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql    (Wstat: 0 Tests: 17 Failed: 12)
+  Failed tests:  1-2, 6-15
+Files=9, Tests=156,  1 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: FAIL
+error running container: exit 1
+exit=1
+
+Reading (the proof the files bite):
+  050 fails 15 of 23. Red: 1-3 (schema shape: INVOKER trigger, EXECUTE held,
+      policy without TO/WITH CHECK); 5 roles → {user,admin} ACCEPTED; 6
+      saved_events_count accepted; 7 email accepted; 9 banned_at = NULL
+      ACCEPTED; 10 ban_expires_at accepted; 11 integrity (S is {user,admin},
+      email hijacked, counter 999); 15 integrity (roles {user,admin}); 16 the
+      newcomer's self-INSERT with {user,admin} ACCEPTED; 18 integrity (that row
+      exists); 19 anon UPDATE completes (0 rows) instead of 42501; 21 and 23
+      the counter is off by the 999 row 6 wrote.
+      Green, as expected before the fix: 4 (impersonation), 8 (USING on
+      another row), 12 (profile columns), 13 (inferred_tags), 14 (banned user's
+      pronouns), 17 (INSERT for a foreign id: the old policy already refused
+      it), 20 and 22 (save and unsave).
+  055 fails 12 of 17. Red: 1 (2 INSERT policies), 2 (privileges held), 6/9/12
+      admin, student and anon INSERTs pass RLS and reach the auth.users FK
+      (23503, not 42501), 7/8/10/11/13/14 UPDATE and DELETE complete on zero
+      rows, 15 anon TRUNCATE completes. Green: 3 (read side), 4 (service_role
+      INSERT privilege), 5 (impersonation), 16 (service_role 23503), 17.
+  Every other file passes (000, 010, 020, 025, 030, 040, 060).
+
+A first run of this red (kept in scratch, not a finding) failed 050 row 13 for
+a test-shape reason: `ARRAY['{music}'::text[]]` builds a two-dimensional
+array, so results_eq compared text[] with text. Row 13 was rewritten as
+`$q$VALUES ('{music}'::text[])$q$`; the run above is the corrected file, in
+which row 13 passes against today's schema as an allow row should.
