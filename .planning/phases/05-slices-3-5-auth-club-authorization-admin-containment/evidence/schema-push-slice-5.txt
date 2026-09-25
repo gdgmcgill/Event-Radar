@@ -1,0 +1,1216 @@
+Schema push, slice 5: the LOCAL rebuild with the F-006/F-007 migration (plan 05-16 Task 2)
+**Plan:** 05-16 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-25
+
+This is the project's schema push for slice 5, and it is LOCAL ONLY (phase-locked constraint 3,
+DI-23). The only database targeted is the local Docker stack (supabase_db_Event-Radar,
+127.0.0.1:54321). No command below uses the linked-project flag or the push subcommand, and no
+production host was read or written. Supabase CLI 2.115.0 on PATH for every step, including the
+mutation check (SUPABASE_CMD=supabase). Each long command ran in the background with its output
+captured to a file and a bounded wait (the 05-16 retry's stall rule); no interactive psql session was
+opened. Output is filtered of key-, secret-, token- and password-shaped lines and of the CLI's update
+nag.
+
+SUMMARY
+| # | Step | Result | Verdict |
+|---|------|--------|---------|
+| 1 | supabase --version | 2.115.0, exit 0 | the pinned CLI |
+| 2 | supabase db reset --local | 6 migrations applied, incl. 20260923130000_users_grants_audit_log_insert.sql; exit 0 | rebuilds from zero |
+| 3 | supabase gen types typescript --local --schema public > src/lib/supabase/types.ts; git diff --stat | exit 0; diff empty (git diff --exit-code 0) | expected (research A2: grants, policies and a function body do not reach the generated types); types.ts not in the commit |
+| 4 | supabase test db --local, UNSEEDED | Files=9, Tests=156, Result: PASS; exit 0 (116 + 23 in 050 + 17 in 055) | green |
+| 5 | npx tsx scripts/seed/load.ts | 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved; exit 0 | seed unchanged |
+| 6 | supabase test db --local, SEEDED | Files=9, Tests=156, Result: PASS; exit 0 | green |
+| 7 | privileges and policies after (read-only probe) | users: anon/authenticated hold no INSERT/UPDATE; authenticated UPDATE on exactly the 11 columns; own-row policy {authenticated} with WITH CHECK; admin_audit_log: REFERENCES,SELECT,TRIGGER only, no INSERT policy; counter trigger prosecdef=t, search_path="", no EXECUTE for anon/authenticated | the migration landed as written |
+| 8 | git commit d7c2036 (migration + 050 + 055 + mutation glob) | fix(05-16), INTENTIONAL BEHAVIOUR CHANGE | types.ts unchanged, so not included |
+| 9 | SUPABASE_CMD=supabase bash scripts/pgtap-mutation-check.sh (run 1, on d7c2036) | 4 migrations, 6 policies, each RED_ASSERTION removed / GREEN restored; "Users can update own profile" removed → 050 Failed 5/23 (3, 12-15, the allow rows); failures=0; exit 0 | the policy removal bites |
+| 10 | manual grant mutations (run 1, on d7c2036) | M1 users UPDATE revoke removed → 050 Failed 10/23; M2 audit revoke removed → 055 Failed 7/17; M3 users INSERT revoke removed → 050 Failed 2/23; M4 counter back to INVOKER → 050 "Bad plan: planned 23 but ran 19" (the save row's results_eq aborted the file); each restored with git checkout and green | M1-M3 bite as assertions; M4 bit, but not as an assertion |
+| 11 | git commit 92b509a | test(05-16): 050 rows 20-23 use lives_ok plus an owner integrity read | M4 must be an assertion red |
+| 12 | supabase test db --local after 11 | Files=9, Tests=156, PASS; exit 0 | green |
+| 13 | mutation check, run 2 (final files) | same 6 × RED_ASSERTION/GREEN; 050 Failed 5/23 on the own-row policy; failures=0; exit 0 | final |
+| 14 | manual grant mutations, run 2 (final files) | M1 → 050 Failed 10/23 (5-7, 9-11, 15, 19, 21, 23); M2 → 055 Failed 7/17 (2, 7-8, 10-11, 13-14); M3 → 050 Failed 2/23 (16, 18); M4 → 050 Failed 3/23 (1, 20-21); every restore clean (git checkout), reset exit 0, test PASS; migrations_dir_clean=true | both plan cycles (M1, M2) and both extras red then green |
+| 15 | supabase db reset --local; test UNSEEDED; seed; test SEEDED (final files) | exit 0; Files=9 Tests=156 PASS; exit 0; Files=9 Tests=156 PASS | clean base for Playwright |
+| 16 | npx tsc --noEmit | exit 0 | green |
+| 17 | npx jest --ci | 1325 passed, 71 suites, 0 failed; exit 0 | equal to the 05-15 floor |
+| 18 | npx playwright test (the five plan specs) from 15, port 3000 free | 32 passed (10 setup + 22), first run, exit 0 | save, profile PATCH, wizard PATCH, audit writes, admin writes all work under the grant |
+| 19 | full Playwright suite from a fresh reset + seed | 91 passed, first run, exit 0 | equal to the 05-15 floor |
+| 20 | supabase db reset --local; seed (leave the stack) | exit 0; exit 0 | stack left reset and seeded |
+| 21 | supabase gen types typescript --local --schema public | diff -u src/lib/supabase/types.ts - | no output, exit 0 | the CI drift gate, after the commit |
+| 22 | the plan's verify: supabase test db --local && gen types | diff | Files=9 Tests=156 PASS; no diff output; exit 0 | done |
+| 23 | lsof -iTCP:3000 -sTCP:LISTEN | no listener (exit 1) | port 3000 free |
+
+Why the mutation check ran after the fix commit: it restores with `git checkout --` and refuses to
+start while a listed migration has uncommitted changes (05-11 learned this). The same holds for the
+manual cycles below, which restore the committed file the same way.
+
+Why manual cycles exist: the harness mutates CREATE POLICY statements only. Removing the re-created
+own-row policy denies every self-update, which turns the ALLOW rows red (3, 12-15) but can never turn
+a DENY row red. The F-006/F-007 denials come from REVOKE and GRANT statements, which the harness
+cannot see, so M1 and M2 (the plan's two) remove the revokes that carry them. M3 (users INSERT) and
+M4 (the C3 counter) were added to cover the two remaining behaviours of the file.
+
+Why M2 does not turn the INSERT rows red: with the audit revoke removed, the two INSERT policies are
+still dropped, so RLS (no INSERT policy) refuses the insert with the same SQLSTATE 42501. The INSERT
+denial therefore has two independent barriers; 055 row 1 pins the policy half and row 2 the
+privilege half, and M2 turned row 2 red.
+
+==============================================================================
+RAW BLOCKS
+==============================================================================
+------------------------------------------------------------------------------
+[1 · CLI version]
+$ supabase --version
+2.115.0
+exit=0
+------------------------------------------------------------------------------
+[2 · reset (LOCAL)]
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+Applying migration 20260923130000_users_grants_audit_log_insert.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+------------------------------------------------------------------------------
+[3 · generated types]
+$ supabase gen types typescript --local --schema public > src/lib/supabase/types.ts
+exit=0
+$ git diff --stat src/lib/supabase/types.ts
+(no output) exit=0
+$ git diff --exit-code --quiet src/lib/supabase/types.ts
+exit=0
+------------------------------------------------------------------------------
+[4 · pgTAP UNSEEDED]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.04 CPU)
+Result: PASS
+------------------------------------------------------------------------------
+[5 · seed]
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+------------------------------------------------------------------------------
+[6 · pgTAP SEEDED]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: PASS
+------------------------------------------------------------------------------
+[7 · privileges and policies after (read-only)]
+$ docker exec -i supabase_db_Event-Radar psql -U postgres -v ON_ERROR_STOP=1 -f - < probe2.sql
+  sql> SELECT table_name, grantee, string_agg(privilege_type, ',' ORDER BY privilege_type) FROM information_schema.role_table_grants WHERE table_schema='public' AND table_name IN ('users','admin_audit_log') AND grantee IN ('anon','authenticated') GROUP BY 1,2 ORDER BY 1,2;
+  sql> SELECT grantee, string_agg(column_name, ',' ORDER BY column_name) AS update_columns FROM information_schema.column_privileges WHERE table_schema='public' AND table_name='users' AND privilege_type='UPDATE' AND grantee IN ('anon','authenticated') GROUP BY 1;
+  sql> SELECT polname, polcmd, polroles::regrole[], pg_get_expr(polqual, polrelid) AS using_, pg_get_expr(polwithcheck, polrelid) AS check_ FROM pg_policy WHERE polrelid IN ('public.users'::regclass,'public.admin_audit_log'::regclass) ORDER BY 1;
+  sql> SELECT prosecdef, proconfig, has_function_privilege('authenticated', oid, 'EXECUTE') AS auth_exec, has_function_privilege('anon', oid, 'EXECUTE') AS anon_exec FROM pg_proc WHERE oid='public.update_saved_events_count()'::regprocedure;
+   table_name    |    grantee    |                string_agg                 
+-----------------+---------------+-------------------------------------------
+ admin_audit_log | anon          | REFERENCES,SELECT,TRIGGER
+ admin_audit_log | authenticated | REFERENCES,SELECT,TRIGGER
+ users           | anon          | DELETE,REFERENCES,SELECT,TRIGGER,TRUNCATE
+ users           | authenticated | DELETE,REFERENCES,SELECT,TRIGGER,TRUNCATE
+(4 rows)
+
+    grantee    |                                                     update_columns                                                      
+---------------+-------------------------------------------------------------------------------------------------------------------------
+ authenticated | avatar_url,banner_url,faculty,inferred_tags,interest_tags,name,onboarding_completed,pronouns,updated_at,visibility,year
+(1 row)
+
+           polname            | polcmd |    polroles     |                                  using_                                  |               check_               
+------------------------------+--------+-----------------+--------------------------------------------------------------------------+------------------------------------
+ Admins can read audit log    | r      | {-}             | (EXISTS ( SELECT 1                                                      +| 
+                              |        |                 |    FROM users u                                                         +| 
+                              |        |                 |   WHERE ((u.id = auth.uid()) AND ('admin'::user_role = ANY (u.roles))))) | 
+ Admins can view all profiles | r      | {authenticated} | is_admin()                                                               | 
+ Users can insert own profile | a      | {-}             |                                                                          | (auth.uid() = id)
+ Users can read own profile   | r      | {-}             | (auth.uid() = id)                                                        | 
+ Users can update own profile | w      | {authenticated} | (( SELECT auth.uid() AS uid) = id)                                       | (( SELECT auth.uid() AS uid) = id)
+(5 rows)
+
+ prosecdef |      proconfig       | auth_exec | anon_exec 
+-----------+----------------------+-----------+-----------
+ t         | {"search_path=\"\""} | f         | f
+(1 row)
+
+------------------------------------------------------------------------------
+[9 · mutation check, run 1 (d7c2036)]
+$ SUPABASE_CMD=supabase bash scripts/pgtap-mutation-check.sh
+=============================================================================
+pgTAP mutation check
+migrations: 4
+          : supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql
+          : supabase/migrations/20260916000000_invitation_policy_fixes.sql
+          : supabase/migrations/20260923120000_events_insert_club_scope.sql
+          : supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+policies  : 6 distinct (de-duplicated across the files above)
+started   : 2026-09-25T04:59:29Z
+=============================================================================
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can view their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=15
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 5)
+# Failed test 2: "the invitee can read the invitation addressed to them"
+#         have: NULL
+#         want: (pgtap-invitee@mail.mcgill.ca)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Failed test 10: "the invitee still sees their own invitations — the stranger's empty read was a filter"
+# Looks like you failed 5 tests of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.03 cusr 0.01 csys = 0.06 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can accept their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=29
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 3)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Looks like you failed 3 tests of 15
+# Failed test 3: "the invitee cannot repoint an invitation at another club while accepting it"
+#       wanted: 42501
+# Failed test 4: "the invitee cannot extend their own invitation while accepting it"
+#       wanted: 42501
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.03 cusr 0.00 csys = 0.05 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Club owners can update club invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=17
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 1)
+# Failed test 15: "the club owner can revoke a pending invitation for their own club"
+#         have: NULL
+#         want: (revoked)
+# Looks like you failed 1 test of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.02 cusr 0.01 csys = 0.05 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can join the club they were invited to
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=9
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql (Wstat: 0 Tests: 18 Failed: 2)
+# Failed test 17: "and can then insert the membership row — the accept path completes, which it could not before (F-016 / WR-01)"
+#         have: DENIED: row-level security refused the membership insert (42501)
+#         want: 00000000-0000-4000-8000-0000000000d1
+# Failed test 18: "the membership row exists with role organizer — not owner"
+#         have: NULL
+#         want: (organizer)
+# Looks like you failed 2 tests of 18
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.02 cusr 0.00 csys = 0.04 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Authenticated users can insert events
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=24
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql (Wstat: 0 Tests: 30 Failed: 6)
+# Failed test 7: "attacker (§ D events INSERT, DEC-42): a pending event naming club A under their own id passes RLS (23503 = reached the auth.users FK)"
+#       wanted: 23503
+# Failed test 8: "attacker in their own lane: approved event in club B, which they own, passes RLS (23503)"
+#       wanted: 23503
+# Failed test 9: "organizer M (§ D events INSERT, owner-member arm): approved event in club A, of which M is a member, passes RLS (23503)"
+#       wanted: 23503
+# Failed test 12: "owner A: a pending event in their pending club passes RLS (23503)"
+#       wanted: 23503
+# Failed test 13: "admin X (§ D events INSERT, admin arm): an approved event with no creator and no club is accepted"
+# Failed test 14: "the admin's event is in the table with RLS bypassed — the allow wrote the row"
+# Looks like you failed 6 tests of 30
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 1 wallclock secs ( 0.01 usr 0.01 sys + 0.03 cusr 0.00 csys = 0.05 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Users can update own profile
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=6
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 0 Tests: 23 Failed: 5)
+# Failed test 3: "the own-row UPDATE policy is TO authenticated and carries a WITH CHECK"
+# Failed test 12: "student: a self-update of every granted profile column is accepted"
+#         have: NULL
+#         want: ("T050 Student Renamed")
+# Failed test 13: "student (C3): a self-update of inferred_tags is accepted"
+#         have: NULL
+#         want: ({music})
+# Failed test 14: "banned user: a self-update of a granted column is still accepted — only the ban columns are withheld"
+#         have: NULL
+#         want: (she/her)
+# Failed test 15: "with RLS bypassed: S's profile columns hold the new values and roles is still {user}"
+#         have: ("T050 Student S",public,f,{},{},{user})
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.02 usr 0.01 sys + 0.02 cusr 0.00 csys = 0.05 CPU)
+Result: PASS
+
+=============================================================================
+migrations_dir_clean=true
+policies_checked=6
+failures=0
+finished=2026-09-25T05:04:53Z
+=============================================================================
+exit=0
+------------------------------------------------------------------------------
+[10 · manual grant mutations, run 1 (d7c2036)]
+$ bash manual-mutations.sh   (script reproduced in block 14)
+started=2026-09-25T05:05:21Z
+=============================================================================
+MUTATION M1 (plan): users table-level UPDATE revoke removed
+  pattern     : REVOKE UPDATE ON public.users FROM anon, authenticated;
+  replacement : -- MUTATION M1: REVOKE UPDATE ON public.users FROM anon, authenticated;
+=============================================================================
+  occurrences : 1
+--- git diff (mutation applied) ---
+diff --git a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+index 679fd73..be011c4 100644
+--- a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
++++ b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+@@ -102 +102 @@ REVOKE TRUNCATE ON public.admin_audit_log FROM anon, authenticated;
+-REVOKE UPDATE ON public.users FROM anon, authenticated;
++-- MUTATION M1: REVOKE UPDATE ON public.users FROM anon, authenticated;
+--- mutated: supabase db reset --local ---
+reset_exit=0
+--- mutated: supabase test db --local ---
+# Failed test 5: "student (F-006): setting their own roles to {user,admin} is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 6: "student: setting their own saved_events_count is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 7: "student: rewriting their own email is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 9: "banned user (F-006): clearing their own banned_at is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 10: "banned user: back-dating their own ban expiry is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 11: "with RLS bypassed: S is still {user} with its email and a zero counter, B is still banned with no expiry, B's name is untouched"
+#         have: (00000000-0000-4000-8000-000000005001,"{user,admin}",pgtap-050-hijack@mail.mcgill.ca,999,"T050 Student S",f,t)
+#         want: (00000000-0000-4000-8000-000000005001,{user},pgtap-050-student@mail.mcgill.ca,0,"T050 Student S",f,t)
+# Failed test 15: "with RLS bypassed: S's profile columns hold the new values and roles is still {user}"
+#         have: ("T050 Student Renamed",private,t,"{academic,tech}",{music},"{user,admin}")
+#         want: ("T050 Student Renamed",private,t,"{academic,tech}",{music},{user})
+# Failed test 19: "anonymous: any UPDATE of users is refused outright"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 21: "with RLS bypassed: S's saved_events_count is 1 after the save"
+#         have: (1000)
+#         want: (1)
+# Failed test 23: "with RLS bypassed: after S unsaves, the saved_events row is gone and the counter is back to 0"
+#         have: (999,0)
+#         want: (0,0)
+# Looks like you failed 10 tests of 23
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 0 Tests: 23 Failed: 10)
+  Failed tests:  5-7, 9-11, 15, 19, 21, 23
+Files=9, Tests=156,  0 wallclock secs ( 0.02 usr  0.00 sys +  0.02 cusr  0.00 csys =  0.04 CPU)
+Result: FAIL
+mutated_test_exit=1
+--- restore: git checkout -- supabase/migrations/20260923130000_users_grants_audit_log_insert.sql ---
+restore_clean=true
+--- restored: supabase db reset --local ---
+reset_exit=0
+--- restored: supabase test db --local ---
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: PASS
+restored_test_exit=0
+
+=============================================================================
+MUTATION M2 (plan): audit-log write revoke removed
+  pattern     : REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;
+  replacement : -- MUTATION M2: REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;
+=============================================================================
+  occurrences : 1
+--- git diff (mutation applied) ---
+diff --git a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+index 679fd73..0db1478 100644
+--- a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
++++ b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+@@ -91 +91 @@ DROP POLICY IF EXISTS "Service role can insert audit log" ON public.admin_audit_
+-REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;
++-- MUTATION M2: REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;
+--- mutated: supabase db reset --local ---
+reset_exit=0
+--- mutated: supabase test db --local ---
+# Failed test 2: "anon and authenticated hold none of INSERT, UPDATE, DELETE, TRUNCATE on admin_audit_log"
+# Failed test 7: "admin: an UPDATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 8: "admin: a DELETE from the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 10: "student: an UPDATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 11: "student: a DELETE from the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 13: "anonymous: an UPDATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 14: "anonymous: a DELETE from the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Looks like you failed 7 tests of 17
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql    (Wstat: 0 Tests: 17 Failed: 7)
+  Failed tests:  2, 7-8, 10-11, 13-14
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: FAIL
+mutated_test_exit=1
+--- restore: git checkout -- supabase/migrations/20260923130000_users_grants_audit_log_insert.sql ---
+restore_clean=true
+--- restored: supabase db reset --local ---
+reset_exit=0
+--- restored: supabase test db --local ---
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.04 CPU)
+Result: PASS
+restored_test_exit=0
+
+=============================================================================
+MUTATION M3 (extra): users INSERT revoke removed
+  pattern     : REVOKE INSERT ON public.users FROM anon, authenticated;
+  replacement : -- MUTATION M3: REVOKE INSERT ON public.users FROM anon, authenticated;
+=============================================================================
+  occurrences : 1
+--- git diff (mutation applied) ---
+diff --git a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+index 679fd73..f042712 100644
+--- a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
++++ b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+@@ -103 +103 @@ REVOKE UPDATE ON public.users FROM anon, authenticated;
+-REVOKE INSERT ON public.users FROM anon, authenticated;
++-- MUTATION M3: REVOKE INSERT ON public.users FROM anon, authenticated;
+--- mutated: supabase db reset --local ---
+reset_exit=0
+--- mutated: supabase test db --local ---
+# Failed test 16: "newcomer with no profile row: inserting their own row with {user,admin} is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 18: "with RLS bypassed: neither inserted users row exists"
+# Looks like you failed 2 tests of 23
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 0 Tests: 23 Failed: 2)
+  Failed tests:  16, 18
+Files=9, Tests=156,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.06 CPU)
+Result: FAIL
+mutated_test_exit=1
+--- restore: git checkout -- supabase/migrations/20260923130000_users_grants_audit_log_insert.sql ---
+restore_clean=true
+--- restored: supabase db reset --local ---
+reset_exit=0
+--- restored: supabase test db --local ---
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: PASS
+restored_test_exit=0
+
+=============================================================================
+MUTATION M4 (extra, C3): counter trigger back to SECURITY INVOKER
+  pattern     :   SECURITY DEFINER
+  SET search_path = ''
+AS $$
+BEGIN
+  IF TG_OP
+  replacement :   SECURITY INVOKER
+  SET search_path = ''
+AS $$
+BEGIN
+  IF TG_OP
+=============================================================================
+  occurrences : 1
+--- git diff (mutation applied) ---
+diff --git a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+index 679fd73..3f8268f 100644
+--- a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
++++ b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+@@ -135 +135 @@ CREATE OR REPLACE FUNCTION public.update_saved_events_count()
+-  SECURITY DEFINER
++  SECURITY INVOKER
+--- mutated: supabase db reset --local ---
+reset_exit=0
+--- mutated: supabase test db --local ---
+# Failed test 1: "update_saved_events_count is SECURITY DEFINER with an empty search_path (C3)"
+Dubious, test returned 3 (wstat 768, 0x300)
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 768 (exited 3) Tests: 19 Failed: 1)
+  Parse errors: Bad plan.  You planned 23 tests but ran 19.
+Files=9, Tests=152,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.04 CPU)
+Result: FAIL
+mutated_test_exit=1
+--- restore: git checkout -- supabase/migrations/20260923130000_users_grants_audit_log_insert.sql ---
+restore_clean=true
+--- restored: supabase db reset --local ---
+reset_exit=0
+--- restored: supabase test db --local ---
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.04 CPU)
+Result: PASS
+restored_test_exit=0
+
+migrations_dir_clean=true
+finished=2026-09-25T05:08:57Z
+exit=0
+------------------------------------------------------------------------------
+[12 · pgTAP after the 050 hardening]
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: PASS
+------------------------------------------------------------------------------
+[13 · mutation check, run 2 (final files, 92b509a)]
+$ SUPABASE_CMD=supabase bash scripts/pgtap-mutation-check.sh
+=============================================================================
+pgTAP mutation check
+migrations: 4
+          : supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql
+          : supabase/migrations/20260916000000_invitation_policy_fixes.sql
+          : supabase/migrations/20260923120000_events_insert_club_scope.sql
+          : supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+policies  : 6 distinct (de-duplicated across the files above)
+started   : 2026-09-25T05:09:35Z
+=============================================================================
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can view their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=15
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 5)
+# Failed test 2: "the invitee can read the invitation addressed to them"
+#         have: NULL
+#         want: (pgtap-invitee@mail.mcgill.ca)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Failed test 10: "the invitee still sees their own invitations — the stranger's empty read was a filter"
+# Looks like you failed 5 tests of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.02 cusr 0.01 csys = 0.05 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can accept their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=29
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 3)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Looks like you failed 3 tests of 15
+# Failed test 3: "the invitee cannot repoint an invitation at another club while accepting it"
+#       wanted: 42501
+# Failed test 4: "the invitee cannot extend their own invitation while accepting it"
+#       wanted: 42501
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.02 cusr 0.01 csys = 0.05 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Club owners can update club invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=17
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 1)
+# Failed test 15: "the club owner can revoke a pending invitation for their own club"
+#         have: NULL
+#         want: (revoked)
+# Looks like you failed 1 test of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.03 cusr 0.00 csys = 0.05 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can join the club they were invited to
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=9
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql (Wstat: 0 Tests: 18 Failed: 2)
+# Failed test 17: "and can then insert the membership row — the accept path completes, which it could not before (F-016 / WR-01)"
+#         have: DENIED: row-level security refused the membership insert (42501)
+#         want: 00000000-0000-4000-8000-0000000000d1
+# Failed test 18: "the membership row exists with role organizer — not owner"
+#         have: NULL
+#         want: (organizer)
+# Looks like you failed 2 tests of 18
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.02 usr 0.01 sys + 0.03 cusr 0.01 csys = 0.07 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Authenticated users can insert events
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=24
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql (Wstat: 0 Tests: 30 Failed: 6)
+# Failed test 7: "attacker (§ D events INSERT, DEC-42): a pending event naming club A under their own id passes RLS (23503 = reached the auth.users FK)"
+#       wanted: 23503
+# Failed test 8: "attacker in their own lane: approved event in club B, which they own, passes RLS (23503)"
+#       wanted: 23503
+# Failed test 9: "organizer M (§ D events INSERT, owner-member arm): approved event in club A, of which M is a member, passes RLS (23503)"
+#       wanted: 23503
+# Failed test 12: "owner A: a pending event in their pending club passes RLS (23503)"
+#       wanted: 23503
+# Failed test 13: "admin X (§ D events INSERT, admin arm): an approved event with no creator and no club is accepted"
+# Failed test 14: "the admin's event is in the table with RLS bypassed — the allow wrote the row"
+# Looks like you failed 6 tests of 30
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.01 usr 0.01 sys + 0.03 cusr 0.00 csys = 0.05 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Users can update own profile
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=6
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 0 Tests: 23 Failed: 5)
+# Failed test 3: "the own-row UPDATE policy is TO authenticated and carries a WITH CHECK"
+# Failed test 12: "student: a self-update of every granted profile column is accepted"
+#         have: NULL
+#         want: ("T050 Student Renamed")
+# Failed test 13: "student (C3): a self-update of inferred_tags is accepted"
+#         have: NULL
+#         want: ({music})
+# Failed test 14: "banned user: a self-update of a granted column is still accepted — only the ban columns are withheld"
+#         have: NULL
+#         want: (she/her)
+# Failed test 15: "with RLS bypassed: S's profile columns hold the new values and roles is still {user}"
+#         have: ("T050 Student S",public,f,{},{},{user})
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=9, Tests=156, 0 wallclock secs ( 0.01 usr 0.02 sys + 0.03 cusr 0.00 csys = 0.06 CPU)
+Result: PASS
+
+=============================================================================
+migrations_dir_clean=true
+policies_checked=6
+failures=0
+finished=2026-09-25T05:15:01Z
+=============================================================================
+exit=0
+------------------------------------------------------------------------------
+[14 · manual grant mutations, run 2 (final files)]
+$ cat manual-mutations.sh
+  | #!/usr/bin/env bash
+  | # Manual grant mutation cycles for 05-16. LOCAL ONLY: db reset --local, test db --local.
+  | set -u
+  | cd /Users/adyan/Documents/GitHub/Event-Radar || exit 1
+  | MIG=supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+  | run_cycle() {
+  |   local label="$1" pattern="$2" replacement="$3"
+  |   echo "============================================================================="
+  |   echo "MUTATION $label"
+  |   echo "  pattern     : $pattern"
+  |   echo "  replacement : $replacement"
+  |   echo "============================================================================="
+  |   if [ -n "$(git status --porcelain "$MIG")" ]; then echo "FATAL: $MIG dirty before mutation"; return 1; fi
+  |   python3 - "$MIG" "$pattern" "$replacement" <<'PY'
+  | import sys
+  | p, pat, rep = sys.argv[1:4]
+  | s = open(p).read()
+  | n = s.count(pat)
+  | print(f"  occurrences : {n}")
+  | if n != 1: sys.exit(3)
+  | open(p, 'w').write(s.replace(pat, rep))
+  | PY
+  |   [ $? -eq 0 ] || { echo "FATAL: pattern not found exactly once"; git checkout -- "$MIG"; return 1; }
+  |   echo "--- git diff (mutation applied) ---"
+  |   git --no-pager diff -U0 "$MIG"
+  |   echo "--- mutated: supabase db reset --local ---"
+  |   supabase db reset --local > /tmp/.mm_reset 2>&1; echo "reset_exit=$?"
+  |   echo "--- mutated: supabase test db --local ---"
+  |   out=$(supabase test db --local 2>&1); st=$?
+  |   printf '%s\n' "$out" | grep -E '^# (Failed test|        have|        want|      caught|      wanted|Looks like)|Failed tests:|Wstat|^Files=|^Result|Parse errors|Dubious|No plan' 
+  |   echo "mutated_test_exit=$st"
+  |   echo "--- restore: git checkout -- $MIG ---"
+  |   git checkout -- "$MIG"
+  |   if [ -n "$(git status --porcelain "$MIG")" ]; then echo "restore_clean=false"; else echo "restore_clean=true"; fi
+  |   echo "--- restored: supabase db reset --local ---"
+  |   supabase db reset --local > /tmp/.mm_reset 2>&1; echo "reset_exit=$?"
+  |   echo "--- restored: supabase test db --local ---"
+  |   out=$(supabase test db --local 2>&1); st=$?
+  |   printf '%s\n' "$out" | grep -E '^(Files=|Result|All tests)'
+  |   echo "restored_test_exit=$st"
+  |   echo
+  | }
+  | echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  | run_cycle "M1 (plan): users table-level UPDATE revoke removed" \
+  |   "REVOKE UPDATE ON public.users FROM anon, authenticated;" \
+  |   "-- MUTATION M1: REVOKE UPDATE ON public.users FROM anon, authenticated;"
+  | run_cycle "M2 (plan): audit-log write revoke removed" \
+  |   "REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;" \
+  |   "-- MUTATION M2: REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;"
+  | run_cycle "M3 (extra): users INSERT revoke removed" \
+  |   "REVOKE INSERT ON public.users FROM anon, authenticated;" \
+  |   "-- MUTATION M3: REVOKE INSERT ON public.users FROM anon, authenticated;"
+  | run_cycle "M4 (extra, C3): counter trigger back to SECURITY INVOKER" \
+  |   "  SECURITY DEFINER
+  |   SET search_path = ''
+  | AS \$\$
+  | BEGIN
+  |   IF TG_OP" \
+  |   "  SECURITY INVOKER
+  |   SET search_path = ''
+  | AS \$\$
+  | BEGIN
+  |   IF TG_OP"
+  | if [ -n "$(git status --porcelain supabase/migrations/)" ]; then echo "migrations_dir_clean=false"; else echo "migrations_dir_clean=true"; fi
+  | echo "finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+$ bash manual-mutations.sh
+started=2026-09-25T05:15:01Z
+=============================================================================
+MUTATION M1 (plan): users table-level UPDATE revoke removed
+  pattern     : REVOKE UPDATE ON public.users FROM anon, authenticated;
+  replacement : -- MUTATION M1: REVOKE UPDATE ON public.users FROM anon, authenticated;
+=============================================================================
+  occurrences : 1
+--- git diff (mutation applied) ---
+diff --git a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+index 679fd73..be011c4 100644
+--- a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
++++ b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+@@ -102 +102 @@ REVOKE TRUNCATE ON public.admin_audit_log FROM anon, authenticated;
+-REVOKE UPDATE ON public.users FROM anon, authenticated;
++-- MUTATION M1: REVOKE UPDATE ON public.users FROM anon, authenticated;
+--- mutated: supabase db reset --local ---
+reset_exit=0
+--- mutated: supabase test db --local ---
+# Failed test 5: "student (F-006): setting their own roles to {user,admin} is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 6: "student: setting their own saved_events_count is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 7: "student: rewriting their own email is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 9: "banned user (F-006): clearing their own banned_at is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 10: "banned user: back-dating their own ban expiry is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 11: "with RLS bypassed: S is still {user} with its email and a zero counter, B is still banned with no expiry, B's name is untouched"
+#         have: (00000000-0000-4000-8000-000000005001,"{user,admin}",pgtap-050-hijack@mail.mcgill.ca,999,"T050 Student S",f,t)
+#         want: (00000000-0000-4000-8000-000000005001,{user},pgtap-050-student@mail.mcgill.ca,0,"T050 Student S",f,t)
+# Failed test 15: "with RLS bypassed: S's profile columns hold the new values and roles is still {user}"
+#         have: ("T050 Student Renamed",private,t,"{academic,tech}",{music},"{user,admin}")
+#         want: ("T050 Student Renamed",private,t,"{academic,tech}",{music},{user})
+# Failed test 19: "anonymous: any UPDATE of users is refused outright"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 21: "with RLS bypassed: S's saved row exists and saved_events_count is 1 after the save"
+#         have: (1000,1)
+#         want: (1,1)
+# Failed test 23: "with RLS bypassed: after S unsaves, the saved_events row is gone and the counter is back to 0"
+#         have: (999,0)
+#         want: (0,0)
+# Looks like you failed 10 tests of 23
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 0 Tests: 23 Failed: 10)
+  Failed tests:  5-7, 9-11, 15, 19, 21, 23
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: FAIL
+mutated_test_exit=1
+--- restore: git checkout -- supabase/migrations/20260923130000_users_grants_audit_log_insert.sql ---
+restore_clean=true
+--- restored: supabase db reset --local ---
+reset_exit=0
+--- restored: supabase test db --local ---
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.02 sys +  0.03 cusr  0.00 csys =  0.06 CPU)
+Result: PASS
+restored_test_exit=0
+
+=============================================================================
+MUTATION M2 (plan): audit-log write revoke removed
+  pattern     : REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;
+  replacement : -- MUTATION M2: REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;
+=============================================================================
+  occurrences : 1
+--- git diff (mutation applied) ---
+diff --git a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+index 679fd73..0db1478 100644
+--- a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
++++ b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+@@ -91 +91 @@ DROP POLICY IF EXISTS "Service role can insert audit log" ON public.admin_audit_
+-REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;
++-- MUTATION M2: REVOKE INSERT, UPDATE, DELETE ON public.admin_audit_log FROM anon, authenticated;
+--- mutated: supabase db reset --local ---
+reset_exit=0
+--- mutated: supabase test db --local ---
+# Failed test 2: "anon and authenticated hold none of INSERT, UPDATE, DELETE, TRUNCATE on admin_audit_log"
+# Failed test 7: "admin: an UPDATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 8: "admin: a DELETE from the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 10: "student: an UPDATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 11: "student: a DELETE from the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 13: "anonymous: an UPDATE of the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 14: "anonymous: a DELETE from the audit log is refused"
+#       caught: no exception
+#       wanted: 42501
+# Looks like you failed 7 tests of 17
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql    (Wstat: 0 Tests: 17 Failed: 7)
+  Failed tests:  2, 7-8, 10-11, 13-14
+Files=9, Tests=156,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.03 cusr  0.00 csys =  0.06 CPU)
+Result: FAIL
+mutated_test_exit=1
+--- restore: git checkout -- supabase/migrations/20260923130000_users_grants_audit_log_insert.sql ---
+restore_clean=true
+--- restored: supabase db reset --local ---
+reset_exit=0
+--- restored: supabase test db --local ---
+All tests successful.
+Files=9, Tests=156,  1 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: PASS
+restored_test_exit=0
+
+=============================================================================
+MUTATION M3 (extra): users INSERT revoke removed
+  pattern     : REVOKE INSERT ON public.users FROM anon, authenticated;
+  replacement : -- MUTATION M3: REVOKE INSERT ON public.users FROM anon, authenticated;
+=============================================================================
+  occurrences : 1
+--- git diff (mutation applied) ---
+diff --git a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+index 679fd73..f042712 100644
+--- a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
++++ b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+@@ -103 +103 @@ REVOKE UPDATE ON public.users FROM anon, authenticated;
+-REVOKE INSERT ON public.users FROM anon, authenticated;
++-- MUTATION M3: REVOKE INSERT ON public.users FROM anon, authenticated;
+--- mutated: supabase db reset --local ---
+reset_exit=0
+--- mutated: supabase test db --local ---
+# Failed test 16: "newcomer with no profile row: inserting their own row with {user,admin} is refused"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 18: "with RLS bypassed: neither inserted users row exists"
+# Looks like you failed 2 tests of 23
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 0 Tests: 23 Failed: 2)
+  Failed tests:  16, 18
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.03 cusr  0.00 csys =  0.05 CPU)
+Result: FAIL
+mutated_test_exit=1
+--- restore: git checkout -- supabase/migrations/20260923130000_users_grants_audit_log_insert.sql ---
+restore_clean=true
+--- restored: supabase db reset --local ---
+reset_exit=0
+--- restored: supabase test db --local ---
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.03 cusr  0.01 csys =  0.07 CPU)
+Result: PASS
+restored_test_exit=0
+
+=============================================================================
+MUTATION M4 (extra, C3): counter trigger back to SECURITY INVOKER
+  pattern     :   SECURITY DEFINER
+  SET search_path = ''
+AS $$
+BEGIN
+  IF TG_OP
+  replacement :   SECURITY INVOKER
+  SET search_path = ''
+AS $$
+BEGIN
+  IF TG_OP
+=============================================================================
+  occurrences : 1
+--- git diff (mutation applied) ---
+diff --git a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+index 679fd73..3f8268f 100644
+--- a/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
++++ b/supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+@@ -135 +135 @@ CREATE OR REPLACE FUNCTION public.update_saved_events_count()
+-  SECURITY DEFINER
++  SECURITY INVOKER
+--- mutated: supabase db reset --local ---
+reset_exit=0
+--- mutated: supabase test db --local ---
+# Failed test 1: "update_saved_events_count is SECURITY DEFINER with an empty search_path (C3)"
+# Failed test 20: "student: saving an event is accepted — the counter trigger does not raise"
+# Failed test 21: "with RLS bypassed: S's saved row exists and saved_events_count is 1 after the save"
+#         have: (0,0)
+#         want: (1,1)
+# Looks like you failed 3 tests of 23
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 0 Tests: 23 Failed: 3)
+  Failed tests:  1, 20-21
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.02 sys +  0.02 cusr  0.01 csys =  0.06 CPU)
+Result: FAIL
+mutated_test_exit=1
+--- restore: git checkout -- supabase/migrations/20260923130000_users_grants_audit_log_insert.sql ---
+restore_clean=true
+--- restored: supabase db reset --local ---
+reset_exit=0
+--- restored: supabase test db --local ---
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: PASS
+restored_test_exit=0
+
+migrations_dir_clean=true
+finished=2026-09-25T05:18:37Z
+exit=0
+------------------------------------------------------------------------------
+[15 · final reset, unseeded, seed, seeded]
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+Applying migration 20260923130000_users_grants_audit_log_insert.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.03 cusr  0.00 csys =  0.06 CPU)
+Result: PASS
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+$ supabase test db --local
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+All tests successful.
+Files=9, Tests=156,  0 wallclock secs ( 0.02 usr  0.00 sys +  0.03 cusr  0.01 csys =  0.06 CPU)
+Result: PASS
+------------------------------------------------------------------------------
+[16 · tsc]
+$ npx tsc --noEmit
+------------------------------------------------------------------------------
+[17 · jest]
+$ npx jest --ci
+Test Suites: 71 passed, 71 total
+Tests:       1325 passed, 1325 total
+Snapshots:   0 total
+Time:        2.389 s
+------------------------------------------------------------------------------
+[18 · Playwright, the five plan specs]
+$ npx playwright test e2e/specs/save-and-rsvp.spec.ts e2e/specs/public-profile-privacy.spec.ts e2e/specs/ban-and-onboarding-ring.spec.ts e2e/specs/admin-audit-row.spec.ts e2e/specs/admin-write-paths.spec.ts --reporter=list
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (416ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (297ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (290ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (326ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (327ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (317ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (261ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (235ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (221ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (301ms)
+  ✓  11 [chromium] › e2e/specs/admin-audit-row.spec.ts:114:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-073: approving the fixture writes exactly one audit row (190ms)
+  ✓  12 [chromium] › e2e/specs/admin-audit-row.spec.ts:134:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-072: Recent Activity shows the action and the actor by name (517ms)
+  ✓  13 [chromium] › e2e/specs/admin-write-paths.spec.ts:222:7 › admin writes through their split clients (DEC-49) › approving a pending club: approved, owner membership, organizer role, notification (153ms)
+  ✓  14 [chromium] › e2e/specs/admin-write-paths.spec.ts:252:7 › admin writes through their split clients (DEC-49) › resolving a report: status and reviewer change (156ms)
+  ✓  15 [chromium] › e2e/specs/admin-write-paths.spec.ts:267:7 › admin writes through their split clients (DEC-49) › approving an organizer request: approved, organizer membership, notification (135ms)
+  ✓  16 [chromium] › e2e/specs/admin-write-paths.spec.ts:298:7 › admin writes through their split clients (DEC-49) › banning with suspend_content: banned, own club suspended with a review, notification (138ms)
+  ✓  17 [chromium] › e2e/specs/admin-write-paths.spec.ts:335:7 › admin writes through their split clients (DEC-49) › unbanning: banned_at and ban_expires_at are cleared (130ms)
+  ✓  18 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:60:7 › a permanently banned user (F-062, F-088) › gets a JSON 403 Account suspended on an API write (79ms)
+  ✓  19 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:64:7 › a permanently banned user (F-062, F-088) › gets the same JSON 403 on an API read (83ms)
+  ✓  20 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:68:7 › a permanently banned user (F-062, F-088) › is still sent to the ban page on a page request (151ms)
+  ✓  21 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:77:7 › a user whose suspension is still running (F-088) › gets a JSON 403 Account suspended on an API write (61ms)
+  ✓  22 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:85:7 › a user whose suspension has expired › reads their own saved events, because banned_at alone is not a ban (113ms)
+  ✓  23 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:94:7 › the mid-onboarding student (F-089, DEC-34) › is sent to onboarding from the home page (135ms)
+  ✓  24 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:99:7 › the mid-onboarding student (F-089, DEC-34) › is still sent to onboarding with the needs_onboarding cookie deleted (database truth) (216ms)
+  ✓  25 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:108:7 › the mid-onboarding student (F-089, DEC-34) › gets a JSON 403 Onboarding required on a direct API write (78ms)
+  ✓  26 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:112:7 › the mid-onboarding student (F-089, DEC-34) › can still make the wizard's self-update (exempt from the onboarding guard) (76ms)
+  ✓  27 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:119:7 › the mid-onboarding student (F-089, DEC-34) › can still complete onboarding (exempt from the onboarding guard) (81ms)
+  ✓  28 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:129:7 › the deleted debug route (F-027) › answers 404 in the production build (61ms)
+  ✓  29 [chromium] › e2e/specs/public-profile-privacy.spec.ts:71:7 › public profile privacy (F-005) › private: the not-found response to an anonymous reader, the page to a signed-in viewer; public again: the page, never the email (152ms)
+  ✓  30 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (1.2s)
+  ✓  31 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (926ms)
+  ✓  32 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (415ms)
+  32 passed (17.0s)
+exit=0
+------------------------------------------------------------------------------
+[19 · Playwright, full suite from a fresh reset + seed]
+$ supabase db reset --local; npx tsx scripts/seed/load.ts; npx playwright test --reporter=list
+(the seed_exit line is blank because the wrapper shell had no PIPESTATUS; the seed printed its normal two lines)
+reset_exit=0
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+seed_exit=
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (396ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (272ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (292ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (277ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (285ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (286ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (275ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (212ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (206ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (250ms)
+  ✓  11 [chromium] › e2e/specs/admin-audit-row.spec.ts:114:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-073: approving the fixture writes exactly one audit row (212ms)
+  ✓  12 [chromium] › e2e/specs/admin-audit-row.spec.ts:134:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-072: Recent Activity shows the action and the actor by name (517ms)
+  ✓  13 [chromium] › e2e/specs/admin-guard.spec.ts:43:7 › an anonymous caller › FIXED F-061: anonymous admin call answers 401 (10ms)
+  ✓  14 [chromium] › e2e/specs/admin-guard.spec.ts:62:7 › an onboarded student › PRESERVE: a non-admin gets 403 Forbidden (140ms)
+  ✓  15 [chromium] › e2e/specs/admin-guard.spec.ts:70:7 › an admin › PRESERVE: the admin gets 200 with the stats body (127ms)
+  ✓  16 [chromium] › e2e/specs/admin-login-cookie-equivalence.spec.ts:40:5 › the cookie shim emits the same cookie names the real sign-in page does (457ms)
+  ✓  17 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (475ms)
+  ✓  18 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  19 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (199ms)
+  ✓  20 [chromium] › e2e/specs/admin-write-paths.spec.ts:222:7 › admin writes through their split clients (DEC-49) › approving a pending club: approved, owner membership, organizer role, notification (122ms)
+  ✓  21 [chromium] › e2e/specs/admin-write-paths.spec.ts:252:7 › admin writes through their split clients (DEC-49) › resolving a report: status and reviewer change (108ms)
+  ✓  22 [chromium] › e2e/specs/admin-write-paths.spec.ts:267:7 › admin writes through their split clients (DEC-49) › approving an organizer request: approved, organizer membership, notification (123ms)
+  ✓  23 [chromium] › e2e/specs/admin-write-paths.spec.ts:298:7 › admin writes through their split clients (DEC-49) › banning with suspend_content: banned, own club suspended with a review, notification (122ms)
+  ✓  24 [chromium] › e2e/specs/admin-write-paths.spec.ts:335:7 › admin writes through their split clients (DEC-49) › unbanning: banned_at and ban_expires_at are cleared (109ms)
+  ✓  25 [chromium] › e2e/specs/anonymous-browse.spec.ts:31:5 › an anonymous visitor browses the event feed and sees only approved events (334ms)
+  ✓  26 [chromium] › e2e/specs/anonymous-browse.spec.ts:50:5 › an anonymous visitor searches, and the search narrows the feed (660ms)
+  ✓  27 [chromium] › e2e/specs/anonymous-browse.spec.ts:63:5 › an anonymous visitor browses public club content (232ms)
+  ✓  28 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:60:7 › a permanently banned user (F-062, F-088) › gets a JSON 403 Account suspended on an API write (77ms)
+  ✓  29 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:64:7 › a permanently banned user (F-062, F-088) › gets the same JSON 403 on an API read (79ms)
+  ✓  30 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:68:7 › a permanently banned user (F-062, F-088) › is still sent to the ban page on a page request (144ms)
+  ✓  31 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:77:7 › a user whose suspension is still running (F-088) › gets a JSON 403 Account suspended on an API write (79ms)
+  ✓  32 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:85:7 › a user whose suspension has expired › reads their own saved events, because banned_at alone is not a ban (104ms)
+  ✓  33 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:94:7 › the mid-onboarding student (F-089, DEC-34) › is sent to onboarding from the home page (129ms)
+  ✓  34 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:99:7 › the mid-onboarding student (F-089, DEC-34) › is still sent to onboarding with the needs_onboarding cookie deleted (database truth) (162ms)
+  ✓  35 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:108:7 › the mid-onboarding student (F-089, DEC-34) › gets a JSON 403 Onboarding required on a direct API write (77ms)
+  ✓  36 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:112:7 › the mid-onboarding student (F-089, DEC-34) › can still make the wizard's self-update (exempt from the onboarding guard) (98ms)
+  ✓  37 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:119:7 › the mid-onboarding student (F-089, DEC-34) › can still complete onboarding (exempt from the onboarding guard) (77ms)
+  ✓  38 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:129:7 › the deleted debug route (F-027) › answers 404 in the production build (59ms)
+  ✓  39 [chromium] › e2e/specs/banned-redirect.spec.ts:37:7 › a permanently banned user › is redirected away from a protected path, to the ban page (125ms)
+  ✓  40 [chromium] › e2e/specs/banned-redirect.spec.ts:50:7 › a user whose suspension is still running › is redirected away from a protected path, to the ban page (127ms)
+  ✓  41 [chromium] › e2e/specs/banned-redirect.spec.ts:63:7 › a user whose suspension has expired › reaches the protected path, because banned_at alone is not a ban (152ms)
+  ✓  42 [chromium] › e2e/specs/club-authorization.spec.ts:73:7 › the cross-club attacker on the approved club (REFAC-12) › cannot update the club (106ms)
+  ✓  43 [chromium] › e2e/specs/club-authorization.spec.ts:80:7 › the cross-club attacker on the approved club (REFAC-12) › cannot delete the club (104ms)
+  ✓  44 [chromium] › e2e/specs/club-authorization.spec.ts:87:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view invitations (104ms)
+  ✓  45 [chromium] › e2e/specs/club-authorization.spec.ts:94:7 › the cross-club attacker on the approved club (REFAC-12) › cannot send invitations (103ms)
+  ✓  46 [chromium] › e2e/specs/club-authorization.spec.ts:101:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view members (103ms)
+  ✓  47 [chromium] › e2e/specs/club-authorization.spec.ts:108:7 › the cross-club attacker on the approved club (REFAC-12) › cannot remove members (104ms)
+  ✓  48 [chromium] › e2e/specs/club-authorization.spec.ts:117:7 › the cross-club attacker on the approved club (REFAC-12) › cannot change member roles (107ms)
+  ✓  49 [chromium] › e2e/specs/club-authorization.spec.ts:126:7 › the cross-club attacker on the approved club (REFAC-12) › cannot transfer ownership (120ms)
+  ✓  50 [chromium] › e2e/specs/club-authorization.spec.ts:133:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view club analytics (105ms)
+  ✓  51 [chromium] › e2e/specs/club-authorization.spec.ts:140:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view the analytics of the club's event (104ms)
+  ✓  52 [chromium] › e2e/specs/club-authorization.spec.ts:147:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's banner (103ms)
+  ✓  53 [chromium] › e2e/specs/club-authorization.spec.ts:154:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's logo (103ms)
+  ✓  54 [chromium] › e2e/specs/club-authorization.spec.ts:165:7 › the club's organizer (not the owner) › cannot update the club (owner only) (104ms)
+  ✓  55 [chromium] › e2e/specs/club-authorization.spec.ts:172:7 › the club's organizer (not the owner) › can view members (104ms)
+  ✓  56 [chromium] › e2e/specs/club-authorization.spec.ts:179:7 › the club's organizer (not the owner) › can view club analytics (105ms)
+  ✓  57 [chromium] › e2e/specs/club-authorization.spec.ts:187:7 › the club owner › can view invitations (111ms)
+  ✓  58 [chromium] › e2e/specs/club-authorization.spec.ts:193:7 › the club owner › can view members (103ms)
+  ✓  59 [chromium] › e2e/specs/club-authorization.spec.ts:202:7 › the club owner › can view club analytics (106ms)
+  ✓  60 [chromium] › e2e/specs/club-authorization.spec.ts:206:7 › the club owner › FIXED F-087: the owner's own club PATCH answers 200, and status stays unwritable (179ms)
+  ✓  61 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:118:7 › club invitation acceptance (F-016, DEC-43) › the club owner invites the student by email (37ms)
+  ✓  62 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:130:7 › club invitation acceptance (F-016, DEC-43) › the student opens the invitation and it is accepted (446ms)
+  ✓  63 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:159:7 › club invitation acceptance (F-016, DEC-43) › the owner sees the invitation accepted (34ms)
+  ✓  64 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:176:7 › club invitation acceptance (F-016, DEC-43) › the student is now a member of the club, as an organizer (36ms)
+  ✓  65 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:40:7 › the club owner › is routed from /my-clubs to the multi-club surface and sees the approved club (1.1s)
+  ✓  66 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:54:7 › the club owner › opens the club dashboard and sees the club's own events (525ms)
+  ✓  67 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:68:7 › a member of a different club › does not see the approved club on their own surface (381ms)
+  ✓  68 [chromium] › e2e/specs/csrf-origin.spec.ts:69:7 › an onboarded student's session, from another site › DEFECT F-090: a POST carrying Origin https://evil.example is accepted (281ms)
+  ✓  69 [chromium] › e2e/specs/csrf-origin.spec.ts:75:7 › an onboarded student's session, from another site › DEFECT F-090: a POST carrying Sec-Fetch-Site cross-site is accepted (247ms)
+  ✓  70 [chromium] › e2e/specs/csrf-origin.spec.ts:85:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with the application's own Origin is accepted (244ms)
+  ✓  71 [chromium] › e2e/specs/csrf-origin.spec.ts:93:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted (243ms)
+  ✓  72 [chromium] › e2e/specs/event-read-path.spec.ts:84:5 › PRESERVE: GET /api/events?limit=1 returns 200 with the approved event first and total 2 (5ms)
+  ✓  73 [chromium] › e2e/specs/event-read-path.spec.ts:95:5 › PRESERVE: GET /api/events?search=Music Night returns exactly the second approved event (6ms)
+  ✓  74 [chromium] › e2e/specs/event-read-path.spec.ts:104:5 › PRESERVE: typing a,b into the search box shows the No events found state (592ms)
+  ✓  75 [chromium] › e2e/specs/event-read-path.spec.ts:117:5 › PRESERVE: the approved event's detail page renders its title (213ms)
+  ✓  76 [chromium] › e2e/specs/event-read-path.spec.ts:149:5 › PRESERVE: limit=1 then its nextCursor traverses both approved events in start_date order, total 2 on each page (15ms)
+  ✓  77 [chromium] › e2e/specs/event-read-path.spec.ts:163:5 › PRESERVE: the same cursor traversal with search=Seed yields the same two pages (the search or() and the keyset or() are both applied) (17ms)
+  ✓  78 [chromium] › e2e/specs/event-read-path.spec.ts:174:5 › PRESERVE: cursor=not-a-valid-cursor is a 400 with Invalid cursor (2ms)
+  ✓  79 [chromium] › e2e/specs/event-read-path.spec.ts:182:5 › DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix) (227ms)
+  ✓  80 [chromium] › e2e/specs/event-read-path.spec.ts:203:5 › DEFECT F-081: the feed files the academic+tech event under a Social row, and there is no Tech row (moves only if 04-11 ships the identity mappings) (418ms)
+  ✓  81 [chromium] › e2e/specs/event-read-path.spec.ts:226:5 › FIXED F-082: search=a,b is a 200 with an empty events list (moved in 04-08) (9ms)
+  ✓  82 [chromium] › e2e/specs/event-read-path.spec.ts:238:5 › FIXED F-082: search=% matches only a literal percent, so no seeded event (moved in 04-08) (9ms)
+  ✓  83 [chromium] › e2e/specs/event-read-path.spec.ts:250:5 › FIXED F-083: the list body carries a nextCursor when more rows remain (moved in 04-09) (5ms)
+  ✓  84 [chromium] › e2e/specs/no-profile-row.spec.ts:109:7 › a signed-in account with no profile row (DEC-35) › an API call gets a JSON 403 Profile not found (25ms)
+  ✓  85 [chromium] › e2e/specs/no-profile-row.spec.ts:116:7 › a signed-in account with no profile row (DEC-35) › a page request is signed out and sent to /?error=profile_sync_failed (121ms)
+  ✓  86 [chromium] › e2e/specs/protected-route-redirect.spec.ts:35:7 › an anonymous visitor › is redirected from every protected path to the sign-in prompt, carrying the destination (375ms)
+  ✓  87 [chromium] › e2e/specs/protected-route-redirect.spec.ts:66:7 › a signed-in student › reaches every protected path without a redirect (1.0s)
+  ✓  88 [chromium] › e2e/specs/public-profile-privacy.spec.ts:71:7 › public profile privacy (F-005) › private: the not-found response to an anonymous reader, the page to a signed-in viewer; public again: the page, never the email (166ms)
+  ✓  89 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (1.2s)
+  ✓  90 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (776ms)
+  ✓  91 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (416ms)
+  91 passed (28.8s)
+exit=0
+------------------------------------------------------------------------------
+[20 · leave the stack reset and seeded]
+$ supabase db reset --local
+{"target":"local","version":"","message":"Reset local database."}
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+------------------------------------------------------------------------------
+[21 · CI drift gate after the commit]
+$ supabase gen types typescript --local --schema public | diff -u src/lib/supabase/types.ts -
+(no output)
+------------------------------------------------------------------------------
+[22 · the plan's verify]
+$ supabase test db --local && supabase gen types typescript --local --schema public | diff -u src/lib/supabase/types.ts -
+Files=9, Tests=156,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.03 cusr  0.00 csys =  0.05 CPU)
+Result: PASS
+------------------------------------------------------------------------------
+[23 · port 3000]
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN
+(no output) exit=1
