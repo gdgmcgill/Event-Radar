@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getElevatedClient } from "@/server/db/elevated";
-import { sanitizeText } from "@/lib/sanitize";
+import { hasUnsafeUrlScheme, sanitizeText } from "@/lib/sanitize";
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
@@ -53,6 +53,38 @@ export async function POST(request: NextRequest) {
   if (!parsedBody.ok) return parsedBody.response;
   const body = parsedBody.body;
   const { contact_email, logo_url, instagram_handle, website_url, discord_url, twitter_url, linkedin_url } = body;
+
+  // The optional text fields reach an elevated insert: each must be a string
+  // when present, and a link may not carry a non-http(s) scheme such as
+  // `javascript:` (REVIEW-05 WR-09). A value that does not parse as a URL at
+  // all is still accepted, as before: the create form's inputs are free text
+  // and a browser can only resolve such a value as a relative link.
+  const optionalText = {
+    logo_url,
+    instagram_handle,
+    website_url,
+    discord_url,
+    twitter_url,
+    linkedin_url,
+  } as const;
+  for (const [field, value] of Object.entries(optionalText)) {
+    if (value !== undefined && value !== null && typeof value !== "string") {
+      return NextResponse.json(
+        { error: `Invalid value for ${field}`, field },
+        { status: 400 }
+      );
+    }
+    if (
+      field !== "instagram_handle" &&
+      typeof value === "string" &&
+      hasUnsafeUrlScheme(value.trim())
+    ) {
+      return NextResponse.json(
+        { error: `Invalid URL for ${field}` },
+        { status: 400 }
+      );
+    }
+  }
 
   // Sanitize text inputs to prevent XSS
   const name = sanitizeText(body.name ?? "");

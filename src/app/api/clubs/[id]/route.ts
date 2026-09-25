@@ -7,6 +7,7 @@ import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import type { TablesUpdate } from "@/lib/supabase/types";
 import { readJsonObject } from "@/server/body";
+import { isHttpUrl } from "@/lib/sanitize";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -94,27 +95,45 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     ] as const;
 
     // DI-25: typed with the generated update type. Only whitelisted columns.
+    // The whitelist is the control that replaces RLS on this elevated write,
+    // so every value must be a string or null (REVIEW-05 WR-09): any other
+    // JSON type is refused rather than passed through.
     const updates: TablesUpdate<"clubs"> = {};
     for (const field of allowedFields) {
       if (field in body) {
-        const value = body[field];
-        updates[field] =
-          typeof value === "string" ? value.trim() || null : value;
-      }
-    }
-
-    // Validate URL fields
-    const urlFields = ["website_url", "discord_url", "twitter_url", "linkedin_url"] as const;
-    for (const field of urlFields) {
-      if (updates[field] && typeof updates[field] === "string") {
-        try {
-          new URL(updates[field] as string);
-        } catch {
+        const value: unknown = body[field];
+        if (value !== null && typeof value !== "string") {
           return NextResponse.json(
-            { error: `Invalid URL for ${field}` },
+            { error: `Invalid value for ${field}`, field },
             { status: 400 }
           );
         }
+        // A blank string or null clears the column, as before; a NOT NULL
+        // column refuses the null at the database, as before.
+        (updates as Record<string, string | null>)[field] =
+          typeof value === "string" ? value.trim() || null : null;
+      }
+    }
+
+    // Validate URL fields: absolute http(s) only (REVIEW-05 WR-09). `new
+    // URL()` alone accepted `javascript:`, and the club page renders these as
+    // `href`. logo_url and banner_url, previously unchecked, are held to the
+    // same rule.
+    const urlFields = [
+      "website_url",
+      "discord_url",
+      "twitter_url",
+      "linkedin_url",
+      "logo_url",
+      "banner_url",
+    ] as const;
+    for (const field of urlFields) {
+      const value = updates[field];
+      if (typeof value === "string" && !isHttpUrl(value)) {
+        return NextResponse.json(
+          { error: `Invalid URL for ${field}` },
+          { status: 400 }
+        );
       }
     }
 
