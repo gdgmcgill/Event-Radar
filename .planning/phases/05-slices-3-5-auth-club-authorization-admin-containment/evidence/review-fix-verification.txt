@@ -810,3 +810,552 @@ seed: target http://127.0.0.1:54321 (local stack)
 seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
 seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
 exit=0
+
+
+==============================================================
+REVIEW-05 iteration 3 — final verification
+recorded 2026-09-25T20:48:06Z, HEAD 7c68c7d
+==============================================================
+
+$ npx tsc --noEmit
+(started 20:48:06Z, HEAD 7c68c7d)
+exit=0
+
+$ npm run lint
+(started 20:48:07Z, HEAD 7c68c7d)
+
+> uni-verse@0.1.0 lint
+> eslint .
+
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-onboarding.js
+  67:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-online-users.js
+  33:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/calendar/page.tsx
+  779:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/contributors/page.tsx
+  74:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/events/[id]/EventDetailClient.tsx
+  235:5  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/moderation/organizers/page.tsx
+  251:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/my-events/page.tsx
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 159) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 167) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 181) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/page.tsx
+  64:17  warning  The ref value 'timerRefs.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'timerRefs.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/auth/SignOutButton.tsx
+  42:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  44:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubDiscoveryCard.tsx
+  43:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubSettingsTab.tsx
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  233:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  256:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/FollowButton.tsx
+  39:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/onboarding/OnboardingWizard.tsx
+  123:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 18 problems (0 errors, 18 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
+exit=0
+
+$ npx jest --ci
+(started 20:48:12Z, HEAD 7c68c7d)
+PASS node src/__tests__/api/clubs/club-gates-characterization.test.ts
+PASS node src/app/auth/callback/route.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+PASS node src/app/auth/callback/route-defect.test.ts
+PASS node src/__tests__/api/review05/json-body.test.ts
+PASS node src/__tests__/api/admin/admin-guard-characterization.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+  ● Console
+
+    console.error
+      Fuzzy search RPC error: { message: 'RPC unavailable' }
+
+      351 |
+      352 |       if (searchError) {
+    > 353 |         console.error('Fuzzy search RPC error:', searchError);
+          |                 ^
+      354 |         // Fallback to basic ILIKE search if RPC fails. The term is escaped for
+      355 |         // LIKE and double-quoted for PostgREST (F-082, see searchFilter.ts).
+      356 |         searchFallback = [
+
+      at GET (src/app/api/events/route.ts:353:17)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:287:5)
+
+    console.error
+      Supabase error fetching events: {"message":"Database connection failed"}
+
+      467 |       }
+      468 |
+    > 469 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      470 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      471 |         ? errorMessage
+      472 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:469:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:384:17)
+
+    console.error
+      Supabase error fetching events: {"message":"relation \"events\" does not exist"}
+
+      467 |       }
+      468 |
+    > 469 |       console.error("Supabase error fetching events:", JSON.stringify(eventsError));
+          |               ^
+      470 |       const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
+      471 |         ? errorMessage
+      472 |         : 'Failed to fetch events';
+
+      at GET (src/app/api/events/route.ts:469:15)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:399:17)
+
+    console.error
+      Error fetching events: Error: Unexpected crash
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:407:13)
+          at /Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:305:39
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:312:13)
+          at Object.mockConstructor [as from] (/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-mock/build/index.js:102:19)
+          at GET (/Users/adyan/Documents/GitHub/Event-Radar/src/app/api/events/route.ts:328:8)
+          at processTicksAndRejections (node:internal/process/task_queues:104:5)
+          at Object.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/src/__tests__/api/events/get-events.test.ts:410:17)
+
+      529 |     );
+      530 |   } catch (error) {
+    > 531 |     console.error("Error fetching events:", error);
+          |             ^
+      532 |     return NextResponse.json(
+      533 |       { error: "Failed to fetch events" },
+      534 |       { status: 500 }
+
+      at GET (src/app/api/events/route.ts:531:13)
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:410:17)
+
+PASS jsdom src/__tests__/pages/public-profile-defect.test.tsx
+PASS node src/proxy.test.ts
+PASS node src/instrumentation.test.ts
+PASS node src/server/ratelimit/policy.test.ts
+  ● Console
+
+    console.warn
+      [RateLimit] Upstash not configured; using the in-memory store (not shared across instances)
+
+      64 |       }
+      65 |     } else {
+    > 66 |       console.warn(
+         |               ^
+      67 |         "[RateLimit] Upstash not configured; using the in-memory store (not shared across instances)"
+      68 |       );
+      69 |       selected = { kind: "memory", store: memoryStore };
+
+      at select (src/server/ratelimit/index.ts:66:15)
+      at getRateLimitStore (src/server/ratelimit/index.ts:77:10)
+      at Object.<anonymous> (src/server/ratelimit/policy.test.ts:208:36)
+
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS jsdom src/components/events/EventFilters.test.tsx
+PASS node src/__tests__/api/events/rsvp.test.ts
+  ● Console
+
+    console.error
+      Error looking up event: { message: 'DB error' }
+
+      87 |
+      88 |     if (eventError) {
+    > 89 |       console.error("Error looking up event:", eventError);
+         |               ^
+      90 |       return serverError("verify event");
+      91 |     }
+      92 |
+
+      at GET (src/app/api/events/[id]/rsvp/route.ts:89:15)
+      at Object.<anonymous> (src/__tests__/api/events/rsvp.test.ts:136:17)
+
+PASS node src/__tests__/api/review05/notifications-door.test.ts
+PASS node src/__tests__/api/review05/fanout-after.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/__tests__/moderation/audit-shape.test.ts
+(node:59749) [UNDICI-FETCH-patch] Warning: Using `patch` is highly likely to result in a `405 Method Not Allowed`. `PATCH` is much more likely to succeed.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS node src/server/__tests__/csrf.test.ts
+  ● Console
+
+    console.warn
+      [RateLimit] Upstash not configured; using the in-memory store (not shared across instances)
+
+      64 |       }
+      65 |     } else {
+    > 66 |       console.warn(
+         |               ^
+      67 |         "[RateLimit] Upstash not configured; using the in-memory store (not shared across instances)"
+      68 |       );
+      69 |       selected = { kind: "memory", store: memoryStore };
+
+      at select (src/server/ratelimit/index.ts:66:15)
+      at getRateLimitStore (src/server/ratelimit/index.ts:77:10)
+      at proxy (src/proxy.ts:70:72)
+      at src/server/__tests__/csrf.test.ts:256:28
+
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/admin/admin-guard-defect.test.ts
+PASS node src/lib/sanitize.test.ts
+PASS jsdom src/components/events/FilterSidebar.test.tsx
+PASS node src/__tests__/api/service-role-routing.test.ts
+PASS node src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS jsdom src/components/ErrorBoundary.test.tsx
+PASS node src/lib/__tests__/env-assertions-defect.test.ts
+PASS node src/server/ratelimit/selection.test.ts
+PASS node src/__tests__/api/review05/club-links.test.ts
+PASS node src/proxy-characterization.test.ts
+  ● Console
+
+    console.warn
+      [RateLimit] Upstash not configured; using the in-memory store (not shared across instances)
+
+      64 |       }
+      65 |     } else {
+    > 66 |       console.warn(
+         |               ^
+      67 |         "[RateLimit] Upstash not configured; using the in-memory store (not shared across instances)"
+      68 |       );
+      69 |       selected = { kind: "memory", store: memoryStore };
+
+      at select (src/server/ratelimit/index.ts:66:15)
+      at getRateLimitStore (src/server/ratelimit/index.ts:77:10)
+      at proxy (src/proxy.ts:70:72)
+      at src/proxy-characterization.test.ts:239:32
+
+PASS node src/server/ratelimit/upstashStore.test.ts
+PASS node src/__tests__/api/review05/admin-reban.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+PASS node src/proxy-ratelimit-failopen.test.ts
+PASS node src/lib/env.test.ts
+PASS node src/__tests__/api/review05/admin-event-notification.test.ts
+PASS node src/app/api/events/export/route.test.ts
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/app/api/events/route.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/getsession-gate.test.ts
+PASS node src/__tests__/lib/tag-coercion-defect.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/server/__tests__/errors.test.ts
+PASS node src/__tests__/seed/guard.test.ts
+PASS node src/lib/eventTags.test.ts
+PASS node src/__tests__/api/review05/admin-edits-whitelist.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/lib/eventCursor.test.ts
+PASS node src/__tests__/api/review05/club-transfer.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/admin/admin-users-patch-defect.test.ts
+PASS node src/__tests__/seed/env-override.test.ts
+PASS node src/lib/searchFilter.test.ts
+PASS node src/__tests__/api/events/pending-edits-defect.test.ts
+PASS node src/server/__tests__/requireOnboarded.test.ts
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/server/ratelimit/memoryStore.test.ts
+PASS node src/__tests__/api/events/ban-asymmetry-defect.test.ts
+PASS node src/lib/experiments.test.ts
+PASS node src/__tests__/api/review05/admin-review-once.test.ts
+PASS node src/server/__tests__/requireActiveUser.test.ts
+PASS node src/lib/dateValidation.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/lib/__tests__/recommendations.test.ts
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+PASS node src/__tests__/api/review05/club-member-role.test.ts
+PASS node src/server/__tests__/context.test.ts
+PASS node src/lib/exportUtils.test.ts
+PASS node src/lib/__tests__/ban.test.ts
+PASS node src/lib/classifier.test.ts
+PASS node src/proxy-defect.test.ts
+  ● Console
+
+    console.warn
+      [RateLimit] Upstash not configured; using the in-memory store (not shared across instances)
+
+      64 |       }
+      65 |     } else {
+    > 66 |       console.warn(
+         |               ^
+      67 |         "[RateLimit] Upstash not configured; using the in-memory store (not shared across instances)"
+      68 |       );
+      69 |       selected = { kind: "memory", store: memoryStore };
+
+      at select (src/server/ratelimit/index.ts:66:15)
+      at getRateLimitStore (src/server/ratelimit/index.ts:77:10)
+      at proxy (src/proxy.ts:70:72)
+      at Object.<anonymous> (src/proxy-defect.test.ts:206:28)
+
+PASS node src/lib/diversity.test.ts
+PASS node src/server/__tests__/elevated.test.ts
+PASS jsdom src/hooks/useEvents.test.ts
+
+Test Suites: 1 skipped, 87 passed, 87 of 88 total
+Tests:       1 skipped, 1651 passed, 1652 total
+Snapshots:   0 total
+Time:        2.216 s
+Ran all test suites in 2 projects.
+exit=0
+
+$ node scripts/check-characterization-tags.mjs --all
+(started 20:48:14Z, HEAD 7c68c7d)
+ok   PRESERVE src/__tests__/api/admin/admin-guard-characterization.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-guard-defect.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-users-patch-defect.test.ts (F-091)
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/events/ban-asymmetry-defect.test.ts (F-088, F-062, F-089)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071, F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   DEFECT   src/__tests__/api/events/pending-edits-defect.test.ts (F-086)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   DEFECT   src/__tests__/pages/public-profile-defect.test.tsx (F-005)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 34 files
+exit=0
+
+$ node scripts/check-elevated-ratchet.mjs
+(started 20:48:14Z, HEAD 7c68c7d)
+committed=2 live=2 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+$ node scripts/check-migration-filenames.mjs
+(started 20:48:14Z, HEAD 7c68c7d)
+PASS: 8 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql
+exit=0
+==============================================================
+iteration 3: pgTAP from a clean reset
+run at 2026-09-25T20:48:24Z, HEAD 7c68c7d
+==============================================================
+
+$ supabase db reset --local
+(started 20:48:24Z, HEAD 7c68c7d)
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+Applying migration 20260923130000_users_grants_audit_log_insert.sql...
+Applying migration 20260925120000_events_guard_moderated_update.sql...
+Applying migration 20260925130000_events_guard_appeal_increment.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+(unseeded)
+
+$ supabase test db --local
+(started 20:48:50Z, HEAD 7c68c7d)
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/065-events-moderated-update.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql ..... ok
+All tests successful.
+Files=11, Tests=200,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.01 csys =  0.05 CPU)
+Result: PASS
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ npx tsx scripts/seed/load.ts
+(started 20:48:52Z, HEAD 7c68c7d)
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+(seeded)
+
+$ supabase test db --local
+(started 20:48:54Z, HEAD 7c68c7d)
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/065-events-moderated-update.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql ..... ok
+All tests successful.
+Files=11, Tests=200,  1 wallclock secs ( 0.02 usr  0.01 sys +  0.03 cusr  0.01 csys =  0.07 CPU)
+Result: PASS
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+==============================================================
+iteration 3: Playwright from the clean reset above, production build (webServer: npm run build && npm run start, port 3000, never reused)
+[WebServer] tag-mapping noise filtered
+==============================================================
+
+$ npx playwright test e2e/specs/club-authorization.spec.ts e2e/specs/admin-write-paths.spec.ts e2e/specs/admin-moderation-queue.spec.ts e2e/specs/save-and-rsvp.spec.ts e2e/specs/event-moderation-notifications.spec.ts e2e/specs/csrf-origin.spec.ts e2e/specs/admin-guard.spec.ts --reporter=line
+(started 20:49:04Z, HEAD 7c68c7d)
+(eval):1: no such file or directory: npx playwright test e2e/specs/club-authorization.spec.ts e2e/specs/admin-write-paths.spec.ts e2e/specs/admin-moderation-queue.spec.ts e2e/specs/save-and-rsvp.spec.ts e2e/specs/event-moderation-notifications.spec.ts e2e/specs/csrf-origin.spec.ts e2e/specs/admin-guard.spec.ts --reporter=line
+exit=127
+(the exit=127 above is a harness invocation error, not a test result: zsh did not word-split the command variable, so nothing ran. Re-run below with the command written out; the stack was untouched in between.)
+
+$ npx playwright test e2e/specs/club-authorization.spec.ts e2e/specs/admin-write-paths.spec.ts e2e/specs/admin-moderation-queue.spec.ts e2e/specs/save-and-rsvp.spec.ts e2e/specs/event-moderation-notifications.spec.ts e2e/specs/csrf-origin.spec.ts e2e/specs/admin-guard.spec.ts --reporter=line
+(started 20:49:15Z, HEAD 7c68c7d)
+Running 53 tests using 1 worker
+[1/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student
+[2/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student
+[3/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member
+[4/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner
+[5/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer
+[6/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker
+[7/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin
+[8/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent
+[9/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active
+[10/53] [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired
+[11/53] [chromium] › e2e/specs/admin-guard.spec.ts:43:7 › an anonymous caller › FIXED F-061: anonymous admin call answers 401
+[12/53] [chromium] › e2e/specs/admin-guard.spec.ts:62:7 › an onboarded student › PRESERVE: a non-admin gets 403 Forbidden
+[13/53] [chromium] › e2e/specs/admin-guard.spec.ts:70:7 › an admin › PRESERVE: the admin gets 200 with the stats body
+[14/53] [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club
+[15/53] [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it
+[16/53] [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue
+[17/53] [chromium] › e2e/specs/admin-write-paths.spec.ts:222:7 › admin writes through their split clients (DEC-49) › approving a pending club: approved, owner membership, organizer role, notification
+[18/53] [chromium] › e2e/specs/admin-write-paths.spec.ts:252:7 › admin writes through their split clients (DEC-49) › resolving a report: status and reviewer change
+[19/53] [chromium] › e2e/specs/admin-write-paths.spec.ts:267:7 › admin writes through their split clients (DEC-49) › approving an organizer request: approved, organizer membership, notification
+[20/53] [chromium] › e2e/specs/admin-write-paths.spec.ts:298:7 › admin writes through their split clients (DEC-49) › banning with suspend_content: banned, own club suspended with a review, notification
+[21/53] [chromium] › e2e/specs/admin-write-paths.spec.ts:335:7 › admin writes through their split clients (DEC-49) › unbanning: banned_at and ban_expires_at are cleared
+[22/53] [chromium] › e2e/specs/club-authorization.spec.ts:73:7 › the cross-club attacker on the approved club (REFAC-12) › cannot update the club
+[23/53] [chromium] › e2e/specs/club-authorization.spec.ts:80:7 › the cross-club attacker on the approved club (REFAC-12) › cannot delete the club
+[24/53] [chromium] › e2e/specs/club-authorization.spec.ts:87:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view invitations
+[25/53] [chromium] › e2e/specs/club-authorization.spec.ts:94:7 › the cross-club attacker on the approved club (REFAC-12) › cannot send invitations
+[26/53] [chromium] › e2e/specs/club-authorization.spec.ts:101:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view members
+[27/53] [chromium] › e2e/specs/club-authorization.spec.ts:108:7 › the cross-club attacker on the approved club (REFAC-12) › cannot remove members
+[28/53] [chromium] › e2e/specs/club-authorization.spec.ts:117:7 › the cross-club attacker on the approved club (REFAC-12) › cannot change member roles
+[29/53] [chromium] › e2e/specs/club-authorization.spec.ts:126:7 › the cross-club attacker on the approved club (REFAC-12) › cannot transfer ownership
+[30/53] [chromium] › e2e/specs/club-authorization.spec.ts:133:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view club analytics
+[31/53] [chromium] › e2e/specs/club-authorization.spec.ts:140:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view the analytics of the club's event
+[32/53] [chromium] › e2e/specs/club-authorization.spec.ts:147:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's banner
+[33/53] [chromium] › e2e/specs/club-authorization.spec.ts:154:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's logo
+[34/53] [chromium] › e2e/specs/club-authorization.spec.ts:165:7 › the club's organizer (not the owner) › cannot update the club (owner only)
+[35/53] [chromium] › e2e/specs/club-authorization.spec.ts:172:7 › the club's organizer (not the owner) › can view members
+[36/53] [chromium] › e2e/specs/club-authorization.spec.ts:179:7 › the club's organizer (not the owner) › can view club analytics
+[37/53] [chromium] › e2e/specs/club-authorization.spec.ts:187:7 › the club owner › can view invitations
+[38/53] [chromium] › e2e/specs/club-authorization.spec.ts:193:7 › the club owner › can view members
+[39/53] [chromium] › e2e/specs/club-authorization.spec.ts:202:7 › the club owner › can view club analytics
+[40/53] [chromium] › e2e/specs/club-authorization.spec.ts:206:7 › the club owner › FIXED F-087: the owner's own club PATCH answers 200, and status stays unwritable
+[41/53] [chromium] › e2e/specs/csrf-origin.spec.ts:88:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Origin https://evil.example is refused with 403 and writes no row
+[42/53] [chromium] › e2e/specs/csrf-origin.spec.ts:94:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Sec-Fetch-Site cross-site is refused with 403 and writes no row
+[43/53] [chromium] › e2e/specs/csrf-origin.spec.ts:104:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with the application's own Origin is accepted
+[44/53] [chromium] › e2e/specs/csrf-origin.spec.ts:112:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted
+[45/53] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:129:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › an approval writes exactly one event_approved notification
+[46/53] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:136:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a suspension writes one event_suspended notification
+[47/53] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:143:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second approval refreshes the one event_approved row, unread again
+[48/53] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:156:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second suspension refreshes the one event_suspended row with the new reason
+[49/53] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:165:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › the creator's appeal through the real route passes the events guard (+1)
+[50/53] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:191:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a rejection after the appeal writes one event_rejected notification
+[51/53] [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile
+[52/53] [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event
+[53/53] [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going
+  53 passed (21.4s)
+exit=0
+
+iteration 3: final reset and seed (the stack is left reset and seeded)
+
+$ supabase db reset --local
+(started 20:49:43Z, HEAD 7c68c7d)
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+Applying migration 20260923130000_users_grants_audit_log_insert.sql...
+Applying migration 20260925120000_events_guard_moderated_update.sql...
+Applying migration 20260925130000_events_guard_appeal_increment.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+$ npx tsx scripts/seed/load.ts
+(started 20:50:10Z, HEAD 7c68c7d)
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
