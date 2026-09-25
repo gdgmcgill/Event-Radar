@@ -35,6 +35,15 @@ export async function POST(
     return NextResponse.json({ error: "newOwnerId is required" }, { status: 400 });
   }
 
+  // A self-transfer would promote and then demote the same row, leaving the
+  // club with no owner (REVIEW-05 WR-02). Refused before any write.
+  if (newOwnerId === user.id) {
+    return NextResponse.json(
+      { error: "You already own this club" },
+      { status: 400 }
+    );
+  }
+
   // Verify target is a club member
   const { data: targetMember } = await supabase
     .from("club_members")
@@ -73,22 +82,37 @@ export async function POST(
     .eq("user_id", user.id);
 
   if (demoteError) {
-    // Rollback: restore original owner
-    await serviceClient
+    // Rollback: put the target back to the role it held before the
+    // promotion (REVIEW-05 WR-02), not to "owner", which would leave two
+    // owners. A failed rollback is logged, never silent.
+    const { error: rollbackError } = await serviceClient
       .from("club_members")
-      .update({ role: "owner" })
+      .update({ role: targetMember.role })
       .eq("id", targetMember.id);
+    if (rollbackError) {
+      console.error(
+        `[clubs/transfer] rollback failed (requestId ${ctx.requestId}):`,
+        rollbackError
+      );
+    }
     return NextResponse.json({ error: "Failed to transfer ownership" }, { status: 500 });
   }
 
-  // Audit log
-  await serviceClient.from("admin_audit_log").insert({
+  // Audit log. A failed audit write does not undo the transfer, but it is
+  // never silent (F-073, as clubs/[id] DELETE).
+  const { error: auditError } = await serviceClient.from("admin_audit_log").insert({
     admin_user_id: user.id,
     action: "club_ownership_transferred",
     target_type: "club",
     target_id: clubId,
     metadata: { new_owner_id: newOwnerId, previous_owner_id: user.id },
   });
+  if (auditError) {
+    console.error(
+      `[clubs/transfer] audit insert failed (requestId ${ctx.requestId}):`,
+      auditError
+    );
+  }
 
   return NextResponse.json({ success: true });
 }
