@@ -17,7 +17,7 @@
  */
 
 import type { NextRequest, NextResponse } from "next/server";
-import { upstashConfig } from "@/lib/env";
+import { upstashConfig, upstashConfigProblem } from "@/lib/env";
 import { MemoryRateLimitStore } from "./memoryStore";
 import { rateLimitPolicy, tooManyRequests } from "./policy";
 import type { RateLimitStore } from "./types";
@@ -31,11 +31,37 @@ export type RateLimitStoreKind = "upstash" | "memory";
 
 let selected: { kind: RateLimitStoreKind; store: RateLimitStore } | undefined;
 
+/**
+ * Selection never throws (REVIEW-05 CR-02). An unusable pair (a `rediss://`
+ * URL, a `KV_URL` value, anything `@upstash/redis` refuses) or any error the
+ * Upstash constructors raise is logged ONCE and the memory store is used for
+ * the life of the process: rate limiting fails open, it never answers 500.
+ * The log names the problem or the error's class, never its message, because
+ * `UrlError`'s message echoes the URL and a `rediss://` URL carries the
+ * database password.
+ */
 function select(): { kind: RateLimitStoreKind; store: RateLimitStore } {
   if (!selected) {
     const config = upstashConfig();
-    if (config) {
-      selected = { kind: "upstash", store: new UpstashRateLimitStore(config) };
+    const problem = config ? upstashConfigProblem(config) : null;
+    if (config && problem) {
+      console.error(
+        `[RateLimit] Upstash configuration unusable (${problem}); using the in-memory store (not shared across instances)`
+      );
+      selected = { kind: "memory", store: memoryStore };
+    } else if (config) {
+      try {
+        selected = {
+          kind: "upstash",
+          store: new UpstashRateLimitStore(config),
+        };
+      } catch (err) {
+        console.error(
+          "[RateLimit] Upstash store construction failed; using the in-memory store (not shared across instances)",
+          { error: err instanceof Error ? err.name : typeof err }
+        );
+        selected = { kind: "memory", store: memoryStore };
+      }
     } else {
       console.warn(
         "[RateLimit] Upstash not configured; using the in-memory store (not shared across instances)"

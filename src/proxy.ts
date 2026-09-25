@@ -61,7 +61,18 @@ type RingProfile = {
 export async function proxy(request: NextRequest) {
   // Rate limit every /api/* path, /api/admin/* included, before any auth
   // work (DEC-50). The budgets live in src/server/ratelimit/policy.ts.
-  const rateLimitResponse = await applyRateLimit(request, getRateLimitStore());
+  // Fail open (REVIEW-05 CR-02): rate limiting is not an authorization
+  // control, so no fault in store selection or counting may answer 500 or
+  // stop a request. The error's class is logged, never its message, which
+  // can echo a misconfigured store URL.
+  let rateLimitResponse: NextResponse | null = null;
+  try {
+    rateLimitResponse = await applyRateLimit(request, getRateLimitStore());
+  } catch (err) {
+    console.error("[Middleware] Rate limit check failed; allowing request", {
+      error: err instanceof Error ? err.name : typeof err,
+    });
+  }
   if (rateLimitResponse) return rateLimitResponse;
 
   // Refuse a state-changing /api/* request from another site (DEC-52, F-090)

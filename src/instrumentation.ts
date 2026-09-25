@@ -41,6 +41,12 @@
  *       site down;
  *     - otherwise (local, CI, preview) nothing is logged here; the store
  *       selection warns once on first use.
+ *   When a pair IS found but its URL is unusable (not https:, a `rediss://`
+ *   connection string, a pasted `KV_URL` value — REVIEW-05 CR-02), the same
+ *   rule applies: with RATE_LIMIT_REQUIRE_DISTRIBUTED=true the server refuses
+ *   to start (InvalidEnvError naming the URL variables, never the value);
+ *   otherwise ONE error is logged in every environment and the server starts
+ *   on the memory store.
  */
 
 import {
@@ -52,7 +58,16 @@ import {
   supabaseAnonKey,
   supabaseUrl,
   upstashConfig,
+  upstashConfigProblem,
 } from "@/lib/env";
+
+/** The two URL variables, named when a present URL is unusable. */
+const UPSTASH_URL_NAMES = "UPSTASH_REDIS_REST_URL or KV_REST_API_URL";
+
+const RATE_LIMIT_UNUSABLE =
+  "[RateLimit] the configured Upstash store is unusable: set " +
+  `${UPSTASH_URL_NAMES} to the https:// REST URL. Rate limiting is degraded ` +
+  "to the per-instance in-memory store, which is not shared across instances";
 
 const RATE_LIMIT_DEGRADED =
   "[RateLimit] no distributed store is configured in production: set " +
@@ -74,9 +89,27 @@ export async function register(): Promise<void> {
     assertElevatedConfigured();
 
     const requireDistributed = rateLimitRequireDistributed();
-    if (!upstashConfig()) {
+    const upstash = upstashConfig();
+    if (!upstash) {
       if (requireDistributed) throw new MissingEnvError(UPSTASH_ENV_NAMES);
       if (isVercelProduction()) console.error(RATE_LIMIT_DEGRADED);
+    } else {
+      // REVIEW-05 CR-02: a present pair is not necessarily a usable one. A
+      // `rediss://` connection string or a pasted `KV_URL` value is refused
+      // here, at boot, instead of surfacing as a throw on the request path.
+      // Same availability rule as an absent store: refuse to start only under
+      // the explicit opt-in, otherwise log once and serve from the memory
+      // store. The message never contains the URL or the token.
+      const problem = upstashConfigProblem(upstash);
+      if (problem) {
+        if (requireDistributed) {
+          throw new InvalidEnvError(
+            UPSTASH_URL_NAMES,
+            "an https:// Upstash REST URL"
+          );
+        }
+        console.error(`${RATE_LIMIT_UNUSABLE} (${problem})`);
+      }
     }
   } catch (err) {
     if (err instanceof MissingEnvError || err instanceof InvalidEnvError) {

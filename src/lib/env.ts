@@ -129,17 +129,57 @@ function present(value: string | undefined): value is string {
  * check in `src/instrumentation.ts` (one logged error, or a refusal to start
  * when `RATE_LIMIT_REQUIRE_DISTRIBUTED` is true). The request path then falls
  * back to the in-memory store.
+ *
+ * The returned values are TRIMMED (REVIEW-05 CR-02). A value pasted with a
+ * trailing space or newline is present, and `@upstash/redis` throws on it
+ * synchronously; handing it through untrimmed made the store's construction
+ * throw on every request. Whether the trimmed URL is usable is a separate
+ * question, answered by `upstashConfigProblem()`.
  */
 export function upstashConfig(): UpstashConfig | null {
   const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
   const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (present(upstashUrl) && present(upstashToken)) {
-    return { url: upstashUrl, token: upstashToken };
+    return { url: upstashUrl.trim(), token: upstashToken.trim() };
   }
   const kvUrl = process.env.KV_REST_API_URL;
   const kvToken = process.env.KV_REST_API_TOKEN;
   if (present(kvUrl) && present(kvToken)) {
-    return { url: kvUrl, token: kvToken };
+    return { url: kvUrl.trim(), token: kvToken.trim() };
+  }
+  return null;
+}
+
+/**
+ * The URL shape `@upstash/redis` 1.38.2 accepts in its constructor; anything
+ * else makes `new Redis()` throw `UrlError` synchronously
+ * (`node_modules/@upstash/redis/nodejs.js`, `HttpClient`).
+ */
+const UPSTASH_CLIENT_URL = /^https?:\/\/[^\s#$./?].\S*$/;
+
+/**
+ * Why this Upstash pair cannot be used, or null when it can (REVIEW-05 CR-02).
+ *
+ * The URL must parse, use `https:` (the REST endpoint; the token travels in
+ * a header), and match the shape the Upstash client accepts. The common
+ * mistakes this catches: a `rediss://` TCP URL, or the Marketplace's
+ * `KV_URL` value, pasted where the REST URL belongs.
+ *
+ * The message NEVER contains the URL or the token. A `rediss://` URL carries
+ * the database password in its userinfo, so only the scheme is named.
+ */
+export function upstashConfigProblem(config: UpstashConfig): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(config.url);
+  } catch {
+    return "the Upstash REST URL does not parse as a URL";
+  }
+  if (parsed.protocol !== "https:") {
+    return `the Upstash REST URL must use https: (got ${parsed.protocol}); use the REST URL, not the redis:// or rediss:// connection string`;
+  }
+  if (!UPSTASH_CLIENT_URL.test(config.url)) {
+    return "the Upstash REST URL is not in the form the Upstash client accepts";
   }
   return null;
 }

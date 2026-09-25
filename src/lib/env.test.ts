@@ -253,6 +253,24 @@ describe("upstashConfig()", () => {
     expect(upstashConfig()).toEqual(UP);
   });
 
+  // REVIEW-05 CR-02: a pasted value's trailing newline or padding is trimmed,
+  // because @upstash/redis refuses it synchronously.
+  it("trims a trailing newline and surrounding spaces from both halves", async () => {
+    unsetAll();
+    env.UPSTASH_REDIS_REST_URL = `  ${UP.url}\n`;
+    env.UPSTASH_REDIS_REST_TOKEN = `${UP.token} \n`;
+    const { upstashConfig } = await loadEnv();
+    expect(upstashConfig()).toEqual(UP);
+  });
+
+  it("trims the KV pair too", async () => {
+    unsetAll();
+    env.KV_REST_API_URL = `${KV.url}\r\n`;
+    env.KV_REST_API_TOKEN = `\t${KV.token}`;
+    const { upstashConfig } = await loadEnv();
+    expect(upstashConfig()).toEqual(KV);
+  });
+
   it("names all four variables in UPSTASH_ENV_NAMES", async () => {
     const { UPSTASH_ENV_NAMES } = await loadEnv();
     expect(UPSTASH_ENV_NAMES).toBe(
@@ -299,4 +317,33 @@ describe("rateLimitRequireDistributed() (optional, DEC-59)", () => {
       );
     }
   );
+});
+
+// ─── REVIEW-05 CR-02: is a present Upstash pair usable? ──────────────────────
+
+describe("upstashConfigProblem()", () => {
+  const PASSWORD = "Sup3rS3cretPassw0rd";
+  const TOKEN = "placeholder-token";
+
+  it("is null for an https REST URL", async () => {
+    const { upstashConfigProblem } = await loadEnv();
+    expect(
+      upstashConfigProblem({ url: "https://example-1234.upstash.io", token: TOKEN })
+    ).toBeNull();
+  });
+
+  it.each([
+    ["a rediss:// TCP connection string", `rediss://default:${PASSWORD}@example-1234.upstash.io:6379`, /https:/],
+    ["a KV_URL-style redis:// value", `redis://default:${PASSWORD}@example-1234.upstash.io:6379`, /https:/],
+    ["an http:// URL", "http://example-1234.upstash.io", /https:/],
+    ["an unparseable value", "not a url", /does not parse/],
+    ["an https URL the Upstash client refuses", "https://.example.upstash.io", /form the Upstash client accepts/],
+  ])("names the problem for %s, never the URL", async (_label, url, expected) => {
+    const { upstashConfigProblem } = await loadEnv();
+    const problem = upstashConfigProblem({ url, token: TOKEN });
+    expect(problem).toMatch(expected);
+    expect(problem).not.toContain(PASSWORD);
+    expect(problem).not.toContain(TOKEN);
+    expect(problem).not.toContain("example-1234");
+  });
 });

@@ -260,3 +260,64 @@ describe("register() and the rate-limit store", () => {
     expect(errorSpy).not.toHaveBeenCalled();
   });
 });
+
+// ─── REVIEW-05 CR-02: a present but unusable Upstash URL ─────────────────────
+
+describe("register() and an unusable Upstash URL", () => {
+  const PASSWORD = "Sup3rS3cretPassw0rd";
+  const REDISS = `rediss://default:${PASSWORD}@example-1234.upstash.io:6379`;
+
+  beforeEach(() => {
+    env.NEXT_RUNTIME = "nodejs";
+    setAllRequired();
+  });
+
+  it("a rediss:// URL without the enforce flag: resolves and logs exactly one error, without the URL", async () => {
+    env.VERCEL_ENV = "production";
+    env.UPSTASH_REDIS_REST_URL = REDISS;
+    env.UPSTASH_REDIS_REST_TOKEN = "up-token";
+    const { register } = await load();
+    await expect(register()).resolves.toBeUndefined();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const line = String(errorSpy.mock.calls[0][0]);
+    expect(line).toMatch(/^\[RateLimit\] /);
+    expect(line).toContain("UPSTASH_REDIS_REST_URL or KV_REST_API_URL");
+    expect(line).toContain("in-memory store");
+    expect(line).not.toContain(PASSWORD);
+    expect(line).not.toContain("up-token");
+  });
+
+  it("a KV_URL-style value in KV_REST_API_URL outside production is reported too", async () => {
+    env.VERCEL_ENV = "preview";
+    env.KV_REST_API_URL = `redis://default:${PASSWORD}@example-1234.upstash.io:6379`;
+    env.KV_REST_API_TOKEN = "kv-token";
+    const { register } = await load();
+    await expect(register()).resolves.toBeUndefined();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(String(errorSpy.mock.calls[0][0])).not.toContain(PASSWORD);
+  });
+
+  it("a rediss:// URL with RATE_LIMIT_REQUIRE_DISTRIBUTED=true: refuses to start with InvalidEnvError naming the variables, never the value", async () => {
+    env.RATE_LIMIT_REQUIRE_DISTRIBUTED = "true";
+    env.UPSTASH_REDIS_REST_URL = REDISS;
+    env.UPSTASH_REDIS_REST_TOKEN = "up-token";
+    const { register } = await load();
+    const { InvalidEnvError } = await import("@/lib/env");
+    const outcome = register();
+    await expect(outcome).rejects.toBeInstanceOf(InvalidEnvError);
+    await expect(outcome).rejects.toThrow(
+      "Invalid environment variable: UPSTASH_REDIS_REST_URL or KV_REST_API_URL (expected an https:// Upstash REST URL)"
+    );
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(PASSWORD);
+  });
+
+  it("an https URL with a trailing newline is usable: resolves and logs nothing", async () => {
+    env.VERCEL_ENV = "production";
+    env.RATE_LIMIT_REQUIRE_DISTRIBUTED = "true";
+    env.UPSTASH_REDIS_REST_URL = "https://up.example.upstash.io\n";
+    env.UPSTASH_REDIS_REST_TOKEN = "up-token\n";
+    const { register } = await load();
+    await expect(register()).resolves.toBeUndefined();
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+});
