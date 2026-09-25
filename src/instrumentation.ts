@@ -25,10 +25,41 @@
  * The readers themselves stay lazy (src/lib/env.ts). This check runs them
  * early, at server start. It does not move any read to module evaluation.
  *
- * The Upstash arm of this check is added by 05-18 (DEC-50).
+ * THE RATE-LIMIT STORE (plan 05-18, DEC-50 as amended by DEC-59 Part 2)
+ *   `RATE_LIMIT_REQUIRE_DISTRIBUTED` is read first; a value other than
+ *   "true"/"false" refuses to start (InvalidEnvError). Then, when
+ *   `upstashConfig()` finds no Upstash pair:
+ *     - with RATE_LIMIT_REQUIRE_DISTRIBUTED=true, the server refuses to start
+ *       with a MissingEnvError naming both pairs (DEC-50's fail-closed boot,
+ *       now opt-in);
+ *     - otherwise, on Vercel production (`VERCEL_ENV === "production"`), ONE
+ *       error is logged naming all four variables and the degradation, and
+ *       the server starts: rate limiting runs per instance from the memory
+ *       store, which is what production did before this plan. Rate limiting
+ *       is not an authorization control, and a boot failure answers every
+ *       request 500 (measured in 05-04), so a missing store must not take the
+ *       site down;
+ *     - otherwise (local, CI, preview) nothing is logged here; the store
+ *       selection warns once on first use.
  */
 
-import { MissingEnvError, supabaseAnonKey, supabaseUrl } from "@/lib/env";
+import {
+  InvalidEnvError,
+  MissingEnvError,
+  UPSTASH_ENV_NAMES,
+  isVercelProduction,
+  rateLimitRequireDistributed,
+  supabaseAnonKey,
+  supabaseUrl,
+  upstashConfig,
+} from "@/lib/env";
+
+const RATE_LIMIT_DEGRADED =
+  "[RateLimit] no distributed store is configured in production: set " +
+  "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_URL and " +
+  "KV_REST_API_TOKEN). Rate limiting is degraded to the per-instance in-memory " +
+  "store, which is not shared across instances. Set " +
+  "RATE_LIMIT_REQUIRE_DISTRIBUTED=true to refuse to start instead.";
 
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
@@ -41,8 +72,14 @@ export async function register(): Promise<void> {
     // this file never pulls the service-role module into its bundle.
     const { assertElevatedConfigured } = await import("@/server/db/elevated");
     assertElevatedConfigured();
+
+    const requireDistributed = rateLimitRequireDistributed();
+    if (!upstashConfig()) {
+      if (requireDistributed) throw new MissingEnvError(UPSTASH_ENV_NAMES);
+      if (isVercelProduction()) console.error(RATE_LIMIT_DEGRADED);
+    }
   } catch (err) {
-    if (err instanceof MissingEnvError) {
+    if (err instanceof MissingEnvError || err instanceof InvalidEnvError) {
       console.error("[Config] refusing to start:", err.message);
     }
     throw err;

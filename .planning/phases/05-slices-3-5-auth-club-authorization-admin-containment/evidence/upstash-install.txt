@@ -1,0 +1,654 @@
+Upstash install and store wiring — plan 05-18 Task 3 (REFAC-18, DEC-50, DEC-51, DEC-59)
+**Plan:** 05-18 · **Phase:** 05 · **Recorded:** 2026-09-25
+HEAD at capture=01941cc7e679c20cdc02ea5b66cf64c2b0a0b385 (Task 3 changes in the working tree, committed with this file)
+
+Every block: the command, its verbatim output, then exit=<code>. Long outputs are filtered only where
+stated (build route tables; Playwright [WebServer] lines, whose count of the memory-store warning is
+given instead). Scratchpad paths are shortened to <scratchpad>.
+
+Verdict installed (evidence/upstash-legitimacy.txt, Task 2, DEC-59): "use 2.0.8" —
+@upstash/ratelimit 2.0.8 and @upstash/redis 1.38.2, exact pins, no caret.
+DEC-59 Part 2 governs the boot behaviour and supersedes the plan's "production refuses to start"
+clause: production without a store logs ONE error and serves from the memory store;
+RATE_LIMIT_REQUIRE_DISTRIBUTED=true restores the fail-closed boot.
+
+==============================================================================
+1. Production dependency audit BEFORE the install (baseline)
+==============================================================================
+
+$ npm audit --audit-level=high --omit=dev   (summary lines)
+dompurify  <=3.4.12
+Severity: moderate
+yaml  1.0.0 - 1.10.2 || 2.0.0 - 2.8.2
+Severity: moderate
+2 moderate severity vulnerabilities
+exit=0
+
+==============================================================================
+2. The one install
+==============================================================================
+
+$ npm install --save-exact @upstash/ratelimit@2.0.8 @upstash/redis@1.38.2
+
+added 4 packages, and audited 997 packages in 1s
+
+231 packages are looking for funding
+  run `npm fund` for details
+
+9 vulnerabilities (3 low, 3 moderate, 2 high, 1 critical)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+exit=0
+
+Note: the 9 vulnerabilities in npm install's own summary include devDependencies. The production gate
+(section 4) omits dev dependencies, as CI does, and is unchanged from the baseline.
+
+==============================================================================
+3. Lockfile review (as a diff, never regenerated)
+==============================================================================
+
+$ git diff --stat package.json package-lock.json
+ package-lock.json | 41 +++++++++++++++++++++++++++++++++++++++++
+ package.json      |  2 ++
+ 2 files changed, 43 insertions(+)
+exit=0
+
+$ git diff package.json
+diff --git a/package.json b/package.json
+index 03edb2b..be89321 100644
+--- a/package.json
++++ b/package.json
+@@ -18,6 +18,8 @@
+     "@radix-ui/react-slot": "^1.2.4",
+     "@supabase/ssr": "^0.7.0",
+     "@supabase/supabase-js": "^2.49.0",
++    "@upstash/ratelimit": "2.0.8",
++    "@upstash/redis": "1.38.2",
+     "@vercel/analytics": "^2.0.1",
+     "@vercel/speed-insights": "^2.0.0",
+     "class-variance-authority": "^0.7.1",
+exit=0
+
+$ git diff package-lock.json
+diff --git a/package-lock.json b/package-lock.json
+index 4426341..ed66727 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -13,6 +13,8 @@
+         "@radix-ui/react-slot": "^1.2.4",
+         "@supabase/ssr": "^0.7.0",
+         "@supabase/supabase-js": "^2.49.0",
++        "@upstash/ratelimit": "2.0.8",
++        "@upstash/redis": "1.38.2",
+         "@vercel/analytics": "^2.0.1",
+         "@vercel/speed-insights": "^2.0.0",
+         "class-variance-authority": "^0.7.1",
+@@ -5210,6 +5212,39 @@
+         "win32"
+       ]
+     },
++    "node_modules/@upstash/core-analytics": {
++      "version": "0.0.10",
++      "resolved": "https://registry.npmjs.org/@upstash/core-analytics/-/core-analytics-0.0.10.tgz",
++      "integrity": "sha512-7qJHGxpQgQr9/vmeS1PktEwvNAF7TI4iJDi8Pu2CFZ9YUGHZH4fOP5TfYlZ4aVxfopnELiE4BS4FBjyK7V1/xQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@upstash/redis": "^1.28.3"
++      },
++      "engines": {
++        "node": ">=16.0.0"
++      }
++    },
++    "node_modules/@upstash/ratelimit": {
++      "version": "2.0.8",
++      "resolved": "https://registry.npmjs.org/@upstash/ratelimit/-/ratelimit-2.0.8.tgz",
++      "integrity": "sha512-YSTMBJ1YIxsoPkUMX/P4DDks/xV5YYCswWMamU8ZIfK9ly6ppjRnVOyBhMDXBmzjODm4UQKcxsJPvaeFAijp5w==",
++      "license": "MIT",
++      "dependencies": {
++        "@upstash/core-analytics": "^0.0.10"
++      },
++      "peerDependencies": {
++        "@upstash/redis": "^1.34.3"
++      }
++    },
++    "node_modules/@upstash/redis": {
++      "version": "1.38.2",
++      "resolved": "https://registry.npmjs.org/@upstash/redis/-/redis-1.38.2.tgz",
++      "integrity": "sha512-RZ+JaRCVIS+ZTGnjOnDMr+/0aqDxsBb5rV6aW+Pys4SGELwr5lwE3UbLHRCHqMQ5Ulxj0b/CFBHfbmE175Otog==",
++      "license": "MIT",
++      "dependencies": {
++        "uncrypto": "^0.1.3"
++      }
++    },
+     "node_modules/@vercel/analytics": {
+       "version": "2.0.1",
+       "resolved": "https://registry.npmjs.org/@vercel/analytics/-/analytics-2.0.1.tgz",
+@@ -14472,6 +14507,12 @@
+         "url": "https://github.com/sponsors/ljharb"
+       }
+     },
++    "node_modules/uncrypto": {
++      "version": "0.1.3",
++      "resolved": "https://registry.npmjs.org/uncrypto/-/uncrypto-0.1.3.tgz",
++      "integrity": "sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==",
++      "license": "MIT"
++    },
+     "node_modules/undici-types": {
+       "version": "7.18.2",
+       "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-7.18.2.tgz",
+exit=0
+
+$ node -e "<compare every packages[] entry of HEAD:package-lock.json with the working tree>"
+entries before: 1072 after: 1076
+added (4):
+  node_modules/@upstash/core-analytics 0.0.10 sha512-7qJHGxpQgQr9/vmeS1PktEwvNAF7TI4iJDi8Pu2CFZ9YUGHZH4fOP5TfYlZ4aVxfopnELiE4BS4FBjyK7V1/xQ==
+  node_modules/@upstash/ratelimit 2.0.8 sha512-YSTMBJ1YIxsoPkUMX/P4DDks/xV5YYCswWMamU8ZIfK9ly6ppjRnVOyBhMDXBmzjODm4UQKcxsJPvaeFAijp5w==
+  node_modules/@upstash/redis 1.38.2 sha512-RZ+JaRCVIS+ZTGnjOnDMr+/0aqDxsBb5rV6aW+Pys4SGELwr5lwE3UbLHRCHqMQ5Ulxj0b/CFBHfbmE175Otog==
+  node_modules/uncrypto 0.1.3 sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==
+removed (0): none
+changed (1): <root project entry>
+root entry dependency changes: @upstash/ratelimit: (absent) -> 2.0.8; @upstash/redis: (absent) -> 1.38.2
+root entry fields changed: dependencies
+re-resolved existing entries (version or resolved or integrity changed): 0
+lockfileVersion: 3 -> 3
+any added entry with hasInstallScript: false
+exit=0
+
+Reading: exactly four entries added, all four the ones the legitimacy bundle predicted
+(@upstash/ratelimit, @upstash/redis, @upstash/core-analytics, uncrypto); each added integrity equals
+the dist.integrity recorded in upstash-legitimacy.txt; zero entries removed; zero existing entries
+re-resolved; the only changed entry is the root project's dependency list (the two exact pins);
+lockfileVersion 3 unchanged; no added entry has an install script.
+
+$ npm ls @upstash/ratelimit @upstash/redis @upstash/core-analytics uncrypto
+uni-verse@0.1.0 /Users/adyan/Documents/GitHub/Event-Radar
+├─┬ @upstash/ratelimit@2.0.8
+│ ├─┬ @upstash/core-analytics@0.0.10
+│ │ └── @upstash/redis@1.38.2 deduped
+│ └── @upstash/redis@1.38.2 deduped
+└─┬ @upstash/redis@1.38.2
+  └── uncrypto@0.1.3
+exit=0
+
+$ npm ci --dry-run   (npm ci compatibility of the committed lockfile)
+
+up to date in 604ms
+
+231 packages are looking for funding
+  run `npm fund` for details
+exit=0
+
+$ node -p "require('./package.json').dependencies['@upstash/ratelimit']+' '+require('./package.json').dependencies['@upstash/redis']"
+2.0.8 1.38.2
+exit=0
+
+==============================================================================
+4. Production dependency audit AFTER the install
+==============================================================================
+
+$ npm audit --audit-level=high --omit=dev
+# npm audit report
+
+dompurify  <=3.4.12
+Severity: moderate
+DOMPurify: FORBID_TAGS bypassed by function-based ADD_TAGS predicate (asymmetry with FORBID_ATTR fix) - https://github.com/advisories/GHSA-h7mw-gpvr-xq4m
+DOMPurify has a SAFE_FOR_TEMPLATES bypass in RETURN_DOM mode - https://github.com/advisories/GHSA-crv5-9vww-q3g8
+DOMPurify: Prototype Pollution to XSS Bypass via CUSTOM_ELEMENT_HANDLING Fallback - https://github.com/advisories/GHSA-v9jr-rg53-9pgp
+DOMPurify: Cross-realm IN_PLACE sanitization leaves executable markup intact via realm-bound `instanceof` checks - https://github.com/advisories/GHSA-hpcv-96wg-7vj8
+DOMPurify: IN_PLACE mode preserves attributes of a clobbered root element, allowing XSS via attacker-controlled root DOM - https://github.com/advisories/GHSA-r47g-fvhr-h676
+DOMPurify IN_PLACE Sanitization Bypass via Attached Shadow Root Inside <template>.content - https://github.com/advisories/GHSA-rp9w-3fw7-7cwq
+DOMPurify: `CUSTOM_ELEMENT_HANDLING` bypasses `afterSanitizeElements` for allowed custom elements. - https://github.com/advisories/GHSA-c2j3-45gr-mqc4
+DOMPurify: Permanent `ALLOWED_ATTR` pollution via `setConfig()` bypassing the hook clone-guard (incomplete fix of the 3.4.7 hook-pollution patch) - https://github.com/advisories/GHSA-cmwh-pvxp-8882
+DOMPurify: Trusted Types policy survives `clearConfig()` and can poison later `RETURN_TRUSTED_TYPE` output - https://github.com/advisories/GHSA-vxr8-fq34-vvx9
+DOMPurify: SAFE_FOR_TEMPLATES bypass - template expressions survive sanitization inside <template> content when using DOM output modes - https://github.com/advisories/GHSA-gvmj-g25r-r7wr
+DOMPurify: `IN_PLACE` mode trusts attacker-controlled `nodeName` on live non-form nodes, allowing script retention and XSS via attacker-supplied DOM objects - https://github.com/advisories/GHSA-x4vx-rjvf-j5p4
+DOMPurify: Hook mutation of `data.allowedTags` / `data.allowedAttributes` permanently pollutes `DEFAULT_ALLOWED_TAGS` / `DEFAULT_ALLOWED_ATTR` - https://github.com/advisories/GHSA-76mc-f452-cxcm
+DOMPurify's ADD_TAGS function form bypasses FORBID_TAGS due to short-circuit evaluation - https://github.com/advisories/GHSA-39q2-94rc-95cp
+DOMPurify: IN_PLACE hook removal leaves a detached subtree executable, causing XSS - https://github.com/advisories/GHSA-55q2-fjhq-7xh7
+fix available via `npm audit fix`
+node_modules/dompurify
+
+yaml  1.0.0 - 1.10.2 || 2.0.0 - 2.8.2
+Severity: moderate
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+fix available via `npm audit fix`
+node_modules/oas-linter/node_modules/yaml
+node_modules/oas-resolver/node_modules/yaml
+node_modules/oas-validator/node_modules/yaml
+node_modules/swagger2openapi/node_modules/yaml
+node_modules/yaml
+
+2 moderate severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+exit=0
+
+Reading: exit 0; 0 high, 0 critical; the same 2 moderate findings as the baseline (dompurify, yaml), neither
+in the Upstash tree.
+
+==============================================================================
+5. RED: the new tests before any implementation (tests written first)
+==============================================================================
+
+$ npx jest --ci src/server/ratelimit src/lib/env.test.ts src/instrumentation.test.ts   (summary lines)
+FAIL node src/server/ratelimit/upstashStore.test.ts
+    Cannot find module './upstashStore' from 'src/server/ratelimit/upstashStore.test.ts'
+FAIL node src/server/ratelimit/upstash.contract.test.ts
+    Cannot find module './upstashStore' from 'src/server/ratelimit/upstash.contract.test.ts'
+PASS node src/server/ratelimit/policy.test.ts
+FAIL node src/lib/env.test.ts
+FAIL node src/instrumentation.test.ts
+PASS node src/server/ratelimit/memoryStore.test.ts
+Test Suites: 4 failed, 2 passed, 6 total
+Tests:       23 failed, 61 passed, 84 total
+exit=1
+
+==============================================================================
+6. GREEN: the plan's verify command
+==============================================================================
+
+$ npx jest --ci src/server/ratelimit src/lib/env.test.ts src/instrumentation.test.ts && npm audit --audit-level=high --omit=dev && npx tsc --noEmit && npm run lint   (summary lines)
+PASS node src/server/ratelimit/policy.test.ts
+PASS node src/instrumentation.test.ts
+PASS node src/server/ratelimit/upstashStore.test.ts
+PASS node src/lib/env.test.ts
+PASS node src/server/ratelimit/memoryStore.test.ts
+Test Suites: 1 skipped, 5 passed, 5 of 6 total
+Tests:       1 skipped, 98 passed, 99 total
+jest exit=0
+2 moderate severity vulnerabilities
+audit exit=0
+tsc exit=0
+✖ 18 problems (0 errors, 18 warnings)
+lint exit=0
+
+==============================================================================
+7. Full Jest run, and the skipped-not-passed check
+==============================================================================
+
+$ npx jest --ci --json --outputFile=<scratchpad>/jest.json   (summary)
+Test Suites: 1 skipped, 75 passed, 75 of 76 total
+Tests:       1 skipped, 1438 passed, 1439 total
+Snapshots:   0 total
+Ran all test suites in 2 projects.
+exit=0
+
+$ node -e '<every assertion whose status is not passed/failed must be in src/server/ratelimit/upstash.contract.test.ts, and there must be exactly one>' <scratchpad>/jest.json
+numTotalTests 1439 numPassedTests 1438 numFailedTests 0 numPendingTests 1 numTodoTests 0 suites 76 pendingSuites 1 success true
+SKIPPED: src/server/ratelimit/upstash.contract.test.ts | UpstashRateLimitStore against a live store (SKIPPED: no UPSTASH_REDIS_REST_* or KV_REST_API_* configuration) allows the first hit and denies the second at limit 1 | pending
+OK: the only skipped test is in upstash.contract.test.ts (reported skipped, not passed)
+exit=0
+
+Reading: 1438 passed, 0 failed, 1 SKIPPED. The one skipped test is the live-store contract, reported by
+Jest as pending (skipped), not passed, with its reason in the title. Floor from 05-17: 1397 passed;
++41 new passing tests (src/lib/env.test.ts +19: upstashConfig 10, rateLimitRequireDistributed 9;
+src/instrumentation.test.ts +8; src/server/ratelimit/upstashStore.test.ts 14), +1 skipped. PRESERVE suites (src/middlewareRateLimit.test.ts, the proxy
+suites) are unedited and pass.
+
+==============================================================================
+8. Type-check and lint
+==============================================================================
+
+$ npx tsc --noEmit
+exit=0
+
+$ npm run lint   (summary)
+✖ 18 problems (0 errors, 18 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
+exit=0
+$ grep -nE 'ratelimit|env\.(test\.)?ts|instrumentation|playwright.config' <the lint output>
+(no output)
+exit=1
+Reading: 0 errors; the 18 warnings are the pre-existing ones (05-17: 18), none in a touched file.
+
+==============================================================================
+9. CI-env build (placeholder public vars, blank service key, all store variables blank)
+==============================================================================
+
+$ SUPABASE_SERVICE_ROLE_KEY= UPSTASH_REDIS_REST_URL= UPSTASH_REDIS_REST_TOKEN= KV_REST_API_URL= KV_REST_API_TOKEN= RATE_LIMIT_REQUIRE_DISTRIBUTED= NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key npm run build   (route table filtered)
+
+> uni-verse@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.js took 6ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1670ms
+  Running TypeScript ...
+  Finished TypeScript in 3.0s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/100) ...
+  Generating static pages using 9 workers (25/100) 
+  Generating static pages using 9 workers (50/100) 
+(node:29813) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  Generating static pages using 9 workers (75/100) 
+✓ Generating static pages using 9 workers (100/100) in 337ms
+  Finalizing page optimization ...
+
+Route (app)
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+exit=0
+
+==============================================================================
+10. Boot probes against the built server: the three DEC-59 branches, measured
+==============================================================================
+
+Probe script: <scratchpad>/store-probe.mjs (not committed), modelled on 05-04's start probe. It runs
+`next start -H 127.0.0.1 -p 3100` against the section 9 build with placeholder Supabase values and a
+dummy service key (nothing can reach a real database), one store scenario, two GET /api/health
+requests from x-real-ip 10.77.0.1, then kills the process group. /api/health answers 503 by itself
+when its database is unreachable (05-04), so 503 = served, 500 = the boot check refused.
+
+$ node store-probe.mjs prod-unconfigured
+=== scenario: prod-unconfigured {"VERCEL_ENV":"production"}
+=== captured stdout+stderr (verbatim) ===
+▲ Next.js 16.3.5
+- Local:         http://127.0.0.1:3100
+- Network:       http://127.0.0.1:3100
+✓ Ready in 72ms
+✓ Running next.config.js took 6ms
+[RateLimit] no distributed store is configured in production: set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_URL and KV_REST_API_TOKEN). Rate limiting is degraded to the per-instance in-memory store, which is not shared across instances. Set RATE_LIMIT_REQUIRE_DISTRIBUTED=true to refuse to start instead.
+[RateLimit] Upstash not configured; using the in-memory store (not shared across instances)
+=== probe result ===
+GET /api/health -> 503 in 113 ms (X-RateLimit headers: none)
+GET /api/health -> 503 in 6 ms (X-RateLimit headers: none)
+"[RateLimit] no distributed store is configured in production" lines: 1
+"[RateLimit] Upstash not configured; using the in-memory store" lines: 1
+"[Config] refusing to start" lines: 0
+"[RateLimit] store error; request allowed" lines: 0
+"[RateLimit] store timeout; request allowed" lines: 0
+output contains the dummy token: false
+probe exit=0
+
+$ node store-probe.mjs prod-unconfigured-enforced
+=== scenario: prod-unconfigured-enforced {"VERCEL_ENV":"production","RATE_LIMIT_REQUIRE_DISTRIBUTED":"true"}
+=== captured stdout+stderr (verbatim) ===
+▲ Next.js 16.3.5
+- Local:         http://127.0.0.1:3100
+- Network:       http://127.0.0.1:3100
+✓ Ready in 48ms
+✓ Running next.config.js took 5ms
+[Config] refusing to start: Missing required environment variable: UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN
+Failed to prepare server Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN
+    at Module.n [as register] (.next/server/chunks/src_004t_at._.js:1:312)
+⨯ unhandledRejection: Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN
+    at Module.n [as register] (.next/server/chunks/src_004t_at._.js:1:312)
+Failed to prepare server Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN
+    at Module.n [as register] (.next/server/chunks/src_004t_at._.js:1:312)
+Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN
+    at Module.n [as register] (.next/server/chunks/src_004t_at._.js:1:312)
+Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN
+    at Module.n [as register] (.next/server/chunks/src_004t_at._.js:1:312)
+Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN
+    at Module.n [as register] (.next/server/chunks/src_004t_at._.js:1:312)
+Error [MissingEnvError]: An error occurred while loading instrumentation hook: Missing required environment variable: UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN
+    at Module.n [as register] (.next/server/chunks/src_004t_at._.js:1:312)
+=== probe result ===
+GET /api/health -> 500 in 37 ms (X-RateLimit headers: none)
+GET /api/health -> 500 in 2 ms (X-RateLimit headers: none)
+"[RateLimit] no distributed store is configured in production" lines: 0
+"[RateLimit] Upstash not configured; using the in-memory store" lines: 0
+"[Config] refusing to start" lines: 1
+"[RateLimit] store error; request allowed" lines: 0
+"[RateLimit] store timeout; request allowed" lines: 0
+output contains the dummy token: false
+probe exit=0
+
+$ node store-probe.mjs unreachable-store
+=== scenario: unreachable-store {"VERCEL_ENV":"production","RATE_LIMIT_REQUIRE_DISTRIBUTED":"true","UPSTASH_REDIS_REST_URL":"http://127.0.0.1:9","UPSTASH_REDIS_REST_TOKEN":"<dummy>"}
+=== captured stdout+stderr (verbatim) ===
+▲ Next.js 16.3.5
+- Local:         http://127.0.0.1:3100
+- Network:       http://127.0.0.1:3100
+✓ Ready in 52ms
+✓ Running next.config.js took 5ms
+[RateLimit] store timeout; request allowed { key: 'GET:/api/health:10.77.0.1' }
+[RateLimit] store timeout; request allowed { key: 'GET:/api/health:10.77.0.1' }
+=== probe result ===
+GET /api/health -> 503 in 1118 ms (X-RateLimit headers: none)
+GET /api/health -> 503 in 1010 ms (X-RateLimit headers: none)
+"[RateLimit] no distributed store is configured in production" lines: 0
+"[RateLimit] Upstash not configured; using the in-memory store" lines: 0
+"[Config] refusing to start" lines: 0
+"[RateLimit] store error; request allowed" lines: 0
+"[RateLimit] store timeout; request allowed" lines: 2
+output contains the dummy token: false
+probe exit=0
+
+Reading:
+- prod-unconfigured (DEC-59 Part 2): the server serves (503 from the health route itself, not 500); ONE
+  "[RateLimit] no distributed store is configured in production" error naming all four variables and the
+  degradation, and one memory-store warning from the selection.
+- prod-unconfigured-enforced (RATE_LIMIT_REQUIRE_DISTRIBUTED=true): the boot check refuses, exactly as
+  DEC-50 intended: one "[Config] refusing to start" line naming both pairs, every request 500 (Next 16.3.5
+  answers 500 and keeps the process up, as 05-04 measured).
+- unreachable-store (a configured pair pointing at a closed loopback port): the Upstash store is selected
+  (no memory warning; the enforce flag is satisfied), each call is abandoned at the 1000 ms timeout
+  (@upstash/redis retries connection errors, so the library timeout wins before the error surfaces), the
+  request is ALLOWED and logged "[RateLimit] store timeout; request allowed" with the key, and the request
+  completes in about 1.0-1.1 s. The token never appears in the output.
+
+==============================================================================
+11. Mutation checks: each new behaviour's test goes red when the code is broken
+==============================================================================
+
+Each mutation applied to the source, the named suite run, the file restored from a kept copy and
+confirmed byte-identical with cmp.
+
+## src/server/ratelimit/upstashStore.ts: 'enableTelemetry: false' -> 'enableTelemetry: true'
+$ npx jest --ci src/server/ratelimit/upstashStore.test.ts
+    ✕ builds one Redis client from the pair with telemetry off, and never calls fromEnv (2 ms)
+    ✕ configured: returns one UpstashRateLimitStore built from the pair, and warns nothing (9 ms)
+Tests:       2 failed, 12 passed, 14 total
+exit=1 (restored-identical)
+
+## src/server/ratelimit/upstashStore.ts: 'timeout: 1000,' -> 'timeout: 5000,'
+$ npx jest --ci src/server/ratelimit/upstashStore.test.ts
+    ✕ builds the limiter with fixedWindow, prefix uv:rl, timeout 1000 and analytics off (2 ms)
+Tests:       1 failed, 13 passed, 14 total
+exit=1 (restored-identical)
+
+## src/server/ratelimit/upstashStore.ts: 'if (r.reason === "timeout") {' -> 'if (r.reason === ("never" as string)) {'
+$ npx jest --ci src/server/ratelimit/upstashStore.test.ts
+    ✕ a timeout allows the request and logs the timeout line with the key (1 ms)
+Tests:       1 failed, 13 passed, 14 total
+exit=1 (restored-identical)
+
+## src/server/ratelimit/upstashStore.ts: '    } catch (err) {
+      console.error' -> '    } catch (err) {
+      throw err;
+      console.error'
+$ npx jest --ci src/server/ratelimit/upstashStore.test.ts
+    ✕ a store error allows the request and logs the error message, never throwing
+Tests:       1 failed, 13 passed, 14 total
+exit=1 (restored-identical)
+
+## src/server/ratelimit/upstashStore.ts: 'const id = `${limit}:${windowMs}`;' -> 'const id = `${Math.random()}`;'
+$ npx jest --ci src/server/ratelimit/upstashStore.test.ts
+    ✕ reuses one Ratelimit per budget and shares the one Redis client
+Tests:       1 failed, 13 passed, 14 total
+exit=1 (restored-identical)
+
+## src/server/ratelimit/index.ts: '    const config = upstashConfig();' -> '    const config = null as ReturnType<typeof upstashConfig>;'
+$ npx jest --ci src/server/ratelimit/upstashStore.test.ts
+    ✕ configured: returns one UpstashRateLimitStore built from the pair, and warns nothing (30 ms)
+    ✕ configured through the Marketplace KV names: returns the Upstash store (2 ms)
+    ✕ the Upstash store plugs into applyRateLimit: a denial becomes the existing 429 (3 ms)
+Tests:       3 failed, 11 passed, 14 total
+exit=1 (restored-identical)
+
+## src/lib/env.ts: '  if (present(upstashUrl) && present(upstashToken)) {' -> '  if (present(upstashUrl) && present(upstashToken ?? process.env.KV_REST_API_TOKEN)) {'
+$ npx jest --ci src/lib/env.test.ts
+    ✕ never mixes a url from one pair with a token from the other (1 ms)
+    ✕ uses the complete KV pair when the UPSTASH pair is half set (1 ms)
+Tests:       2 failed, 33 passed, 35 total
+exit=1 (restored-identical)
+
+## src/lib/env.ts: '  throw new InvalidEnvError(' -> '  return false; throw new InvalidEnvError('
+$ npx jest --ci src/lib/env.test.ts
+    ✕ throws InvalidEnvError naming the variable for "1"
+    ✕ throws InvalidEnvError naming the variable for "yes"
+    ✕ throws InvalidEnvError naming the variable for "on"
+    ✕ throws InvalidEnvError naming the variable for "ture" (1 ms)
+Tests:       4 failed, 31 passed, 35 total
+exit=1 (restored-identical)
+
+## src/instrumentation.ts: '      if (requireDistributed) throw new MissingEnvError(UPSTASH_ENV_NAMES);' -> ''
+$ npx jest --ci src/instrumentation.test.ts
+    ✕ unconfigured in production with RATE_LIMIT_REQUIRE_DISTRIBUTED=true: rejects with MissingEnvError naming both pairs (3 ms)
+    ✕ unconfigured outside production with the enforce flag: the explicit opt-in is honoured and it rejects (2 ms)
+Tests:       2 failed, 16 passed, 18 total
+exit=1 (restored-identical)
+
+## src/instrumentation.ts: '      if (isVercelProduction()) console.error(RATE_LIMIT_DEGRADED);' -> '      if (isVercelProduction()) throw new MissingEnvError(UPSTASH_ENV_NAMES);'
+$ npx jest --ci src/instrumentation.test.ts
+    ✕ unconfigured in production: resolves, and logs exactly one error naming all four variables and the degradation (3 ms)
+Tests:       1 failed, 17 passed, 18 total
+exit=1 (restored-identical)
+Reading: 10/10 mutations red; every file restored identical.
+
+==============================================================================
+12. Playwright from a clean reset: the plan's three specs (harness boots with blank store variables)
+==============================================================================
+
+$ supabase db reset --local   (tail)
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.117.0 (currently installed v2.115.0)
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+$ npx playwright test e2e/specs/save-and-rsvp.spec.ts e2e/specs/csrf-origin.spec.ts e2e/specs/admin-guard.spec.ts   ([WebServer] lines removed)
+
+Running 20 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (369ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (286ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (236ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (258ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (256ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (243ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (242ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (205ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (216ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (258ms)
+  ✓  11 [chromium] › e2e/specs/admin-guard.spec.ts:43:7 › an anonymous caller › FIXED F-061: anonymous admin call answers 401 (23ms)
+  ✓  12 [chromium] › e2e/specs/admin-guard.spec.ts:62:7 › an onboarded student › PRESERVE: a non-admin gets 403 Forbidden (144ms)
+  ✓  13 [chromium] › e2e/specs/admin-guard.spec.ts:70:7 › an admin › PRESERVE: the admin gets 200 with the stats body (142ms)
+  ✓  14 [chromium] › e2e/specs/csrf-origin.spec.ts:88:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Origin https://evil.example is refused with 403 and writes no row (227ms)
+  ✓  15 [chromium] › e2e/specs/csrf-origin.spec.ts:94:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Sec-Fetch-Site cross-site is refused with 403 and writes no row (212ms)
+  ✓  16 [chromium] › e2e/specs/csrf-origin.spec.ts:104:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with the application's own Origin is accepted (250ms)
+  ✓  17 [chromium] › e2e/specs/csrf-origin.spec.ts:112:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted (246ms)
+  ✓  18 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (1.1s)
+  ✓  19 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (849ms)
+  ✓  20 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (438ms)
+
+  20 passed (14.8s)
+exit=0
+$ grep -c 'Upstash not configured' <the unfiltered output>
+1
+Reading: 20/20 (10 setup + 10 spec), first attempt. The harness server logged the memory-store warning
+exactly once: the four blanked store names read as absent, so the server selected the in-memory store.
+
+==============================================================================
+13. Full Playwright suite from a second clean reset (floor check)
+==============================================================================
+
+$ supabase db reset --local && npx tsx scripts/seed/load.ts
+reset exit=0
+seed exit=0
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+
+$ npx playwright test   ([WebServer] lines removed; last lines)
+  ✓  90 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (811ms)
+  ✓  91 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (403ms)
+
+  91 passed (30.0s)
+exit=0
+$ grep -c 'Upstash not configured' <the unfiltered output>
+1
+Reading: 91/91, equal to the 05-17 floor.
+
+==============================================================================
+14. Gates
+==============================================================================
+
+$ node scripts/check-characterization-tags.mjs --all   (tail)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 34 files
+exit=0
+$ node scripts/check-elevated-ratchet.mjs   (tail)
+committed=2 live=2 delta=0
+PASS: the live census is a subset of the committed allow-list
+exit=0
+
+==============================================================================
+15. The stack left reset and seeded; ports free
+==============================================================================
+
+$ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+Applying migration 20260923130000_users_grants_audit_log_insert.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN
+(no output)
+exit=1
+$ lsof -nP -iTCP:3100 -sTCP:LISTEN
+(no output)
+exit=1
+
+==============================================================================
+16. Acceptance criteria
+==============================================================================
+
+- upstash-legitimacy.txt ends with the verdict: YES (Task 2, verbatim per DEC-59; recorded by the
+  autonomous orchestrator, not a named human; the owner's countersignature is carried to 05-19).
+- package.json pins @upstash/ratelimit 2.0.8 and @upstash/redis 1.38.2, no caret: YES (section 3).
+- Only added lockfile entries under @upstash/ and their dependencies (uncrypto); audit exit 0: YES (3, 4).
+- upstashStore.ts contains enableTelemetry: false, timeout: 1000 and fixedWindow, and no "fromEnv":
+  YES (the node -e check exits 0; section 6 run).
+- The only pending Jest test is in upstash.contract.test.ts, and it is SKIPPED, not passed: YES (7).
+- playwright.config.ts sets the four store variables (plus RATE_LIMIT_REQUIRE_DISTRIBUTED) to "", and
+  the three specs pass from a clean reset: YES (12).
+- The CI-env build exits 0: YES (9).
+- Superseded by DEC-59 Part 2: "a production server without either pair refuses to start" is replaced
+  by one logged error and memory-store serving, with the fail-closed boot available through
+  RATE_LIMIT_REQUIRE_DISTRIBUTED=true. Both branches unit-tested and measured (10).

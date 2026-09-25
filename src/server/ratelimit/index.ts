@@ -6,22 +6,54 @@
  * covers every `/api/*` path, `/api/admin/*` included, with the budgets in
  * `./policy.ts`.
  *
- * `getRateLimitStore()` returns the module-level in-process store today.
- * 05-18 adds the distributed store's selection here; nothing else changes.
+ * `getRateLimitStore()` selects the store once per process (plan 05-18,
+ * DEC-50 as amended by DEC-59 Part 2): the Upstash store when
+ * `upstashConfig()` returns a pair, otherwise the in-process memory store
+ * with one logged warning. Production without a pair also gets the memory
+ * store (today's behaviour); the boot check in `src/instrumentation.ts` logs
+ * that degradation as an error, or refuses to start when
+ * `RATE_LIMIT_REQUIRE_DISTRIBUTED` is true. `rateLimitStoreKind()` reports
+ * which store was selected.
  */
 
 import type { NextRequest, NextResponse } from "next/server";
+import { upstashConfig } from "@/lib/env";
 import { MemoryRateLimitStore } from "./memoryStore";
 import { rateLimitPolicy, tooManyRequests } from "./policy";
 import type { RateLimitStore } from "./types";
+import { UpstashRateLimitStore } from "./upstashStore";
 
 export type { RateDecision, RateLimitStore } from "./types";
 
 const memoryStore = new MemoryRateLimitStore();
 
-/** The store the proxy counts against. */
+export type RateLimitStoreKind = "upstash" | "memory";
+
+let selected: { kind: RateLimitStoreKind; store: RateLimitStore } | undefined;
+
+function select(): { kind: RateLimitStoreKind; store: RateLimitStore } {
+  if (!selected) {
+    const config = upstashConfig();
+    if (config) {
+      selected = { kind: "upstash", store: new UpstashRateLimitStore(config) };
+    } else {
+      console.warn(
+        "[RateLimit] Upstash not configured; using the in-memory store (not shared across instances)"
+      );
+      selected = { kind: "memory", store: memoryStore };
+    }
+  }
+  return selected;
+}
+
+/** The store the proxy counts against, chosen on first call and kept. */
 export function getRateLimitStore(): RateLimitStore {
-  return memoryStore;
+  return select().store;
+}
+
+/** Which store `getRateLimitStore()` returns, for health reporting. */
+export function rateLimitStoreKind(): RateLimitStoreKind {
+  return select().kind;
 }
 
 /**

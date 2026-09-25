@@ -7,7 +7,11 @@
  * WHAT IT READS
  *   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`, through
  *   `supabaseUrl()` and `supabaseAnonKey()`, and `VERCEL_ENV`, through
- *   `isVercelProduction()`. Every read is a literal `process.env.NAME` member
+ *   `isVercelProduction()`. Plan 05-18 adds the rate-limit store's
+ *   configuration: `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` or the
+ *   Vercel Marketplace's `KV_REST_API_URL`/`KV_REST_API_TOKEN`, through
+ *   `upstashConfig()`, and the optional `RATE_LIMIT_REQUIRE_DISTRIBUTED`,
+ *   through `rateLimitRequireDistributed()`. Every read is a literal `process.env.NAME` member
  *   access. Nothing is read by computed key: a computed read evades the
  *   service-key lint rule in `eslint.config.mjs`, and Next inlines only literal
  *   `process.env.NEXT_PUBLIC_*` reads into the browser bundle.
@@ -88,4 +92,73 @@ export function supabaseAnonKey(): string {
 /** True only on Vercel's production deployment. `NODE_ENV` is never consulted. */
 export function isVercelProduction(): boolean {
   return process.env.VERCEL_ENV === "production";
+}
+
+/** Thrown at first read when an optional variable is set to a value it cannot mean. */
+export class InvalidEnvError extends Error {
+  constructor(name: string, expected: string) {
+    super(`Invalid environment variable: ${name} (expected ${expected})`);
+    this.name = "InvalidEnvError";
+  }
+}
+
+// ─── The rate-limit store (plan 05-18, DEC-50, DEC-59 Part 2) ────────────────
+
+/** Both accepted name pairs, as they appear in every message about them. */
+export const UPSTASH_ENV_NAMES =
+  "UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN";
+
+/** One complete Upstash REST endpoint and its token. */
+export type UpstashConfig = { url: string; token: string };
+
+function present(value: string | undefined): value is string {
+  return value !== undefined && value.trim() !== "";
+}
+
+/**
+ * The distributed rate-limit store's configuration, or null.
+ *
+ * Reads `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` first and falls
+ * back to `KV_REST_API_URL`/`KV_REST_API_TOKEN`, the names the Vercel
+ * Marketplace integration injects (research C13). A pair is used only when
+ * both of its halves are present: a URL from one pair is never combined with
+ * a token from the other. Blank and whitespace-only values count as absent.
+ *
+ * It never throws, in production included. DEC-59 Part 2 superseded DEC-50's
+ * "required at boot": what an absent store means is decided once, by the boot
+ * check in `src/instrumentation.ts` (one logged error, or a refusal to start
+ * when `RATE_LIMIT_REQUIRE_DISTRIBUTED` is true). The request path then falls
+ * back to the in-memory store.
+ */
+export function upstashConfig(): UpstashConfig | null {
+  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (present(upstashUrl) && present(upstashToken)) {
+    return { url: upstashUrl, token: upstashToken };
+  }
+  const kvUrl = process.env.KV_REST_API_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN;
+  if (present(kvUrl) && present(kvToken)) {
+    return { url: kvUrl, token: kvToken };
+  }
+  return null;
+}
+
+/**
+ * `RATE_LIMIT_REQUIRE_DISTRIBUTED`, optional (DEC-59 Part 2). True makes a
+ * missing store a boot failure, restoring DEC-50's fail-closed boot by opt-in.
+ * Unset or blank is false. "true"/"false" are read case-insensitively; any
+ * other value throws `InvalidEnvError`, so a typo cannot silently switch the
+ * enforcement off.
+ */
+export function rateLimitRequireDistributed(): boolean {
+  const value = process.env.RATE_LIMIT_REQUIRE_DISTRIBUTED;
+  if (!present(value)) return false;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  throw new InvalidEnvError(
+    "RATE_LIMIT_REQUIRE_DISTRIBUTED",
+    '"true" or "false"'
+  );
 }

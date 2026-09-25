@@ -153,6 +153,20 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_URL: stack.url,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
       SUPABASE_SERVICE_ROLE_KEY: stack.serviceRoleKey,
+      // The rate-limit store (plan 05-18, DEC-50, research C8/C13). All four
+      // Upstash names are set to the empty string, never left unset: Next's
+      // env loader (@next/env) never overrides a variable that is already
+      // defined, even as "", so a developer's .env can never point this
+      // harness at a real Redis store. Blank reads as absent in
+      // upstashConfig(), so the server selects the in-memory store (with one
+      // warning). RATE_LIMIT_REQUIRE_DISTRIBUTED is blanked for the same
+      // reason: a .env that opts into the fail-closed boot must not stop the
+      // harness server from starting.
+      UPSTASH_REDIS_REST_URL: "",
+      UPSTASH_REDIS_REST_TOKEN: "",
+      KV_REST_API_URL: "",
+      KV_REST_API_TOKEN: "",
+      RATE_LIMIT_REQUIRE_DISTRIBUTED: "",
     },
   },
 });

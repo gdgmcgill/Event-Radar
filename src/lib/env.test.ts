@@ -9,7 +9,12 @@
  *   - each reader throws MissingEnvError naming its variable at first read
  *     when the variable is unset or whitespace only, and returns the value
  *     when it is set;
- *   - "production" is VERCEL_ENV === "production", never NODE_ENV.
+ *   - "production" is VERCEL_ENV === "production", never NODE_ENV;
+ *   - upstashConfig() returns one complete pair (UPSTASH_REDIS_REST_* first,
+ *     then the Marketplace's KV_REST_API_*) or null, and never throws, even
+ *     in production (DEC-59 Part 2: the boot check decides, not the reader);
+ *   - rateLimitRequireDistributed() is optional: absent means false, and a
+ *     value other than "true"/"false" is rejected rather than read as false.
  *
  * Each case sets and deletes process.env keys itself and the originals are
  * restored after every test.
@@ -27,6 +32,7 @@ const MANAGED_KEYS = [
   "UPSTASH_REDIS_REST_TOKEN",
   "KV_REST_API_URL",
   "KV_REST_API_TOKEN",
+  "RATE_LIMIT_REQUIRE_DISTRIBUTED",
   "VERCEL_ENV",
   "NODE_ENV",
 ] as const;
@@ -162,4 +168,135 @@ describe("isVercelProduction()", () => {
     const { isVercelProduction } = await loadEnv();
     expect(isVercelProduction()).toBe(false);
   });
+});
+
+// ─── The rate-limit store configuration (plan 05-18, DEC-50, DEC-59) ─────────
+
+describe("upstashConfig()", () => {
+  const UP = { url: "https://up.example.upstash.io", token: "up-token" };
+  const KV = { url: "https://kv.example.upstash.io", token: "kv-token" };
+
+  it("returns the UPSTASH_REDIS_REST_* pair when both are set", async () => {
+    unsetAll();
+    env.UPSTASH_REDIS_REST_URL = UP.url;
+    env.UPSTASH_REDIS_REST_TOKEN = UP.token;
+    const { upstashConfig } = await loadEnv();
+    expect(upstashConfig()).toEqual(UP);
+  });
+
+  it("falls back to the KV_REST_API_* pair (the Vercel Marketplace names)", async () => {
+    unsetAll();
+    env.KV_REST_API_URL = KV.url;
+    env.KV_REST_API_TOKEN = KV.token;
+    const { upstashConfig } = await loadEnv();
+    expect(upstashConfig()).toEqual(KV);
+  });
+
+  it("prefers the UPSTASH pair when both pairs are complete", async () => {
+    unsetAll();
+    env.UPSTASH_REDIS_REST_URL = UP.url;
+    env.UPSTASH_REDIS_REST_TOKEN = UP.token;
+    env.KV_REST_API_URL = KV.url;
+    env.KV_REST_API_TOKEN = KV.token;
+    const { upstashConfig } = await loadEnv();
+    expect(upstashConfig()).toEqual(UP);
+  });
+
+  it("never mixes a url from one pair with a token from the other", async () => {
+    unsetAll();
+    env.UPSTASH_REDIS_REST_URL = UP.url;
+    env.KV_REST_API_TOKEN = KV.token;
+    const { upstashConfig } = await loadEnv();
+    expect(upstashConfig()).toBeNull();
+  });
+
+  it("uses the complete KV pair when the UPSTASH pair is half set", async () => {
+    unsetAll();
+    env.UPSTASH_REDIS_REST_URL = UP.url;
+    env.KV_REST_API_URL = KV.url;
+    env.KV_REST_API_TOKEN = KV.token;
+    const { upstashConfig } = await loadEnv();
+    expect(upstashConfig()).toEqual(KV);
+  });
+
+  it("treats blank and whitespace-only values as absent", async () => {
+    unsetAll();
+    env.UPSTASH_REDIS_REST_URL = "";
+    env.UPSTASH_REDIS_REST_TOKEN = "  ";
+    env.KV_REST_API_URL = " \t";
+    env.KV_REST_API_TOKEN = "";
+    const { upstashConfig } = await loadEnv();
+    expect(upstashConfig()).toBeNull();
+  });
+
+  it("returns null when both pairs are absent outside production", async () => {
+    unsetAll();
+    const { upstashConfig } = await loadEnv();
+    expect(upstashConfig()).toBeNull();
+  });
+
+  // INTENTIONAL (DEC-59 Part 2 supersedes DEC-50's boot clause): the reader
+  // never throws. The boot check decides what an absent store means.
+  it('returns null, and does not throw, when both pairs are absent and VERCEL_ENV is "production"', async () => {
+    unsetAll();
+    env.VERCEL_ENV = "production";
+    const { upstashConfig } = await loadEnv();
+    expect(() => upstashConfig()).not.toThrow();
+    expect(upstashConfig()).toBeNull();
+  });
+
+  it("reads at call time, not at import time", async () => {
+    unsetAll();
+    const { upstashConfig } = await loadEnv();
+    env.UPSTASH_REDIS_REST_URL = UP.url;
+    env.UPSTASH_REDIS_REST_TOKEN = UP.token;
+    expect(upstashConfig()).toEqual(UP);
+  });
+
+  it("names all four variables in UPSTASH_ENV_NAMES", async () => {
+    const { UPSTASH_ENV_NAMES } = await loadEnv();
+    expect(UPSTASH_ENV_NAMES).toBe(
+      "UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN or KV_REST_API_URL/KV_REST_API_TOKEN"
+    );
+  });
+});
+
+describe("rateLimitRequireDistributed() (optional, DEC-59)", () => {
+  it("is false when RATE_LIMIT_REQUIRE_DISTRIBUTED is unset, empty or whitespace", async () => {
+    unsetAll();
+    const { rateLimitRequireDistributed } = await loadEnv();
+    expect(rateLimitRequireDistributed()).toBe(false);
+    env.RATE_LIMIT_REQUIRE_DISTRIBUTED = "";
+    expect(rateLimitRequireDistributed()).toBe(false);
+    env.RATE_LIMIT_REQUIRE_DISTRIBUTED = "  ";
+    expect(rateLimitRequireDistributed()).toBe(false);
+  });
+
+  it.each(["true", "TRUE", " true "])('is true for "%s"', async (value) => {
+    unsetAll();
+    env.RATE_LIMIT_REQUIRE_DISTRIBUTED = value;
+    const { rateLimitRequireDistributed } = await loadEnv();
+    expect(rateLimitRequireDistributed()).toBe(true);
+  });
+
+  it('is false for "false"', async () => {
+    unsetAll();
+    env.RATE_LIMIT_REQUIRE_DISTRIBUTED = "false";
+    const { rateLimitRequireDistributed } = await loadEnv();
+    expect(rateLimitRequireDistributed()).toBe(false);
+  });
+
+  // A typo must not silently turn an opt-in fail-closed switch off.
+  it.each(["1", "yes", "on", "ture"])(
+    'throws InvalidEnvError naming the variable for "%s"',
+    async (value) => {
+      unsetAll();
+      env.RATE_LIMIT_REQUIRE_DISTRIBUTED = value;
+      const { rateLimitRequireDistributed, InvalidEnvError } = await loadEnv();
+      expect(() => rateLimitRequireDistributed()).toThrow(InvalidEnvError);
+      expect(() => rateLimitRequireDistributed()).toThrow(
+        'Invalid environment variable: RATE_LIMIT_REQUIRE_DISTRIBUTED (expected "true" or "false")'
+      );
+    }
+  );
 });
