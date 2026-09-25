@@ -335,7 +335,150 @@ this edit). 05-11 changes no handler, so each item below is the state on the sli
 
 ---
 
-**Next new item id: DI-52.**
+## Slice 5 (05-12..05-18) and the phase close, registered by 05-19
+
+Source: the "Deferred items found", "Observations for later plans", "Notes for later plans" and
+"Human-verify items carried to 05-19" sections of the 05-12..05-18 SUMMARYs, plus 05-19's own DI-25
+measurement (`evidence/di-25-bump.txt`). Each item is registered once. One item became a finding
+rather than a DI: `GET /api/admin/reports` answering 500 on either client (05-15, 05-16) is **F-092**
+(`.planning/audit/quality/phase-05-close-defects.md`), owner Phase 6. Owner actions carried from
+05-18 (the Upstash countersignature, provisioning, the enforce flag) were already folded into DI-42
+by 05-18 and are not re-registered.
+
+## DI-52 — The "legacy-401" set was overstated in the plans: only one route's non-admins moved
+
+- **Found by:** 05-12 (measurement), confirmed by 05-13's commit bodies (`90819ee`, `9f0e5b5`).
+- **What it is.** Research § B, DEC-44's evidence and the 05-13/05-19 plan texts say three routes
+  answered a non-admin 401 and would move to 403. Measured: `admin/clubs` GET and
+  `admin/organizer-requests` GET already answered a non-admin `403 {"error":"Forbidden"}` (PRESERVE P1
+  in `src/__tests__/api/admin/admin-guard-characterization.test.ts`). Only `recommendations/batch`
+  POST moved from 401 to 403 (D2).
+- **Why deferred.** It is a planning-register correction, not a product defect. Nothing is left to
+  fix in code.
+- **Why not cosmetic.** The completion note's INTENTIONAL BEHAVIOUR CHANGE list is what an owner reads
+  before deploying. Saying "three routes" would overstate the change a non-admin can see.
+- **Owner / state:** **CLOSED at registration.** `evidence/PHASE-5-COMPLETION.md` § 5 and F-061's
+  resolution state the measured change (one route).
+
+## DI-53 — DI-25 is PARTIAL: four admin payloads still block `@supabase/supabase-js` 2.116.0
+
+- **Found by:** 05-19 Task 1 (`evidence/di-25-bump.txt`, the throwaway-worktree proof).
+- **What it is.** On 2.116.0, `npx tsc --noEmit` exits 2 with four TS2345 errors, all admin write
+  payloads typed as `Record<string, unknown>` or `Record<string, Json>`:
+  `src/app/api/admin/events/[id]/edits/route.ts:76` (`liveUpdates`),
+  `src/app/api/admin/events/[id]/route.ts:46` (`updateData`),
+  `src/app/api/admin/experiments/[id]/route.ts:109` (the update payload) and
+  `src/app/api/admin/featured/[id]/route.ts:48` (`updates`). Research § H assigned all four to slice 5;
+  05-13/05-14/05-15 touched the files but did not retype them. The other four sites of the Phase 4
+  enumeration are cleared (`4cf4928`, `4531ee2`, `d8cf84e`, `d510914`). The bump was not taken.
+- **Why deferred.** The plan's stop rule ("do not bump"), and the retyping is a behaviour decision:
+  site 1 copies every key of the row's `pending_edits` JSON into the update, so typing it honestly
+  means filtering keys to the table's columns on an admin write path.
+- **Why not cosmetic.** `RejectExcessProperties` exists to catch exactly the F-073 class (a write
+  naming a column that does not exist, rejected silently). Staying on 2.81.1 keeps that class
+  invisible to the compiler on these four writes, and it keeps the SDK a minor behind.
+- **Owner:** Phase 6 (REFAC-15: a zod contract at each of the four boundaries yields a typed payload).
+  Then the bump as its own commit, by DEC-28's worktree method. `@supabase/ssr` stays DI-43.
+
+## DI-54 — `users` still grants DELETE and TRUNCATE to anon and authenticated; one policy is inert
+
+- **Found by:** 05-16 (post-state probe, `evidence/schema-push-slice-5.txt` block 7).
+- **What it is.** After `20260923130000_users_grants_audit_log_insert.sql`, anon and authenticated
+  still hold DELETE and TRUNCATE on `public.users`. DELETE has no policy, so it affects 0 rows.
+  TRUNCATE bypasses RLS, but PostgREST exposes no TRUNCATE and the foreign keys into `users` make a
+  plain TRUNCATE fail. The "Users can insert own profile" policy is now inert, because authenticated
+  has no INSERT privilege.
+- **Why deferred.** Slice 5's migration was scoped to F-006/F-007 (DEC-47). The baseline's blanket
+  `GRANT ALL` pattern is on most tables, so a per-table privilege sweep is the right unit.
+- **Why not cosmetic.** A privilege that no path uses today is one policy change away from being
+  reachable. Least privilege is enforced at the grant, not by the absence of a policy.
+- **Owner:** Phase 7 (the per-table pgTAP and privilege sweep); the migration is local-only until DI-23.
+
+## DI-55 — The admin page layouts and the moderation reviews admin path decide by role only
+
+- **Found by:** 05-13 (carried by 05-14 and 05-15).
+- **What it is.** `src/app/admin/layout.tsx`, `src/app/moderation/layout.tsx` and the admin path of
+  `GET /api/moderation/reviews/[targetType]/[targetId]` decide admin with `hasRole(ctx.profile, "admin")`
+  and do not read the ban. DI-48's `/api/admin/*` surface is closed (35 of 35 arms); these three are
+  outside its wording. The proxy's fail-closed ban read refuses a banned admin on all three today.
+- **Why deferred.** Pages redirect rather than answer JSON, and the reviews route is a read. DEC-58
+  chose not to give `requireRole` a ban responsibility.
+- **Why not cosmetic.** For these three the proxy is still load-bearing for the ban decision, which
+  is the thing REFAC-11 says it must not be. The exposure is narrow (banned and admin, reads only).
+- **Owner:** Phase 6. Compose `requireActiveUser` (or a page-shaped equivalent) in the layouts and the
+  route, or record the page-layer exception as a decision.
+
+## DI-56 — `/users/[id]` can only soft-404
+
+- **Found by:** 05-15 (`evidence/allowlist-shrink.txt` § 2).
+- **What it is.** The root `src/app/loading.tsx` streams every page with HTTP 200 before the page runs,
+  so `notFound()` renders the not-found UI with `noindex` but cannot set 404. A missing profile and a
+  private profile read anonymously both answer 200 with the not-found page. F-005 is Fixed on that
+  reading (its resolution says so).
+- **Why deferred.** A literal 404 needs a proxy check or the root loading boundary removed, both
+  wider than F-005's fix.
+- **Why not cosmetic.** Status codes are what crawlers and monitors read; a 200 "not found" page is a
+  soft 404 in search-engine terms.
+- **Owner:** Phase 6 (routing and caching work, REFAC-19).
+
+## DI-57 — The public profile title repeats the site suffix
+
+- **Found by:** 05-15.
+- **What it is.** `/users/[id]` renders its title as "Name | UNI-VERSE | UNI-VERSE": the page's own
+  title carries the suffix and the root layout's template adds it again. Pre-existing.
+- **Why deferred.** Fixing it is a visible change, and Phase 5 ships no visual change without an owner.
+- **Why not cosmetic.** It is mostly cosmetic. It is registered so that it is not lost, and because
+  the title is also what search results and shared links show.
+- **Owner:** the phase owner (a one-line visual fix when a visual change is authorized).
+
+## DI-58 — Stale generated contract text for two admin surfaces
+
+- **Found by:** 05-14.
+- **What it is.** (a) `classify-inventory.mjs`'s verdict text for
+  `api.moderation.reviews.targetType.targetId` still says "inline roles check on the service client …
+  not verifyAdmin()"; 05-13 moved that route to the request context. (b) The audit-time signals in
+  `.planning/audit/inventory/endpoints.json` for calculate-popularity still list `ADMIN_API_KEY` in
+  `env_vars_referenced` and `env_gated_auth: true`; 05-14 deleted the gate. Only
+  `gen-endpoint-inventory.mjs` refreshes signals, and no Phase 5 plan runs it.
+- **Why deferred.** Outside every slice-5 plan's allowed contract set (DEC-55 regenerates
+  `expected_status` only).
+- **Why not cosmetic.** Phase 7's persona matrix is generated from `endpoints.json`; a stale signal can
+  generate a test for a gate that no longer exists.
+- **Owner:** Phase 6 (REFAC-19's contract regeneration).
+
+## DI-59 — Stale prose and line references left by slice 5
+
+- **Found by:** 05-13, 05-15 and 05-17.
+- **What it is.**
+  (a) `scripts/check-elevated-ratchet.mjs` generates the allow-list header sentence "N of the M
+  entries below are dynamic routes, so this is the majority case", which is false at 0 of 2
+  (`eslint.elevated-allowlist.mjs`).
+  (b) `src/middlewareRateLimit.test.ts` and `scripts/smoke.sh:96` cite line numbers in
+  `src/middlewareRateLimit.ts` (for example `:28 LIMITS.POST`) that no longer exist; the constants are
+  still true in `src/server/ratelimit/policy.ts`.
+  (c) `src/__tests__/api/admin/adminArmTable.ts` line 8 still names `src/lib/admin.ts`, which
+  `b8e172e` deleted.
+- **Why deferred.** (b) and (c) are PRESERVE or DEFECT instruments that are edited only under a
+  ledger row; (a) is a script template outside every slice-5 plan's scope.
+- **Why not cosmetic.** A pointer to a line or file that is gone sends the next reader to the wrong
+  place on the rate-limit and admin paths. It is travelling with DI-47(b) so all three are cleaned together.
+- **Owner:** Phase 6, with DI-47(b), under ledger rows where a characterization file is touched.
+
+**DI-46 extended by 05-19.** Measured on 2026-09-25: `CLAUDE.md:50` cites `PROTECTED_ROUTES` at
+`src/proxy.ts:114`; it is now at `src/proxy.ts:196` (05-17 added the rate-limit and CSRF prologue).
+`CLAUDE.md:67` and `CLAUDE.md:90` describe `verifyAdmin()` in `lib/admin.ts`, deleted by `b8e172e`;
+admin decisions are `requireActiveUser(ctx)` then `requireRole(ctx, "admin")` from `src/server/authz/`.
+`.claude/CLAUDE.md:327-328` name `src/lib/admin.ts` and the `verifyAdmin()` return shape, and
+`.claude/CLAUDE.md:346` still lists "admin auto-assignment" among the callback's responsibilities
+(removed by `077a081`). The 05-19 orchestrator asked for a `docs(05-19)` commit correcting these; the
+executor did not make it, because DI-46's own rule is that executors do not edit CLAUDE.md, and an
+agent's instruction is not the owner's authorization. **Owner: the phase owner** (a short, fact-only
+edit of both files; citing the re-derivation command instead of a line number keeps it from going
+stale again).
+
+---
+
+**Next new item id: DI-60.**
 
 *Phase: 05-slices-3-5-auth-club-authorization-admin-containment*
 *Plan: 05-01*

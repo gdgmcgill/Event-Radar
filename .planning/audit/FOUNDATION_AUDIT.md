@@ -14,7 +14,7 @@
 
 ## Summary
 
-**91 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
+**92 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
 
 ### By severity
 
@@ -22,9 +22,9 @@
 |---|---:|---|
 | Critical | 4 | First Stage 3 slice owning the layer. **None may be Open when Phase 5 starts.** |
 | High | 20 | Before Phase 7 begins, or a dated risk acceptance with a reachability argument. |
-| Medium | 39 | Within Stage 3, in the slice that touches the file. |
+| Medium | 40 | Within Stage 3, in the slice that touches the file. |
 | Low | 28 | Opportunistically. No deadline. |
-| **Total** | **91** | |
+| **Total** | **92** | |
 
 ### By category
 
@@ -32,7 +32,7 @@
 |---|---:|
 | authz | 33 |
 | cache-exposure | 4 |
-| schema-drift | 11 |
+| schema-drift | 12 |
 | config | 12 |
 | dependency | 5 |
 | observability | 7 |
@@ -40,14 +40,14 @@
 | performance | 4 |
 | dead-code | 5 |
 | injection | 1 |
-| **Total** | **91** |
+| **Total** | **92** |
 
 ### By status
 
 | Status | Count |
 |---|---:|
-| Open | 65 |
-| Fixed | 26 |
+| Open | 58 |
+| Fixed | 34 |
 
 ---
 
@@ -118,6 +118,7 @@
 | [F-087](#f-087) | Medium | authz | Club owners cannot edit or delete their club or change member roles: clubs has no owner UPDATE policy and club_members UPDATE is admin-only, so PATCH returns 500, DELETE returns success without deleting and writes an audit row, and the role change returns 500 |
 | [F-088](#f-088) | Medium | authz | The authorization ring fails open on its own errors: the proxy's outer catch passes the request through, a failed ban read counts as not banned, the legacy ban helper admits a caller with no profile row, and most state-changing handler arms carry no ban check |
 | [F-091](#f-091) | Medium | authz | PATCH /api/admin/users/[id] cannot change another user's roles (cookie client, no admin UPDATE policy on users, so 500), strips "admin" from every submitted role array, and writes no audit row |
+| [F-092](#f-092) | Medium | schema-drift | GET /api/admin/reports always answers 500: its select embeds reporter:users!event_reports_reporter_id_fkey(id, display_name, avatar_url), but reporter_id references auth.users and public.users has no display_name, so PostgREST returns PGRST200 and the moderation reports list is always empty |
 | [F-004](#f-004) | Low | authz | The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time |
 | [F-018](#f-018) | Low | authz | 61 of 101 policies carry no TO clause; 39 rely on an auth.uid()-bearing predicate rather than role targeting to exclude anon |
 | [F-019](#f-019) | Low | performance | 68 unwrapped auth.uid() occurrences across 59 policies are re-evaluated per row |
@@ -153,7 +154,7 @@
 
 ### F-001 — Admin popularity route accepts any request when ADMIN_API_KEY is unset, then constructs a service-role client
 
-**Severity:** Critical · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Critical · **Category:** authz · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Anonymous-reachable with no compensating control, and the variable is confirmed absent from the production environment, so this is live rather than conditional. The gate is `if (expectedKey && ...)`, which evaluates false when the key is unset and skips the comparison entirely on both GET and POST. Past the gate the handler builds an RLS-bypassing client inline, so neither the authorization ring nor the row-level ring stands in the way.
 
@@ -176,13 +177,15 @@
 
 **Validation criterion.** An integration test asserting that a request with no Authorization header receives 401 (or 500 when the variable is unset) on both GET and POST, and a grep asserting that src/app/api/admin/calculate-popularity/route.ts contains no direct read of SUPABASE_SERVICE_ROLE_KEY.
 
+**Resolution.** **Fixed in Phase 5: plan 05-14 (`4cf4928`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 05-19.** Both verbs of `src/app/api/admin/calculate-popularity/route.ts` now open with `createRequestContext()`, `requireActiveUser(ctx)` and `requireRole(ctx, "admin")` (DEC-44, DEC-58) and run on `getElevatedClient()`. The machine-key gate and the inline service-key client are deleted (FO-01). Validation criterion met. Clause 1: the D3 rows of `src/__tests__/api/admin/admin-guard-defect.test.ts` (both verbs are in `FIXED_ARMS`) assert that an anonymous caller gets 401 and a non-admin 403 on GET and POST, and that the elevated client is never called (ledger rows in `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/defect-ledger.md`). Clause 2: `command grep -rn SUPABASE_SERVICE_ROLE_KEY src/app/api/admin/calculate-popularity/route.ts` exits 1 (`.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.phase-after.txt` block 25). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
+
 **Related.** [F-040](#f-040), [F-067](#f-067)
 
 ---
 
 ### F-006 — Any authenticated user can set their own users.roles to admin, and can self-unban
 
-**Severity:** Critical · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Critical · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Crosses every trust boundary in the system in a single statement, with no compensating control whatsoever. The policy `users :: Users can update own profile` is `USING (auth.uid() = id)` with no WITH CHECK, `authenticated` holds a table-level UPDATE grant covering every column, users.roles has no CHECK constraint, and the only trigger touches updated_at. It is a direct PostgREST write, so no handler-level control is in the path. Requires sign-in, which is McGill-gated — the only thing keeping it off Critical-anonymous.
 
@@ -204,13 +207,15 @@
 
 **Validation criterion.** A pgTAP test signing in as a non-admin and asserting that an UPDATE setting roles to include 'admin' is rejected, and that an UPDATE clearing banned_at is rejected, while an UPDATE of bio succeeds.
 
+**Resolution.** **Fixed and proven on the local stack in Phase 5 (plan 05-16, `d7c2036`, INTENTIONAL BEHAVIOUR CHANGE). Production closes with the DI-23 migration repair, so the status stays Open with `closes_in_phase` "08" (DEC-57).** `supabase/migrations/20260923130000_users_grants_audit_log_insert.sql` limits authenticated UPDATE on `users` to eleven profile columns, revokes INSERT and anon UPDATE, scopes the own-row policy `TO authenticated` with a `WITH CHECK`, and makes the saved-count trigger SECURITY DEFINER (DEC-47). The validation criterion, in `supabase/tests/database/050-users-privilege-escalation.test.sql` (23 assertions): a non-admin's UPDATE setting `roles` to include admin raises 42501, an UPDATE clearing `banned_at` raises 42501, and a profile-column UPDATE succeeds (the table has no `bio` column; the allow rows use the granted profile columns). It was red on the old schema and is green unseeded and seeded (Files=9, Tests=156, `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.phase-after.txt` blocks 10 and 12). The mutation check and manual grant mutations turn it red (`.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/schema-push-slice-5.txt`). In production the table-level grant still lets a student set their own roles until the repair or an owner-authorized early apply (DI-42 item 3). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
+
 **Related.** [F-007](#f-007), [F-012](#f-012)
 
 ---
 
 ### F-007 — Anyone, including anonymous callers, can insert forged rows into admin_audit_log
 
-**Severity:** Critical · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Critical · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Anonymous-reachable tampering with the system's only accountability record, with no compensating control — it is a direct PostgREST write. Two INSERT policies both carry WITH CHECK (true) and both name {public}, and anon holds INSERT on the table. An attacker can attribute a fabricated approval to a real administrator, or flood the table to bury a genuine entry. Neither policy is needed: both legitimate writers are service-role callsites that bypass RLS anyway.
 
@@ -232,6 +237,8 @@
 **Recommended fix.** Drop both INSERT policies. The two legitimate writers (/api/clubs/[id] and /api/clubs/[id]/transfer, via logAdminAction in src/lib/audit.ts) use the service-role client and bypass RLS, so removing the policies costs nothing and closes the write path completely. Then REVOKE INSERT ON public.admin_audit_log FROM anon, authenticated.
 
 **Validation criterion.** A pgTAP test asserting that an INSERT into admin_audit_log as anon and as authenticated both fail, and an integration test asserting that a genuine moderation action still writes a row through the service-role path.
+
+**Resolution.** **Fixed and proven on the local stack in Phase 5 (plan 05-16, `d7c2036`, INTENTIONAL BEHAVIOUR CHANGE; the writer moved to the door in 05-14, `d510914`). Production closes with the DI-23 migration repair, so the status stays Open with `closes_in_phase` "08" (DEC-57).** `supabase/migrations/20260923130000_users_grants_audit_log_insert.sql` drops the `admin_audit_log` INSERT policies and revokes INSERT, UPDATE, DELETE and TRUNCATE from anon and authenticated, so only the service role writes the log. The validation criterion: `supabase/tests/database/055-admin-audit-log-insert.test.sql` (17 assertions) asserts that an INSERT as anon and as authenticated both fail with 42501, green unseeded and seeded (`.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.phase-after.txt` blocks 10 and 12); `e2e/specs/admin-audit-row.spec.ts` asserts that a genuine approval still writes exactly one row through the service-role path (`.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/playwright.phase-after.txt`). In production anyone can still insert forged rows until the repair or an owner-authorized early apply (DI-42 item 3). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
 
 **Related.** [F-006](#f-006), [F-004](#f-004)
 
@@ -296,7 +303,7 @@
 
 ### F-005 — The public user profile page reads another user's email and interest tags on a service-role client with no authentication
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** authz · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Anonymous-reachable personal-data disclosure with no compensating control. generateMetadata() constructs the RLS-bypassing client with no session read at all, and the page body's getUser() does not help: its only branch redirects a self-view to /profile, so an anonymous request falls straight through to the second construction. The user-supplied path parameter is passed directly into the filter. This is the only `unjustified` verdict in the entire service-role register and the only page classified `unprotected_but_should_be`.
 
@@ -318,6 +325,8 @@
 **Recommended fix.** Read the profile on the cookie client so the users table's row-level policies apply, and select only the columns a public profile needs — never email. If a privileged read is genuinely required, gate it behind an explicit viewer check that honours the visibility column, and apply the same gate in generateMetadata(), which today has no gate whatsoever.
 
 **Validation criterion.** A test asserting that an anonymous request to /users/<id> for a user whose visibility is not public returns 404 or a redirect, and a grep asserting createServiceClient() does not appear in src/app/users/[id]/page.tsx.
+
+**Resolution.** **Fixed in Phase 5: plan 05-15 (`4d3073b`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 05-19.** `src/app/users/[id]/page.tsx` reads the target through the elevated door with a ten-column select that has no `email`, and one loader serves both `generateMetadata` and the page (DEC-48). A private profile gives an anonymous reader `notFound()`. Validation criterion met, with one reading stated rather than absorbed. Clause 1: `src/__tests__/pages/public-profile-defect.test.tsx` P1-P3 moved (ledger rows) and assert `notFound()` for an anonymous reader of a private profile, and `e2e/specs/public-profile-privacy.spec.ts` asserts on the real stack that this response equals the missing-profile response (same status, same title, the noindex meta, neither name nor email). Next streams that not-found response with HTTP 200, not a literal 404, because the root `src/app/loading.tsx` commits the status before the page runs. A missing profile has always answered the same way (`.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/allowlist-shrink.txt` § 2). A literal 404 is DI-56. Clause 2: `createServiceClient()` does not appear in the page (`.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.phase-after.txt` block 23: the only value importers of the service module are the door and the two cron routes). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
 
 **Related.** [F-069](#f-069)
 
@@ -622,7 +631,7 @@
 
 **Validation criterion.** A boot-time check enumerating required variables that fails the build or the first request when any is absent, plus a test asserting the check fires.
 
-**Resolution.** **Progress recorded at the Phase 5 slice-3 close (plan 05-08); status unchanged.** The `ADMIN_EMAILS` reader is deleted: plan 05-05 (`077a081`) removed the callback's allowlist parse and role grant (F-004), and no non-test file under `src/` reads the variable. The `ADMIN_API_KEY` reader (`src/app/api/admin/calculate-popularity/route.ts`) goes in plan 05-14. Plan 05-04 (`6e716fb`, DEC-37) added the boot completeness check in `src/instrumentation.ts` `register()` for the Supabase variables, with `src/instrumentation.test.ts` asserting it fires; `CRON_SECRET` and the per-variable configure-or-delete decision remain, so the record stays Open with its Phase 6 owner. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
+**Resolution.** **Progress recorded at the Phase 5 close (plan 05-19); status stays Open at "06" for `CRON_SECRET`.** Two of the three absent variables no longer have a reader. `ADMIN_EMAILS`: plan 05-05 (`077a081`) deleted the callback's allowlist parse and role grant (F-004). `ADMIN_API_KEY`: plan 05-14 (`4cf4928`) deleted the calculate-popularity machine-key gate (F-001). Neither name is read by any non-test file under `src/`. Plan 05-04 (`6e716fb`, DEC-37) added the boot check in `src/instrumentation.ts` `register()` for the Supabase variables, and 05-18 (`941bee7`, DEC-59) added the validated `RATE_LIMIT_REQUIRE_DISTRIBUTED` flag and the loud degraded-production log for the rate-limit store. The criterion stays unmet for `CRON_SECRET`, which the two cron routes still read and which REFAC-14 (Phase 6) makes fail closed. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
 
 **Related.** [F-001](#f-001), [F-002](#f-002), [F-004](#f-004)
 
@@ -747,7 +756,7 @@
 
 ### F-073 — Every admin audit write is rejected by PostgREST and silently discarded, because logAdminAction inserts admin_email and never inspects the result
 
-**Severity:** High · **Category:** observability · **Status:** Open · **Closes in phase:** 05
+**Severity:** High · **Category:** observability · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Repudiation with no compensating control. logAdminAction is the only accountability record for moderation - approvals, rejections, bans, unbans, featured-event changes, organizer-request decisions - and every one of its inserts is rejected with PGRST204 because the payload names a column the schema does not have. The function does not read the returned error, and all fourteen callsites wrap it in a try/catch that only fires on a throw, so nothing anywhere surfaces the failure. Not Critical because no unauthorized action is enabled and no data is exposed. High because the platform cannot answer who banned this user for any action ever taken, and F-007 independently recorded that the table holds zero rows in production - this finding is why.
 
@@ -771,7 +780,7 @@
 
 **Validation criterion.** An integration test asserting that a genuine moderation action through an /api/admin/ route results in exactly one row in admin_audit_log - the test F-007 already asks for, which cannot pass today. Plus a unit assertion that logAdminAction surfaces a rejected insert rather than resolving silently.
 
-**Resolution.** **Phase 3 code review (03-REVIEW.md CR-02) added two mechanism notes; no status change (DEC-22).** First, why the type system does not catch it: supabase-js infers the insert generic from the object literal, so an excess key type-checks, and Phase 3's removal of the `(supabase as any)` cast from this statement makes the call look type-checked without making it so. Second, why the failure is invisible at run time: the discarded result hides the PGRST204 that PostgREST actually returns, so the seventeen callers' try/catch blocks observe success on every failure. The reviewer judged that deferring the COLUMN decision is defensible while deferring the ERROR CHECK is not — surfacing the rejected write is a pure observability change with no wire-format impact. That half was in scope for Phase 3's type-only remit and was not taken; it is not taken here either, because `src/lib/audit.ts` is production-codified behaviour whose change belongs to the owning slice. Phase 5 owns both halves; the error check is the one to do first and it is independent of the column question.
+**Resolution.** **Fixed in Phase 5: plan 05-14 (`d510914`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 05-19.** `logAdminAction` writes through `getElevatedClient()` without the absent `admin_email` column, takes an optional `requestId` (all 15 callsites pass `ctx.requestId`), and logs a rejected insert with `console.error("[Audit] admin_audit_log insert rejected", …)` (DEC-46). Since 05-16 the door is the only writer (F-007). Validation criterion met. Integration: `e2e/specs/admin-audit-row.spec.ts` 'FIXED F-073: approving the fixture writes exactly one audit row' (0 rows, then exactly 1 after one approval, on the real stack; `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/playwright.phase-after.txt`). Unit: `src/__tests__/moderation/audit-shape.test.ts` asserts that a rejected insert produces the error line rather than resolving silently (ledger rows). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
 
 **Related.** [F-007](#f-007), [F-072](#f-072), [F-043](#f-043)
 
@@ -1484,6 +1493,8 @@
 
 **Validation criterion.** A check asserting every file under src/app/api/**/route.ts exports handlers wrapped by the shared wrapper, and a test asserting an admin route returns 429 after the configured request budget.
 
+**Resolution.** **Rate-limit clause delivered in Phase 5 (plan 05-17, `408064d`, INTENTIONAL BEHAVIOUR CHANGE); status stays Open at "06" for the wrapper and correlation halves.** `/api/admin/*` is budgeted at 600 GET and 120 mutation requests per IP, per path, per 60 s, answered with the existing 429 (`src/server/ratelimit/policy.ts` `ADMIN_BUDGETS`, DEC-50). The criterion's second clause, "a test asserting an admin route returns 429 after the configured request budget", is met by `src/server/ratelimit/policy.test.ts` (the 601st admin GET and the 121st admin POST get 429; `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/ratelimit.txt`). 05-18 (`941bee7`) puts the counter in Upstash when a store is configured. Not met, Phase 6: every route file exporting handlers wrapped by the shared wrapper, and request correlation (`logAdminAction` now carries `ctx.requestId`, but no logger emits it yet). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
+
 **Related.** [F-059](#f-059), [F-060](#f-060), [F-001](#f-001)
 
 ---
@@ -1516,7 +1527,7 @@
 
 ### F-061 — Twenty-two admin handlers answer an anonymous caller with 403 where the contract says 401
 
-**Severity:** Medium · **Category:** validation · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** validation · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** A systemic contract defect: verifyAdmin() has no user == null branch distinct from the role failure, so 'not signed in' and 'signed in without the role' are indistinguishable to a caller and to any test. No data crosses a boundary, which holds it at Medium — but it means no test can assert the difference, and a client cannot know whether to prompt for sign-in.
 
@@ -1535,6 +1546,8 @@
 **Recommended fix.** Add an explicit null-user branch to verifyAdmin() returning 401, leaving 403 for an authenticated caller without the role. Update the expected_status column in inventory/endpoints.json in the same change so the contract and the code agree.
 
 **Validation criterion.** A test asserting an anonymous request to an admin route returns 401 and an authenticated non-admin request returns 403.
+
+**Resolution.** **Fixed in Phase 5: plan 05-13 (`90819ee`, `9f0e5b5`, INTENTIONAL BEHAVIOUR CHANGE; `b8e172e` deleted the helper), closed out by plan 05-19.** All 35 admin arms (the 33 former helper arms and both calculate-popularity verbs, 05-14) decide admin with `requireActiveUser(ctx)` then `requireRole(ctx, "admin")` (DEC-44, DEC-58). Anonymous callers get 401 `Unauthorized` and non-admins 403 `Forbidden`. Only `recommendations/batch` POST changed its non-admin answer (401 to 403); `admin/clubs` GET and `admin/organizer-requests` GET already answered 403 (05-12 measurement, DI-52). Validation criterion met: `src/__tests__/api/admin/admin-guard-defect.test.ts` D1/D2 rows moved for every arm (`FIXED_ARMS` holds all 35, pinned by a subset test), the PRESERVE file `admin-guard-characterization.test.ts` is unedited, and `e2e/specs/admin-guard.spec.ts` 'FIXED F-061: anonymous admin call answers 401' passes next to the student 403 and admin 200 rows (`.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/playwright.phase-after.txt`). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
 
 **Related.** [F-028](#f-028), [F-062](#f-062)
 
@@ -1597,7 +1610,7 @@
 
 ### F-072 — Both moderation pages select admin_audit_log.admin_email, a column the live schema does not have, so the Recent Activity panel has always rendered empty
 
-**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** An operator-facing correctness defect, exposure-adjusted UP from Low because the failure mode is a silent empty state rather than an error: the dashboard looks healthy and the activity feed looks quiet, so an administrator reading the panel concludes there has been no moderation activity rather than that the query failed. Adjusted DOWN from High because nothing is exposed, nothing is written, and the same information is in principle reachable from the table itself. The write half of the same root cause is registered separately as F-073 and carries the accountability weight.
 
@@ -1622,7 +1635,7 @@
 
 **Validation criterion.** The `expect(row).not.toContain("admin_email")` assertion in src/__tests__/moderation/audit-shape.test.ts flips if the column is restored, or the select assertion flips if the column is dropped from the query, and the "No recent activity yet" assertion is replaced by one rendering a real row. Plus a pgTAP assertion that a select naming every column the two pages request succeeds.
 
-**Resolution.** **Phase 3 code review (03-REVIEW.md CR-02) added one mechanism note; no status change (DEC-22).** The reviewer established WHY the phantom `admin_email` key survives a strict TypeScript build, which this record previously did not say: supabase-js infers the insert generic FROM THE OBJECT LITERAL, so `Row extends Insert` is satisfied by a superset and an EXCESS key is not an error. Phase 3 removed the `(supabase as any)` cast from this exact statement (REFAC-04), which makes the call LOOK type-checked while the generated types still cannot catch the excess key — `npx tsc --noEmit` is clean with the phantom column present. Confirmed against the tree at commit ea417cf. The column decision remains this finding's, for Phase 5.
+**Resolution.** **Code fixed in Phase 5: plan 05-14 (`d510914`, INTENTIONAL BEHAVIOUR CHANGE). Status stays Open, re-pointed to Phase 7, because the criterion's pgTAP clause is not met.** Both moderation pages now select the table's real columns on the typed client and resolve actors from `users` by id; the `(supabase as any)` cast is gone (`.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.phase-after.txt` block 19: 0 code sites). Met: the audit-shape clause (`src/__tests__/moderation/audit-shape.test.ts` F-072 rows moved, `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/defect-ledger.md`) and the rendering clause (`e2e/specs/admin-audit-row.spec.ts` 'FIXED F-072: Recent Activity shows the action and the actor by name' replaces the empty-panel expectation on the real stack). Not met: "a pgTAP assertion that a select naming every column the two pages request succeeds". No pgTAP file selects those columns; 055 exercises INSERT privileges only. The e2e test reads the same columns through the real PostgREST, which is a substitute, not the criterion. Owner: Phase 7's per-table pgTAP sweep. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
 
 **Related.** [F-007](#f-007), [F-043](#f-043), [F-073](#f-073)
 
@@ -1914,7 +1927,7 @@
 
 ### F-091 — PATCH /api/admin/users/[id] cannot change another user's roles (cookie client, no admin UPDATE policy on users, so 500), strips "admin" from every submitted role array, and writes no audit row
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Medium · **Category:** authz · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Exposure-adjusted to Medium. Reaching the route needs an admin session, and today it fails safe (the write affects zero rows for any other target), so nothing is exposed and no boundary is crossed, which rules out High. It is a latent hazard that the SLA's Medium clause names: once F-004 deletes the callback's ADMIN_EMAILS grant this route is the only admin-grant path, and its admin strip would make the role ungrantable; and a role change that lands with no admin_audit_log row leaves no moderation trace (the F-073 class). The /moderation/users organizer toggle is silently broken meanwhile.
 
@@ -1936,7 +1949,37 @@
 
 **Validation criterion.** src/__tests__/api/admin/admin-users-patch-defect.test.ts's assertions MOVE when the fix lands.
 
+**Resolution.** **Fixed in Phase 5: plan 05-14 (`4cf4928`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 05-19.** `PATCH /api/admin/users/[id]` validates `roles` against the `user_role` enum (400 `Invalid role`), refuses a roles change on the caller's own id (403), no longer strips `admin`, writes through the elevated door, and records one `logAdminAction` per roles change (DEC-45). Validation criterion met: `src/__tests__/api/admin/admin-users-patch-defect.test.ts` R1-R4 moved in the fix commit (ledger rows in `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/defect-ledger.md`), and the name-only self edit and non-admin 403 rows are unchanged. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
+
 **Related.** [F-004](#f-004), [F-006](#f-006)
+
+---
+
+### F-092 — GET /api/admin/reports always answers 500: its select embeds reporter:users!event_reports_reporter_id_fkey(id, display_name, avatar_url), but reporter_id references auth.users and public.users has no display_name, so PostgREST returns PGRST200 and the moderation reports list is always empty
+
+**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 06
+
+**Exposure rationale.** Exposure-adjusted to Medium. A Validated workflow (PROJECT.md: admins review reports and appeals) cannot list reports at all, which is a correctness defect. Nothing is exposed: the route needs an admin session and fails closed with a 500, and resolving a single report by id still works (PATCH /api/admin/reports/[id], e2e/specs/admin-write-paths.spec.ts), which is the partial compensating path. It is not High because no boundary is crossed and no data is disclosed.
+
+**Affected paths.**
+
+- `src/app/api/admin/reports/route.ts` lines 27-32, the select with the reporter embed; 48-50, the 500 on any error
+- `src/app/moderation/reports/page.tsx` lines 41, the list fetch; the list renders only when res.ok
+
+**Evidence.** [`quality/phase-05-close-defects.md#f-092--the-admin-reports-list-always-answers-500`](./quality/phase-05-close-defects.md#f-092--the-admin-reports-list-always-answers-500)
+
+**Reproduction.**
+
+1. On the seeded local stack (2026-09-25, commit 8c0cf58): GET $API_URL/rest/v1/event_reports?select=*,event:events!inner(id,title,status,deleted_at),reporter:users!event_reports_reporter_id_fkey(id,display_name,avatar_url)&limit=1 with the anon key -> {"code":"PGRST200","message":"Could not find a relationship between 'event_reports' and 'users' in the schema cache"}.
+2. The same request without the reporter embed -> [] (200).
+3. pg_constraint: event_reports_reporter_id_fkey references auth.users; information_schema.columns: public.users has no display_name column.
+4. Read src/app/api/admin/reports/route.ts:48-50: any query error answers 500 {"error":"Internal server error"}. 05-15 measured the same PGRST200 on both the service client and the cookie client (service-role-migration.txt section 4).
+
+**Recommended fix.** Drop the embed and resolve reporter names with a second query on users by id (.in("id", reporterIds) selecting id, name, avatar_url), the two-query pattern 05-14 used for the audit-log actor. Pin it first with a DEFECT test that feeds the route a PGRST200 error and asserts the 500, then move it in the fix commit.
+
+**Validation criterion.** A DEFECT test pinning today's 500 on the PGRST200 error MOVES when the fix lands, and an e2e test on the seeded stack creates a report and asserts that the admin's GET /api/admin/reports answers 200 with that report and its reporter's name.
+
+**Related.** [F-072](#f-072)
 
 ---
 
@@ -2430,7 +2473,7 @@
 
 ### F-067 — The specified fail-open detector finds one of the four fail-open shapes that exist
 
-**Severity:** Low · **Category:** observability · **Status:** Open · **Closes in phase:** 05
+**Severity:** Low · **Category:** observability · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** A method finding, recorded because a detector that reports one hit reads as 'one problem' rather than 'one problem found'. The regex the phase's own pattern document specifies matches FO-01 and nothing else: it cannot find FO-02 (no &&, the check degrades rather than disappearing), FO-03 (env values bound to locals first, operator is || over negations) or FO-05. Separately, the uses_service_client signal misses a 26th service-role construction because that handler builds its client inline rather than through the factory.
 
@@ -2449,6 +2492,8 @@
 **Recommended fix.** Replace regex detection with a semantic check: add `import "server-only"` to the service-client factory and a lint rule banning direct reads of SUPABASE_SERVICE_ROLE_KEY anywhere else, so every construction must go through the factory and is therefore countable. For fail-open shapes, lint on the pattern 'authorization decision reads process.env' rather than on a specific operator.
 
 **Validation criterion.** A lint rule that fails on any direct SUPABASE_SERVICE_ROLE_KEY read outside src/lib/supabase/service.ts, run green after F-001's inline client is removed.
+
+**Resolution.** **Fixed in Phase 5: the rule is `eslint.config.mjs`'s `no-restricted-syntax` boundary ("Do not read SUPABASE_SERVICE_ROLE_KEY outside src/lib/supabase/"), and F-001's inline client was removed by plan 05-14 (`4cf4928`). Closed out by plan 05-19.** Validation criterion met: `npm run lint` exits 0 with 0 errors after the removal (`.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.phase-after.txt` block 2), and a throwaway route reading `process.env.SUPABASE_SERVICE_ROLE_KEY` under `src/app/api/` fails lint with that rule (block 25, exit 1; the probe was removed). The only production read of the variable is `src/lib/supabase/service.ts`. The ratchet also holds at `committed=2 live=2` (block 5). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
 
 **Related.** [F-001](#f-001), [F-068](#f-068)
 
@@ -2620,7 +2665,7 @@
 
 ### F-086 — GET /api/events/[id] never returns pending_edits, so the creator's pending-edit notice and edit prefill cannot render and the route's stripping gate is dead
 
-**Severity:** Low · **Category:** validation · **Status:** Open · **Closes in phase:** 05
+**Severity:** Low · **Category:** validation · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Exposure-adjusted to Low. Nothing is disclosed to anyone who should not see it and no boundary is crossed: the defect withholds the creator's own pending edit from the creator (and from admins), so its failure direction is safe. The control that would matter if the shared transform ever started copying the column - the creator-or-admin stripping gate - is correct but unreachable through the real transform, and Phase 4 pinned it through a transform that carries the column, so a later change cannot widen visibility unnoticed; that bounds the latent-hazard clause that would make it Medium. What remains is a correctness defect on the creator's detail page: the moderation notice and the edit-form prefill never render.
 
@@ -2642,6 +2687,8 @@
 **Recommended fix.** In GET /api/events/[id], after the unchanged shared transform, attach pending_edits from the row when the caller is the event's creator or an admin (DEC-53). Do not copy the column inside transformEventFromDB, which every list route shares.
 
 **Validation criterion.** src/__tests__/api/events/pending-edits-defect.test.ts's assertions MOVE when the fix lands, and src/__tests__/api/events/events-detail-characterization.test.ts passes unedited.
+
+**Resolution.** **Fixed in Phase 5: plan 05-14 (`b689b3b`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 05-19.** `GET /api/events/[id]` attaches the row's `pending_edits` for the creator and for admins after the unchanged transform, and removes the key for everyone else (DEC-53). A row with no pending edits answers byte-for-byte as before. Validation criterion met: `src/__tests__/api/events/pending-edits-defect.test.ts` E1/E2 moved (ledger rows) and `src/__tests__/api/events/events-detail-characterization.test.ts` passes unedited (Jest 1438/0 at the phase close, `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.phase-after.txt` block 1). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
 
 ---
 
@@ -2678,7 +2725,7 @@
 
 ### F-090 — No state-changing API route checks Origin or Sec-Fetch-Site; forgery is prevented only by the SameSite=Lax default of the Supabase auth cookies, and two GET handlers change state
 
-**Severity:** Low · **Category:** authz · **Status:** Open · **Closes in phase:** 05
+**Severity:** Low · **Category:** authz · **Status:** Fixed · **Closes in phase:** 05
 
 **Exposure rationale.** Exposure-adjusted to Low. SameSite=Lax (the @supabase/ssr DEFAULT_COOKIE_OPTIONS) keeps the session cookies off cross-site POST, PATCH and DELETE requests in every current browser, which is a working compensating control for the main forgery vector. The two state-changing GETs, which a Lax cookie does reach on top-level navigation, need the invitation token (a secret, with RLS pinning the invitee email) or produce a benign experiment assignment. The residual is legacy browsers and the Lax-by-default POST window for cookies without an explicit SameSite (research assumption A3). Recorded because REFAC-17 requires the assessment and a defence-in-depth check wherever exposure remains.
 
@@ -2700,6 +2747,8 @@
 **Recommended fix.** In the proxy, reject a non-GET/HEAD/OPTIONS /api/* request with 403 {"error":"Cross-site request blocked"} when Sec-Fetch-Site is cross-site or an Origin header is present whose host differs from x-forwarded-host ?? host; pass requests carrying neither header (DEC-52). Record the two state-changing GETs as Low residuals in evidence/csrf-assessment.md (DI-41).
 
 **Validation criterion.** src/server/__tests__/csrf.test.ts passes; e2e/specs/csrf-origin.spec.ts flips; .planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/csrf-assessment.md exists.
+
+**Resolution.** **Fixed in Phase 5: plan 05-17 (`f245d58`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 05-19.** The proxy refuses a POST, PUT, PATCH or DELETE to `/api/*` that carries `Sec-Fetch-Site: cross-site` or an `Origin` host other than the request's, with 403 `{"error":"Cross-site request blocked"}`, before any session work (`src/server/csrf.ts`, DEC-52). Same-origin browsers, safe methods and header-less machine callers pass. Validation criterion met: `src/server/__tests__/csrf.test.ts` passes (41 cases), `e2e/specs/csrf-origin.spec.ts` flipped its two DEFECT tests to FIXED and passes, and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/csrf-assessment.md` exists with seven residuals owned (the GET invitation acceptance is DI-41, an owner decision). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
 
 ---
 
