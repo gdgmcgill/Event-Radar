@@ -82,12 +82,13 @@ describe("POST /api/events/[id]/invite", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ sent: 2 });
     expect(callsTo(mockCookie, "notifications", "insert")).toHaveLength(0);
-    const [notify] = callsTo(mockElevated, "notifications", "insert");
-    expect((notify.payload as Array<{ user_id: string }>).map((n) => n.user_id)).toEqual([
+    // One insert per invitee (iter3 WR-03).
+    const inserts = callsTo(mockElevated, "notifications", "insert");
+    expect(inserts.map((c) => (c.payload as { user_id: string }).user_id)).toEqual([
       OTHER,
       THIRD,
     ]);
-    expect((notify.payload as Array<{ type: string }>)[0]).toMatchObject({
+    expect(inserts[0].payload).toMatchObject({
       type: "event_invite",
       event_id: EVENT_ID,
     });
@@ -97,10 +98,8 @@ describe("POST /api/events/[id]/invite", () => {
     asStudent({ ...friends, "event_invites.upsert": { data: [{ invitee_id: THIRD }] } });
     const res = await invite();
     expect(await res.json()).toEqual({ sent: 2 });
-    const [notify] = callsTo(mockElevated, "notifications", "insert");
-    expect((notify.payload as Array<{ user_id: string }>).map((n) => n.user_id)).toEqual([
-      THIRD,
-    ]);
+    const inserts = callsTo(mockElevated, "notifications", "insert");
+    expect(inserts.map((c) => (c.payload as { user_id: string }).user_id)).toEqual([THIRD]);
   });
 
   it("when every invite already existed, nothing is inserted", async () => {
@@ -128,6 +127,55 @@ describe("POST /api/events/[id]/invite", () => {
     expect(
       errorSpy.mock.calls.some((c) => String(c[0]).includes("invite notifications"))
     ).toBe(true);
+  });
+
+  // REVIEW-05 iter3 WR-03: notifications_dedup_idx ignores the inviter, so a
+  // new invite can meet an existing notification (a second inviter, or a
+  // re-invite after the invitee deleted the invite). That one 23505 used to
+  // drop every notification in the batch.
+  it("iter3 WR-03: one invitee's duplicate notification does not stop the others", async () => {
+    asStudent(
+      {
+        ...friends,
+        "event_invites.upsert": { data: [{ invitee_id: OTHER }, { invitee_id: THIRD }] },
+      },
+      {
+        "notifications.insert": [
+          { error: { code: "23505", message: "duplicate key value violates unique constraint" } },
+          { data: null },
+        ],
+      }
+    );
+    const res = await invite();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ sent: 2 });
+    const inserts = callsTo(mockElevated, "notifications", "insert");
+    expect(inserts.map((c) => (c.payload as { user_id: string }).user_id)).toEqual([
+      OTHER,
+      THIRD,
+    ]);
+    // A duplicate means the invitee is already notified: not logged as a failure.
+    expect(
+      errorSpy.mock.calls.some((c) => String(c[0]).includes("invite notifications"))
+    ).toBe(false);
+  });
+
+  it("iter3 WR-03: a per-row failure other than a duplicate is logged; the other rows still insert", async () => {
+    asStudent(
+      {
+        ...friends,
+        "event_invites.upsert": { data: [{ invitee_id: OTHER }, { invitee_id: THIRD }] },
+      },
+      { "notifications.insert": [{ data: null }, { error: { message: "boom" } }] }
+    );
+    const res = await invite();
+    expect(res.status).toBe(200);
+    expect(callsTo(mockElevated, "notifications", "insert")).toHaveLength(2);
+    const logged = errorSpy.mock.calls.filter((c) =>
+      String(c[0]).includes("invite notifications")
+    );
+    expect(logged).toHaveLength(1);
+    expect(String(logged[0][0])).toContain("row 2 of 2");
   });
 });
 

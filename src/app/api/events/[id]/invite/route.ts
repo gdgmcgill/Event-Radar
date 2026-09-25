@@ -84,26 +84,40 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Notify only the newly invited: an existing invite already notified its
-    // invitee, and notifications_dedup_idx (user_id, event_id, type) would
-    // refuse the whole batch on a repeat. notifications INSERT is granted to
-    // service_role only, so on the cookie client these never delivered.
-    // REGISTRY.md row: "Notify another user (notifications insert)".
+    // invitee. notifications INSERT is granted to service_role only, so on
+    // the cookie client these never delivered. REGISTRY.md row: "Notify
+    // another user (notifications insert)".
+    //
+    // One insert per invitee (REVIEW-05 iter3 WR-03). A new invite row can
+    // still meet an existing notification: notifications_dedup_idx is
+    // (user_id, event_id, type) and ignores the inviter, so a second inviter,
+    // or a re-invite after the invitee deleted the invite, collides with
+    // 23505. In a single multi-row INSERT that one collision dropped every
+    // notification in the batch. PostgREST's on_conflict cannot name the
+    // partial index, so each row is inserted on its own.
     const newlyInvited = (inserted ?? []).map((row) => row.invitee_id);
     if (newlyInvited.length > 0) {
-      const notifications = newlyInvited.map((inviteeId) => ({
-        user_id: inviteeId,
-        type: "event_invite",
-        title: "Event Invitation",
-        message: `${inviterName} invited you to "${eventTitle}"`,
-        event_id: eventId,
-      }));
-
-      const { error: notifyError } = await getElevatedClient()
-        .from("notifications")
-        .insert(notifications);
-      if (notifyError) {
-        console.error("Error inserting invite notifications:", notifyError);
-      }
+      const elevated = getElevatedClient();
+      const results = await Promise.all(
+        newlyInvited.map((inviteeId) =>
+          elevated.from("notifications").insert({
+            user_id: inviteeId,
+            type: "event_invite",
+            title: "Event Invitation",
+            message: `${inviterName} invited you to "${eventTitle}"`,
+            event_id: eventId,
+          })
+        )
+      );
+      results.forEach(({ error: notifyError }, index) => {
+        // 23505: this invitee already holds an event_invite notification
+        // for this event, so they are notified; not a failure.
+        if (!notifyError || notifyError.code === "23505") return;
+        console.error(
+          `Error inserting invite notifications (row ${index + 1} of ${results.length}):`,
+          notifyError
+        );
+      });
     }
 
     // Every valid invitee now holds an invite (new or pre-existing).
