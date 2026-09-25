@@ -355,7 +355,7 @@ describe("admin/events/[id]/edits PATCH", () => {
 describe("admin/events/[id]/status PATCH", () => {
   type Route = typeof import("@/app/api/admin/events/[id]/status/route");
 
-  it("approve after an appeal: event and review on the cookie client; notification upsert through the door", async () => {
+  it("approve after an appeal: event and review on the cookie client; notification read and insert through the door", async () => {
     asAdmin({
       "events.select": {
         data: { title: "Routing Event", created_by: OTHER, status: "pending", appeal_count: 1 },
@@ -374,10 +374,17 @@ describe("admin/events/[id]/status PATCH", () => {
       "events.update",
       "moderation_reviews.insert",
     ]);
-    expect(mockElevated.calls).toEqual(["admin_audit_log.insert", "notifications.upsert"]);
+    // REVIEW-05 iter3 WR-07: the upsert could not infer the partial
+    // notifications_dedup_idx (42P10); the existing row is read, then
+    // inserted (or updated). Both stay on the door.
+    expect(mockElevated.calls).toEqual([
+      "admin_audit_log.insert",
+      "notifications.select",
+      "notifications.insert",
+    ]);
   });
 
-  it("suspend: the same split, with a notification insert", async () => {
+  it("suspend: the same split, with a notification read and insert", async () => {
     asAdmin({
       "events.select": {
         data: { title: "Routing Event", created_by: OTHER, status: "approved", appeal_count: 0 },
@@ -399,7 +406,11 @@ describe("admin/events/[id]/status PATCH", () => {
       "events.update",
       "moderation_reviews.insert",
     ]);
-    expect(mockElevated.calls).toEqual(["admin_audit_log.insert", "notifications.insert"]);
+    expect(mockElevated.calls).toEqual([
+      "admin_audit_log.insert",
+      "notifications.select",
+      "notifications.insert",
+    ]);
   });
 });
 

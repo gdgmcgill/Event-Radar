@@ -1,0 +1,72 @@
+# REVIEW-05 iter3 WR-07 — real-stack evidence (e2e/specs/event-moderation-notifications.spec.ts)
+
+Stack: local Supabase, reset and seeded after 20260925130000 (evidence/review-fix-iter3-wr02-schema.txt).
+webServer: npm run build && npm run start on port 3000 (never reused).
+[WebServer] tag-mapping noise lines are filtered out below.
+
+## 1. GREEN: fixed route (HEAD 04eb39d + working tree)
+$ npx playwright test e2e/specs/event-moderation-notifications.spec.ts --reporter=line
+Running 16 tests using 1 worker
+[1/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student
+[2/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student
+[3/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member
+[4/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner
+[5/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer
+[6/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker
+[7/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin
+[8/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent
+[9/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active
+[10/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired
+[11/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:129:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › an approval writes exactly one event_approved notification
+[12/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:136:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a suspension writes one event_suspended notification
+[13/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:143:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second approval refreshes the one event_approved row, unread again
+[14/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:156:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second suspension refreshes the one event_suspended row with the new reason
+[15/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:165:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › the creator's appeal through the real route passes the events guard (+1)
+[16/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:191:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a rejection after the appeal writes one event_rejected notification
+  16 passed (13.6s)
+exit=0
+
+## 2. RED: the pre-fix route (git show HEAD:src/app/api/admin/events/[id]/status/route.ts), same spec
+$ npx playwright test e2e/specs/event-moderation-notifications.spec.ts --reporter=line
+Running 16 tests using 1 worker
+[1/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student
+[2/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student
+[3/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member
+[4/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner
+[5/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer
+[6/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker
+[7/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin
+[8/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent
+[9/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active
+[10/16] [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired
+[11/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:129:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › an approval writes exactly one event_approved notification
+  1) [chromium] › e2e/specs/event-moderation-notifications.spec.ts:129:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › an approval writes exactly one event_approved notification 
+    Error: expect(received).toHaveLength(expected)
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+      130 |     await decide(page.request, { status: "approved" });
+      131 |     const notes = await creatorNotes("event_approved");
+    > 132 |     expect(notes).toHaveLength(1);
+          |                   ^
+      133 |     expect(notes[0].read).toBe(false);
+      134 |   });
+      135 |
+        at /Users/adyan/Documents/GitHub/Event-Radar/e2e/specs/event-moderation-notifications.spec.ts:132:19
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/specs-event-moderation-not-86173-event-approved-notification-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/specs-event-moderation-not-86173-event-approved-notification-chromium/error-context.md
+    Error Context: test-results/specs-event-moderation-not-86173-event-approved-notification-chromium/error-context.md
+[12/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:136:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a suspension writes one event_suspended notification
+[13/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:143:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second approval refreshes the one event_approved row, unread again
+[14/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:156:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second suspension refreshes the one event_suspended row with the new reason
+[15/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:165:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › the creator's appeal through the real route passes the events guard (+1)
+[16/16] [chromium] › e2e/specs/event-moderation-notifications.spec.ts:191:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a rejection after the appeal writes one event_rejected notification
+  1 failed
+    [chromium] › e2e/specs/event-moderation-notifications.spec.ts:129:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › an approval writes exactly one event_approved notification 
+  5 did not run
+  10 passed (10.8s)
+exit=1
+
+The pre-fix approval wrote no event_approved row (the upsert's 42P10 was never read). The fixed route source was restored and is cmp-identical to the working copy.

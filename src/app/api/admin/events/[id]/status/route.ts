@@ -169,39 +169,30 @@ export async function PATCH(
   try {
     if (event.created_by) {
       if (status === "approved") {
-        await getElevatedClient().from("notifications").upsert(
-          {
-            user_id: event.created_by,
-            type: "event_approved",
-            title: "Event Approved!",
-            message: `Your event "${event.title}" has been approved and is now live.`,
-            event_id: id,
-            read: false,
-            created_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,event_id,type" }
-        );
+        await notifyEventCreator({
+          user_id: event.created_by,
+          type: "event_approved",
+          title: "Event Approved!",
+          message: `Your event "${event.title}" has been approved and is now live.`,
+          event_id: id,
+        });
       } else if (status === "suspended") {
         const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
-        await getElevatedClient().from("notifications").insert({
+        await notifyEventCreator({
           user_id: event.created_by,
           type: "event_suspended",
           title: "Event Suspended",
           message: `Your event "${event.title}" has been suspended. Reason: ${categoryLabel} — ${message.trim()}`,
           event_id: id,
-          read: false,
-          created_at: new Date().toISOString(),
         });
       } else {
         const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
-        await getElevatedClient().from("notifications").insert({
+        await notifyEventCreator({
           user_id: event.created_by,
           type: "event_rejected",
           title: "Event Not Approved",
           message: `Your event "${event.title}" was not approved. Reason: ${categoryLabel} — ${message.trim()}`,
           event_id: id,
-          read: false,
-          created_at: new Date().toISOString(),
         });
       }
     }
@@ -210,4 +201,54 @@ export async function PATCH(
   }
 
   return NextResponse.json({ success: true });
+}
+
+interface CreatorNotification {
+  user_id: string;
+  type: "event_approved" | "event_suspended" | "event_rejected";
+  title: string;
+  message: string;
+  event_id: string;
+}
+
+/**
+ * Delivers one moderation notification per (creator, event, type), and
+ * refreshes it when the same decision is made again (REVIEW-05 iter3 WR-07).
+ *
+ * notifications_dedup_idx is UNIQUE (user_id, event_id, type) WHERE event_id
+ * IS NOT NULL. Postgres cannot infer a partial index from PostgREST's
+ * `ON CONFLICT (user_id, event_id, type)`, so the approval's upsert failed
+ * with 42P10 every time, and nothing read the error. A plain insert
+ * collides (23505) on a second rejection or suspension after an appeal. So
+ * the existing row is read first: if there is one it is updated (new text,
+ * unread, re-dated, which is what the upsert meant), otherwise one is
+ * inserted. Every error is logged. REGISTRY.md row: "Notify another user
+ * (notifications insert)".
+ */
+async function notifyEventCreator(row: CreatorNotification): Promise<void> {
+  const elevated = getElevatedClient();
+  const { data: existing, error: readError } = await elevated
+    .from("notifications")
+    .select("id")
+    .eq("user_id", row.user_id)
+    .eq("event_id", row.event_id)
+    .eq("type", row.type)
+    .maybeSingle();
+  if (readError) {
+    console.error("[Admin] Failed to read existing notification:", readError);
+    return;
+  }
+
+  const fresh = {
+    title: row.title,
+    message: row.message,
+    read: false,
+    created_at: new Date().toISOString(),
+  };
+  const { error: writeError } = existing
+    ? await elevated.from("notifications").update(fresh).eq("id", existing.id)
+    : await elevated.from("notifications").insert({ ...row, ...fresh });
+  if (writeError) {
+    console.error("[Admin] Failed to send notification:", writeError);
+  }
 }
