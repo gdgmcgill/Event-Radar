@@ -9,8 +9,9 @@
  *
  * `after` is mocked here to capture the task. Outside a request scope the
  * real `after` throws E468; the helper then runs the task detached, exactly
- * as before, which is the path every other suite (including the PRESERVE
- * suite club-gates-characterization) exercises unchanged.
+ * as before, which is the path every other suite exercises unchanged
+ * (including the club gate pins, where a member creates an approved club
+ * event).
  */
 
 import {
