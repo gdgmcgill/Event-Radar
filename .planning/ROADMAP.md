@@ -404,7 +404,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | 2. Dependency and Runtime Stabilization | 11/11 | Complete   | 2026-09-15 |
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 11/11 | Complete   | 2026-09-23 |
-| 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 19/19 | Complete   | 2026-09-25 |
+| 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 19/19 | Complete    | 2026-09-25 |
 | 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 0/TBD | Not started | - |
 | 7. Certification Datasets and Persona Coverage | 0/TBD | Not started | - |
 | 8. Operational Certification and Sign-Off | 0/TBD | Not started | - |
