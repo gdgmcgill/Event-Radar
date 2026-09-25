@@ -246,6 +246,18 @@ Plans:
   4. Rate limiting runs from a distributed store so it holds across serverless instances and now covers `/api/admin/*`; CSRF exposure is assessed against Supabase cookie SameSite behavior and protection added on state-changing routes wherever exposure remains.
   5. After each of the three slices the Playwright specs pass and the Validated workflow list is re-confirmed — in particular every persona can still sign in, non-McGill sign-in is still rejected, banned users are still blocked, and organizers still reach their club surfaces.
 
+**Requirement states** *(recorded 2026-09-25 by plan 05-19; these must agree with `.planning/REQUIREMENTS.md` and they do)*:
+
+- **REFAC-11, REFAC-12 and REFAC-17 are Complete.** REFAC-11 flipped at 05-19, when DI-48 closed at 35 of 35 admin arms.
+- **REFAC-13 is PARTIAL**, naming its unmet clauses: "every fail-open endpoint fails closed" and "every remaining service-role use goes through `src/server/db/elevated/`". Both are unmet only at the two cron routes, which REFAC-14 (Phase 6) owns.
+- **REFAC-18 is PARTIAL**, naming its unmet clause: "so it works across serverless instances". The Upstash store is built and selected by config, but none is provisioned (DI-42, owner action), and the live contract test is skipped.
+- **Success criteria 1, 2 and 5 are MET.** Criterion 2's RLS clause is met on the local stack and reaches production with DI-23.
+- **Criteria 3 and 4 are PARTIAL**, on the same clauses as REFAC-13 and REFAC-18.
+- **DI-25 is PARTIAL.** Four admin payloads still fail `tsc` on supabase-js 2.116.0, so the bump was not taken (DI-53, Phase 6).
+- The 05-18 package checkpoint was **resolved by rule (DEC-59)** because no owner answer was available. The owner's countersignature and the Upstash provisioning come **before any push to `main`**.
+- F-006, F-007, F-008 and F-016 are closed only on the local stack, and each waits for DI-23.
+- See `evidence/PHASE-5-COMPLETION.md` (§ 8 lists the owner actions).
+
 **Plans**: 18/19 plans executed
 
 Plans:

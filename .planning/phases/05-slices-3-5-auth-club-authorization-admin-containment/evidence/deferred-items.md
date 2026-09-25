@@ -478,6 +478,49 @@ stale again).
 
 ---
 
+# Part 5 — Final state of every item at the phase close (05-19)
+
+Mirrored in `evidence/PHASE-5-COMPLETION.md` § 9. Where a state changed at the close, the reason is
+given in the row.
+
+| Item | Final state | Owner |
+|---|---|---|
+| DI-21 | unchanged | Phase 6 |
+| DI-22 | unchanged | the phase owner |
+| DI-23 | unchanged and binding. F-006, F-007, F-008 and F-016 wait on it | Phase 8 |
+| DI-25 | **PARTIAL.** Four of the eight sites were cleared; four admin payloads still fail `tsc` on 2.116.0, so the bump was not taken (`evidence/di-25-bump.txt`). Carried as DI-53 | Phase 6 (DI-53) |
+| DI-26 | unchanged | Phase 6 |
+| DI-27, DI-29 | unchanged | the phase owner; Phase 7 |
+| DI-30 | **CLOSED.** The last `(supabase as any)` code site was removed by `d510914` (05-14; `evidence/floor.phase-after.txt` block 19, 0 code sites) | — |
+| DI-33 | unchanged | Phase 8 (buckets); Phase 6 (cron jobs) |
+| DI-36 | retired into F-086, which is now Fixed | — |
+| DI-38 | CLOSED (05-01) | — |
+| DI-39, DI-40 | unchanged | the phase owner |
+| DI-41 | open, a Low CSRF residual | the phase owner |
+| DI-42 | open. The completion note's § 8 (a)-(c) is its checklist | the phase owner |
+| DI-43 | unchanged | Phase 6 at the earliest, Phase 8 by default |
+| DI-44 | **re-owned.** Slice 5 did not take the anon-role RLS probe, so it moves to Phase 7's per-table RLS sweep. The dead fallback stays with Phase 6 | Phase 7 (probe), Phase 6 (code) |
+| DI-45 | unchanged | Phase 6 |
+| DI-46 | open, extended by 05-19 | the phase owner |
+| DI-47 | unchanged; travels with DI-59 | Phase 6 |
+| DI-48 | **CLOSED** at 35 of 35 `/api/admin/*` arms (05-13, 05-14). The read-side remainder is DI-55 | — |
+| DI-49 | unchanged | the phase owner |
+| DI-50 | unchanged | Phase 6 |
+| DI-51 | unchanged. It was not registered as a finding at the close, because its owner text makes that the phase owner's choice | the phase owner |
+| DI-52 | CLOSED at registration | — |
+| DI-53 to DI-59 | new at 05-19 | see each entry |
+
+| Assumption | Final state |
+|---|---|
+| A1 | CLOSED (05-04's CI-env build; re-measured at the close, `evidence/floor.phase-after.txt` block 8d) |
+| A2 | CLOSED (the types diff was empty after 05-11, after 05-16 and at the close, block 8c) |
+| A3 | stays ASSUMED; the origin check covers it (`evidence/csrf-assessment.md` § 4.6) |
+| A4 | MITIGATED (both pairs are read); confirmed only at provisioning (DI-42) |
+| A5 | MITIGATED (`x-real-ip` first, `408064d`) |
+| A6 | OPEN; owner action (DI-42 item 2) |
+
+---
+
 **Next new item id: DI-60.**
 
 *Phase: 05-slices-3-5-auth-club-authorization-admin-containment*
