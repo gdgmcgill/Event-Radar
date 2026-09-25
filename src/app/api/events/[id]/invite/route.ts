@@ -43,12 +43,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "No valid friends to invite" }, { status: 400 });
     }
 
-    // Get event title for notification
+    // Only a live, approved event can be shared (REVIEW-05 iter3 WR-04). The
+    // notification goes out on the elevated door, so without this gate a
+    // creator could carry an unmoderated pending or rejected title to their
+    // friends, and anyone could invite friends to an event id they cannot
+    // see (someone else's pending event, or a soft-deleted one). Checked
+    // before any invite row is written.
     const { data: event } = await supabase
       .from("events")
       .select("title")
       .eq("id", eventId)
-      .single();
+      .eq("status", "approved")
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
 
     // Get inviter name
     const { data: inviter } = await supabase
@@ -58,7 +69,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .single();
 
     const inviterName = inviter?.name ?? "Someone";
-    const eventTitle = event?.title ?? "an event";
+    const eventTitle = event.title;
 
     // Insert invites (ignore duplicates)
     const inviteRows = validInvitees.map((inviteeId) => ({

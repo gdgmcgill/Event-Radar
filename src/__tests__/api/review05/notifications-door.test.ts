@@ -129,6 +129,36 @@ describe("POST /api/events/[id]/invite", () => {
     ).toBe(true);
   });
 
+  // REVIEW-05 iter3 WR-04: only a live, approved event can be shared. The
+  // read is filtered on status and deleted_at, so a pending, rejected,
+  // soft-deleted or unknown event reads as no row.
+  it("iter3 WR-04: the event read requires an approved, live event", async () => {
+    asStudent({
+      ...friends,
+      "event_invites.upsert": { data: [{ invitee_id: OTHER }] },
+    });
+    await invite();
+    const [eventRead] = callsTo(mockCookie, "events", "select");
+    expect(eventRead.filters).toEqual([
+      { op: "eq", column: "id", value: EVENT_ID },
+      { op: "eq", column: "status", value: "approved" },
+      { op: "is", column: "deleted_at", value: null },
+    ]);
+  });
+
+  it("iter3 WR-04: an event that is not approved and live answers 404 and writes nothing", async () => {
+    asStudent({
+      ...friends,
+      "events.select": { data: null },
+      "event_invites.upsert": { data: [{ invitee_id: OTHER }] },
+    });
+    const res = await invite();
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Event not found" });
+    expect(callsTo(mockCookie, "event_invites", "upsert")).toHaveLength(0);
+    expect(callsTo(mockElevated, "notifications", "insert")).toHaveLength(0);
+  });
+
   // REVIEW-05 iter3 WR-03: notifications_dedup_idx ignores the inviter, so a
   // new invite can meet an existing notification (a second inviter, or a
   // re-invite after the invitee deleted the invite). That one 23505 used to
