@@ -6,7 +6,7 @@ current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: executing
 stopped_at: Completed 05-16-PLAN.md
-last_updated: "2026-09-25T23:47:30.266Z"
+last_updated: "2026-09-25T23:47:35.292Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 06 execution started
 progress:
@@ -117,6 +117,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P18 | 16min | 3 tasks | 14 files |
 | Phase 05 P19 | 18min | 3 tasks | 12 files |
 | Phase 06 P01 | 14min | 3 tasks | 10 files |
+| Phase 06 P02 | 11 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -306,6 +307,9 @@ Recent decisions affecting current work:
 - [Phase 06]: DEC-60/61: zod 4.6.5 and @sentry/nextjs 10.75.3 exact pins, installed only if the live integrity equals the bundle INTEGRITY line; Sentry with SENTRYCLI_SKIP_DOWNLOAD=1 (06-01)
 - [Phase 06]: Phase 6 floor on f186621: Playwright 97/0 (not 91; +6 from 86fd2a2), Jest 1651+1 skipped, pgTAP 11/200 (06-01)
 - [Phase 06]: F-093 and F-094 registered; F-084 to 07, F-078/F-038/F-041 to 08; DI-60 vacant, DI-61..DI-77 disposed, next DI-82 (06-01)
+- [Phase 06]: 06-02: shared fakeSupabase.ts not extended; upsert and hint-conditional PGRST200 are test-local wrappers so no existing suite shifts
+- [Phase 06]: 06-02: PRESERVE files pin no error.message 500s (F-059) and no headers on 500s (06-12); only bytes slice 6 keeps
+- [Phase 06]: 06-02: F-017 fix shape known in advance - student fixture lands in control (lambda 1), admin in diverse (lambda 0)
 
 ### Pending Todos
 
