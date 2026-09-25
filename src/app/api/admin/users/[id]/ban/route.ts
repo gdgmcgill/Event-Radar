@@ -3,6 +3,7 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
+import { isBanned } from "@/lib/ban";
 import { getElevatedClient } from "@/server/db/elevated";
 
 /**
@@ -68,7 +69,7 @@ export async function POST(
   // Check target user exists
   const { data: targetUser, error: fetchError } = await supabase
     .from("users")
-    .select("id, name, banned_at, roles")
+    .select("id, name, banned_at, ban_expires_at, roles")
     .eq("id", id)
     .single();
 
@@ -81,8 +82,10 @@ export async function POST(
     return NextResponse.json({ error: "Cannot ban an admin account" }, { status: 403 });
   }
 
-  // Check not already banned
-  if (targetUser.banned_at) {
+  // Check not already banned. An expired temporary ban leaves banned_at set
+  // (only the unban arm clears it), so the raw column is not the test: the
+  // same isBanned() the proxy and the guards use is (REVIEW-05 WR-05).
+  if (isBanned(targetUser)) {
     return NextResponse.json(
       { error: "User is already banned" },
       { status: 409 }
