@@ -39,7 +39,9 @@ export async function POST(
   }
 
   // A self-transfer would promote and then demote the same row, leaving the
-  // club with no owner (REVIEW-05 WR-02). Refused before any write.
+  // club with no owner (REVIEW-05 WR-02). Refused before any write. This is
+  // the cheap check for the canonical spelling; the membership row below is
+  // the authoritative one.
   if (newOwnerId === user.id) {
     return NextResponse.json(
       { error: "You already own this club" },
@@ -50,13 +52,25 @@ export async function POST(
   // Verify target is a club member
   const { data: targetMember } = await supabase
     .from("club_members")
-    .select("id, role")
+    .select("id, role, user_id")
     .eq("club_id", clubId)
     .eq("user_id", newOwnerId)
     .single();
 
   if (!targetMember) {
     return NextResponse.json({ error: "Target user is not a member of this club" }, { status: 400 });
+  }
+
+  // The string check above misses a non-canonical spelling of the caller's
+  // own id (upper case, braces, no hyphens): Postgres's uuid cast accepts
+  // them all, so the lookup returned the caller's own owner row. The
+  // identity the database returned is the one compared (REVIEW-05 iter3
+  // WR-01).
+  if (String(targetMember.user_id).toLowerCase() === user.id.toLowerCase()) {
+    return NextResponse.json(
+      { error: "You already own this club" },
+      { status: 400 }
+    );
   }
 
   // The elevated door, after the owner gate (DEC-41): club_members UPDATE is
@@ -66,14 +80,26 @@ export async function POST(
   // admin_audit_log".
   const serviceClient = getElevatedClient();
 
-  // Set new owner
-  const { error: newOwnerError } = await serviceClient
+  // Set new owner. The promotion must change exactly one row: if the target
+  // left the club between the read above and this write, it matches none,
+  // and demoting the caller anyway would leave the club with no owner
+  // (REVIEW-05 iter3 WR-01). Nothing has been written yet, so there is
+  // nothing to roll back.
+  const { data: promoted, error: newOwnerError } = await serviceClient
     .from("club_members")
     .update({ role: "owner" })
-    .eq("id", targetMember.id);
+    .eq("id", targetMember.id)
+    .select("id");
 
   if (newOwnerError) {
     return NextResponse.json({ error: "Failed to set new owner" }, { status: 500 });
+  }
+
+  if (!promoted || promoted.length !== 1) {
+    return NextResponse.json(
+      { error: "Member changed concurrently. Please refresh and try again." },
+      { status: 409 }
+    );
   }
 
   // Demote current owner to organizer. The guard reports the role only, so
