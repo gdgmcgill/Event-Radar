@@ -5,6 +5,7 @@ import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
 import { isBanned } from "@/lib/ban";
 import { getElevatedClient } from "@/server/db/elevated";
+import { readJsonObject } from "@/server/body";
 
 /**
  * POST /api/admin/users/[id]/ban — Ban a user
@@ -22,18 +23,18 @@ export async function POST(
 
   const { id } = await params;
 
-  let body: {
+  // An invalid body answers 400 "Invalid JSON body", as before. A valid body
+  // that is not an object (`null`, a string, a number, an array) used to
+  // reach the destructuring below and throw outside any try, which the
+  // framework answered with an HTML 500 (REVIEW-05 iter3 WR-08); it now
+  // answers 400 "Request body must be a JSON object".
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const { reason, duration_days, suspend_content } = parsedBody.body as {
     reason?: string;
     duration_days?: number;
     suspend_content?: boolean;
   };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  const { reason, duration_days, suspend_content } = body;
 
   // Validate reason
   if (!reason || typeof reason !== "string" || !reason.trim()) {

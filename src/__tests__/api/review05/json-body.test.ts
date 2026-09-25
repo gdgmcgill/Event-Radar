@@ -9,6 +9,8 @@
  * `readJsonObject()` (`src/server/body.ts`), after its guards, so a caller
  * who fails a guard still gets the guard's answer first.
  *
+ * `POST /api/admin/users/[id]/ban` joined the table in REVIEW-05 iter3 WR-08.
+ *
  * Also pinned: `PATCH /api/admin/users/[id]` validates `name` (a trimmed
  * string of 2-50 characters) and audits a name change.
  */
@@ -93,6 +95,10 @@ const ARMS: Array<[string, Persona, string, string, Call]> = [
     async (r) => (await import("@/app/api/clubs/[id]/appeal/route")).POST(r, idParams(CLUB_ID))],
   ["events/[id]/report POST", "student", `events/${EVENT_ID}/report`, "POST",
     async (r) => (await import("@/app/api/events/[id]/report/route")).POST(r, idParams(EVENT_ID))],
+  // REVIEW-05 iter3 WR-08: missed by the first pass. Its own try caught only
+  // a parse failure, so `null` threw at the destructuring (HTML 500).
+  ["admin/users/[id]/ban POST", "admin", `admin/users/${OTHER}/ban`, "POST",
+    async (r) => (await import("@/app/api/admin/users/[id]/ban/route")).POST(r, idParams(OTHER))],
 ];
 
 describe.each(ARMS)("%s", (_id, persona, path, method, call) => {
