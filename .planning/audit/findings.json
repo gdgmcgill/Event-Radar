@@ -870,7 +870,7 @@
     "validation_criterion": "Either an integration test asserting an email is dispatched and logged for a due reminder, or a grep asserting no identifier in the codebase contains 'email' for a path that only writes in-app notifications, plus a corrected PROJECT.md line.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "06",
+    "closes_in_phase": "08",
     "related": ["F-037", "F-041"]
   },
   {
@@ -940,7 +940,7 @@
     "validation_criterion": "A check asserting user_event_scores is non-empty after a scheduled compute_user_scores() run, and an integration test asserting a user with interaction history receives a personalized ordering distinct from the popularity ordering.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "06",
+    "closes_in_phase": "08",
     "related": ["F-017", "F-009", "F-038"]
   },
   {
@@ -1872,7 +1872,7 @@
     "validation_criterion": "A pgTAP case asserting that SELECT * FROM public.search_events_fuzzy('<term>', 10) executes without raising and returns the seeded event whose title contains the term, plus an EXPLAIN assertion (with enable_seqscan off, per the 010 file's convention) that the plan names idx_events_title_trgm - so 'the function runs' and 'the indexes it was written for are usable' are two separate reds.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "06",
+    "closes_in_phase": "08",
     "resolution": "**Found during the Phase 3 code-review fix pass (03-REVIEW-FIX.md), not by 03-REVIEW.md.** It surfaced in the Playwright server log while verifying unrelated fixes: the harness passes, and the reason it passes is the fallback. Registered rather than fixed because changing a function's volatility or its body is production-codified behaviour outside a review-fix pass's remit, and because the right fix is entangled with the fallback's error handling and with the `or()` interpolation on the same lines. Recorded here rather than only in 03-REVIEW-FIX.md so it cannot go quiet. Owner: Phase 5.",
     "related": [
       "F-015",
@@ -2037,7 +2037,7 @@
     "validation_criterion": "A pgTAP case asserting either that events has no rsvp_count column, or that inserting, updating and cancelling an rsvps row keeps events.rsvp_count equal to the count of that event's non-cancelled rows; and a grep showing no src/ reader of the column remains if it is dropped.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "06",
+    "closes_in_phase": "07",
     "resolution": "Registered by plan 04-01 and deliberately NOT closed in Phase 4: every fix is a schema change, and Phase 4 adds nothing under supabase/migrations/ (orchestrator decision 2). Owner Phase 6, because a migration reaches production only through the DI-23 migration-history repair, which is deferred to Phase 8; a Phase 6 migration is the earliest one that can be written, tested locally and queued behind that repair.",
     "related": ["F-079"]
   },
@@ -2244,5 +2244,71 @@
     "risk_acceptance": null,
     "closes_in_phase": "06",
     "related": ["F-072"]
+  },
+  {
+    "id": "F-093",
+    "title": "send_event_reminders() has no deleted_at IS NULL and no status = 'approved' filter, so a user who saved an event is reminded about it after it is soft-deleted or while it is pending, rejected or suspended, and the reminder carries the event's title",
+    "severity": "Medium",
+    "severity_rationale": "Exposure-adjusted to Medium. The function is SECURITY DEFINER and runs from pg_cron every 15 minutes in production, so it needs no caller to reach it. What it sends is the title of an event the recipient saved earlier, and only to that recipient: a moderation decision (soft-delete, reject, suspend) does not stop user-facing messages about the event, which is a correctness defect in the in-app reminder workflow with a bounded disclosure. The compensating control is that the recipient set is the event's own savers and RLS no longer serves the event's page to them. It is not High because no tenant boundary is crossed, no credential is exposed, and nothing reaches a user who had not already seen the event. It is not Low because a removed or unapproved event keeps producing notifications, and the dead JavaScript handler that filtered correctly is deleted in Phase 6 (F-037 divergence 3), leaving this function as the only reminder path.",
+    "category": "authz",
+    "affected_paths": [
+      { "path": "supabase/migrations/20260915214553_baseline.sql", "lines": "379-445, send_event_reminders(); the 24-hour loop's select at 390-393 and the 1-hour loop's at 416-419 filter only on start_date" }
+    ],
+    "evidence": "quality/phase-06-slice-defects.md#f-093--reminders-are-sent-for-deleted-and-unapproved-events",
+    "reproduction": [
+      "On the local stack after a reset and seed (2026-09-25, base f186621), inside BEGIN ... ROLLBACK through docker exec -i supabase_db_Event-Radar psql -U postgres -v ON_ERROR_STOP=1 -f: insert three events starting now() + 24 hours (one approved, one approved with deleted_at = now(), one pending), save all three for the seeded user 5eed0000-0000-4000-8000-000000000003, then SELECT public.send_event_reminders().",
+      "Result: {\"1h\": 0, \"24h\": 3}; one reminder_24h notification per event, each message quoting the event's title. The correct count is 1 (the approved, non-deleted event). The transaction rolled back and left no row.",
+      "Read supabase/migrations/20260915214553_baseline.sql:390-393 and :416-419: both loops join saved_events to events with only a start_date window."
+    ],
+    "recommended_fix": "In the slice-6 migration (20260926120000_async_edge_definer_hardening.sql), CREATE OR REPLACE public.send_event_reminders() with e.deleted_at IS NULL AND e.status = 'approved' in both loops and SET search_path = public, pg_temp. Pin today's behaviour first with a DEFECT pgTAP case, then move it in the migration commit (INTENTIONAL: the function's md5 pin becomes a behaviour pin).",
+    "validation_criterion": "A pgTAP case in supabase/tests/database/070-definer-functions.test.sql runs the three-event fixture inside a transaction and asserts that send_event_reminders() writes exactly one reminder_24h row, for the approved, non-deleted event, and none for the soft-deleted or pending one.",
+    "status": "Open",
+    "risk_acceptance": null,
+    "closes_in_phase": "06",
+    "related": ["F-037", "F-075", "F-076"]
+  },
+  {
+    "id": "F-094",
+    "title": "Route handlers read request input by hand with no schema: 21 raw request.json() sites answer 500 on a malformed body, handlers .trim() fields that may not be strings (an HTML 500), 400 texts are per-route if-ladders, and club link fields have different rules on POST and PATCH",
+    "severity": "Medium",
+    "severity_rationale": "Exposure-adjusted to Medium. Any caller who passes a route's guards can send a malformed or mistyped body; the reachable effect is a 500 instead of a 400 (a JSON 500 from a catch, or Next's HTML error page where no try encloses the read) and, for club links, a value POST stores that PATCH then refuses, so the club settings form cannot save. The compensating controls are that the guards run before the body is read, RLS and the column whitelists bound every write, and no malformed value is persisted by the 500 paths. It is not High because no trust boundary is crossed and nothing is disclosed beyond a generic 500. It is not Low because a Validated workflow (club settings) breaks on data the same API accepted, and the missing contract is what REFAC-15 requires.",
+    "category": "validation",
+    "affected_paths": [
+      { "path": "src/app/api/clubs/[id]/invites/route.ts", "lines": "86, raw request.json() inside the try; 163-167, the 500 on a malformed body; 96, email.trim() unchecked" },
+      { "path": "src/app/api/clubs/[id]/appeal/route.ts", "lines": "26, message?.trim() on an unchecked value before the first try (96): a non-string answers Next's HTML 500" },
+      { "path": "src/app/api/clubs/route.ts", "lines": "77-86, POST refuses only an unsafe URL scheme, so a scheme-less link is stored" },
+      { "path": "src/app/api/clubs/[id]/route.ts", "lines": "82, raw request.json() (DELETE confirmation); 132-136, PATCH requires an absolute http(s) URL" },
+      { "path": "src/app/api/admin/events/[id]/route.ts", "lines": "21" },
+      { "path": "src/app/api/admin/events/route.ts", "lines": "124" },
+      { "path": "src/app/api/admin/experiments/[id]/route.ts", "lines": "86" },
+      { "path": "src/app/api/admin/experiments/route.ts", "lines": "79" },
+      { "path": "src/app/api/admin/featured/[id]/route.ts", "lines": "24" },
+      { "path": "src/app/api/admin/featured/route.ts", "lines": "54" },
+      { "path": "src/app/api/clubs/[id]/members/route.ts", "lines": "102" },
+      { "path": "src/app/api/events/[id]/invite/route.ts", "lines": "27" },
+      { "path": "src/app/api/events/[id]/reviews/route.ts", "lines": "33" },
+      { "path": "src/app/api/events/[id]/route.ts", "lines": "248" },
+      { "path": "src/app/api/events/[id]/rsvp/route.ts", "lines": "215, 379" },
+      { "path": "src/app/api/events/create/route.ts", "lines": "33" },
+      { "path": "src/app/api/feedback/route.ts", "lines": "20" },
+      { "path": "src/app/api/interactions/route.ts", "lines": "69" },
+      { "path": "src/app/api/profile/inferred-tags/route.ts", "lines": "17" },
+      { "path": "src/app/api/profile/interests/route.ts", "lines": "24" },
+      { "path": "src/app/api/recommendations/feedback/route.ts", "lines": "111" },
+      { "path": "src/app/api/users/[id]/route.ts", "lines": "31" }
+    ],
+    "evidence": "quality/phase-06-slice-defects.md#f-094--handlers-parse-input-without-a-schema",
+    "reproduction": [
+      "Census at base f186621 (.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.before.txt C2-C5): 21 raw request.json()/req.json() sites in 20 route files, 5 .formData() sites, 59 searchParams reads in 19 route files, 15 readJsonObject sites; no route imports a schema library.",
+      "Read src/app/api/clubs/[id]/invites/route.ts:86 and :163-167: a body that is not JSON throws inside the try and answers 500 {\"error\":\"Failed to create invitation\"} (05-REVIEW-FIX IN-03).",
+      "Read src/app/api/clubs/[id]/appeal/route.ts:26: {\"message\": 5} reaches message?.trim() before the first try (:96) and throws a TypeError, which Next answers with its HTML 500 page (05-REVIEW-FIX IN-02).",
+      "Read src/app/api/clubs/route.ts:77-86 against src/app/api/clubs/[id]/route.ts:132-136: POST stores website_url www.example.com; PATCH answers 400 Invalid URL for website_url for the same value (05-REVIEW-FIX IN-04)."
+    ],
+    "recommended_fix": "zod contracts in src/contracts/ read through parseBody, parseQuery and parseForm in src/server/body.ts, called after the guards where readJsonObject sits today. Each rule carries today's 400 text; an invalid body answers 400 Invalid JSON body and a non-object body 400 Request body must be a JSON object; a non-string field answers 400; club links use one ClubLinkFields rule on POST and PATCH; route UUIDs parse through one lower-casing Uuid schema (absorbs DI-64 and DI-66). Business-rule 400s stay in the handlers. Each moved byte is a DEFECT move with a defect-ledger row (INTENTIONAL).",
+    "validation_criterion": "node scripts/check-contracts.mjs exits 0 with an empty allow-list (no raw request.json(), .formData() or route-file searchParams read outside src/server/body.ts, auth/callback's four OAuth params excepted by name), and the DEFECT suites that pin a 500 on malformed input move to 400.",
+    "status": "Open",
+    "risk_acceptance": null,
+    "closes_in_phase": "06",
+    "related": ["F-058", "F-059"]
   }
 ]

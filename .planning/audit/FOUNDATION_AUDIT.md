@@ -14,7 +14,7 @@
 
 ## Summary
 
-**92 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
+**94 findings**, every one carrying a reproduction, a recommended fix and a validation criterion. A finding with no evidence is not in this register.
 
 ### By severity
 
@@ -22,31 +22,31 @@
 |---|---:|---|
 | Critical | 4 | First Stage 3 slice owning the layer. **None may be Open when Phase 5 starts.** |
 | High | 20 | Before Phase 7 begins, or a dated risk acceptance with a reachability argument. |
-| Medium | 40 | Within Stage 3, in the slice that touches the file. |
+| Medium | 42 | Within Stage 3, in the slice that touches the file. |
 | Low | 28 | Opportunistically. No deadline. |
-| **Total** | **92** | |
+| **Total** | **94** | |
 
 ### By category
 
 | Category | Count |
 |---|---:|
-| authz | 33 |
+| authz | 34 |
 | cache-exposure | 4 |
 | schema-drift | 12 |
 | config | 12 |
 | dependency | 5 |
 | observability | 7 |
-| validation | 9 |
+| validation | 10 |
 | performance | 4 |
 | dead-code | 5 |
 | injection | 1 |
-| **Total** | **92** |
+| **Total** | **94** |
 
 ### By status
 
 | Status | Count |
 |---|---:|
-| Open | 58 |
+| Open | 60 |
 | Fixed | 34 |
 
 ---
@@ -119,6 +119,8 @@
 | [F-088](#f-088) | Medium | authz | The authorization ring fails open on its own errors: the proxy's outer catch passes the request through, a failed ban read counts as not banned, the legacy ban helper admits a caller with no profile row, and most state-changing handler arms carry no ban check |
 | [F-091](#f-091) | Medium | authz | PATCH /api/admin/users/[id] cannot change another user's roles (cookie client, no admin UPDATE policy on users, so 500), strips "admin" from every submitted role array, and writes no audit row |
 | [F-092](#f-092) | Medium | schema-drift | GET /api/admin/reports always answers 500: its select embeds reporter:users!event_reports_reporter_id_fkey(id, display_name, avatar_url), but reporter_id references auth.users and public.users has no display_name, so PostgREST returns PGRST200 and the moderation reports list is always empty |
+| [F-093](#f-093) | Medium | authz | send_event_reminders() has no deleted_at IS NULL and no status = 'approved' filter, so a user who saved an event is reminded about it after it is soft-deleted or while it is pending, rejected or suspended, and the reminder carries the event's title |
+| [F-094](#f-094) | Medium | validation | Route handlers read request input by hand with no schema: 21 raw request.json() sites answer 500 on a malformed body, handlers .trim() fields that may not be strings (an HTML 500), 400 texts are per-route if-ladders, and club link fields have different rules on POST and PATCH |
 | [F-004](#f-004) | Low | authz | The auth callback grants the admin role from an ADMIN_EMAILS allowlist read at request time |
 | [F-018](#f-018) | Low | authz | 61 of 101 policies carry no TO clause; 39 rely on an auth.uid()-bearing predicate rather than role targeting to exclude anon |
 | [F-019](#f-019) | Low | performance | 68 unwrapped auth.uid() occurrences across 59 policies are re-evaluated per row |
@@ -554,7 +556,7 @@
 
 ### F-038 — No email is sent by anything in the project, while three names and a Validated requirement assert otherwise
 
-**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 06
+**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** A Validated product requirement — PROJECT.md's 'In-app notifications and email reminders' — has no implementation anywhere. No email-provider dependency exists in the project at all. Both the live pg_cron function and the dead handler insert in-app notifications rows and nothing else, while the table name email_reminder_log, the route name send-reminders and the requirement's own wording all assert an email path. Graded High rather than Medium because the gap is between what the program believes it has shipped and what exists, and that belief is load-bearing for every downstream phase: email_reminder_log holds exactly 0 rows, which is consistent with both 'working and idle' and 'never implemented' unless someone checks.
 
@@ -1230,7 +1232,7 @@
 
 ### F-041 — user_event_scores holds exactly zero rows, so personalized recommendations always take the popularity fallback
 
-**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 06
+**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** A Validated capability that does not happen in production. compute_user_scores() runs on schedule with zero failures and the table is empty, so every recommendation request falls through to the popularity-ranked feed. Held at Medium rather than High because the fallback is a working product experience rather than an outage, and because the defect is discoverable only by counting rows — n_live_tup would not have shown it. Compounded by F-017: the A/B framework meant to measure recommendation quality is also degraded.
 
@@ -1704,7 +1706,7 @@
 
 ### F-078 — search_events_fuzzy is declared STABLE and sets a GUC in its body, so every fuzzy search errors at run time and silently falls back to ILIKE
 
-**Severity:** Medium · **Category:** dead-code · **Status:** Open · **Closes in phase:** 06
+**Severity:** Medium · **Category:** dead-code · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** A Validated user-facing capability that has never worked, plus two indexes added to serve it that can never be used, plus a swallowed error. Postgres refuses a bare SET statement inside a non-VOLATILE function, so `public.search_events_fuzzy` raises SQLSTATE 0A000 'SET is not allowed in a non-volatile function' on EVERY invocation. src/app/api/events/route.ts:222 catches it, console.errors it and falls through to an ILIKE query, so the feature degrades invisibly and the end-to-end search spec passes on the fallback path. Not High because no authorization boundary is crossed and no data is disclosed - the result set is merely worse than intended. Not Low because it makes two of the indexes Phase 3 added (idx_events_title_trgm, idx_events_description_trgm) permanently unreachable, and because the fallback path it forces is the one that interpolates user input into a PostgREST or() filter.
 
@@ -1980,6 +1982,80 @@
 **Validation criterion.** A DEFECT test pinning today's 500 on the PGRST200 error MOVES when the fix lands, and an e2e test on the seeded stack creates a report and asserts that the admin's GET /api/admin/reports answers 200 with that report and its reporter's name.
 
 **Related.** [F-072](#f-072)
+
+---
+
+### F-093 — send_event_reminders() has no deleted_at IS NULL and no status = 'approved' filter, so a user who saved an event is reminded about it after it is soft-deleted or while it is pending, rejected or suspended, and the reminder carries the event's title
+
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 06
+
+**Exposure rationale.** Exposure-adjusted to Medium. The function is SECURITY DEFINER and runs from pg_cron every 15 minutes in production, so it needs no caller to reach it. What it sends is the title of an event the recipient saved earlier, and only to that recipient: a moderation decision (soft-delete, reject, suspend) does not stop user-facing messages about the event, which is a correctness defect in the in-app reminder workflow with a bounded disclosure. The compensating control is that the recipient set is the event's own savers and RLS no longer serves the event's page to them. It is not High because no tenant boundary is crossed, no credential is exposed, and nothing reaches a user who had not already seen the event. It is not Low because a removed or unapproved event keeps producing notifications, and the dead JavaScript handler that filtered correctly is deleted in Phase 6 (F-037 divergence 3), leaving this function as the only reminder path.
+
+**Affected paths.**
+
+- `supabase/migrations/20260915214553_baseline.sql` lines 379-445, send_event_reminders(); the 24-hour loop's select at 390-393 and the 1-hour loop's at 416-419 filter only on start_date
+
+**Evidence.** [`quality/phase-06-slice-defects.md#f-093--reminders-are-sent-for-deleted-and-unapproved-events`](./quality/phase-06-slice-defects.md#f-093--reminders-are-sent-for-deleted-and-unapproved-events)
+
+**Reproduction.**
+
+1. On the local stack after a reset and seed (2026-09-25, base f186621), inside BEGIN ... ROLLBACK through docker exec -i supabase_db_Event-Radar psql -U postgres -v ON_ERROR_STOP=1 -f: insert three events starting now() + 24 hours (one approved, one approved with deleted_at = now(), one pending), save all three for the seeded user 5eed0000-0000-4000-8000-000000000003, then SELECT public.send_event_reminders().
+2. Result: {"1h": 0, "24h": 3}; one reminder_24h notification per event, each message quoting the event's title. The correct count is 1 (the approved, non-deleted event). The transaction rolled back and left no row.
+3. Read supabase/migrations/20260915214553_baseline.sql:390-393 and :416-419: both loops join saved_events to events with only a start_date window.
+
+**Recommended fix.** In the slice-6 migration (20260926120000_async_edge_definer_hardening.sql), CREATE OR REPLACE public.send_event_reminders() with e.deleted_at IS NULL AND e.status = 'approved' in both loops and SET search_path = public, pg_temp. Pin today's behaviour first with a DEFECT pgTAP case, then move it in the migration commit (INTENTIONAL: the function's md5 pin becomes a behaviour pin).
+
+**Validation criterion.** A pgTAP case in supabase/tests/database/070-definer-functions.test.sql runs the three-event fixture inside a transaction and asserts that send_event_reminders() writes exactly one reminder_24h row, for the approved, non-deleted event, and none for the soft-deleted or pending one.
+
+**Related.** [F-037](#f-037), [F-075](#f-075), [F-076](#f-076)
+
+---
+
+### F-094 — Route handlers read request input by hand with no schema: 21 raw request.json() sites answer 500 on a malformed body, handlers .trim() fields that may not be strings (an HTML 500), 400 texts are per-route if-ladders, and club link fields have different rules on POST and PATCH
+
+**Severity:** Medium · **Category:** validation · **Status:** Open · **Closes in phase:** 06
+
+**Exposure rationale.** Exposure-adjusted to Medium. Any caller who passes a route's guards can send a malformed or mistyped body; the reachable effect is a 500 instead of a 400 (a JSON 500 from a catch, or Next's HTML error page where no try encloses the read) and, for club links, a value POST stores that PATCH then refuses, so the club settings form cannot save. The compensating controls are that the guards run before the body is read, RLS and the column whitelists bound every write, and no malformed value is persisted by the 500 paths. It is not High because no trust boundary is crossed and nothing is disclosed beyond a generic 500. It is not Low because a Validated workflow (club settings) breaks on data the same API accepted, and the missing contract is what REFAC-15 requires.
+
+**Affected paths.**
+
+- `src/app/api/clubs/[id]/invites/route.ts` lines 86, raw request.json() inside the try; 163-167, the 500 on a malformed body; 96, email.trim() unchecked
+- `src/app/api/clubs/[id]/appeal/route.ts` lines 26, message?.trim() on an unchecked value before the first try (96): a non-string answers Next's HTML 500
+- `src/app/api/clubs/route.ts` lines 77-86, POST refuses only an unsafe URL scheme, so a scheme-less link is stored
+- `src/app/api/clubs/[id]/route.ts` lines 82, raw request.json() (DELETE confirmation); 132-136, PATCH requires an absolute http(s) URL
+- `src/app/api/admin/events/[id]/route.ts` lines 21
+- `src/app/api/admin/events/route.ts` lines 124
+- `src/app/api/admin/experiments/[id]/route.ts` lines 86
+- `src/app/api/admin/experiments/route.ts` lines 79
+- `src/app/api/admin/featured/[id]/route.ts` lines 24
+- `src/app/api/admin/featured/route.ts` lines 54
+- `src/app/api/clubs/[id]/members/route.ts` lines 102
+- `src/app/api/events/[id]/invite/route.ts` lines 27
+- `src/app/api/events/[id]/reviews/route.ts` lines 33
+- `src/app/api/events/[id]/route.ts` lines 248
+- `src/app/api/events/[id]/rsvp/route.ts` lines 215, 379
+- `src/app/api/events/create/route.ts` lines 33
+- `src/app/api/feedback/route.ts` lines 20
+- `src/app/api/interactions/route.ts` lines 69
+- `src/app/api/profile/inferred-tags/route.ts` lines 17
+- `src/app/api/profile/interests/route.ts` lines 24
+- `src/app/api/recommendations/feedback/route.ts` lines 111
+- `src/app/api/users/[id]/route.ts` lines 31
+
+**Evidence.** [`quality/phase-06-slice-defects.md#f-094--handlers-parse-input-without-a-schema`](./quality/phase-06-slice-defects.md#f-094--handlers-parse-input-without-a-schema)
+
+**Reproduction.**
+
+1. Census at base f186621 (.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.before.txt C2-C5): 21 raw request.json()/req.json() sites in 20 route files, 5 .formData() sites, 59 searchParams reads in 19 route files, 15 readJsonObject sites; no route imports a schema library.
+2. Read src/app/api/clubs/[id]/invites/route.ts:86 and :163-167: a body that is not JSON throws inside the try and answers 500 {"error":"Failed to create invitation"} (05-REVIEW-FIX IN-03).
+3. Read src/app/api/clubs/[id]/appeal/route.ts:26: {"message": 5} reaches message?.trim() before the first try (:96) and throws a TypeError, which Next answers with its HTML 500 page (05-REVIEW-FIX IN-02).
+4. Read src/app/api/clubs/route.ts:77-86 against src/app/api/clubs/[id]/route.ts:132-136: POST stores website_url www.example.com; PATCH answers 400 Invalid URL for website_url for the same value (05-REVIEW-FIX IN-04).
+
+**Recommended fix.** zod contracts in src/contracts/ read through parseBody, parseQuery and parseForm in src/server/body.ts, called after the guards where readJsonObject sits today. Each rule carries today's 400 text; an invalid body answers 400 Invalid JSON body and a non-object body 400 Request body must be a JSON object; a non-string field answers 400; club links use one ClubLinkFields rule on POST and PATCH; route UUIDs parse through one lower-casing Uuid schema (absorbs DI-64 and DI-66). Business-rule 400s stay in the handlers. Each moved byte is a DEFECT move with a defect-ledger row (INTENTIONAL).
+
+**Validation criterion.** node scripts/check-contracts.mjs exits 0 with an empty allow-list (no raw request.json(), .formData() or route-file searchParams read outside src/server/body.ts, auth/callback's four OAuth params excepted by name), and the DEFECT suites that pin a 500 on malformed input move to 400.
+
+**Related.** [F-058](#f-058), [F-059](#f-059)
 
 ---
 
@@ -2609,7 +2685,7 @@
 
 ### F-084 — events.rsvp_count is a denormalized counter that no migration, trigger or route writes
 
-**Severity:** Low · **Category:** dead-code · **Status:** Open · **Closes in phase:** 06
+**Severity:** Low · **Category:** dead-code · **Status:** Open · **Closes in phase:** 07
 
 **Exposure rationale.** Dead denormalized state, Low under the SLA's hygiene definition. Nothing writes the column, so it holds its default (0) on every locally built database and whatever production's never-maintained column holds (production not read). Two readers pass it on: transformEventFromDB copies it into every Event response, and the CSV export writes it as the rsvp_count column (export route 32 and 231), so an export presents a stale number as data. Not Medium: no in-app surface renders it, it gates no decision, crosses no boundary, and the real counts come from the rsvp route (F-079). The hazard is that a later slice adopts it as the count source; DEC-31 forbids that.
 

@@ -1,0 +1,407 @@
+@sentry/nextjs package-legitimacy bundle — plan 06-01 Task 2 (DEC-61, threat T-06-01-SC)
+**Plan:** 06-01 · **Phase:** 06-slices-6-7-async-edge-contracts-caching-observability · **Recorded:** 2026-09-25T23:07Z–23:09Z (registry read on this date)
+npm 11.13.0 · node v24.16.0 · registry https://registry.npmjs.org/
+
+What this is: the registry facts a human needs to verify @sentry/nextjs@10.75.3 and its install-time
+surface before 06-16 installs it, readable from this one file without running anything. 06-16 compares
+the live registry integrity against the INTEGRITY line at the end of this file and refuses to install if
+they differ (DEC-61).
+
+How it was produced: every command below ran from the session scratchpad directory, never from the
+repo root. `npm view` reads metadata only. Section 4 fetched the tarball into the scratchpad with
+`npm pack <spec>` (a download, not an install), hashed it, extracted it there and read its package.json.
+Nothing was installed and nothing was written into the project (the git status check at the end).
+
+FINDINGS (read from the verbatim output below)
+- Identity: repository github.com/getsentry/sentry-javascript; maintainer and publisher `sentry-bot`
+  (accounts@sentry.io). 10.75.3 carries NO provenance attestation (section 1 has no dist.attestations
+  key), unlike zod 4.6.5. The identity rests on the publisher account, the repository and the integrity
+  match.
+- Age: the package was created 2021-03-03 (5.5 years). 10.75.3 was published 2026-09-23T14:05Z, two days
+  before this read, as the `v10` maintenance tag; `latest` is 11.0.0, published 2026-09-23T12:38Z
+  (sections 2 and 6).
+- Why v10 and not 11.0.0 (06-RESEARCH.md C15): v11 replaces `sendDefaultPii` with `dataCollection`, and
+  an unset `dataCollection` collects user info, cookies and request bodies. 10.75.3 keeps
+  `sendDefaultPii` with its restrictive default, which is the posture CONTEXT Area 4 decided. v11 is DI-79.
+- Peers: `next` "^13.2.0 || ^14.0 || ^15.0.0-rc.0 || ^16.0.0-0" admits Next 16.3.5; engines node >=18
+  admits Node 24 (section 6).
+- A9: @sentry/react@10.75.3 peers `react` "^16.14.0 || 17.x || 18.x || 19.x", which admits React 18.3
+  (section 7). The assumption holds.
+- Downloads: 9,610,296 in the week 2026-09-18..2026-09-24.
+- Install surface of @sentry/nextjs itself: no preinstall, install, postinstall or prepare script
+  (section 4).
+- Integrity: the tarball's sha512 equals the registry's dist.integrity (MATCH, section 4).
+- A7, the transitive @sentry/cli (section 8): 10.75.3 depends on @sentry/bundler-plugin-core ^5.3.0 and
+  @sentry/webpack-plugin ^5.3.0. The webpack plugin's newest 5.x is 5.4.0 (2026-07-10), which depends on
+  @sentry/bundler-plugins ^10.64.0, and @sentry/bundler-plugins@10.75.3 depends on @sentry/cli ^2.58.6;
+  bundler-plugin-core 5.x depends on @sentry/cli ^2.58.5. Both resolve to @sentry/cli@2.58.6, whose
+  package.json runs `postinstall: node ./scripts/install.js`. That script fetches the platform binary when
+  the matching optional package (@sentry/cli-darwin, -linux-x64, … all 2.58.6) is absent, so it is a
+  network-capable install script. The binary is used only for source-map upload, which 06-16 disables
+  without SENTRY_AUTH_TOKEN. Installation therefore runs with SENTRYCLI_SKIP_DOWNLOAD=1, and CI sets the
+  same variable at workflow level (DEC-61). 06-16 records which @sentry/cli and platform package the
+  lockfile resolves.
+- The unscoped `sentry` package (research's Package Legitimacy Audit, row 4) is a dependency of
+  @sentry/bundler-plugins 11.0.0 only (section 8); the 10.75.3 chain does not pull it in.
+- Seam: `package-legitimacy check` answers verdict SUS with the single reason `too-new`. The seam
+  evaluates the LATEST version (its publishedAt is 11.0.0's, 12:38Z), not the pin; 10.75.3 is also two
+  days old. That is release cadence, not identity. DEC-61 resolves it by rule (exact pin, integrity
+  comparison at install, SENTRYCLI_SKIP_DOWNLOAD=1, owner countersignature carried to the completion note
+  as a human-check).
+
+==============================================================================
+REGISTRY OUTPUT (verbatim)
+==============================================================================
+$ pwd
+<scratchpad>/pack
+exit=0
+
+$ npm --version; node --version; npm config get registry
+11.13.0
+v24.16.0
+https://registry.npmjs.org/
+exit=0
+
+------------------------------------------------------------------------------
+1. The pinned version: identity, publisher, provenance, scripts, dependencies, integrity
+------------------------------------------------------------------------------
+$ npm view @sentry/nextjs@10.75.3 version time.10.75.3 dist.integrity dist.tarball dist.attestations repository.url maintainers _npmUser scripts dependencies peerDependencies --json
+{
+  "version": "10.75.3",
+  "dist.integrity": "sha512-gqLutcMvwWUBmEotwcPprG9SoFmC1sjgVxYdoJcsJot/8ojgHtA2XAgImJ+5xcq+cSiO8SGg+ujYz+qDoLd7BA==",
+  "dist.tarball": "https://registry.npmjs.org/@sentry/nextjs/-/nextjs-10.75.3.tgz",
+  "repository.url": "git://github.com/getsentry/sentry-javascript.git",
+  "maintainers": [
+    "sentry-bot <accounts@sentry.io>"
+  ],
+  "_npmUser": "sentry-bot <accounts@sentry.io>",
+  "scripts": {
+    "lint": "OXLINT_TSGOLINT_DANGEROUSLY_SUPPRESS_PROGRAM_DIAGNOSTICS=true oxlint . --type-aware",
+    "test": "yarn test:unit",
+    "build": "run-p build:transpile build:types",
+    "clean": "rimraf build coverage sentry-nextjs-*.tgz",
+    "lint:fix": "OXLINT_TSGOLINT_DANGEROUSLY_SUPPRESS_PROGRAM_DIAGNOSTICS=true oxlint . --fix --type-aware",
+    "test:all": "run-s test:unit",
+    "build:dev": "yarn build",
+    "test:unit": "vitest run",
+    "test:watch": "vitest --watch",
+    "build:types": "run-s build:types:core build:types:downlevel",
+    "build:watch": "run-p build:transpile:watch",
+    "yalc:publish": "yalc publish --push --sig",
+    "build:tarball": "npm pack",
+    "vercel:branch": "source vercel/set-up-branch-for-test-app-use.sh",
+    "vercel:project": "source vercel/make-project-use-current-branch.sh",
+    "build:dev:watch": "yarn build:watch",
+    "build:transpile": "tsx --tsconfig tsconfig.tsnode.json scripts/buildRollup.ts",
+    "build:types:core": "tsc -p tsconfig.types.json",
+    "circularDepCheck": "madge --circular src/index.client.ts && madge --circular src/edge/index.ts && madge --circular src/index.server.ts && madge --circular src/index.types.ts",
+    "build:transpile:watch": "nodemon --ext ts --watch src scripts/buildRollup.ts",
+    "build:types:downlevel": "yarn downlevel-dts build/types build/types-ts3.8 --to ts3.8",
+    "lint:es-compatibility": "es-check es2020 ./build/cjs/*.js && es-check es2020 ./build/esm/*.js --module"
+  },
+  "dependencies": {
+    "rollup": "^4.60.3",
+    "@sentry/core": "10.75.3",
+    "@sentry/node": "10.75.3",
+    "@sentry/react": "10.75.3",
+    "stacktrace-parser": "^0.1.11",
+    "@opentelemetry/api": "^1.9.1",
+    "@sentry/conventions": "^0.16.0",
+    "@sentry/vercel-edge": "10.75.3",
+    "@sentry/server-utils": "10.75.3",
+    "@sentry/browser-utils": "10.75.3",
+    "@sentry/opentelemetry": "10.75.3",
+    "@sentry/webpack-plugin": "^5.3.0",
+    "@rollup/plugin-commonjs": "28.0.1",
+    "@sentry/bundler-plugin-core": "^5.3.0"
+  },
+  "peerDependencies": {
+    "next": "^13.2.0 || ^14.0 || ^15.0.0-rc.0 || ^16.0.0-0"
+  }
+}
+exit=0
+
+------------------------------------------------------------------------------
+2. Package age and dist-tags
+------------------------------------------------------------------------------
+$ npm view @sentry/nextjs time.created time.modified dist-tags --json
+{
+  "time.created": "2021-03-03T09:18:08.541Z",
+  "time.modified": "2026-09-23T14:05:15.052Z",
+  "dist-tags": {
+    "v7": "7.120.4",
+    "v9": "9.47.1",
+    "v8": "8.55.2",
+    "next": "11.0.0-rc.1",
+    "latest": "11.0.0",
+    "v10": "10.75.3"
+  }
+}
+exit=0
+
+------------------------------------------------------------------------------
+3. Weekly downloads
+------------------------------------------------------------------------------
+$ curl -s https://api.npmjs.org/downloads/point/last-week/@sentry%2Fnextjs
+{"downloads":9610296,"start":"2026-09-18","end":"2026-09-24","package":"@sentry/nextjs"}
+exit=0
+
+------------------------------------------------------------------------------
+4. Tarball: fetched into the scratchpad with npm pack (a download, not an install), hashed, compared to dist.integrity
+------------------------------------------------------------------------------
+$ npm pack @sentry/nextjs@10.75.3 --pack-destination <scratchpad>/pack --silent
+sentry-nextjs-10.75.3.tgz
+exit=0
+
+$ shasum -a 512 sentry-nextjs-10.75.3.tgz
+82a2eeb5c32fc16501984a2dc1c3e9ac6f52a05982d6c8e057161da0972c268b7ff288e01ed0365c0808989fb9c5cabe71288ef121a0fae8d8cfea83a0b77b04
+exit=0
+$ node -e <base64-decode dist.integrity to hex>
+82a2eeb5c32fc16501984a2dc1c3e9ac6f52a05982d6c8e057161da0972c268b7ff288e01ed0365c0808989fb9c5cabe71288ef121a0fae8d8cfea83a0b77b04
+exit=0
+MATCH: the tarball's sha512 equals the registry dist.integrity
+
+$ node -p "JSON.stringify(require('<scratchpad>/pack/extract-_sentry_nextjs/package/package.json').scripts || {}, null, 0)"
+{"build":"run-p build:transpile build:types","build:dev":"yarn build","build:transpile":"tsx --tsconfig tsconfig.tsnode.json scripts/buildRollup.ts","build:types":"run-s build:types:core build:types:downlevel","build:types:core":"tsc -p tsconfig.types.json","build:types:downlevel":"yarn downlevel-dts build/types build/types-ts3.8 --to ts3.8","build:watch":"run-p build:transpile:watch","build:dev:watch":"yarn build:watch","build:transpile:watch":"nodemon --ext ts --watch src scripts/buildRollup.ts","build:tarball":"npm pack","circularDepCheck":"madge --circular src/index.client.ts && madge --circular src/edge/index.ts && madge --circular src/index.server.ts && madge --circular src/index.types.ts","clean":"rimraf build coverage sentry-nextjs-*.tgz","lint:fix":"OXLINT_TSGOLINT_DANGEROUSLY_SUPPRESS_PROGRAM_DIAGNOSTICS=true oxlint . --fix --type-aware","lint":"OXLINT_TSGOLINT_DANGEROUSLY_SUPPRESS_PROGRAM_DIAGNOSTICS=true oxlint . --type-aware","lint:es-compatibility":"es-check es2020 ./build/cjs/*.js && es-check es2020 ./build/esm/*.js --module","test":"yarn test:unit","test:all":"run-s test:unit","test:unit":"vitest run","test:watch":"vitest --watch","vercel:branch":"source vercel/set-up-branch-for-test-app-use.sh","vercel:project":"source vercel/make-project-use-current-branch.sh","yalc:publish":"yalc publish --push --sig"}
+exit=0
+
+$ node -p <lifecycle scripts present? preinstall/install/postinstall/prepare>
+preinstall=none install=none postinstall=none prepare=none
+exit=0
+
+$ tar tzf sentry-nextjs-10.75.3.tgz | wc -l; tar tzf sentry-nextjs-10.75.3.tgz | head -15
+638
+package/LICENSE
+package/build/cjs/common/pages-router-instrumentation/_error.js
+package/build/esm/common/pages-router-instrumentation/_error.js
+package/build/cjs/common/utils/addHeadersAsAttributes.js
+package/build/esm/common/utils/addHeadersAsAttributes.js
+package/build/cjs/config/templates/apiWrapperTemplate.js
+package/build/esm/config/templates/apiWrapperTemplate.js
+package/build/cjs/client/routing/appRouterRoutingInstrumentation.js
+package/build/esm/client/routing/appRouterRoutingInstrumentation.js
+package/build/cjs/client/browserTracingIntegration.js
+package/build/esm/client/browserTracingIntegration.js
+package/build/cjs/config/withSentryConfig/buildTime.js
+package/build/esm/config/withSentryConfig/buildTime.js
+package/build/cjs/common/captureRequestError.js
+package/build/esm/common/captureRequestError.js
+exit=0
+
+------------------------------------------------------------------------------
+5. The GSD package-legitimacy seam
+------------------------------------------------------------------------------
+$ node /Users/adyan/.claude/gsd-core/bin/gsd-tools.cjs query package-legitimacy check --ecosystem npm @sentry/nextjs
+[
+  {
+    "name": "@sentry/nextjs",
+    "verdict": "SUS",
+    "signals": {
+      "exists": true,
+      "publishedAt": "2026-09-23T12:38:07.854Z",
+      "weeklyDownloads": 9610296,
+      "repoUrl": "git://github.com/getsentry/sentry-javascript.git",
+      "deprecated": false,
+      "postinstall": null,
+      "ecosystem": "npm"
+    },
+    "reasons": [
+      "too-new"
+    ]
+  }
+]
+exit=0
+
+------------------------------------------------------------------------------
+6. The pinned version's publish time and the v11 release beside it
+------------------------------------------------------------------------------
+$ npm view @sentry/nextjs time --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s);for(const v of ["10.75.3","11.0.0","10.71.0"])console.log(v,t[v])})'
+10.75.3 2026-09-23T14:05:14.860Z
+11.0.0 2026-09-23T12:38:07.854Z
+10.71.0 2026-08-24T12:51:04.232Z
+exit=0
+
+$ npm view @sentry/nextjs@10.75.3 peerDependencies engines --json
+{
+  "peerDependencies": {
+    "next": "^13.2.0 || ^14.0 || ^15.0.0-rc.0 || ^16.0.0-0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
+exit=0
+
+$ npm view @sentry/nextjs dist-tags --json
+{
+  "v7": "7.120.4",
+  "v9": "9.47.1",
+  "v8": "8.55.2",
+  "next": "11.0.0-rc.1",
+  "latest": "11.0.0",
+  "v10": "10.75.3"
+}
+exit=0
+
+------------------------------------------------------------------------------
+7. A9: @sentry/react@10.75.3 admits React 18.3
+------------------------------------------------------------------------------
+$ npm view @sentry/react@10.75.3 peerDependencies --json
+{
+  "react": "^16.14.0 || 17.x || 18.x || 19.x"
+}
+exit=0
+
+$ npm view @sentry/react@10.75.3 dependencies --json
+{
+  "@sentry/core": "10.75.3",
+  "@sentry/browser": "10.75.3",
+  "@sentry/conventions": "^0.16.0"
+}
+exit=0
+
+------------------------------------------------------------------------------
+8. A7: the transitive @sentry/cli and its postinstall
+------------------------------------------------------------------------------
+$ npm view @sentry/webpack-plugin@^5.3.0 version dependencies --json | tail -20
+[
+  {
+    "version": "5.3.0",
+    "dependencies": {
+      "@sentry/bundler-plugin-core": "5.3.0"
+    }
+  },
+  {
+    "version": "5.4.0",
+    "dependencies": {
+      "@sentry/bundler-plugins": "^10.64.0"
+    }
+  }
+]
+exit=0
+
+$ npm view @sentry/bundler-plugin-core@5 dependencies --json | tail -15
+    "@babel/core": "^7.18.5",
+    "@sentry/cli": "^2.58.5",
+    "magic-string": "~0.30.8",
+    "@sentry/babel-plugin-component-annotate": "5.2.1"
+  },
+  {
+    "@babel/core": "^7.18.5",
+    "@sentry/babel-plugin-component-annotate": "5.3.0",
+    "@sentry/cli": "^2.58.5",
+    "dotenv": "^16.3.1",
+    "find-up": "^5.0.0",
+    "glob": "^13.0.6",
+    "magic-string": "~0.30.8"
+  }
+]
+exit=0
+
+$ npm view @sentry/cli@^2.58.5 version --json
+[
+  "2.58.5",
+  "2.58.6"
+]
+exit=0
+
+$ npm view @sentry/cli@2.58.6 scripts optionalDependencies dist.integrity _npmUser --json
+{
+  "scripts": {
+    "fix": "npm-run-all fix:eslint fix:prettier",
+    "test": "npm-run-all test:jest test:eslint test:prettier test:vercel-nft",
+    "build": "tsc",
+    "prepack": "npm run build",
+    "test:jest": "jest",
+    "fix:eslint": "eslint --fix bin/* scripts/**/*.js lib/**/*.js",
+    "test:watch": "jest --watch --notify",
+    "check:types": "tsc --noEmit",
+    "install-cli": "node ./scripts/install.js",
+    "postinstall": "node ./scripts/install.js",
+    "test:eslint": "eslint bin/* scripts/**/*.js lib/**/*.js",
+    "fix:prettier": "prettier --write bin/* scripts/**/*.js lib/**/*.js",
+    "test:prettier": "prettier --check  bin/* scripts/**/*.js lib/**/*.js",
+    "test:vercel-nft": "node scripts/test-vercel-nft.js"
+  },
+  "optionalDependencies": {
+    "@sentry/cli-darwin": "2.58.6",
+    "@sentry/cli-linux-arm": "2.58.6",
+    "@sentry/cli-linux-x64": "2.58.6",
+    "@sentry/cli-win32-x64": "2.58.6",
+    "@sentry/cli-linux-i686": "2.58.6",
+    "@sentry/cli-win32-i686": "2.58.6",
+    "@sentry/cli-linux-arm64": "2.58.6",
+    "@sentry/cli-win32-arm64": "2.58.6"
+  },
+  "dist.integrity": "sha512-baBcNPLLfUi9WuL+Tpri9BFaAdvugZIKelC5X0tt0Zdy+K0K+PCVSrnNmwMWU/HyaF/SEv6b6UHnXIdqanBlcg==",
+  "_npmUser": "sentry-bot <accounts@sentry.io>"
+}
+exit=0
+
+$ npm view @sentry/nextjs@10.75.3 dependencies --json
+{
+  "rollup": "^4.60.3",
+  "@sentry/core": "10.75.3",
+  "@sentry/node": "10.75.3",
+  "@sentry/react": "10.75.3",
+  "stacktrace-parser": "^0.1.11",
+  "@opentelemetry/api": "^1.9.1",
+  "@sentry/conventions": "^0.16.0",
+  "@sentry/vercel-edge": "10.75.3",
+  "@sentry/server-utils": "10.75.3",
+  "@sentry/browser-utils": "10.75.3",
+  "@sentry/opentelemetry": "10.75.3",
+  "@sentry/webpack-plugin": "^5.3.0",
+  "@rollup/plugin-commonjs": "28.0.1",
+  "@sentry/bundler-plugin-core": "^5.3.0"
+}
+exit=0
+
+$ npm view @sentry/webpack-plugin time --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s);for(const v of ["5.3.0","5.4.0"])console.log(v,t[v])})'
+5.3.0 2026-05-12T08:42:43.250Z
+5.4.0 2026-07-10T11:17:38.136Z
+exit=0
+
+$ npm view @sentry/webpack-plugin@5.4.0 dependencies --json
+{
+  "@sentry/bundler-plugins": "^10.64.0"
+}
+exit=0
+
+$ npm view @sentry/bundler-plugins@10.75.3 dependencies --json
+{
+  "glob": "^13.0.6",
+  "dotenv": "^17.4.2",
+  "find-up": "^5.0.0",
+  "@babel/core": "^7.18.5",
+  "@sentry/cli": "^2.58.6",
+  "@sentry/core": "10.75.3",
+  "magic-string": "~0.30.8"
+}
+exit=0
+
+$ npm view @sentry/bundler-plugins@11.0.0 dependencies --json
+{
+  "glob": "^13.0.6",
+  "dotenv": "^17.4.2",
+  "sentry": "^0.44.0",
+  "oxc-parser": "^0.143.0",
+  "@babel/core": "^7.18.5",
+  "@sentry/core": "11.0.0",
+  "magic-string": "~0.30.8",
+  "supports-color": "^8.1.1"
+}
+exit=0
+
+$ npm view @sentry/bundler-plugin-core@^5.3.0 version --json
+"5.3.0"
+exit=0
+
+==============================================================================
+END OF BUNDLE
+==============================================================================
+$ git status --porcelain -- package.json package-lock.json      (run from the repo root after the bundle)
+exit=0  (no output = nothing installed, lockfile untouched)
+
+Install note for 06-16: SENTRYCLI_SKIP_DOWNLOAD=1 npm install --save-exact @sentry/nextjs@10.75.3
+INTEGRITY @sentry/nextjs@10.75.3 sha512-gqLutcMvwWUBmEotwcPprG9SoFmC1sjgVxYdoJcsJot/8ojgHtA2XAgImJ+5xcq+cSiO8SGg+ujYz+qDoLd7BA==
