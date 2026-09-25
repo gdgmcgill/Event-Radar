@@ -6,14 +6,14 @@ current_phase: 05
 current_phase_name: Slices 3–5 — Auth, Club Authorization, Admin Containment
 status: executing
 stopped_at: Completed 05-16-PLAN.md
-last_updated: "2026-09-25T05:23:48.612Z"
+last_updated: "2026-09-25T05:41:41.295Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 62
-  completed_plans: 59
+  completed_plans: 60
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 05 (Slices 3–5 — Auth, Club Authorization, Admin Containment) — EXECUTING
-Plan: 17 of 19
+Plan: 18 of 19
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 05 execution started
 
@@ -112,6 +112,7 @@ Progress: [███████░░░] 73%
 | Phase 05 P14 | 16min | 3 tasks | 33 files |
 | Phase 05 P15 | 24min | 3 tasks | 27 files |
 | Phase 05 P16 | 29min | 2 tasks | 6 files |
+| Phase 05 P17 | 15min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -291,6 +292,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-15: every research F permits-cell re-verified against production and local policy text (43 identical); no cell wrong, no policy widened; the events-appeal pre-read stays on the door so a non-creator still gets 403 (tenth REGISTRY row, Phase 7 retirement) — Behaviour preservation: a cookie-client read would turn 403 into 404 with no finding behind it
 - [Phase 05]: 05-15: /users/[id] is a soft 404 (root loading.tsx streams 200 before the page runs); a private profile gives anonymous readers the same not-found response as a missing profile, with neither name nor email (F-005) — Next documents that the status cannot change once streaming starts; a hard 404 would need a proxy check (deferred to 05-19)
 - [Phase 05]: 05-16: TRUNCATE on admin_audit_log is revoked with INSERT/UPDATE/DELETE (TRUNCATE bypasses RLS); the users-INSERT deny is proven by a newcomer inserting their own id
+- [Phase 05]: 05-17: the rate-limit rule carries a scope; applyApiRateLimit stays sync and public-only while applyRateLimit(req, store) budgets /api/admin/* at 600 GET / 120 mutation per IP per path per minute (DEC-50)
+- [Phase 05]: 05-17: the CSRF check compares Origin with x-forwarded-host (first entry), else host, else nextUrl.host; null or unparseable Origin refused; header-less requests pass (DEC-52)
 
 ### Pending Todos
 
@@ -342,7 +345,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-25T05:23:48.607Z
+Last session: 2026-09-25T05:41:36.712Z
 Stopped at: Completed 05-16-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None

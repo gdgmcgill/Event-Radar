@@ -152,3 +152,7 @@ None beyond the deviations above. Every Playwright run passed on its first attem
 ## Next Phase Readiness
 
 05-18 can add `UpstashRateLimitStore implements RateLimitStore` and select it in `getRateLimitStore()` without touching the policy, the memory path or the proxy. The local stack is left reset and seeded, and port 3000 is free.
+
+## Self-Check: PASSED
+
+All 12 created files are present, and commits 408064d and f245d58 are in the log.
