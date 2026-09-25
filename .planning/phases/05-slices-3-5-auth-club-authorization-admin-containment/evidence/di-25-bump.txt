@@ -1,0 +1,140 @@
+DI-25 — @supabase/supabase-js 2.81.1 → 2.116.0: throwaway-worktree proof, and the bump NOT taken
+**Plan:** 05-19 Task 1 · **Phase:** 05-slices-3-5-auth-club-authorization-admin-containment · **Recorded:** 2026-09-25
+Base commit: dc75656583af9cacd6557dd96f932b9e222dbc75 (05-18's metadata commit; the phase's last code-bearing commit is 941bee7)
+Method: DEC-28 / DEC-56 (05-RESEARCH.md § H): a detached worktree of HEAD in the session scratchpad,
+OUTSIDE the repository (shown as <scratch>); `npm ci`; `npx tsc --noEmit` on the pinned 2.81.1;
+`npm install --no-save @supabase/supabase-js@2.116.0`; `npx tsc --noEmit` again; `npx jest --ci` as a
+second signal; then the worktree is force-removed and pruned.
+
+VERDICT — PARTIAL. THE BUMP IS NOT TAKEN.
+The plan's rule (05-19 Task 1): "if any error appears, record it, stop, and name the site and the slice
+that should have cleared it — do not bump". tsc on 2.116.0 exits 2 with 4 diagnostics (block 5). So
+package.json and package-lock.json are unchanged, @supabase/supabase-js stays on 2.81.1 and
+@supabase/ssr on 0.7.0 (block 8). DI-25's minor half stays open with the four sites below (registered
+as DI-53 in evidence/deferred-items.md).
+
+THE EIGHT SITES FROM PHASE 4 (.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/di-25-enumeration.txt), NOW
+| # | Site (Phase 4 line) | Research § H: cleared by | State on 2.116.0 at dc75656 | Cleared by commit |
+|---|---------------------|--------------------------|-----------------------------|-------------------|
+| 1 | admin/events/[id]/edits/route.ts (67) | slice 5: type liveUpdates as TablesUpdate<"events"> | STILL ERRORS, now line 76 (TS2345 Record<string, unknown>) | none. 05-13 90819ee, 05-14 d510914 and 05-15 26cbb2a touched the file; none retyped liveUpdates |
+| 2 | admin/events/[id]/route.ts (41) | slice 5: type updateData | STILL ERRORS, now line 46 (TS2345 Record<string, unknown>) | none. 90819ee and d510914 touched the file |
+| 3 | admin/experiments/[id]/route.ts (103) | slice 5: type the payload | STILL ERRORS, now line 109 (TS2345 Record<string, unknown>) | none. 90819ee touched the file |
+| 4 | admin/featured/[id]/route.ts (43) | slice 5: TablesUpdate<"featured_events"> | STILL ERRORS, now line 48 (TS2345 Record<string, Json>) | none. 9f0e5b5 and d510914 touched the file |
+| 5 | admin/users/[id]/route.ts (33) | slice 5 (C12 rewrite) | clear | 4cf4928 (05-14, F-091: updateData is TablesUpdate<"users">) |
+| 6 | clubs/[id]/route.ts (129) | slice 4 | clear | 4531ee2 (05-10, F-087: TablesUpdate<"clubs">) |
+| 7 | events/[id]/route.ts (318) PATCH | slice 4 or 5 | clear | d8cf84e (05-10: directUpdates is TablesUpdate<"events">) |
+| 8 | lib/audit.ts (38) | slice 5 (F-073) | clear | d510914 (05-14, F-073: admin_email dropped) |
+
+Why this plan does not retype sites 1-4 itself: the task says stop and name them, and the retyping is
+not a pure annotation. RejectExcessProperties rejects the Record types because each payload is built
+from request or row data whose keys are not proven to be columns: site 1 copies every key of the
+row's pending_edits JSON into the update, and site 4's values are Json. Typing them honestly means
+filtering the keys to the table's columns (a behaviour decision on an admin write path), which
+belongs with REFAC-15's zod contracts at each boundary (Phase 6), not with a dependency bump.
+`@supabase/ssr@0.7.0`'s peer range ^2.43.4 would admit 2.116.0 (block 4 shows it deduping onto it in
+the worktree), so the ssr pin is not what blocks the bump. The ssr major stays DI-43 (DEC-28).
+
+==============================================================================
+RAW BLOCKS — invoking command, verbatim output, exit code
+(The scratchpad path is shown as <scratch>; npm prints it with a masked segment.)
+==============================================================================
+[1 · create the throwaway worktree]
+$ git worktree add --detach <scratch>/di25 dc75656583af9cacd6557dd96f932b9e222dbc75
+Preparing worktree (detached HEAD dc75656)
+HEAD is now at dc75656 docs(05-18): complete Upstash rate-limit store plan
+exit=0
+[2 · npm ci in the worktree (tail)]
+$ npm ci
+exit=0
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+[3 · versions and tsc BEFORE the bump]
+$ npm ls @supabase/supabase-js @supabase/postgrest-js
+uni-verse@0.1.0 /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/***/scratchpad/di25
+├─┬ @supabase/ssr@0.7.0
+│ └── @supabase/supabase-js@2.81.1 deduped
+└─┬ @supabase/supabase-js@2.81.1
+  └── @supabase/postgrest-js@2.81.1
+
+exit=0
+$ npx tsc --noEmit   # BEFORE the bump, in the worktree
+exit=0
+[4 · the no-save install]
+$ npm install --no-save @supabase/supabase-js@2.116.0
+exit=0
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+$ npm ls @supabase/supabase-js @supabase/postgrest-js
+uni-verse@0.1.0 /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/***/scratchpad/di25
+├─┬ @supabase/ssr@0.7.0
+│ └── @supabase/supabase-js@2.116.0 deduped
+└─┬ @supabase/supabase-js@2.116.0
+  └── @supabase/postgrest-js@2.116.0
+
+exit=0
+$ git status --porcelain -- package.json package-lock.json   # in the worktree
+exit=0
+[5 · tsc AFTER the bump — full diagnostic output]
+$ npx tsc --noEmit   # AFTER the bump
+exit=2
+src/app/api/admin/events/[id]/edits/route.ts(76,15): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'RejectExcessProperties<{ appeal_count?: number | undefined; category?: string | null | undefined; club_id?: string | null | undefined; content_hash?: string | null | undefined; created_at?: string | null | undefined; ... 19 more ...; updated_at?: string | ... 1 more ... | undefined; }, Record<...>>'.
+  Type 'Record<string, unknown>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'unknown' is not assignable to type 'never'.
+src/app/api/admin/events/[id]/route.ts(46,13): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'RejectExcessProperties<{ appeal_count?: number | undefined; category?: string | null | undefined; club_id?: string | null | undefined; content_hash?: string | null | undefined; created_at?: string | null | undefined; ... 19 more ...; updated_at?: string | ... 1 more ... | undefined; }, Record<...>>'.
+  Type 'Record<string, unknown>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'unknown' is not assignable to type 'never'.
+src/app/api/admin/experiments/[id]/route.ts(109,13): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'RejectExcessProperties<{ created_at?: string | undefined; description?: string | null | undefined; end_date?: string | null | undefined; id?: string | undefined; name?: string | undefined; start_date?: string | null | undefined; status?: string | undefined; target_metric?: string | ... 1 more ... | undefined; update...'.
+  Type 'Record<string, unknown>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'unknown' is not assignable to type 'never'.
+src/app/api/admin/featured/[id]/route.ts(48,15): error TS2345: Argument of type 'Record<string, Json>' is not assignable to parameter of type 'RejectExcessProperties<{ created_at?: string | undefined; created_by?: string | undefined; ends_at?: string | undefined; event_id?: string | undefined; id?: string | undefined; priority?: number | undefined; sponsor_name?: string | ... 1 more ... | undefined; starts_at?: string | undefined; }, Record<...>>'.
+  Type 'Record<string, Json>' is not assignable to type '{ [x: string]: never; }'.
+    'string' index signatures are incompatible.
+      Type 'Json' is not assignable to type 'never'.
+        Type 'null' is not assignable to type 'never'.
+error lines: 4
+[6 · jest in the worktree, second signal]
+$ npx jest --ci
+exit=0
+Test Suites: 1 skipped, 75 passed, 75 of 76 total
+Tests:       1 skipped, 1438 passed, 1439 total
+Snapshots:   0 total
+DONE
+------------------------------------------------------------------------------
+[7 · remove the throwaway worktree]
+$ git worktree remove --force <scratch>/di25
+exit=0
+$ git worktree prune
+exit=0
+$ git worktree list
+/Users/adyan/Documents/GitHub/Event-Radar dc75656 [main]
+exit=0
+$ git worktree list | wc -l
+1
+$ test -d <scratch>/di25
+exit=1  (1 = removed)
+[8 · main tree unchanged by the proof]
+$ node -p "require(\"./node_modules/@supabase/supabase-js/package.json\").version"
+2.81.1
+$ node -p "require(\"./node_modules/@supabase/ssr/package.json\").version"
+0.7.0
+$ git status --porcelain -- package.json package-lock.json
+exit=0
+------------------------------------------------------------------------------
+NOTES
+- Block 2 and block 4 print npm's generic "run npm audit" tail; the production gate
+  (npm audit --audit-level=high --omit=dev) is measured on the main tree in
+  evidence/floor.phase-after.txt, where no dependency moved.
+- Block 6: the worktree's Jest on 2.116.0 passed 1438 + 1 skipped (the Upstash live contract suite),
+  equal to the main tree's floor. Jest compiles through ts-jest per file, so it does not see the four
+  tsc errors; tsc is the gate that decides the bump.
+- Nothing from the worktree reached the main tree: block 8 shows 2.81.1 / 0.7.0 resolved and
+  `git status --porcelain -- package.json package-lock.json` empty.
