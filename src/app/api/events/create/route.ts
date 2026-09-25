@@ -9,6 +9,7 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 import { hasRole } from "@/lib/roles";
 import { getElevatedClient } from "@/server/db/elevated";
+import { runAfterResponse } from "@/server/afterResponse";
 
 export async function POST(request: NextRequest) {
   try {
@@ -240,8 +241,10 @@ export async function POST(request: NextRequest) {
           console.error("Notification fanout error:", err);
         }
       };
-      // Fire-and-forget
-      fanout();
+      // Scheduled with after() so the platform keeps the instance alive for
+      // it: a detached promise can be dropped once the response is sent on
+      // serverless (REVIEW-05 iter3 WR-06).
+      runAfterResponse(fanout);
     }
 
     return NextResponse.json(
