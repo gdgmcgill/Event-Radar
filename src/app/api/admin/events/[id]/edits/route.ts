@@ -6,6 +6,12 @@ import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
 
+/**
+ * The fields PATCH /api/events/[id] routes through pending_edits (its
+ * MODERATED_FIELDS). The only keys an approval may copy onto the event.
+ */
+const MODERATED_FIELDS = ["title", "image_url"] as const;
+
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
@@ -64,10 +70,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const pendingEdits = event.pending_edits as Record<string, string>;
 
   if (action === "approve") {
+    // Only the moderated fields leave the queue (REVIEW-05 WR-01). PATCH
+    // /api/events/[id] writes nothing else into pending_edits, but the column
+    // is creator-writable, and this update runs with admin privileges: an
+    // unlisted key (created_by, club_id, status, …) must never be applied.
     const liveUpdates: Record<string, unknown> = { pending_edits: null };
-    for (const [key, value] of Object.entries(pendingEdits)) {
-      if (key !== "submitted_at") {
-        liveUpdates[key] = value;
+    const approvedFields: string[] = [];
+    for (const key of MODERATED_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(pendingEdits, key)) {
+        liveUpdates[key] = pendingEdits[key];
+        approvedFields.push(key);
       }
     }
 
@@ -107,7 +119,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       action: "approved_edits",
       targetType: "event",
       targetId: id,
-      metadata: { approved_fields: Object.keys(pendingEdits).filter(k => k !== "submitted_at") },
+      metadata: { approved_fields: approvedFields },
     });
 
     return NextResponse.json({ success: true, message: "Edits approved" });
