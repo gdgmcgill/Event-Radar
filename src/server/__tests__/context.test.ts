@@ -33,6 +33,7 @@ jest.mock("@/lib/supabase/server", () => ({
 }));
 
 import { createRequestContext, getRequestContext } from "../context";
+import { runWithRequest } from "../log";
 
 const AUTHENTICATED_USER = { id: "user-1", email: "someone@mail.mcgill.ca" };
 
@@ -141,6 +142,96 @@ describe("createRequestContext", () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
     );
     expect(second.requestId).not.toBe(first.requestId);
+  });
+});
+
+describe("createRequestContext: the request id comes from the request store (DEC-74, C19)", () => {
+  const STORE_ID = "5d0c2f8e-9b1a-4c3d-8e7f-0a1b2c3d4e5f";
+
+  it("takes the store's id inside runWithRequest, so the proxy's and the handler's lines share it", async () => {
+    const ctx = await runWithRequest({ requestId: STORE_ID, route: "/api/x" }, () =>
+      createRequestContext()
+    );
+
+    expect(ctx.requestId).toBe(STORE_ID);
+  });
+
+  it("mints its own id outside a store", async () => {
+    const ctx = await createRequestContext();
+
+    expect(ctx.requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+    );
+    expect(ctx.requestId).not.toBe(STORE_ID);
+  });
+});
+
+describe("createRequestContext: an auth lookup failure logs one warn line (DI-45)", () => {
+  let consoleError: jest.SpyInstance;
+  let consoleLog: jest.SpyInstance;
+
+  beforeEach(() => {
+    consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    consoleLog = jest.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleError.mockRestore();
+    consoleLog.mockRestore();
+  });
+
+  it("logs 'auth user lookup failed' with code and status only, and stays anonymous", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        name: "AuthApiError",
+        message: "invalid JWT for someone@mail.mcgill.ca",
+        code: "bad_jwt",
+        status: 403,
+      },
+    });
+
+    const ctx = await runWithRequest({ requestId: "5d0c2f8e-9b1a-4c3d-8e7f-0a1b2c3d4e5f" }, () =>
+      createRequestContext()
+    );
+
+    expect(ctx.user).toBeNull();
+    expect(ctx.profile).toBeNull();
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    const line = JSON.parse(String(consoleError.mock.calls[0][0]));
+    expect(line).toMatchObject({
+      level: "warn",
+      msg: "auth user lookup failed",
+      scope: "Auth",
+      code: "bad_jwt",
+      status: 403,
+      requestId: "5d0c2f8e-9b1a-4c3d-8e7f-0a1b2c3d4e5f",
+    });
+    expect(Object.keys(line).sort()).toEqual(
+      ["code", "level", "msg", "requestId", "scope", "status", "ts"].sort()
+    );
+    expect(JSON.stringify(line)).not.toContain("mcgill");
+    expect(JSON.stringify(line)).not.toContain("invalid JWT");
+  });
+
+  it("logs nothing for a missing session (the ordinary anonymous request)", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { name: "AuthSessionMissingError", message: "Auth session missing!", status: 400 },
+    });
+
+    await createRequestContext();
+
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(consoleLog).not.toHaveBeenCalled();
+  });
+
+  it("logs nothing when there is no error", async () => {
+    await createRequestContext();
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+    await createRequestContext();
+
+    expect(consoleError).not.toHaveBeenCalled();
   });
 });
 

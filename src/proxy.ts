@@ -18,12 +18,28 @@
  * IT FAILS CLOSED ON ITS OWN ERRORS
  *   - A missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY
  *     throws MissingEnvError inside the try (F-003).
- *   - A rejected `auth.getUser()` or a failed users read (any error other than
- *     PGRST116, or no data) throws too (F-088).
- *   Every throw reaches the catch, which logs `[Middleware] Error:` and
- *   answers 500: `{"error":"Failed to process request"}` as JSON under
- *   `/api/`, plain-text `Internal Server Error` otherwise. It never passes the
- *   request through.
+ *   - A failed users read (any error other than PGRST116, or no data) throws
+ *     too (F-088), and so does anything that makes `auth.getUser()` reject.
+ *   `auth.getUser()` does not normally reject on an auth or network failure:
+ *   it RETURNS `{ data: { user: null }, error }` (DI-70, REVIEW-05 IN-20). Such
+ *   a request takes the anonymous path, which still fails closed: a protected
+ *   page redirects to sign-in, and every handler re-decides the caller and
+ *   answers 401.
+ *   Every throw reaches the catch, which logs one error line (scope
+ *   "Middleware") and answers 500: `{"error":"Failed to process request"}` as
+ *   JSON under `/api/`, plain-text `Internal Server Error` otherwise. It never
+ *   passes the request through.
+ *
+ * ONE REQUEST ID PER REQUEST (plan 06-12, DEC-74, research C19)
+ *   The first statement of `proxy()` mints a UUID and sets it as
+ *   `x-request-id` on the REQUEST headers, overwriting whatever the client
+ *   sent: a client-chosen id is never trusted. `NextResponse.next({ request })`
+ *   forwards request headers as `x-middleware-request-*`, so the handler
+ *   receives the id whether or not `setAll` rebuilt the response. The rest of
+ *   the ring runs inside `runWithRequest`, so its log lines carry the id, and
+ *   every response the proxy returns (pass-through, 429, 403, 500, redirects)
+ *   carries it as `x-request-id`. The logger writes JSON lines through the
+ *   console (`src/server/log.ts`); the proxy runs on the Node.js runtime.
  *
  * ONE USERS READ, THREE DECISIONS
  *   A signed-in request outside BAN_EXEMPT_PATHS gets exactly one read of
@@ -47,6 +63,8 @@ import * as env from "@/lib/env";
 import { isBanned } from "@/lib/ban";
 import { applyRateLimit, getRateLimitStore } from "@/server/ratelimit";
 import { crossSiteBlocked, isCrossSiteMutation } from "@/server/csrf";
+import { log, runWithRequest } from "@/server/log";
+import { REQUEST_ID_HEADER } from "@/server/route";
 
 /** PostgREST's code when `.single()` finds no row. */
 const NO_PROFILE_ROW = "PGRST116";
@@ -58,7 +76,35 @@ type RingProfile = {
   onboarding_completed: boolean | null;
 };
 
-export async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest): Promise<Response> {
+  // Stamp the request id before any other work (DEC-74). It overwrites a
+  // client-supplied value: only this id is ever forwarded or logged.
+  const requestId = crypto.randomUUID();
+  request.headers.set(REQUEST_ID_HEADER, requestId);
+
+  const response = await runWithRequest(
+    { requestId, route: request.nextUrl.pathname },
+    () => ring(request)
+  );
+  return stampRequestId(response, requestId);
+}
+
+/**
+ * Sets `x-request-id` on a response the proxy returns. Every response here is
+ * built by NextResponse, whose headers are mutable; should one ever not be,
+ * the response is returned unchanged rather than failing the request.
+ */
+function stampRequestId(response: Response, requestId: string): Response {
+  try {
+    response.headers.set(REQUEST_ID_HEADER, requestId);
+  } catch {
+    // Immutable headers: the id is still on the forwarded request.
+  }
+  return response;
+}
+
+/** The ring itself, run inside the request store by `proxy()`. */
+async function ring(request: NextRequest) {
   // Rate limit every /api/* path, /api/admin/* included, before any auth
   // work (DEC-50). The budgets live in src/server/ratelimit/policy.ts.
   // Fail open (REVIEW-05 CR-02): rate limiting is not an authorization
@@ -69,7 +115,8 @@ export async function proxy(request: NextRequest) {
   try {
     rateLimitResponse = await applyRateLimit(request, getRateLimitStore());
   } catch (err) {
-    console.error("[Middleware] Rate limit check failed; allowing request", {
+    log.error("Rate limit check failed; allowing request", {
+      scope: "Middleware",
       error: err instanceof Error ? err.name : typeof err,
     });
   }
@@ -232,7 +279,7 @@ export async function proxy(request: NextRequest) {
 
   } catch (e) {
     // Fail closed: the ring's own error is never a pass-through (F-003, F-088).
-    console.error("[Middleware] Error:", e);
+    log.error("Error", { scope: "Middleware", error: e });
     if (request.nextUrl.pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
     }

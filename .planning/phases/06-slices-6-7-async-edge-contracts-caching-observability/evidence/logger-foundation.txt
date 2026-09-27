@@ -50,3 +50,152 @@ Acceptance rows:
  src/server/http.ts | 65 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
  1 file changed, 65 insertions(+)
   removed lines in http.ts: 0
+
+======================================================================================================
+TASK 2 - the request id from the proxy through the context; proxy and boot logs as JSON (DI-45, DI-70)
+======================================================================================================
+
+[2.1 A1] Research assumption A1: request.headers.set on the proxy's NextRequest is permitted and is
+forwarded by NextResponse.next({ request }). Scratch Jest test (src/zz-scratch-a1.test.ts, deleted after the
+run, never staged):
+$ npx jest --ci src/zz-scratch-a1.test.ts
+A1 set threw: null
+A1 forwarded: 11111111-1111-4111-8111-111111111111
+A1 override list: x-request-id
+A1 after cookies.set (setAll path): 11111111-1111-4111-8111-111111111111 | cookie: sb-x=v
+PASS node src/zz-scratch-a1.test.ts
+exit=0
+RESULT: A1 HOLDS. headers.set did not throw; the value is forwarded as x-middleware-request-x-request-id, and
+it is still forwarded after request.cookies.set (the setAll path). The runtime agrees: Next's adapter
+(node_modules/next/dist/server/web/adapter.js:150-175) builds the proxy's NextRequest from a fresh Headers
+object (fromNodeOutgoingHttpHeaders), which is mutable - the proxy's existing setAll already relies on
+request.cookies.set mutating it. FORM USED: the direct form (request.headers.set at the top of proxy());
+the clone-and-pass fallback was not needed.
+
+[2.2 RED] src/proxy-request-id.test.ts (new), context.test.ts rows added, instrumentation.test.ts edited in
+place (untagged; inventory row 4) - all before the source changed
+$ npx jest --ci src/proxy-request-id.test.ts src/server/__tests__/context.test.ts src/instrumentation.test.ts
+FAIL node src/proxy-request-id.test.ts
+FAIL node src/instrumentation.test.ts
+FAIL node src/server/__tests__/context.test.ts
+Test Suites: 3 failed, 3 total
+Tests:       23 failed, 29 passed, 52 total
+exit=1
+  x createRequestContext: an auth lookup failure logs one warn line (DI-45) › logs 'auth user lookup failed' with code and status only, and stays anonymous
+  x createRequestContext: the request id comes from the request store (DEC-74, C19) › takes the store's id inside runWithRequest, so the proxy's and the handler's lines share it
+  x proxy request id (DEC-74, C19) › 403 cross-site mutation carries the id
+  x proxy request id (DEC-74, C19) › 429 from the limiter carries the id and is otherwise unchanged
+  x proxy request id (DEC-74, C19) › 500 on a page carries the id
+  x proxy request id (DEC-74, C19) › 500 on the ring's own error carries the id, and the error line is JSON with the same id
+  x proxy request id (DEC-74, C19) › a limiter fault logs one JSON line carrying the request's id, then passes through
+  x proxy request id (DEC-74, C19) › banned /api/* 403 and banned page redirect carry the id
+  x proxy request id (DEC-74, C19) › mints a distinct id per request
+  x proxy request id (DEC-74, C19) › never trusts a client-supplied id, even a UUID-shaped one
+  x proxy request id (DEC-74, C19) › non-refreshed pass-through: forwards a fresh UUID in place of the client's value and echoes it
+  x proxy request id (DEC-74, C19) › onboarding redirect carries the id
+  x proxy request id (DEC-74, C19) › profile-not-found 403 and sync-failed redirect carry the id
+  x proxy request id (DEC-74, C19) › refreshed pass-through (setAll rebuilt the response): still forwards and echoes the id, and keeps the cookie
+  x proxy request id (DEC-74, C19) › runs the ring inside the request store: getUser sees the forwarded id
+  x proxy request id (DEC-74, C19) › sign-in redirect on a protected page carries the id
+  x register() and an unusable Upstash URL › a rediss:// URL without the enforce flag: resolves and logs exactly one error, without the URL
+  x register() and the rate-limit store › an unreadable RATE_LIMIT_REQUIRE_DISTRIBUTED refuses to start, even with a store configured
+  x register() and the rate-limit store › unconfigured in production with RATE_LIMIT_REQUIRE_DISTRIBUTED=true: rejects with MissingEnvError naming both pairs
+  x register() and the rate-limit store › unconfigured in production: resolves, and logs exactly one error naming all four variables and the degradation
+  x register() on the Node.js server runtime › rejects with MissingEnvError naming NEXT_PUBLIC_SUPABASE_ANON_KEY when it is unset
+  x register() on the Node.js server runtime › rejects with MissingEnvError naming NEXT_PUBLIC_SUPABASE_URL when it is unset
+  x register() on the Node.js server runtime › rejects with MissingEnvError naming SUPABASE_SERVICE_ROLE_KEY when it is unset
+
+[2.3 LEDGER, step 2] the DEFECT suite src/proxy-defect.test.ts run UNEDITED against the changed proxy -> red,
+exactly the two exact-argument rows the inventory names (:213, :241). All other proxy suites green unedited:
+$ npx jest --ci src/proxy src/middlewareRateLimit.test.ts src/server/__tests__/ src/instrumentation.test.ts
+PASS node src/server/__tests__/context.test.ts
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/server/__tests__/route.test.ts
+PASS node src/server/__tests__/getsession-gate.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/server/__tests__/requireOnboarded.test.ts
+PASS node src/server/__tests__/errors.test.ts
+PASS node src/server/__tests__/body.test.ts
+PASS node src/proxy-request-id.test.ts
+PASS node src/server/__tests__/requireActiveUser.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+PASS node src/server/__tests__/elevated.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/proxy-ratelimit-failopen.test.ts
+PASS node src/instrumentation.test.ts
+FAIL node src/proxy-defect.test.ts
+PASS node src/server/__tests__/log.test.ts
+PASS node src/proxy-characterization.test.ts
+PASS node src/server/__tests__/csrf.test.ts
+PASS node src/proxy.test.ts
+Test Suites: 1 failed, 20 passed, 21 total
+Tests:       2 failed, 316 passed, 318 total
+exit=1
+  x proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile → 500 plain text, no client built, logged
+  x proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-088: auth.getUser rejecting reaches the catch — /profile → 500, not passed through, and logged
+
+[2.4 LEDGER, step 3] the two rows moved (edited in place: DEFECT file) to parse the JSON line -> green
+$ npx jest --ci src/proxy-defect.test.ts
+PASS node src/proxy-defect.test.ts
+Tests:       9 passed, 9 total
+exit=0
+
+[2.5 LEDGER, step 4] pre-change src/proxy.ts (HEAD d790b21) restored temporarily -> the moved rows go red;
+the changed proxy restored and proven byte-identical
+$ cp proxy.prefix.ts src/proxy.ts && npx jest --ci src/proxy-defect.test.ts
+FAIL node src/proxy-defect.test.ts
+Tests:       2 failed, 7 passed, 9 total
+exit=1
+  x proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile → 500 plain text, no client built, logged
+  x proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-088: auth.getUser rejecting reaches the catch — /profile → 500, not passed through, and logged
+$ cp proxy.fixed.ts src/proxy.ts && cmp src/proxy.ts proxy.fixed.ts
+cmp exit=0
+[step 5] the PRESERVE suites src/proxy.test.ts, src/proxy-characterization.test.ts, src/middlewareRateLimit.test.ts
+and src/server/__tests__/getsession-gate.test.ts passed UNEDITED throughout (2.3 above; git diff shows none of them).
+
+Measured against the inventory (evidence/console-coupled-tests.md, 06-12 rows): src/proxy-ratelimit-failopen.test.ts
+(row 6, 'edited in place') needed NO edit. Its assertions are content checks over JSON.stringify(mock.calls):
+the new line still contains "TypeError" (the proxy logs the error's class as the error field) and never the
+secret. Inventory note 3 is resolved in favour of keeping the class name in the field. proxy-characterization.test.ts
+(PRESERVE) has no exact console assertion, so nothing moved out of a PRESERVE file in this task.
+
+[2.6 GREEN] full Jest, tsc, lint
+$ npx jest --ci
+Test Suites: 1 skipped, 120 passed, 120 of 121 total
+Tests:       1 skipped, 2984 passed, 2985 total
+Time:        2.794 s, estimated 3 s
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ npm run lint
+
+exit=0
+
+[2.7 acceptance] proxy invariants (T-06-12-04)
+PROTECTED_ROUTES, re-derived with the CLAUDE.md command, before (HEAD) and after:
+  before: "/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"
+  after:  "/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"
+The region from 'const supabase = createServerClient(' to 'await supabase.auth.getUser();' extracted from both
+(30 lines each) and compared: cmp exit=0 (nothing added between createServerClient and getUser).
+The 'export const config = {' block to end of file compared: cmp exit=0 (matcher unchanged).
+applyRateLimit(request, getRateLimitStore()) line identical; src/middlewareRateLimit.ts (applyApiRateLimit) untouched.
+Lines removed from src/proxy.ts (git diff -U0): the DI-70 comment lines, the proxy() signature line (the body
+moved unchanged into ring(), run inside runWithRequest), and the two console.error calls:
+  - *   - A rejected `auth.getUser()` or a failed users read (any error other than
+  - *     PGRST116, or no data) throws too (F-088).
+  - *   Every throw reaches the catch, which logs `[Middleware] Error:` and
+  - *   answers 500: `{"error":"Failed to process request"}` as JSON under
+  - *   `/api/`, plain-text `Internal Server Error` otherwise. It never passes the
+  - *   request through.
+  -export async function proxy(request: NextRequest) {
+  -    console.error("[Middleware] Rate limit check failed; allowing request", {
+  -    console.error("[Middleware] Error:", e);
+src/server/context.ts: 1 x currentRequestId(), 1 x 'auth user lookup failed'
+
+[2.8 VERIFY] the plan's <verify> command, verbatim
+$ npx jest --ci src/proxy src/server/__tests__/context.test.ts src/instrumentation.test.ts && npx tsc --noEmit && npm run lint
+Test Suites: 7 passed, 7 total
+Tests:       110 passed, 110 total
+✖ 17 problems (0 errors, 17 warnings)
+exit=0

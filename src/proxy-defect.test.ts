@@ -32,7 +32,9 @@
  *   Fixed shapes pinned below:
  *   - a. F-003: env unset → 500, plain text on a page, JSON
  *        `{"error":"Failed to process request"}` under `/api/`; no client built
- *   - b. F-088: `auth.getUser` rejecting → 500, logged `[Middleware] Error:`
+ *   - b. F-088: `auth.getUser` rejecting → 500, logged as one JSON line
+ *        (level "error", scope "Middleware", msg "Error"; moved from the
+ *        `[Middleware] Error:` argument pair by 06-12, F-058, DEC-74)
  *   - c. F-088: a users read failing with XX000 → 500
  *   - d. F-088: no users row (PGRST116) → `/api/*` 403
  *        `{"error":"Profile not found"}`; a page signs out once and gets 307 to
@@ -175,6 +177,21 @@ function location(res: Response): URL | null {
 /** The session cookie name the placeholder project URL yields. */
 const AUTH_COOKIE = "sb-placeholder-project-auth-token";
 
+/**
+ * The proxy's error line, parsed. Since 06-12 (F-058, DEC-74) the proxy logs
+ * through `src/server/log.ts`: one console.error call whose one argument is a
+ * JSON line, the error serialized to `{ name, message, code }`.
+ */
+function errorLine(spy: jest.SpyInstance): Record<string, unknown> {
+  const lines = spy.mock.calls.map((call: unknown[]) => {
+    expect(call).toHaveLength(1);
+    return JSON.parse(String(call[0])) as Record<string, unknown>;
+  });
+  const line = lines.find((l) => l.scope === "Middleware" && l.msg === "Error");
+  expect(line).toBeDefined();
+  return line as Record<string, unknown>;
+}
+
 describe("proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05)", () => {
   const savedEnv = { ...process.env };
   let consoleError: jest.SpyInstance;
@@ -210,10 +227,13 @@ describe("proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05)", (
     expect(res.headers.get("content-type") ?? "").not.toContain("application/json");
     expect(await res.text()).toBe("Internal Server Error");
     expect(mockCreateServerClient).not.toHaveBeenCalled();
-    expect(consoleError).toHaveBeenCalledWith(
-      "[Middleware] Error:",
-      expect.objectContaining({ name: "MissingEnvError" })
-    );
+    expect(errorLine(consoleError)).toMatchObject({
+      level: "error",
+      scope: "Middleware",
+      msg: "Error",
+      route: "/profile",
+      error: expect.objectContaining({ name: "MissingEnvError" }),
+    });
   });
 
   it('F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /api/events → 500 JSON {"error":"Failed to process request"}', async () => {
@@ -238,7 +258,13 @@ describe("proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05)", (
     expect(res.status).toBe(500);
     expect(res.headers.get("location")).toBeNull();
     expect(await res.text()).toBe("Internal Server Error");
-    expect(consoleError).toHaveBeenCalledWith("[Middleware] Error:", failure);
+    expect(errorLine(consoleError)).toMatchObject({
+      level: "error",
+      scope: "Middleware",
+      msg: "Error",
+      route: "/profile",
+      error: { name: failure.name, message: failure.message },
+    });
   });
 
   // ── c. F-088: a failed users read ─────────────────────────────────────────

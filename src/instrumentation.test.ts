@@ -6,7 +6,8 @@
  *   - on the Node.js server runtime, register() resolves when the Supabase URL,
  *     the anon key and the service-role key are all set, and rejects with a
  *     MissingEnvError naming the first missing variable when any one of them
- *     is unset or blank, after logging one "[Config] refusing to start:" line;
+ *     is unset or blank, after logging one JSON line (scope "Config", msg
+ *     "refusing to start", the error's name and message; plan 06-12, DEC-74);
  *   - it checks nothing during `next build` (NEXT_PHASE is
  *     "phase-production-build"), because CI builds with no service key;
  *   - it checks nothing outside the Node.js runtime (NEXT_RUNTIME "edge", or
@@ -78,6 +79,23 @@ function setAllRequired(): void {
   env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key-value";
 }
 
+/** The Nth console.error call, parsed: the logger writes one JSON line (DEC-74). */
+function loggedLine(index = 0): Record<string, unknown> {
+  const call = errorSpy.mock.calls[index] as unknown[];
+  expect(call).toHaveLength(1);
+  return JSON.parse(String(call[0])) as Record<string, unknown>;
+}
+
+/** The refusal line: level error, scope Config, the error's name and message. */
+function expectRefusal(name: string, message: string): void {
+  expect(loggedLine()).toMatchObject({
+    level: "error",
+    scope: "Config",
+    msg: "refusing to start",
+    error: { name, message },
+  });
+}
+
 async function load(): Promise<{
   register: (typeof import("./instrumentation"))["register"];
   MissingEnvError: (typeof import("@/lib/env"))["MissingEnvError"];
@@ -110,8 +128,8 @@ describe("register() on the Node.js server runtime", () => {
       await expect(outcome).rejects.toThrow(
         `Missing required environment variable: ${variable}`
       );
-      expect(errorSpy).toHaveBeenCalledWith(
-        "[Config] refusing to start:",
+      expectRefusal(
+        "MissingEnvError",
         `Missing required environment variable: ${variable}`
       );
     }
@@ -192,8 +210,9 @@ describe("register() and the rate-limit store", () => {
     const { register } = await load();
     await expect(register()).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalledTimes(1);
-    const line = String(errorSpy.mock.calls[0][0]);
-    expect(line).toMatch(/^\[RateLimit\] /);
+    const logged = loggedLine();
+    expect(logged).toMatchObject({ level: "error", scope: "RateLimit" });
+    const line = String(logged.msg);
     for (const name of [
       "UPSTASH_REDIS_REST_URL",
       "UPSTASH_REDIS_REST_TOKEN",
@@ -217,8 +236,8 @@ describe("register() and the rate-limit store", () => {
       `Missing required environment variable: ${FOUR_NAMES}`
     );
     expect(errorSpy).toHaveBeenCalledTimes(1);
-    expect(errorSpy).toHaveBeenCalledWith(
-      "[Config] refusing to start:",
+    expectRefusal(
+      "MissingEnvError",
       `Missing required environment variable: ${FOUR_NAMES}`
     );
   });
@@ -245,8 +264,8 @@ describe("register() and the rate-limit store", () => {
     const { InvalidEnvError } = await import("@/lib/env");
     const outcome = register();
     await expect(outcome).rejects.toBeInstanceOf(InvalidEnvError);
-    expect(errorSpy).toHaveBeenCalledWith(
-      "[Config] refusing to start:",
+    expectRefusal(
+      "InvalidEnvError",
       'Invalid environment variable: RATE_LIMIT_REQUIRE_DISTRIBUTED (expected "true" or "false")'
     );
   });
@@ -279,12 +298,15 @@ describe("register() and an unusable Upstash URL", () => {
     const { register } = await load();
     await expect(register()).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalledTimes(1);
-    const line = String(errorSpy.mock.calls[0][0]);
-    expect(line).toMatch(/^\[RateLimit\] /);
+    const logged = loggedLine();
+    expect(logged).toMatchObject({ level: "error", scope: "RateLimit" });
+    const line = String(logged.msg);
     expect(line).toContain("UPSTASH_REDIS_REST_URL or KV_REST_API_URL");
     expect(line).toContain("in-memory store");
     expect(line).not.toContain(PASSWORD);
     expect(line).not.toContain("up-token");
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(PASSWORD);
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("up-token");
   });
 
   it("a KV_URL-style value in KV_REST_API_URL outside production is reported too", async () => {
