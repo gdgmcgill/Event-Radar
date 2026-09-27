@@ -1,0 +1,347 @@
+# Slice 6 mutation check — plan 06-05 Task 3
+# head=0ba575a (the migration, pgTAP 031/070 and types committed) · recorded 2026-09-27T01:30Z-01:39Z
+# supabase CLI 2.115.0 · LOCAL ONLY: every supabase command is `db reset --local` or `test db --local`;
+# no production push command and no linked-project flag appear anywhere in this file.
+#
+# | Round | What was removed | Suite with the removal | Restore |
+# |-------|------------------|------------------------|---------|
+# | script | each of the 6 RLS policies in the 4 policy-bearing migrations (scripts/pgtap-mutation-check.sh) | every policy RED_ASSERTION removed, GREEN restored; failures=0; exit 0 | migrations_dir_clean=true |
+# | M1 | REVOKE EXECUTE on compute_user_scores(), send_feedback_requests() FROM PUBLIC, anon, authenticated (F-075) | 070 Failed 8/47: 10-12, 18-20, 22, 24; exit 1 | cmp exit 0; git diff exit 0 |
+# | M2 | the subject predicate in get_friends and get_friends_going_to_event (F-074) | 070 Failed 2/47: 35, 37 (A-for-B returns D); exit 1 | cmp exit 0; git diff exit 0 |
+# | M3 | `AND e.deleted_at IS NULL AND e.status = 'approved'` in both reminder loops (F-093) | 070 Failed 2/47: 6, 7; exit 1 | cmp exit 0; git diff exit 0 |
+# | M4 | REVOKE ALL ON FUNCTION public.cron_job_status() FROM PUBLIC, anon, authenticated (C4) | 070 Failed 4/47: 42-44, 46; exit 1 | cmp exit 0; git diff exit 0 |
+# | final | nothing (committed tree) | reset exit 0; seed exit 0; SEEDED Files=13 Tests=260 PASS exit 0 | git status --porcelain -- supabase/ empty; port 3000 free |
+#
+# WHY THE SCRIPT ALONE IS NOT ENOUGH. scripts/pgtap-mutation-check.sh takes no arguments: it
+# mutates CREATE POLICY statements in the four migrations listed in its POLICY_MIGRATION_GLOBS.
+# 20260926120000 creates no policy (its clauses are grants, ALTER FUNCTION, function bodies and
+# cron jobs), so the script cannot mutate it and its glob list is deliberately NOT extended — an
+# entry would match no CREATE POLICY and prove nothing. It was run as-is to prove the six existing
+# policies still bite with 031 and 070 in the suite (the new files must not mask an older red).
+# The new migration's clauses are proven by M1-M4 below, each by removing the clause from the
+# COMMITTED migration (copied to the scratchpad first), resetting, running the suite, restoring
+# from the copy and proving the restore with cmp and git diff --exit-code.
+#
+# Not separately mutated, and why: the F-042 cron declarations are pinned byte-for-byte by 031
+# (red 9/13 before the migration, evidence/definer-hardening-red.txt), and the search_path pins
+# by 070 row 8 (red, 5 functions, before the migration). Removing either clause restores exactly
+# that measured pre-migration state.
+
+## 1. $ SUPABASE_CMD=supabase bash scripts/pgtap-mutation-check.sh   (verbatim)
+=============================================================================
+pgTAP mutation check
+migrations: 4
+          : supabase/migrations/20260915230000_fk_indexes_and_policy_gaps.sql
+          : supabase/migrations/20260916000000_invitation_policy_fixes.sql
+          : supabase/migrations/20260923120000_events_insert_club_scope.sql
+          : supabase/migrations/20260923130000_users_grants_audit_log_insert.sql
+policies  : 6 distinct (de-duplicated across the files above)
+started   : 2026-09-27T01:30:18Z
+=============================================================================
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can view their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=15
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 5)
+# Failed test 2: "the invitee can read the invitation addressed to them"
+#         have: NULL
+#         want: (pgtap-invitee@mail.mcgill.ca)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Failed test 10: "the invitee still sees their own invitations — the stranger's empty read was a filter"
+# Looks like you failed 5 tests of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=13, Tests=260, 0 wallclock secs ( 0.02 usr 0.02 sys + 0.04 cusr 0.01 csys = 0.09 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can accept their own invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=29
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 3)
+# Failed test 5: "the invitee can accept their own pending invitation"
+#         have: NULL
+#         want: (accepted)
+# Failed test 6: "the invitee cannot revoke an invitation — accept is the only transition open to them"
+#       wanted: 42501
+# Failed test 7: "the invitee cannot reassign an invitation to another address while accepting it"
+#       wanted: 42501
+# Looks like you failed 3 tests of 15
+# Failed test 3: "the invitee cannot repoint an invitation at another club while accepting it"
+#       wanted: 42501
+# Failed test 4: "the invitee cannot extend their own invitation while accepting it"
+#       wanted: 42501
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=13, Tests=260, 0 wallclock secs ( 0.03 usr 0.02 sys + 0.03 cusr 0.02 csys = 0.10 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Club owners can update club invitations
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=2
+mutation_lines_commented=17
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql (Wstat: 0 Tests: 15 Failed: 1)
+# Failed test 15: "the club owner can revoke a pending invitation for their own club"
+#         have: NULL
+#         want: (revoked)
+# Looks like you failed 1 test of 15
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=13, Tests=260, 0 wallclock secs ( 0.01 usr 0.02 sys + 0.04 cusr 0.01 csys = 0.08 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Invitees can join the club they were invited to
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=9
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql (Wstat: 0 Tests: 18 Failed: 2)
+# Failed test 17: "and can then insert the membership row — the accept path completes, which it could not before (F-016 / WR-01)"
+#         have: DENIED: row-level security refused the membership insert (42501)
+#         want: 00000000-0000-4000-8000-0000000000d1
+# Failed test 18: "the membership row exists with role organizer — not owner"
+#         have: NULL
+#         want: (organizer)
+# Looks like you failed 2 tests of 18
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=13, Tests=260, 1 wallclock secs ( 0.02 usr 0.02 sys + 0.04 cusr 0.02 csys = 0.10 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Authenticated users can insert events
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=24
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql (Wstat: 0 Tests: 30 Failed: 6)
+# Failed test 7: "attacker (§ D events INSERT, DEC-42): a pending event naming club A under their own id passes RLS (23503 = reached the auth.users FK)"
+#       wanted: 23503
+# Failed test 8: "attacker in their own lane: approved event in club B, which they own, passes RLS (23503)"
+#       wanted: 23503
+# Failed test 9: "organizer M (§ D events INSERT, owner-member arm): approved event in club A, of which M is a member, passes RLS (23503)"
+#       wanted: 23503
+# Failed test 12: "owner A: a pending event in their pending club passes RLS (23503)"
+#       wanted: 23503
+# Failed test 13: "admin X (§ D events INSERT, admin arm): an approved event with no creator and no club is accepted"
+# Failed test 14: "the admin's event is in the table with RLS bypassed — the allow wrote the row"
+# Looks like you failed 6 tests of 30
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=13, Tests=260, 1 wallclock secs ( 0.01 usr 0.01 sys + 0.04 cusr 0.01 csys = 0.07 CPU)
+Result: PASS
+
+-----------------------------------------------------------------------------
+POLICY: Users can update own profile
+-----------------------------------------------------------------------------
+mutation_applied=true
+mutation_files=1
+mutation_lines_commented=6
+removed_exit_code=1
+removed_verdict=RED_ASSERTION
+removed_summary=/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql (Wstat: 0 Tests: 23 Failed: 5)
+# Failed test 3: "the own-row UPDATE policy is TO authenticated and carries a WITH CHECK"
+# Failed test 12: "student: a self-update of every granted profile column is accepted"
+#         have: NULL
+#         want: ("T050 Student Renamed")
+# Failed test 13: "student (C3): a self-update of inferred_tags is accepted"
+#         have: NULL
+#         want: ({music})
+# Failed test 14: "banned user: a self-update of a granted column is still accepted — only the ban columns are withheld"
+#         have: NULL
+#         want: (she/her)
+# Failed test 15: "with RLS bypassed: S's profile columns hold the new values and roles is still {user}"
+#         have: ("T050 Student S",public,f,{},{},{user})
+restore_clean=true
+restored_exit_code=0
+restored_verdict=GREEN
+Files=13, Tests=260, 0 wallclock secs ( 0.02 usr 0.01 sys + 0.03 cusr 0.02 csys = 0.08 CPU)
+Result: PASS
+
+=============================================================================
+migrations_dir_clean=true
+policies_checked=6
+failures=0
+finished=2026-09-27T01:35:53Z
+=============================================================================
+script exit=0
+
+## 2. Manual mutations — tools (verbatim)
+### mutate06.py
+    #!/usr/bin/env python3
+    """Remove one named clause from the committed 06-05 migration (exact-string; counts must match)."""
+    import sys
+    MIG = "supabase/migrations/20260926120000_async_edge_definer_hardening.sql"
+    MUT = {
+      # M1: the F-075 REVOKE on compute and feedback
+      "M1": ("REVOKE EXECUTE ON FUNCTION public.compute_user_scores(), public.send_feedback_requests()\n  FROM PUBLIC, anon, authenticated;\n", "", 1),
+      # M2: the F-074 subject predicate, in both friends functions
+      "M2": ("  WHERE (target_user_id = (SELECT auth.uid()) OR (SELECT auth.role()) = 'service_role');\n", "  ;\n", 1),
+      "M2b": ("  WHERE (current_user_id = (SELECT auth.uid()) OR (SELECT auth.role()) = 'service_role');\n", "  ;\n", 1),
+      # M3: the F-093 filters, in both reminder loops
+      "M3": ("      AND e.deleted_at IS NULL\n      AND e.status = 'approved'\n", "", 2),
+      # M4: the C4 REVOKE ALL on cron_job_status
+      "M4": ("REVOKE ALL ON FUNCTION public.cron_job_status() FROM PUBLIC, anon, authenticated;\n", "", 1),
+    }
+    s = open(MIG).read()
+    for key in sys.argv[1:]:
+        old, new, n = MUT[key]
+        c = s.count(old)
+        if c != n:
+            sys.exit(f"{key}: expected {n} match(es), found {c}")
+        s = s.replace(old, new)
+        print(f"{key}: removed {n} occurrence(s)")
+    open(MIG, "w").write(s)
+### cycle06.sh
+    #!/bin/bash
+    # usage: cycle06.sh <label> <mutation keys...> — one manual mutation round against the committed migration
+    SP=/private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/77814cbd-69e3-4a7a-af07-046b71d20540/scratchpad
+    MIG=supabase/migrations/20260926120000_async_edge_definer_hardening.sql
+    cd /Users/adyan/Documents/GitHub/Event-Radar || exit 1
+    label=$1; shift
+    echo "=== $label: $* — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    cp "$MIG" "$SP/mig06.orig"
+    python3 "$SP/mutate06.py" "$@"; echo "mutate exit=$?"
+    git diff --stat -- "$MIG"
+    "$SP/with-timeout.sh" 300 supabase db reset --local > "$SP/cyc-$label-reset.txt" 2>&1; echo "\$ supabase db reset --local  exit=$?"
+    "$SP/with-timeout.sh" 120 supabase test db --local > "$SP/cyc-$label-test.txt" 2>&1; rc=$?
+    echo "\$ supabase test db --local  exit=$rc"
+    grep -E "^# Failed test|^#[[:space:]]+(have|want|caught|wanted):|Failed tests:|^[[:space:]]+[0-9, -]+$|\(Wstat|^Files=|^Result:" "$SP/cyc-$label-test.txt"
+    cp "$SP/mig06.orig" "$MIG"
+    cmp "$SP/mig06.orig" "$MIG"; echo "\$ cmp restored-copy committed  exit=$?"
+    git diff --exit-code -- "$MIG" >/dev/null; echo "\$ git diff --exit-code -- $MIG  exit=$?"
+
+## 3.1 M1 (verbatim)
+=== M1: M1 — 2026-09-27T01:36:08Z
+M1: removed 1 occurrence(s)
+mutate exit=0
+ supabase/migrations/20260926120000_async_edge_definer_hardening.sql | 2 --
+ 1 file changed, 2 deletions(-)
+$ supabase db reset --local  exit=0
+$ supabase test db --local  exit=1
+# Failed test 10: "PUBLIC cannot execute compute_user_scores() (F-075)"
+# Failed test 11: "anon cannot execute compute_user_scores() (F-075)"
+# Failed test 12: "authenticated cannot rescore every user (F-075)"
+# Failed test 18: "PUBLIC cannot execute send_feedback_requests() (F-075)"
+# Failed test 19: "anon cannot send feedback requests (F-075)"
+# Failed test 20: "authenticated cannot send feedback requests (F-075)"
+# Failed test 22: "anon calling compute_user_scores() is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 24: "anon calling send_feedback_requests() is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql         (Wstat: 0 Tests: 47 Failed: 8)
+  Failed tests:  10-12, 18-20, 22, 24
+Files=13, Tests=260,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.04 cusr  0.01 csys =  0.08 CPU)
+Result: FAIL
+$ cmp restored-copy committed  exit=0
+$ git diff --exit-code -- supabase/migrations/20260926120000_async_edge_definer_hardening.sql  exit=0
+
+## 3.2 M2 (verbatim)
+=== M2: M2 M2b — 2026-09-27T01:36:39Z
+M2: removed 1 occurrence(s)
+M2b: removed 1 occurrence(s)
+mutate exit=0
+ supabase/migrations/20260926120000_async_edge_definer_hardening.sql | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+$ supabase db reset --local  exit=0
+$ supabase test db --local  exit=1
+# Failed test 35: "A asking for B's friends gets nothing (F-074: the IDOR is closed)"
+#         have: 1
+#         want: 0
+# Failed test 37: "A asking which of B's friends go to the event gets nothing (F-074)"
+#         have: 1
+#         want: 0
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql         (Wstat: 0 Tests: 47 Failed: 2)
+  Failed tests:  35, 37
+Files=13, Tests=260,  0 wallclock secs ( 0.03 usr  0.01 sys +  0.04 cusr  0.01 csys =  0.09 CPU)
+Result: FAIL
+$ cmp restored-copy committed  exit=0
+$ git diff --exit-code -- supabase/migrations/20260926120000_async_edge_definer_hardening.sql  exit=0
+
+## 3.3 M3 (verbatim)
+=== M3: M3 — 2026-09-27T01:37:11Z
+M3: removed 2 occurrence(s)
+mutate exit=0
+ supabase/migrations/20260926120000_async_edge_definer_hardening.sql | 4 ----
+ 1 file changed, 4 deletions(-)
+$ supabase db reset --local  exit=0
+$ supabase test db --local  exit=1
+# Failed test 6: "a soft-deleted event gets no reminder (F-093)"
+#         have: 1
+#         want: 0
+# Failed test 7: "a pending (unapproved) event gets no reminder (F-093)"
+#         have: 1
+#         want: 0
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql         (Wstat: 0 Tests: 47 Failed: 2)
+  Failed tests:  6-7
+Files=13, Tests=260,  1 wallclock secs ( 0.02 usr  0.01 sys +  0.04 cusr  0.01 csys =  0.08 CPU)
+Result: FAIL
+$ cmp restored-copy committed  exit=0
+$ git diff --exit-code -- supabase/migrations/20260926120000_async_edge_definer_hardening.sql  exit=0
+
+## 3.4 M4 (verbatim)
+=== M4: M4 — 2026-09-27T01:37:43Z
+M4: removed 1 occurrence(s)
+mutate exit=0
+ supabase/migrations/20260926120000_async_edge_definer_hardening.sql | 1 -
+ 1 file changed, 1 deletion(-)
+$ supabase db reset --local  exit=0
+$ supabase test db --local  exit=1
+# Failed test 42: "PUBLIC cannot execute cron_job_status() — the default grant is explicitly revoked (C4)"
+# Failed test 43: "anon cannot execute cron_job_status() — job names and failure states stay private (C4)"
+# Failed test 44: "authenticated cannot execute cron_job_status() (C4)"
+# Failed test 46: "an authenticated caller is refused cron_job_status() with 42501"
+#       caught: no exception
+#       wanted: 42501
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql         (Wstat: 0 Tests: 47 Failed: 4)
+  Failed tests:  42-44, 46
+Files=13, Tests=260,  1 wallclock secs ( 0.02 usr  0.01 sys +  0.04 cusr  0.01 csys =  0.08 CPU)
+Result: FAIL
+$ cmp restored-copy committed  exit=0
+$ git diff --exit-code -- supabase/migrations/20260926120000_async_edge_definer_hardening.sql  exit=0
+
+## 4. Final state (verbatim)
+=== final: 2026-09-27T01:38:18Z
+$ supabase db reset --local  exit=0
+$ npx tsx scripts/seed/load.ts  exit=0
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+$ supabase test db --local (SEEDED)  exit=0
+Files=13, Tests=260,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.04 cusr  0.01 csys =  0.08 CPU)
+Result: PASS
+$ git status --porcelain -- supabase/
+(empty) exit=0
+$ lsof -i :3000 -sTCP:LISTEN
+exit=1 (1 = nothing listening: port 3000 free)
