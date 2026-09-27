@@ -1,0 +1,1294 @@
+Full Playwright suite, phase after-floor — plan 06-18 Task 2 (REFAC-23, ROADMAP Phase 6 criterion 5)
+Recorded 2026-09-27 · HEAD=f4c59e42f597f33f91fafbd334d5c0335eed7909 (f4c59e4, the supabase-js 2.116.0 bump: the last code change of the phase)
+
+How it was run. From the clean reset and seed of floor.phase-after.txt blocks 14a and 14b (the database was not
+touched in between), the 24 spec files in two alphabetical halves of 12, as 06-16 did (playwright.csp.txt).
+Playwright runs files alphabetically on its one worker, so the halves replay one full run's order and database
+state. Each half builds and starts its own production server (reuseExistingServer: false) and re-runs the setup
+project's 10 persona sign-ins. The CSP is ENFORCED: playwright.config.ts:99 `bypassCSP: false` (06-16). Each half
+was time-boxed at 480 s. Port 3000 was free before and after each half. No spec was edited; no retry happened
+(retries: 0 locally); this is the first run of each half.
+The output below is verbatim, [WebServer] lines included.
+
+==============================================================================
+1. Group A (files 1-12 of 24) — verbatim
+==============================================================================
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   (before group A)
+exit=1 (1 = port free)
+$ npx playwright test e2e/specs/admin-audit-row.spec.ts e2e/specs/admin-guard.spec.ts e2e/specs/admin-login-cookie-equivalence.spec.ts e2e/specs/admin-moderation-queue.spec.ts e2e/specs/admin-page-gates.spec.ts e2e/specs/admin-write-paths.spec.ts e2e/specs/anonymous-browse.spec.ts e2e/specs/async-edge.spec.ts e2e/specs/ban-and-onboarding-ring.spec.ts e2e/specs/banned-redirect.spec.ts e2e/specs/cache-headers.spec.ts e2e/specs/club-authorization.spec.ts --reporter=list   # group A of 2 (alphabetical), started 2026-09-27T18:10:48Z
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 build
+[WebServer] > next build
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5 (Turbopack)
+[WebServer] - Environments: .env.local, .env
+[WebServer] ✓ Running next.config.js took 217ms
+[WebServer] - Experiments (use with caution):
+[WebServer]   · clientTraceMetadata
+[WebServer] 
+[WebServer]   Creating an optimized production build ...
+[WebServer] ✓ Compiled successfully in 2.9s
+[WebServer]   Running next.config.js provided runAfterProductionCompile ...
+[WebServer] ✓ Completed runAfterProductionCompile in 64ms
+[WebServer]   Running TypeScript ...
+[WebServer]   Finished TypeScript in 1697ms ...
+[WebServer]   Collecting page data using 9 workers ...
+[WebServer]   Generating static pages using 9 workers (0/98) ...
+[WebServer]   Generating static pages using 9 workers (24/98) 
+[WebServer]   Generating static pages using 9 workers (48/98) 
+[WebServer]   Generating static pages using 9 workers (73/98) 
+[WebServer] (node:18410) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+[WebServer] (Use `node --trace-deprecation ...` to show where the warning was created)
+[WebServer] ✓ Generating static pages using 9 workers (98/98) in 363ms
+[WebServer]   Finalizing page optimization ...
+[WebServer] 
+[WebServer] Route (app)
+[WebServer] ┌ ○ /
+[WebServer] ├ ○ /_not-found
+[WebServer] ├ ○ /about
+[WebServer] ├ ○ /admin-login
+[WebServer] ├ ƒ /admin/experiments
+[WebServer] ├ ƒ /admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/analytics/events
+[WebServer] ├ ƒ /api/admin/analytics/users
+[WebServer] ├ ƒ /api/admin/audit-log
+[WebServer] ├ ƒ /api/admin/calculate-popularity
+[WebServer] ├ ƒ /api/admin/clubs
+[WebServer] ├ ƒ /api/admin/clubs/[id]
+[WebServer] ├ ƒ /api/admin/events
+[WebServer] ├ ƒ /api/admin/events/[id]
+[WebServer] ├ ƒ /api/admin/events/[id]/edits
+[WebServer] ├ ƒ /api/admin/events/[id]/status
+[WebServer] ├ ƒ /api/admin/experiments
+[WebServer] ├ ƒ /api/admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/experiments/[id]/results
+[WebServer] ├ ƒ /api/admin/featured
+[WebServer] ├ ƒ /api/admin/featured/[id]
+[WebServer] ├ ƒ /api/admin/organizer-requests
+[WebServer] ├ ƒ /api/admin/organizer-requests/[id]
+[WebServer] ├ ƒ /api/admin/organizers
+[WebServer] ├ ƒ /api/admin/reports
+[WebServer] ├ ƒ /api/admin/reports/[id]
+[WebServer] ├ ƒ /api/admin/stats
+[WebServer] ├ ƒ /api/admin/users
+[WebServer] ├ ƒ /api/admin/users/[id]
+[WebServer] ├ ƒ /api/admin/users/[id]/ban
+[WebServer] ├ ƒ /api/calendar/events
+[WebServer] ├ ƒ /api/clubs
+[WebServer] ├ ƒ /api/clubs/[id]
+[WebServer] ├ ƒ /api/clubs/[id]/analytics
+[WebServer] ├ ƒ /api/clubs/[id]/appeal
+[WebServer] ├ ƒ /api/clubs/[id]/events
+[WebServer] ├ ƒ /api/clubs/[id]/follow
+[WebServer] ├ ƒ /api/clubs/[id]/invites
+[WebServer] ├ ƒ /api/clubs/[id]/members
+[WebServer] ├ ƒ /api/clubs/[id]/members/role
+[WebServer] ├ ƒ /api/clubs/[id]/transfer
+[WebServer] ├ ƒ /api/clubs/banner
+[WebServer] ├ ƒ /api/clubs/featured
+[WebServer] ├ ƒ /api/clubs/friends
+[WebServer] ├ ƒ /api/clubs/logo
+[WebServer] ├ ƒ /api/clubs/new
+[WebServer] ├ ƒ /api/clubs/trending
+[WebServer] ├ ƒ /api/events
+[WebServer] ├ ƒ /api/events/[id]
+[WebServer] ├ ƒ /api/events/[id]/analytics
+[WebServer] ├ ƒ /api/events/[id]/appeal
+[WebServer] ├ ƒ /api/events/[id]/friends
+[WebServer] ├ ƒ /api/events/[id]/invite
+[WebServer] ├ ƒ /api/events/[id]/report
+[WebServer] ├ ƒ /api/events/[id]/reviews
+[WebServer] ├ ƒ /api/events/[id]/rsvp
+[WebServer] ├ ƒ /api/events/[id]/save
+[WebServer] ├ ƒ /api/events/create
+[WebServer] ├ ƒ /api/events/export
+[WebServer] ├ ƒ /api/events/featured
+[WebServer] ├ ƒ /api/events/following
+[WebServer] ├ ƒ /api/events/friends-activity
+[WebServer] ├ ƒ /api/events/friends-organizing
+[WebServer] ├ ƒ /api/events/happening-now
+[WebServer] ├ ƒ /api/events/my-events
+[WebServer] ├ ƒ /api/events/new
+[WebServer] ├ ƒ /api/events/popular
+[WebServer] ├ ƒ /api/events/upload-image
+[WebServer] ├ ƒ /api/feedback
+[WebServer] ├ ƒ /api/health
+[WebServer] ├ ƒ /api/interactions
+[WebServer] ├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+[WebServer] ├ ƒ /api/my-clubs
+[WebServer] ├ ƒ /api/notifications
+[WebServer] ├ ƒ /api/notifications/[id]
+[WebServer] ├ ƒ /api/notifications/count
+[WebServer] ├ ƒ /api/onboarding/complete
+[WebServer] ├ ƒ /api/organizer-requests
+[WebServer] ├ ƒ /api/profile/avatar
+[WebServer] ├ ƒ /api/profile/banner
+[WebServer] ├ ƒ /api/profile/inferred-tags
+[WebServer] ├ ƒ /api/profile/interests
+[WebServer] ├ ƒ /api/recommendations
+[WebServer] ├ ƒ /api/recommendations/analytics
+[WebServer] ├ ƒ /api/recommendations/batch
+[WebServer] ├ ƒ /api/recommendations/feedback
+[WebServer] ├ ƒ /api/user/engagement
+[WebServer] ├ ƒ /api/user/following
+[WebServer] ├ ƒ /api/users/[id]
+[WebServer] ├ ƒ /api/users/[id]/follow
+[WebServer] ├ ƒ /api/users/me/friends
+[WebServer] ├ ƒ /api/users/me/requests
+[WebServer] ├ ƒ /api/users/me/suggestions
+[WebServer] ├ ƒ /api/users/saved-events
+[WebServer] ├ ƒ /api/users/search
+[WebServer] ├ ƒ /auth/callback
+[WebServer] ├ ƒ /auth/signout
+[WebServer] ├ ƒ /banned
+[WebServer] ├ ○ /calendar
+[WebServer] ├ ƒ /clubs
+[WebServer] ├ ƒ /clubs/[id]
+[WebServer] ├ ○ /clubs/create
+[WebServer] ├ ○ /contributors
+[WebServer] ├ ○ /create-event
+[WebServer] ├ ƒ /docs
+[WebServer] ├ ƒ /events/[id]
+[WebServer] ├ ○ /feedback
+[WebServer] ├ ○ /friends
+[WebServer] ├ ƒ /health
+[WebServer] ├ ○ /help
+[WebServer] ├ ƒ /invites/[token]
+[WebServer] ├ ○ /landing
+[WebServer] ├ ƒ /moderation
+[WebServer] ├ ƒ /moderation/appeals
+[WebServer] ├ ƒ /moderation/audit-log
+[WebServer] ├ ƒ /moderation/clubs
+[WebServer] ├ ƒ /moderation/events
+[WebServer] ├ ƒ /moderation/featured
+[WebServer] ├ ƒ /moderation/organizer-requests
+[WebServer] ├ ƒ /moderation/organizers
+[WebServer] ├ ƒ /moderation/pending
+[WebServer] ├ ƒ /moderation/reports
+[WebServer] ├ ƒ /moderation/stats
+[WebServer] ├ ƒ /moderation/users
+[WebServer] ├ ƒ /my-clubs
+[WebServer] ├ ƒ /my-clubs/[id]
+[WebServer] ├ ○ /my-events
+[WebServer] ├ ○ /notifications
+[WebServer] ├ ƒ /onboarding
+[WebServer] ├ ○ /people
+[WebServer] ├ ○ /privacy
+[WebServer] ├ ƒ /profile
+[WebServer] ├ ○ /robots.txt
+[WebServer] ├ ○ /settings
+[WebServer] ├ ƒ /sitemap.xml
+[WebServer] ├ ○ /terms
+[WebServer] └ ƒ /users/[id]
+[WebServer] 
+[WebServer] 
+[WebServer] ƒ Proxy (Middleware)
+[WebServer] 
+[WebServer] ○  (Static)   prerendered as static content
+[WebServer] ƒ  (Dynamic)  server-rendered on demand
+[WebServer] 
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 start
+[WebServer] > next start
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5
+[WebServer] - Local:         http://localhost:3000
+[WebServer] - Network:       http://10.121.205.78:3000
+[WebServer] ✓ Ready in 73ms
+[WebServer] ✓ Running next.config.js took 152ms
+[WebServer] {"ts":"2026-09-27T18:10:59.110Z","level":"info","msg":"Sentry disabled","scope":"Sentry","reason":"SENTRY_DSN is not set"}
+[WebServer] {"ts":"2026-09-27T18:10:59.687Z","level":"warn","msg":"Upstash not configured; using the in-memory store (not shared across instances)","requestId":"bd8b8f7c-86d0-40a0-a77c-cd9f50a52bcc","route":"/","scope":"RateLimit"}
+
+Running 189 tests using 1 worker
+
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓    1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (698ms)
+  ✓    2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (272ms)
+  ✓    3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (233ms)
+  ✓    4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (227ms)
+  ✓    5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (235ms)
+  ✓    6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (238ms)
+  ✓    7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (247ms)
+  ✓    8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (238ms)
+  ✓    9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (214ms)
+  ✓   10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (230ms)
+  ✓   11 [chromium] › e2e/specs/admin-audit-row.spec.ts:114:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-073: approving the fixture writes exactly one audit row (159ms)
+  ✓   12 [chromium] › e2e/specs/admin-audit-row.spec.ts:134:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-072: Recent Activity shows the action and the actor by name (505ms)
+  ✓   13 [chromium] › e2e/specs/admin-guard.spec.ts:43:7 › an anonymous caller › FIXED F-061: anonymous admin call answers 401 (6ms)
+  ✓   14 [chromium] › e2e/specs/admin-guard.spec.ts:62:7 › an onboarded student › PRESERVE: a non-admin gets 403 Forbidden (105ms)
+  ✓   15 [chromium] › e2e/specs/admin-guard.spec.ts:70:7 › an admin › PRESERVE: the admin gets 200 with the stats body (104ms)
+  ✓   16 [chromium] › e2e/specs/admin-login-cookie-equivalence.spec.ts:40:5 › the cookie shim emits the same cookie names the real sign-in page does (393ms)
+[WebServer] ⨯ Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '3371026682'
+[WebServer] }
+  ✓   17 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (485ms)
+  ✓   18 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓   19 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (290ms)
+[WebServer] (node:18441) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+[WebServer] (Use `node --trace-deprecation ...` to show where the warning was created)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   20 [chromium] › e2e/specs/admin-page-gates.spec.ts:29:9 › /docs, anonymous › /docs redirects an anonymous caller to / (475ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   21 [chromium] › e2e/specs/admin-page-gates.spec.ts:38:9 › /docs, onboarded student › /docs redirects a signed-in non-admin to / (650ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   22 [chromium] › e2e/specs/admin-page-gates.spec.ts:29:9 › /health, anonymous › /health redirects an anonymous caller to / (386ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   23 [chromium] › e2e/specs/admin-page-gates.spec.ts:38:9 › /health, onboarded student › /health redirects a signed-in non-admin to / (619ms)
+  ✓   24 [chromium] › e2e/specs/admin-page-gates.spec.ts:48:7 › admin › /docs answers 200 and renders the API description (581ms)
+  ✓   25 [chromium] › e2e/specs/admin-page-gates.spec.ts:55:7 › admin › /health answers 200 and renders the dashboard (463ms)
+  ✓   26 [chromium] › e2e/specs/admin-write-paths.spec.ts:222:7 › admin writes through their split clients (DEC-49) › approving a pending club: approved, owner membership, organizer role, notification (126ms)
+  ✓   27 [chromium] › e2e/specs/admin-write-paths.spec.ts:252:7 › admin writes through their split clients (DEC-49) › resolving a report: status and reviewer change (108ms)
+  ✓   28 [chromium] › e2e/specs/admin-write-paths.spec.ts:267:7 › admin writes through their split clients (DEC-49) › approving an organizer request: approved, organizer membership, notification (121ms)
+  ✓   29 [chromium] › e2e/specs/admin-write-paths.spec.ts:298:7 › admin writes through their split clients (DEC-49) › banning with suspend_content: banned, own club suspended with a review, notification (123ms)
+  ✓   30 [chromium] › e2e/specs/admin-write-paths.spec.ts:335:7 › admin writes through their split clients (DEC-49) › unbanning: banned_at and ban_expires_at are cleared (113ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   31 [chromium] › e2e/specs/anonymous-browse.spec.ts:31:5 › an anonymous visitor browses the event feed and sees only approved events (351ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] {"ts":"2026-09-27T18:11:13.607Z","level":"error","msg":"Fuzzy search RPC error","requestId":"5eb5a201-7524-4fec-9f0a-9830d86640af","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+[WebServer] {"ts":"2026-09-27T18:11:13.608Z","level":"error","msg":"Fuzzy search RPC error","requestId":"f2d6e961-1910-4be5-ad54-2f2fd6a9e529","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+  ✓   32 [chromium] › e2e/specs/anonymous-browse.spec.ts:50:5 › an anonymous visitor searches, and the search narrows the feed (638ms)
+  ✓   33 [chromium] › e2e/specs/anonymous-browse.spec.ts:63:5 › an anonymous visitor browses public club content (512ms)
+  ✓   34 [chromium] › e2e/specs/async-edge.spec.ts:59:5 › FIXED F-028: an anonymous notifications count answers 401 (3ms)
+  ✓   35 [chromium] › e2e/specs/async-edge.spec.ts:98:7 › FIXED F-092: the admin reports list › a student's report reaches the admin list with the reporter's name (99ms)
+  ✓   36 [chromium] › e2e/specs/async-edge.spec.ts:197:7 › FIXED F-017: a non-admin is assigned an A/B variant › the student's recommendations assign exactly one variant, keyed by the student (124ms)
+  ✓   37 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:60:7 › a permanently banned user (F-062, F-088) › gets a JSON 403 Account suspended on an API write (60ms)
+  ✓   38 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:64:7 › a permanently banned user (F-062, F-088) › gets the same JSON 403 on an API read (59ms)
+  ✓   39 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:68:7 › a permanently banned user (F-062, F-088) › is still sent to the ban page on a page request (125ms)
+  ✓   40 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:77:7 › a user whose suspension is still running (F-088) › gets a JSON 403 Account suspended on an API write (60ms)
+  ✓   41 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:85:7 › a user whose suspension has expired › reads their own saved events, because banned_at alone is not a ban (103ms)
+  ✓   42 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:94:7 › the mid-onboarding student (F-089, DEC-34) › is sent to onboarding from the home page (144ms)
+  ✓   43 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:99:7 › the mid-onboarding student (F-089, DEC-34) › is still sent to onboarding with the needs_onboarding cookie deleted (database truth) (145ms)
+  ✓   44 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:108:7 › the mid-onboarding student (F-089, DEC-34) › gets a JSON 403 Onboarding required on a direct API write (78ms)
+  ✓   45 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:112:7 › the mid-onboarding student (F-089, DEC-34) › can still make the wizard's self-update (exempt from the onboarding guard) (76ms)
+  ✓   46 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:119:7 › the mid-onboarding student (F-089, DEC-34) › can still complete onboarding (exempt from the onboarding guard) (76ms)
+  ✓   47 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:129:7 › the deleted debug route (F-027) › answers 404 in the production build (42ms)
+  ✓   48 [chromium] › e2e/specs/banned-redirect.spec.ts:37:7 › a permanently banned user › is redirected away from a protected path, to the ban page (125ms)
+  ✓   49 [chromium] › e2e/specs/banned-redirect.spec.ts:50:7 › a user whose suspension is still running › is redirected away from a protected path, to the ban page (124ms)
+  ✓   50 [chromium] › e2e/specs/banned-redirect.spec.ts:63:7 › a user whose suspension has expired › reaches the protected path, because banned_at alone is not a ban (160ms)
+SKIPPED /api/auth-debug: handler file deleted; the row is retained by DEC-55 (classification-rules.md § 8)
+SKIPPED /api/cron/send-feedback-requests: handler file deleted; the row is retained by DEC-55 (classification-rules.md § 8)
+SKIPPED /api/cron/send-reminders: handler file deleted; the row is retained by DEC-55 (classification-rules.md § 8)
+  ✓   51 [chromium] › e2e/specs/cache-headers.spec.ts:171:5 › the table: live rows, and the skipped rows with their reasons (0ms)
+SWEEP {"route":"/api/admin/analytics/events","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/analytics/events","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   52 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/analytics/events (41ms)
+SWEEP {"route":"/api/admin/analytics/users","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/analytics/users","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   53 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/analytics/users (36ms)
+SWEEP {"route":"/api/admin/audit-log","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/audit-log","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   54 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/audit-log (36ms)
+SWEEP {"route":"/api/admin/calculate-popularity","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/calculate-popularity","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   55 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/calculate-popularity (36ms)
+SWEEP {"route":"/api/admin/clubs","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+[WebServer] {"ts":"2026-09-27T18:11:16.214Z","level":"error","msg":"Error fetching admin clubs","requestId":"8cb01c4a-66f5-4c6b-aab1-0d6a50566744","route":"/api/admin/clubs","error":{"code":"PGRST200","details":"Searched for a foreign key relationship between 'clubs' and 'users' using the hint 'created_by' in the schema 'public', but no matches were found.","hint":"Perhaps you meant 'club_members' instead of 'users'.","message":"Could not find a relationship between 'clubs' and 'users' in the schema cache"}}
+SWEEP {"route":"/api/admin/clubs","who":"admin","method":"GET","status":500,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   56 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/clubs (32ms)
+SWEEP {"route":"/api/admin/events","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/events","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   57 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/events (35ms)
+SWEEP {"route":"/api/admin/experiments/[id]/results","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/experiments/[id]/results","who":"admin","method":"GET","status":404,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   58 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/experiments/[id]/results (36ms)
+SWEEP {"route":"/api/admin/experiments/[id]","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/experiments/[id]","who":"admin","method":"GET","status":404,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   59 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/experiments/[id] (37ms)
+SWEEP {"route":"/api/admin/experiments","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/experiments","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   60 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/experiments (32ms)
+SWEEP {"route":"/api/admin/featured","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/featured","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   61 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/featured (36ms)
+SWEEP {"route":"/api/admin/organizer-requests","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/organizer-requests","who":"admin","method":"GET","status":500,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   62 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/organizer-requests (33ms)
+SWEEP {"route":"/api/admin/organizers","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/organizers","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   63 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/organizers (35ms)
+SWEEP {"route":"/api/admin/reports","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/reports","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   64 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/reports (36ms)
+SWEEP {"route":"/api/admin/stats","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/stats","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   65 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/stats (38ms)
+SWEEP {"route":"/api/admin/users","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/admin/users","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   66 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/admin/users (38ms)
+SWEEP {"route":"/api/calendar/events","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/calendar/events","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   67 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/calendar/events (40ms)
+SWEEP {"route":"/api/clubs/[id]/analytics","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/[id]/analytics","who":"onboarded_student","method":"GET","status":403,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   68 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/[id]/analytics (39ms)
+SWEEP {"route":"/api/clubs/[id]/events","who":"anonymous","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/[id]/events","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   69 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/[id]/events (35ms)
+SWEEP {"route":"/api/clubs/[id]/follow","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/[id]/follow","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   70 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/[id]/follow (33ms)
+SWEEP {"route":"/api/clubs/[id]/invites","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/[id]/invites","who":"onboarded_student","method":"GET","status":403,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   71 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/[id]/invites (34ms)
+SWEEP {"route":"/api/clubs/[id]/members","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/[id]/members","who":"onboarded_student","method":"GET","status":403,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   72 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/[id]/members (33ms)
+SWEEP {"route":"/api/clubs/[id]","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/[id]","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+  ✓   73 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/[id] (25ms)
+SWEEP {"route":"/api/clubs/featured","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=120","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/featured","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=120","requestId":"uuid"}
+  ✓   74 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/featured (21ms)
+SWEEP {"route":"/api/clubs/friends","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/friends","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   75 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/friends (33ms)
+SWEEP {"route":"/api/clubs/new","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/new","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+  ✓   76 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/new (27ms)
+SWEEP {"route":"/api/clubs","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+SWEEP {"route":"/api/clubs","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+  ✓   77 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs (21ms)
+SWEEP {"route":"/api/clubs/trending","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+SWEEP {"route":"/api/clubs/trending","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+  ✓   78 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/clubs/trending (24ms)
+SWEEP {"route":"/api/events/[id]/analytics","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/events/[id]/analytics","who":"onboarded_student","method":"GET","status":403,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   79 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/[id]/analytics (36ms)
+SWEEP {"route":"/api/events/[id]/friends","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/events/[id]/friends","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   80 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/[id]/friends (34ms)
+SWEEP {"route":"/api/events/[id]/reviews","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/events/[id]/reviews","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   81 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/[id]/reviews (35ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+SWEEP {"route":"/api/events/[id]","who":"anonymous","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+SWEEP {"route":"/api/events/[id]","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   82 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/[id] (33ms)
+SWEEP {"route":"/api/events/[id]/rsvp","who":"anonymous","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/events/[id]/rsvp","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   83 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/[id]/rsvp (38ms)
+SWEEP {"route":"/api/events/export","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+SWEEP {"route":"/api/events/export","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+  ✓   84 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/export (22ms)
+SWEEP {"route":"/api/events/featured","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=120","requestId":"uuid"}
+SWEEP {"route":"/api/events/featured","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=120","requestId":"uuid"}
+  ✓   85 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/featured (21ms)
+SWEEP {"route":"/api/events/following","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/events/following","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   86 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/following (35ms)
+SWEEP {"route":"/api/events/friends-activity","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/events/friends-activity","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   87 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/friends-activity (35ms)
+SWEEP {"route":"/api/events/friends-organizing","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/events/friends-organizing","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   88 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/friends-organizing (32ms)
+SWEEP {"route":"/api/events/happening-now","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+SWEEP {"route":"/api/events/happening-now","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+  ✓   89 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/happening-now (28ms)
+SWEEP {"route":"/api/events/my-events","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/events/my-events","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   90 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/my-events (35ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+SWEEP {"route":"/api/events/new","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+SWEEP {"route":"/api/events/new","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+  ✓   91 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/new (23ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+SWEEP {"route":"/api/events/popular","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+SWEEP {"route":"/api/events/popular","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=60, stale-while-revalidate=300","requestId":"uuid"}
+  ✓   92 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events/popular (22ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+SWEEP {"route":"/api/events","who":"anonymous","method":"GET","status":200,"cacheControl":"public, s-maxage=30, stale-while-revalidate=60","requestId":"uuid"}
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+SWEEP {"route":"/api/events","who":"onboarded_student","method":"GET","status":200,"cacheControl":"public, s-maxage=30, stale-while-revalidate=60","requestId":"uuid"}
+  ✓   93 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/events (21ms)
+SWEEP {"route":"/api/health","who":"anonymous","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/health","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   94 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/health (35ms)
+SWEEP {"route":"/api/moderation/reviews/[targetType]/[targetId]","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/moderation/reviews/[targetType]/[targetId]","who":"onboarded_student","method":"GET","status":403,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   95 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/moderation/reviews/[targetType]/[targetId] (36ms)
+SWEEP {"route":"/api/my-clubs","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/my-clubs","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   96 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/my-clubs (31ms)
+SWEEP {"route":"/api/notifications/count","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/notifications/count","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   97 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/notifications/count (33ms)
+SWEEP {"route":"/api/notifications","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/notifications","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   98 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/notifications (40ms)
+SWEEP {"route":"/api/organizer-requests","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/organizer-requests","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓   99 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/organizer-requests (35ms)
+SWEEP {"route":"/api/recommendations/analytics","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/recommendations/analytics","who":"admin","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  100 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/recommendations/analytics (39ms)
+SWEEP {"route":"/api/recommendations/feedback","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/recommendations/feedback","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  101 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/recommendations/feedback (33ms)
+SWEEP {"route":"/api/recommendations","who":"anonymous","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/recommendations","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  102 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/recommendations (38ms)
+[WebServer] {"ts":"2026-09-27T18:11:17.852Z","level":"warn","msg":"Unauthenticated request to /api/user/engagement","requestId":"5de8ff7a-c53c-48d3-99d3-099381780e7d","route":"/api/user/engagement","error":{"name":"AuthSessionMissingError","message":"Auth session missing!"}}
+SWEEP {"route":"/api/user/engagement","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+[WebServer] {"ts":"2026-09-27T18:11:17.882Z","level":"error","msg":"Error fetching engagement","requestId":"76bd38bf-37ec-45bd-9f8f-0730e026c4b4","route":"/api/user/engagement","error":{"code":"PGRST205","details":null,"hint":null,"message":"Could not find the table 'public.user_engagement_summary' in the schema cache"}}
+SWEEP {"route":"/api/user/engagement","who":"onboarded_student","method":"GET","status":500,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  103 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/user/engagement (34ms)
+SWEEP {"route":"/api/user/following","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/user/following","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  104 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/user/following (32ms)
+SWEEP {"route":"/api/users/me/friends","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/users/me/friends","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  105 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/users/me/friends (36ms)
+SWEEP {"route":"/api/users/me/requests","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/users/me/requests","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  106 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/users/me/requests (34ms)
+SWEEP {"route":"/api/users/me/suggestions","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/users/me/suggestions","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  107 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/users/me/suggestions (49ms)
+SWEEP {"route":"/api/users/saved-events","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/users/saved-events","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  108 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/users/saved-events (39ms)
+SWEEP {"route":"/api/users/search","who":"anonymous","method":"GET","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+SWEEP {"route":"/api/users/search","who":"onboarded_student","method":"GET","status":200,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  109 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /api/users/search (42ms)
+[WebServer] {"ts":"2026-09-27T18:11:18.145Z","level":"error","msg":"No code parameter found","requestId":"aaa38524-f37a-41ef-8fce-c87e042977c2","route":"/auth/callback","scope":"Callback"}
+SWEEP {"route":"/auth/callback","who":"anonymous","method":"GET","status":307,"cacheControl":"private, no-store","requestId":"uuid"}
+[WebServer] {"ts":"2026-09-27T18:11:18.147Z","level":"error","msg":"No code parameter found","requestId":"2b6bc742-cab0-4042-942f-97e7a329ce0f","route":"/auth/callback","scope":"Callback"}
+SWEEP {"route":"/auth/callback","who":"onboarded_student","method":"GET","status":307,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  110 [chromium] › e2e/specs/cache-headers.spec.ts:183:9 › GET rows: the class value on 200/404, private otherwise, and a request id › GET /auth/callback (6ms)
+SWEEP {"route":"/api/admin/calculate-popularity","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  111 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/admin/calculate-popularity (4ms)
+SWEEP {"route":"/api/admin/clubs/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  112 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/admin/clubs/[id] (2ms)
+SWEEP {"route":"/api/admin/events/[id]/edits","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  113 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/admin/events/[id]/edits (3ms)
+SWEEP {"route":"/api/admin/events/[id]","who":"anonymous","method":"PUT","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  114 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PUT /api/admin/events/[id] (3ms)
+SWEEP {"route":"/api/admin/events/[id]","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  115 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/admin/events/[id] (2ms)
+SWEEP {"route":"/api/admin/events/[id]/status","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  116 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/admin/events/[id]/status (1ms)
+SWEEP {"route":"/api/admin/events","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  117 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/admin/events (1ms)
+SWEEP {"route":"/api/admin/experiments/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  118 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/admin/experiments/[id] (1ms)
+SWEEP {"route":"/api/admin/experiments/[id]","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  119 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/admin/experiments/[id] (1ms)
+SWEEP {"route":"/api/admin/experiments","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  120 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/admin/experiments (2ms)
+SWEEP {"route":"/api/admin/featured/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  121 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/admin/featured/[id] (3ms)
+SWEEP {"route":"/api/admin/featured/[id]","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  122 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/admin/featured/[id] (1ms)
+SWEEP {"route":"/api/admin/featured","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  123 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/admin/featured (2ms)
+SWEEP {"route":"/api/admin/organizer-requests/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  124 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/admin/organizer-requests/[id] (1ms)
+SWEEP {"route":"/api/admin/reports/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  125 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/admin/reports/[id] (1ms)
+SWEEP {"route":"/api/admin/users/[id]/ban","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  126 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/admin/users/[id]/ban (1ms)
+SWEEP {"route":"/api/admin/users/[id]/ban","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  127 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/admin/users/[id]/ban (4ms)
+SWEEP {"route":"/api/admin/users/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  128 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/admin/users/[id] (3ms)
+SWEEP {"route":"/api/clubs/[id]/appeal","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  129 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/clubs/[id]/appeal (2ms)
+SWEEP {"route":"/api/clubs/[id]/follow","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  130 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/clubs/[id]/follow (2ms)
+SWEEP {"route":"/api/clubs/[id]/follow","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  131 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/clubs/[id]/follow (1ms)
+SWEEP {"route":"/api/clubs/[id]/invites","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  132 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/clubs/[id]/invites (1ms)
+SWEEP {"route":"/api/clubs/[id]/members/role","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  133 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/clubs/[id]/members/role (2ms)
+SWEEP {"route":"/api/clubs/[id]/members","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  134 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/clubs/[id]/members (1ms)
+SWEEP {"route":"/api/clubs/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  135 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/clubs/[id] (1ms)
+SWEEP {"route":"/api/clubs/[id]","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  136 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/clubs/[id] (1ms)
+SWEEP {"route":"/api/clubs/[id]/transfer","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  137 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/clubs/[id]/transfer (2ms)
+SWEEP {"route":"/api/clubs/banner","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  138 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/clubs/banner (2ms)
+SWEEP {"route":"/api/clubs/logo","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  139 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/clubs/logo (2ms)
+SWEEP {"route":"/api/clubs","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  140 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/clubs (2ms)
+SWEEP {"route":"/api/events/[id]/appeal","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  141 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/events/[id]/appeal (2ms)
+SWEEP {"route":"/api/events/[id]/invite","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  142 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/events/[id]/invite (2ms)
+SWEEP {"route":"/api/events/[id]/report","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  143 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/events/[id]/report (2ms)
+SWEEP {"route":"/api/events/[id]/reviews","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  144 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/events/[id]/reviews (2ms)
+SWEEP {"route":"/api/events/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  145 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/events/[id] (3ms)
+SWEEP {"route":"/api/events/[id]","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  146 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/events/[id] (4ms)
+SWEEP {"route":"/api/events/[id]/rsvp","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  147 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/events/[id]/rsvp (3ms)
+SWEEP {"route":"/api/events/[id]/rsvp","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  148 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/events/[id]/rsvp (2ms)
+SWEEP {"route":"/api/events/[id]/save","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  149 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/events/[id]/save (6ms)
+SWEEP {"route":"/api/events/[id]/save","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  150 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/events/[id]/save (3ms)
+SWEEP {"route":"/api/events/create","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  151 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/events/create (3ms)
+SWEEP {"route":"/api/events/upload-image","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  152 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/events/upload-image (3ms)
+SWEEP {"route":"/api/feedback","who":"anonymous","method":"POST","status":400,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  153 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/feedback (4ms)
+SWEEP {"route":"/api/interactions","who":"anonymous","method":"POST","status":400,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  154 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/interactions (4ms)
+SWEEP {"route":"/api/notifications/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  155 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/notifications/[id] (3ms)
+SWEEP {"route":"/api/notifications","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  156 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/notifications (1ms)
+SWEEP {"route":"/api/onboarding/complete","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  157 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/onboarding/complete (3ms)
+SWEEP {"route":"/api/organizer-requests","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  158 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/organizer-requests (2ms)
+SWEEP {"route":"/api/profile/avatar","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  159 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/profile/avatar (2ms)
+SWEEP {"route":"/api/profile/banner","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  160 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/profile/banner (2ms)
+SWEEP {"route":"/api/profile/inferred-tags","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  161 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/profile/inferred-tags (2ms)
+SWEEP {"route":"/api/profile/interests","who":"anonymous","method":"PUT","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  162 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PUT /api/profile/interests (2ms)
+SWEEP {"route":"/api/recommendations/batch","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  163 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/recommendations/batch (2ms)
+SWEEP {"route":"/api/recommendations/feedback","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  164 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/recommendations/feedback (1ms)
+SWEEP {"route":"/api/user/engagement","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  165 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/user/engagement (1ms)
+SWEEP {"route":"/api/users/[id]/follow","who":"anonymous","method":"POST","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  166 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /api/users/[id]/follow (2ms)
+SWEEP {"route":"/api/users/[id]/follow","who":"anonymous","method":"DELETE","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  167 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › DELETE /api/users/[id]/follow (1ms)
+SWEEP {"route":"/api/users/[id]","who":"anonymous","method":"PATCH","status":401,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  168 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › PATCH /api/users/[id] (1ms)
+SWEEP {"route":"/auth/signout","who":"anonymous","method":"POST","status":302,"cacheControl":"private, no-store","requestId":"uuid"}
+  ✓  169 [chromium] › e2e/specs/cache-headers.spec.ts:211:11 › mutations, anonymous and bodiless: refused, and private › POST /auth/signout (2ms)
+COVERAGE live_rows=91 get_rows=59 get_requests=118 mutation_methods=59 skipped=3
+  ✓  170 [chromium] › e2e/specs/cache-headers.spec.ts:229:5 › the sweep covered every live GET row and every mutation method (0ms)
+  ✓  171 [chromium] › e2e/specs/club-authorization.spec.ts:73:7 › the cross-club attacker on the approved club (REFAC-12) › cannot update the club (164ms)
+  ✓  172 [chromium] › e2e/specs/club-authorization.spec.ts:80:7 › the cross-club attacker on the approved club (REFAC-12) › cannot delete the club (107ms)
+  ✓  173 [chromium] › e2e/specs/club-authorization.spec.ts:87:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view invitations (112ms)
+  ✓  174 [chromium] › e2e/specs/club-authorization.spec.ts:94:7 › the cross-club attacker on the approved club (REFAC-12) › cannot send invitations (107ms)
+  ✓  175 [chromium] › e2e/specs/club-authorization.spec.ts:101:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view members (105ms)
+  ✓  176 [chromium] › e2e/specs/club-authorization.spec.ts:108:7 › the cross-club attacker on the approved club (REFAC-12) › cannot remove members (108ms)
+  ✓  177 [chromium] › e2e/specs/club-authorization.spec.ts:117:7 › the cross-club attacker on the approved club (REFAC-12) › cannot change member roles (107ms)
+  ✓  178 [chromium] › e2e/specs/club-authorization.spec.ts:126:7 › the cross-club attacker on the approved club (REFAC-12) › cannot transfer ownership (116ms)
+  ✓  179 [chromium] › e2e/specs/club-authorization.spec.ts:133:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view club analytics (104ms)
+  ✓  180 [chromium] › e2e/specs/club-authorization.spec.ts:140:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view the analytics of the club's event (107ms)
+  ✓  181 [chromium] › e2e/specs/club-authorization.spec.ts:147:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's banner (105ms)
+  ✓  182 [chromium] › e2e/specs/club-authorization.spec.ts:154:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's logo (104ms)
+  ✓  183 [chromium] › e2e/specs/club-authorization.spec.ts:165:7 › the club's organizer (not the owner) › cannot update the club (owner only) (103ms)
+  ✓  184 [chromium] › e2e/specs/club-authorization.spec.ts:172:7 › the club's organizer (not the owner) › can view members (104ms)
+  ✓  185 [chromium] › e2e/specs/club-authorization.spec.ts:179:7 › the club's organizer (not the owner) › can view club analytics (114ms)
+  ✓  186 [chromium] › e2e/specs/club-authorization.spec.ts:187:7 › the club owner › can view invitations (103ms)
+  ✓  187 [chromium] › e2e/specs/club-authorization.spec.ts:193:7 › the club owner › can view members (104ms)
+  ✓  188 [chromium] › e2e/specs/club-authorization.spec.ts:202:7 › the club owner › can view club analytics (113ms)
+  ✓  189 [chromium] › e2e/specs/club-authorization.spec.ts:206:7 › the club owner › FIXED F-087: the owner's own club PATCH answers 200, and status stays unwritable (201ms)
+
+  189 passed (30.0s)
+exit=0
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN; ps -axo pid,command | grep -E 'next start|next-server|playwright' | grep -v grep   (after group A)
+lsof=1 (1 = port free)
+(no process listed)
+group A finished 2026-09-27T18:11:20Z
+done=0
+
+==============================================================================
+2. Group B (files 13-24 of 24; includes csp.spec.ts and health.spec.ts) — verbatim
+==============================================================================
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   (before group B)
+exit=1 (1 = port free)
+$ npx playwright test e2e/specs/club-invitation-acceptance.spec.ts e2e/specs/club-owner-surfaces.spec.ts e2e/specs/cross-user-cache.spec.ts e2e/specs/csp.spec.ts e2e/specs/csrf-origin.spec.ts e2e/specs/event-moderation-notifications.spec.ts e2e/specs/event-read-path.spec.ts e2e/specs/health.spec.ts e2e/specs/no-profile-row.spec.ts e2e/specs/protected-route-redirect.spec.ts e2e/specs/public-profile-privacy.spec.ts e2e/specs/save-and-rsvp.spec.ts --reporter=list   # group B of 2 (alphabetical), started 2026-09-27T18:11:57Z
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 build
+[WebServer] > next build
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5 (Turbopack)
+[WebServer] - Environments: .env.local, .env
+[WebServer] ✓ Running next.config.js took 233ms
+[WebServer] - Experiments (use with caution):
+[WebServer]   · clientTraceMetadata
+[WebServer] 
+[WebServer]   Creating an optimized production build ...
+[WebServer] ✓ Compiled successfully in 1697ms
+[WebServer]   Running next.config.js provided runAfterProductionCompile ...
+[WebServer] ✓ Completed runAfterProductionCompile in 74ms
+[WebServer]   Running TypeScript ...
+[WebServer]   Finished TypeScript in 1571ms ...
+[WebServer]   Collecting page data using 9 workers ...
+[WebServer]   Generating static pages using 9 workers (0/98) ...
+[WebServer]   Generating static pages using 9 workers (24/98) 
+[WebServer]   Generating static pages using 9 workers (48/98) 
+[WebServer]   Generating static pages using 9 workers (73/98) 
+[WebServer] (node:18857) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+[WebServer] (Use `node --trace-deprecation ...` to show where the warning was created)
+[WebServer] ✓ Generating static pages using 9 workers (98/98) in 341ms
+[WebServer]   Finalizing page optimization ...
+[WebServer] 
+[WebServer] Route (app)
+[WebServer] ┌ ○ /
+[WebServer] ├ ○ /_not-found
+[WebServer] ├ ○ /about
+[WebServer] ├ ○ /admin-login
+[WebServer] ├ ƒ /admin/experiments
+[WebServer] ├ ƒ /admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/analytics/events
+[WebServer] ├ ƒ /api/admin/analytics/users
+[WebServer] ├ ƒ /api/admin/audit-log
+[WebServer] ├ ƒ /api/admin/calculate-popularity
+[WebServer] ├ ƒ /api/admin/clubs
+[WebServer] ├ ƒ /api/admin/clubs/[id]
+[WebServer] ├ ƒ /api/admin/events
+[WebServer] ├ ƒ /api/admin/events/[id]
+[WebServer] ├ ƒ /api/admin/events/[id]/edits
+[WebServer] ├ ƒ /api/admin/events/[id]/status
+[WebServer] ├ ƒ /api/admin/experiments
+[WebServer] ├ ƒ /api/admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/experiments/[id]/results
+[WebServer] ├ ƒ /api/admin/featured
+[WebServer] ├ ƒ /api/admin/featured/[id]
+[WebServer] ├ ƒ /api/admin/organizer-requests
+[WebServer] ├ ƒ /api/admin/organizer-requests/[id]
+[WebServer] ├ ƒ /api/admin/organizers
+[WebServer] ├ ƒ /api/admin/reports
+[WebServer] ├ ƒ /api/admin/reports/[id]
+[WebServer] ├ ƒ /api/admin/stats
+[WebServer] ├ ƒ /api/admin/users
+[WebServer] ├ ƒ /api/admin/users/[id]
+[WebServer] ├ ƒ /api/admin/users/[id]/ban
+[WebServer] ├ ƒ /api/calendar/events
+[WebServer] ├ ƒ /api/clubs
+[WebServer] ├ ƒ /api/clubs/[id]
+[WebServer] ├ ƒ /api/clubs/[id]/analytics
+[WebServer] ├ ƒ /api/clubs/[id]/appeal
+[WebServer] ├ ƒ /api/clubs/[id]/events
+[WebServer] ├ ƒ /api/clubs/[id]/follow
+[WebServer] ├ ƒ /api/clubs/[id]/invites
+[WebServer] ├ ƒ /api/clubs/[id]/members
+[WebServer] ├ ƒ /api/clubs/[id]/members/role
+[WebServer] ├ ƒ /api/clubs/[id]/transfer
+[WebServer] ├ ƒ /api/clubs/banner
+[WebServer] ├ ƒ /api/clubs/featured
+[WebServer] ├ ƒ /api/clubs/friends
+[WebServer] ├ ƒ /api/clubs/logo
+[WebServer] ├ ƒ /api/clubs/new
+[WebServer] ├ ƒ /api/clubs/trending
+[WebServer] ├ ƒ /api/events
+[WebServer] ├ ƒ /api/events/[id]
+[WebServer] ├ ƒ /api/events/[id]/analytics
+[WebServer] ├ ƒ /api/events/[id]/appeal
+[WebServer] ├ ƒ /api/events/[id]/friends
+[WebServer] ├ ƒ /api/events/[id]/invite
+[WebServer] ├ ƒ /api/events/[id]/report
+[WebServer] ├ ƒ /api/events/[id]/reviews
+[WebServer] ├ ƒ /api/events/[id]/rsvp
+[WebServer] ├ ƒ /api/events/[id]/save
+[WebServer] ├ ƒ /api/events/create
+[WebServer] ├ ƒ /api/events/export
+[WebServer] ├ ƒ /api/events/featured
+[WebServer] ├ ƒ /api/events/following
+[WebServer] ├ ƒ /api/events/friends-activity
+[WebServer] ├ ƒ /api/events/friends-organizing
+[WebServer] ├ ƒ /api/events/happening-now
+[WebServer] ├ ƒ /api/events/my-events
+[WebServer] ├ ƒ /api/events/new
+[WebServer] ├ ƒ /api/events/popular
+[WebServer] ├ ƒ /api/events/upload-image
+[WebServer] ├ ƒ /api/feedback
+[WebServer] ├ ƒ /api/health
+[WebServer] ├ ƒ /api/interactions
+[WebServer] ├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+[WebServer] ├ ƒ /api/my-clubs
+[WebServer] ├ ƒ /api/notifications
+[WebServer] ├ ƒ /api/notifications/[id]
+[WebServer] ├ ƒ /api/notifications/count
+[WebServer] ├ ƒ /api/onboarding/complete
+[WebServer] ├ ƒ /api/organizer-requests
+[WebServer] ├ ƒ /api/profile/avatar
+[WebServer] ├ ƒ /api/profile/banner
+[WebServer] ├ ƒ /api/profile/inferred-tags
+[WebServer] ├ ƒ /api/profile/interests
+[WebServer] ├ ƒ /api/recommendations
+[WebServer] ├ ƒ /api/recommendations/analytics
+[WebServer] ├ ƒ /api/recommendations/batch
+[WebServer] ├ ƒ /api/recommendations/feedback
+[WebServer] ├ ƒ /api/user/engagement
+[WebServer] ├ ƒ /api/user/following
+[WebServer] ├ ƒ /api/users/[id]
+[WebServer] ├ ƒ /api/users/[id]/follow
+[WebServer] ├ ƒ /api/users/me/friends
+[WebServer] ├ ƒ /api/users/me/requests
+[WebServer] ├ ƒ /api/users/me/suggestions
+[WebServer] ├ ƒ /api/users/saved-events
+[WebServer] ├ ƒ /api/users/search
+[WebServer] ├ ƒ /auth/callback
+[WebServer] ├ ƒ /auth/signout
+[WebServer] ├ ƒ /banned
+[WebServer] ├ ○ /calendar
+[WebServer] ├ ƒ /clubs
+[WebServer] ├ ƒ /clubs/[id]
+[WebServer] ├ ○ /clubs/create
+[WebServer] ├ ○ /contributors
+[WebServer] ├ ○ /create-event
+[WebServer] ├ ƒ /docs
+[WebServer] ├ ƒ /events/[id]
+[WebServer] ├ ○ /feedback
+[WebServer] ├ ○ /friends
+[WebServer] ├ ƒ /health
+[WebServer] ├ ○ /help
+[WebServer] ├ ƒ /invites/[token]
+[WebServer] ├ ○ /landing
+[WebServer] ├ ƒ /moderation
+[WebServer] ├ ƒ /moderation/appeals
+[WebServer] ├ ƒ /moderation/audit-log
+[WebServer] ├ ƒ /moderation/clubs
+[WebServer] ├ ƒ /moderation/events
+[WebServer] ├ ƒ /moderation/featured
+[WebServer] ├ ƒ /moderation/organizer-requests
+[WebServer] ├ ƒ /moderation/organizers
+[WebServer] ├ ƒ /moderation/pending
+[WebServer] ├ ƒ /moderation/reports
+[WebServer] ├ ƒ /moderation/stats
+[WebServer] ├ ƒ /moderation/users
+[WebServer] ├ ƒ /my-clubs
+[WebServer] ├ ƒ /my-clubs/[id]
+[WebServer] ├ ○ /my-events
+[WebServer] ├ ○ /notifications
+[WebServer] ├ ƒ /onboarding
+[WebServer] ├ ○ /people
+[WebServer] ├ ○ /privacy
+[WebServer] ├ ƒ /profile
+[WebServer] ├ ○ /robots.txt
+[WebServer] ├ ○ /settings
+[WebServer] ├ ƒ /sitemap.xml
+[WebServer] ├ ○ /terms
+[WebServer] └ ƒ /users/[id]
+[WebServer] 
+[WebServer] 
+[WebServer] ƒ Proxy (Middleware)
+[WebServer] 
+[WebServer] ○  (Static)   prerendered as static content
+[WebServer] ƒ  (Dynamic)  server-rendered on demand
+[WebServer] 
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 start
+[WebServer] > next start
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5
+[WebServer] - Local:         http://localhost:3000
+[WebServer] - Network:       http://10.121.205.78:3000
+[WebServer] ✓ Ready in 50ms
+[WebServer] ✓ Running next.config.js took 101ms
+[WebServer] {"ts":"2026-09-27T18:12:06.328Z","level":"info","msg":"Sentry disabled","scope":"Sentry","reason":"SENTRY_DSN is not set"}
+[WebServer] {"ts":"2026-09-27T18:12:06.541Z","level":"warn","msg":"Upstash not configured; using the in-memory store (not shared across instances)","requestId":"fd0235bf-5cfa-4623-b737-c434a7e71fa0","route":"/","scope":"RateLimit"}
+
+Running 80 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (450ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (271ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (249ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (251ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (464ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (243ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (238ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (221ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (218ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (231ms)
+  ✓  11 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:118:7 › club invitation acceptance (F-016, DEC-43) › the club owner invites the student by email (74ms)
+  ✓  12 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:130:7 › club invitation acceptance (F-016, DEC-43) › the student opens the invitation and it is accepted (510ms)
+  ✓  13 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:159:7 › club invitation acceptance (F-016, DEC-43) › the owner sees the invitation accepted (49ms)
+  ✓  14 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:176:7 › club invitation acceptance (F-016, DEC-43) › the student is now a member of the club, as an organizer (42ms)
+  ✓  15 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:40:7 › the club owner › is routed from /my-clubs to the multi-club surface and sees the approved club (1.2s)
+  ✓  16 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:54:7 › the club owner › opens the club dashboard and sees the club's own events (450ms)
+  ✓  17 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:68:7 › a member of a different club › does not see the approved club on their own surface (298ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  18 [chromium] › e2e/specs/cross-user-cache.spec.ts:110:5 › positive control: an anonymous public read HITs on its second request (9ms)
+  ✓  19 [chromium] › e2e/specs/cross-user-cache.spec.ts:207:7 › negative control: a per-cookie body the stand-in is told it may share › negative control: B receives A's body with a HIT when a personalized answer is marked public (2ms)
+  ✓  20 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: private, no-store (1ms)
+  ✓  21 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: no-store beside s-maxage (1ms)
+  ✓  22 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: a Set-Cookie on the answer (2ms)
+  ✓  23 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: Vary: Cookie (1ms)
+  ✓  24 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: max-age without s-maxage (1ms)
+  ✓  25 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: s-maxage=0 (1ms)
+  ✓  26 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: a 500 (1ms)
+  ✓  27 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: an Authorization header on the request (1ms)
+  ✓  28 [chromium] › e2e/specs/cross-user-cache.spec.ts:240:7 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share a POST (1ms)
+  ✓  29 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/users/saved-events: A then B then anonymous, never shared (A saves secondApprovedEvent for this test) (80ms)
+  ✓  30 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/notifications: A then B then anonymous, never shared (no seeded notification) (83ms)
+  ✓  31 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/notifications/count: A then B then anonymous, never shared (a count, no ids) (102ms)
+  ✓  32 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/recommendations: A then B then anonymous, never shared (the feed carries no viewer id) (83ms)
+  ✓  33 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/users/me/friends: A then B then anonymous, never shared (no seeded follow) (74ms)
+  ✓  34 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/my-clubs: A then B then anonymous, never shared (A is an organizer of the approved club) (82ms)
+  ✓  35 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/events/5eed0000-0000-4000-8000-0000000000e1/rsvp: A then B then anonymous, never shared (A's own going RSVP row) (102ms)
+  ✓  36 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/clubs/5eed0000-0000-4000-8000-0000000000c1/events: A then B then anonymous, never shared (A's organizer view: the flag and the RSVP counts) (92ms)
+  ✓  37 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/user/following: A then B then anonymous, never shared (no seeded club follow) (76ms)
+[WebServer] {"ts":"2026-09-27T18:12:17.322Z","level":"error","msg":"Supabase error fetching event","requestId":"2fb95524-3cb3-441a-afd2-a4c20eb39d6e","route":"/api/events/5eed0000-0000-4000-8000-0000000000e3","eventId":"5eed0000-0000-4000-8000-0000000000e3","error":{"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"Cannot coerce the result to a single JSON object"}}
+  ✓  38 [chromium] › e2e/specs/cross-user-cache.spec.ts:344:5 › C7: the admin's 200 on a pending event is not served to an anonymous visitor (50ms)
+[WebServer] {"ts":"2026-09-27T18:12:17.332Z","level":"error","msg":"Supabase error fetching event","requestId":"92e33f29-683b-4890-81b4-76f282693542","route":"/api/events/5eed0000-0000-4000-8000-0000000000e3","eventId":"5eed0000-0000-4000-8000-0000000000e3","error":{"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"Cannot coerce the result to a single JSON object"}}
+  ✓  39 [chromium] › e2e/specs/cross-user-cache.spec.ts:359:5 › C7: an anonymous 404 on a pending event is not served to the admin (40ms)
+  ✓  40 [chromium] › e2e/specs/cross-user-cache.spec.ts:372:5 › recorded: a public-class 404 is shared (the club detail read, unknown id) (6ms)
+  ✓  41 [chromium] › e2e/specs/csp.spec.ts:72:7 › the CSP header › has no 'unsafe-eval', keeps 'unsafe-inline', and admits the local Supabase origin (6ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  42 [chromium] › e2e/specs/csp.spec.ts:111:9 › / as anonymous › reports no CSP violation (2.3s)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  43 [chromium] › e2e/specs/csp.spec.ts:111:9 › /events/5eed0000-0000-4000-8000-0000000000e1 as anonymous › reports no CSP violation (2.6s)
+  ✓  44 [chromium] › e2e/specs/csp.spec.ts:111:9 › /profile as onboarded_student › reports no CSP violation (2.6s)
+  ✓  45 [chromium] › e2e/specs/csp.spec.ts:111:9 › /clubs/5eed0000-0000-4000-8000-0000000000c1 as club_owner › reports no CSP violation (2.6s)
+  ✓  46 [chromium] › e2e/specs/csp.spec.ts:111:9 › /moderation as admin › reports no CSP violation (2.5s)
+  ✓  47 [chromium] › e2e/specs/csrf-origin.spec.ts:88:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Origin https://evil.example is refused with 403 and writes no row (276ms)
+  ✓  48 [chromium] › e2e/specs/csrf-origin.spec.ts:94:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Sec-Fetch-Site cross-site is refused with 403 and writes no row (209ms)
+  ✓  49 [chromium] › e2e/specs/csrf-origin.spec.ts:104:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with the application's own Origin is accepted (248ms)
+  ✓  50 [chromium] › e2e/specs/csrf-origin.spec.ts:112:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted (239ms)
+  ✓  51 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:129:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › an approval writes exactly one event_approved notification (129ms)
+  ✓  52 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:136:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a suspension writes one event_suspended notification (121ms)
+  ✓  53 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:143:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second approval refreshes the one event_approved row, unread again (125ms)
+  ✓  54 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:156:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second suspension refreshes the one event_suspended row with the new reason (125ms)
+  ✓  55 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:165:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › the creator's appeal through the real route passes the events guard (+1) (48ms)
+  ✓  56 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:191:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a rejection after the appeal writes one event_rejected notification (149ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  57 [chromium] › e2e/specs/event-read-path.spec.ts:84:5 › PRESERVE: GET /api/events?limit=1 returns 200 with the approved event first and total 2 (6ms)
+[WebServer] {"ts":"2026-09-27T18:12:31.694Z","level":"error","msg":"Fuzzy search RPC error","requestId":"5a727739-46bf-453b-a9e2-4a996aa6b627","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+  ✓  58 [chromium] › e2e/specs/event-read-path.spec.ts:95:5 › PRESERVE: GET /api/events?search=Music Night returns exactly the second approved event (6ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] {"ts":"2026-09-27T18:12:32.211Z","level":"error","msg":"Fuzzy search RPC error","requestId":"e034b60d-87e2-4e4a-9dfa-1a78284ffeec","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+[WebServer] {"ts":"2026-09-27T18:12:32.212Z","level":"error","msg":"Fuzzy search RPC error","requestId":"612a5e9a-be2c-49a8-b862-4e5166edd372","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+  ✓  59 [chromium] › e2e/specs/event-read-path.spec.ts:104:5 › PRESERVE: typing a,b into the search box shows the No events found state (642ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  60 [chromium] › e2e/specs/event-read-path.spec.ts:117:5 › PRESERVE: the approved event's detail page renders its title (243ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  61 [chromium] › e2e/specs/event-read-path.spec.ts:149:5 › PRESERVE: limit=1 then its nextCursor traverses both approved events in start_date order, total 2 on each page (17ms)
+[WebServer] {"ts":"2026-09-27T18:12:32.616Z","level":"error","msg":"Fuzzy search RPC error","requestId":"ec8d5973-d132-400b-92a7-10268b858aa4","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] {"ts":"2026-09-27T18:12:32.626Z","level":"error","msg":"Fuzzy search RPC error","requestId":"454b003b-0be9-4bae-a244-cabd6ae56c95","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+  ✓  62 [chromium] › e2e/specs/event-read-path.spec.ts:163:5 › PRESERVE: the same cursor traversal with search=Seed yields the same two pages (the search or() and the keyset or() are both applied) (22ms)
+  ✓  63 [chromium] › e2e/specs/event-read-path.spec.ts:174:5 › PRESERVE: cursor=not-a-valid-cursor is a 400 with Invalid cursor (2ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  64 [chromium] › e2e/specs/event-read-path.spec.ts:182:5 › DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix) (222ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  65 [chromium] › e2e/specs/event-read-path.spec.ts:203:5 › DEFECT F-081: the feed files the academic+tech event under a Social row, and there is no Tech row (moves only if 04-11 ships the identity mappings) (367ms)
+[WebServer] {"ts":"2026-09-27T18:12:33.241Z","level":"error","msg":"Fuzzy search RPC error","requestId":"badc7b05-e18d-4a40-9d44-86da90ab9147","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+  ✓  66 [chromium] › e2e/specs/event-read-path.spec.ts:226:5 › FIXED F-082: search=a,b is a 200 with an empty events list (moved in 04-08) (12ms)
+[WebServer] {"ts":"2026-09-27T18:12:33.253Z","level":"error","msg":"Fuzzy search RPC error","requestId":"ef29c8cb-d7b8-43b1-8ace-ea0df3ee0139","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+  ✓  67 [chromium] › e2e/specs/event-read-path.spec.ts:238:5 › FIXED F-082: search=% matches only a literal percent, so no seeded event (moved in 04-08) (11ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  68 [chromium] › e2e/specs/event-read-path.spec.ts:250:5 › FIXED F-083: the list body carries a nextCursor when more rows remain (moved in 04-09) (6ms)
+  ✓  69 [chromium] › e2e/specs/health.spec.ts:31:7 › an anonymous caller › GET /api/health answers liveness only, private, with a request id (3ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  70 [chromium] › e2e/specs/health.spec.ts:50:7 › an anonymous caller › the /health page redirects to / (383ms)
+  ✓  71 [chromium] › e2e/specs/health.spec.ts:59:7 › an admin › GET /api/health answers the documented report (135ms)
+  ✓  72 [chromium] › e2e/specs/health.spec.ts:85:7 › an admin › the /health page renders the overall status (984ms)
+  ✓  73 [chromium] › e2e/specs/no-profile-row.spec.ts:109:7 › a signed-in account with no profile row (DEC-35) › an API call gets a JSON 403 Profile not found (26ms)
+  ✓  74 [chromium] › e2e/specs/no-profile-row.spec.ts:116:7 › a signed-in account with no profile row (DEC-35) › a page request is signed out and sent to /?error=profile_sync_failed (123ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  75 [chromium] › e2e/specs/protected-route-redirect.spec.ts:35:7 › an anonymous visitor › is redirected from every protected path to the sign-in prompt, carrying the destination (315ms)
+  ✓  76 [chromium] › e2e/specs/protected-route-redirect.spec.ts:66:7 › a signed-in student › reaches every protected path without a redirect (1.0s)
+  ✓  77 [chromium] › e2e/specs/public-profile-privacy.spec.ts:71:7 › public profile privacy (F-005) › private: the not-found response to an anonymous reader, the page to a signed-in viewer; public again: the page, never the email (156ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  78 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (1.1s)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  79 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (930ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  80 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (463ms)
+
+  80 passed (39.6s)
+exit=0
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN; ps -axo pid,command | grep -E 'next start|next-server|playwright' | grep -v grep   (after group B)
+lsof=1 (1 = port free)
+(no process listed)
+group B finished 2026-09-27T18:12:39Z
+done=0
+
+==============================================================================
+3. Totals
+==============================================================================
+Group A:  189 passed (30.0s) (10 setup + 179 spec), 0 failed, exit=0
+Group B:  80 passed (39.6s) (10 setup + 70 spec), 0 failed, exit=0
+Spec tests: 249 = 06-16's 239 + e2e/specs/health.spec.ts and e2e/specs/admin-page-gates.spec.ts (06-17). 0 flaky, 0 skipped, 0 did not run.
+Known server-log rows inside the output are not failures: cache-headers.spec.ts's sweep prints 500 for the admin GET of /api/admin/clubs and /api/admin/organizer-requests and the student GET of /api/user/engagement on the reset schema (DI-87), which the spec records (status and Cache-Control) rather than asserts as 2xx.
+
+FULL SUITE: 269 passed, 0 failed
+exit=0

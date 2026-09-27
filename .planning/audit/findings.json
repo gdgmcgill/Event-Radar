@@ -576,8 +576,8 @@
     "validation_criterion": "Re-run the two-session probe with COOKIE_A and COOKIE_B supplied and assert that no personalized route returns x-vercel-cache HIT for session B after session A populated it, and that every personalized route's Cache-Control contains `private` or `no-store`.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "06",
-    "resolution": "**NOT CLOSED BY PHASE 2, and the distinction matters enough to record here.** `closes_in_phase` corrected 05 -> **06** to agree with the roadmap, whose Phase 6 success criterion 3 is the one that deletes the blanket `s-maxage=60` from `vercel.json`, returns `private, no-store` on personalized routes, and adds the cross-user cache regression test (REFAC-19). Phase 2 closed the `next` cache-poisoning **advisories** by version (F-051). It did not touch the **precondition** those advisories need, which Phase 1 measured live on this deployment: eight personalized routes returned `x-vercel-cache` HIT or STALE with non-zero age, and not one response in the run varied on `Cookie` or `Authorization`. A closed advisory is not a removed precondition. Severity stays **Critical** and status stays **Open**. Phase 2 is a dependency phase and the fix is a behaviour change; making it here would have broken the one property the phase exists to preserve.",
+    "closes_in_phase": "08",
+    "resolution": "**Open at \"08\": every repository clause is met; the real-CDN re-run is the owner's (DI-81).** Recorded at the Phase 6 close (plan 06-18). Met: every personalized route's Cache-Control is `private, no-store`, proven live over every personalized row (`e2e/specs/cache-headers.spec.ts`, `64939b2`, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/cache-e2e.txt` § 3.3), the blanket `vercel.json` rule is deleted (`6221669`), and a cross-user test through a shared-cache stand-in that applies Vercel's rules shows no personalized route served to session B or to an anonymous caller after session A filled it (`e2e/specs/cross-user-cache.spec.ts`, `eaed119`), green again at the phase after-floor (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/playwright.phase-after.txt`). Unmet: the criterion's own probe, \"re-run the two-session probe with COOKIE_A and COOKIE_B\", against Vercel's real CDN on a preview or production deploy; the exact commands are in `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/cache-e2e.txt` § 5 (`.planning/audit/tools/cache-probe.sh`). `closes_in_phase` moved 06 -> 08 (DEC-72). Earlier history: the Phase 2 note in this record's git history. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md` § 8.",
     "related": ["F-026", "F-027", "F-028"]
   },
   {
@@ -597,9 +597,10 @@
     ],
     "recommended_fix": "Same fix as F-025 — per-handler Cache-Control. Administrative responses must carry `private, no-store` unconditionally; there is no admin response that benefits from a shared cache.",
     "validation_criterion": "A test asserting that every route classified admin or authenticated in inventory/endpoints.json responds with a Cache-Control containing `private` or `no-store`, on both its success and its 401 path.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "06",
+    "resolution": "**Fixed in Phase 6, slice 7 (plans 06-12..06-15; INTENTIONAL BEHAVIOUR CHANGE in `6221669`).** Validation criterion met: `e2e/specs/cache-headers.spec.ts` (`64939b2`) sweeps every live row of `inventory/endpoints.json` (91 rows, 118 GET requests as the row's authorized persona and anonymously, 59 anonymous bodiless mutations): every admin and authenticated row answers `private, no-store` on its success and on its 401 path, and every status other than 200/404 is private (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/cache-e2e.txt` § 3.3). `src/__tests__/api/cache-headers-census.test.ts` asserts each export's `withRoute` class against the inventory's independent target, and `src/__tests__/api/cache-headers-defect.test.ts` C4/C5 drive 46 private-target GET arms signed in and anonymous. The blanket `vercel.json` rule is deleted (`6221669`). Green again at the phase after-floor from a clean reset (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.phase-after.txt`, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/playwright.phase-after.txt`). Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-7-close.md` and `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md`.",
     "related": ["F-025"]
   },
   {
@@ -644,8 +645,8 @@
     "validation_criterion": "A test asserting that each of the eight routes returns 401 to an anonymous caller.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "06",
-    "resolution": "**Progress recorded at the slice-6 close (plan 06-06); the status stays Open at \"06\".** Five of the eight routes now answer an anonymous caller 401, and one is deleted. The four fixed in Phase 5 are `/api/events/following`, `/api/events/friends-activity`, `/api/events/friends-organizing` and `/api/events/[id]/friends` (`7ff08c1`; `src/__tests__/api/events/anonymous-personalized-defect.test.ts`). The fifth is `/api/notifications/count`, fixed by plan 06-04 (`2617b7b`, INTENTIONAL BEHAVIOUR CHANGE, DEC-69) through `createRequestContext` + `requireUser`, pinned by the moved rows D1 and D2 of `src/__tests__/api/notifications/notifications-count-defect.test.ts` and by `e2e/specs/async-edge.spec.ts` 'FIXED F-028' (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/playwright.slice-6-after.txt`, test 28); the side navigation requests the count only when signed in, so no page polls into the 401. `/api/auth-debug` is deleted (F-027). Still 200 for an anonymous caller: `/api/events/[id]/rsvp` GET and `/api/clubs/[id]/events`, which feed public pages; REFAC-19 gives both `private, no-store` in plan 06-14, and DEC-69 keeps their 200 pending the owner's risk-acceptance or a 401 decision at the phase close. Unmet clause: \"each of the eight routes returns 401\". Earlier history: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4.",
+    "closes_in_phase": "08",
+    "resolution": "**Open at \"08\": six of the eight routes are resolved; two stay 200 by rule pending the owner (DEC-69).** Recorded at the Phase 6 close (plan 06-18). Five answer an anonymous caller 401: `/api/events/following`, `/api/events/friends-activity`, `/api/events/friends-organizing` and `/api/events/[id]/friends` (Phase 5, `7ff08c1`) and `/api/notifications/count` (06-04, `2617b7b`); `/api/auth-debug` is deleted (F-027). Still 200 for an anonymous caller: `/api/events/[id]/rsvp` GET and `/api/clubs/[id]/events`, which feed public pages; both now answer `private, no-store` on every path (`29ced7e`, `2c12a61`; `e2e/specs/cache-headers.spec.ts`), so the degraded body is never shared by a cache. Unmet clause: \"each of the eight routes returns 401\". It closes when the owner either accepts the two public reads as a risk (`risk_acceptance`) or decides they answer 401 (a public-page change). Earlier history: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md` § 8.",
     "related": ["F-025", "F-061"]
   },
   {
@@ -665,9 +666,10 @@
     ],
     "recommended_fix": "Split the route: an unauthenticated liveness endpoint returning only a status literal, and an authenticated diagnostics endpoint behind verifyAdmin() carrying the detail. Do not replace the getSession() call with getUser() here — it errors for anonymous callers on a route that is anonymous by design; remove the unused call instead.",
     "validation_criterion": "A test asserting that an anonymous GET /api/health returns a body containing no dependency names, no configuration state and no error text, and that the detailed report requires an admin session.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "06",
+    "resolution": "**Fixed in Phase 6 by plan 06-17 (`747ef77`, INTENTIONAL BEHAVIOUR CHANGE, DEC-78).** Validation criterion met: an anonymous (or non-admin) GET /api/health answers 200 `{ status, version }` with no dependency names, no configuration state and no error text (`src/__tests__/api/health/health.test.ts`; `src/__tests__/api/health/health-defect.test.ts` H1-H5 moved under the ledger; `e2e/specs/health.spec.ts` on the real stack, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/health.txt`). The documented report (`docs/health.md`, `src/contracts/health.ts`) requires an active admin session (`requireActiveUser` then `requireRole`), or a bearer equal to `HEALTH_TOKEN`, DEC-78's machine credential for an uptime monitor (at least 32 characters, SHA-256 digests compared with `timingSafeEqual`); no environment sets that token until the owner provisions it (DI-81), so today only an admin session reads the report. The session accessor, the OAuth probe, the environment and the memory checks are deleted. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-7-close.md` and `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md`.",
     "related": ["F-027", "F-059"]
   },
   {
@@ -1248,9 +1250,10 @@
     ],
     "recommended_fix": "Gate /docs behind an authenticated (preferably admin) check implemented as a layout guard, not only as a PROTECTED_ROUTES entry — the middleware ring is itself environment-conditional (F-003), so a middleware-only fix evaporates when a variable is unset. Upgrade redoc to 2.5.4 in the same change.",
     "validation_criterion": "A test asserting an anonymous request to /docs redirects or returns 404, and that an authenticated non-admin also does not receive the API description.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "06",
+    "resolution": "**Fixed in Phase 6 by plan 06-17 (`00aa06d`, INTENTIONAL BEHAVIOUR CHANGE, DEC-79).** Validation criterion met: `src/app/docs/layout.tsx` awaits `requireAdminPage(\"/\")` before rendering, so an anonymous request to /docs and a signed-in non-admin (and a banned admin) are redirected to \"/\" and never receive the API description (`src/__tests__/pages/docs-gate-defect.test.ts` G1/G2 moved under the ledger, G5 added for /health; `src/server/__tests__/requireAdminPage.test.ts`; `e2e/specs/admin-page-gates.spec.ts` on the real stack, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/admin-page-gates.txt`). Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-7-close.md` and `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md`.",
     "related": ["F-003", "F-053", "F-029"]
   },
   {
@@ -1271,7 +1274,8 @@
     "validation_criterion": "A test asserting the CSP response header contains neither 'unsafe-inline' nor 'unsafe-eval', and that the application still renders without console CSP violations.",
     "status": "Open",
     "risk_acceptance": null,
-    "closes_in_phase": "06",
+    "closes_in_phase": "08",
+    "resolution": "**Open at \"08\": the 'unsafe-eval' half is fixed; the 'unsafe-inline' half is DI-80.** Recorded at the Phase 6 close (plan 06-18). Plan 06-16 (`d6e8489`, INTENTIONAL BEHAVIOUR CHANGE, DEC-77) removed 'unsafe-eval' from the production CSP (`next.config.js` `contentSecurityPolicy(env)`; `src/__tests__/config/csp-defect.test.ts` rows moved under the ledger) and made the harness enforce the CSP (`bypassCSP: false`); `e2e/specs/csp.spec.ts` finds no CSP violation on five persona pages through two channels, green in the full suite (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/csp.txt`, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/playwright.phase-after.txt`). Unmet clause: \"contains neither 'unsafe-inline' …\". 'unsafe-inline' stays for the root layout's inline theme script and Next's inline bootstrap; removing it needs a nonce CSP and dynamic rendering of every page (DI-80, Phase 8). `closes_in_phase` moved 06 -> 08. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md`.",
     "related": ["F-051"]
   },
   {
@@ -1334,10 +1338,10 @@
     ],
     "recommended_fix": "Adopt a shared route wrapper that supplies try/catch, a request id propagated into every log line, and a rate limiter, then apply it to all 94 handlers. Doing it per handler will leave the same 22 behind.",
     "validation_criterion": "A check asserting every file under src/app/api/**/route.ts exports handlers wrapped by the shared wrapper, and a test asserting an admin route returns 429 after the configured request budget.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "06",
-    "resolution": "**Rate-limit clause delivered in Phase 5 (plan 05-17, `408064d`, INTENTIONAL BEHAVIOUR CHANGE); status stays Open at \"06\" for the wrapper and correlation halves.** `/api/admin/*` is budgeted at 600 GET and 120 mutation requests per IP, per path, per 60 s, answered with the existing 429 (`src/server/ratelimit/policy.ts` `ADMIN_BUDGETS`, DEC-50). The criterion's second clause, \"a test asserting an admin route returns 429 after the configured request budget\", is met by `src/server/ratelimit/policy.test.ts` (the 601st admin GET and the 121st admin POST get 429; `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/ratelimit.txt`). 05-18 (`941bee7`) puts the counter in Upstash when a store is configured. Not met, Phase 6: every route file exporting handlers wrapped by the shared wrapper, and request correlation (`logAdminAction` now carries `ctx.requestId`, but no logger emits it yet). Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.",
+    "resolution": "**Fixed in Phase 6, slice 7: the wrapper and correlation halves by plans 06-12..06-14; the 429 clause was delivered in Phase 5 (`408064d`).** Validation criterion met on both clauses. (1) Every file under src/app/api/**/route.ts exports handlers wrapped by `withRoute`: `src/__tests__/api/cache-headers-census.test.ts` asserts `PENDING_WRAP` is empty and fails on any unwrapped export (`6221669`), `src/__tests__/api/admin/admin-arm-tree-defect.test.ts` and `src/__tests__/api/auth-ring/write-arm-tree-defect.test.ts` read both export forms, and `src/__tests__/api/uncaught-throw-defect.test.ts` U3 shows the 26 formerly untried arms answering a JSON 500 (`217593b`, `2c12a61`, `29ced7e`, `6221669`). Request correlation: the proxy mints `x-request-id` and `withRoute` echoes it on every response and log line (`d790b21`, `4ad1fae`; `src/proxy-request-id.test.ts`, `src/server/__tests__/route.test.ts`). (2) An admin route answers 429 after its budget: `src/server/ratelimit/policy.test.ts` (Phase 5). Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-7-close.md` and `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md`.",
     "related": ["F-059", "F-060", "F-001"]
   },
   {
@@ -1357,9 +1361,10 @@
     ],
     "recommended_fix": "Return a fixed error code and a generic message to the caller, log the internal text server-side with the request id from F-058. Type the catch clauses as unknown rather than any, so the compiler forces the narrowing that currently does not happen.",
     "validation_criterion": "A grep asserting no route handler interpolates a caught error's message into a NextResponse body, and a test asserting a constraint violation returns a generic body.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "06",
+    "resolution": "**Fixed in Phase 6, slice 7 (plans 06-13, 06-14, 06-17; DEC-75).** Validation criterion met. The grep clause: `scripts/check-server-console.mjs` counts caught-error text as rule S2, and its allow-list holds exactly one S2 site, `src/app/auth/callback/route.ts`, whose failed-sign-in redirect carries the provider's text in its Location query (`/?error=auth_failed&message=…`), not in a response body; a PRESERVE suite pins it and Phase 7 owns that decision. The phase after-floor's census C7 over every route file finds that one line only (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.phase-after.txt`). The test clause: `src/__tests__/api/error-text-defect.test.ts` E2 (36 rows) drives each former site's read or write failure (inserts and updates included) with a per-site sentinel message and asserts a generic body with no sentinel (`217593b`, `2c12a61`, `29ced7e`, `6221669`, `747ef77`). The rows script the database error with code XX000; because no handler reads a caught error's message into a body any more, a constraint violation's code cannot change what the caller receives. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-7-close.md` and `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md`.",
     "related": ["F-058", "F-029"]
   },
   {
@@ -2065,9 +2070,10 @@
     ],
     "recommended_fix": "One shared floor function used by both endpoints, following the convention src/lib/timezone.ts documents. Not in Phase 4: it changes which events each endpoint returns during a time-of-day band, and must land with a characterization of both floors first (04-RESEARCH.md Pitfall 6).",
     "validation_criterion": "src/__tests__/api/events/saved-events-time-floor-defect.test.ts's assertions MOVE when the shared floor lands.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "06",
+    "resolution": "**Fixed in Phase 6 by plan 06-18 (`b8e20f4`, INTENTIONAL BEHAVIOUR CHANGE, DEC-80).** `src/app/api/users/saved-events/route.ts` floors \"upcoming\" on `getESTNowISO()`, the floor /api/events uses. Validation criterion met: the assertions of `src/__tests__/api/events/saved-events-time-floor-defect.test.ts` MOVED in the fixing commit (2026-09-23T14:30:00.000Z and 2026-01-15T14:30:00.000Z instead of the true-UTC values; the event ninety minutes away is kept), under the five-step ledger protocol: unedited red 3/4, moved green, pre-fix red 3/4, `cmp` exit 0, the PRESERVE saved-events suite unedited (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/f-085-fix.txt`, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/defect-ledger.md`). Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md`.",
     "related": []
   },
   {
@@ -2313,9 +2319,10 @@
     ],
     "recommended_fix": "zod contracts in src/contracts/ read through parseBody, parseQuery and parseForm in src/server/body.ts, called after the guards where readJsonObject sits today. Each rule carries today's 400 text; an invalid body answers 400 Invalid JSON body and a non-object body 400 Request body must be a JSON object; a non-string field answers 400; club links use one ClubLinkFields rule on POST and PATCH; route UUIDs parse through one lower-casing Uuid schema (absorbs DI-64 and DI-66). Business-rule 400s stay in the handlers. Each moved byte is a DEFECT move with a defect-ledger row (INTENTIONAL).",
     "validation_criterion": "node scripts/check-contracts.mjs exits 0 with an empty allow-list (no raw request.json(), .formData() or route-file searchParams read outside src/server/body.ts, auth/callback's four OAuth params excepted by name), and the DEFECT suites that pin a 500 on malformed input move to 400.",
-    "status": "Open",
+    "status": "Fixed",
     "risk_acceptance": null,
     "closes_in_phase": "06",
+    "resolution": "**Fixed in Phase 6 (plans 06-04, 06-08, 06-09, 06-10; DEC-65, DEC-66).** Validation criterion met. `node scripts/check-contracts.mjs` prints `committed=0 live=0` with an empty `scripts/contracts-allowlist.json` (`edb5eef`; `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.phase-after.txt` block 7b), so no route file reads request.json(), .formData() or searchParams outside `src/server/body.ts` (auth/callback's four OAuth params excepted by name). The DEFECT suites that pinned a 500 on malformed input moved to 400: `src/__tests__/api/slice6-malformed-input-defect.test.ts` (`2617b7b`) and `src/__tests__/contracts/malformed-input-defect.test.ts`, whose raw and readJsonObject site lists are now empty (`4caf196`, `4f918ae`, `a543979`, `f869323`), each move with a ledger row. Stated residue, outside the criterion: three malformed payload shapes at the events-webhook edge function (not a route handler) still answer 500, pinned by PRESERVE rows 7, 11 and 12 of `src/__tests__/webhook/webhook-handler.test.ts`; DI-83 carries them to Phase 8 with the CI redeploy (DI-81, DI-84). Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-7-close.md` and `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/PHASE-6-COMPLETION.md`.",
     "related": ["F-058", "F-059"]
   }
 ]

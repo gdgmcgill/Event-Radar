@@ -323,6 +323,14 @@ reason.
 - **Owner:** Phase 6, 06-18, which decides F-094's status: either the one-line handler change with a
   ledger row, or these three rows recorded as F-094's stated residue. The live effect travels with
   DI-81's redeploy.
+- **Dispositioned at the phase close (06-18): recorded as F-094's stated residue, owner Phase 8.** 06-18's
+  plan makes the supabase-js bump (`f4c59e4`) the last code change of the phase, and its tasks do not name
+  the webhook, so the handler change is not made here. F-094's criterion is met without it: the criterion
+  names route handlers and DEFECT suites, and these three rows are PRESERVE rows of an edge-function suite
+  (`src/__tests__/webhook/webhook-handler.test.ts` rows 7, 11, 12). F-094 is Fixed with this residue
+  written into its resolution. **Owner: Phase 8**, in the change that deploys `events-webhook` from CI
+  (DI-81, DI-84): move the three rows out of PRESERVE into a DEFECT file, let the contract answer 400, and
+  ship it with the redeploy, since the handler change is live only then.
 
 ## DI-84 — The owner's Deno integration suite for events-webhook has never run in this program
 
@@ -405,7 +413,204 @@ different rows (06-02 § 2, a note on the source, both pinned); the census's R3 
 
 ---
 
-**Next new item id: DI-89.** (DI-87 and DI-88 added by 06-15.)
+~~**Next new item id: DI-89.** (DI-87 and DI-88 added by 06-15.)~~ Superseded by Part 6.
+
+---
+
+# Part 6 — Items found by 06-07..06-17, registered at the phase close (06-18)
+
+Source: the Issues, Deviations, Observations and Threat Flags sections of `06-07-SUMMARY.md` ..
+`06-17-SUMMARY.md`, read at the phase close. DI-87 and DI-88 were registered by 06-15 (Part 5). Every
+item below has an owner. Items those SUMMARYs name that are not deferrals are listed at the end with the
+reason.
+
+## DI-89 — `events/[id]` PATCH stores `rsvp_link` and `price` as sent
+
+- **Found by:** 06-08 (`06-08-SUMMARY.md` § Observations, "Not in scope, noticed").
+- **What it is.** The create route length-checks `price` and refuses a non-http(s) `rsvp_link`; the PATCH
+  route writes both as sent. A PATCH can store a `javascript:` link that create would refuse, and the
+  event page renders it as a link.
+- **Why deferred.** A new refusal on a write route is a behaviour change no Phase 6 plan named; 06-08
+  preserved the handler's rules byte for byte (DEC-65).
+- **Why not cosmetic.** A stored script URL on a public page.
+- **Owner:** Phase 7 (register as a finding at the start, then fix with a DEFECT pin), or the phase owner.
+
+## DI-90 — `users/[id]` PATCH accepts any URL scheme for `avatar_url` and `banner_url`
+
+- **Found by:** 06-09 (`06-09-SUMMARY.md` § Observations).
+- **What it is.** `UserUpdateBody` checks these with `new URL()`, as the handler did, so `javascript:x`
+  and `data:` values are stored. They render as image sources, not links.
+- **Why deferred.** Same reason as DI-89: a new refusal on a write route.
+- **Why not cosmetic.** Arbitrary-scheme URLs stored on every profile; the rendering context is what keeps
+  them inert today.
+- **Owner:** Phase 7, with DI-89.
+
+## DI-91 — `users.visibility` is an unconstrained text column
+
+- **Found by:** 06-11 (`06-11-SUMMARY.md` § Issues).
+- **What it is.** `users.visibility` is `text DEFAULT 'public'` with no CHECK constraint
+  (`supabase/migrations/20260915214553_baseline.sql`), while the PATCH contract accepts only `"public"` or
+  `"private"`. A stored value outside the two is sent back by the profile form and answered 400, as before
+  the contract.
+- **Why deferred.** A CHECK constraint is a schema change that needs a data check over existing rows.
+- **Why not cosmetic.** A profile holding such a value cannot save any edit.
+- **Owner:** Phase 7 (schema and datasets).
+
+## DI-92 — `EventAnalytics.rsvp_cancelled` is declared but never sent
+
+- **Found by:** 06-11 (`06-11-SUMMARY.md` § Issues).
+- **What it is.** `src/types/index.ts` declares `rsvp_cancelled` on `EventAnalytics`, but
+  `GET /api/events/[id]/analytics` never sends it (the club analytics route does). `useEventAnalytics` has
+  no consumer today; `EventAnalyticsResponse` lists what is sent.
+- **Why deferred.** Either the type or the route changes; neither is a Phase 6 requirement.
+- **Why not cosmetic.** A consumer written against the type would read `undefined`.
+- **Owner:** Phase 7 (types kept in sync with the wire, per CLAUDE.md).
+
+## DI-93 — Database errors answered as a 500 without a log line
+
+- **Found by:** 06-13 (threat flag `silent-500s`).
+- **What it is.** Many handlers answer `{"error":"Internal server error"}` or `Failed to …` on a database
+  error without logging it. The wrapper logs and captures only an uncaught throw, so these failures are
+  invisible in logs and in Sentry. 06-13 and 06-14 converted the existing console calls; they did not add
+  a log line where none existed.
+- **Why deferred.** A logging sweep across every handler's error branch, outside the plans' allowed edits.
+- **Why not cosmetic.** REFAC-21's purpose is that a production failure becomes visible; a caught database
+  error is the common one.
+- **Owner:** Phase 7 (the error-path sweep, with DI-88), or Phase 8 (operational certification).
+
+## DI-94 — Client IP addresses in the rate-limit store's log lines
+
+- **Found by:** 06-12 (threat flag `pii-in-logs`).
+- **What it is.** `src/server/ratelimit/upstashStore.ts`'s store-timeout and store-error lines keep the
+  `key` field, `METHOD:path:client-ip`. The logger redacts named secrets and email-shaped text, not IP
+  addresses. 06-16's `docs/observability.md` does not record a decision.
+- **Why deferred.** The key's shape belongs to the rate-limit design (DI-61), which CONTEXT kept untouched.
+- **Why not cosmetic.** An IP address is personal data in the logs.
+- **Owner:** Phase 8, with DI-61 (log only the method and path, or hash the address), or the owner's
+  explicit acceptance.
+
+## DI-95 — A CDN-cached public response replays the first request's `x-request-id`
+
+- **Found by:** 06-12 (threat flag `cached-correlation-id`).
+- **What it is.** The eleven public GET classes are shareable, so on a CDN hit a later client receives the
+  `x-request-id` of the request that filled the cache. It is not a secret, but a correlation id read from
+  a cache hit points at another request's log lines. `docs/observability.md` does not say so.
+- **Why deferred.** Only observable on the real CDN (DI-81's probe host); the fix is a documentation line
+  or a CDN-side header rule.
+- **Why not cosmetic.** An operator correlating a user's report through a cached response reads the wrong
+  lines.
+- **Owner:** Phase 8 (record it in `docs/observability.md` when the real CDN is probed).
+
+## DI-96 — `save-and-rsvp.spec.ts:53` failed once in 06-08
+
+- **Found by:** 06-08 (`06-08-SUMMARY.md` § Issues, Playwright run 1 of 2).
+- **What it is.** The awaited save answered and the row landed, but the control still read "Save". The
+  likely cause is `EventDetailClient`'s mount-time `checkSaved` GET resolving after the toggle and setting
+  the state back. It passed on the second fresh reset and in every floor since, including this phase's
+  after-floor (`evidence/playwright.phase-after.txt`).
+- **Why deferred.** A client race outside every Phase 6 plan's files, seen once.
+- **Why not cosmetic.** A user who saves an event right after the page loads can see it flip back.
+- **Owner:** Phase 7 (harness flake triage, and the component's request ordering).
+
+## DI-97 — `admin/events` POST checks `start_date` and `end_date` for presence only
+
+- **Found by:** 06-10 (`06-10-SUMMARY.md` § Observations).
+- **What it is.** A number passes the presence check and reaches the insert, as it did before the contract,
+  which kept the handler's rule.
+- **Why deferred.** A new 400 on an admin write, outside 06-10's byte-preserving scope.
+- **Why not cosmetic.** A malformed date reaches the database as a 500.
+- **Owner:** Phase 7, with DI-89.
+
+## DI-98 — The failed-sign-in redirect carries the provider's error text
+
+- **Found by:** 06-14 (`06-14-SUMMARY.md` § Measured differences; threat flag `redirect-error-text`).
+- **What it is.** `src/app/auth/callback/route.ts` redirects a failed code exchange to
+  `/?error=auth_failed&message=<exchangeError.message>`. The PRESERVE callback suite pins it, and the
+  callback plan could change only logging and the wrapper, so it stays as the one reasoned S2 entry in
+  `scripts/server-console-allowlist.json`. It goes to the browser that started the sign-in, not to a
+  response body, so F-059's criterion is met without it (F-059 resolution).
+- **Why deferred.** Changing it moves a PRESERVE pin on the sign-in path, a Validated workflow.
+- **Why not cosmetic.** Provider error text in a URL reaches browser history and referrers.
+- **Owner:** Phase 7 (the decision, and a DEFECT move if the text goes).
+
+## DI-99 — The moderation-reviews banned-admin refusal has no real-stack test
+
+- **Found by:** 06-17 (`06-17-SUMMARY.md` § Issues and notes).
+- **What it is.** The reviews route's admin path now runs `requireActiveUser`, pinned by a unit row in
+  `src/__tests__/api/service-role-routing.test.ts`. The seed has no banned-admin persona, so no spec drives
+  it end to end; adding one would move rows other specs read.
+- **Why deferred.** A new persona is dataset work.
+- **Why not cosmetic.** The refusal is proven only against the fake.
+- **Owner:** Phase 7 (persona datasets).
+
+**Named in the 06-07..06-17 SUMMARYs and not deferrals:** the two PRESERVE tree scans moved into DEFECT
+suites by 06-13 (`admin-arm-tree-defect.test.ts`, `write-arm-tree-defect.test.ts`) and the batch
+error-text row moved by 06-14 (`batch-error-text-defect.test.ts`), each with ledger rows and accepted by the
+orchestrator (decisions, recorded in `evidence/PHASE-6-COMPLETION.md` § 6); 06-17's `getsession-gate`
+tightening to an empty list (the suite's anticipated change); `with-timeout.sh`'s orphaned watcher (session
+tooling, since fixed, not this project); the Supabase CLI update notice; F-078's fuzzy-search 0A000 and
+F-081's unmapped-tags line in the Playwright server log (findings already, Open at "08"); zsh
+word-splitting and bash 3.2 `mapfile` (executor scripting); the Sentry event's `server_name` (a function
+host, not personal data, 06-16).
+
+---
+
+# Part 7 — Final state of every item at the phase close (06-18)
+
+| Item | Final state | Evidence | Owner after Phase 6 |
+|---|---|---|---|
+| DI-21 | **CLOSED** by `d6e8489` (06-16): the CSP admits the local Supabase origin at config evaluation and the harness runs with `bypassCSP: false` | `evidence/csp.txt`; the full suite under the enforced CSP in `evidence/playwright.phase-after.txt` | — |
+| DI-22 | Unchanged | — | the phase owner |
+| DI-23 | **Open**, binding: nothing was pushed. 06-05's migration and F-074, F-075, F-076, F-093 wait for it | `evidence/PHASE-6-COMPLETION.md` § 7 | Phase 8 |
+| DI-25 / DI-53 | **CLOSED**: the four admin payloads retyped by `f869323` (06-10); `@supabase/supabase-js` 2.116.0 exact by `f4c59e4` (06-18), after a throwaway-worktree tsc with 0 errors | `evidence/di-53-bump.txt` | — |
+| DI-26 | **CLOSED**: `vercel.json` has no `headers` (`6221669`); `/api/events` is `public-30-60` explicitly; the cross-user spec and the live sweep pass (`eaed119`, `64939b2`) | `evidence/cache-e2e.txt` § 3.3 | — |
+| DI-27, DI-29 | Unchanged | — | the phase owner; Phase 7 |
+| DI-33 | Cron half CLOSED (06-06); bucket half unchanged | `evidence/slice-6-close.md` § 7 | Phase 8 (buckets) |
+| DI-39, DI-40, DI-41 | Unchanged (owner decisions) | — | the phase owner |
+| DI-42 | **Open**, owner action before any push to `main` (Upstash) | `evidence/PHASE-6-COMPLETION.md` § 8 | the phase owner |
+| DI-43 | Unchanged: `@supabase/ssr` stays 0.7.0; its peer range admits 2.116.0 | `evidence/di-53-bump.txt` block 11 | Phase 8 |
+| DI-44 | Code half CLOSED (06-04); the anon-role probe stays | `evidence/slice-6-close.md` § 7 | Phase 7 (probe) |
+| DI-45 | **CLOSED** by `4ad1fae` (06-12): a warn line when the user lookup fails with anything but a missing session | `evidence/logger-foundation.txt` | — |
+| DI-46 | See the DI-46 row of Part 1 and the 06-18 paragraph appended below it (Task 3) | `evidence/claude-md-corrections.patch` | the phase owner |
+| DI-47 | **Partly done** by 06-14's comment sweep. (a), the inferred-tags 404, is reachable and stays with a comment; (b) names files 06-14 did not touch | `06-14-SUMMARY.md` § Measured differences | Phase 7 |
+| DI-49, DI-51 | Unchanged | — | the phase owner |
+| DI-50 | CLOSED by record (06-01) | — | — |
+| DI-54 | Unchanged | — | Phase 7 |
+| DI-55 | **CLOSED** by `00aa06d` (06-17): `requireAdminPage` in the admin, moderation, docs and health layouts; the reviews route's admin path runs `requireActiveUser` | `evidence/admin-page-gates.txt` | — (real-stack gap is DI-99) |
+| DI-56, DI-57 | Unchanged (visual changes) | — | the phase owner |
+| DI-58 | **CLOSED** by `83e2f7e` (06-15): (a) and (b) regenerated through the classifier | `evidence/contract-regen-slice-7.txt` | — |
+| DI-59 | **Carried**: (a)-(c) name files 06-14 did not touch | `06-14-SUMMARY.md` | Phase 7, with DI-47(b) |
+| Phase 2 residuals | Renovate unchanged. The production audit gate exits 0 at the phase close: 0 critical, 0 high, 2 moderate (`dompurify`, `yaml`) and 1 low (`@babel/core`, an advisory published during the phase on a package no Phase 6 install touched) | `evidence/floor.phase-after.txt` block 4 | the phase owner |
+| DI-60 | Vacant by record | — | — |
+| DI-61, DI-69, DI-71 | Unchanged | — | Phase 8 |
+| DI-62, DI-65, DI-67, DI-68, DI-72, DI-74, DI-76, DI-77 | Unchanged | — | Phase 7 |
+| DI-63, DI-75 | Unchanged | — | the phase owner |
+| DI-64 | Retired into F-094; executed by `f869323` (canonical ids at ban and role change); **F-094 Fixed** | findings.json F-094 | — |
+| DI-66 | Retired into F-094; executed by `4f918ae` (`ClubLinkFields`); **F-094 Fixed** | findings.json F-094 | — |
+| DI-70 | **CLOSED** by `4ad1fae` (06-12): both comments corrected | `evidence/logger-foundation.txt` | — |
+| DI-73 | Retired into F-059; **F-059 Fixed** | findings.json F-059 | — |
+| DI-78 | Unchanged (the sender's signing contract) | — | the phase owner |
+| DI-79 | Unchanged (Sentry v11) | — | Phase 8 |
+| DI-80 | Unchanged; F-055 Open at "08" for it | findings.json F-055 | Phase 8 |
+| DI-81 | **Open**: every item is an owner action, listed in order as the Phase 8 deploy prerequisites | `evidence/PHASE-6-COMPLETION.md` § 8 | the phase owner, before Phase 8 deploys |
+| DI-82 | Unchanged since 06-06 (Phase 7 with a target); the batch 500 no longer carries the error text (`6221669`, F-059) | `src/__tests__/api/recommendations/batch-error-text-defect.test.ts` | Phase 7 |
+| DI-83 | **Re-dispositioned**: F-094's stated residue, owner Phase 8 with the webhook redeploy (see its section) | findings.json F-094 | Phase 8 |
+| DI-84 | Unchanged | — | Phase 8, with DI-81 |
+| DI-85 | Unchanged; the phase after-floor ran pgTAP before Playwright and reset afterwards | `evidence/floor.phase-after.txt` | Phase 7 |
+| DI-86 | CLOSED by `57cb55f` | — | — |
+| DI-87, DI-88 | Unchanged since 06-15; DI-87's three 500s appear, as recorded, in the phase after-floor's header sweep | `evidence/playwright.phase-after.txt` | Phase 7 |
+| DI-89..DI-99 | New (Part 6) | Part 6 | as listed |
+| A1 | **CLOSED** (06-12): a proxy `request.headers.set` is forwarded | `evidence/logger-foundation.txt` [2.1] | — |
+| A2 | **CLOSED** (06-16): the build with `withSentryConfig` and no token exits 0; re-run at the phase close | `evidence/build-ci-env.txt`; `evidence/floor.phase-after.txt` block 8d | — |
+| A3 | **CLOSED** (06-16): the real SDK runs in Jest with an in-memory transport built by `Sentry.createTransport` and the event carries `tags.request_id` | `evidence/sentry.txt` §§ 1, 7 | — |
+| A4 | **CLOSED** (06-11): no zod symbol in the production client chunks, with a positive control | `evidence/client-contracts.txt` [2.7]-[2.8] | — |
+| A5, A6 | **Open**: proven only by the owner's first deploy | — | DI-81 |
+| A7 | **CLOSED** (06-16): installed with `SENTRYCLI_SKIP_DOWNLOAD=1`, no binary fetched | `evidence/sentry-install.txt` | — |
+| A8 | Moot: the OAuth check is deleted (06-17) | `evidence/health.txt` | — |
+| A9 | CLOSED by 06-01's bundle | `evidence/sentry-legitimacy.txt` § 7 | — |
+
+**Next new item id: DI-100.** (DI-89..DI-99 added by 06-18.)
+
 
 *Phase: 06-slices-6-7-async-edge-contracts-caching-observability*
-*Plan: 06-01*
+*Plans: 06-01 (opened), 06-06 (Part 5), 06-15 (DI-87, DI-88), 06-18 (Parts 6 and 7)*
