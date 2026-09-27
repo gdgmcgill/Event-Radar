@@ -458,3 +458,131 @@ export const AdminUserNameBody = z.object({
     .transform((value) => value.trim())
     .optional(),
 });
+
+// ─── The admin list queries (Task 2): read through readQuery, never a 400 ────
+//
+// QUERY VALUES KEEP TODAY'S SILENT COERCION (the 06-08 rule). A value the
+// handler parsed with a default gets the same number or default here, NaN
+// included; a text parameter read with `searchParams.get` is the string as
+// sent (the first of a repeated key) or null when absent. None of these
+// routes answered a 400 for its query, so none of these schemas can refuse:
+// the routes read them through readQuery, with no 400 branch (T-06-10-04).
+
+/** `searchParams.get(key)`: the first value as sent, or null. */
+const getParam = () =>
+  z
+    .string()
+    .optional()
+    .transform((value) => value ?? null);
+
+/** `searchParams.get(key) || fallback`: an empty value falls back too. */
+const paramOr = (fallback: string) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => value || fallback);
+
+/** `searchParams.get(key) ?? fallback`: an empty value stays empty. */
+const paramOrNullish = (fallback: string) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => value ?? fallback);
+
+/** `parseInt(searchParams.get(key) || fallback, 10)`, NaN kept. */
+const intParam = (fallback: string) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => parseInt(value || fallback, 10));
+
+/** `Math.min(parseInt(get(key) || fallback, 10), max)`, NaN kept. */
+const cappedIntParam = (fallback: string, max: number) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => Math.min(parseInt(value || fallback, 10), max));
+
+/** GET /api/admin/events */
+export const AdminEventsQuery = z.object({
+  status: getParam(),
+  search: getParam(),
+  sort: paramOr("created_at"),
+  direction: paramOr("desc"),
+  limit: cappedIntParam("50", 100),
+  offset: intParam("0"),
+  // Support viewing deleted events for audit: exactly "true".
+  includeDeleted: z
+    .string()
+    .optional()
+    .transform((value) => value === "true"),
+});
+
+export type AdminEventsQueryOutput = z.infer<typeof AdminEventsQuery>;
+
+/** GET /api/admin/clubs: an unknown status is passed to the filter as sent. */
+export const AdminClubsQuery = z.object({
+  status: paramOr("pending"),
+});
+
+/** GET /api/admin/organizer-requests */
+export const OrganizerRequestsQuery = z.object({
+  status: paramOr("pending"),
+  limit: cappedIntParam("50", 100),
+  offset: intParam("0"),
+});
+
+/**
+ * `parseInt(get(key) || fallback)` with no radix, as the reports handler
+ * called it, then its fallback for NaN or a negative value.
+ */
+const nonNegativeIntParam = (fallback: number, max?: number) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => {
+      const raw = parseInt(value || String(fallback));
+      if (isNaN(raw) || raw < 0) return fallback;
+      return max === undefined ? raw : Math.min(raw, max);
+    });
+
+/** GET /api/admin/reports */
+export const ReportsQuery = z.object({
+  status: getParam(),
+  event_id: getParam(),
+  limit: nonNegativeIntParam(50, 100),
+  offset: nonNegativeIntParam(0),
+});
+
+/**
+ * GET /api/admin/audit-log. page is `parseInt(get("page") || "1")` with no
+ * radix; page=0 still yields a negative offset in the route (06-07 P2).
+ */
+export const AuditLogQuery = z.object({
+  action: getParam(),
+  page: z
+    .string()
+    .optional()
+    .transform((value) => parseInt(value || "1")),
+});
+
+/** GET /api/admin/organizers: `?? ""` and `?? "all"`, so an empty value stays empty. */
+export const OrganizersQuery = z.object({
+  search: paramOrNullish(""),
+  status: paramOrNullish("all"),
+});
+
+/** POST /api/admin/calculate-popularity: one event, or all approved ones. */
+export const CalculatePopularityQuery = z.object({
+  event_id: getParam(),
+});
+
+// ─── GET /api/moderation/reviews/[targetType]/[targetId] (route params) ──────
+
+/** The one 400 this route answers; the target id is used as sent. */
+export const ReviewTargetParams = z.object({
+  targetType: z.enum(["event", "club"], { error: "Invalid target type" }),
+  targetId: z.string(),
+});
+
+export type ReviewTargetParamsOutput = z.infer<typeof ReviewTargetParams>;

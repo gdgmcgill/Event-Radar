@@ -13,6 +13,8 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { readQuery } from "@/server/body";
+import { CalculatePopularityQuery } from "@/contracts/admin";
 import { getElevatedClient } from "@/server/db/elevated";
 
 /**
@@ -48,8 +50,10 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const specificEventId = searchParams.get("event_id");
+    const { event_id: specificEventId } = readQuery(
+      request.nextUrl.searchParams,
+      CalculatePopularityQuery
+    );
 
     // The recompute writes event_popularity_scores, which are service-role
     // only by design (F-010). REGISTRY.md row: popularity recompute.

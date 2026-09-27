@@ -4,6 +4,8 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { hasRole } from "@/lib/roles";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
+import { parseWith } from "@/server/body";
+import { ReviewTargetParams } from "@/contracts/admin";
 
 export async function GET(
   _request: NextRequest,
@@ -14,11 +16,10 @@ export async function GET(
   if (!auth.ok) return auth.response;
   const user = auth.user;
 
-  const { targetType, targetId } = await params;
-
-  if (!["event", "club"].includes(targetType)) {
-    return NextResponse.json({ error: "Invalid target type" }, { status: 400 });
-  }
+  // "Invalid target type" unless event or club; the id is used as sent.
+  const target = parseWith(ReviewTargetParams, await params);
+  if (!target.ok) return target.response;
+  const { targetType, targetId } = target.data;
 
   // The target read and the review listing run on the caller's cookie client:
   // "Anyone can read clubs", "Organizers can view own events", "Admins can

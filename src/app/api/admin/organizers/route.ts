@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { readQuery } from "@/server/body";
+import { OrganizersQuery } from "@/contracts/admin";
 
 export async function GET(request: NextRequest) {
   const ctx = await createRequestContext();
@@ -10,9 +12,10 @@ export async function GET(request: NextRequest) {
   const auth = requireRole(ctx, "admin");
   if (!auth.ok) return auth.response;
 
-  const { searchParams } = request.nextUrl;
-  const search = searchParams.get("search") ?? "";
-  const status = searchParams.get("status") ?? "all";
+  const { search, status } = readQuery(
+    request.nextUrl.searchParams,
+    OrganizersQuery
+  );
 
   // Every read here is permitted to an admin on the cookie client ("Admins can
   // view all profiles", "Admins manage memberships", "Admins can view all

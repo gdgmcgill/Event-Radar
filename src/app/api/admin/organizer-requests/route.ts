@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { readQuery } from "@/server/body";
+import { OrganizerRequestsQuery } from "@/contracts/admin";
 
 export async function GET(request: NextRequest) {
   const ctx = await createRequestContext();
@@ -12,10 +14,10 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const supabase = ctx.supabase;
 
-  const searchParams = request.nextUrl.searchParams;
-  const status = searchParams.get("status") || "pending";
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
+  const { status, limit, offset } = readQuery(
+    request.nextUrl.searchParams,
+    OrganizerRequestsQuery
+  );
 
   let query = supabase
     .from("organizer_requests")

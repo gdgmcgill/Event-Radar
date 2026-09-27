@@ -4,8 +4,8 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
-import { parseBody } from "@/server/body";
-import { AdminEventCreateBody } from "@/contracts/admin";
+import { parseBody, readQuery } from "@/server/body";
+import { AdminEventCreateBody, AdminEventsQuery } from "@/contracts/admin";
 import { computeEventContentHash } from "@/lib/contentHash";
 
 type MetricsSortField = "popularity_score" | "trending_score" | "view_count" | "click_count" | "save_count";
@@ -30,16 +30,17 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const supabase = ctx.supabase;
 
-  const searchParams = request.nextUrl.searchParams;
-  const status = searchParams.get("status");
-  const search = searchParams.get("search");
-  const sortBy = searchParams.get("sort") || "created_at";
-  const sortDir = searchParams.get("direction") || "desc";
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
-
-  // Support viewing deleted events for audit
-  const includeDeleted = searchParams.get("includeDeleted") === "true";
+  // Today's defaults and silent coercion (NaN kept), never a 400; deleted
+  // events are included for audit only on includeDeleted=true.
+  const {
+    status,
+    search,
+    sort: sortBy,
+    direction: sortDir,
+    limit,
+    offset,
+    includeDeleted,
+  } = readQuery(request.nextUrl.searchParams, AdminEventsQuery);
 
   const sortByMetric = METRICS_SORT_FIELDS.has(sortBy);
 

@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { readQuery } from "@/server/body";
+import { ReportsQuery } from "@/contracts/admin";
 
 export async function GET(request: NextRequest) {
   const ctx = await createRequestContext();
@@ -11,13 +13,14 @@ export async function GET(request: NextRequest) {
   const auth = requireRole(ctx, "admin");
   if (!auth.ok) return auth.response;
 
-  const url = request.nextUrl;
-  const status = url.searchParams.get("status");
-  const eventId = url.searchParams.get("event_id");
-  const rawLimit = parseInt(url.searchParams.get("limit") || "50");
-  const limit = isNaN(rawLimit) || rawLimit < 0 ? 50 : Math.min(rawLimit, 100);
-  const rawOffset = parseInt(url.searchParams.get("offset") || "0");
-  const offset = isNaN(rawOffset) || rawOffset < 0 ? 0 : rawOffset;
+  // A NaN or negative limit or offset falls back to 50 or 0; limit is
+  // capped at 100 (src/contracts/admin.ts). Never a 400.
+  const {
+    status,
+    event_id: eventId,
+    limit,
+    offset,
+  } = readQuery(request.nextUrl.searchParams, ReportsQuery);
 
   // "Admins can read all reports", "Admins can view all events" and "Admins
   // can view all profiles" permit every read here on the cookie client, so no

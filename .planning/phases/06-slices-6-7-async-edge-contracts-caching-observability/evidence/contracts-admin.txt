@@ -1,0 +1,412 @@
+contracts-admin — admin and moderation families on zod contracts; contracts census to zero
+**Plan:** 06-10 · **Phase:** 06-slices-6-7-async-edge-contracts-caching-observability · **Recorded:** 2026-09-27
+Base commit: 8b6ee8f (06-09's metadata commit). Task 1 commit: f869323. Task 2: the commit carrying this file.
+Scratchpad paths are shown as <scratch>. Every command below was run verbatim; exit codes are as printed.
+
+SUMMARY
+- Task 1: src/contracts/admin.ts (13 body schemas + ModerationReason), CanonicalId in src/contracts/common.ts,
+  13 admin route files on parseBody/parseWith, the four DI-53 payloads typed TablesUpdate<>, the ban and
+  role-change self-checks on canonical ids. 22 DEFECT rows moved (five-step protocol, section 3), one
+  PRESERVE-table row added for admin/events/[id] PUT (section 2), 24 ledger rows. Allow-list 20 entries/33
+  sites -> 7/20.
+- Task 2: 7 admin list query schemas read through readQuery (no 400 branch, no new 400), ReviewTargetParams
+  through parseWith at moderation/reviews. Allow-list 7/20 -> [] ; census committed=0 live=0.
+- Early DEC-80 signal: npx tsc --noEmit on @supabase/supabase-js 2.116.0 in a throwaway worktree: exit 0,
+  0 errors (DI-53's four TS2345 sites are cleared). Main tree untouched: package.json and package-lock.json
+  byte-identical, node_modules on 2.81.1, one worktree line.
+- Playwright, six specs, fresh reset and seed: 32 passed, exit 0.
+
+==============================================================================
+1. Task 1 RED — src/contracts/__tests__/admin.test.ts before src/contracts/admin.ts existed
+$ npx jest --ci src/contracts/__tests__/admin.test.ts        exit 1
+FAIL node src/contracts/__tests__/admin.test.ts
+  ● Test suite failed to run
+
+    Configuration error:
+
+    Could not locate module @/contracts/admin mapped as:
+    src/$1.
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+
+Contracts written, routes not yet adopted (the two route-level upper-case own-id rows stay red:
+the pre-fix ban route answers 404 User not found and the role change 500, because the fake, like the
+string compare, does not match the upper-case id; Postgres would have matched it and written):
+$ npx jest --ci src/contracts/__tests__/admin.test.ts        exit 1
+    ✕ ban POST: 400 Cannot ban your own account, nothing written (9 ms)
+    ✕ role change PATCH: 403 You cannot change your own roles, nothing written (2 ms)
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 107 passed, 109 total
+
+==============================================================================
+2. PRESERVE: bad-request-characterization P0 and the one added table row
+After adoption, P0 ('every route file that can answer a 400 has a row here or a named suite elsewhere')
+went red on one route: admin/events/[id] now calls parseBody( and answers its first 400s (F-094); it
+answered none before, so it had no row.
+  ● P0: the table covers the tree › every route file that can answer a 400 has a row here or a named suite elsewhere
+    +   "admin/events/[id]",
+Test Suites: 1 failed, 5 passed, 6 total
+Tests:       1 failed, 457 passed, 458 total
+Resolution: one row ADDED to src/__tests__/contracts/badRequestTable.ts, 'admin event PUT: title not a
+string' -> 400 {"error":"title must be a string"}, measured on the adopted handler. The test file
+bad-request-characterization.test.ts is unedited; no row was removed or changed (ledger row 24).
+$ npx jest --ci src/contracts/__tests__/admin.test.ts src/__tests__/contracts/bad-request-characterization.test.ts src/__tests__/api/admin   exit 0
+Test Suites: 6 passed, 6 total
+Tests:       459 passed, 459 total
+$ git diff --exit-code --stat -- src/__tests__/contracts/bad-request-characterization.test.ts src/__tests__/api/admin   exit 0 (empty)
+$ git diff --stat aa04365 -- src/__tests__/contracts/bad-request-characterization.test.ts src/__tests__/api/admin/admin-guard-characterization.test.ts   exit 0 (empty)
+
+==============================================================================
+3. Ledger protocol — src/__tests__/contracts/malformed-input-defect.test.ts (F-094)
+Step 1, the unedited suite on the pre-fix tree:   exit 0
+Test Suites: 1 passed, 1 total
+Tests:       73 passed, 73 total
+Step 2, the fix applied, the suite unedited:       exit 1
+    ✕ RAW_SITES covers every raw request.json() in a route file (6 sites) (7 ms)
+    ✕ RJO_SITES is every route file calling readJsonObject (7) (3 ms)
+    ✕ admin/experiments/[id] PATCH (54 ms)
+    ✕ admin/experiments POST (1 ms)
+    ✕ admin/featured POST (1 ms)
+    ✕ admin/events POST (1 ms)
+    ✕ admin/featured/[id] PATCH
+    ✕ admin/events/[id] PUT (1 ms)
+    ✕ admin/experiments/[id] PATCH (1 ms)
+    ✕ admin/experiments POST
+    ✕ admin/featured POST (1 ms)
+    ✕ admin/events POST
+    ✕ admin/featured/[id] PATCH
+    ✕ admin/events/[id] PUT (1 ms)
+    ✕ admin/experiments/[id] PATCH
+    ✕ admin/experiments POST
+    ✕ admin/featured POST
+    ✕ admin/events POST
+    ✕ admin/featured/[id] PATCH (1 ms)
+    ✕ admin/events/[id] PUT
+    ✕ admin/clubs/[id] PATCH (1 ms)
+    ✕ admin/events/[id]/status PATCH (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       22 failed, 51 passed, 73 total
+Step 3, the rows moved:                           exit 0
+Test Suites: 1 passed, 1 total
+Tests:       73 passed, 73 total
+Step 4, the 13 pre-fix route files swapped in against the moved suite:   exit 1
+    ✕ RAW_SITES covers every raw request.json() in a route file (none after 06-10) (14 ms)
+    ✕ RJO_SITES is every route file calling readJsonObject (none after 06-10) (3 ms)
+    ✕ the adopted sites read their body through parseBody and nothing raw (06-08, 06-09, 06-10) (2 ms)
+    ✕ admin/experiments/[id] PATCH (4 ms)
+    ✕ admin/experiments POST (1 ms)
+    ✕ admin/featured POST (4 ms)
+    ✕ admin/events POST (2 ms)
+    ✕ admin/featured/[id] PATCH (1 ms)
+    ✕ admin/events/[id] PUT (1 ms)
+    ✕ admin/experiments/[id] PATCH (1 ms)
+    ✕ admin/experiments POST
+    ✕ admin/featured POST
+    ✕ admin/events POST
+    ✕ admin/featured/[id] PATCH
+    ✕ admin/events/[id] PUT
+    ✕ admin/experiments/[id] PATCH
+    ✕ admin/experiments POST
+    ✕ admin/featured POST
+    ✕ admin/events POST (2 ms)
+    ✕ admin/featured/[id] PATCH
+    ✕ admin/events/[id] PUT
+    ✕ admin/clubs/[id] PATCH (1 ms)
+    ✕ admin/events/[id]/status PATCH (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       23 failed, 50 passed, 73 total
+Restore, then cmp against the saved fixed sources:
+cmp exit=0 src/app/api/admin/clubs/[id]/route.ts
+cmp exit=0 src/app/api/admin/events/[id]/edits/route.ts
+cmp exit=0 src/app/api/admin/events/[id]/route.ts
+cmp exit=0 src/app/api/admin/events/[id]/status/route.ts
+cmp exit=0 src/app/api/admin/events/route.ts
+cmp exit=0 src/app/api/admin/experiments/[id]/route.ts
+cmp exit=0 src/app/api/admin/experiments/route.ts
+cmp exit=0 src/app/api/admin/featured/[id]/route.ts
+cmp exit=0 src/app/api/admin/featured/route.ts
+cmp exit=0 src/app/api/admin/organizer-requests/[id]/route.ts
+cmp exit=0 src/app/api/admin/reports/[id]/route.ts
+cmp exit=0 src/app/api/admin/users/[id]/ban/route.ts
+cmp exit=0 src/app/api/admin/users/[id]/route.ts
+Step 5: the PRESERVE suites (bad-request-characterization, admin-guard-characterization) passed unedited
+throughout (section 2).
+
+Moved: D0 x3 (RAW_SITES 6 -> 0, RJO_SITES 7 -> 0, adopted files 18 -> 31), D1 x6, D2 x6, D3 x8 (the 6 raw
+sites + admin/clubs/[id] and admin/events/[id]/status). Five D3 rows keep their outcome, now from the
+contract: edits action, organizer-request status, report status, ban reason, admin user name.
+
+Ledger rows appended (24, all F-094, hash filled by this commit):
+count=24
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: RAW_SITES) | the raw `request.json()` list is the tree at **6 sites** (6 files, all admin: experiments/[id] PATCH, experiments POST, featured POST, events POST, featured/[id] PATCH, events/[id] PUT) | the list is the tree at **0 sites**; the six moved to `ADOPTED_RAW_SITES` (they read through `parseBody` with the `src/contracts/admin.ts` schemas) | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: RJO_SITES) | the `readJsonObject` file list is the tree at **7** files (admin/clubs/[id], events/[id]/edits, events/[id]/status, organizer-requests/[id], reports/[id], users/[id]/ban, users/[id]) | the list is the tree at **0**; the seven moved to `ADOPTED_RJO_SITES` | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: the adopted sites read through parseBody) | **18** adopted route files | **31**: the 13 admin files added (`parseBody(request, ` with no raw read or `readJsonObject(`) | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: admin/experiments/[id] PATCH, not JSON) | rejected handler promise from the raw read (no outer try: Next's HTML 500, F-058) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `ExperimentUpdateBody`, after the admin guards), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: admin/experiments POST, not JSON) | rejected handler promise from the raw read (no outer try: Next's HTML 500, F-058) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `ExperimentCreateBody`, after the admin guards), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: admin/featured POST, not JSON) | **500** `{"error":"Failed to create featured event"}` (the raw read threw inside the try) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `FeaturedCreateBody`, after the admin guards), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: admin/events POST, not JSON) | rejected handler promise from the raw read (no outer try: Next's HTML 500, F-058) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `AdminEventCreateBody`, after the admin guards), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: admin/featured/[id] PATCH, not JSON) | **500** `{"error":"Failed to update featured event"}` (the raw read threw inside the try) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `FeaturedUpdateBody`, after the admin guards), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: admin/events/[id] PUT, not JSON) | rejected handler promise from the raw read (no outer try: Next's HTML 500, F-058) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `AdminEventPutBody`, after the admin guards), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: admin/experiments/[id] PATCH, array) | **200**, the experiment updated with nothing but `updated_at` (`experiments.update`) | **400** `{"error":"Request body must be a JSON object"}`, no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: admin/experiments POST, array) | **400** `{"error":"name is required"}` (an array read as an object with no keys) | **400** `{"error":"Request body must be a JSON object"}`, no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: admin/featured POST, array) | **400** `{"error":"event_id, starts_at, and ends_at are required"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: admin/events POST, array) | **400** `{"error":"title, start_date, and end_date are required"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: admin/featured/[id] PATCH, array) | **400** `{"error":"No fields to update"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: admin/events/[id] PUT, array) | **200**, the event updated with nothing but `updated_at` and an audit row (`events.update`, `admin_audit_log.insert`) | **400** `{"error":"Request body must be a JSON object"}`, no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: admin/experiments/[id] PATCH, numeric `status`) | **200**, the number written as the status (`experiments.update`) | **400** `{"error":"Invalid status"}` (new text: `ExperimentUpdateBody`'s status is the table's check-constraint enum), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: admin/experiments POST, numeric `name`) | **201**, the number written as the name (`experiments.insert`, `experiment_variants.insert`) | **400** `{"error":"name is required"}` (`ExperimentCreateBody`), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: admin/featured POST, numeric `sponsor_name`) | **201**, `sponsor_name: "5"` (`sanitizeText` coerced the number), with an audit row | **400** `{"error":"sponsor_name must be a string"}` (new text: none existed), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: admin/events POST, numeric `title`) | **201**, the event inserted with `title: "5"` (`sanitizeText` coerced the number), with an audit row | **400** `{"error":"title, start_date, and end_date are required"}` (`AdminEventCreateBody`), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: admin/featured/[id] PATCH, numeric `sponsor_name`) | **200**, `sponsor_name: "5"` written, with an audit row | **400** `{"error":"sponsor_name must be a string"}` (`FeaturedUpdateBody`), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: admin/events/[id] PUT, numeric `title`) | **200**, the number written as the title, with an audit row | **400** `{"error":"title must be a string"}` (new text: `AdminEventUpdateBody` types each field as its events column), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: admin/clubs/[id] PATCH, rejection with numeric `message`) | rejected handler promise, `rejectionMessage?.trim is not a function` (no outer try: Next's HTML 500, F-058) | **400** `{"error":"Rejection requires category and message"}` (`AdminClubDecisionBody` → `ModerationReason`), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: admin/events/[id]/status PATCH, rejection with numeric `message`) | rejected handler promise, `message?.trim is not a function` (after the transition guard; no outer try) | **400** `{"error":"Rejection requires category and message"}` (`ModerationReason`, parsed after the transition guard as before), no write | `f869323` | 06-10 |
+| F-094 | `src/__tests__/contracts/badRequestTable.ts` (row added: `admin event PUT: title not a string`, read by the unedited `bad-request-characterization.test.ts` P0 and P1) | no row: `admin/events/[id]` PUT answered no 400, so P0 did not count it (the D3 row above pinned its 200) | **400** `{"error":"title must be a string"}`, measured on the adopted handler. An addition, not a move: P0 counts every route file that calls `parseBody(`, and this route gained its first 400 (F-094); no PRESERVE row was removed or edited | `f869323` | 06-10 |
+
+==============================================================================
+4. Task 1 <verify>: npx jest --ci src/contracts src/__tests__/api/admin src/__tests__/contracts && npx tsc --noEmit && npm run lint
+Test Suites: 11 passed, 11 total
+Tests:       905 passed, 905 total
+jest exit=0
+tsc exit=0
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+lint exit=0
+Acceptance greps (grep -c 'TablesUpdate<' per DI-53 file; CanonicalId at both self-checks; gates):
+src/app/api/admin/events/[id]/edits/route.ts:1
+src/app/api/admin/events/[id]/route.ts:1
+src/app/api/admin/experiments/[id]/route.ts:1
+src/app/api/admin/featured/[id]/route.ts:1
+---
+src/app/api/admin/users/[id]/route.ts:10:import { CanonicalId } from "@/contracts/common";
+src/app/api/admin/users/[id]/route.ts:30:  const id = CanonicalId.parse((await params).id);
+src/app/api/admin/users/[id]/route.ts:52:    if (id === CanonicalId.parse(auth.user.id)) {
+src/app/api/admin/users/[id]/ban/route.ts:9:import { CanonicalId } from "@/contracts/common";
+src/app/api/admin/users/[id]/ban/route.ts:30:  const id = CanonicalId.parse((await params).id);
+src/app/api/admin/users/[id]/ban/route.ts:46:  if (id === CanonicalId.parse(user.id)) {
+$ node scripts/check-characterization-tags.mjs --all   -> ok 54 files, exit 0
+$ node scripts/check-elevated-ratchet.mjs            -> committed=0 live=0 delta=0, exit 0
+$ node scripts/check-contracts.mjs (after Task 1)    -> committed=20 live=20 delta=0, exit 0
+
+==============================================================================
+5. Task 2 RED — the query rows before the schemas existed
+$ npx jest --ci src/contracts/__tests__/admin.test.ts        exit 1
+    ✕ defaults as the handler did
+    ✕ limit=abc
+    ✕ limit=500
+    ✕ limit=5.9
+    ✕ limit=
+    ✕ offset=-3
+    ✕ offset=x
+    ✕ sort=
+    ✕ sort=trending_score&direction=asc
+    ✕ includeDeleted=1
+    ✕ includeDeleted=true
+    ✕ status=all&search=
+    ✕ status=a&status=b
+    ✕ admin/clubs: status defaults to pending; an unknown status is passed on (06-07 P2)
+    ✕ admin/organizer-requests: pending, 50, 0; offset=abc is NaN (06-07 P2)
+    ✕ admin/reports: limit and offset fall back when negative or NaN (06-07 P2)
+    ✕ admin/audit-log: page defaults to 1; page=0 is 0 (06-07 P2: a negative offset)
+    ✕ admin/organizers: search defaults to '', status to all, an empty status stays empty
+    ✕ admin/calculate-popularity: event_id as sent, or null
+    ✕ targetType "user" -> Invalid target type
+    ✕ targetType "" -> Invalid target type
+    ✕ targetType "Event" -> Invalid target type
+    ✕ targetType "events" -> Invalid target type
+    ✕ keeps the target id as sent (no new 400 for a malformed id)
+Test Suites: 1 failed, 1 total
+Tests:       24 failed, 109 passed, 133 total
+GREEN:
+$ npx jest --ci src/contracts/__tests__/admin.test.ts        exit 0
+Test Suites: 1 passed, 1 total
+Tests:       133 passed, 133 total
+
+==============================================================================
+6. The census at zero
+$ grep -rn 'searchParams.(get|getAll|has)(|readJsonObject(|request.json()|req.json()|.formData()' src/app --include=route.ts | grep -v src/app/auth/callback
+(no output)
+Before writing the list (after adoption):
+$ node scripts/check-contracts.mjs        exit 0
+committed=20 live=0 delta=-20
+retired=7 (the list shrank — this is the intended direction; delete these entries)
+  - src/app/api/admin/audit-log/route.ts R3 2 -> 0
+  - src/app/api/admin/calculate-popularity/route.ts R3 1 -> 0
+  - src/app/api/admin/clubs/route.ts R3 1 -> 0
+  - src/app/api/admin/events/route.ts R3 7 -> 0
+  - src/app/api/admin/organizer-requests/route.ts R3 3 -> 0
+  - src/app/api/admin/organizers/route.ts R3 2 -> 0
+  - src/app/api/admin/reports/route.ts R3 4 -> 0
+PASS: the live census is within the committed allow-list
+$ printf '[]\n' > scripts/contracts-allowlist.json
+$ node scripts/check-contracts.mjs        exit 0
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+$ node -e 'process.exit(require("./scripts/contracts-allowlist.json").length===0?0:1)'   exit 0
+
+==============================================================================
+7. Early DEC-80 signal — supabase-js 2.116.0 in a throwaway worktree (the formal proof is 06-18's)
+Method: DEC-28 / DI-25 (Phase 5 evidence/di-25-bump.txt): a detached worktree of HEAD (f869323, Task 1,
+which holds all four DI-53 retypes) OUTSIDE the repository, with the uncommitted Task 2 diff applied so
+the check covers exactly what this commit holds; npm ci; tsc on 2.81.1; npm install --no-save 2.116.0;
+tsc again; jest as a second signal; then the worktree is force-removed and pruned.
+VERDICT: 0 errors. tsc on 2.116.0 exits 0; DI-53's four TS2345 sites (edits:76, events/[id]:46,
+experiments/[id]:109, featured/[id]:48 at dc75656) are cleared. The bump itself is 06-18's.
+[1 · create the throwaway worktree]
+$ git worktree add --detach <scratch>/di53-early HEAD
+Preparing worktree (detached HEAD f869323)
+HEAD is now at f869323 refactor(06-10): admin contracts, typed payloads for DI-53, canonical ids (REFAC-15, F-094)
+exit=0
+HEAD=f869323dc87fa8cbae1727a52baaa08214fa723e
+$ git apply <the uncommitted Task 2 diff> (in the worktree)
+exit=0
+ M scripts/contracts-allowlist.json
+ M src/app/api/admin/audit-log/route.ts
+ M src/app/api/admin/calculate-popularity/route.ts
+ M src/app/api/admin/clubs/route.ts
+ M src/app/api/admin/events/route.ts
+ M src/app/api/admin/organizer-requests/route.ts
+ M src/app/api/admin/organizers/route.ts
+ M src/app/api/admin/reports/route.ts
+ M src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts
+ M src/contracts/__tests__/admin.test.ts
+ M src/contracts/admin.ts
+[2 · npm ci in the worktree (tail)]
+$ npm ci
+exit=0
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+[3 · versions and tsc BEFORE the bump]
+$ npm ls @supabase/supabase-js @supabase/postgrest-js
+uni-verse@0.1.0 /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/***/scratchpad/di53-early
+├─┬ @supabase/ssr@0.7.0
+│ └── @supabase/supabase-js@2.81.1 deduped
+└─┬ @supabase/supabase-js@2.81.1
+  └── @supabase/postgrest-js@2.81.1
+
+exit=0
+$ npx tsc --noEmit   # BEFORE the bump, in the worktree
+exit=0
+[4 · the no-save install]
+$ npm install --no-save @supabase/supabase-js@2.116.0
+exit=0
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+$ npm ls @supabase/supabase-js @supabase/postgrest-js
+uni-verse@0.1.0 /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/***/scratchpad/di53-early
+├─┬ @supabase/ssr@0.7.0
+│ └── @supabase/supabase-js@2.116.0 deduped
+└─┬ @supabase/supabase-js@2.116.0
+  └── @supabase/postgrest-js@2.116.0
+
+exit=0
+$ git status --porcelain -- package.json package-lock.json   # in the worktree
+exit=0
+[5 · tsc AFTER the bump — full diagnostic output]
+$ npx tsc --noEmit   # AFTER the bump
+exit=0
+error lines: 0
+[6 · jest in the worktree on 2.116.0, second signal]
+$ npx jest --ci
+exit=0
+Test Suites: 1 skipped, 116 passed, 116 of 117 total
+Tests:       1 skipped, 2877 passed, 2878 total
+Snapshots:   0 total
+[7 · remove the throwaway worktree]
+$ git worktree remove --force <scratch>/di53-early
+exit=0
+$ git worktree prune
+exit=0
+$ git worktree list
+/Users/adyan/Documents/GitHub/Event-Radar f869323 [main]
+exit=0
+$ git worktree list | wc -l
+       1
+[8 · the main tree is untouched]
+$ git diff --exit-code -- package.json package-lock.json
+exit=0
+$ npm ls @supabase/supabase-js (main tree)
+uni-verse@0.1.0 /Users/adyan/Documents/GitHub/Event-Radar
+├─┬ @supabase/ssr@0.7.0
+│ └── @supabase/supabase-js@2.81.1 deduped
+└── @supabase/supabase-js@2.81.1
+
+$ node -p "require('@supabase/supabase-js/package.json').version"
+2.81.1
+"<scratch>/di53-early": No such file or directory (os error 2)
+
+==============================================================================
+8. Playwright — the six admin and moderation specs from a fresh reset and seed
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN
+exit=1
+$ supabase db reset --local
+exit=0
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   # after
+exit=1
+$ npx playwright test e2e/specs/admin-guard.spec.ts e2e/specs/admin-write-paths.spec.ts e2e/specs/admin-moderation-queue.spec.ts e2e/specs/admin-audit-row.spec.ts e2e/specs/event-moderation-notifications.spec.ts e2e/specs/async-edge.spec.ts --reporter=list
+[WebServer] ✓ Compiled successfully in 2.3s
+Running 32 tests using 1 worker
+  ✓   1 [setup] › e2e/auth.setup.ts:59:18 › authenticate as onboarded_student (393ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:18 › authenticate as mid_onboarding_student (285ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_member (243ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_owner (237ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:18 › authenticate as multi_club_organizer (241ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:18 › authenticate as cross_club_attacker (240ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:18 › authenticate as admin (471ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:18 › authenticate as banned_permanent (208ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspended_active (207ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspension_expired (223ms)
+  ✓  11 [chromium] › e2e/specs/admin-audit-row.spec.ts:114:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-073: approving the fixture writes exactly one audit row (160ms)
+  ✓  12 [chromium] › e2e/specs/admin-audit-row.spec.ts:134:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-072: Recent Activity shows the action and the actor by name (502ms)
+  ✓  13 [chromium] › e2e/specs/admin-guard.spec.ts:43:7 › an anonymous caller › FIXED F-061: anonymous admin call answers 401 (6ms)
+  ✓  14 [chromium] › e2e/specs/admin-guard.spec.ts:62:7 › an onboarded student › PRESERVE: a non-admin gets 403 Forbidden (105ms)
+  ✓  15 [chromium] › e2e/specs/admin-guard.spec.ts:70:7 › an admin › PRESERVE: the admin gets 200 with the stats body (105ms)
+  ✓  16 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:29:18 › an admin › reaches the moderation surface and sees the pending event and pending club (484ms)
+  ✓  17 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:40:18 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  18 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:69:18 › a student › does not reach the moderation queue (237ms)
+  ✓  19 [chromium] › e2e/specs/admin-write-paths.spec.ts:222:7 › admin writes through their split clients (DEC-49) › approving a pending club: approved, owner membership, organizer role, notification (133ms)
+  ✓  20 [chromium] › e2e/specs/admin-write-paths.spec.ts:252:7 › admin writes through their split clients (DEC-49) › resolving a report: status and reviewer change (114ms)
+  ✓  21 [chromium] › e2e/specs/admin-write-paths.spec.ts:267:7 › admin writes through their split clients (DEC-49) › approving an organizer request: approved, organizer membership, notification (122ms)
+  ✓  22 [chromium] › e2e/specs/admin-write-paths.spec.ts:298:7 › admin writes through their split clients (DEC-49) › banning with suspend_content: banned, own club suspended with a review, notification (126ms)
+  ✓  23 [chromium] › e2e/specs/admin-write-paths.spec.ts:335:7 › admin writes through their split clients (DEC-49) › unbanning: banned_at and ban_expires_at are cleared (120ms)
+  ✓  24 [chromium] › e2e/specs/async-edge.spec.ts:59:5 › FIXED F-028: an anonymous notifications count answers 401 (2ms)
+  ✓  25 [chromium] › e2e/specs/async-edge.spec.ts:98:7 › FIXED F-092: the admin reports list › a student's report reaches the admin list with the reporter's name (77ms)
+  ✓  26 [chromium] › e2e/specs/async-edge.spec.ts:197:7 › FIXED F-017: a non-admin is assigned an A/B variant › the student's recommendations assign exactly one variant, keyed by the student (126ms)
+  ✓  27 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:129:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › an approval writes exactly one event_approved notification (127ms)
+  ✓  28 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:136:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a suspension writes one event_suspended notification (115ms)
+  ✓  29 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:143:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second approval refreshes the one event_approved row, unread again (122ms)
+  ✓  30 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:156:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second suspension refreshes the one event_suspended row with the new reason (114ms)
+  ✓  31 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:165:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › the creator's appeal through the real route passes the events guard (+1) (53ms)
+  ✓  32 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:191:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a rejection after the appeal writes one event_rejected notification (114ms)
+  32 passed (17.6s)
+playwright exit=0
+
+==============================================================================
+9. Task 2 <verify>: node scripts/check-contracts.mjs | grep -E 'committed=0 live=0' && node -e '...length===0...' && npx jest --ci && npx tsc --noEmit
+committed=0 live=0 delta=0
+Test Suites: 1 skipped, 116 passed, 116 of 117 total
+Tests:       1 skipped, 2877 passed, 2878 total
+Snapshots:   0 total
+verify exit=0
+$ npm run lint
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+lint exit=0
+(the 18 warnings are the pre-existing set, in the same 13 files; none in a file this plan touched)
+$ node scripts/check-characterization-tags.mjs --all   -> ok 54 files, exit 0
+$ node scripts/check-elevated-ratchet.mjs            -> committed=0 live=0 delta=0, exit 0

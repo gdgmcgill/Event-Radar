@@ -21,7 +21,7 @@
  */
 
 import { z } from "zod";
-import { parseWith } from "@/server/body";
+import { parseWith, readQuery } from "@/server/body";
 import type { TablesUpdate } from "@/lib/supabase/types";
 import { CanonicalId } from "@/contracts/common";
 import {
@@ -41,6 +41,14 @@ import {
   ModerationReason,
   OrganizerRequestDecisionBody,
   ReportDecisionBody,
+  AdminClubsQuery,
+  AdminEventsQuery,
+  AuditLogQuery,
+  CalculatePopularityQuery,
+  OrganizerRequestsQuery,
+  OrganizersQuery,
+  ReportsQuery,
+  ReviewTargetParams,
 } from "@/contracts/admin";
 import {
   createFakeSupabase,
@@ -525,6 +533,109 @@ describe("AdminUserUpdateBody then AdminUserNameBody (admin/users/[id] PATCH)", 
   it("the name is trimmed; an absent name stays absent", async () => {
     expect(await accepted(AdminUserNameBody, { name: "  Ada  " })).toEqual({ name: "Ada" });
     expect(await accepted(AdminUserNameBody, { roles: ["user"] })).toEqual({});
+  });
+});
+
+// ─── The admin list queries (Task 2): today's defaults, no new 400 ─────────
+
+/** readQuery over a query string, exactly as the route hands it over. */
+function q<S extends z.ZodType>(schema: S, query: string): z.output<S> {
+  return readQuery(new URLSearchParams(query), schema);
+}
+
+describe("AdminEventsQuery (admin/events GET)", () => {
+  it("defaults as the handler did", () => {
+    expect(q(AdminEventsQuery, "")).toEqual({
+      status: null,
+      search: null,
+      sort: "created_at",
+      direction: "desc",
+      limit: 50,
+      offset: 0,
+      includeDeleted: false,
+    });
+  });
+
+  it.each([
+    // the 06-07 P2 row: limit=abc becomes a NaN range
+    ["limit=abc", { limit: Number.NaN }],
+    ["limit=500", { limit: 100 }],
+    ["limit=5.9", { limit: 5 }],
+    ["limit=", { limit: 50 }],
+    ["offset=-3", { offset: -3 }],
+    ["offset=x", { offset: Number.NaN }],
+    ["sort=", { sort: "created_at" }],
+    ["sort=trending_score&direction=asc", { sort: "trending_score", direction: "asc" }],
+    ["includeDeleted=1", { includeDeleted: false }],
+    ["includeDeleted=true", { includeDeleted: true }],
+    ["status=all&search=", { status: "all", search: "" }],
+    ["status=a&status=b", { status: "a" }],
+  ])("%s", (query, expected) => {
+    expect(q(AdminEventsQuery, query)).toMatchObject(expected);
+  });
+});
+
+describe("the other admin list queries", () => {
+  it("admin/clubs: status defaults to pending; an unknown status is passed on (06-07 P2)", () => {
+    expect(q(AdminClubsQuery, "")).toEqual({ status: "pending" });
+    expect(q(AdminClubsQuery, "status=")).toEqual({ status: "pending" });
+    expect(q(AdminClubsQuery, "status=banana")).toEqual({ status: "banana" });
+  });
+
+  it("admin/organizer-requests: pending, 50, 0; offset=abc is NaN (06-07 P2)", () => {
+    expect(q(OrganizerRequestsQuery, "")).toEqual({ status: "pending", limit: 50, offset: 0 });
+    expect(q(OrganizerRequestsQuery, "offset=abc&limit=999")).toEqual({
+      status: "pending",
+      limit: 100,
+      offset: Number.NaN,
+    });
+  });
+
+  it("admin/reports: limit and offset fall back when negative or NaN (06-07 P2)", () => {
+    expect(q(ReportsQuery, "")).toEqual({ status: null, event_id: null, limit: 50, offset: 0 });
+    expect(q(ReportsQuery, "limit=-5&offset=-3")).toMatchObject({ limit: 50, offset: 0 });
+    expect(q(ReportsQuery, "limit=abc&offset=x")).toMatchObject({ limit: 50, offset: 0 });
+    expect(q(ReportsQuery, "limit=250&offset=7")).toMatchObject({ limit: 100, offset: 7 });
+    // parseInt with no radix, as the handler called it
+    expect(q(ReportsQuery, "limit=0x10")).toMatchObject({ limit: 16 });
+    expect(q(ReportsQuery, "status=pending&event_id=e1")).toMatchObject({
+      status: "pending",
+      event_id: "e1",
+    });
+  });
+
+  it("admin/audit-log: page defaults to 1; page=0 is 0 (06-07 P2: a negative offset)", () => {
+    expect(q(AuditLogQuery, "")).toEqual({ action: null, page: 1 });
+    expect(q(AuditLogQuery, "page=0&action=banned")).toEqual({ action: "banned", page: 0 });
+    expect(q(AuditLogQuery, "page=abc")).toEqual({ action: null, page: Number.NaN });
+    expect(q(AuditLogQuery, "page=0x2")).toEqual({ action: null, page: 2 });
+  });
+
+  it("admin/organizers: search defaults to '', status to all, an empty status stays empty", () => {
+    expect(q(OrganizersQuery, "")).toEqual({ search: "", status: "all" });
+    expect(q(OrganizersQuery, "status=&search=%20a")).toEqual({ search: " a", status: "" });
+    expect(q(OrganizersQuery, "status=banana")).toEqual({ search: "", status: "banana" });
+  });
+
+  it("admin/calculate-popularity: event_id as sent, or null", () => {
+    expect(q(CalculatePopularityQuery, "")).toEqual({ event_id: null });
+    expect(q(CalculatePopularityQuery, "event_id=")).toEqual({ event_id: "" });
+    expect(q(CalculatePopularityQuery, "event_id=abc")).toEqual({ event_id: "abc" });
+  });
+});
+
+describe("ReviewTargetParams (moderation/reviews/[targetType]/[targetId] GET)", () => {
+  it.each(["user", "", "Event", "events"])("targetType %j -> Invalid target type", async (targetType) => {
+    expect(
+      await refused(ReviewTargetParams, { targetType, targetId: "5eed0000-0000-4000-8000-0a70000000e1" })
+    ).toEqual({ error: "Invalid target type" });
+  });
+
+  it("keeps the target id as sent (no new 400 for a malformed id)", async () => {
+    expect(await accepted(ReviewTargetParams, { targetType: "club", targetId: "not-a-uuid" })).toEqual({
+      targetType: "club",
+      targetId: "not-a-uuid",
+    });
   });
 });
 
