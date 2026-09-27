@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: executing
-stopped_at: Completed 06-13-PLAN.md
-last_updated: "2026-09-27T04:50:37.275Z"
+stopped_at: Completed 06-14-PLAN.md
+last_updated: "2026-09-27T05:18:16.985Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 80
-  completed_plans: 75
+  completed_plans: 76
   percent: 63
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 06 (Slices 6–7 — Async Edge, Contracts, Caching, Observability) — EXECUTING
-Plan: 14 of 18
+Plan: 15 of 18
 Status: Ready to execute
 Last activity: 2026-09-25 — Phase 06 execution started
 
@@ -129,6 +129,7 @@ Progress: [███████░░░] 73%
 | Phase 06 P11 | 23min | 2 tasks | 57 files |
 | Phase 06 P12 | 19min | 3 tasks | 28 files |
 | Phase 06 P13 | 17min | 2 tasks | 56 files |
+| Phase 06 P14 | 21min | 2 tasks | 64 files |
 
 ## Accumulated Context
 
@@ -353,6 +354,9 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-13: Two PRESERVE tree scans (admin-guard-characterization P0, write-handlers-characterization P0) read export async function; their tree comparisons moved out of PRESERVE to admin-arm-tree-defect and write-arm-tree-defect (both export forms, plus a withRoute after-shape) with ledger rows — The plan's must-have form (export const VERB = withRoute(...)) and its unedited-PRESERVE criterion cannot both hold: the regex finds no verb once a file is wrapped. The ledger's move-out-of-PRESERVE protocol keeps the completeness check alive for 06-14 while P0's length and uniqueness and every behaviour row stay in PRESERVE unedited. Reversible by the owner if a different resolution is preferred.
 - [Phase 06]: 06-13: A withRoute action is the route's existing Failed-to phrase where one exists, else a verb-noun phrase for the handler; a caught-error body becomes the route's generic text (per-item popularity errors: Failed to update popularity; appeal: Failed to submit appeal; organizer requests: Failed to create/fetch organizer request(s); moderation: Failed to fetch moderation reviews) — DEC-75 wants one error vocabulary with the cause logged, never returned; reusing a route's own Failed-to text keeps existing client copy, and the new texts follow the same shape.
 - [Phase 06]: 06-13: Public club reads: clubs/featured 200 keeps its bytes (public, s-maxage=60, stale-while-revalidate=120); clubs, clubs/[id], clubs/new and clubs/trending now send public, s-maxage=60, stale-while-revalidate=300 from the origin, the vercel.json directives plus an explicit public token; a 404 on a public class stays shareable, a 500 is private, no-store — The class values were fixed in 06-12 (DEC-73, research C9); the probe on pre-fix and fixed sources shows the only byte change on a 200 is the explicit public token on the four inherited-rule routes, which 06-14's vercel.json removal needs.
+- [Phase 06]: 06-14: the auth callback's auth_failed redirect keeps message=<provider text> (PRESERVE-pinned; the callback changes only logging and the wrapper), allow-listed as one reasoned S2 entry — Auth callback PRESERVE suites must pass unedited and its behaviour stay byte-identical; the text goes to the caller's own redirect, not a JSON body; Phase 7 or the owner decides it
+- [Phase 06]: 06-14: withRoute gains a NextResponse overload so a NextResponse-only handler keeps Promise<NextResponse> — The callback PRESERVE suites read res.cookies, which Promise<Response> erased; no test or handler signature was changed and runtime is unchanged
+- [Phase 06]: 06-14: the recommendations/batch 500 drops details (F-059); its PRESERVE row moved out to batch-error-text-defect.test.ts under the ledger protocol — Fixing F-059 contradicts the PRESERVE pin; the ledger's move-out protocol (red, move, green, pre-fix red, cmp) keeps every other PRESERVE row unedited
 
 ### Pending Todos
 
@@ -405,7 +409,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T04:49:37.900Z
-Stopped at: Completed 06-13-PLAN.md
+Last session: 2026-09-27T05:18:16.979Z
+Stopped at: Completed 06-14-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None

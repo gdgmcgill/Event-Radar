@@ -82,7 +82,7 @@ Constraint for every REFAC requirement: characterize current behavior with a tes
 - [x] **REFAC-17**: CSRF exposure is assessed (SameSite on Supabase cookies) and protection is added on state-changing routes where exposure remains
 - [ ] **REFAC-18**: Rate limiting is moved to a distributed store (e.g. Upstash) so it works across serverless instances
 - [ ] **REFAC-19**: Slice 7 (close-out): the blanket `s-maxage=60` on `/api/*` is removed from `vercel.json`, personalized routes return `private, no-store`, public routes opt in explicitly, and a cross-user cache regression test passes
-- [ ] **REFAC-20**: A structured JSON logger with levels and a request correlation id replaces `console.*` calls in server code, working on both Node and middleware runtimes
+- [x] **REFAC-20**: A structured JSON logger with levels and a request correlation id replaces `console.*` calls in server code, working on both Node and middleware runtimes
 - [ ] **REFAC-21**: Sentry is installed with a Turbopack-aware setup, source maps, environment and release tagging, and PII scrubbing rules decided before install; a deliberately triggered error appears in Sentry with the correlation id
 - [ ] **REFAC-22**: `/api/health` checks DB, auth, storage, pg_cron freshness, and last webhook receipt, returns a documented shape, and does not use `getSession()` for access control
 - [ ] **REFAC-23**: After each slice, the Playwright happy-path specs (REFAC-06) pass and the Validated workflow list in PROJECT.md is re-confirmed
@@ -218,7 +218,7 @@ No phase crosses a stage boundary.
 | REFAC-17 | Phase 5 | Complete (05-19; first recorded by 05-17), measured clause by clause in .planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md § 3. Exposure assessed against the installed @supabase/ssr 0.7.0 cookie defaults (evidence/csrf-assessment.md); protection added: the proxy refuses cross-site /api/* mutations with 403 before session work (f245d58, src/server/csrf.ts, 41 unit cases, e2e/specs/csrf-origin.spec.ts). Stated residual: /invites/[token] accepts an invitation on GET, outside /api/ (Low; the attacker must hold the token; DI-41, owner decision). If the owner reads that route as exposure remaining, this requirement is PARTIAL for exactly it |
 | REFAC-18 | Phase 5 | PARTIAL (05-19; 05-18 had recorded Complete), measured clause by clause in .planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md § 3. Met in the code: rate limiting runs behind RateLimitStore (408064d) and counts in Upstash when UPSTASH_REDIS_REST_* or KV_REST_API_* is configured (941bee7, DEC-59), unit-tested with a mocked client. Unmet clause: "so it works across serverless instances". No store is provisioned (DI-42), production counts per instance from the memory store with a loud boot error, and src/server/ratelimit/upstash.contract.test.ts is skipped. It closes when the owner provisions Upstash and the contract test runs green against it |
 | REFAC-19 | Phase 6 | Pending |
-| REFAC-20 | Phase 6 | Pending |
+| REFAC-20 | Phase 6 | Complete |
 | REFAC-21 | Phase 6 | Pending |
 | REFAC-22 | Phase 6 | Pending |
 | REFAC-23 | Phase 6 | Pending |
