@@ -2,6 +2,9 @@
  * handleWebhook — the events-webhook request logic without Deno globals
  * (plan 06-03 Task 3, F-039, DEC-64, threats T-06-03-02 and T-06-03-03).
  *
+ * PRESERVE: rows 1-17 below, with the two F-039 changes applied, are the
+ * behaviour every later refactor of the webhook must keep.
+ *
  * The table is slice-6-characterization.txt § 3, rows 1-17: every response
  * the deployed function gives today, read from source because Deno is not
  * installed locally. Each row is reproduced byte for byte EXCEPT the two rows

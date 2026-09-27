@@ -2,6 +2,9 @@
  * verifySignature — the events-webhook credential check as a pure module
  * (plan 06-03 Task 2, F-039, DEC-64, threat T-06-03-02).
  *
+ * PRESERVE: this suite pins the behaviour the F-039 fix must keep — every
+ * bad signature, whatever its length, answers false without throwing.
+ *
  * Today's handler (supabase/functions/events-webhook/index.ts:45-53) hands the
  * supplied signature straight to crypto.timingSafeEqual, which THROWS a
  * RangeError when the two buffers differ in length. The outer catch turns that
