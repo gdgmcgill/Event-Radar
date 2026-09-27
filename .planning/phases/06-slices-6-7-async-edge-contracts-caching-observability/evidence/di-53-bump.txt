@@ -1,0 +1,324 @@
+DI-53 / DI-25 — @supabase/supabase-js 2.81.1 → 2.116.0 (exact): legitimacy facts, throwaway-worktree proof, the bump
+**Plan:** 06-18 Task 1 · **Phase:** 06-slices-6-7-async-edge-contracts-caching-observability · **Recorded:** 2026-09-27
+Base commit: b8e20f48493f2e79e87569a569df14df4b76e4e6 (b8e20f4, the F-085 fix; the last code change before this bump)
+Method: DEC-28 / DEC-56 / DEC-80, the precedent is 06-10's early signal (evidence/contracts-admin.txt § 7) and
+Phase 5's evidence/di-25-bump.txt: a detached worktree of HEAD in the session scratchpad, OUTSIDE the
+repository (shown as <scratch>); npm ci; tsc on 2.81.1; npm install --no-save 2.116.0; tsc again; jest as a
+second signal; the worktree is force-removed and pruned; only then the exact-pin install in the main tree.
+Every block is appended as it runs: the verbatim command, its output, its exit code.
+
+==============================================================================
+[0 · legitimacy facts, recorded BEFORE any install]
+No evidence/ file in any phase carries an integrity bundle for @supabase/supabase-js (only zod-legitimacy.txt
+and sentry-legitimacy.txt in this phase, upstash-legitimacy.txt in Phase 5). 04-RESEARCH.md:698 lists the
+package as OK in its supply-chain audit (registry, github.com/supabase/supabase-js). The bundle is therefore
+recorded here, from the registry, and compared with what npm resolves into the lockfile (block 10).
+$ npm view @supabase/supabase-js@2.116.0 name version dist.integrity dist.tarball dist.shasum dist.fileCount dist.unpackedSize repository.url maintainers dependencies time --json   (time reduced to the entries below)
+name = @supabase/supabase-js
+version = 2.116.0
+dist.integrity = sha512-YyWmKXt2NspV9iO8FPnlswUFJIRnrLd3oTCb+3ZyYRuKZtBH0xCUDgnUqoyA0fGUxpM/UhfwDjYf/dht/9bp7g==
+dist.tarball = https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.116.0.tgz
+dist.shasum = 8bb07df307b72ca76c908a30ffc4513dd63c51d6
+dist.fileCount = 45
+dist.unpackedSize = 647930
+repository.url = https://github.com/supabase/supabase-js.git
+maintainers = etienne_supa <etienne@supabase.io>, mandarini <katerina.skroumpelou@supabase.io>
+dependencies = {"@supabase/auth-js":"2.116.0","@supabase/storage-js":"2.116.0","@supabase/realtime-js":"2.116.0","@supabase/functions-js":"2.116.0","@supabase/postgrest-js":"2.116.0"}
+time[2.116.0] = 2026-09-07T16:26:56.729Z   time[2.81.1] = 2025-11-11T16:09:53.182Z   time.modified = 2026-09-25T10:08:52.248Z
+versions after 2.116.0 on the registry: 2.116.0-canary.0, 2.116.0-canary.1, 2.116.0-canary.2, 2.116.0-canary.3, 2.117.0-canary.0, 2.117.0-canary.1, 2.117.0, 2.117.1-canary.0, 2.117.1, 2.117.2-canary.0, 2.117.2
+exit=0
+$ npm view @supabase/postgrest-js@2.116.0 dist.integrity  (and auth-js, storage-js, realtime-js, functions-js)
+@supabase/postgrest-js@2.116.0 sha512-kGpVZTDHxFTJS3tu+rU0iTAZ+4U0bcLVjxwCk8f3gRhjw3qdCZjTBlgYvc4kGH2XccmAzbkKwXL/mrNHMGSc+A==
+@supabase/auth-js@2.116.0 sha512-Cmosty12gyKGK9N3bQb+lMmuAFev5nmUzaR1AsmZHqKOAGzqX1VQzmp49CNPwOx/pw0H9Qqk4rs9yhwTlKpfDg==
+@supabase/storage-js@2.116.0 sha512-6/3hR6vccBP6oGM5B6RfbwZcTCKmQOodd/ZWQdsw8yJsU5zO/a//oBL6yLnmgxcjnHSrelW8rsO7hL5DPybyUQ==
+@supabase/realtime-js@2.116.0 sha512-MHAnlXxi2s6yiJsZsQMfs2B3RFxeVfQWxerqYhIMqcCQV/FuY3LIeouPEkXw/ah7wUWMLYwempF9MOCUScyddg==
+@supabase/functions-js@2.116.0 sha512-E+VOc2QDcni/fySqkBFiZhnoB3SGydEdZgFI6/dEAGAHx6yEhB46TN9qb2wXs+E+RSzOBV0R6dasiSlw4xlZAA==
+exit=0
+[1 · create the throwaway worktree]
+$ git worktree add --detach <scratch>/di53 HEAD
+Preparing worktree (detached HEAD b8e20f4)
+HEAD is now at b8e20f4 fix(06-18): saved-events upcoming uses the feed's Eastern floor (F-085)
+exit=0
+HEAD=b8e20f48493f2e79e87569a569df14df4b76e4e6
+[2 · npm ci in the worktree (tail)]
+$ npm ci
+8 vulnerabilities (3 low, 3 moderate, 1 high, 1 critical)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+exit=0
+[3 · versions and tsc BEFORE the bump]
+$ npm ls @supabase/supabase-js @supabase/postgrest-js @supabase/ssr
+uni-verse@0.1.0 <scratch>/di53
+├─┬ @supabase/ssr@0.7.0
+│ └── @supabase/supabase-js@2.81.1 deduped
+└─┬ @supabase/supabase-js@2.81.1
+  └── @supabase/postgrest-js@2.81.1
+
+exit=0
+$ npx tsc --noEmit   # BEFORE the bump, in the worktree
+exit=0
+error lines: 0
+[4 · the no-save install]
+$ npm install --no-save @supabase/supabase-js@2.116.0
+8 vulnerabilities (3 low, 3 moderate, 1 high, 1 critical)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+exit=0
+$ npm ls @supabase/supabase-js @supabase/postgrest-js @supabase/ssr
+uni-verse@0.1.0 <scratch>/di53
+├─┬ @supabase/ssr@0.7.0
+│ └── @supabase/supabase-js@2.116.0 deduped
+└─┬ @supabase/supabase-js@2.116.0
+  └── @supabase/postgrest-js@2.116.0
+
+exit=0
+$ git status --porcelain -- package.json package-lock.json   # in the worktree
+exit=0
+[5 · tsc AFTER the bump — full diagnostic output]
+$ npx tsc --noEmit   # AFTER the bump
+exit=0
+error lines: 0
+[6 · jest in the worktree on 2.116.0, second signal]
+$ npx jest --ci
+exit=0
+Test Suites: 1 skipped, 129 passed, 129 of 130 total
+Tests:       1 skipped, 3439 passed, 3440 total
+Snapshots:   0 total
+[7 · remove the throwaway worktree]
+$ git worktree remove --force <scratch>/di53
+exit=0
+$ git worktree prune
+exit=0
+$ git worktree list
+/Users/adyan/Documents/GitHub/Event-Radar b8e20f4 [main]
+exit=0
+$ git worktree list | wc -l
+1
+$ test -d <scratch>/di53
+exit=1  (1 = removed)
+[8 · main tree unchanged by the proof]
+$ node -p "require(\"./node_modules/@supabase/supabase-js/package.json\").version"
+2.81.1
+$ git status --porcelain -- package.json package-lock.json
+exit=0
+
+VERDICT OF THE PROOF: 0 errors. tsc on 2.116.0 exits 0 in the worktree (block 5), Jest 3439 passed + 1 skipped (block 6), worktree removed (block 7). The bump is taken below.
+
+[9 · the exact-pin install in the main tree]
+$ npm install --save-exact @supabase/supabase-js@2.116.0
+  run `npm fund` for details
+
+8 vulnerabilities (3 low, 3 moderate, 1 high, 1 critical)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+exit=0
+
+[10 · lockfile diff reviewed package by package]
+$ git diff --stat -- package.json package-lock.json
+ package-lock.json | 106 +++++++++++++++++++++++++++++-------------------------
+ package.json      |   2 +-
+ 2 files changed, 58 insertions(+), 50 deletions(-)
+$ git diff -- package.json
+diff --git a/package.json b/package.json
+index 4542e6d..dc15433 100644
+--- a/package.json
++++ b/package.json
+@@ -18,7 +18,7 @@
+     "@radix-ui/react-slot": "^1.2.4",
+     "@sentry/nextjs": "10.75.3",
+     "@supabase/ssr": "^0.7.0",
+-    "@supabase/supabase-js": "^2.49.0",
++    "@supabase/supabase-js": "2.116.0",
+     "@upstash/ratelimit": "2.0.8",
+     "@upstash/redis": "1.38.2",
+     "@vercel/analytics": "^2.0.1",
+$ node <scratch>/p18/lockdiff.mjs   # before = the committed lockfile at b8e20f4, after = the working tree
+lockfileVersion before=3 after=3 UNCHANGED
+package.json dependencies['@supabase/supabase-js']: before=^2.49.0 after=2.116.0
+package.json dependencies['@supabase/ssr']: before=^0.7.0 after=^0.7.0
+other package.json changes: none
+  root.dependencies: "^2.49.0" -> "2.116.0"
+changed lockfile package entries: 12
+CHANGED  (root) 0.1.0 -> 0.1.0 fields=[dependencies]
+CHANGED  node_modules/@supabase/auth-js 2.81.1 -> 2.116.0 fields=[version,resolved,integrity,engines] integrity=sha512-Cmosty12gyKGK9N3bQb+lMmuAFev5nmUzaR1AsmZHqKOAGzqX1VQzmp49CNPwOx/pw0H9Qqk4rs9yhwTlKpfDg==
+CHANGED  node_modules/@supabase/functions-js 2.81.1 -> 2.116.0 fields=[version,resolved,integrity,engines] integrity=sha512-E+VOc2QDcni/fySqkBFiZhnoB3SGydEdZgFI6/dEAGAHx6yEhB46TN9qb2wXs+E+RSzOBV0R6dasiSlw4xlZAA==
+ADDED    node_modules/@supabase/phoenix 0.4.5 sha512-aAn9H9ovVyeApKy11OWOrrOGq8DV68yWeH4ud2lN9fzn4aO8Zb5GLL9m1pUg9nLqIcT+ZDfAcsZe0E/nqdv2lw==
+CHANGED  node_modules/@supabase/postgrest-js 2.81.1 -> 2.116.0 fields=[version,resolved,integrity,engines] integrity=sha512-kGpVZTDHxFTJS3tu+rU0iTAZ+4U0bcLVjxwCk8f3gRhjw3qdCZjTBlgYvc4kGH2XccmAzbkKwXL/mrNHMGSc+A==
+CHANGED  node_modules/@supabase/realtime-js 2.81.1 -> 2.116.0 fields=[version,resolved,integrity,dependencies,engines] integrity=sha512-MHAnlXxi2s6yiJsZsQMfs2B3RFxeVfQWxerqYhIMqcCQV/FuY3LIeouPEkXw/ah7wUWMLYwempF9MOCUScyddg==
+CHANGED  node_modules/@supabase/storage-js 2.81.1 -> 2.116.0 fields=[version,resolved,integrity,dependencies,engines] integrity=sha512-6/3hR6vccBP6oGM5B6RfbwZcTCKmQOodd/ZWQdsw8yJsU5zO/a//oBL6yLnmgxcjnHSrelW8rsO7hL5DPybyUQ==
+CHANGED  node_modules/@supabase/supabase-js 2.81.1 -> 2.116.0 fields=[version,resolved,integrity,dependencies,engines,peerDependencies,peerDependenciesMeta] integrity=sha512-YyWmKXt2NspV9iO8FPnlswUFJIRnrLd3oTCb+3ZyYRuKZtBH0xCUDgnUqoyA0fGUxpM/UhfwDjYf/dht/9bp7g==
+REMOVED  node_modules/@types/phoenix 1.6.6
+REMOVED  node_modules/@types/ws 8.18.1
+ADDED    node_modules/iceberg-js 0.8.1 sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==
+CHANGED  node_modules/ws 8.21.3 -> 8.21.3 fields=[dev]
+entries outside @supabase/* (excluding root): node_modules/@types/phoenix, node_modules/@types/ws, node_modules/iceberg-js, node_modules/ws
+exit=1
+
+[10b · every entry outside @supabase/* traced to a @supabase package's own dependency map]
+lockdiff.mjs exits 1 because its filter is literal (@supabase/* only). The plan's rule is "only @supabase/supabase-js and the @supabase/* packages it pins and their own dependencies"; the trace below attributes each of the four:
+$ node <scratch>/p18/trace.mjs
+@supabase/realtime-js dependencies before={"@types/phoenix":"^1.6.6","@types/ws":"^8.18.1","tslib":"2.8.1","ws":"^8.18.2"} after={"@supabase/phoenix":"0.4.5","tslib":"2.8.1"}
+@supabase/storage-js dependencies before={"tslib":"2.8.1"} after={"iceberg-js":"^0.8.1","tslib":"2.8.1"}
+@supabase/supabase-js dependencies before={"@supabase/auth-js":"2.81.1","@supabase/functions-js":"2.81.1","@supabase/postgrest-js":"2.81.1","@supabase/realtime-js":"2.81.1","@supabase/storage-js":"2.81.1"} after={"@supabase/auth-js":"2.116.0","@supabase/functions-js":"2.116.0","@supabase/postgrest-js":"2.116.0","@supabase/realtime-js":"2.116.0","@supabase/storage-js":"2.116.0"}
+@types/phoenix: required by (before) ["@supabase/realtime-js"] | (after) []
+@types/ws: required by (before) ["@supabase/realtime-js"] | (after) []
+iceberg-js: required by (before) [] | (after) ["@supabase/storage-js"]
+ws: required by (before) ["@supabase/realtime-js","jsdom"] | (after) ["jsdom"]
+@supabase/phoenix: required by (before) [] | (after) ["@supabase/realtime-js"]
+ws before: version=8.21.3 dev=false | after: version=8.21.3 dev=true
+iceberg-js after: {"version":"0.8.1","license":"MIT","dependencies":{}}
+@supabase/phoenix after: {"version":"0.4.5","license":"MIT","dependencies":{}}
+exit=0
+$ npm view iceberg-js@0.8.1 repository.url maintainers dist.integrity
+repository.url = 'git+https://github.com/supabase/iceberg-js.git'
+maintainers = 'etienne_supa <etienne@supabase.io>'
+dist.integrity = 'sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA=='
+exit=0
+Attribution:
+- @types/phoenix 1.6.6 REMOVED, @types/ws 8.18.1 REMOVED: dependencies of @supabase/realtime-js 2.81.1 only; realtime-js 2.116.0 dropped them (it now depends on @supabase/phoenix 0.4.5, ADDED, MIT, no dependencies).
+- ws 8.21.3: same version and integrity; only its `dev` flag flipped to true because realtime-js 2.116.0 no longer depends on it and its remaining dependent is jsdom (a devDependency of the Jest harness). Production no longer ships ws.
+- iceberg-js 0.8.1 ADDED (MIT, no dependencies, repository github.com/supabase/iceberg-js, maintainer etienne_supa, who also maintains supabase-js): a new dependency of @supabase/storage-js 2.116.0.
+- The five @supabase/* sub-packages resolved in the lockfile carry exactly the integrities recorded from the registry in block 0 (supabase-js sha512-YyWmKXt2…9bp7g==, postgrest-js sha512-kGpVZTDH…MGSc+A==, auth-js sha512-Cmosty12…KpfDg==, storage-js sha512-6/3hR6vc…PybyUQ==, realtime-js sha512-MHAnlXxi…UScyddg==, functions-js sha512-E+VOc2QD…4xlZAA==).
+- lockfileVersion 3 unchanged; package.json changes exactly one line (@supabase/supabase-js ^2.49.0 → 2.116.0); @supabase/ssr stays ^0.7.0 (DI-43).
+VERDICT: the lockfile diff is limited to the @supabase packages the pin moves and their own dependencies.
+[11 · resolved versions]
+$ npm ls @supabase/supabase-js @supabase/ssr
+uni-verse@0.1.0 /Users/adyan/Documents/GitHub/Event-Radar
+├─┬ @supabase/ssr@0.7.0
+│ └── @supabase/supabase-js@2.116.0 deduped
+└── @supabase/supabase-js@2.116.0
+
+exit=0
+$ node -p "require(\"./node_modules/@supabase/supabase-js/package.json\").version"
+2.116.0
+$ node -p "require(\"./node_modules/@supabase/ssr/package.json\").version"
+0.7.0
+$ node -p "require(\"./node_modules/@supabase/ssr/package.json\").peerDependencies"   # ssr peer range admits 2.116.0
+{"@supabase/supabase-js":"^2.43.4"}
+$ node -p "require(\"./package.json\").dependencies[\"@supabase/supabase-js\"]"
+2.116.0
+[12 · production audit gate]
+$ npm audit --audit-level=high --omit=dev
+# npm audit report
+
+@babel/core  <=7.29.0
+@babel/core: Arbitrary File Read via sourceMappingURL Comment - https://github.com/advisories/GHSA-4x5r-pxfx-6jf8
+fix available via `npm audit fix`
+node_modules/@babel/core
+
+dompurify  <=3.4.12
+Severity: moderate
+DOMPurify: FORBID_TAGS bypassed by function-based ADD_TAGS predicate (asymmetry with FORBID_ATTR fix) - https://github.com/advisories/GHSA-h7mw-gpvr-xq4m
+DOMPurify has a SAFE_FOR_TEMPLATES bypass in RETURN_DOM mode - https://github.com/advisories/GHSA-crv5-9vww-q3g8
+DOMPurify: Prototype Pollution to XSS Bypass via CUSTOM_ELEMENT_HANDLING Fallback - https://github.com/advisories/GHSA-v9jr-rg53-9pgp
+DOMPurify: Cross-realm IN_PLACE sanitization leaves executable markup intact via realm-bound `instanceof` checks - https://github.com/advisories/GHSA-hpcv-96wg-7vj8
+DOMPurify: IN_PLACE mode preserves attributes of a clobbered root element, allowing XSS via attacker-controlled root DOM - https://github.com/advisories/GHSA-r47g-fvhr-h676
+DOMPurify IN_PLACE Sanitization Bypass via Attached Shadow Root Inside <template>.content - https://github.com/advisories/GHSA-rp9w-3fw7-7cwq
+DOMPurify: `CUSTOM_ELEMENT_HANDLING` bypasses `afterSanitizeElements` for allowed custom elements. - https://github.com/advisories/GHSA-c2j3-45gr-mqc4
+DOMPurify: Permanent `ALLOWED_ATTR` pollution via `setConfig()` bypassing the hook clone-guard (incomplete fix of the 3.4.7 hook-pollution patch) - https://github.com/advisories/GHSA-cmwh-pvxp-8882
+DOMPurify: Trusted Types policy survives `clearConfig()` and can poison later `RETURN_TRUSTED_TYPE` output - https://github.com/advisories/GHSA-vxr8-fq34-vvx9
+DOMPurify: SAFE_FOR_TEMPLATES bypass - template expressions survive sanitization inside <template> content when using DOM output modes - https://github.com/advisories/GHSA-gvmj-g25r-r7wr
+DOMPurify: `IN_PLACE` mode trusts attacker-controlled `nodeName` on live non-form nodes, allowing script retention and XSS via attacker-supplied DOM objects - https://github.com/advisories/GHSA-x4vx-rjvf-j5p4
+DOMPurify: Hook mutation of `data.allowedTags` / `data.allowedAttributes` permanently pollutes `DEFAULT_ALLOWED_TAGS` / `DEFAULT_ALLOWED_ATTR` - https://github.com/advisories/GHSA-76mc-f452-cxcm
+DOMPurify's ADD_TAGS function form bypasses FORBID_TAGS due to short-circuit evaluation - https://github.com/advisories/GHSA-39q2-94rc-95cp
+DOMPurify: IN_PLACE hook removal leaves a detached subtree executable, causing XSS - https://github.com/advisories/GHSA-55q2-fjhq-7xh7
+fix available via `npm audit fix`
+node_modules/dompurify
+
+yaml  1.0.0 - 1.10.2 || 2.0.0 - 2.8.2
+Severity: moderate
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+yaml is vulnerable to Stack Overflow via deeply nested YAML collections - https://github.com/advisories/GHSA-48c2-rrv3-qjmp
+fix available via `npm audit fix`
+node_modules/oas-linter/node_modules/yaml
+node_modules/oas-resolver/node_modules/yaml
+node_modules/oas-validator/node_modules/yaml
+node_modules/swagger2openapi/node_modules/yaml
+node_modules/yaml
+
+3 vulnerabilities (1 low, 2 moderate)
+
+To address all issues, run:
+  npm audit fix
+exit=0
+[13 · type-check]
+$ npx tsc --noEmit
+exit=0
+error lines: 0
+[14 · lint]
+$ npm run lint
+✖ 17 problems (0 errors, 17 warnings)
+exit=0
+[15 · full Jest]
+$ npx jest --ci
+Test Suites: 1 skipped, 129 passed, 129 of 130 total
+Tests:       1 skipped, 3439 passed, 3440 total
+Snapshots:   0 total
+exit=0
+[16 · the CI-env build (evidence/build-ci-env.txt command, verbatim)]
+$ CI=true SENTRYCLI_SKIP_DOWNLOAD=1 SENTRY_AUTH_TOKEN= SENTRY_DSN= NEXT_PUBLIC_SENTRY_DSN= SENTRY_ORG= SENTRY_PROJECT= SUPABASE_SERVICE_ROLE_KEY= NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key npm run build
+(started at the timestamp on the first output line; the route table is elided to its header and footer)
+2026-09-27T18:06:51Z
+
+> uni-verse@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.js took 97ms
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.9s
+  Running next.config.js provided runAfterProductionCompile ...
+[@sentry/nextjs - After Production Compile] Warning: No auth token provided. Will not create release. Please set the `authToken` option. You can find information on how to generate a Sentry auth token here: https://docs.sentry.io/api/auth/
+✓ Completed runAfterProductionCompile in 44ms
+  Running TypeScript ...
+  Finished TypeScript in 4.1s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/98) ...
+  Generating static pages using 9 workers (24/98) 
+  Generating static pages using 9 workers (48/98) 
+  Generating static pages using 9 workers (73/98) 
+(node:17379) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✓ Generating static pages using 9 workers (98/98) in 366ms
+  Finalizing page optimization ...
+
+Route (app)
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+exit=0
+
+==============================================================================
+THE EIGHT DI-25 SITES (Phase 4 evidence/di-25-enumeration.txt), FINAL STATE ON 2.116.0
+| # | Site (Phase 4 line) | Cleared by commit |
+|---|---------------------|-------------------|
+| 1 | admin/events/[id]/edits/route.ts (67) | f869323 (06-10: liveUpdates is TablesUpdate<"events"> built from the admin contract) |
+| 2 | admin/events/[id]/route.ts (41) | f869323 (06-10: updateData from AdminEventUpdateBody, TablesUpdate<"events">) |
+| 3 | admin/experiments/[id]/route.ts (103) | f869323 (06-10: payload from ExperimentUpdateBody, TablesUpdate<"experiments">) |
+| 4 | admin/featured/[id]/route.ts (43) | f869323 (06-10: payload from FeaturedUpdateBody, TablesUpdate<"featured_events">) |
+| 5 | admin/users/[id]/route.ts (33) | 4cf4928 (05-14, F-091) |
+| 6 | clubs/[id]/route.ts (129) | 4531ee2 (05-10, F-087) |
+| 7 | events/[id]/route.ts (318) PATCH | d8cf84e (05-10) |
+| 8 | lib/audit.ts (38) | d510914 (05-14, F-073) |
+
+FINAL VERDICT — THE BUMP IS TAKEN.
+- Worktree proof: tsc 0 errors on 2.116.0 (block 5); Jest 3439 passed + 1 skipped (block 6); worktree removed, `git worktree list` one line (block 7).
+- Main tree: package.json pins "@supabase/supabase-js": "2.116.0" exactly; one resolved 2.116.0 (ssr dedupes onto it); @supabase/ssr stays 0.7.0 (DI-43, Phase 8), its peer range ^2.43.4 satisfied.
+- Lockfile: lockfileVersion 3 unchanged; 12 entries moved, every one a @supabase package or a dependency one of them added or dropped (block 10b); resolved integrities equal the registry facts recorded before install (block 0).
+- Gates: npm audit --audit-level=high --omit=dev exit 0 (0 high, 0 critical: 2 moderate — dompurify, yaml, the two floor.before.txt row 4 carries — and 1 low, @babel/core, an advisory published since the before-floor on a package this lockfile diff does not touch); tsc exit 0; lint 0 errors / 17 warnings (pre-existing); Jest 129 passed + 1 skipped suites, 3439 passed + 1 skipped tests; the CI-env build exit 0.
+- DI-53 and DI-25's minor half are closed by this commit. No code change follows it in Phase 6.

@@ -18,7 +18,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@sentry/nextjs": "10.75.3",
     "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.49.0",
+    "@supabase/supabase-js": "2.116.0",
     "@upstash/ratelimit": "2.0.8",
     "@upstash/redis": "1.38.2",
     "@vercel/analytics": "^2.0.1",
