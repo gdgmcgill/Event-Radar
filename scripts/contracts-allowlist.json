@@ -1,0 +1,292 @@
+[
+  {
+    "file": "src/app/api/admin/audit-log/route.ts",
+    "rule": "R3",
+    "count": 2
+  },
+  {
+    "file": "src/app/api/admin/calculate-popularity/route.ts",
+    "rule": "R3",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/clubs/[id]/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/clubs/route.ts",
+    "rule": "R3",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/events/[id]/edits/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/events/[id]/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/events/[id]/status/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/events/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/events/route.ts",
+    "rule": "R3",
+    "count": 7
+  },
+  {
+    "file": "src/app/api/admin/experiments/[id]/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/experiments/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/featured/[id]/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/featured/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/organizer-requests/[id]/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/organizer-requests/route.ts",
+    "rule": "R3",
+    "count": 3
+  },
+  {
+    "file": "src/app/api/admin/organizers/route.ts",
+    "rule": "R3",
+    "count": 2
+  },
+  {
+    "file": "src/app/api/admin/reports/[id]/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/reports/route.ts",
+    "rule": "R3",
+    "count": 4
+  },
+  {
+    "file": "src/app/api/admin/users/[id]/ban/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/admin/users/[id]/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/calendar/events/route.ts",
+    "rule": "R3",
+    "count": 2
+  },
+  {
+    "file": "src/app/api/clubs/[id]/appeal/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/[id]/invites/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/[id]/members/role/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/[id]/members/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/[id]/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/[id]/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/[id]/transfer/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/banner/route.ts",
+    "rule": "R2",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/logo/route.ts",
+    "rule": "R2",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/clubs/trending/route.ts",
+    "rule": "R3",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/events/[id]/appeal/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/events/[id]/invite/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/events/[id]/report/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/events/[id]/reviews/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/events/[id]/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/events/[id]/rsvp/route.ts",
+    "rule": "R1",
+    "count": 2
+  },
+  {
+    "file": "src/app/api/events/create/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/events/export/route.ts",
+    "rule": "R3",
+    "count": 8
+  },
+  {
+    "file": "src/app/api/events/popular/route.ts",
+    "rule": "R3",
+    "count": 4
+  },
+  {
+    "file": "src/app/api/events/route.ts",
+    "rule": "R3",
+    "count": 10
+  },
+  {
+    "file": "src/app/api/events/upload-image/route.ts",
+    "rule": "R2",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/feedback/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/interactions/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/notifications/route.ts",
+    "rule": "R3",
+    "count": 2
+  },
+  {
+    "file": "src/app/api/organizer-requests/route.ts",
+    "rule": "R4",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/profile/avatar/route.ts",
+    "rule": "R2",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/profile/banner/route.ts",
+    "rule": "R2",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/profile/inferred-tags/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/profile/interests/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/recommendations/analytics/route.ts",
+    "rule": "R3",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/recommendations/feedback/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/recommendations/feedback/route.ts",
+    "rule": "R3",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/recommendations/route.ts",
+    "rule": "R3",
+    "count": 2
+  },
+  {
+    "file": "src/app/api/users/[id]/route.ts",
+    "rule": "R1",
+    "count": 1
+  },
+  {
+    "file": "src/app/api/users/saved-events/route.ts",
+    "rule": "R3",
+    "count": 2
+  },
+  {
+    "file": "src/app/api/users/search/route.ts",
+    "rule": "R3",
+    "count": 1
+  }
+]

@@ -72,6 +72,13 @@ jobs:
       - name: Elevated-callsite ratchet
         run: node scripts/check-elevated-ratchet.mjs
 
+      # Plan 06-04 (REFAC-15, F-094, DEC-65). The shrink-only census of raw
+      # input reads: request.json()/formData() outside src/server/body.ts, and
+      # query reads or schema-less readJsonObject in route files. Fails when a
+      # site the committed scripts/contracts-allowlist.json does not hold appears.
+      - name: Contracts census
+        run: node scripts/check-contracts.mjs
+
       # Plan 04-01's gate: every characterization suite carries its tag, a
       # defect-tagged suite cites a finding id, and every F-nnn cited is in
       # .planning/audit/findings.json.
