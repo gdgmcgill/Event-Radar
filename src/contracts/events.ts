@@ -557,3 +557,96 @@ export const CalendarQuery = z.object({
 });
 
 export type CalendarQueryOutput = z.infer<typeof CalendarQuery>;
+
+// ─── Responses the client reads (plan 06-11, REFAC-16, DEC-67) ───────────────
+//
+// Checked in development only, by the hooks, through checkResponseInDev
+// (src/lib/contractCheck.ts); a hook loads these with a dynamic import inside
+// a NODE_ENV branch, so they never reach a production client chunk. Every
+// object is loose: an extra key is not drift, so a warning means a key the
+// client reads has changed. Each lists what the handler returns on its
+// success arm and what the client reads, no more.
+
+/** One event row as the list and the joins return it: an id at least. */
+const EventRowShape = z.looseObject({ id: z.string() });
+
+/**
+ * GET /api/events, 200 (every success arm, including the empty ones):
+ * useEvents reads events, total, nextCursor and prevCursor. The handler also
+ * sends page, limit and totalPages, which no client reads.
+ */
+export const EventsListResponse = z.looseObject({
+  events: z.array(EventRowShape),
+  total: z.number(),
+  nextCursor: z.string().nullable(),
+  prevCursor: z.string().nullable(),
+});
+
+export type EventsListResponseBody = z.infer<typeof EventsListResponse>;
+
+/**
+ * GET /api/events/featured, 200: `{ featured }`, each a featured_events row
+ * with its approved, live event joined (the handler drops the rest).
+ */
+export const FeaturedEventsResponse = z.looseObject({
+  featured: z.array(
+    z.looseObject({
+      id: z.string(),
+      event_id: z.string(),
+      priority: z.number(),
+      starts_at: z.string(),
+      ends_at: z.string(),
+      event: EventRowShape,
+    })
+  ),
+});
+
+export type FeaturedEventsResponseBody = z.infer<typeof FeaturedEventsResponse>;
+
+/**
+ * GET /api/events/[id]/analytics, 200. The handler sends no rsvp_cancelled
+ * (the EventAnalytics type in src/types declares one); the schema lists what
+ * is sent, so the check stays quiet about that known gap.
+ */
+export const EventAnalyticsResponse = z.looseObject({
+  event_id: z.string(),
+  title: z.string(),
+  start_date: z.string(),
+  views: z.number(),
+  clicks: z.number(),
+  saves: z.number(),
+  unique_viewers: z.number(),
+  rsvp_going: z.number(),
+  rsvp_interested: z.number(),
+});
+
+export type EventAnalyticsResponseBody = z.infer<typeof EventAnalyticsResponse>;
+
+/** GET /api/events/[id]/reviews, 200: the aggregate, the caller's review, eligibility. */
+export const EventReviewsResponse = z.looseObject({
+  aggregate: z.looseObject({
+    average_rating: z.number(),
+    total_reviews: z.number(),
+    distribution: z.array(
+      z.looseObject({ rating: z.number(), count: z.number() })
+    ),
+    comments: z.array(
+      z.looseObject({
+        rating: z.number(),
+        comment: z.string(),
+        created_at: z.string(),
+      })
+    ),
+  }),
+  user_review: z
+    .looseObject({
+      id: z.string(),
+      rating: z.number(),
+      comment: z.string().nullable(),
+      created_at: z.string(),
+    })
+    .nullable(),
+  can_review: z.boolean(),
+});
+
+export type EventReviewsResponseBody = z.infer<typeof EventReviewsResponse>;

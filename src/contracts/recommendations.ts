@@ -168,11 +168,28 @@ export const RecommendationFeedbackBody = z
     return z.NEVER;
   });
 
+export type ThumbsFeedbackBodyInput = z.input<typeof ThumbsFeedbackBody>;
+export type AnalyticsFeedbackBodyInput = z.input<typeof AnalyticsFeedbackBody>;
 export type ThumbsFeedbackBodyOutput = z.infer<typeof ThumbsFeedbackBody>;
 export type AnalyticsFeedbackBodyOutput = z.infer<typeof AnalyticsFeedbackBody>;
 export type RecommendationFeedbackBodyInput =
-  | z.input<typeof ThumbsFeedbackBody>
-  | z.input<typeof AnalyticsFeedbackBody>;
+  | ThumbsFeedbackBodyInput
+  | AnalyticsFeedbackBodyInput;
 export type RecommendationFeedbackBodyOutput = z.infer<
   typeof RecommendationFeedbackBody
 >;
+
+// ─── Responses the client reads (plan 06-11, REFAC-16, DEC-67) ───────────────
+
+/**
+ * POST /api/recommendations/feedback, 200 on the thumbs arm: `{ ok: true,
+ * feedback }`, the vote as stored. Loose (an extra key is not drift); checked
+ * in development only by useTracking's submitThumbsFeedback, which loads it
+ * with a dynamic import inside a NODE_ENV branch.
+ */
+export const ThumbsFeedbackResponse = z.looseObject({
+  ok: z.literal(true),
+  feedback: z.enum(THUMBS_FEEDBACK),
+});
+
+export type ThumbsFeedbackResponseBody = z.infer<typeof ThumbsFeedbackResponse>;

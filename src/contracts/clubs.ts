@@ -485,3 +485,145 @@ export const TrendingQuery = z.object({
 });
 
 export type TrendingQueryOutput = z.infer<typeof TrendingQuery>;
+
+// ─── Responses the client reads (plan 06-11, REFAC-16, DEC-67) ───────────────
+//
+// Checked in development only, by the hooks, through checkResponseInDev
+// (src/lib/contractCheck.ts); a hook loads these with a dynamic import inside
+// a NODE_ENV branch, so they never reach a production client chunk. Every
+// object is loose: an extra key is not drift, so a warning means a key the
+// client reads has changed. Each lists what the handler returns on its
+// success arm, no more.
+
+/** A clubs row (select "*"), an id and a name at least. */
+const ClubRowShape = z.looseObject({ id: z.string(), name: z.string() });
+
+/** GET /api/clubs/[id], 200: the club and its follower count. */
+export const ClubResponse = z.looseObject({
+  club: ClubRowShape,
+  followerCount: z.number(),
+});
+
+export type ClubResponseBody = z.infer<typeof ClubResponse>;
+
+/**
+ * GET /api/clubs/[id]/events, 200: the listing and whether the caller is a
+ * member. A member's rows carry rsvp_counts; the public listing's do not.
+ */
+export const ClubEventsResponse = z.looseObject({
+  events: z.array(
+    z.looseObject({
+      id: z.string(),
+      status: z.string(),
+      rsvp_counts: z
+        .looseObject({
+          going: z.number(),
+          interested: z.number(),
+          cancelled: z.number(),
+        })
+        .optional(),
+    })
+  ),
+  isOrganizer: z.boolean(),
+});
+
+export type ClubEventsResponseBody = z.infer<typeof ClubEventsResponse>;
+
+/** GET /api/clubs/[id]/members, 200: each membership with its user (or null). */
+export const ClubMembersResponse = z.looseObject({
+  members: z.array(
+    z.looseObject({
+      id: z.string(),
+      user_id: z.string(),
+      role: z.string(),
+      created_at: z.string(),
+      user: z.looseObject({ id: z.string() }).nullable(),
+    })
+  ),
+});
+
+export type ClubMembersResponseBody = z.infer<typeof ClubMembersResponse>;
+
+/** GET /api/clubs/[id]/invites, 200: a bare array of the club's invitations. */
+export const ClubInvitesResponse = z.array(
+  z.looseObject({
+    id: z.string(),
+    invitee_email: z.string(),
+    status: z.string(),
+    created_at: z.string(),
+    expires_at: z.string(),
+  })
+);
+
+export type ClubInvitesResponseBody = z.infer<typeof ClubInvitesResponse>;
+
+/** GET /api/clubs/[id]/follow, 200: whether the caller follows the club. */
+export const ClubFollowStatusResponse = z.looseObject({
+  following: z.boolean(),
+});
+
+export type ClubFollowStatusResponseBody = z.infer<
+  typeof ClubFollowStatusResponse
+>;
+
+/**
+ * GET /api/clubs/featured, 200: `{ featured }`, each a featured_clubs row
+ * with its approved club joined (the handler drops the rest).
+ */
+export const FeaturedClubsResponse = z.looseObject({
+  featured: z.array(
+    z.looseObject({
+      id: z.string(),
+      club_id: z.string(),
+      priority: z.number(),
+      starts_at: z.string(),
+      ends_at: z.string(),
+      club: ClubRowShape,
+    })
+  ),
+});
+
+export type FeaturedClubsResponseBody = z.infer<typeof FeaturedClubsResponse>;
+
+/** GET /api/clubs/[id]/analytics, 200: the dashboard's eight series. */
+export const ClubAnalyticsResponse = z.looseObject({
+  follower_growth: z.array(
+    z.looseObject({ date: z.string(), count: z.number() })
+  ),
+  total_attendees: z.number(),
+  popular_tags: z.array(
+    z.looseObject({ tag: z.string(), count: z.number() })
+  ),
+  events: z.array(
+    z.looseObject({
+      event_id: z.string(),
+      title: z.string(),
+      start_date: z.string(),
+      views: z.number(),
+      clicks: z.number(),
+      saves: z.number(),
+      unique_viewers: z.number(),
+      rsvp_going: z.number(),
+      rsvp_interested: z.number(),
+      rsvp_cancelled: z.number(),
+    })
+  ),
+  engagement_trend: z.array(
+    z.looseObject({ date: z.string(), rate: z.number() })
+  ),
+  peak_hours: z.array(
+    z.looseObject({ hour: z.number(), count: z.number() })
+  ),
+  peak_days: z.array(
+    z.looseObject({ day: z.string(), count: z.number() })
+  ),
+  best_event_type: z
+    .looseObject({
+      tag: z.string(),
+      avg_rsvps: z.number(),
+      comparison: z.number(),
+    })
+    .nullable(),
+});
+
+export type ClubAnalyticsResponseBody = z.infer<typeof ClubAnalyticsResponse>;

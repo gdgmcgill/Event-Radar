@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import type {
+  NotificationCountResponse,
+  NotificationCountResponseBody,
+} from "@/contracts/notifications";
+import { checkResponseInDev } from "@/lib/contractCheck";
 
 /** Custom event name used to sync notification count across components */
 const SYNC_EVENT = "notifications:count-changed";
@@ -8,6 +13,25 @@ const SYNC_EVENT = "notifications:count-changed";
 /** Dispatch a sync event so all consumers of useNotificationCount refresh */
 export function notifyCountChanged() {
   window.dispatchEvent(new Event(SYNC_EVENT));
+}
+
+/**
+ * Development only: check the count against its contract (plan 06-11,
+ * REFAC-16). Module-level, outside the hook, so the hook body holds no
+ * dynamic import; in a production build the branch, and the import with it,
+ * is removed.
+ */
+function checkCountInDev(json: unknown) {
+  if (process.env.NODE_ENV !== "production") {
+    void checkResponseInDev(
+      "GET /api/notifications/count",
+      (): Promise<typeof NotificationCountResponse> =>
+        import("@/contracts/notifications").then(
+          (m) => m.NotificationCountResponse
+        ),
+      json
+    );
+  }
 }
 
 export interface UseNotificationCountOptions {
@@ -28,7 +52,8 @@ export function useNotificationCount({
     try {
       const res = await fetch("/api/notifications/count");
       if (!res.ok) return;
-      const data = await res.json();
+      const data: NotificationCountResponseBody = await res.json();
+      checkCountInDev(data);
       setUnreadCount(data.unread_count || 0);
     } catch {
       // Silently fail

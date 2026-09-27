@@ -2,6 +2,28 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import type {
+  AvatarUploadResponse,
+  ProfileImageFileField,
+} from "@/contracts/users";
+import { checkResponseInDev } from "@/lib/contractCheck";
+
+/**
+ * Development only: check the response against its contract (plan 06-11,
+ * REFAC-16). Module-level, outside the hook, so the hook body holds no
+ * dynamic import; in a production build the branch, and the import with it,
+ * is removed.
+ */
+function checkUploadInDev(json: unknown) {
+  if (process.env.NODE_ENV !== "production") {
+    void checkResponseInDev(
+      "POST /api/profile/avatar",
+      (): Promise<typeof AvatarUploadResponse> =>
+        import("@/contracts/users").then((m) => m.AvatarUploadResponse),
+      json
+    );
+  }
+}
 
 export function useAvatarUpload(initialUrl: string | null | undefined) {
   const { updateUser } = useAuthStore();
@@ -43,7 +65,13 @@ export function useAvatarUpload(initialUrl: string | null | undefined) {
 
       try {
         const formData = new FormData();
-        formData.append("file", blob, "avatar.jpg");
+        // The field name is the route's form contract's (a type, so nothing
+        // from the contract module ships to the browser).
+        formData.append(
+          "file" satisfies ProfileImageFileField,
+          blob,
+          "avatar.jpg"
+        );
 
         const res = await fetch("/api/profile/avatar", {
           method: "POST",
@@ -56,6 +84,8 @@ export function useAvatarUpload(initialUrl: string | null | undefined) {
           setError(data.error || "Upload failed");
           return;
         }
+
+        checkUploadInDev(data);
 
         setAvatarUrl(data.avatar_url);
         updateUser({ avatar_url: data.avatar_url });

@@ -177,6 +177,15 @@ export type InferredTagBodyOutput = z.infer<typeof InferredTagBody>;
 export const ProfileImageForm = z.object({});
 
 /**
+ * The multipart field both routes read the image from. A client sender types
+ * its `formData.append` name as ProfileImageFileField through an `import
+ * type`, so renaming the field here fails the sender's type-check without
+ * shipping this module (and zod) to the browser (plan 06-11, REFAC-16).
+ */
+export const PROFILE_IMAGE_FILE_FIELD = "file";
+export type ProfileImageFileField = typeof PROFILE_IMAGE_FILE_FIELD;
+
+/**
  * Each route's file rule, texts and order (type before size), and its answer
  * to an unreadable form (its catch's 500, unchanged). No guard sits between
  * the form read and the checks, so parseForm runs them.
@@ -188,7 +197,7 @@ function profileImageUpload(
 ): FormOptions {
   return {
     file: {
-      field: "file",
+      field: PROFILE_IMAGE_FILE_FIELD,
       types,
       maxBytes: maxMb * 1024 * 1024,
       order: ["type", "size"],
@@ -243,3 +252,55 @@ export const UserSearchQuery = z.object({
 });
 
 export type UserSearchQueryOutput = z.infer<typeof UserSearchQuery>;
+
+// ─── Responses the client reads (plan 06-11, REFAC-16, DEC-67) ───────────────
+//
+// Checked in development only, by the hooks, through checkResponseInDev
+// (src/lib/contractCheck.ts); a hook loads these with a dynamic import inside
+// a NODE_ENV branch, so they never reach a production client chunk. Every
+// object is loose: an extra key is not drift, so a warning means a key the
+// client reads has changed.
+
+/**
+ * GET /api/my-clubs, 200: each membership with its club (null when the club
+ * row is not readable) and three counts.
+ */
+export const MyClubsResponse = z.looseObject({
+  clubs: z.array(
+    z.looseObject({
+      id: z.string(),
+      role: z.string(),
+      created_at: z.string(),
+      club: z.looseObject({ id: z.string(), name: z.string() }).nullable(),
+      memberCount: z.number(),
+      followerCount: z.number(),
+      upcomingEventCount: z.number(),
+    })
+  ),
+});
+
+export type MyClubsResponseBody = z.infer<typeof MyClubsResponse>;
+
+/**
+ * GET /api/user/following, 200: the clubs the caller follows. useFollowedClubIds
+ * reads each row's `clubs.id` (null when the joined club is not readable).
+ */
+export const FollowedClubsResponse = z.looseObject({
+  following: z.array(
+    z.looseObject({
+      id: z.string(),
+      created_at: z.string(),
+      clubs: z.looseObject({ id: z.string() }).nullable(),
+    })
+  ),
+});
+
+export type FollowedClubsResponseBody = z.infer<typeof FollowedClubsResponse>;
+
+/** POST /api/profile/avatar, 200: the stored public URL. */
+export const AvatarUploadResponse = z.looseObject({
+  success: z.literal(true),
+  avatar_url: z.string(),
+});
+
+export type AvatarUploadResponseBody = z.infer<typeof AvatarUploadResponse>;

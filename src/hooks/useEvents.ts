@@ -6,6 +6,11 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Event, EventFilter } from "@/types";
+import type {
+  EventsListQueryInput,
+  EventsListResponse,
+} from "@/contracts/events";
+import { checkResponseInDev } from "@/lib/contractCheck";
 
 type SortField = "start_date" | "created_at" | "popularity_score" | "trending_score";
 type SortDirection = "asc" | "desc";
@@ -50,6 +55,24 @@ interface UseEventsResult {
 }
 
 /**
+ * A query parameter this hook sends. Each is a key of the route's query
+ * contract (EventsListQuery), so renaming one there fails this file's
+ * type-check (REFAC-16). `sort`, `direction` and `clubId` are sent as they
+ * always were and are not read by the route (DEC-25), so they are named here
+ * rather than in the contract.
+ */
+type EventsListParam =
+  | keyof EventsListQueryInput
+  | "sort"
+  | "direction"
+  | "clubId";
+
+/** URLSearchParams whose `set` accepts only an EventsListParam. */
+interface EventsListSearchParams extends URLSearchParams {
+  set(name: EventsListParam, value: string): void;
+}
+
+/**
  * Build query string from EventFilter with cursor pagination
  */
 function buildQueryParams(
@@ -59,7 +82,7 @@ function buildQueryParams(
   sort: SortField,
   direction: SortDirection
 ): string {
-  const params = new URLSearchParams();
+  const params: EventsListSearchParams = new URLSearchParams();
 
   params.set("limit", limit.toString());
   params.set("sort", sort);
@@ -90,6 +113,23 @@ function buildQueryParams(
   }
 
   return params.toString();
+}
+
+/**
+ * Development only: check the response against its contract (plan 06-11,
+ * REFAC-16). Module-level, outside the hook, so the hook body holds no
+ * dynamic import; in a production build the branch, and the import with it,
+ * is removed.
+ */
+function checkEventsPageInDev(json: unknown) {
+  if (process.env.NODE_ENV !== "production") {
+    void checkResponseInDev(
+      "GET /api/events",
+      (): Promise<typeof EventsListResponse> =>
+        import("@/contracts/events").then((m) => m.EventsListResponse),
+      json
+    );
+  }
 }
 
 export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
@@ -126,6 +166,7 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
       }
 
       const data = await response.json();
+      checkEventsPageInDev(data);
       const eventList = Array.isArray(data) ? data : data.events || [];
 
       return {

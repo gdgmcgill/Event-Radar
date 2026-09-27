@@ -26,3 +26,19 @@ export const NotificationsQuery = z.object({
 
 export type NotificationsListQueryOutput = z.infer<typeof NotificationsListQuery>;
 export type NotificationsQueryOutput = z.infer<typeof NotificationsQuery>;
+
+// ─── Responses the client reads (plan 06-11, REFAC-16, DEC-67) ───────────────
+
+/**
+ * GET /api/notifications/count, 200: `{ unread_count }` (a number; 0 when the
+ * count read failed). Loose, as every response schema here is: an extra key
+ * is not drift, so a development warning means a key the client reads has
+ * changed. Checked in development only by useNotificationCount.
+ */
+export const NotificationCountResponse = z.looseObject({
+  unread_count: z.number(),
+});
+
+export type NotificationCountResponseBody = z.infer<
+  typeof NotificationCountResponse
+>;
