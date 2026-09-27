@@ -30,13 +30,13 @@ re-plans the item, and its existing owner stands.
 | **DI-26** | The blanket shared-cache directive (`vercel.json` `s-maxage=60`), and `/api/events`' own `s-maxage=30` | **To 06-14 and 06-15** (DEC-73): `vercel.json` loses `headers` in 06-14; `/api/events`' value is kept, now explicit as `public-30-60`; 06-15's cross-user spec and header sweep close it | 06-14, 06-15 |
 | **DI-27** | The five signed-in Tier 3 manual acceptance steps | **Unchanged** | the phase owner; CERT-05, Phase 7 |
 | **DI-29** | No staging Supabase project | **Unchanged** | the phase owner to provision; CERT-01, Phase 7 |
-| **DI-33** | Three storage buckets and three pg_cron jobs exist only in production | **Split.** The cron half goes **to 06-05** (the two missing jobs declared byte-identical, DEC-70). The bucket half is unchanged | 06-05 (cron); Phase 8 (buckets) |
+| **DI-33** | Three storage buckets and three pg_cron jobs exist only in production | **Split.** The cron half goes **to 06-05** (the two missing jobs declared byte-identical, DEC-70). The bucket half is unchanged. **Cron half CLOSED at the slice-6 close (06-06):** `0ba575a` declares both jobs; after a fresh reset `cron.job` equals production's list field for field (`evidence/floor.slice-6-after.txt` block 16c; F-042 Fixed, `evidence/slice-6-close.md` § 4) | ~~06-05 (cron)~~ closed; Phase 8 (buckets) |
 | **DI-39** | F-080's visual half | **Unchanged.** Owner-decision item | the phase owner |
 | **DI-40** | F-081's six identity mappings | **Unchanged.** Owner-decision item | the phase owner |
 | **DI-41** | `/invites/[token]` auto-accepts an invitation on GET (a Low CSRF residual) | **Unchanged** | the phase owner |
 | **DI-42** | Owner actions required before any push to `main` (Upstash provisioning and `RATE_LIMIT_REQUIRE_DISTRIBUTED`) | **Unchanged.** Travels with DI-81's deploy prerequisites in the completion note | the phase owner |
 | **DI-43** | `@supabase/ssr` 0.7 → 0.12, the major | **Phase 8** (CONTEXT out of scope; DEC-80) | Phase 8 |
-| **DI-44** | `recommendations/feedback` keeps an unreachable body-`user_id` fallback; the anon-role write is unprobed | **Split.** The code half goes **to 06-04** (the feedback contract has no user id, so the fallback is deleted; DEC-68). The anon-role RLS probe stays with Phase 7 | 06-04 (code); Phase 7 (probe) |
+| **DI-44** | `recommendations/feedback` keeps an unreachable body-`user_id` fallback; the anon-role write is unprobed | **Split.** The code half goes **to 06-04** (the feedback contract has no user id, so the fallback is deleted; DEC-68). The anon-role RLS probe stays with Phase 7. **Code half CLOSED at the slice-6 close (06-06):** `2617b7b` removed both `authUser?.id ?? body.user_id` fallbacks and their dead 401s; the four remaining `user_id` lines all use the caller's id (`evidence/contracts-slice-6.txt` [2.9]), and the DI-44 rows of `recommendations-family-characterization.test.ts` pass unedited | ~~06-04 (code)~~ closed; Phase 7 (probe) |
 | **DI-45** | Auth-failure log lines removed by the context adoption | **To 06-12** (DEC-74): a warn line when the user lookup errors with anything but a missing session | 06-12 |
 | **DI-46** | CLAUDE.md cites stale lines and a deleted helper | **Unchanged in ownership.** 06-18 prepares a fact-only patch; it is applied only if the owner signs an authorization here (DEC-81) | the phase owner |
 | **DI-47** | Branches and prose left behind by the handler ring | **To 06-14's comment-only sweep**, with DI-59, under ledger rows where a characterization file is touched | 06-14 |
@@ -121,6 +121,12 @@ Phase 6 plan executes it; every other owner is outside this phase and says why.
   143), IN-19 (pgTAP 050 does not pin the full UPDATE column set on `users`).
 - **Why not Phase 6.** Test-tooling and coverage work on surfaces Phase 6 does not change.
 - **Owner:** Phase 7 (certification coverage).
+- **Extended at the slice-6 close (06-06), from 06-05's SUMMARY.** `scripts/pgtap-mutation-check.sh` mutates
+  only `CREATE POLICY` statements in the four migrations it lists. The slice-6 migration creates no policy,
+  so its revokes, the friends predicate, the F-093 filters and the `cron_job_status` revoke were proven by
+  four manual clause mutations (M1-M4, `evidence/slice-6-mutation-check.txt` § 3). A mutation harness that
+  can remove a named clause (REVOKE, a WHERE predicate) from any migration belongs with this item. Same
+  owner.
 
 ## DI-68 — Approving pending edits is not bound to the version the admin reviewed
 
@@ -282,10 +288,89 @@ Source: 06-RESEARCH.md § Assumptions Log.
   body (F-059 territory).
 - **Owner:** Phase 6 (06-05 or the slice-6 close, 06-06) to disposition; 06-04 worked around it in the
   e2e fixture only (a service-client score row), with no product-code change.
+- **Dispositioned at the slice-6 close (06-06).** Neither 06-05 nor 06-06 changes the function: 06-05's
+  text pins its body by md5 and never directs a change, and 06-06 forbids source, test and configuration
+  changes. **Owner: Phase 7**, beside the other function-body changes that want its datasets (DI-62,
+  DI-68). **Target:** a fix-forward migration that re-creates `compute_user_scores()` with its two
+  unqualified deletes written as `DELETE … WHERE true` and nothing else changed; in the same commit,
+  070 row 1's md5 is re-derived under a signed amendment to DEC-68 (the breakdown invariant, row 4, keeps
+  proving the formula); a DEFECT row first pins today's 500 on the real stack, then moves to 200; and
+  `e2e/specs/async-edge.spec.ts` drops its service-client score workaround and calls the admin route.
+  Production is the same (PostgREST's `authenticator` preloads safeupdate there too), so the live fix
+  travels with DI-23. Until then the 500's `details` text is F-059's to remove (06-13/06-14), and the
+  six-hourly pg_cron job, which runs as `postgres`, keeps scores fresh.
 
 ---
 
-**Next new item id: DI-83.**
+# Part 5 — Items found by 06-02..06-05, registered at the slice-6 close (06-06)
+
+Source: the Issues, Deviations and Observations sections of `06-02-SUMMARY.md` .. `06-05-SUMMARY.md`
+and the evidence they cite, read at the slice-6 close. DI-82 (above) is the first of them. Each new
+item has an owner. Items the SUMMARYs name that are not deferrals are listed at the end with the
+reason.
+
+## DI-83 — Three malformed webhook payload shapes still answer 500
+
+- **Found by:** 06-02 (`evidence/slice-6-characterization.txt` § 3, rows 7, 11 and 12) and kept by
+  06-03 as a recorded decision (`evidence/webhook.txt` § 7: "rows 7, 11 and 12 stay 500").
+- **What it is.** A JSON `null` payload, a `null` element in `events`, and a non-string tag each answer
+  `500 Internal server error` from `handleWebhook`, where the zod contract could answer 400. The sender
+  must already hold the secret, so the reachable effect is a wrong status to an authenticated caller.
+- **Why deferred.** 06-03's plan named exactly two intentional webhook changes; this is the webhook's
+  share of F-094, and no slice-7 plan lists the webhook among its adoptions.
+- **Why not cosmetic.** F-094's criterion is that suites pinning a 500 on malformed input move to 400;
+  these three rows are such pins.
+- **Owner:** Phase 6, 06-18, which decides F-094's status: either the one-line handler change with a
+  ledger row, or these three rows recorded as F-094's stated residue. The live effect travels with
+  DI-81's redeploy.
+
+## DI-84 — The owner's Deno integration suite for events-webhook has never run in this program
+
+- **Found by:** 06-03 (`evidence/webhook.txt` § 1: `command -v deno` exit 1).
+- **What it is.** `supabase/functions/tests/webhook.test.ts` was updated for the two changed rows (a
+  wrong-length test, a right-length test, a replay test, `content_hash` on the success row) but not run:
+  Deno is absent locally and no CI job runs it. Its pre-existing "Invalid signature returns 401" test
+  sent a 23-character signature and was already failing (500) against the deployed function.
+- **Why deferred.** Running it needs Deno and a served edge runtime, which neither the executor host nor
+  CI provides; the Jest suites prove the Deno-free handler instead.
+- **Why not cosmetic.** The adapter (`index.ts`, `deno.json`'s `npm:zod@4.6.5` mapping, `_shared`
+  bundling, research A5) is proven only by the owner's first deploy.
+- **Owner:** Phase 8, with DI-81: the CI job that deploys `events-webhook` runs this suite first.
+
+## DI-85 — The Playwright suite leaves a wall-clock `updated_at` on a seeded user, so pgTAP 040 row 20 fails until the next reset
+
+- **Found by:** 06-05 (`evidence/schema-push-slice-6.txt` § 13). Phase 5 met the same residue and reset
+  it without registering it (`schema-push-slice-5.txt` row 20).
+- **What it is.** The specs write to seeded users, `update_users_updated_at` stamps `now()`, and
+  `040-seed-coverage` row 20 ("every seeded user carries the pinned stamp, not a wall-clock one") then
+  fails. Every floor resets and re-seeds before pgTAP, so no gate is affected.
+- **Why deferred.** The fix is harness hygiene (per-spec cleanup, or a seed-coverage pin that tolerates
+  harness writes), which is Phase 7's dataset work.
+- **Why not cosmetic.** A developer who runs pgTAP after Playwright sees a red seed pin that is not a
+  regression.
+- **Owner:** Phase 7 (datasets and the harness reset discipline).
+
+## DI-86 — CLOSED by record: the characterization tag gate was red on HEAD after 06-03
+
+- **Found by:** 06-04 (`06-04-SUMMARY.md` Issues): `src/__tests__/webhook/verify-signature.test.ts` and
+  `webhook-handler.test.ts` named neither PRESERVE nor DEFECT, so the CI step "Characterization tag gate"
+  failed.
+- **Closed by:** the orchestrator's `57cb55f` (docblock-only; both suites PRESERVE, citing F-039). The
+  gate reads `ok 44 files` at the slice-6 close (`evidence/floor.slice-6-after.txt` block 7).
+- **Owner:** none (closed).
+
+**Also extended:** DI-67 (the mutation harness covers only `CREATE POLICY`; see its section).
+
+**Named in the SUMMARYs and not deferrals:** F-078's fuzzy-search 0A000 in the Playwright server log
+(already a finding, Open at "08"); the two λ 0.7 constants in `recommendations/route.ts` pinned by
+different rows (06-02 § 2, a note on the source, both pinned); the census's R3 total 54 against C4's 59
+(itemized in `evidence/contracts-slice-6.txt` [1.4]); `allowImportingTsExtensions` in `tsconfig.json`
+(06-03, a recorded Rule 3 fix); the `ExtractedEvent` drift guard firing under `tsc` rather than Jest
+(CI runs `tsc`); and `state.add-decision` refusing scratchpad paths (GSD tooling, not this project).
+
+---
+
+**Next new item id: DI-87.**
 
 *Phase: 06-slices-6-7-async-edge-contracts-caching-observability*
 *Plan: 06-01*

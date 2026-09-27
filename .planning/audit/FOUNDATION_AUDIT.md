@@ -46,8 +46,8 @@
 
 | Status | Count |
 |---|---:|
-| Open | 60 |
-| Fixed | 34 |
+| Open | 54 |
+| Fixed | 40 |
 
 ---
 
@@ -279,7 +279,7 @@
 
 ### F-002 — Reminder cron route compares the Authorization header against the fixed literal 'Bearer undefined'
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 06
+**Severity:** High · **Category:** authz · **Status:** Fixed · **Closes in phase:** 06
 
 **Exposure rationale.** Fail-open shape on a machine path in front of a service-role client. The check still runs, but its comparison target is a template literal interpolating an unset variable, so it degrades to one well-known constant rather than disappearing. CRON_SECRET is confirmed absent from production. Bounded below Critical only because the caller must send an exact known string rather than nothing at all.
 
@@ -298,6 +298,8 @@
 **Recommended fix.** Copy the fail-closed shape from src/app/api/cron/send-feedback-requests/route.ts:8-12 — a separate presence check that returns 500 before any comparison, then a constant-time comparison of the supplied token. Do not fold the presence check into the comparison; folding them is precisely how F-001 fails. If the handler is to be deleted instead (see F-037), delete it rather than guarding it.
 
 **Validation criterion.** A test asserting that with CRON_SECRET unset the route returns 500 for every caller, and with it set returns 401 for a wrong token and 200 only for the correct one. A grep asserting no `Bearer ${` template literal appears in any comparison under src/app/api/cron/.
+
+**Resolution.** **Fixed in Phase 6 by deletion: plan 06-03 (`ffd973e`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 06-06 (DEC-63).** `src/app/api/cron/send-reminders/route.ts` and its sibling are deleted, with the ESLint override that listed them. Nothing called them: `vercel.json` has no `crons` key, pg_cron runs the SQL functions directly, and no caller exists in `src`, `e2e`, `scripts` or `.github` (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/cron-deletion.txt` § 1). Validation criterion met: its test clause described the guard of a route that no longer exists, and on a production build against the local stack both deleted paths answer 404 to GET and POST (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` block 8e); its grep clause over `src/app/api/cron/` is vacuously satisfied, because the directory is absent (block 8f, `test ! -e src/app/api/cron` exit 0). No non-test file reads `CRON_SECRET` (block 8f), and the elevated ratchet is committed=0 live=0 (block 5). Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4.
 
 **Related.** [F-037](#f-037), [F-040](#f-040)
 
@@ -585,7 +587,7 @@
 
 ### F-039 — The events-webhook edge function is deployed and ACTIVE with verify_jwt disabled, built from a developer's local checkout
 
-**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 06
+**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** An anonymously reachable ingestion endpoint with no gateway authentication — verify_jwt is false, so the platform performs no JWT check and all request-level authentication must be implemented inside the function body. An in-body HMAC check does exist and was verified, which is the compensating control that holds this below Critical. Two further facts raise it above Medium: the function has no replay protection or deduplication on an HMAC-authenticated endpoint, and it was deployed from a different developer's local filesystem rather than from CI, so the deployed code is not provably the code in this repository.
 
@@ -606,13 +608,15 @@
 
 **Validation criterion.** A test replaying a previously accepted, validly-signed payload and asserting it is rejected, plus a deployment record showing the function was built by CI from a named commit.
 
+**Resolution.** **Code half fixed in Phase 6: plan 06-03 (`db839a7`, `239b7cd`, INTENTIONAL BEHAVIOUR CHANGE; the suites tagged PRESERVE by `57cb55f`), recorded at the slice-6 close by plan 06-06; the status stays Open with `closes_in_phase` "08" for the deployment-record clause (DEC-64, DEC-72).** The function's request logic is `supabase/functions/_shared/webhook-handler.ts`, Deno-free and proven by Jest, behind a thin `events-webhook/index.ts`. The HMAC over the raw body is kept, and every bad signature (missing, wrong, and now wrong-length) answers 401. Rows carry `content_hash` from a parity-tested copy of `src/lib/contentHash.ts`, and a replayed, validly signed payload reports each event `duplicate` and inserts nothing. The payload contract is `supabase/functions/_shared/webhook-contract.ts`, with today's messages. Met: the criterion's replay clause, `src/__tests__/webhook/webhook-handler.test.ts` row 16 (4 cases; mutation M2 turns 6 rows red; `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/webhook.txt`; ledger rows `239b7cd`). Unmet: "a deployment record showing the function was built by CI from a named commit". The redeploy from CI with `WEBHOOK_SECRET` confirmed is DI-81, an owner action; until then production runs version 3 from a local checkout, and neither change is live. The signed-timestamp window is DI-78. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4.
+
 **Related.** [F-050](#f-050), [F-042](#f-042)
 
 ---
 
 ### F-040 — Only three environment variables are configured in production; ADMIN_API_KEY, CRON_SECRET and ADMIN_EMAILS are all absent
 
-**Severity:** High · **Category:** config · **Status:** Open · **Closes in phase:** 06
+**Severity:** High · **Category:** config · **Status:** Fixed · **Closes in phase:** 06
 
 **Exposure rationale.** This is the fact that converts three conditional findings into live ones. F-001's admin gate is skipped entirely, F-002's comparison degrades to a known literal, and F-004's allowlist is empty — all because the variables their code reads are not set. Graded High in its own right because the configuration surface the code believes it has is three times larger than what exists, so any reasoning about the deployment from the source alone is wrong.
 
@@ -633,7 +637,7 @@
 
 **Validation criterion.** A boot-time check enumerating required variables that fails the build or the first request when any is absent, plus a test asserting the check fires.
 
-**Resolution.** **Progress recorded at the Phase 5 close (plan 05-19); status stays Open at "06" for `CRON_SECRET`.** Two of the three absent variables no longer have a reader. `ADMIN_EMAILS`: plan 05-05 (`077a081`) deleted the callback's allowlist parse and role grant (F-004). `ADMIN_API_KEY`: plan 05-14 (`4cf4928`) deleted the calculate-popularity machine-key gate (F-001). Neither name is read by any non-test file under `src/`. Plan 05-04 (`6e716fb`, DEC-37) added the boot check in `src/instrumentation.ts` `register()` for the Supabase variables, and 05-18 (`941bee7`, DEC-59) added the validated `RATE_LIMIT_REQUIRE_DISTRIBUTED` flag and the loud degraded-production log for the rate-limit store. The criterion stays unmet for `CRON_SECRET`, which the two cron routes still read and which REFAC-14 (Phase 6) makes fail closed. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-5-close.md` section 4 and `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md`.
+**Resolution.** **Fixed in Phase 6: the last reader went with plan 06-03 (`ffd973e`); closed out by plan 06-06 (DEC-63).** `ADMIN_EMAILS` lost its reader in 05-05 (`077a081`), `ADMIN_API_KEY` in 05-14 (`4cf4928`), and `CRON_SECRET` when 06-03 deleted the two cron routes. No non-test file under `src/` reads any of the three names; the remaining hits are env fixtures and comments in characterization tests (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` block 8f: grep exit 1). Validation criterion met: the boot check in `src/instrumentation.ts` `register()` enumerates the variables the code requires and refuses to start with `MissingEnvError` when one is unset or blank (05-04 `6e716fb`, DEC-37; the rate-limit flag, 05-18 `941bee7`, DEC-59), and `src/instrumentation.test.ts` asserts that it fires (Jest, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` block 1, 0 failed). The configuration the code reads no longer includes a variable production lacks. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4.
 
 **Related.** [F-001](#f-001), [F-002](#f-002), [F-004](#f-004)
 
@@ -790,7 +794,7 @@
 
 ### F-074 — get_friends and get_friends_going_to_event are anon-executable SECURITY DEFINER functions that take the subject as a parameter, so any unauthenticated caller can read any user's friend graph
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 06
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Anonymous-reachable IDOR against the social graph with no compensating control. Both functions are SECURITY DEFINER, so they run as postgres and bypass every RLS policy on users and user_follows; both take the subject as an ARGUMENT rather than reading it from the session, so there is nothing to bypass in the first place; and both are GRANT ALL ... TO anon, so the public anon key that ships in the client bundle is sufficient. get_friends_going_to_event additionally discloses who saved a given event. Not Critical because what is disclosed is id, name and avatar_url plus a mutual-follow edge rather than credentials or contact details, and user ids must first be harvested (which /api/users/search and /users/[id] make trivial). High because the boundary crossed is anonymous-to-authenticated and the disclosure is of every user, not one.
 
@@ -815,7 +819,7 @@
 
 **Validation criterion.** A pgTAP assertion that ok(NOT has_function_privilege('anon', 'public.get_friends(uuid)', 'EXECUTE')) for both functions, plus a case that impersonates user A with tests.act_as and asserts the function returns A's friends and not B's when asked for B - an assertion that fails if the subject is ever taken from a parameter again.
 
-**Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md CR-01) and registered rather than fixed.** Inherited from production, not authored by Phase 3 - but supabase/migrations/20260915214553_baseline.sql is what creates it in every environment built from this repository from now on, which is why it is a repository finding and not only a production one. Not fixed in Phase 3's review-fix pass because changing an RPC's signature and its grants is production-codified behaviour: five live callsites pass the subject explicitly, and Phase 3's charter is behaviour preservation. No characterization test was written either - an assertion documenting that anon CAN call this would have to be deleted by the fix, and the one worth writing is the assertion that it cannot, which belongs with the fix. Owner: Phase 5 (authz/RLS hardening).
+**Resolution.** **Fixed and proven locally (migration 20260926120000, pgTAP 070 and 031, mutation check); production closes with the DI-23 repair.** Plan 06-05 (`0ba575a`, INTENTIONAL BEHAVIOUR CHANGE, LOCAL ONLY; mutation evidence `e55e1c9`), recorded at the slice-6 close by plan 06-06 under DEC-72, so the status stays Open with `closes_in_phase` "08". `get_friends(uuid)` and `get_friends_going_to_event(uuid, uuid)` keep their signatures and gain `SET search_path = ''`, schema-qualified relations and the predicate caller-is-subject-or-service_role; EXECUTE is revoked from PUBLIC and anon (DEC-70). The criterion, in `supabase/tests/database/070-definer-functions.test.sql`: `NOT has_function_privilege('anon', …, 'EXECUTE')` for both functions, real anon calls raising 42501, user A asking for user B getting 0 rows, A for A getting A's friends, and the service role for B answering; mutation M2 turns rows 35 and 37 red; PostgREST answers the anon key 42501 (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/schema-push-slice-6.txt` § 10). Green unseeded and seeded from a clean reset (Files=13, Tests=260, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` blocks 11 and 13); red before the migration (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/definer-hardening-red.txt` § 2). In production, any anonymous caller can still read any user's friend graph until the repair. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4 and section 6, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/schema-push-slice-6.txt`, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-mutation-check.txt`.
 
 **Related.** [F-013](#f-013), [F-075](#f-075), [F-076](#f-076), [F-005](#f-005)
 
@@ -823,7 +827,7 @@
 
 ### F-075 — compute_user_scores, send_event_reminders and send_feedback_requests are SECURITY DEFINER privileged writes granted to anon
 
-**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 06
+**Severity:** High · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Three unauthenticated write/compute primitives, each reachable with the public anon key alone. compute_user_scores() is a full recompute of user_event_scores across every user - the job Phase 3 put on a six-hour pg_cron schedule precisely because it is expensive - callable on demand and unthrottled, which is a denial-of-service primitive against the database the whole application shares. send_event_reminders() and send_feedback_requests() write notifications rows on behalf of OTHER users. Not Critical because the notification writes de-duplicate on (user_id, event_id, type) so the spam ceiling is bounded, and because no data is disclosed to the caller. High because an anonymous caller triggering privileged writes for other users is an authorization failure regardless of the ceiling, and because the compute path has no ceiling at all.
 
@@ -847,7 +851,7 @@
 
 **Validation criterion.** A pgTAP assertion per function that ok(NOT has_function_privilege('anon', '<signature>', 'EXECUTE')) AND NOT has_function_privilege('authenticated', ...), plus a re-run of supabase/tests/database/030-cron-schedule.test.sql proving the scheduled job still runs after the revoke.
 
-**Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md CR-05) and registered rather than fixed.** Inherited from production; codified for every rebuilt environment by the baseline migration. Not fixed in Phase 3's review-fix pass because revoking EXECUTE changes who can invoke three live functions, and the cron HTTP routes that call them have not been traced to a role - doing this blind is how a scheduled job stops running silently, which is the failure mode this program exists to end rather than create. Owner: Phase 5 (authz/RLS hardening), together with F-076.
+**Resolution.** **Fixed and proven locally (migration 20260926120000, pgTAP 070 and 031, mutation check); production closes with the DI-23 repair.** Plan 06-05 (`0ba575a`, INTENTIONAL BEHAVIOUR CHANGE, LOCAL ONLY; mutation evidence `e55e1c9`), recorded at the slice-6 close by plan 06-06 under DEC-72, so the status stays Open with `closes_in_phase` "08". EXECUTE on `compute_user_scores()`, `send_event_reminders()` and `send_feedback_requests()` is revoked from PUBLIC, anon and authenticated; service_role keeps it; pg_cron runs the jobs as `postgres`, which the revoke does not touch (DEC-70). The criterion, in 070: `has_function_privilege` rows for PUBLIC, anon, authenticated and service_role on all three, plus real anon calls raising 42501; mutation M1 turns rows 10-12, 18-20, 22 and 24 red. Its re-run clause holds: `030-cron-schedule.test.sql` is green, and on the local stack, reset at 01:48:08Z with the jobs `0ba575a` declares, `cron.job_run_details` shows `send-event-reminders` with 1 run, succeeded, and `send-feedback-requests` with 1 run, succeeded, both at 02:00:00Z, and 0 runs in any other status (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` block 16b), so the scheduled writers still run after the revoke. Green unseeded and seeded from a clean reset (Files=13, Tests=260, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` blocks 11 and 13); red before the migration (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/definer-hardening-red.txt` § 2). In production, the public anon key can still trigger a full recompute or a reminder run until the repair. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4 and section 6, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/schema-push-slice-6.txt`, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-mutation-check.txt`.
 
 **Related.** [F-074](#f-074), [F-076](#f-076), [F-037](#f-037), [F-041](#f-041), [F-042](#f-042)
 
@@ -992,7 +996,7 @@
 
 ### F-017 — A/B experiment assignment silently degrades to the control path for every non-admin caller
 
-**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 06
+**Severity:** Medium · **Category:** config · **Status:** Fixed · **Closes in phase:** 06
 
 **Exposure rationale.** Correctness defect with a compensating control that is itself the problem: experiments and experiment_variants each have exactly one live policy, an admin-only ALL, and the five migration-declared read policies are absent. /api/recommendations reads all three experiment tables on the cookie client, so a non-admin gets zero rows and falls through to control without erroring. No user-visible failure, which is why it survived — the experiment framework reports results it never actually ran.
 
@@ -1012,6 +1016,8 @@
 **Recommended fix.** Apply the missing read policies, or read the experiment tables on the service-role client with an explicit assignment write. Then add an assertion that a non-admin caller receives a variant, so a silent degradation fails a test rather than producing a null result.
 
 **Validation criterion.** An integration test asserting a non-admin caller to /api/recommendations is assigned a variant and that experiment_assignments records it.
+
+**Resolution.** **Fixed in Phase 6: plan 06-04 (`376bf37`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 06-06 (DEC-68).** `/api/recommendations` reads `experiments` and `experiment_variants`, and reads and writes the caller's own `experiment_assignments` row, through `getElevatedClient()`, keyed only by the id `getUser()` returns, with a row in `src/server/db/elevated/REGISTRY.md`; every other query stays on the cookie client. Validation criterion met: `e2e/specs/async-edge.spec.ts` 'FIXED F-017: a non-admin is assigned an A/B variant' runs on the reset and seeded stack, and asserts the student's recommendations answer 200, that `experiment_assignments` holds exactly one row keyed by the student, and that the reported variant is that row's (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/playwright.slice-6-after.txt`, test 30). The Jest DEFECT rows D1 and D2 of `src/__tests__/api/recommendations/experiment-assignment-defect.test.ts` moved under the ledger protocol (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/defect-ledger.md`; `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/async-edge-fixes.txt` § 1). Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4.
 
 **Related.** [F-012](#f-012), [F-041](#f-041)
 
@@ -1038,7 +1044,7 @@
 
 **Validation criterion.** A test asserting that each of the eight routes returns 401 to an anonymous caller.
 
-**Resolution.** **Partly fixed in Phase 5; re-pointed to Phase 6 by plan 05-08 (DEC-39).** Four of eight routes answer 401 in Phase 5 (05-06, DEC-39); rsvp GET, clubs/[id]/events and notifications/count move with REFAC-19. The four fixed routes are `/api/events/following`, `/api/events/friends-activity`, `/api/events/friends-organizing` and `/api/events/[id]/friends` (`7ff08c1`, INTENTIONAL BEHAVIOUR CHANGE), pinned by `src/__tests__/api/events/anonymous-personalized-defect.test.ts` and reflected in `endpoints.json` by `7bccf15` (anonymous expected_status 401). The eighth route, `/api/auth-debug`, is deleted (F-027). The rsvp GET and the club events GET feed public UI (the Validated anonymous-browse and public-club-page workflows), so a 401 there is REFAC-19's cache-and-contract decision, not slice 3's. Unmet clause: the criterion's 'each of the eight routes' is not met until those three move. Evidence: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4.
+**Resolution.** **Progress recorded at the slice-6 close (plan 06-06); the status stays Open at "06".** Five of the eight routes now answer an anonymous caller 401, and one is deleted. The four fixed in Phase 5 are `/api/events/following`, `/api/events/friends-activity`, `/api/events/friends-organizing` and `/api/events/[id]/friends` (`7ff08c1`; `src/__tests__/api/events/anonymous-personalized-defect.test.ts`). The fifth is `/api/notifications/count`, fixed by plan 06-04 (`2617b7b`, INTENTIONAL BEHAVIOUR CHANGE, DEC-69) through `createRequestContext` + `requireUser`, pinned by the moved rows D1 and D2 of `src/__tests__/api/notifications/notifications-count-defect.test.ts` and by `e2e/specs/async-edge.spec.ts` 'FIXED F-028' (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/playwright.slice-6-after.txt`, test 28); the side navigation requests the count only when signed in, so no page polls into the 401. `/api/auth-debug` is deleted (F-027). Still 200 for an anonymous caller: `/api/events/[id]/rsvp` GET and `/api/clubs/[id]/events`, which feed public pages; REFAC-19 gives both `private, no-store` in plan 06-14, and DEC-69 keeps their 200 pending the owner's risk-acceptance or a 401 decision at the phase close. Unmet clause: "each of the eight routes returns 401". Earlier history: `.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/slice-3-close.md` section 4. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4.
 
 **Related.** [F-025](#f-025), [F-061](#f-061)
 
@@ -1203,7 +1209,7 @@
 
 ### F-037 — Two dead cron handlers duplicate live pg_cron functions with four behavioural divergences
 
-**Severity:** Medium · **Category:** config · **Status:** Open · **Closes in phase:** 06
+**Severity:** Medium · **Category:** config · **Status:** Fixed · **Closes in phase:** 06
 
 **Exposure rationale.** Correctness and maintenance defect with a compensating control: nothing triggers the handlers, proved three independent ways, so the divergence is dormant rather than live. The hazard is that scheduling them — the obvious reading of 'the cron route has no trigger' — would activate four divergences against the pg_cron implementations and send duplicate notifications to real users. The route is separately a live security defect as F-002.
 
@@ -1225,6 +1231,8 @@
 **Recommended fix.** Delete both handlers. The live implementation is the pg_cron function; two implementations of one workflow, one of them unreachable and divergent, is worse than one. Deleting them also closes F-002 without needing a guard.
 
 **Validation criterion.** A grep asserting src/app/api/cron/ is empty or contains only handlers with a confirmed trigger, plus a check that the pg_cron run history continues to show zero failures after the deletion.
+
+**Resolution.** **Fixed in Phase 6 by deletion: plan 06-03 (`ffd973e`, INTENTIONAL BEHAVIOUR CHANGE); the run-history clause observed at the slice-6 close by plan 06-06 (DEC-63, DEC-71).** Both dead handlers are deleted, so the pg_cron functions are the only implementation and the four divergences are gone with the duplicate. Validation criterion met on both clauses. The grep clause: `src/app/api/cron/` does not exist (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` block 8f). The run-history clause: on the local stack, reset at 01:48:08Z with the jobs `0ba575a` declares, `cron.job_run_details` shows `send-event-reminders` with 1 run, succeeded, and `send-feedback-requests` with 1 run, succeeded, both at 02:00:00Z, and 0 runs in any other status (block 16b; the probe is a rolled-back read). The deletion touched no SQL function and no job, so the production history the audit captured (`.planning/audit/async/cron-job.json`: every run succeeded) is unaffected by it; production was not read in this phase. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4.
 
 **Related.** [F-002](#f-002), [F-038](#f-038), [F-042](#f-042)
 
@@ -1259,7 +1267,7 @@
 
 ### F-042 — All three pg_cron jobs exist only in production; the repository's sole trace is a commented-out schedule line in a never-applied migration
 
-**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 06
+**Severity:** Medium · **Category:** schema-drift · **Status:** Fixed · **Closes in phase:** 06
 
 **Exposure rationale.** Three live scheduled jobs mutating production data every 15, 30 and 360 minutes, none of them schema-as-code. A rebuilt environment runs nothing. Held at Medium because the jobs are working correctly — 97 successful runs, zero failures in the captured window — so the defect is reproducibility rather than behaviour. It is the same class as F-012 and F-035 and should be fixed in the same slice.
 
@@ -1278,6 +1286,8 @@
 **Recommended fix.** Declare all three jobs in a migration, alongside the function bodies they call, so a rebuilt environment schedules the same work. Sequenced behind F-043.
 
 **Validation criterion.** A fresh `supabase db reset` followed by a cron.job census matching the production job list exactly.
+
+**Resolution.** **Fixed in Phase 6: plan 06-05 (`0ba575a`), closed out by plan 06-06 (DEC-70, DEC-72).** `supabase/migrations/20260926120000_async_edge_definer_hardening.sql` declares `send-event-reminders` and `send-feedback-requests` byte for byte, beside the `compute-user-scores` job of `20260915230100_cron_compute_user_scores.sql`. Validation criterion met: after a fresh `supabase db reset --local`, the `cron.job` census equals `.planning/audit/async/cron-job.json` field for field (jobname, schedule, command, active, username, database; `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` block 16c, and `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/schema-push-slice-6.txt` § 9), and `supabase/tests/database/031-cron-jobs.test.sql` pins each job and the whole catalog (13 rows, green unseeded and seeded, blocks 11 and 13). The criterion is repository truth; production already runs these jobs, so it does not wait on DI-23. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4.
 
 **Related.** [F-012](#f-012), [F-035](#f-035), [F-043](#f-043), [F-037](#f-037)
 
@@ -1645,7 +1655,7 @@
 
 ### F-076 — Five of the seven SECURITY DEFINER functions in the baseline have a mutable search_path
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 06
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** The standard function_search_path_mutable advisory. Only is_admin and is_club_owner carry SET search_path TO 'public'; compute_user_scores, get_friends, get_friends_going_to_event, send_event_reminders and send_feedback_requests do not, and every one of their bodies references unqualified relations (users, user_follows, saved_events, notifications). Medium rather than High because exploitation requires a CREATE privilege on some schema in the cluster, which no application role currently holds - it is the SEVERITY_SLA.md latent clause. It is recorded as its own finding rather than folded into F-074/F-075 because it is the AMPLIFIER for both: a definer function with a mutable path plus a public EXECUTE grant is the shape that turns a schema-creation privilege anywhere in the cluster into arbitrary execution as postgres.
 
@@ -1667,7 +1677,7 @@
 
 **Validation criterion.** A pgTAP assertion that iterates pg_proc WHERE prosecdef AND pronamespace = 'public'::regnamespace and requires proconfig to contain a search_path entry for EVERY row - one assertion that a future definer function cannot satisfy by forgetting, rather than five assertions naming the five functions that exist today.
 
-**Resolution.** **Raised by the Phase 3 code review (03-REVIEW.md WR-05) and registered rather than fixed.** Inherited from production; codified for every rebuilt environment by the baseline migration. Not fixed in Phase 3's review-fix pass because pinning the path REQUIRES rewriting five function bodies to schema-qualify their relations, which is a behaviour-affecting change to production-codified SQL and is exactly the kind of work Stage 2's charter excludes. Owner: Phase 5, in the same migration as F-075.
+**Resolution.** **Fixed and proven locally (migration 20260926120000, pgTAP 070 and 031, mutation check); production closes with the DI-23 repair.** Plan 06-05 (`0ba575a`, INTENTIONAL BEHAVIOUR CHANGE, LOCAL ONLY; mutation evidence `e55e1c9`), recorded at the slice-6 close by plan 06-06 under DEC-72, so the status stays Open with `closes_in_phase` "08". The five SECURITY DEFINER functions without a path now carry one: `SET search_path = public, pg_temp` on compute and feedback by `ALTER FUNCTION` with no body change (DEC-68's md5 pins hold) and on the re-created reminder function, and `SET search_path = ''` with schema-qualified bodies on the two friends functions; the new `cron_job_status()` is created with `search_path = ''`. The criterion, in 070: one catalog invariant counting SECURITY DEFINER functions in `public` whose `proconfig` has no `search_path=` entry (0), which a future function cannot satisfy by forgetting, plus a non-vacuity row. Green unseeded and seeded from a clean reset (Files=13, Tests=260, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` blocks 11 and 13); red before the migration (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/definer-hardening-red.txt` § 2). In production, the five functions keep a mutable search_path until the repair. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4 and section 6, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/schema-push-slice-6.txt`, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-mutation-check.txt`.
 
 **Related.** [F-074](#f-074), [F-075](#f-075)
 
@@ -1959,7 +1969,7 @@
 
 ### F-092 — GET /api/admin/reports always answers 500: its select embeds reporter:users!event_reports_reporter_id_fkey(id, display_name, avatar_url), but reporter_id references auth.users and public.users has no display_name, so PostgREST returns PGRST200 and the moderation reports list is always empty
 
-**Severity:** Medium · **Category:** schema-drift · **Status:** Open · **Closes in phase:** 06
+**Severity:** Medium · **Category:** schema-drift · **Status:** Fixed · **Closes in phase:** 06
 
 **Exposure rationale.** Exposure-adjusted to Medium. A Validated workflow (PROJECT.md: admins review reports and appeals) cannot list reports at all, which is a correctness defect. Nothing is exposed: the route needs an admin session and fails closed with a 500, and resolving a single report by id still works (PATCH /api/admin/reports/[id], e2e/specs/admin-write-paths.spec.ts), which is the partial compensating path. It is not High because no boundary is crossed and no data is disclosed.
 
@@ -1981,13 +1991,15 @@
 
 **Validation criterion.** A DEFECT test pinning today's 500 on the PGRST200 error MOVES when the fix lands, and an e2e test on the seeded stack creates a report and asserts that the admin's GET /api/admin/reports answers 200 with that report and its reporter's name.
 
+**Resolution.** **Fixed in Phase 6: plan 06-04 (`376bf37`, INTENTIONAL BEHAVIOUR CHANGE), closed out by plan 06-06 (DEC-69).** The `users!event_reports_reporter_id_fkey` embed is gone: the route reads `users` for `id, name, avatar_url` by the distinct reporter ids and maps each report's `reporter` to `{ id, display_name, avatar_url }`, so the moderation page renders unchanged. Validation criterion met: DEFECT row D1 of `src/__tests__/api/admin/admin-reports-defect.test.ts` pinned the 500 on PGRST200 and moved to 200 in the fix commit under the ledger protocol (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/defect-ledger.md`; `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/async-edge-fixes.txt` § 2), and `e2e/specs/async-edge.spec.ts` 'FIXED F-092' has the seeded student report an event and asserts the admin's GET answers 200 with that report and the reporter's seeded name (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/playwright.slice-6-after.txt`, test 29). Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4.
+
 **Related.** [F-072](#f-072)
 
 ---
 
 ### F-093 — send_event_reminders() has no deleted_at IS NULL and no status = 'approved' filter, so a user who saved an event is reminded about it after it is soft-deleted or while it is pending, rejected or suspended, and the reminder carries the event's title
 
-**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 06
+**Severity:** Medium · **Category:** authz · **Status:** Open · **Closes in phase:** 08
 
 **Exposure rationale.** Exposure-adjusted to Medium. The function is SECURITY DEFINER and runs from pg_cron every 15 minutes in production, so it needs no caller to reach it. What it sends is the title of an event the recipient saved earlier, and only to that recipient: a moderation decision (soft-delete, reject, suspend) does not stop user-facing messages about the event, which is a correctness defect in the in-app reminder workflow with a bounded disclosure. The compensating control is that the recipient set is the event's own savers and RLS no longer serves the event's page to them. It is not High because no tenant boundary is crossed, no credential is exposed, and nothing reaches a user who had not already seen the event. It is not Low because a removed or unapproved event keeps producing notifications, and the dead JavaScript handler that filtered correctly is deleted in Phase 6 (F-037 divergence 3), leaving this function as the only reminder path.
 
@@ -2006,6 +2018,8 @@
 **Recommended fix.** In the slice-6 migration (20260926120000_async_edge_definer_hardening.sql), CREATE OR REPLACE public.send_event_reminders() with e.deleted_at IS NULL AND e.status = 'approved' in both loops and SET search_path = public, pg_temp. Pin today's behaviour first with a DEFECT pgTAP case, then move it in the migration commit (INTENTIONAL: the function's md5 pin becomes a behaviour pin).
 
 **Validation criterion.** A pgTAP case in supabase/tests/database/070-definer-functions.test.sql runs the three-event fixture inside a transaction and asserts that send_event_reminders() writes exactly one reminder_24h row, for the approved, non-deleted event, and none for the soft-deleted or pending one.
+
+**Resolution.** **Fixed and proven locally (migration 20260926120000, pgTAP 070 and 031, mutation check); production closes with the DI-23 repair.** Plan 06-05 (`0ba575a`, INTENTIONAL BEHAVIOUR CHANGE, LOCAL ONLY; mutation evidence `e55e1c9`), recorded at the slice-6 close by plan 06-06 under DEC-72, so the status stays Open with `closes_in_phase` "08". `send_event_reminders()` is re-created with `e.deleted_at IS NULL AND e.status = 'approved'` in both loops and nothing else changed (a diff against the baseline body shows those four lines). The criterion, in 070 rows 5-7: the three-event fixture runs inside a transaction, and the function writes exactly one `reminder_24h` row, for the approved, non-deleted event, and none for the soft-deleted or the pending one; mutation M3 turns rows 6 and 7 red. Green unseeded and seeded from a clean reset (Files=13, Tests=260, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.slice-6-after.txt` blocks 11 and 13); red before the migration (`.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/definer-hardening-red.txt` § 2). In production, reminders for deleted and unapproved events continue every 15 minutes until the repair. Evidence: `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-close.md` section 4 and section 6, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/schema-push-slice-6.txt`, `.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-mutation-check.txt`.
 
 **Related.** [F-037](#f-037), [F-075](#f-075), [F-076](#f-076)
 
