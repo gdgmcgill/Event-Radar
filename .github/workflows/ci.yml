@@ -82,6 +82,14 @@ jobs:
       - name: Contracts census
         run: node scripts/check-contracts.mjs && node scripts/check-contracts.mjs --client
 
+      # Plan 06-12 (REFAC-20, F-059, DEC-74, DEC-75). The shrink-only census of
+      # raw console calls in server code (S1) and of caught-error text in route
+      # files (S2). Fails when a site the committed
+      # scripts/server-console-allowlist.json does not hold appears; the route
+      # sweeps (06-13, 06-14) shrink it.
+      - name: Server console census
+        run: node scripts/check-server-console.mjs
+
       # Plan 04-01's gate: every characterization suite carries its tag, a
       # defect-tagged suite cites a finding id, and every F-nnn cited is in
       # .planning/audit/findings.json.

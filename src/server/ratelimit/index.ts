@@ -22,6 +22,7 @@ import { MemoryRateLimitStore } from "./memoryStore";
 import { rateLimitPolicy, tooManyRequests } from "./policy";
 import type { RateLimitStore } from "./types";
 import { UpstashRateLimitStore } from "./upstashStore";
+import { log } from "../log";
 
 export type { RateDecision, RateLimitStore } from "./types";
 
@@ -38,15 +39,18 @@ let selected: { kind: RateLimitStoreKind; store: RateLimitStore } | undefined;
  * the life of the process: rate limiting fails open, it never answers 500.
  * The log names the problem or the error's class, never its message, because
  * `UrlError`'s message echoes the URL and a `rediss://` URL carries the
- * database password.
+ * database password. The lines go through the structured logger with scope
+ * "RateLimit" (plan 06-12, DEC-74); the unconfigured line is a warn, which
+ * the logger writes to `console.error`.
  */
 function select(): { kind: RateLimitStoreKind; store: RateLimitStore } {
   if (!selected) {
     const config = upstashConfig();
     const problem = config ? upstashConfigProblem(config) : null;
     if (config && problem) {
-      console.error(
-        `[RateLimit] Upstash configuration unusable (${problem}); using the in-memory store (not shared across instances)`
+      log.error(
+        "Upstash configuration unusable; using the in-memory store (not shared across instances)",
+        { scope: "RateLimit", problem }
       );
       selected = { kind: "memory", store: memoryStore };
     } else if (config) {
@@ -56,15 +60,16 @@ function select(): { kind: RateLimitStoreKind; store: RateLimitStore } {
           store: new UpstashRateLimitStore(config),
         };
       } catch (err) {
-        console.error(
-          "[RateLimit] Upstash store construction failed; using the in-memory store (not shared across instances)",
-          { error: err instanceof Error ? err.name : typeof err }
+        log.error(
+          "Upstash store construction failed; using the in-memory store (not shared across instances)",
+          { scope: "RateLimit", error: err instanceof Error ? err.name : typeof err }
         );
         selected = { kind: "memory", store: memoryStore };
       }
     } else {
-      console.warn(
-        "[RateLimit] Upstash not configured; using the in-memory store (not shared across instances)"
+      log.warn(
+        "Upstash not configured; using the in-memory store (not shared across instances)",
+        { scope: "RateLimit" }
       );
       selected = { kind: "memory", store: memoryStore };
     }

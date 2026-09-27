@@ -52,6 +52,13 @@ async function loadIndex(): Promise<typeof import("./index")> {
   return import("./index");
 }
 
+/** The Nth console.error call, parsed: the logger writes one JSON line (DEC-74). */
+function errorLine(index = 0): Record<string, unknown> {
+  const call = errorSpy.mock.calls[index] as unknown[];
+  expect(call).toHaveLength(1);
+  return JSON.parse(String(call[0])) as Record<string, unknown>;
+}
+
 function logged(): string {
   return JSON.stringify([...errorSpy.mock.calls, ...warnSpy.mock.calls]);
 }
@@ -93,7 +100,7 @@ describe("getRateLimitStore() with an unusable Upstash pair", () => {
       expect(rateLimitStoreKind()).toBe("memory");
       getRateLimitStore();
       expect(errorSpy).toHaveBeenCalledTimes(1);
-      expect(String(errorSpy.mock.calls[0][0])).toMatch(/^\[RateLimit\] /);
+      expect(errorLine()).toMatchObject({ level: "error", scope: "RateLimit" });
       expect(logged()).not.toContain(PASSWORD);
       expect(logged()).not.toContain("placeholder-token");
     }

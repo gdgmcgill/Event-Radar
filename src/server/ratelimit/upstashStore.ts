@@ -32,6 +32,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { UpstashConfig } from "@/lib/env";
 import type { RateDecision, RateLimitStore } from "./types";
+import { log } from "../log";
 
 /** Every key this store writes starts with this prefix. */
 export const UPSTASH_PREFIX = "uv:rl";
@@ -68,12 +69,13 @@ export class UpstashRateLimitStore implements RateLimitStore {
     try {
       const r = await this.limiterFor(limit, windowMs).limit(key);
       if (r.reason === "timeout") {
-        console.error("[RateLimit] store timeout; request allowed", { key });
+        log.error("store timeout; request allowed", { scope: "RateLimit", key });
         return { allowed: true, limit, resetAtMs: Date.now() + windowMs };
       }
       return { allowed: r.success, limit: r.limit, resetAtMs: r.reset };
     } catch (err) {
-      console.error("[RateLimit] store error; request allowed", {
+      log.error("store error; request allowed", {
+        scope: "RateLimit",
         key,
         error: err instanceof Error ? err.message : String(err),
       });

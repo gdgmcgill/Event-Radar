@@ -103,9 +103,18 @@ describe("runAfterResponse", () => {
       throw new Error("task boom");
     });
     await expect(mockAfter.mock.calls[0][0]()).resolves.toBeUndefined();
-    expect(
-      errorSpy.mock.calls.some((c) => String(c[0]).includes("[afterResponse] task failed"))
-    ).toBe(true);
+    // One JSON line from the logger (06-12, DEC-74), the error serialized.
+    const lines = errorSpy.mock.calls.map(
+      (c) => JSON.parse(String(c[0])) as Record<string, unknown>
+    );
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        scope: "afterResponse",
+        msg: "task failed",
+        error: { name: "Error", message: "task boom" },
+      })
+    );
   });
 });
 

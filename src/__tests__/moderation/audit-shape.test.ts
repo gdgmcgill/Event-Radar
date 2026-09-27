@@ -324,7 +324,14 @@ describe("F-072 / F-073 — admin_audit_log.admin_email does not exist (FIXED in
     ).resolves.toBeUndefined();
 
     expect(errorSpy).toHaveBeenCalledTimes(1);
-    expect(errorSpy).toHaveBeenCalledWith("[Audit] admin_audit_log insert rejected", {
+    // One JSON line from the logger since 06-12 (F-058, DEC-74): the same
+    // fields, scope "Audit" in place of the "[Audit]" prefix.
+    const call = errorSpy.mock.calls[0] as unknown[];
+    expect(call).toHaveLength(1);
+    expect(JSON.parse(String(call[0]))).toMatchObject({
+      level: "error",
+      scope: "Audit",
+      msg: "admin_audit_log insert rejected",
       action: "banned",
       targetType: "user",
       targetId: "00000000-0000-0000-0000-000000000003",
