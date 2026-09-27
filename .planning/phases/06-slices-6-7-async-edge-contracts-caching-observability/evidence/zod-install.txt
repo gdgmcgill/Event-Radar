@@ -163,3 +163,61 @@ zod has no advisory.
 Carried to the end-of-phase human-check (DEC-81, DI-81): the owner countersigns the DEC-60
 resolution-by-rule (seam verdict SUS, reason too-new) on the evidence in zod-legitimacy.txt
 and this file.
+
+=== 6. Task 2 red then green: the shared contract and verifySignature ===
+
+--- RED (modules absent) ---
+$ npx jest --ci src/__tests__/webhook/verify-signature.test.ts src/__tests__/webhook/webhook-contract.test.ts
+FAIL node src/__tests__/webhook/webhook-contract.test.ts
+    Could not locate module @/contracts/webhook mapped as:
+FAIL node src/__tests__/webhook/verify-signature.test.ts
+    Cannot find module '../../../supabase/functions/_shared/webhook-signature' from 'src/__tests__/webhook/verify-signature.test.ts'
+Test Suites: 2 failed, 2 total
+Tests:       0 total
+exit=1
+
+--- GREEN ---
+$ npx jest --ci src/__tests__/webhook/verify-signature.test.ts src/__tests__/webhook/webhook-contract.test.ts
+PASS node src/__tests__/webhook/verify-signature.test.ts
+PASS node src/__tests__/webhook/webhook-contract.test.ts
+Test Suites: 2 passed, 2 total
+Tests:       59 passed, 59 total
+exit=0
+
+--- Drift guard mutation (ExtractedEvent.title: string -> number, then restored byte-identical) ---
+ts-jest runs transpile-only here (tsconfig isolatedModules: true), so under Jest the mutated
+suite still passed (exit 0); the type-level assertion is enforced by tsc, which CI runs:
+$ npx tsc --noEmit   # with the mutation
+src/__tests__/webhook/webhook-contract.test.ts(54,7): error TS2322: Type 'true' is not assignable to type 'false'.
+src/lib/classifier.ts(320,7): error TS2322: Type 'string' is not assignable to type 'number'.
+exit=2
+$ cmp src/lib/classifier.ts <copy>   # restored
+RESTORED
+
+--- Plan <verify> ---
+$ node -p "require('./node_modules/zod/package.json').version" | grep -x 4.6.5 && npx jest --ci <two suites> && npx tsc --noEmit && npm audit --audit-level=high --omit=dev
+4.6.5
+Test Suites: 2 passed, 2 total
+Tests:       59 passed, 59 total
+verify exit=0
+
+$ npm run lint
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+lint exit=0
+(0 errors; the 18 warnings are the pre-existing set recorded in cron-deletion.txt, none in the new files)
+
+--- Structural checks ---
+$ grep -n 'timingSafeEqual\|byteLength !==' supabase/functions/_shared/webhook-signature.ts
+15: * THE LENGTH CHECK COMES FIRST. crypto.timingSafeEqual throws a RangeError on
+22:import { createHmac, timingSafeEqual } from "node:crypto";
+51:  if (suppliedBytes.byteLength !== expectedBytes.byteLength) return false;
+52:  return timingSafeEqual(suppliedBytes, expectedBytes);
+$ grep -c 'webhook-signature\|webhook-handler' src/contracts/webhook.ts
+0
+$ grep -nE '^import' supabase/functions/_shared/webhook-signature.ts supabase/functions/_shared/webhook-contract.ts
+supabase/functions/_shared/webhook-signature.ts:22:import { createHmac, timingSafeEqual } from "node:crypto";
+supabase/functions/_shared/webhook-contract.ts:24:import { z } from "zod";
+$ grep -c 'Deno\.' supabase/functions/_shared/webhook-signature.ts supabase/functions/_shared/webhook-contract.ts
+supabase/functions/_shared/webhook-contract.ts:0
+supabase/functions/_shared/webhook-signature.ts:0
