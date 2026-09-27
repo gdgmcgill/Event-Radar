@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 /**
  * GET /api/my-clubs
@@ -24,6 +24,7 @@ export const GET = withRoute({ cache: "private", action: "fetch your clubs" }, a
       .eq("user_id", user.id);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to fetch your clubs" },
         { status: 500 }
@@ -83,7 +84,8 @@ export const GET = withRoute({ cache: "private", action: "fetch your clubs" }, a
     }));
 
     return NextResponse.json({ clubs });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch your clubs" },
       { status: 500 }

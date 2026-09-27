@@ -143,15 +143,16 @@ function present(value: string | undefined): value is string {
 export function upstashConfig(): UpstashConfig | null {
   const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
   const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (present(upstashUrl) && present(upstashToken)) {
-    return { url: upstashUrl.trim(), token: upstashToken.trim() };
-  }
+  const primary = present(upstashUrl) && present(upstashToken)
+    ? { url: upstashUrl.trim(), token: upstashToken.trim() } : null;
   const kvUrl = process.env.KV_REST_API_URL;
   const kvToken = process.env.KV_REST_API_TOKEN;
-  if (present(kvUrl) && present(kvToken)) {
-    return { url: kvUrl.trim(), token: kvToken.trim() };
-  }
-  return null;
+  const fallback = present(kvUrl) && present(kvToken)
+    ? { url: kvUrl.trim(), token: kvToken.trim() } : null;
+  if (primary && !upstashConfigProblem(primary)) return primary;
+  if (fallback && !upstashConfigProblem(fallback)) return fallback;
+  // Retain an invalid pair for the caller's actionable, redacted diagnostic.
+  return primary ?? fallback;
 }
 
 /**
@@ -181,6 +182,9 @@ export function upstashConfigProblem(config: UpstashConfig): string | null {
   }
   if (parsed.protocol !== "https:") {
     return `the Upstash REST URL must use https: (got ${parsed.protocol}); use the REST URL, not the redis:// or rediss:// connection string`;
+  }
+  if (parsed.username || parsed.password || /\s/.test(config.token)) {
+    return "the REST credentials contain URL userinfo or internal token whitespace";
   }
   if (!UPSTASH_CLIENT_URL.test(config.url)) {
     return "the Upstash REST URL is not in the form the Upstash client accepts";

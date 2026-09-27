@@ -6,7 +6,7 @@ import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { ReportDecisionBody } from "@/contracts/admin";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 export const PATCH = withRoute({ cache: "private", action: "update report" }, async (
@@ -61,6 +61,7 @@ export const PATCH = withRoute({ cache: "private", action: "update report" }, as
     .select("id");
 
   if (updateError) {
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

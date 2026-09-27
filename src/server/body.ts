@@ -32,8 +32,8 @@
  *     401 or 403 still precedes any 400.
  *
  * parseForm (plan 06-08) is the multipart door. It reads the form inside a
- * try (an unreadable form answers what the route answered before, from the
- * route's own options), checks the one file field with the route's own texts
+ * try (production contracts classify an unreadable form as a 400 client error),
+ * checks the one file field with the route's own texts
  * and order (missing, then size and type in the order the route checked them)
  * and hands the non-file fields, first value per key, to a zod schema.
  *
@@ -227,9 +227,8 @@ export interface FileRule {
 export interface FormOptions extends ParseOptions {
   file: FileRule;
   /**
-   * What the route answered when the body could not be read as a form. Kept
-   * per route (today it is each route's own catch), so the move changes no
-   * bytes.
+   * Response when the body cannot be read as a form. Production upload
+   * contracts classify malformed multipart as a client error (400).
    */
   unreadable: { status: number; error: string };
   /**
@@ -249,7 +248,8 @@ function isUploadedFile(value: unknown): value is File {
     typeof (value as File).size === "number" &&
     typeof (value as File).type === "string" &&
     typeof (value as File).name === "string" &&
-    typeof (value as File).arrayBuffer === "function"
+    typeof (value as File).arrayBuffer === "function" &&
+    typeof (value as File).slice === "function"
   );
 }
 
@@ -271,6 +271,21 @@ export function checkFile(file: File, rule: FileRule): NextResponse | null {
     }
   }
   return null;
+}
+
+/** M0 upload boundary: declared MIME must agree with the bounded file header.
+ * This rejects renamed executable/HTML files; it is not a full image decoder.
+ */
+export async function checkFileContent(file: File): Promise<NextResponse | null> {
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const starts = (prefix: number[]) => prefix.every((value, index) => bytes[index] === value);
+  const signatures: Record<string, boolean> = {
+    "image/png": starts([137,80,78,71,13,10,26,10]),
+    "image/jpeg": starts([255,216,255]),
+    "image/gif": starts([71,73,70,56,55,97]) || starts([71,73,70,56,57,97]),
+    "image/webp": starts([82,73,70,70]) && [87,69,66,80].every((value,index) => bytes[index+8] === value),
+  };
+  return signatures[file.type] ? null : badRequest("File content does not match its image type");
 }
 
 /**
@@ -314,7 +329,7 @@ export async function parseForm<S extends z.ZodType>(
   if (!fields.ok) return fields;
 
   if (!opts.deferFileChecks) {
-    const refused = checkFile(file, opts.file);
+    const refused = checkFile(file, opts.file) ?? await checkFileContent(file);
     if (refused) return { ok: false, response: refused };
   }
 

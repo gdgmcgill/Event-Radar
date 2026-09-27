@@ -12,8 +12,8 @@
  *   1. Takes the request id from the incoming `x-request-id` when it is
  *      UUID-shaped (the proxy overwrites any client value, so a well-formed id
  *      here is the proxy's own), otherwise mints one. The matcher skips
- *      `auth/callback` and image-suffixed paths, so those requests arrive with
- *      no id and get a fresh one.
+ *      `auth/callback` and non-API image-suffixed paths, so those requests arrive with
+ *      a client-controlled id; those paths always get a fresh one.
  *   2. Runs the handler inside `runWithRequest({ requestId, route })`, so the
  *      handler's log lines and `createRequestContext()` share that id.
  *   3. Turns an uncaught throw into the seam's JSON 500,
@@ -25,6 +25,10 @@
  *      `captureServerError(error, { requestId, route })` (plan 06-16,
  *      REFAC-21): the event is tagged `request_id` with the same id the
  *      response carries as `x-request-id`. With no DSN the capture is a no-op.
+ *      Returned 5xx responses are reported too: the last request-local
+ *      log.error cause is captured, or a generic action error is logged and
+ *      captured when the handler was silent. Successful recovery is not
+ *      captured. Next control-flow errors are rethrown to the framework.
  *   4. Applies the handler's cache class (`applyCachePolicy`) and sets
  *      `x-request-id` on the response.
  *
@@ -41,7 +45,8 @@
  */
 
 import type { NextResponse } from "next/server";
-import { log, runWithRequest } from "./log";
+import { unstable_rethrow } from "next/navigation";
+import { currentRequestError, log, runWithRequest } from "./log";
 import { serverError } from "./errors";
 import { applyCachePolicy, type CacheClass } from "./http";
 import { captureServerError } from "./observability/sentry";
@@ -60,8 +65,15 @@ export const REQUEST_ID_HEADER = "x-request-id";
 const REQUEST_ID_SHAPE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** The id to carry: the incoming one when it is UUID-shaped, else a new one. */
+/** The proxy matcher excludes these paths; their incoming ids are untrusted. */
+const PROXY_EXCLUDED_PATH = /^\/(?:_next\/static|_next\/image|favicon\.ico|auth\/callback)|\.(?:svg|png|jpg|jpeg|gif|webp)$/;
+
+/** Trust the incoming UUID only on paths where the proxy replaces it. */
 export function requestIdFrom(request: Request | undefined): string {
+  if (request && !new URL(request.url).pathname.startsWith("/api/") &&
+      PROXY_EXCLUDED_PATH.test(new URL(request.url).pathname)) {
+    return crypto.randomUUID();
+  }
   const incoming = request?.headers.get(REQUEST_ID_HEADER) ?? "";
   return REQUEST_ID_SHAPE.test(incoming) ? incoming : crypto.randomUUID();
 }
@@ -82,6 +94,12 @@ function withMutableHeaders(response: Response): Response {
       headers: new Headers(response.headers),
     });
   }
+}
+
+/** Retain a handled failure's original cause; withRoute owns the single capture. */
+export function logRouteError(error: unknown): void {
+  unstable_rethrow(error);
+  log.error("handled route error", { error });
 }
 
 export function withRoute<A extends unknown[]>(
@@ -107,9 +125,20 @@ export function withRoute<A extends unknown[]>(
       try {
         response = await fn(...args);
       } catch (error) {
+        unstable_rethrow(error);
         log.error("unhandled route error", { error, method });
-        captureServerError(error, { requestId, route });
         response = serverError(opts.action ?? "process request");
+      }
+      // One capture for every server failure, including locally handled errors.
+      // Reuse a logged cause when available; never inspect the response body.
+      if (response.status >= 500) {
+        let failure = currentRequestError();
+        if (!failure) {
+          const error = new Error(`Failed to ${opts.action ?? "process request"}`);
+          log.error("route returned server error", { error, method, status: response.status });
+          failure = { cause: error };
+        }
+        captureServerError(failure.cause, { requestId, route });
       }
       response = withMutableHeaders(response);
       applyCachePolicy(response, opts.cache, method);

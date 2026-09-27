@@ -53,6 +53,16 @@ jest.mock("@/lib/supabase/server", () => ({
   createClient: jest.fn(() => Promise.resolve(mockSupabase)),
 }));
 
+const mockElevatedBuilders: ReturnType<typeof createMockQueryBuilder>[] = [];
+const mockElevated = { from: jest.fn((table: string) => {
+  const result = mockQueryResults.get(table) ?? { data: null, error: null };
+  const builder = createMockQueryBuilder({ ...result, count: Array.isArray(result.data) ? result.data.length : 0 } as { data: unknown; error: unknown });
+  mockElevatedBuilders.push(builder);
+  return builder;
+}) };
+const mockGetElevatedClient = jest.fn(() => mockElevated);
+jest.mock("@/server/db/elevated", () => ({ getElevatedClient: () => mockGetElevatedClient() }));
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function createMockRequest(): NextRequest {
@@ -76,6 +86,7 @@ beforeEach(async () => {
   mockUser = null;
   mockAuthError = null;
   mockQueryResults = new Map();
+  mockElevatedBuilders.length = 0;
 
   const routeModule = await import("@/app/api/events/[id]/analytics/route");
   GET = routeModule.GET;
@@ -89,6 +100,7 @@ describe("GET /api/events/:id/analytics", () => {
 
     expect(res.status).toBe(401);
     expect(json.error).toBe("Unauthorized");
+    expect(mockGetElevatedClient).not.toHaveBeenCalled();
   });
 
   it("returns 403 when user is not a club member", async () => {
@@ -107,6 +119,7 @@ describe("GET /api/events/:id/analytics", () => {
 
     expect(res.status).toBe(403);
     expect(json.error).toBeDefined();
+    expect(mockGetElevatedClient).not.toHaveBeenCalled();
   });
 
   it("returns event analytics with zero defaults for new event", async () => {
@@ -177,5 +190,19 @@ describe("GET /api/events/:id/analytics", () => {
     expect(json.unique_viewers).toBe(120);
     expect(json.rsvp_going).toBe(2);
     expect(json.rsvp_interested).toBe(1);
+    expect(mockElevated.from).toHaveBeenCalledWith("saved_events");
+    expect(mockElevatedBuilders[0].select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+    expect(mockElevatedBuilders[0].eq).toHaveBeenCalledWith("event_id", "event-123");
+    expect(mockSupabase.from).not.toHaveBeenCalledWith("saved_events");
+  });
+
+  it("fails privately when the authorized cross-user count is unavailable", async () => {
+    mockUser = { id: "user-123" };
+    mockQueryResults.set("events", { data: { id: "event-123", club_id: "club-abc" }, error: null });
+    mockQueryResults.set("club_members", { data: { role: "owner" }, error: null });
+    mockQueryResults.set("saved_events", { data: null, error: { message: "unavailable" } });
+    const response = await GET(createMockRequest(), createRouteContext());
+    expect(response.status).toBe(500);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });

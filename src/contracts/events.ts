@@ -215,8 +215,19 @@ export const EventUpdateBody = z
     image_url: asSent(),
     category: asSent(),
     is_free: asSent(),
-    price: asSent(),
-    rsvp_link: asSent(),
+    // M0 / DI-89: the PATCH path must enforce create's bounds and safe
+    // schemes too. Null/empty still clear these optional values.
+    price: z.string({ error: "Price must be a string or null" }).max(20, { error: C.price }).nullable().optional(),
+    rsvp_link: z.string({ error: "Registration link must be a string or null" })
+      .max(500, { error: C.linkTooLong }).superRefine((value, ctx) => {
+        if (value === "") return;
+        try {
+          const url = new URL(value);
+          if (!["http:", "https:"].includes(url.protocol)) ctx.addIssue({ code: "custom", message: C.linkScheme });
+        } catch {
+          ctx.addIssue({ code: "custom", message: C.linkInvalid });
+        }
+      }).nullable().optional(),
   })
   .superRefine((body, ctx) => {
     if (!EDITABLE_EVENT_FIELDS.some((key) => key in body)) {
@@ -373,7 +384,7 @@ export type EventImageFileField = typeof EVENT_IMAGE_FILE_FIELD;
 
 /**
  * The route's file rule, texts and order (size before type), and its answer
- * to an unreadable form (its catch's 500, unchanged).
+ * to an unreadable form (M0 CERT-02: malformed transport is a client 400).
  */
 export const EVENT_IMAGE_UPLOAD: FormOptions = {
   file: {
@@ -388,7 +399,7 @@ export const EVENT_IMAGE_UPLOAD: FormOptions = {
         `Invalid file type "${type}". Allowed: JPEG, PNG, WebP, GIF.`,
     },
   },
-  unreadable: { status: 500, error: "Internal server error" },
+  unreadable: { status: 400, error: "Invalid multipart form data" },
 };
 
 // ─── Mutations that read no body (plan 06-11, REFAC-16) ──────────────────────

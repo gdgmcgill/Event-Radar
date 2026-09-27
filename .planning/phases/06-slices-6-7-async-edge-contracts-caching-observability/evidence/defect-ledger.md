@@ -301,3 +301,17 @@ same words.
 | F-054 | `src/__tests__/pages/docs-gate-defect.test.ts` (G1) | `src/app/docs/` holds only `page.tsx`; no `layout.tsx` exists | `src/app/docs/layout.tsx` exists beside `page.tsx`, imports `requireAdminPage` and awaits `requireAdminPage("/")` before rendering its children (DEC-79). Step 2 red at G1; step 4 (layout moved aside) red; `cmp` exit 0 (evidence/admin-page-gates.txt) | `00aa06d` | 06-17 |
 | F-054 | `src/__tests__/pages/docs-gate-defect.test.ts` (G2) | the page imports no guard and calls `getApiDocs()`: nothing asks who is reading | driven: the docs layout redirects anonymous, a signed-in student and a banned admin to "/" and renders its children for an active admin; the page is unchanged and still calls `getApiDocs()` (the gate is the layout's). G3 (proxy list) and G4 (control) unchanged; G5 added (the /health layout carries the same gate) | `00aa06d` | 06-17 |
 | F-085 | `src/__tests__/api/events/saved-events-time-floor-defect.test.ts` (all four cases; DEFECT file, assertions moved in place) | the default upcoming floor is TRUE UTC: at 18:30Z (14:30 EDT) `gte start_date 2026-09-23T18:30:00.000Z`; at 19:30Z in January `2026-01-15T19:30:00.000Z`; SOON (16:00 Eastern, ninety minutes away) is dropped, `savedEventIds` is `[LATER]` | the floor is the feed's Eastern wall-clock `getESTNowISO()`: `2026-09-23T14:30:00.000Z` and `2026-01-15T14:30:00.000Z`; SOON is kept, `savedEventIds` is `[LATER, SOON]` (recent sort); `include_past=true` still sends no floor. Step 2 red 3/4; step 4 (pre-fix source) red 3/4; `cmp` exit 0; PRESERVE `saved-events-characterization.test.ts` unedited and green (evidence/f-085-fix.txt) | `b8e20f4` | 06-18 |
+
+
+## M0 continuation — intentional behavior corrections
+
+The original phase rows above remain historical. The M0 mixed webhook suite explicitly marks the corrected rows as DEFECT while retaining signature, valid-input and dedup assertions. Final local evidence is in the [M0 report](../../../milestones/m0/REPORT.md); the tested implementation SHA is in its environment record. No new full red/revert protocol is claimed for M0 and no deployed finding is closed by this entry.
+
+| Finding / deferred item | Suite / assertion | Previous behavior | Corrected behavior | Execution |
+|---|---|---|---|---|
+| F-094 / DI-83 | `webhook-handler.test.ts`, rows 7, 11, 12; Deno handler and Edge cases | Null body, null event and non-string tag caused 500; malformed later event could follow an earlier insert | All three return contracted 400 before any batch insert | Final Jest, Deno and local Edge green |
+| F-059 / IN-05 | `webhook-handler.test.ts`, failed insert rows | Database error message returned in batch results | Stable `insert_failed`; redacted structured diagnostic | Final Jest and local Edge green |
+| F-094 / DI-68 | `badRequestTable.ts`, pending-edit approval | Missing reviewed snapshot could approve newer unseen edits | Require exact reviewed JSON snapshot; atomic RPC conflicts on changes | Final contract, route, database and concurrent transaction checks green |
+| F-094 / IN-07 | `badRequestTable.ts`, admin audit page=0 | Negative pagination offset | First-page bounds 0–19 | Final contract and unit checks green |
+
+Other M0 test harness edits bind existing response assertions to the new scoped elevated/transactional seams. The report lists the associated privacy, write-boundary, failed-read and upload behavior changes and their narrower evidence; these are intentional fixes rather than a claim that every former defect assertion was preserved unchanged.

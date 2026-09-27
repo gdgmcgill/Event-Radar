@@ -191,7 +191,7 @@ function userRow(persona: Persona, onboarded: boolean): FakeRow[] {
     {
       id: caller.id,
       email: caller.email,
-      full_name: persona === "admin" ? "Slice Six Admin" : "Slice Six Student",
+      name: persona === "admin" ? "Slice Six Admin" : "Slice Six Student",
       roles: persona === "admin" ? ["user", "admin"] : ["user"],
       onboarding_completed: onboarded,
       banned_at: null,

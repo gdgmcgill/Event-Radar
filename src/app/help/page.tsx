@@ -134,30 +134,25 @@ const SECTIONS: Section[] = [
     icon: Bell,
     faqs: [
       {
-        question: "How do email reminders work?",
+        question: "How do event reminders work?",
         answer: (
           <p>
-            When you save or RSVP to an event, UNI-VERSE can send you an email
-            reminder before the event starts. You can control whether you
-            receive reminders from your{" "}
-            <Link href="/profile" className="text-primary hover:underline">
-              profile settings
-            </Link>{" "}
-            at any time.
+            Reminders appear in your UNI-VERSE notifications before eligible
+            saved or RSVP events start. Open the notification bell to read them.
+            Event reminders are delivered in the app; email delivery is not available.
           </p>
         ),
       },
       {
-        question: "How do I turn off notifications?",
+        question: "How do I manage my notifications?",
         answer: (
           <p>
             Open your{" "}
-            <Link href="/profile" className="text-primary hover:underline">
-              profile page
+            <Link href="/notifications" className="text-primary hover:underline">
+              notifications
             </Link>{" "}
-            and toggle off <strong>Email Notifications</strong>. You can also
-            click the <strong>Unsubscribe</strong> link at the bottom of any
-            reminder email we send you.
+            to filter messages and mark them as read. Notification delivery
+            preferences are not available yet.
           </p>
         ),
       },

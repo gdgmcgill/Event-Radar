@@ -18,6 +18,7 @@ const mockGetRateLimitStore = jest.fn();
 const mockApplyRateLimit = jest.fn();
 
 jest.mock("@/server/ratelimit", () => ({
+  DistributedStoreRequiredError: jest.requireActual("@/server/ratelimit").DistributedStoreRequiredError,
   getRateLimitStore: (...args: unknown[]) => mockGetRateLimitStore(...args),
   applyRateLimit: (...args: unknown[]) => mockApplyRateLimit(...args),
 }));
@@ -90,12 +91,25 @@ describe("proxy() when the rate limiter faults", () => {
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(SECRET);
   });
 
-  it("a 429 from the limiter is still returned unchanged", async () => {
+  it("a 429 retains its response identity and gains private cache control", async () => {
     const tooMany = new Response(null, { status: 429 });
     mockGetRateLimitStore.mockReturnValue({});
     mockApplyRateLimit.mockResolvedValue(tooMany);
     const res = await proxy(req("/api/events"));
     expect(res).toBe(tooMany);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(errorSpy).not.toHaveBeenCalled();
   });
+});
+
+// M0 DI-61: explicit required-store configuration is a deployment gate.
+it.each(["/api/events", "/profile"])("returns private 503 on %s when the required distributed store cannot be selected", async (path) => {
+  const { DistributedStoreRequiredError } = jest.requireActual("@/server/ratelimit");
+  mockGetRateLimitStore.mockImplementation(() => { throw new DistributedStoreRequiredError(); });
+  const response = await proxy(req(path));
+  expect(response.status).toBe(503);
+  expect(response.headers.get("cache-control")).toBe("private, no-store");
+  expect(response.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(await response.json()).toEqual({ error: "Service temporarily unavailable" });
+  expect(mockApplyRateLimit).not.toHaveBeenCalled();
 });

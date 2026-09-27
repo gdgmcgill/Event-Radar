@@ -15,12 +15,17 @@
  */
 
 import { assertEquals, assertExists } from "jsr:@std/assert";
-import { load } from "jsr:@std/dotenv";
 import crypto from "node:crypto";
 
-// Load test environment variables
-// Load from the root directory
-await load({ envPath: ".env.test", export: true });
+// Never load .env.test: a stale hosted URL would make cleanup destructive.
+// scripts/test-edge-local.ts injects credentials read from the local CLI only.
+const testUrl = new URL(Deno.env.get("SUPABASE_URL") || "http://127.0.0.1:54321");
+if (!["localhost", "127.0.0.1"].includes(testUrl.hostname) || testUrl.port !== "54321") {
+  throw new Error("REFUSED: webhook tests only support local Supabase on port 54321");
+}
+if (!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || !Deno.env.get("WEBHOOK_SECRET")) {
+  throw new Error("Run with: npx tsx scripts/test-edge-local.ts");
+}
 
 // Helper function to compute HMAC SHA-256 signature
 function computeHMAC(payload: string, secret: string): string {
@@ -42,7 +47,7 @@ function createRequest(
     headers[headerName] = signature;
   }
 
-  return new Request("http://localhost:54321/functions/v1/events-webhook", {
+  return new Request(`${testUrl.origin}/functions/v1/events-webhook`, {
     method: "POST",
     headers,
     body,
@@ -75,7 +80,7 @@ async function cleanupTestData(organizerName: string) {
 }
 
 Deno.test("CORS preflight request", async () => {
-  const request = new Request("http://localhost:54321/functions/v1/events-webhook", {
+  const request = new Request(`${testUrl.origin}/functions/v1/events-webhook`, {
     method: "OPTIONS",
   });
 
@@ -221,7 +226,7 @@ Deno.test("Invalid JSON payload returns 400", async () => {
   const invalidJson = "{ invalid json }";
   const signature = computeHMAC(invalidJson, webhookSecret);
 
-  const request = new Request("http://localhost:54321/functions/v1/events-webhook", {
+  const request = new Request(`${testUrl.origin}/functions/v1/events-webhook`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -249,6 +254,37 @@ Deno.test("Invalid payload structure returns 400", async () => {
   const body = await response.json();
   assertEquals(body.error, "Invalid payload structure. Expected event_count (number) and events (array)");
 });
+
+// M0 / DI-83 intentionally changes characterization rows 7, 11 and 12 from
+// accidental 500s to validation 400s. Each fails before any database insert.
+for (const [label, payload, expected] of [
+  ["null envelope", null, {
+    error: "Invalid payload structure. Expected event_count (number) and events (array)",
+  }],
+  ["null event", { event_count: 1, events: [null] }, {
+    error: "Invalid events found",
+    details: [{ index: 0, errors: [
+      "title is required and must be a non-empty string",
+      "description is required and must be a non-empty string",
+      "date is required and must be a string",
+      "location is required and must be a non-empty string",
+    ] }],
+  }],
+  ["non-string tag", { event_count: 1, events: [{
+    title: "Malformed tags", description: "Test", date: "2030-01-01",
+    location: "Test", tags: [1],
+  }] }, {
+    error: "Invalid events found",
+    details: [{ index: 0, errors: ["tags must contain only strings"] }],
+  }],
+] as const) {
+  Deno.test(`DI-83: ${label} returns 400`, async () => {
+    const secret = Deno.env.get("WEBHOOK_SECRET")!;
+    const response = await fetch(createRequest(payload, computeHMAC(JSON.stringify(payload), secret)));
+    assertEquals(response.status, 400);
+    assertEquals(await response.json(), expected);
+  });
+}
 
 Deno.test("Event count mismatch returns 400", async () => {
   const webhookSecret = Deno.env.get("WEBHOOK_SECRET")!;
@@ -490,7 +526,7 @@ Deno.test("Supports x-hub-signature-256 header format", async () => {
     // Format: sha256=<signature>
     const signatureWithPrefix = `sha256=${signature}`;
 
-    const request = new Request("http://localhost:54321/functions/v1/events-webhook", {
+    const request = new Request(`${testUrl.origin}/functions/v1/events-webhook`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -581,4 +617,3 @@ Deno.test("Event tags and category are properly processed", async () => {
     await cleanupTestData(organizerName);
   }
 });
-

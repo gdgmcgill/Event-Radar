@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "name": "adversarial",
+  "seed": 1431193942,
+  "namespace": "c0700002",
+  "counts": {
+    "users": 12,
+    "clubs": 4,
+    "club_members": 4,
+    "events": 24,
+    "rsvps": 48,
+    "saved_events": 48,
+    "user_interactions": 48,
+    "notifications": 48,
+    "club_invitations": 2
+  },
+  "probes": 29,
+  "sha256": "37b0bd4014752e2e4ec14e65fcc93ba81eb7a8fe361937784e81006d9eda8de5",
+  "persistedSha256": "d32ac494212f79719301933116a32b6dd1da4b2aea5f89e32060bdafb3da28f3",
+  "excludedRuntimeColumns": [
+    "updated_at",
+    "auth timestamps",
+    "derived popularity calculated_at/scores"
+  ]
+}

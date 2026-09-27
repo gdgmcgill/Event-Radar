@@ -215,38 +215,6 @@ export type Database = {
         }
         Relationships: []
       }
-      email_reminder_log: {
-        Row: {
-          event_id: string | null
-          id: string
-          reminder_type: string
-          sent_at: string
-          user_id: string | null
-        }
-        Insert: {
-          event_id?: string | null
-          id?: string
-          reminder_type: string
-          sent_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          event_id?: string | null
-          id?: string
-          reminder_type?: string
-          sent_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "email_reminder_log_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       event_invites: {
         Row: {
           created_at: string | null
@@ -740,6 +708,38 @@ export type Database = {
           },
         ]
       }
+      legacy_reminder_log: {
+        Row: {
+          event_id: string | null
+          id: string
+          reminder_type: string
+          sent_at: string
+          user_id: string | null
+        }
+        Insert: {
+          event_id?: string | null
+          id?: string
+          reminder_type: string
+          sent_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          event_id?: string | null
+          id?: string
+          reminder_type?: string
+          sent_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legacy_reminder_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       moderation_reviews: {
         Row: {
           action: string
@@ -1215,7 +1215,7 @@ export type Database = {
           saved_events_count: number
           total_habits_completed: number | null
           updated_at: string | null
-          visibility: string | null
+          visibility: string
           year: string | null
         }
         Insert: {
@@ -1239,7 +1239,7 @@ export type Database = {
           saved_events_count?: number
           total_habits_completed?: number | null
           updated_at?: string | null
-          visibility?: string | null
+          visibility?: string
           year?: string | null
         }
         Update: {
@@ -1263,7 +1263,7 @@ export type Database = {
           saved_events_count?: number
           total_habits_completed?: number | null
           updated_at?: string | null
-          visibility?: string | null
+          visibility?: string
           year?: string | null
         }
         Relationships: []
@@ -1318,6 +1318,14 @@ export type Database = {
           name: string
         }[]
       }
+      get_public_event_rsvp_counts: {
+        Args: { target_event_id: string }
+        Returns: {
+          going: number
+          interested: number
+        }[]
+      }
+      get_user_engagement: { Args: never; Returns: Json }
       has_open_club_invitation: {
         Args: { p_club_id: string }
         Returns: boolean
@@ -1325,6 +1333,20 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_club_member: { Args: { p_club_id: string }; Returns: boolean }
       is_club_owner: { Args: { p_club_id: string }; Returns: boolean }
+      review_event_edits_atomic: {
+        Args: {
+          p_action: string
+          p_actor_id: string
+          p_event_id: string
+          p_expected_pending_edits: Json
+          p_reason?: string
+        }
+        Returns: string
+      }
+      review_organizer_request_atomic: {
+        Args: { p_actor_id: string; p_request_id: string; p_status: string }
+        Returns: string
+      }
       search_events_fuzzy: {
         Args: { result_limit?: number; search_term: string }
         Returns: {
@@ -1336,6 +1358,10 @@ export type Database = {
       send_feedback_requests: { Args: never; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      transfer_club_ownership_atomic: {
+        Args: { p_actor_id: string; p_club_id: string; p_new_owner_id: string }
+        Returns: string
+      }
       update_event_popularity: {
         Args: { p_event_id: string }
         Returns: undefined

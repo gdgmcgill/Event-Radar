@@ -21,6 +21,7 @@ import {
 } from "@/contracts/recommendations";
 import type { NextRequest } from "next/server";
 import { withRoute } from "@/server/route";
+import { getElevatedClient } from "@/server/db/elevated";
 import { log } from "@/server/log";
 
 /** GET: fetch current user's thumbs feedback for given event_ids */
@@ -42,11 +43,13 @@ export const GET = withRoute({ cache: "private", action: "fetch feedback" }, asy
       return NextResponse.json({ feedback: {} });
     }
 
-    const { data: rawRows } = await supabase
+    const { data: rawRows, error: feedbackError } = await supabase
       .from("recommendation_explicit_feedback")
       .select("event_id, feedback_type")
       .eq("user_id", user.id)
       .in("event_id", eventIds);
+
+    if (feedbackError) throw feedbackError;
 
     const list = (rawRows ?? []) as { event_id: string; feedback_type: string }[];
     const feedback: Record<string, ThumbsFeedback> = {};
@@ -123,16 +126,41 @@ export const POST = withRoute({ cache: "private", action: "submit feedback" }, a
     // --- Analytics: impression, click, save, dismiss ---
     const { event_id, recommendation_rank, action, session_id } = body;
 
+    // M0 WR-07: resolve attribution from server-owned assignments only.
+    // Feedback never creates an assignment. The same deterministic experiment
+    // selection is used by GET /recommendations. Ended experiments get no credit.
+    // INSERT is service-only so direct Data API requests cannot forge attribution.
+    const elevated = getElevatedClient();
+    const { data: experiments, error: experimentsError } = await elevated
+      .from("experiments")
+      .select("id")
+      .eq("status", "running")
+      .order("id", { ascending: true })
+      .limit(1);
+    if (experimentsError) throw experimentsError;
+
+    let experimentVariantId: string | null = null;
+    if (experiments?.[0]) {
+      const { data: assignment, error: assignmentError } = await elevated
+        .from("experiment_assignments")
+        .select("variant_id")
+        .eq("experiment_id", experiments[0].id)
+        .eq("user_id", authUser.id)
+        .maybeSingle();
+      if (assignmentError) throw assignmentError;
+      experimentVariantId = assignment?.variant_id ?? null;
+    }
+
     const row = {
       user_id: authUser.id,
       event_id,
       recommendation_rank,
       action: action as string,
       session_id: session_id ?? null,
-      experiment_variant_id: body.experiment_variant_id ?? null,
+      experiment_variant_id: experimentVariantId,
     };
 
-    const { error } = await supabase
+    const { error } = await elevated
       .from("recommendation_feedback")
       .insert(row as any);
 

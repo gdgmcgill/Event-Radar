@@ -7,7 +7,7 @@ import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 import type { Review } from "@/types";
 import { parseBody } from "@/server/body";
 import { ReviewBody } from "@/contracts/events";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -41,7 +41,7 @@ export const POST = withRoute({ cache: "private", action: "create review" }, asy
     // Check 1: Event exists and has ended
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, start_date, club_id")
+      .select("id, start_date, end_date, club_id")
       .eq("id", eventId)
       .single();
 
@@ -49,7 +49,9 @@ export const POST = withRoute({ cache: "private", action: "create review" }, asy
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    if (new Date(event.start_date) >= new Date()) {
+    // M0 review-window finding: a started event may still be in progress.
+    // Legacy rows without an end retain their start-time fallback.
+    if (new Date(event.end_date ?? event.start_date) >= new Date()) {
       return NextResponse.json(
         { error: "Reviews can only be submitted after the event has ended" },
         { status: 400 }
@@ -100,6 +102,7 @@ export const POST = withRoute({ cache: "private", action: "create review" }, asy
       .single();
 
     if (insertError) {
+      logRouteError(insertError);
       return NextResponse.json(
         { error: "Failed to create review" },
         { status: 500 }
@@ -107,7 +110,8 @@ export const POST = withRoute({ cache: "private", action: "create review" }, asy
     }
 
     return NextResponse.json({ review }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -135,7 +139,7 @@ export const GET = withRoute({ cache: "private", action: "fetch reviews" }, asyn
     // Get event info (for club_id to check organizer status)
     const { data: event } = await supabase
       .from("events")
-      .select("id, start_date, club_id")
+      .select("id, start_date, end_date, club_id")
       .eq("id", eventId)
       .single();
 
@@ -188,7 +192,7 @@ export const GET = withRoute({ cache: "private", action: "fetch reviews" }, asyn
     // Can user review? Must have RSVP'd going, event ended, no existing review
     let canReview = false;
     if (!userReview && event) {
-      const eventEnded = new Date(event.start_date) < new Date();
+      const eventEnded = new Date(event.end_date ?? event.start_date) < new Date();
       if (eventEnded) {
         const { data: rsvp } = await supabase
           .from("rsvps")
@@ -211,7 +215,8 @@ export const GET = withRoute({ cache: "private", action: "fetch reviews" }, asyn
       user_review: userReview,
       can_review: canReview,
     });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

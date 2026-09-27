@@ -4,17 +4,9 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
-import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { EventEditsDecisionBody } from "@/contracts/admin";
-import type { TablesUpdate } from "@/lib/supabase/types";
-import { withRoute } from "@/server/route";
-
-/**
- * The fields PATCH /api/events/[id] routes through pending_edits (its
- * MODERATED_FIELDS). The only keys an approval may copy onto the event.
- */
-const MODERATED_FIELDS = ["title", "image_url"] as const;
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -33,133 +25,33 @@ export const PATCH = withRoute({ cache: "private", action: "review event edits" 
   // event has no pending edits" is a rule on the row and stays below.
   const parsed = await parseBody(request, EventEditsDecisionBody);
   if (!parsed.ok) return parsed.response;
-  const { action, reason } = parsed.data;
+  const { action, reason, expected_pending_edits } = parsed.data;
 
-  // The event read and both updates run on the caller's cookie client: the
-  // admin policies on events ("Admins can view all events", "Admins can
-  // update any event") permit them (DEC-49). The creator's notification goes
-  // through the elevated door: notifications INSERT is granted to service_role
-  // only. REGISTRY.md row: "Notify another user (notifications insert)".
-  const supabase = ctx.supabase;
-
-  const { data: event, error: fetchError } = await supabase
-    .from("events")
-    .select("id, title, pending_edits, created_by")
-    .eq("id", id)
-    .is("deleted_at", null)
-    .single();
-
-  if (fetchError || !event) {
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
-  }
-
-  if (!event.pending_edits) {
-    return NextResponse.json(
-      { error: "This event has no pending edits" },
-      { status: 400 }
-    );
-  }
-
-  const pendingEdits = event.pending_edits as Record<string, string>;
-
-  if (action === "approve") {
-    // Only the moderated fields leave the queue (REVIEW-05 WR-01). PATCH
-    // /api/events/[id] writes nothing else into pending_edits, but the column
-    // is creator-writable, and this update runs with admin privileges: an
-    // unlisted key (created_by, club_id, status, …) must never be applied.
-    // Typed as the events update (DI-53): each moderated key is assigned by
-    // name, so no other key can reach this admin-privileged write.
-    const liveUpdates: TablesUpdate<"events"> = { pending_edits: null };
-    const approvedFields: string[] = [];
-    for (const key of MODERATED_FIELDS) {
-      if (Object.prototype.hasOwnProperty.call(pendingEdits, key)) {
-        if (key === "title") liveUpdates.title = pendingEdits.title;
-        else liveUpdates.image_url = pendingEdits.image_url;
-        approvedFields.push(key);
-      }
-    }
-
-    const { data: updateData, error: updateError } = await supabase
-      .from("events")
-      .update(liveUpdates)
-      .eq("id", id)
-      .not("pending_edits", "is", null)
-      .select("id");
-
-    if (updateError) {
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-    }
-
-    if (!updateData || updateData.length === 0) {
-      return NextResponse.json(
-        { error: "Pending edits were modified concurrently. Please refresh and try again." },
-        { status: 409 }
-      );
-    }
-
-    if (event.created_by) {
-      await getElevatedClient().from("notifications").insert({
-        user_id: event.created_by,
-        type: "edit_approved",
-        title: "Edits Approved",
-        message: `Your edits to "${event.title}" have been approved and are now live.`,
-        event_id: id,
-        read: false,
-        created_at: new Date().toISOString(),
-      });
-    }
-
-    await logAdminAction({
-      adminUserId: user.id,
-      requestId: ctx.requestId,
-      action: "approved_edits",
-      targetType: "event",
-      targetId: id,
-      metadata: { approved_fields: approvedFields },
-    });
-
-    return NextResponse.json({ success: true, message: "Edits approved" });
-  }
-
-  // Reject
-  const { data: rejectData, error: updateError } = await supabase
-    .from("events")
-    .update({ pending_edits: null })
-    .eq("id", id)
-    .not("pending_edits", "is", null)
-    .select("id");
-
-  if (updateError) {
+  // DI-68: the exact pending-edit object displayed by the client is the
+  // concurrency token. The locked RPC applies only that version and commits
+  // its whitelisted event update, notification and audit together.
+  const { data: outcome, error } = await getElevatedClient().rpc("review_event_edits_atomic", {
+    p_event_id: id,
+    p_actor_id: user.id,
+    p_action: action,
+    p_expected_pending_edits: expected_pending_edits,
+    p_reason: reason == null ? undefined : String(reason),
+  });
+  if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  if (!rejectData || rejectData.length === 0) {
+  if (outcome === "not_found") {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+  if (outcome === "forbidden") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (outcome !== "ok") {
     return NextResponse.json(
       { error: "Pending edits were modified concurrently. Please refresh and try again." },
       { status: 409 }
     );
   }
-
-  if (event.created_by) {
-    await getElevatedClient().from("notifications").insert({
-      user_id: event.created_by,
-      type: "edit_rejected",
-      title: "Edits Rejected",
-      message: `Your edits to "${event.title}" were rejected: ${reason}`,
-      event_id: id,
-      read: false,
-      created_at: new Date().toISOString(),
-    });
-  }
-
-  await logAdminAction({
-    adminUserId: user.id,
-    requestId: ctx.requestId,
-    action: "rejected_edits",
-    targetType: "event",
-    targetId: id,
-    metadata: { reason, rejected_fields: Object.keys(pendingEdits).filter(k => k !== "submitted_at") },
-  });
-
-  return NextResponse.json({ success: true, message: "Edits rejected" });
+  return NextResponse.json({ success: true, message: action === "approve" ? "Edits approved" : "Edits rejected" });
 });

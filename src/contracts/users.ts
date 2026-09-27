@@ -73,8 +73,8 @@ const NAME_LENGTH = "Name must be between 2 and 50 characters long";
  * A profile image URL: a string or null ("<Label> URL must be a string or
  * null"); a non-blank string must parse with `new URL()` ("Invalid <Label>
  * URL format") and is stored trimmed; null or blank clears it (null). The
- * handler's rule was `new URL()` only, so any scheme it parses is kept, as
- * before.
+ * M0 / DI-90 restricts nonempty values to http(s); other URL schemes are
+ * rejected before an image URL reaches storage.
  */
 function imageUrl(label: "Avatar" | "Banner") {
   return z
@@ -85,7 +85,8 @@ function imageUrl(label: "Avatar" | "Banner") {
     .transform((value, ctx): string | null => {
       if (!value || value.trim() === "") return null;
       try {
-        new URL(value);
+        const url = new URL(value);
+        if (!["http:", "https:"].includes(url.protocol)) throw new Error("Unsafe URL scheme");
       } catch {
         ctx.issues.push({
           code: "custom",
@@ -189,7 +190,7 @@ export type ProfileImageFileField = typeof PROFILE_IMAGE_FILE_FIELD;
 
 /**
  * Each route's file rule, texts and order (type before size), and its answer
- * to an unreadable form (its catch's 500, unchanged). No guard sits between
+ * to an unreadable form (M0 CERT-02: malformed transport is a client 400). No guard sits between
  * the form read and the checks, so parseForm runs them.
  */
 function profileImageUpload(
@@ -209,7 +210,7 @@ function profileImageUpload(
         badType,
       },
     },
-    unreadable: { status: 500, error: "Internal server error" },
+    unreadable: { status: 400, error: "Invalid multipart form data" },
   };
 }
 

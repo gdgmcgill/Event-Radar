@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 /**
  * GET /api/users/me/requests — Returns inbound followers who the current user
@@ -57,7 +57,8 @@ export const GET = withRoute({ cache: "private", action: "fetch requests" }, asy
     }));
 
     return NextResponse.json({ requests });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch requests" },
       { status: 500 }

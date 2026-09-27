@@ -14,8 +14,8 @@
  *     `requireAdminPage("/")` before rendering its children;
  *   - G2 driven: the docs layout redirects an anonymous caller, a signed-in
  *     student and a banned admin to "/", and renders its children for an
- *     active admin; the page itself is unchanged and still calls
- *     `getApiDocs()` (the gate is the layout's);
+ *     active admin; M0 / review WR-01 also gates the page itself before
+ *     `getApiDocs()` because partial RSC rendering can skip the layout;
  *   - G3 `/docs` is not in the proxy's PROTECTED_ROUTES (unchanged: the
  *     page-level gate is the fix, the proxy list is advisory);
  *   - G4 the control: `src/app/admin/layout.tsx` carries the gate shape;
@@ -34,6 +34,24 @@ jest.mock("next/navigation", () => ({
 }));
 
 let caller: { user: unknown; profile: unknown };
+const docsMock = jest.fn().mockResolvedValue({ openapi: "3.0.0", paths: {} });
+const fromMock = jest.fn(() => {
+  const builder: Record<string, unknown> = {};
+  for (const method of ["select", "eq", "gt", "order", "limit", "in"]) {
+    builder[method] = jest.fn(() => builder);
+  }
+  builder.then = (resolve: (value: unknown) => unknown) =>
+    Promise.resolve({ data: [], count: 0, error: null }).then(resolve);
+  return builder;
+});
+jest.mock("@/lib/swagger", () => ({ getApiDocs: () => docsMock() }));
+jest.mock("@/components/redoc/RedocUI", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock("@/lib/supabase/server", () => ({
+  createClient: async () => ({ from: fromMock }),
+}));
 jest.mock("@/server/context", () => ({
   getRequestContext: async () => ({
     supabase: null,
@@ -56,7 +74,11 @@ function profile(roles: string[], banned_at: string | null = null) {
   return { id: USER.id, roles, onboarding_completed: true, banned_at, ban_expires_at: null };
 }
 
-beforeEach(() => redirectMock.mockClear());
+beforeEach(() => {
+  redirectMock.mockClear();
+  docsMock.mockClear();
+  fromMock.mockClear();
+});
 
 describe("/docs is admin-only (F-054 fixed by 06-17)", () => {
   it("G1 src/app/docs has a layout beside page.tsx, and it calls requireAdminPage(\"/\")", () => {
@@ -102,5 +124,35 @@ describe("/docs is admin-only (F-054 fixed by 06-17)", () => {
 
   it("G5 the /health layout carries the same gate (DEC-79)", () => {
     expect(read("health", "layout.tsx")).toMatch(ADMIN_PAGE_GATE);
+  });
+
+  describe("WR-01 / F-054: standalone pages authorize before reading data", () => {
+    it.each([
+      ["anonymous", { user: null, profile: null }],
+      ["student", { user: USER, profile: profile(["user"]) }],
+      ["missing profile", { user: USER, profile: null }],
+      ["banned admin", { user: USER, profile: profile(["admin"], "2026-01-01T00:00:00.000Z") }],
+    ])("refuses %s even when neither layout executes", async (_label, who) => {
+      caller = who;
+      const { default: DocsPage } = await import("@/app/docs/page");
+      const { default: ModerationPage } = await import("@/app/moderation/page");
+      await expect(DocsPage()).rejects.toThrow("NEXT_REDIRECT:/");
+      await expect(ModerationPage()).rejects.toThrow(
+        who.user ? /^NEXT_REDIRECT:\/$/ : /^NEXT_REDIRECT:\/admin-login$/
+      );
+      expect(docsMock).not.toHaveBeenCalled();
+      expect(fromMock).not.toHaveBeenCalled();
+    });
+
+    it("allows an active admin to render both pages without their layouts", async () => {
+      caller = { user: USER, profile: profile(["admin"]) };
+      const { default: DocsPage } = await import("@/app/docs/page");
+      const { default: ModerationPage } = await import("@/app/moderation/page");
+      await DocsPage();
+      await ModerationPage();
+      expect(docsMock).toHaveBeenCalledTimes(1);
+      expect(fromMock).toHaveBeenCalledWith("admin_audit_log");
+      expect(redirectMock).not.toHaveBeenCalled();
+    });
   });
 });

@@ -73,12 +73,11 @@ export const GET = withRoute({ cache: "private", action: "fetch engagement data"
       );
     }
 
-    // Fetch user's engagement summary
-    const { data: engagement, error: engagementError } = await supabase
-      .from("user_engagement_summary" as never)
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // DI-87: compute from canonical interactions; the retired summary table
+    // never existed on the reset schema. The RPC scopes itself to auth.uid().
+    const { data: engagement, error: engagementError } = await supabase.rpc(
+      "get_user_engagement"
+    );
 
     if (engagementError) {
       log.error("Error fetching engagement", { error: engagementError });
@@ -126,35 +125,18 @@ export const POST = withRoute({ cache: "private", action: "recalculate engagemen
     if (!active.ok) return active.response;
     const onboarded = requireOnboarded(ctx);
     if (!onboarded.ok) return onboarded.response;
-    const user = active.user;
     const supabase = ctx.supabase;
 
-    // Call the database function to recalculate engagement
-    // Using type assertion since the function isn't in generated types yet
-    const { error: rpcError } = await supabase.rpc(
-      "update_user_engagement" as never,
-      { p_user_id: user.id } as never
+    // DI-87: live aggregation is always current, so refresh needs no write to
+    // a missing materialization table or caller-selected subject argument.
+    const { data: engagement, error: rpcError } = await supabase.rpc(
+      "get_user_engagement"
     );
 
     if (rpcError) {
       log.error("Error recalculating engagement", { error: rpcError });
       return NextResponse.json(
         { error: "Failed to recalculate engagement" },
-        { status: 500 }
-      );
-    }
-
-    // Fetch the updated engagement
-    const { data: engagement, error: engagementError } = await supabase
-      .from("user_engagement_summary" as never)
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    if (engagementError) {
-      log.error("Error fetching updated engagement", { error: engagementError });
-      return NextResponse.json(
-        { error: "Failed to fetch updated engagement" },
         { status: 500 }
       );
     }

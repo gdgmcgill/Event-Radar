@@ -3,7 +3,7 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { getElevatedClient } from "@/server/db/elevated";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 interface RouteParams {
@@ -40,6 +40,7 @@ export const POST = withRoute({ cache: "private", action: "follow user" }, async
       .select("id");
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Failed to follow user" }, { status: 500 });
     }
 
@@ -63,12 +64,16 @@ export const POST = withRoute({ cache: "private", action: "follow user" }, async
       return NextResponse.json({ following: true, isFriend }, { status: 201 });
     }
 
-    // Fetch target user name for notification
-    const { data: targetUser } = await supabase
-      .from("users")
-      .select("name")
-      .eq("id", targetId)
-      .single();
+    // DI-65: only a newly established mutual relationship needs the peer's
+    // display name. The cookie client cannot read another user's profile;
+    // select only the name, scoped to that exact reciprocal follow target.
+    let targetName: string | null = null;
+    if (isFriend) {
+      const { data: targetUser, error: nameError } = await getElevatedClient()
+        .from("users").select("name").eq("id", targetId).maybeSingle();
+      targetName = targetUser?.name ?? null;
+      if (nameError) log.warn("Friend notification name unavailable", { code: nameError.code });
+    }
 
     const { data: currentUser } = await supabase
       .from("users")
@@ -95,7 +100,7 @@ export const POST = withRoute({ cache: "private", action: "follow user" }, async
             user_id: user.id,
             type: "new_friend",
             title: "New Friend!",
-            message: `You and ${targetUser?.name ?? "someone"} are now friends.`,
+            message: `You and ${targetName ?? "someone"} are now friends.`,
           },
         ]
       : [
@@ -116,7 +121,8 @@ export const POST = withRoute({ cache: "private", action: "follow user" }, async
     }
 
     return NextResponse.json({ following: true, isFriend }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Failed to follow user" }, { status: 500 });
   }
 });
@@ -143,11 +149,13 @@ export const DELETE = withRoute({ cache: "private", action: "unfollow user" }, a
       .eq("following_id", targetId);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Failed to unfollow user" }, { status: 500 });
     }
 
     return NextResponse.json({ following: false, isFriend: false });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Failed to unfollow user" }, { status: 500 });
   }
 });

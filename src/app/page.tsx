@@ -143,6 +143,7 @@ function InferredTagsToastLayer({ inferredTags }: InferredTagsToastLayerProps) {
   );
 }
 import { useEvents } from "@/hooks/useEvents";
+import { SectionError } from "@/components/ui/SectionRow";
 import { HeroSection } from "@/components/events/HeroSection";
 import { HappeningNowSection } from "@/components/events/HappeningNowSection";
 import { PopularEventsSection } from "@/components/events/PopularEventsSection";
@@ -245,7 +246,7 @@ function HomePageContent() {
     [todayStart]
   );
 
-  const { events, loading } = useEvents({
+  const { events, loading, error: eventsError, refetch: refetchEvents } = useEvents({
     filters: upcomingFilters,
     limit: 100,
     sort: "start_date",
@@ -268,6 +269,8 @@ function HomePageContent() {
     loadMore,
     nextCursor,
     loadingMore,
+    error: filteredError,
+    refetch: refetchFilteredEvents,
   } = useEvents({
     filters: filteredFilters,
     limit: 30,
@@ -442,7 +445,9 @@ function HomePageContent() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-bold text-foreground">
-                  {filteredLoading
+                  {filteredError
+                    ? "Results unavailable"
+                    : filteredLoading
                     ? "Searching..."
                     : `${filteredEvents.length} result${filteredEvents.length !== 1 ? "s" : ""}`}
                 </h2>
@@ -475,7 +480,9 @@ function HomePageContent() {
             </div>
 
             {/* Results Grid */}
-            {filteredLoading && filteredEvents.length === 0 ? (
+            {filteredError ? (
+              <SectionError message="Failed to load events." onRetry={refetchFilteredEvents} />
+            ) : filteredLoading && filteredEvents.length === 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="aspect-[16/10] rounded-3xl bg-muted animate-pulse" />
@@ -544,6 +551,9 @@ function HomePageContent() {
             {user && <FriendsActivitySection />}
 
             {/* Upcoming This Week */}
+            {eventsError && (
+              <SectionError message="Failed to load upcoming events." onRetry={refetchEvents} />
+            )}
             {!loading && events.length > 0 && (
               <UpcomingThisWeekSection events={events} onEventClick={handleEventClick} />
             )}

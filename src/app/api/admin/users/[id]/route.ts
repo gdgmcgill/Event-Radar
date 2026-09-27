@@ -13,7 +13,7 @@ import {
   AdminUserUpdateBody,
   type UserRoleValue,
 } from "@/contracts/admin";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 export const PATCH = withRoute({ cache: "private", action: "update user" }, async (
   request: NextRequest,
@@ -84,6 +84,7 @@ export const PATCH = withRoute({ cache: "private", action: "update user" }, asyn
     .single();
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

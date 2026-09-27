@@ -1,0 +1,53 @@
+name: Deploy verified Edge webhook
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Dedicated GitHub environment containing the matching Supabase credentials
+        required: true
+        type: choice
+        options: [staging, production]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: edge-${{ inputs.target }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Require a successful CI run for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          count=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&status=success" --jq '.total_count')
+          test "$count" -gt 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.115.0
+      - name: Deno handler contract
+        run: npx --yes --package=deno@2.9.6 deno test --frozen --config supabase/functions/events-webhook/deno.json supabase/functions/tests/webhook-handler.test.ts
+      - name: Deploy only the HMAC-authenticated webhook
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          supabase functions deploy events-webhook --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+      - name: Record deployed source
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          node -e 'require("fs").writeFileSync("edge-deployment.json",JSON.stringify({commit:process.env.GITHUB_SHA,run:process.env.GITHUB_RUN_ID,target:process.env.TARGET,function:"events-webhook",timestamp:new Date().toISOString()},null,2))'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: edge-deployment-${{ github.sha }}
+          path: edge-deployment.json
+          retention-days: 90

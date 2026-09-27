@@ -1,0 +1,666 @@
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 build
+[WebServer] > next build
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5 (Turbopack)
+[WebServer] - Environments: .env.local, .env
+[WebServer] (node:57340) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] ✓ Running next.config.js took 215ms
+[WebServer] - Experiments (use with caution):
+[WebServer]   · clientTraceMetadata
+[WebServer] 
+[WebServer]   Creating an optimized production build ...
+[WebServer] (node:57340) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:57346) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] ✓ Compiled successfully in 2.3s
+[WebServer]   Running next.config.js provided runAfterProductionCompile ...
+[WebServer] ✓ Completed runAfterProductionCompile in 124ms
+[WebServer]   Running TypeScript ...
+[WebServer]   Finished TypeScript in 2.4s ...
+[WebServer]   Collecting page data using 9 workers ...
+[WebServer] (node:57356) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:57361) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:57359) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:57355) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:57357) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:57362) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:57358) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:57354) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:57360) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]   Generating static pages using 9 workers (0/98) ...
+[WebServer]   Generating static pages using 9 workers (24/98) 
+[WebServer]   Generating static pages using 9 workers (48/98) 
+[WebServer]   Generating static pages using 9 workers (73/98) 
+[WebServer] ✓ Generating static pages using 9 workers (98/98) in 360ms
+[WebServer]   Finalizing page optimization ...
+[WebServer] 
+[WebServer] Route (app)
+[WebServer] ┌ ○ /
+[WebServer] ├ ○ /_not-found
+[WebServer] ├ ○ /about
+[WebServer] ├ ○ /admin-login
+[WebServer] ├ ƒ /admin/experiments
+[WebServer] ├ ƒ /admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/analytics/events
+[WebServer] ├ ƒ /api/admin/analytics/users
+[WebServer] ├ ƒ /api/admin/audit-log
+[WebServer] ├ ƒ /api/admin/calculate-popularity
+[WebServer] ├ ƒ /api/admin/clubs
+[WebServer] ├ ƒ /api/admin/clubs/[id]
+[WebServer] ├ ƒ /api/admin/events
+[WebServer] ├ ƒ /api/admin/events/[id]
+[WebServer] ├ ƒ /api/admin/events/[id]/edits
+[WebServer] ├ ƒ /api/admin/events/[id]/status
+[WebServer] ├ ƒ /api/admin/experiments
+[WebServer] ├ ƒ /api/admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/experiments/[id]/results
+[WebServer] ├ ƒ /api/admin/featured
+[WebServer] ├ ƒ /api/admin/featured/[id]
+[WebServer] ├ ƒ /api/admin/organizer-requests
+[WebServer] ├ ƒ /api/admin/organizer-requests/[id]
+[WebServer] ├ ƒ /api/admin/organizers
+[WebServer] ├ ƒ /api/admin/reports
+[WebServer] ├ ƒ /api/admin/reports/[id]
+[WebServer] ├ ƒ /api/admin/stats
+[WebServer] ├ ƒ /api/admin/users
+[WebServer] ├ ƒ /api/admin/users/[id]
+[WebServer] ├ ƒ /api/admin/users/[id]/ban
+[WebServer] ├ ƒ /api/calendar/events
+[WebServer] ├ ƒ /api/clubs
+[WebServer] ├ ƒ /api/clubs/[id]
+[WebServer] ├ ƒ /api/clubs/[id]/analytics
+[WebServer] ├ ƒ /api/clubs/[id]/appeal
+[WebServer] ├ ƒ /api/clubs/[id]/events
+[WebServer] ├ ƒ /api/clubs/[id]/follow
+[WebServer] ├ ƒ /api/clubs/[id]/invites
+[WebServer] ├ ƒ /api/clubs/[id]/members
+[WebServer] ├ ƒ /api/clubs/[id]/members/role
+[WebServer] ├ ƒ /api/clubs/[id]/transfer
+[WebServer] ├ ƒ /api/clubs/banner
+[WebServer] ├ ƒ /api/clubs/featured
+[WebServer] ├ ƒ /api/clubs/friends
+[WebServer] ├ ƒ /api/clubs/logo
+[WebServer] ├ ƒ /api/clubs/new
+[WebServer] ├ ƒ /api/clubs/trending
+[WebServer] ├ ƒ /api/events
+[WebServer] ├ ƒ /api/events/[id]
+[WebServer] ├ ƒ /api/events/[id]/analytics
+[WebServer] ├ ƒ /api/events/[id]/appeal
+[WebServer] ├ ƒ /api/events/[id]/friends
+[WebServer] ├ ƒ /api/events/[id]/invite
+[WebServer] ├ ƒ /api/events/[id]/report
+[WebServer] ├ ƒ /api/events/[id]/reviews
+[WebServer] ├ ƒ /api/events/[id]/rsvp
+[WebServer] ├ ƒ /api/events/[id]/save
+[WebServer] ├ ƒ /api/events/create
+[WebServer] ├ ƒ /api/events/export
+[WebServer] ├ ƒ /api/events/featured
+[WebServer] ├ ƒ /api/events/following
+[WebServer] ├ ƒ /api/events/friends-activity
+[WebServer] ├ ƒ /api/events/friends-organizing
+[WebServer] ├ ƒ /api/events/happening-now
+[WebServer] ├ ƒ /api/events/my-events
+[WebServer] ├ ƒ /api/events/new
+[WebServer] ├ ƒ /api/events/popular
+[WebServer] ├ ƒ /api/events/upload-image
+[WebServer] ├ ƒ /api/feedback
+[WebServer] ├ ƒ /api/health
+[WebServer] ├ ƒ /api/interactions
+[WebServer] ├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+[WebServer] ├ ƒ /api/my-clubs
+[WebServer] ├ ƒ /api/notifications
+[WebServer] ├ ƒ /api/notifications/[id]
+[WebServer] ├ ƒ /api/notifications/count
+[WebServer] ├ ƒ /api/onboarding/complete
+[WebServer] ├ ƒ /api/organizer-requests
+[WebServer] ├ ƒ /api/profile/avatar
+[WebServer] ├ ƒ /api/profile/banner
+[WebServer] ├ ƒ /api/profile/inferred-tags
+[WebServer] ├ ƒ /api/profile/interests
+[WebServer] ├ ƒ /api/recommendations
+[WebServer] ├ ƒ /api/recommendations/analytics
+[WebServer] ├ ƒ /api/recommendations/batch
+[WebServer] ├ ƒ /api/recommendations/feedback
+[WebServer] ├ ƒ /api/user/engagement
+[WebServer] ├ ƒ /api/user/following
+[WebServer] ├ ƒ /api/users/[id]
+[WebServer] ├ ƒ /api/users/[id]/follow
+[WebServer] ├ ƒ /api/users/me/friends
+[WebServer] ├ ƒ /api/users/me/requests
+[WebServer] ├ ƒ /api/users/me/suggestions
+[WebServer] ├ ƒ /api/users/saved-events
+[WebServer] ├ ƒ /api/users/search
+[WebServer] ├ ƒ /auth/callback
+[WebServer] ├ ƒ /auth/signout
+[WebServer] ├ ƒ /banned
+[WebServer] ├ ○ /calendar
+[WebServer] ├ ƒ /clubs
+[WebServer] ├ ƒ /clubs/[id]
+[WebServer] ├ ○ /clubs/create
+[WebServer] ├ ○ /contributors
+[WebServer] ├ ○ /create-event
+[WebServer] ├ ƒ /docs
+[WebServer] ├ ƒ /events/[id]
+[WebServer] ├ ○ /feedback
+[WebServer] ├ ○ /friends
+[WebServer] ├ ƒ /health
+[WebServer] ├ ○ /help
+[WebServer] ├ ƒ /invites/[token]
+[WebServer] ├ ○ /landing
+[WebServer] ├ ƒ /moderation
+[WebServer] ├ ƒ /moderation/appeals
+[WebServer] ├ ƒ /moderation/audit-log
+[WebServer] ├ ƒ /moderation/clubs
+[WebServer] ├ ƒ /moderation/events
+[WebServer] ├ ƒ /moderation/featured
+[WebServer] ├ ƒ /moderation/organizer-requests
+[WebServer] ├ ƒ /moderation/organizers
+[WebServer] ├ ƒ /moderation/pending
+[WebServer] ├ ƒ /moderation/reports
+[WebServer] ├ ƒ /moderation/stats
+[WebServer] ├ ƒ /moderation/users
+[WebServer] ├ ƒ /my-clubs
+[WebServer] ├ ƒ /my-clubs/[id]
+[WebServer] ├ ○ /my-events
+[WebServer] ├ ○ /notifications
+[WebServer] ├ ƒ /onboarding
+[WebServer] ├ ○ /people
+[WebServer] ├ ○ /privacy
+[WebServer] ├ ƒ /profile
+[WebServer] ├ ○ /robots.txt
+[WebServer] ├ ○ /settings
+[WebServer] ├ ƒ /sitemap.xml
+[WebServer] ├ ○ /terms
+[WebServer] └ ƒ /users/[id]
+[WebServer] 
+[WebServer] 
+[WebServer] ƒ Proxy (Middleware)
+[WebServer] 
+[WebServer] ○  (Static)   prerendered as static content
+[WebServer] ƒ  (Dynamic)  server-rendered on demand
+[WebServer] 
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 start
+[WebServer] > next start
+[WebServer] 
+[WebServer] (node:57386) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] ▲ Next.js 16.3.5
+[WebServer] - Local:         http://localhost:3000
+[WebServer] - Network:       http://10.121.205.78:3000
+[WebServer] ✓ Ready in 60ms
+[WebServer] ✓ Running next.config.js took 105ms
+[WebServer] {"ts":"2026-09-27T22:57:36.729Z","level":"info","msg":"Sentry disabled","scope":"Sentry","reason":"SENTRY_DSN is not set"}
+[WebServer] {"ts":"2026-09-27T22:57:36.955Z","level":"warn","msg":"Upstash not configured; using the in-memory store (not shared across instances)","requestId":"8b99bd80-0ea5-4ad9-a4dc-011d0cb4998e","route":"/","scope":"RateLimit"}
+
+Running 23 tests using 1 worker
+
+(node:57389) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (717ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (357ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (516ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (696ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (608ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (548ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (706ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (300ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (304ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (532ms)
+(node:57424) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  11 [chromium] › e2e/specs/m0-banned-admin.spec.ts:10:5 › a banned admin cannot use admin APIs or view the protected API specification (754ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] {"ts":"2026-09-27T22:57:49.354Z","level":"error","msg":"Fuzzy search RPC error","requestId":"17ba5b8f-b953-4c2f-a6e8-128f07aa8e11","route":"/api/events","error":{"code":"0A000","details":null,"hint":null,"message":"SET is not allowed in a non-volatile function"}}
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  12 [chromium] › e2e/specs/m0-discovery-recovery.spec.ts:10:5 › failed event search shows an error rather than empty results and retries the real API (811ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  13 [chromium] › e2e/specs/m0-discovery-recovery.spec.ts:46:5 › public discovery shows a recoverable error and retry loads real events (523ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000a',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  14 [chromium] › e2e/specs/m0-participation-workflows.spec.ts:69:5 › RSVP interested → going → cancelled persists after reload and changes public aggregates (2.5s)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000b',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000b',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000b',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000b',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000b',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000b',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000b',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000b',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000b',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  15 [chromium] › e2e/specs/m0-participation-workflows.spec.ts:113:5 › past attendee submits review through UI; organizer gets exact anonymous aggregate, others cannot submit without attending (1.9s)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000c',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000c',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070004-0000-4000-8000-00000000000c',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  16 [chromium] › e2e/specs/m0-participation-workflows.spec.ts:145:5 › future and ongoing events do not offer or accept reviews even for a going attendee (848ms)
+  ✓  17 [chromium] › e2e/specs/m0-participation-workflows.spec.ts:159:5 › actual reminder function sends only due approved saved events once; recipient reads it and unread count drops (1.2s)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✘  18 [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /events/[id]: anonymous › renders or redirects without browser errors (5.3s)
+(node:57477) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  19 [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /events/[id]: onboarded_student › renders or redirects without browser errors (740ms)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  20 [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /my-clubs: anonymous › renders or redirects without browser errors (498ms)
+  ✘  21 [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /my-clubs: club_owner › renders or redirects without browser errors (5.9s)
+(node:57505) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  22 [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /settings: anonymous › renders or redirects without browser errors (489ms)
+  ✘  23 [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /settings: onboarded_student › renders or redirects without browser errors (5.7s)
+
+
+  1) [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /events/[id]: anonymous › renders or redirects without browser errors 
+
+    Error: Initial data requests did not finish within 5s after visible content on /events/5eed0000-0000-4000-8000-0000000000e1:
+    GET http://127.0.0.1:3000/api/events/5eed0000-0000-4000-8000-0000000000e1/reviews
+
+      64 |                   const unfinished = initialRequests.filter(([request]) => pending.has(request))
+      65 |                     .map(([request]) => `${request.method()} ${request.url()}`);
+    > 66 |                   reject(new Error(`Initial data requests did not finish within 5s after visible content on ${path}:\n${unfinished.join("\n")}`));
+         |                          ^
+      67 |                 }, 5000);
+      68 |               }),
+      69 |             ]);
+        at Timeout.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/e2e/specs/page-smoke-matrix.spec.ts:66:26)
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/specs-page-smoke-matrix--e-91780-ects-without-browser-errors-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/specs-page-smoke-matrix--e-91780-ects-without-browser-errors-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/specs-page-smoke-matrix--e-91780-ects-without-browser-errors-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/specs-page-smoke-matrix--e-91780-ects-without-browser-errors-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /my-clubs: club_owner › renders or redirects without browser errors 
+
+    Error: Initial data requests did not finish within 5s after visible content on /my-clubs:
+    GET http://127.0.0.1:3000/api/notifications/count
+    GET http://127.0.0.1:3000/api/notifications/count
+
+      64 |                   const unfinished = initialRequests.filter(([request]) => pending.has(request))
+      65 |                     .map(([request]) => `${request.method()} ${request.url()}`);
+    > 66 |                   reject(new Error(`Initial data requests did not finish within 5s after visible content on ${path}:\n${unfinished.join("\n")}`));
+         |                          ^
+      67 |                 }, 5000);
+      68 |               }),
+      69 |             ]);
+        at Timeout.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/e2e/specs/page-smoke-matrix.spec.ts:66:26)
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/specs-page-smoke-matrix--m-97547-ects-without-browser-errors-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/specs-page-smoke-matrix--m-97547-ects-without-browser-errors-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/specs-page-smoke-matrix--m-97547-ects-without-browser-errors-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/specs-page-smoke-matrix--m-97547-ects-without-browser-errors-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /settings: onboarded_student › renders or redirects without browser errors 
+
+    Error: Initial data requests did not finish within 5s after visible content on /settings:
+    GET http://127.0.0.1:3000/api/notifications/count
+    GET http://127.0.0.1:3000/api/notifications/count
+
+      64 |                   const unfinished = initialRequests.filter(([request]) => pending.has(request))
+      65 |                     .map(([request]) => `${request.method()} ${request.url()}`);
+    > 66 |                   reject(new Error(`Initial data requests did not finish within 5s after visible content on ${path}:\n${unfinished.join("\n")}`));
+         |                          ^
+      67 |                 }, 5000);
+      68 |               }),
+      69 |             ]);
+        at Timeout.<anonymous> (/Users/adyan/Documents/GitHub/Event-Radar/e2e/specs/page-smoke-matrix.spec.ts:66:26)
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/specs-page-smoke-matrix--s-fd537-ects-without-browser-errors-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/specs-page-smoke-matrix--s-fd537-ects-without-browser-errors-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/specs-page-smoke-matrix--s-fd537-ects-without-browser-errors-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/specs-page-smoke-matrix--s-fd537-ects-without-browser-errors-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /events/[id]: anonymous › renders or redirects without browser errors 
+    [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /my-clubs: club_owner › renders or redirects without browser errors 
+    [chromium] › e2e/specs/page-smoke-matrix.spec.ts:22:11 › /settings: onboarded_student › renders or redirects without browser errors 
+  20 passed (51.4s)

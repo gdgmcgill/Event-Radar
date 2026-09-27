@@ -78,8 +78,8 @@ export default function RootLayout({
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>
-        <Analytics />
-        <SpeedInsights />
+        {process.env.VERCEL === "1" && <Analytics />}
+        {process.env.VERCEL === "1" && <SpeedInsights />}
       </body>
     </html>
   );

@@ -59,6 +59,8 @@ export default function ModerationPendingEventsPage() {
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
   const [editRejectEventId, setEditRejectEventId] = useState<string | null>(null);
   const [editRejectReason, setEditRejectReason] = useState("");
+  const [editRejectSnapshot, setEditRejectSnapshot] = useState<PendingEvent["pending_edits"]>(null);
+  const [editReviewError, setEditReviewError] = useState<string | null>(null);
 
   const fetchPending = useCallback(async () => {
     setConfirmAction(null);
@@ -177,6 +179,9 @@ export default function ModerationPendingEventsPage() {
   };
 
   const handleApproveEdits = async (eventId: string) => {
+    const reviewed = events.find((event) => event.id === eventId)?.pending_edits;
+    if (!reviewed) return;
+    setEditReviewError(null);
     setActionLoading(eventId);
     try {
       const res = await fetch(`/api/admin/events/${eventId}/edits`, {
@@ -184,10 +189,15 @@ export default function ModerationPendingEventsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "approve",
+          expected_pending_edits: reviewed,
         } satisfies EventEditsDecisionBodyInput),
       });
       if (res.ok) {
-        fetchPending();
+        await fetchPending();
+      } else {
+        const result = await res.json();
+        setEditReviewError(result.error || "Unable to review these edits. Please try again.");
+        if (res.status === 409) await fetchPending();
       }
     } finally {
       setActionLoading(null);
@@ -196,6 +206,9 @@ export default function ModerationPendingEventsPage() {
 
   const handleRejectEdits = async () => {
     if (!editRejectEventId || !editRejectReason.trim()) return;
+    const reviewed = editRejectSnapshot;
+    if (!reviewed) return;
+    setEditReviewError(null);
     setActionLoading(editRejectEventId);
     try {
       const res = await fetch(`/api/admin/events/${editRejectEventId}/edits`, {
@@ -204,10 +217,15 @@ export default function ModerationPendingEventsPage() {
         body: JSON.stringify({
           action: "reject",
           reason: editRejectReason.trim(),
+          expected_pending_edits: reviewed,
         } satisfies EventEditsDecisionBodyInput),
       });
       if (res.ok) {
-        fetchPending();
+        await fetchPending();
+      } else {
+        const result = await res.json();
+        setEditReviewError(result.error || "Unable to review these edits. Please try again.");
+        if (res.status === 409) await fetchPending();
       }
     } finally {
       setActionLoading(null);
@@ -264,6 +282,8 @@ export default function ModerationPendingEventsPage() {
           {events.length}
         </Badge>
       </div>
+
+      {editReviewError && <p role="alert" className="text-sm text-red-600">{editReviewError}</p>}
 
       {events.length === 0 ? (
         <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -415,7 +435,7 @@ export default function ModerationPendingEventsPage() {
                         Approve Edits
                       </button>
                       <button
-                        onClick={() => setEditRejectEventId(event.id)}
+                        onClick={() => { setEditRejectEventId(event.id); setEditRejectSnapshot(event.pending_edits); }}
                         disabled={actionLoading === event.id}
                         className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
                       >

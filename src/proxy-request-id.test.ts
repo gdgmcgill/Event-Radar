@@ -9,6 +9,9 @@
  * `x-request-id`: the pass-through, the 429, the 403s, the 500 and the
  * redirects. The rest of the proxy runs inside the request store, so its log
  * lines (and anything the handler logs) carry that id.
+ * M0 also pins private/no-store on every direct denial, error and redirect:
+ * those responses never reach withRoute's cache policy. Successful next()
+ * responses must leave the downstream route's cache policy available.
  *
  * Mock seams: `@supabase/ssr` (the proxy imports createServerClient from it
  * directly) and `@/server/ratelimit` (to script a 429 and a limiter fault).
@@ -29,6 +32,7 @@ jest.mock("@supabase/ssr", () => ({
 }));
 
 jest.mock("@/server/ratelimit", () => ({
+  DistributedStoreRequiredError: jest.requireActual("@/server/ratelimit").DistributedStoreRequiredError,
   getRateLimitStore: () => ({}),
   applyRateLimit: (...args: unknown[]) => mockApplyRateLimit(...args),
 }));
@@ -109,6 +113,7 @@ describe("proxy request id (DEC-74, C19)", () => {
     const res = await proxy(req("/", { headers: { "x-request-id": "client-chosen" } }));
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBeNull();
     const forwarded = res.headers.get(FORWARDED);
     expect(forwarded).toMatch(UUID);
     expect(forwarded).not.toBe("client-chosen");
@@ -162,14 +167,22 @@ describe("proxy request id (DEC-74, C19)", () => {
     expect(seen).toBe(res.headers.get(FORWARDED));
   });
 
-  it("429 from the limiter carries the id and is otherwise unchanged", async () => {
-    const tooMany = NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  it("429 keeps the limiter's body and retry metadata while forcing private caching", async () => {
+    const tooMany = NextResponse.json({ error: "Too many requests" }, {
+      status: 429,
+      headers: { "Retry-After": "42", "X-RateLimit-Limit": "300", "X-RateLimit-Remaining": "0", "Cache-Control": "public, max-age=60" },
+    });
     mockApplyRateLimit.mockResolvedValue(tooMany);
 
     const res = await proxy(req("/api/events", { headers: { "x-request-id": CLIENT_UUID } }));
 
     expect(res).toBe(tooMany);
     expect(res.status).toBe(429);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect(res.headers.get("retry-after")).toBe("42");
+    expect(res.headers.get("x-ratelimit-limit")).toBe("300");
+    expect(res.headers.get("x-ratelimit-remaining")).toBe("0");
+    expect(await res.json()).toEqual({ error: "Too many requests" });
     expect(res.headers.get("x-request-id")).toMatch(UUID);
     expect(res.headers.get("x-request-id")).not.toBe(CLIENT_UUID);
   });
@@ -180,6 +193,7 @@ describe("proxy request id (DEC-74, C19)", () => {
     const res = await proxy(req("/api/events"));
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBeNull();
     const [line] = jsonLines(consoleError);
     expect(line).toMatchObject({
       level: "error",
@@ -200,6 +214,8 @@ describe("proxy request id (DEC-74, C19)", () => {
     );
 
     expect(res.status).toBe(403);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect(await res.json()).toEqual({ error: "Cross-site request blocked" });
     expect(res.headers.get("x-request-id")).toMatch(UUID);
   });
 
@@ -209,6 +225,7 @@ describe("proxy request id (DEC-74, C19)", () => {
     const res = await proxy(req("/api/events"));
 
     expect(res.status).toBe(500);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(await res.json()).toEqual({ error: "Failed to process request" });
     const id = res.headers.get("x-request-id");
     expect(id).toMatch(UUID);
@@ -230,6 +247,7 @@ describe("proxy request id (DEC-74, C19)", () => {
     const res = await proxy(req("/profile"));
 
     expect(res.status).toBe(500);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(await res.text()).toBe("Internal Server Error");
     expect(res.headers.get("x-request-id")).toMatch(UUID);
   });
@@ -238,6 +256,7 @@ describe("proxy request id (DEC-74, C19)", () => {
     const res = await proxy(req("/profile"));
 
     expect(res.status).toBe(307);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("location")).toContain("signin=required");
     expect(res.headers.get("x-request-id")).toMatch(UUID);
   });
@@ -255,10 +274,13 @@ describe("proxy request id (DEC-74, C19)", () => {
 
     const api = await proxy(req("/api/events"));
     expect(api.status).toBe(403);
+    expect(api.headers.get("cache-control")).toBe("private, no-store");
+    expect(await api.json()).toEqual({ error: "Account suspended" });
     expect(api.headers.get("x-request-id")).toMatch(UUID);
 
     const page = await proxy(req("/"));
     expect(page.status).toBe(307);
+    expect(page.headers.get("cache-control")).toBe("private, no-store");
     expect(page.headers.get("location")).toContain("/banned");
     expect(page.headers.get("x-request-id")).toMatch(UUID);
   });
@@ -269,10 +291,13 @@ describe("proxy request id (DEC-74, C19)", () => {
 
     const api = await proxy(req("/api/events"));
     expect(api.status).toBe(403);
+    expect(api.headers.get("cache-control")).toBe("private, no-store");
+    expect(await api.json()).toEqual({ error: "Profile not found" });
     expect(api.headers.get("x-request-id")).toMatch(UUID);
 
     const page = await proxy(req("/"));
     expect(page.status).toBe(307);
+    expect(page.headers.get("cache-control")).toBe("private, no-store");
     expect(page.headers.get("location")).toContain("error=profile_sync_failed");
     expect(page.headers.get("x-request-id")).toMatch(UUID);
   });
@@ -286,6 +311,7 @@ describe("proxy request id (DEC-74, C19)", () => {
 
     const res = await proxy(req("/"));
     expect(res.status).toBe(307);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("location")).toContain("/onboarding");
     expect(res.headers.get("x-request-id")).toMatch(UUID);
   });

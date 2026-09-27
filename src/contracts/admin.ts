@@ -58,6 +58,7 @@ import {
   type BodilessRequestInit,
 } from "@/contracts/common";
 import { sanitizeText } from "@/lib/sanitize";
+import { isEndAfterStart, isValidISODate } from "@/lib/dateValidation";
 import { Constants } from "@/lib/supabase/types";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
 
@@ -193,7 +194,12 @@ export const EventEditsDecisionBody = z
         path: ["reason"],
       });
     }
-  });
+  })
+  .and(z.object({
+    expected_pending_edits: z.record(z.string(), z.json(), {
+      error: "The reviewed pending edits are required. Refresh and try again.",
+    }),
+  }));
 
 export type EventEditsDecisionBodyInput = z.input<typeof EventEditsDecisionBody>;
 
@@ -235,6 +241,15 @@ export const AdminEventCreateBody = z.object({
   tags: asSent(),
   image_url: asSent(),
   category: asSent(),
+}).superRefine((body, ctx) => {
+  // M0 / DI-97: preserve missing-field errors, but reject malformed dates and
+  // reversed intervals before the insert. Admin imports may include past dates.
+  for (const field of ["start_date", "end_date"] as const) {
+    if (!isValidISODate(body[field])) ctx.addIssue({ code: "custom", message: `${field} must be a valid ISO 8601 date`, path: [field] });
+  }
+  if (isValidISODate(body.start_date) && isValidISODate(body.end_date) && !isEndAfterStart(body.start_date, body.end_date)) {
+    ctx.addIssue({ code: "custom", message: "end_date must be after start_date", path: ["end_date"] });
+  }
 });
 
 export type AdminEventCreateBodyInput = z.input<typeof AdminEventCreateBody>;
@@ -572,15 +587,20 @@ export const ReportsQuery = z.object({
 });
 
 /**
- * GET /api/admin/audit-log. page is `parseInt(get("page") || "1")` with no
- * radix; page=0 still yields a negative offset in the route (06-07 P2).
+ * GET /api/admin/audit-log. Invalid pages fall back to one so the 20-row
+ * range remains non-negative and safely representable (M0 IN-07).
  */
 export const AuditLogQuery = z.object({
   action: getParam(),
   page: z
     .string()
     .optional()
-    .transform((value) => parseInt(value || "1")),
+    .transform((value) => {
+      const page = parseInt(value || "1", 10);
+      return Number.isSafeInteger(page) && page >= 1 && page <= Math.floor(Number.MAX_SAFE_INTEGER / 20)
+        ? page
+        : 1;
+    }),
 });
 
 /** GET /api/admin/organizers: `?? ""` and `?? "all"`, so an empty value stays empty. */

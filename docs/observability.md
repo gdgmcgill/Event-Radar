@@ -52,8 +52,9 @@ The id's path through a request:
 2. **Request header.** `NextResponse.next({ request })` forwards it to the
    handler.
 3. **Wrapper** (`withRoute`, `src/server/route.ts`). It accepts the incoming
-   id only when it is UUID-shaped, otherwise mints one (paths the proxy
-   matcher skips, such as `/auth/callback`, arrive with none). It runs the
+   id only when it is UUID-shaped and the path is covered by the proxy.
+   Paths the proxy matcher skips, such as `/auth/callback`, always get a fresh
+   id, even when a client sends its own UUID. It runs the
    handler inside `runWithRequest({ requestId, route })`.
 4. **Context.** `createRequestContext()` (`src/server/context.ts`) and every
    log line read the same id through `currentRequestId()`.
@@ -74,8 +75,13 @@ its unset `dataCollection` collects cookies and bodies by default).
 **What is captured.** Errors only (`tracesSampleRate: 0`, no performance
 tracing, no session replay):
 
-- an uncaught throw in any route wrapped by `withRoute`, through
-  `captureServerError(error, { requestId, route })` in the wrapper's catch;
+- every 5xx response from a route wrapped by `withRoute`, including handled
+  database failures, through one `captureServerError` call. The wrapper uses
+  the request's last logged error cause; `logRouteError(error)` preserves
+  causes in local catch and database-error branches. A silent 5xx gets a
+  generic action error and a correlated error log without changing its body;
+- Next redirects, not-found responses and other framework control-flow errors
+  are rethrown without reporting them as application failures;
 - a throw in the proxy's ring (its fail-closed 500), the same call;
 - errors Next reports to `onRequestError` in `src/instrumentation.ts`
   (Server Components, route handlers, server actions), through Sentry's
@@ -83,7 +89,8 @@ tracing, no session replay):
 - unhandled errors in the browser, through `src/instrumentation-client.ts`.
 
 Every server event from the wrapper or the proxy carries the tags
-`request_id` (the same id as the `x-request-id` response header) and `route`.
+`request_id` (the same id as the `x-request-id` response header) and `route`
+(UUID path segments replaced with `[id]`).
 Events carry `environment` = `VERCEL_ENV` (default `development`) and
 `release` = `VERCEL_GIT_COMMIT_SHA`.
 
@@ -93,6 +100,10 @@ event (`src/server/observability/sentry.ts` on the server,
 
 - request cookies, request data (bodies) and the query string are deleted;
 - the `cookie` and `authorization` request headers are deleted;
+- query strings and fragments are stripped from `Referer`/`Referrer` headers
+  regardless of case;
+- UUID segments are normalized in request URLs, route tags, Next request
+  paths and navigation breadcrumbs;
 - email-shaped text in the message, exception values and breadcrumb messages
   becomes `[email]`;
 - the user is reduced to `{ id: <hex SHA-256 of the user id> }` on the server,

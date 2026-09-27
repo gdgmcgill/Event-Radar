@@ -26,7 +26,7 @@ Inferred from the existing codebase (see `.planning/codebase/`). These are worki
 - ✓ Organizers see event-level analytics (RSVPs, saves, clicks) and club-level trends — existing
 - ✓ Attendees review past events; organizers see aggregate feedback — existing
 - ✓ Admins approve/reject events and clubs, ban/suspend users, review reports and appeals, with actions written to `admin_audit_log` — existing; contradicted by Phase 1 evidence (F-007), keep on the preservation list only after Stage 3 fixes it
-- ✓ In-app notifications and email reminders — existing; contradicted by Phase 1 evidence (F-038), keep on the preservation list only after Stage 3 fixes it
+- ✓ In-app notifications and event reminders — existing; reminders are delivered in the app. Email delivery is future product work (M0 / F-038 wording correction).
 - ✓ Instagram scraper pipeline (Apify) classifies posts and ingests events with content-hash dedup — existing
 - ✓ A/B experiment framework for recommendation variants — existing; contradicted by Phase 1 evidence (F-017), keep on the preservation list only after Stage 3 fixes it
 - ✓ Interaction tracking feeds popularity and interaction signals — existing

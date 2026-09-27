@@ -7,13 +7,10 @@ import {
   Share2,
   Calendar,
   CalendarCheck,
-  CalendarX,
-  Clock,
   Users,
   Lock,
-  Building2,
-  Heart,
   MapPin,
+  Building2,
   GraduationCap,
   Shield,
   ChevronRight,
@@ -21,7 +18,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { EVENT_CATEGORIES, QUICK_FILTER_CATEGORIES } from "@/lib/constants";
-import type { EventTag, Event } from "@/types";
+import type { EventTag } from "@/types";
 import FollowUserButton from "@/components/users/FollowUserButton";
 import type { Metadata } from "next";
 import { getRequestContext } from "@/server/context";
@@ -86,7 +83,7 @@ export default async function UserProfilePage({ params }: PageProps) {
   if (!target) notFound();
 
   // The target's own activity rows (saved events, created events, friends,
-  // memberships, RSVPs) are readable under RLS only by the target, so they are
+  // memberships) are readable under RLS only by the target, so they are
   // read through the same door as the profile row.
   const elevated = getElevatedClient();
 
@@ -99,8 +96,6 @@ export default async function UserProfilePage({ params }: PageProps) {
     { count: eventsOrganized },
     { data: friends },
     { data: memberships },
-    { data: upcomingRsvps },
-    { data: pastRsvps },
   ] = await Promise.all([
     // Follow status queries use authenticated client (RLS applies)
     authUser
@@ -137,26 +132,6 @@ export default async function UserProfilePage({ params }: PageProps) {
       .select("id, role, clubs (id, name, logo_url, category)")
       .eq("user_id", targetId)
       .order("created_at", { ascending: false }),
-    elevated
-      .from("rsvps")
-      .select("id, status, events!inner(*, club:clubs(id, name, logo_url))")
-      .eq("user_id", targetId)
-      .in("status", ["going", "interested"])
-      .gte("events.start_date", now)
-      .is("events.deleted_at", null)
-      .eq("events.status", "approved")
-      .order("created_at", { ascending: false })
-      .limit(6),
-    elevated
-      .from("rsvps")
-      .select("id, status, events!inner(*, club:clubs(id, name, logo_url))")
-      .eq("user_id", targetId)
-      .in("status", ["going", "interested"])
-      .lt("events.start_date", now)
-      .is("events.deleted_at", null)
-      .eq("events.status", "approved")
-      .order("created_at", { ascending: false })
-      .limit(6),
   ]);
 
   const isFollowing = !!followRow;
@@ -181,15 +156,6 @@ export default async function UserProfilePage({ params }: PageProps) {
     (m: any) => m.role === "organizer" || m.role === "admin" || m.role === "president"
   );
   const isOrganizer = organizerClubs.length > 0;
-
-  const upcomingEvents: Event[] = (upcomingRsvps ?? [])
-    .map((r: any) => r.events)
-    .filter(Boolean)
-    .sort((a: any, b: any) => a.start_date.localeCompare(b.start_date));
-  const pastEvents: Event[] = (pastRsvps ?? [])
-    .map((r: any) => r.events)
-    .filter(Boolean)
-    .sort((a: any, b: any) => b.start_date.localeCompare(a.start_date));
 
   const subtitleParts: string[] = [];
   if (target.faculty) subtitleParts.push(target.faculty);
@@ -475,103 +441,12 @@ export default async function UserProfilePage({ params }: PageProps) {
               )}
             </div>
 
-            {/* Right Column — Events */}
-            <div className="lg:col-span-2 flex flex-col gap-8">
-              {/* Upcoming Events */}
-              <section className="space-y-4">
-                <h2 className="text-xl font-bold text-foreground flex items-center gap-2.5">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 backdrop-blur-sm">
-                    <CalendarCheck className="h-4 w-4 text-primary" />
-                  </div>
-                  Upcoming Events
-                </h2>
-                {upcomingEvents.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {upcomingEvents.map((event) => {
-                      const sd = new Date(event.start_date);
-                      const timeLabel = sd.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-                      return (
-                        <Link key={event.id} href={`/events/${event.id}`} className="group bg-white/60 dark:bg-white/[0.08] backdrop-blur-2xl rounded-2xl overflow-hidden border border-white/40 dark:border-white/[0.04] shadow-sm hover:shadow-[0_8px_30px_rgba(237,27,47,0.12)] hover:bg-white/75 dark:hover:bg-white/[0.12] transition-all duration-200 hover:-translate-y-0.5 cursor-pointer relative">
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
-                          <div className="h-36 bg-muted bg-cover bg-center relative overflow-hidden" style={event.image_url ? { backgroundImage: `url('${event.image_url}')` } : undefined}>
-                            <div className="absolute inset-0 bg-gradient-to-t from-white/80 dark:from-black/60 via-transparent to-transparent" />
-                            <div className="absolute bottom-3 left-3 flex flex-col bg-white/70 dark:bg-black/40 backdrop-blur-2xl border border-white/40 dark:border-white/[0.06] rounded-xl px-3.5 py-2 shadow-lg">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{sd.toLocaleDateString("en-US", { month: "short" })}</span>
-                              <span className="text-2xl font-black leading-none text-foreground -mt-0.5">{sd.getDate()}</span>
-                            </div>
-                          </div>
-                          <div className="p-4 relative">
-                            <h4 className="font-bold text-foreground group-hover:text-primary transition-colors duration-200 line-clamp-1">{event.title}</h4>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" />{timeLabel}</span>
-                              {event.location && <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" /><span className="truncate max-w-[120px]">{event.location}</span></span>}
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="bg-white/50 dark:bg-white/[0.04] backdrop-blur-2xl rounded-2xl border border-dashed border-white/40 dark:border-white/[0.04] p-10 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/[0.08] backdrop-blur-sm flex items-center justify-center mx-auto mb-4 border border-white/30 dark:border-white/[0.04]">
-                      <CalendarX className="h-7 w-7 text-muted-foreground/40" />
-                    </div>
-                    <p className="font-medium text-foreground mb-1">No upcoming events</p>
-                    <p className="text-sm text-muted-foreground">{target.name ?? "This user"} hasn&apos;t RSVPed to any upcoming events yet.</p>
-                  </div>
-                )}
+            <div className="lg:col-span-2">
+              <section className="rounded-2xl border border-border p-8 text-center">
+                <Lock className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+                <h2 className="text-lg font-semibold">Event attendance is private</h2>
+                <p className="mt-2 text-sm text-muted-foreground">RSVPs are visible to the attendee and event organizers.</p>
               </section>
-
-              {/* Past Events */}
-              {pastEvents.length > 0 && (
-                <section className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-foreground flex items-center gap-2.5">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 backdrop-blur-sm">
-                        <Heart className="h-4 w-4 text-primary" />
-                      </div>
-                      Past Events
-                    </h2>
-                    {pastEvents.length >= 6 && (
-                      <span className="text-sm text-muted-foreground">Showing latest 6</span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {pastEvents.slice(0, 6).map((event) => {
-                      const sd = new Date(event.start_date);
-                      const timeLabel = sd.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-                      return (
-                        <Link key={event.id} href={`/events/${event.id}`} className="group bg-white/60 dark:bg-white/[0.08] backdrop-blur-2xl rounded-2xl overflow-hidden border border-white/40 dark:border-white/[0.04] shadow-sm hover:bg-white/75 dark:hover:bg-white/[0.12] transition-all duration-200 hover:-translate-y-0.5 cursor-pointer relative">
-                          <div className="h-36 bg-muted bg-cover bg-center relative overflow-hidden" style={event.image_url ? { backgroundImage: `url('${event.image_url}')` } : undefined}>
-                            <div className="absolute inset-0 bg-gradient-to-t from-white/80 dark:from-black/60 via-transparent to-transparent" />
-                            <div className="absolute bottom-3 left-3 flex flex-col bg-white/70 dark:bg-black/40 backdrop-blur-2xl border border-white/40 dark:border-white/[0.06] rounded-xl px-3.5 py-2 shadow-lg">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{sd.toLocaleDateString("en-US", { month: "short" })}</span>
-                              <span className="text-2xl font-black leading-none text-foreground -mt-0.5">{sd.getDate()}</span>
-                            </div>
-                          </div>
-                          <div className="p-4 relative">
-                            <h4 className="font-bold text-foreground group-hover:text-primary transition-colors duration-200 line-clamp-1">{event.title}</h4>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" />{timeLabel}</span>
-                              {event.location && <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" /><span className="truncate max-w-[120px]">{event.location}</span></span>}
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </section>
-              )}
-
-              {/* No events at all */}
-              {upcomingEvents.length === 0 && pastEvents.length === 0 && (
-                <div className="bg-white/50 dark:bg-white/[0.04] backdrop-blur-2xl rounded-2xl border border-dashed border-white/40 dark:border-white/[0.04] p-10 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/[0.08] backdrop-blur-sm flex items-center justify-center mx-auto mb-4 border border-white/30 dark:border-white/[0.04]">
-                    <CalendarX className="h-7 w-7 text-muted-foreground/40" />
-                  </div>
-                  <p className="text-muted-foreground">No event activity to show yet.</p>
-                </div>
-              )}
             </div>
           </div>
         )}

@@ -12,6 +12,7 @@
  * handler read, with no new 400.
  */
 
+import { imageBytes } from "../../__tests__/helpers/imageBytes";
 import { z } from "zod";
 import { parseForm, parseWith, readQuery } from "@/server/body";
 import { VALID_INTEREST_TAGS } from "@/lib/constants";
@@ -181,7 +182,7 @@ describe("ProfileImageForm with AVATAR_UPLOAD and PROFILE_BANNER_UPLOAD", () => 
   const MB = 1024 * 1024;
 
   function file(size: number, type: string): File {
-    return new File([new Uint8Array(size)], "x.bin", { type });
+    return new File([imageBytes(size, type)], "x.bin", { type });
   }
 
   function formRequest(entries: [string, string | File][]): Request {
@@ -223,15 +224,15 @@ describe("ProfileImageForm with AVATAR_UPLOAD and PROFILE_BANNER_UPLOAD", () => 
     }
   });
 
-  it("an unreadable form keeps the route's 500 Internal server error", async () => {
-    const request = new Request("http://localhost/api/profile/avatar", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}",
-    });
-    await expect(
-      outcome(await parseForm(request, ProfileImageForm, AVATAR_UPLOAD))
-    ).resolves.toEqual({ status: 500, body: { error: "Internal server error" } });
+  // M0 CERT-02: both profile upload endpoints reject malformed transport.
+  it.each([AVATAR_UPLOAD, PROFILE_BANNER_UPLOAD])("rejects unreadable forms before upload", async (opts) => {
+    for (const contentType of ["application/json", "multipart/form-data; boundary=missing"]) {
+      const request = new Request("http://localhost/api/profile/avatar", {
+        method: "POST", headers: { "content-type": contentType }, body: "{}",
+      });
+      await expect(outcome(await parseForm(request, ProfileImageForm, opts)))
+        .resolves.toEqual({ status: 400, body: { error: "Invalid multipart form data" } });
+    }
   });
 });
 

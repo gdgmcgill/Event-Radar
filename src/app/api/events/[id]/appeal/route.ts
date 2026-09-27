@@ -28,30 +28,22 @@ export const POST = withRoute({ cache: "private", action: "submit appeal" }, asy
   if (!parsed.ok) return parsed.response;
   const { message } = parsed.data;
 
-  // The appeal review ("Creators can appeal their items"), the status reset
-  // ("Organizers can update own events") and the final re-read ("Organizers
-  // can view own events") run on the caller's cookie client (DEC-49). The
-  // pre-read, the admin lookup and the admin notifications go through the
-  // elevated door.
+  // DI-74: scope the pre-read to the creator under RLS. Hidden, deleted,
+  // missing and another creator's events share the same 404.
   const supabase = ctx.supabase;
-
-  // The pre-read runs before the creator check. On the cookie client a
-  // non-creator could not see a rejected or suspended event and would get 404
-  // "Event not found" where this route answers 403 "Forbidden". REGISTRY.md
-  // row: "Read an appealed event before the creator check".
-  const { data: event, error: fetchError } = await getElevatedClient()
+  const { data: event, error: fetchError } = await supabase
     .from("events")
     .select("id, title, created_by, status, appeal_count")
     .eq("id", id)
-    .single();
+    .eq("created_by", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
 
-  if (fetchError || !event) {
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  if (fetchError) {
+    log.error("Failed to read appealed event", { error: fetchError });
+    return NextResponse.json({ error: "Failed to submit appeal" }, { status: 500 });
   }
-
-  if (event.created_by !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
   if (!["rejected", "suspended"].includes(event.status)) {
     return NextResponse.json(

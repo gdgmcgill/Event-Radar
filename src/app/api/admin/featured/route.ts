@@ -7,7 +7,7 @@ import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { FeaturedCreateBody } from "@/contracts/admin";
 import { getESTNowISO } from "@/lib/timezone";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 export const GET = withRoute({ cache: "private", action: "fetch featured events" }, async () => {
@@ -25,6 +25,7 @@ export const GET = withRoute({ cache: "private", action: "fetch featured events"
       .order("ends_at", { ascending: false });
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
@@ -36,7 +37,8 @@ export const GET = withRoute({ cache: "private", action: "fetch featured events"
     const expired = (data ?? []).filter((r: any) => r.ends_at <= now);
 
     return NextResponse.json({ active, upcoming, expired });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch featured events" },
       { status: 500 }
@@ -81,6 +83,7 @@ export const POST = withRoute({ cache: "private", action: "create featured event
           { status: 409 }
         );
       }
+      logRouteError(error);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
@@ -98,7 +101,8 @@ export const POST = withRoute({ cache: "private", action: "create featured event
     }
 
     return NextResponse.json({ featured: data }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to create featured event" },
       { status: 500 }

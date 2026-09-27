@@ -14,6 +14,7 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { parseBody } from "@/server/body";
 import { InteractionBody } from "@/contracts/interactions";
 import { withRoute } from "@/server/route";
+import { getElevatedClient } from "@/server/db/elevated";
 import { log } from "@/server/log";
 
 /**
@@ -100,8 +101,10 @@ export const POST = withRoute({ cache: "private", action: "record interaction" }
       );
     }
 
-    // Insert the interaction
-    // Using type assertion since the new tables aren't in generated types yet
+    // F-009/F-010: only the server may insert interactions or update popularity.
+    // The cookie lookup above preserves event visibility; identity is bound to
+    // the authenticated session, never a request field. The existing invoker
+    // trigger recomputes popularity with this same service-role capability.
     const interactionData = {
       user_id: user?.id || null,
       event_id: body.event_id,
@@ -111,7 +114,7 @@ export const POST = withRoute({ cache: "private", action: "record interaction" }
       metadata: body.metadata || {},
     };
 
-    const { data: interaction, error: insertError } = await supabase
+    const { data: interaction, error: insertError } = await getElevatedClient()
       .from("user_interactions")
       .insert(interactionData as never)
       .select("id, created_at")

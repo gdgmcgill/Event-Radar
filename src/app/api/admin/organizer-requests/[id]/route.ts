@@ -4,11 +4,9 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
-import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { OrganizerRequestDecisionBody } from "@/contracts/admin";
-import { withRoute } from "@/server/route";
-import { log } from "@/server/log";
+import { logRouteError, withRoute } from "@/server/route";
 
 export const PATCH = withRoute({ cache: "private", action: "review organizer request" }, async (
   request: NextRequest,
@@ -26,11 +24,8 @@ export const PATCH = withRoute({ cache: "private", action: "review organizer req
   if (!parsed.ok) return parsed.response;
   const { status } = parsed.data;
 
-  // The request read and update, the target's roles read, the membership
-  // upsert and the club name read run on the caller's cookie client: the admin
-  // policies on organizer_requests, users (SELECT), club_members and the public
-  // clubs read permit them (DEC-49). The roles write and the notification go
-  // through the elevated door.
+  // Keep the admin-scoped preflight read; the transaction repeats its
+  // pending check while holding the row lock.
   const supabase = ctx.supabase;
 
   const { data: orgRequest, error: fetchError } = await supabase
@@ -53,101 +48,25 @@ export const PATCH = withRoute({ cache: "private", action: "review organizer req
     );
   }
 
-  // Conditional on the row still being pending (REVIEW-05 WR-07): two
-  // moderators, or a double click, both pass the read above. Only the one
-  // whose update changes the row goes on to the side effects (the roles
-  // write, the membership upsert, the notification, the audit row).
-  const { data: updated, error: updateError } = await supabase
-    .from("organizer_requests")
-    .update({
-      status,
-      reviewed_by: user.id,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .eq("status", "pending")
-    .select("id");
-
-  if (updateError) {
+  // DI-62: decision, roles, membership, audit and notification are one
+  // database transaction. A competing reviewer sees a conflict after the lock.
+  const { data: outcome, error } = await getElevatedClient().rpc("review_organizer_request_atomic", {
+    p_request_id: id,
+    p_actor_id: user.id,
+    p_status: status,
+  });
+  if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  if (!updated || updated.length === 0) {
+  if (outcome === "forbidden") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (outcome !== "ok") {
     return NextResponse.json(
       { error: "This request has already been reviewed" },
       { status: 409 }
     );
   }
-
-  // Log audit action
-  try {
-    await logAdminAction({
-      adminUserId: user.id,
-      requestId: ctx.requestId,
-      action: status as "approved" | "rejected",
-      targetType: "organizer_request",
-      targetId: id,
-      metadata: { user_id: orgRequest.user_id, club_id: orgRequest.club_id },
-    });
-  } catch (auditErr) {
-    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
-  }
-
-  if (status === "approved") {
-    const { data: targetUser } = await supabase
-      .from("users")
-      .select("roles")
-      .eq("id", orgRequest.user_id)
-      .single();
-
-    if (targetUser && !targetUser.roles?.includes("club_organizer")) {
-      const updatedRoles = [...(targetUser.roles || []), "club_organizer"] as ("user" | "club_organizer" | "admin")[];
-      // users has no admin UPDATE policy and the F-006 grant withholds roles.
-      // REGISTRY.md row: "Set another user's roles on approval
-      // (club_organizer)".
-      await getElevatedClient()
-        .from("users")
-        .update({
-          roles: updatedRoles,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", orgRequest.user_id);
-    }
-
-    await supabase.from("club_members").upsert(
-      {
-        user_id: orgRequest.user_id,
-        club_id: orgRequest.club_id,
-        role: "organizer",
-      },
-      { onConflict: "user_id,club_id" }
-    );
-  }
-
-  try {
-    const { data: club } = await supabase
-      .from("clubs")
-      .select("name")
-      .eq("id", orgRequest.club_id)
-      .single();
-
-    const clubName = club?.name || "the club";
-    const isApproved = status === "approved";
-
-    // REGISTRY.md row: "Notify another user (notifications insert)".
-    await getElevatedClient().from("notifications").insert({
-      user_id: orgRequest.user_id,
-      type: isApproved ? "organizer_approved" : "organizer_rejected",
-      title: isApproved
-        ? "Organizer Request Approved!"
-        : "Organizer Request Not Approved",
-      message: isApproved
-        ? `Your request to become an organizer for ${clubName} has been approved. You can now create events for this club.`
-        : `Your request to become an organizer for ${clubName} was not approved.`,
-    });
-  } catch (notifErr) {
-    log.error("Failed to send notification", { scope: "Admin", error: notifErr });
-  }
-
   return NextResponse.json({ success: true });
 });

@@ -63,7 +63,7 @@
 -- =============================================================================
 
 BEGIN;
-SELECT plan(47);
+SELECT plan(49);
 
 
 -- -----------------------------------------------------------------------------
@@ -145,7 +145,12 @@ INSERT INTO public.saved_events (user_id, event_id) VALUES
 -- =============================================================================
 
 -- 1.
-SELECT is((SELECT md5(prosrc) FROM pg_proc WHERE oid = 'public.compute_user_scores()'::regprocedure),
+-- M0 permits only DI-82's explicit full-table rebuild predicates. Normalize
+-- those two statements to keep the original scoring formula byte-for-byte pin.
+SELECT is((SELECT md5(replace(replace(prosrc,
+            'DELETE FROM tag_interaction_counts WHERE true;', 'DELETE FROM tag_interaction_counts;'),
+            'DELETE FROM user_event_scores WHERE true;', 'DELETE FROM user_event_scores;'))
+            FROM pg_proc WHERE oid = 'public.compute_user_scores()'::regprocedure),
           'ed64959b44c9329a1212cde928810010',
           'compute_user_scores body is unchanged — the scoring formula is pinned (REFAC-14, DEC-68)');
 
@@ -154,7 +159,12 @@ SELECT is((SELECT md5(prosrc) FROM pg_proc WHERE oid = 'public.send_feedback_req
           'c69a62ad437efb7e875517f6b94c3b4b',
           'send_feedback_requests body is unchanged — only its search_path is pinned (C6)');
 
-DO $$ BEGIN PERFORM public.compute_user_scores(); END $$;
+-- The real PostgREST/safeupdate execution is covered by async-edge.spec.ts.
+SELECT ok((SELECT position('DELETE FROM tag_interaction_counts WHERE true;' IN prosrc) > 0
+                  AND position('DELETE FROM user_event_scores WHERE true;' IN prosrc) > 0
+           FROM pg_proc WHERE oid = 'public.compute_user_scores()'::regprocedure),
+          'DI-82: both intentional full rebuilds have explicit predicates');
+SELECT lives_ok('SELECT public.compute_user_scores()', 'DI-82: scoring still executes');
 
 -- 3.
 SELECT ok((SELECT count(*) FROM public.user_event_scores

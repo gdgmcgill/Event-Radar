@@ -14,6 +14,7 @@
  */
 
 import { z } from "zod";
+import { imageBytes } from "@/__tests__/helpers/imageBytes";
 import {
   checkFile,
   parseBody,
@@ -227,7 +228,7 @@ describe("parseForm", () => {
   });
 
   function file(size: number, type: string, name = "x.bin"): File {
-    return new File([new Uint8Array(size)], name, { type });
+    return new File([imageBytes(size, type)], name, { type });
   }
 
   function formRequest(entries: [string, string | File][]): Request {
@@ -243,7 +244,7 @@ describe("parseForm", () => {
   }
 
   it("returns the file and the parsed non-file fields", async () => {
-    const upload = file(4, "image/png", "a.png");
+    const upload = file(8, "image/png", "a.png");
     const result = await parseForm(
       formRequest([["file", upload], ["clubId", "c1"], ["clubId", "c2"], ["extra", "x"]]),
       WithClub,
@@ -254,7 +255,7 @@ describe("parseForm", () => {
     // The first value of a repeated key, as formData.get returned it.
     expect(result.data.fields).toEqual({ clubId: "c1" });
     expect(result.data.file.name).toBe("a.png");
-    expect(result.data.file.size).toBe(4);
+    expect(result.data.file.size).toBe(8);
     expect(result.data.file.type).toBe("image/png");
   });
 
@@ -308,7 +309,7 @@ describe("parseForm", () => {
   });
 
   it("validates the non-file fields with the schema after the file is present", async () => {
-    const result = await parseForm(formRequest([["file", file(4, "image/png")]]), WithClub, OPTS);
+    const result = await parseForm(formRequest([["file", file(8, "image/png")]]), WithClub, OPTS);
     await expect(refusal(result)).resolves.toEqual({
       status: 400,
       body: { error: "clubId is required" },

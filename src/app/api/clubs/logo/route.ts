@@ -3,9 +3,9 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
-import { checkFile, parseForm } from "@/server/body";
+import { checkFile, checkFileContent, parseForm } from "@/server/body";
 import { CLUB_LOGO_UPLOAD, ClubImageForm } from "@/contracts/clubs";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 /**
  * POST /api/clubs/logo
@@ -40,7 +40,7 @@ export const POST = withRoute({ cache: "private", action: "upload logo" }, async
     if (!gate.ok) return gate.response;
 
     // Type, then size, with the route's texts.
-    const refused = checkFile(file, CLUB_LOGO_UPLOAD.file);
+    const refused = checkFile(file, CLUB_LOGO_UPLOAD.file) ?? await checkFileContent(file);
     if (refused) return refused;
 
     const ext = file.name.split(".").pop() || "png";
@@ -51,6 +51,7 @@ export const POST = withRoute({ cache: "private", action: "upload logo" }, async
       .upload(path, file, { contentType: file.type, upsert: true });
 
     if (uploadError) {
+      logRouteError(uploadError);
       return NextResponse.json(
         { error: "Failed to upload logo" },
         { status: 500 }
@@ -62,7 +63,8 @@ export const POST = withRoute({ cache: "private", action: "upload logo" }, async
     } = supabase.storage.from("club-logos").getPublicUrl(path);
 
     return NextResponse.json({ url: publicUrl }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to upload logo" },
       { status: 500 }

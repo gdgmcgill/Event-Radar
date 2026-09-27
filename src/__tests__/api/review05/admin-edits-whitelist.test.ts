@@ -1,113 +1,43 @@
-/**
- * PATCH /api/admin/events/[id]/edits approves only the moderated fields
- * (REVIEW-05 WR-01).
- *
- * `pending_edits` is creator-writable, and the approval update runs with the
- * admin's privileges. Before the fix every key but `submitted_at` was copied
- * onto the event, so a creator could stage `created_by`, `club_id` or
- * `status` for an unsuspecting admin to apply.
- */
-
-import {
-  ADMIN,
-  EVENT_ID,
-  OTHER,
-  OTHER_CLUB_ID,
-  THIRD,
-  callsTo,
-  idParams,
-  jsonRequest,
-  makeFake,
-  profileOf,
-  type Fake,
-} from "./fake";
-
+/** DI-68: the route transmits the reviewed snapshot; SQL pgTAP verifies
+ * whitelisted publication and all-or-nothing audit/notification effects. */
+import { ADMIN, EVENT_ID, OTHER, callsTo, idParams, jsonRequest, makeFake, profileOf, type Fake } from "./fake";
 let mockCookie: Fake;
 let mockElevated: Fake;
-
-jest.mock("@/lib/supabase/server", () => ({
-  createClient: () => Promise.resolve(mockCookie.client),
-}));
-jest.mock("@/lib/supabase/service", () => ({
-  createServiceClient: () => mockElevated.client,
-  serviceRoleKey: () => "test-service-role-key",
-}));
-
-type Route = typeof import("@/app/api/admin/events/[id]/edits/route");
-
-function asAdminWithPending(pending: Record<string, unknown>): void {
-  mockCookie = makeFake({
-    user: ADMIN,
-    profile: profileOf(ADMIN.id, ["user", "admin"]),
-    answers: {
-      "events.select": {
-        data: { id: EVENT_ID, title: "Old", pending_edits: pending, created_by: OTHER },
-      },
-      "events.update": { data: [{ id: EVENT_ID }] },
-    },
-  });
-  mockElevated = makeFake();
-}
-
+jest.mock("@/lib/supabase/server", () => ({ createClient: () => Promise.resolve(mockCookie.client) }));
+jest.mock("@/lib/supabase/service", () => ({ createServiceClient: () => mockElevated.client, serviceRoleKey: () => "test-key" }));
 beforeEach(() => {
   jest.spyOn(console, "error").mockImplementation(() => {});
+  mockCookie = makeFake({ user: ADMIN, profile: profileOf(ADMIN.id, ["user", "admin"]) });
+  mockElevated = makeFake({ answers: { "rpc:review_event_edits_atomic": { data: "ok" } } });
 });
 afterEach(() => jest.restoreAllMocks());
-
-describe("approve", () => {
-  it("copies title and image_url, and nothing else, onto the event", async () => {
-    asAdminWithPending({
-      title: "New title",
-      image_url: "https://images.example/new.png",
-      created_by: THIRD,
-      club_id: OTHER_CLUB_ID,
-      status: "approved",
-      deleted_at: null,
-      submitted_at: "2026-09-25T00:00:00.000Z",
-    });
-    const { PATCH }: Route = await import("@/app/api/admin/events/[id]/edits/route");
-    const res = await PATCH(
-      jsonRequest(`admin/events/${EVENT_ID}/edits`, "PATCH", { action: "approve" }),
-      idParams(EVENT_ID)
-    );
-
-    expect(res.status).toBe(200);
-    const [update] = callsTo(mockCookie, "events", "update");
-    expect(update.payload).toEqual({
-      pending_edits: null,
-      title: "New title",
-      image_url: "https://images.example/new.png",
-    });
-    const [audit] = callsTo(mockElevated, "admin_audit_log", "insert");
-    expect((audit.payload as { metadata: unknown }).metadata).toEqual({
-      approved_fields: ["title", "image_url"],
-    });
-  });
-
-  it("a queue holding only forged keys clears the queue and applies nothing", async () => {
-    asAdminWithPending({ created_by: THIRD, status: "approved" });
-    const { PATCH }: Route = await import("@/app/api/admin/events/[id]/edits/route");
-    const res = await PATCH(
-      jsonRequest(`admin/events/${EVENT_ID}/edits`, "PATCH", { action: "approve" }),
-      idParams(EVENT_ID)
-    );
-
-    expect(res.status).toBe(200);
-    const [update] = callsTo(mockCookie, "events", "update");
-    expect(update.payload).toEqual({ pending_edits: null });
-  });
-
-  it("the ordinary title-only queue is applied as before", async () => {
-    asAdminWithPending({ title: "New", submitted_at: "2026-09-25T00:00:00.000Z" });
-    const { PATCH }: Route = await import("@/app/api/admin/events/[id]/edits/route");
-    const res = await PATCH(
-      jsonRequest(`admin/events/${EVENT_ID}/edits`, "PATCH", { action: "approve" }),
-      idParams(EVENT_ID)
-    );
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true, message: "Edits approved" });
-    const [update] = callsTo(mockCookie, "events", "update");
-    expect(update.payload).toEqual({ pending_edits: null, title: "New" });
-  });
+async function review(body: unknown) {
+  const { PATCH } = await import("@/app/api/admin/events/[id]/edits/route");
+  return PATCH(jsonRequest(`admin/events/${EVENT_ID}/edits`, "PATCH", body), idParams(EVENT_ID));
+}
+it("binds approval to the displayed object and the authenticated admin, including unexpected keys", async () => {
+  const snapshot = { title: "Reviewed", image_url: "https://example.test/img.png", created_by: OTHER, status: "rejected", submitted_at: "v1" };
+  const response = await review({ action: "approve", expected_pending_edits: snapshot, actor_id: OTHER });
+  expect(response.status).toBe(200);
+  expect(mockCookie.calls).toHaveLength(0);
+  expect(callsTo(mockElevated, "rpc:review_event_edits_atomic", "select")[0].payload).toEqual({ p_actor_id: ADMIN.id, p_event_id: EVENT_ID, p_action: "approve", p_expected_pending_edits: snapshot, p_reason: undefined });
+});
+it.each(["approve", "reject"])("%s refuses a stale version with 409", async action => {
+  mockElevated = makeFake({ answers: { "rpc:review_event_edits_atomic": { data: "conflict" } } });
+  const response = await review({ action, reason: "outdated", expected_pending_edits: { title: "Old" } });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({ error: "Pending edits were modified concurrently. Please refresh and try again." });
+  expect(mockElevated.calls).toHaveLength(1);
+});
+it("refuses a decision without the reviewed snapshot before any elevated call", async () => {
+  expect((await review({ action: "approve" })).status).toBe(400);
+  expect(mockElevated.calls).toHaveLength(0);
+});
+it("preserves ordinary success and transaction failure responses", async () => {
+  const body = { action: "approve", expected_pending_edits: { title: "New" } };
+  expect(await (await review(body)).json()).toEqual({ success: true, message: "Edits approved" });
+  mockElevated = makeFake({ answers: { "rpc:review_event_edits_atomic": { error: { message: "audit failed" } } } });
+  const response = await review(body);
+  expect(response.status).toBe(500);
+  expect(response.headers.get("cache-control")).toBe("private, no-store");
 });

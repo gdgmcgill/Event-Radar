@@ -135,7 +135,7 @@ describe("RecommendationFeedbackBody", () => {
 
 // ─── recommendations GET query ─────────────────────────────────────────────
 
-describe("RecommendationsQuery (never a 400)", () => {
+describe("RecommendationsQuery (bounded, never a 400)", () => {
   it.each<[string, { top_k: number; diversity: number }]>([
     ["", { top_k: 10, diversity: 0.7 }],
     ["top_k=2", { top_k: 2, diversity: 0.7 }],
@@ -150,12 +150,12 @@ describe("RecommendationsQuery (never a 400)", () => {
     expect(query(RecommendationsQuery, qs)).toEqual(expected);
   });
 
-  it("a non-numeric top_k or diversity is NaN, exactly what parseInt/parseFloat gave", () => {
+  it("a non-numeric top_k defaults to 10; diversity retains its NaN fallback", () => {
     const parsed = query(RecommendationsQuery, "top_k=abc&diversity=abc") as {
       top_k: number;
       diversity: number;
     };
-    expect(Number.isNaN(parsed.top_k)).toBe(true);
+    expect(parsed.top_k).toBe(10);
     expect(Number.isNaN(parsed.diversity)).toBe(true);
   });
 });

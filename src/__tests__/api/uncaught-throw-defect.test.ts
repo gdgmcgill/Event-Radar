@@ -34,7 +34,7 @@
  * onboarding/complete and auth/signout, which empties U1). U0 now
  * reads both export forms, `export async function VERB` and `export const
  * VERB = withRoute(`, so the arm list stays the no-try tree (22 files, 26
- * arms) while the rows move.
+ * arms) while the rows move. M0 adds four reads (26 files, 30 arms).
  *
  * Personas and the world come from `src/__tests__/contracts/badRequestTable.ts`.
  */
@@ -138,7 +138,10 @@ function throwingOn(
   let spared = !(spareContextRead && table === "users");
   return {
     auth: client.auth,
-    rpc: (name, args) => client.rpc(name, args),
+    rpc: (name, args) => {
+      if (`rpc:${name}` === table) throw new Error(SENTINEL);
+      return client.rpc(name, args);
+    },
     from(name) {
       if (name === table) {
         if (spared) throw new Error(SENTINEL);
@@ -180,10 +183,10 @@ const ARMS: Arm[] = [
     invoke: async () => (await import("@/app/api/admin/audit-log/route")).GET(get("/api/admin/audit-log")) },
   { file: "api/admin/clubs", verb: "GET", persona: "admin", throws: { table: "clubs" },
     invoke: async () => (await import("@/app/api/admin/clubs/route")).GET(get("/api/admin/clubs")) },
-  { file: "api/admin/events/[id]/edits", verb: "PATCH", persona: "admin", throws: { table: "events" },
+  { file: "api/admin/events/[id]/edits", verb: "PATCH", persona: "admin", throws: { table: "rpc:review_event_edits_atomic" },
     invoke: async () =>
       (await import("@/app/api/admin/events/[id]/edits/route")).PATCH(
-        json(`/api/admin/events/${EVENT_OWN}/edits`, "PATCH", { action: "approve" }),
+        json(`/api/admin/events/${EVENT_OWN}/edits`, "PATCH", { action: "approve", expected_pending_edits: { title: "reviewed" } }),
         idOf(EVENT_OWN)
       ) },
   { file: "api/admin/experiments/[id]/results", verb: "GET", persona: "admin", throws: { table: "experiments" },
@@ -217,6 +220,10 @@ const ARMS: Arm[] = [
       (await import("@/app/api/admin/experiments/route")).POST(
         json("/api/admin/experiments", "POST", { name: "x", variants: [{ name: "a" }, { name: "b" }] })
       ) },
+  { file: "api/admin/organizer-requests/[id]", verb: "PATCH", persona: "admin", throws: { table: "organizer_requests" },
+    invoke: async () => (await import("@/app/api/admin/organizer-requests/[id]/route")).PATCH(
+      json("/api/admin/organizer-requests/00000000-0000-4000-8000-000000000001", "PATCH", { status: "approved" }),
+      idOf("00000000-0000-4000-8000-000000000001")) },
   { file: "api/admin/organizer-requests", verb: "GET", persona: "admin", throws: { table: "organizer_requests" },
     invoke: async () =>
       (await import("@/app/api/admin/organizer-requests/route")).GET(get("/api/admin/organizer-requests")) },
@@ -269,6 +276,15 @@ const ARMS: Arm[] = [
       ) },
   { file: "api/organizer-requests", verb: "GET", persona: "student", throws: { table: "organizer_requests" },
     invoke: async () => (await import("@/app/api/organizer-requests/route")).GET() },
+  // M0: these reads delegate errors directly to withRoute.
+  { file: "api/clubs/new", verb: "GET", persona: "student", throws: { table: "clubs" },
+    invoke: async () => (await import("@/app/api/clubs/new/route")).GET() },
+  { file: "api/clubs/trending", verb: "GET", persona: "student", throws: { table: "clubs" },
+    invoke: async () => (await import("@/app/api/clubs/trending/route")).GET(get("/api/clubs/trending")) },
+  { file: "api/events/new", verb: "GET", persona: "student", throws: { table: "events" },
+    invoke: async () => (await import("@/app/api/events/new/route")).GET() },
+  { file: "api/notifications/count", verb: "GET", persona: "student", throws: { table: "notifications" },
+    invoke: async () => (await import("@/app/api/notifications/count/route")).GET() },
   { file: "auth/signout", verb: "POST", persona: "student", throws: { signOut: true },
     invoke: async () =>
       (await import("@/app/auth/signout/route")).POST(
@@ -310,14 +326,14 @@ function noTryRouteFiles(): Record<string, string[]> {
 }
 
 describe("U0: the arm list is the tree", () => {
-  it("the files are exactly the 22 route files with no try, each verb once", () => {
+  it("the files are exactly the 27 route files with no try, each verb once", () => {
     const listed: Record<string, string[]> = {};
     for (const arm of ARMS) (listed[arm.file] ??= []).push(arm.verb);
     for (const verbs of Object.values(listed)) verbs.sort();
     const tree = noTryRouteFiles();
     expect(listed).toEqual(tree);
-    expect(Object.keys(tree)).toHaveLength(22);
-    expect(ARMS).toHaveLength(26);
+    expect(Object.keys(tree)).toHaveLength(27);
+    expect(ARMS).toHaveLength(31);
   });
 
   it("every ADOPTED key is an arm, and its file declares that verb through withRoute", () => {
@@ -326,10 +342,10 @@ describe("U0: the arm list is the tree", () => {
     for (const arm of adoptedArms) {
       const source = readFileSync(join(APP, arm.file, "route.ts"), "utf8");
       expect(source).toMatch(
-        new RegExp(`export const ${arm.verb} = withRoute\\(\\{ cache: "private", action: "${ADOPTED[armId(arm)]}" \\}`)
+        new RegExp(`export const ${arm.verb} = withRoute\\(\\{ cache: "(?:private|public-60-300)", action: "${ADOPTED[armId(arm)]}" \\}`)
       );
     }
-    expect(pendingArms.length + adoptedArms.length).toBe(26);
+    expect(pendingArms.length + adoptedArms.length).toBe(31);
   });
 });
 
@@ -354,6 +370,7 @@ const ADOPTED: Readonly<Record<string, string>> = {
   "api/admin/experiments GET": "fetch experiments",
   "api/admin/experiments POST": "create experiment",
   "api/admin/organizer-requests GET": "fetch organizer requests",
+  "api/admin/organizer-requests/[id] PATCH": "review organizer request",
   "api/admin/organizers GET": "fetch organizers",
   "api/admin/reports GET": "fetch reports",
   "api/admin/stats GET": "fetch stats",
@@ -368,6 +385,11 @@ const ADOPTED: Readonly<Record<string, string>> = {
   // 06-14 Task 1: events
   "api/events/[id]/report POST": "report event",
   "api/events/my-events GET": "fetch your events",
+  // M0: reads now delegate the original cause directly to the wrapper.
+  "api/clubs/new GET": "fetch new clubs",
+  "api/clubs/trending GET": "fetch trending clubs",
+  "api/events/new GET": "fetch new events",
+  "api/notifications/count GET": "fetch notification count",
   // 06-14 Task 2: the last two
   "api/onboarding/complete POST": "complete onboarding",
   "auth/signout POST": "sign out",

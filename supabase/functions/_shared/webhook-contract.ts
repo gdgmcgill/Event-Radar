@@ -15,11 +15,10 @@
  * date string is "required" rather than "invalid", and a whitespace-only
  * title, description or location fails.
  *
- * WHAT IS NOT CHECKED, ON PURPOSE. validateEvent checked six fields; so does
- * WebhookEvent. duration, organizer, image_url, source_url, tags and the rest
- * are read by the mapper unvalidated, as before. Checking them here would turn
- * today's 200s and 500s for those inputs into 400s — a behaviour change this
- * plan does not make (the webhook's share of F-094 stays recorded, not fixed).
+ * M0 / DI-83 additionally validates array tag elements before mapping so a
+ * malformed tag yields a 400 before any insert. Non-array tags remain ignored
+ * by the mapper for compatibility. duration, organizer, image_url and source_url
+ * retain their existing behavior; this contract does not broaden their rules.
  */
 import { z } from "zod";
 
@@ -33,6 +32,7 @@ export const WEBHOOK_MESSAGES = {
   dateInvalid: "date must be a valid date string",
   location: "location is required and must be a non-empty string",
   time: "time must be a string if provided",
+  tags: "tags must contain only strings",
   structure:
     "Invalid payload structure. Expected event_count (number) and events (array)",
 } as const;
@@ -85,6 +85,12 @@ export const WebhookEvent = z.object({
   date: dateField,
   location: nonEmptyString(M.location),
   time: optionalTruthyString(M.time),
+  // DI-83: mapping calls toLowerCase on every array element. Keep previously
+  // ignored non-array values compatible, but reject unsafe arrays atomically.
+  tags: z.custom<unknown>(
+    (value) => !Array.isArray(value) || value.every((tag) => typeof tag === "string"),
+    { error: M.tags }
+  ).optional(),
 });
 
 /**
@@ -123,8 +129,8 @@ export type WebhookPayloadOutput = z.infer<typeof WebhookPayload>;
  *
  * A non-null primitive or an array reads as an event with no fields, because
  * validateEvent's property reads (`event.title`, …) on such a value all give
- * undefined. null and undefined are the caller's concern: today they throw in
- * validateEvent and the handler reproduces that 500.
+ * undefined. DI-83 uses the same required-field errors for null and undefined,
+ * rather than letting them throw from the handler.
  */
 export function webhookEventErrors(input: unknown): string[] {
   const view =

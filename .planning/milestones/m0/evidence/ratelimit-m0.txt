@@ -1,0 +1,11 @@
+PASS node src/proxy-ratelimit-failopen.test.ts
+PASS node src/proxy.test.ts
+PASS node src/server/ratelimit/selection.test.ts
+PASS node src/server/ratelimit/upstashStore.test.ts
+PASS node src/lib/env.test.ts
+
+Test Suites: 5 passed, 5 total
+Tests:       111 passed, 111 total
+Snapshots:   0 total
+Time:        0.687 s, estimated 1 s
+Ran all test suites matching src/proxy.test.ts|src/proxy-ratelimit-failopen.test.ts|src/server/ratelimit/selection.test.ts|src/server/ratelimit/upstashStore.test.ts|src/lib/env.test.ts.

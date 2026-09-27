@@ -1,6 +1,11 @@
 /**
  * PRESERVE characterization — /api/events/[id]/rsvp (REFAC-09)
  *
+ * M0 F-011: the fake now supplies the narrow aggregate RPC while preserving
+ * every response assertion. Raw attendance reads are deliberately private;
+ * the SQL role matrix and F-079 defect suite pin that intentional change.
+ * The byte-for-byte requirement below describes the original Phase 4 move.
+ *
  * Written against the UNMODIFIED route `src/app/api/events/[id]/rsvp/route.ts`
  * at the base commit recorded on line 1 of
  * `.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/floor.before.txt`.
@@ -70,9 +75,9 @@
  * `rsvp-count-defect.test.ts` red.
  */
 
+import { createRsvpFake } from "../../helpers/rsvpCounts";
 import { NextRequest } from "next/server";
 import {
-  createFakeSupabase,
   type FakeRow,
   type FakeSupabase,
   type FakeSupabaseInit,
@@ -158,7 +163,7 @@ function callerRow(eventId: string, status: string): FakeRow {
 }
 
 function setup(init: Partial<FakeSupabaseInit> = {}): FakeSupabase {
-  mockFake = createFakeSupabase({
+  mockFake = createRsvpFake({
     user: CALLER,
     now: INSERT_NOW,
     tables: { users: [profile()], events: EVENTS, rsvps: crowd() },

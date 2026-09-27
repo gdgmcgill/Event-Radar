@@ -90,7 +90,7 @@ function upload(path: string, extra: Record<string, string> = {}): NextRequest {
   const form = new FormData();
   form.append(
     "file",
-    new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "ring.png", {
+    new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10])], "ring.png", {
       type: "image/png",
     })
   );

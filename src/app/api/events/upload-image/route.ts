@@ -18,8 +18,8 @@ export const POST = withRoute({ cache: "private", action: "upload image" }, asyn
         const supabase = ctx.supabase;
 
         // The multipart contract (plan 06-08, REFAC-15): the route's own
-        // texts and order (missing, size, then type), and its 500 for a body
-        // that is not a form, unchanged.
+        // texts and order (missing, size, then type). Malformed multipart
+        // is a 400 client error; the bounded signature check follows.
         const parsed = await parseForm(request, UploadImageForm, EVENT_IMAGE_UPLOAD);
         if (!parsed.ok) return parsed.response;
         const { file } = parsed.data;

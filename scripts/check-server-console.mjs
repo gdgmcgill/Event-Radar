@@ -41,7 +41,11 @@
  *       reading, and a line that is not a response body (a log line, an
  *       internal throw) is listed with its file until the sweep rewrites it.
  *
- *   The allow-list entries are { file, rule: "S1" | "S2", count, reason? }.
+ *   S3  a server-failure response in a route whose exported HTTP handlers do
+ *       not all use withRoute from @/server/route. The wrapper logs and captures
+ *       every 5xx centrally, including a handler's locally caught failures.
+ *
+ *   The allow-list entries are { file, rule: "S1" | "S2" | "S3", count, reason? }.
  *   A `reason` marks an entry meant to stay (for example src/lib/tagMapping.ts,
  *   a module shared with client components, which stays on console).
  *
@@ -136,6 +140,16 @@ function inServerScope(file, lines) {
   return false;
 }
 
+/** Central 5xx visibility is guaranteed only for wrapped handler exports. */
+function hasObservedHandlers(lines) {
+  const source = lines.filter((line) => !COMMENT_LINE.test(line.trim())).join("\n");
+  if (!/import\s*\{[^}]*\bwithRoute\b[^}]*\}\s*from\s*["']@\/server\/route["']/.test(source)) return false;
+  const declarations = [...source.matchAll(/export\s+(?:(?:async\s+)?function\s+|const\s+)(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b/g)];
+  return declarations.length > 0 && declarations.every((match) =>
+    /^export\s+const\s+\w+\s*=\s*withRoute\s*\(/.test(source.slice(match.index))
+  );
+}
+
 const RULES = [
   {
     id: "S1",
@@ -149,6 +163,12 @@ const RULES = [
     pattern: /\.message\b/,
     applies: (file) => ROUTE_FILE.test(file),
     exempt: (_file, line) => /\bdateError\.message\b/.test(line),
+  },
+  {
+    id: "S3",
+    what: "server failure bypasses central reporting (wrap every HTTP handler with withRoute)",
+    pattern: /\bstatus\s*:\s*5\d\d\b|\bserverError\s*\(/,
+    applies: (file, lines) => ROUTE_FILE.test(file) && !hasObservedHandlers(lines),
   },
 ];
 
@@ -233,7 +253,7 @@ function readAllowlist({ required }) {
     );
   if (!wellFormed) {
     console.error(
-      "FAIL: the allow-list must be a JSON array of { file, rule: S1|S2, count > 0, reason?: string }"
+      "FAIL: the allow-list must be a JSON array of { file, rule: S1|S2|S3, count > 0, reason?: string }"
     );
     process.exit(1);
   }

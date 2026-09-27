@@ -19,9 +19,10 @@
  *      content_hash, so the unique partial index idx_events_content_hash
  *      refuses a second copy with 23505, reported per event as "duplicate".
  *
- * PRESERVED, ON PURPOSE: a JSON null body, a null element in `events`, and a
- * non-string tag still answer 500 (rows 7, 11 and 12). Turning them into 400s
- * is the webhook's share of F-094 and is not a change this plan makes.
+ * M0 / DI-83: a JSON null body, a null element in `events`, and a non-string
+ * array tag now answer validation 400s before any insert (rows 7, 11 and 12).
+ * IN-05: database failures use a stable public code and structured diagnostics;
+ * unexpected failures log their class without logging payloads or credentials.
  *
  * Imports are relative `.ts` paths so the Deno runtime resolves them; the root
  * tsconfig sets allowImportingTsExtensions so tsc accepts them too.
@@ -33,8 +34,8 @@ import { verifySignature } from "./webhook-signature.ts";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /**
- * A webhook event as the sender supplies it. Only six fields are validated
- * (webhook-contract.ts); the rest are read here unvalidated, as before.
+ * A webhook event as the sender supplies it. The shared contract validates the
+ * required fields, category, time and array tag elements before mapping.
  */
 interface RawWebhookEvent {
   title: string;
@@ -93,6 +94,9 @@ export const UNIQUE_VIOLATION = "23505";
 /** The per-event error a replayed event is reported with. */
 export const DUPLICATE_ERROR = "duplicate";
 
+/** IN-05: stable sender-facing error; never expose database error messages. */
+export const INSERT_FAILED_ERROR = "insert_failed";
+
 // ─── Responses ────────────────────────────────────────────────────────────────
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
@@ -109,8 +113,8 @@ function json(body: unknown, status: number, headers: Record<string, string>): R
 
 /**
  * Map a validated webhook event to its database row. The body is the old
- * mapEventToDatabase unchanged, including what it throws on (a non-string tag,
- * a time whose parts are not numbers); content_hash is computed only for a
+ * mapEventToDatabase unchanged; array tags are now validated first (DI-83).
+ * content_hash is computed only for a
  * row that mapped without errors, with the same arguments the admin create
  * route uses.
  */
@@ -230,12 +234,7 @@ export async function handleWebhook(req: Request, deps: WebhookDeps): Promise<Re
       return json({ error: "Invalid JSON payload" }, 400, JSON_HEADERS);
     }
 
-    // Row 7, preserved: the old handler dereferenced `payload.event_count`
-    // and a JSON null threw into the outer catch.
-    if (payload === null) {
-      throw new TypeError("payload is null");
-    }
-
+    // DI-83: null envelopes follow the shared structure validation.
     const payloadError = webhookPayloadError(payload);
     if (payloadError) {
       return json({ error: payloadError }, 400, JSON_HEADERS);
@@ -244,11 +243,6 @@ export async function handleWebhook(req: Request, deps: WebhookDeps): Promise<Re
     const events = (payload as { events: unknown[] }).events;
 
     const validationResults = events.map((event, index) => {
-      // Row 11, preserved: validateEvent dereferenced the element and a null
-      // (or undefined) threw into the outer catch.
-      if (event === null || event === undefined) {
-        throw new TypeError(`events[${index}] is ${event}`);
-      }
       const errors = webhookEventErrors(event);
       return { index, valid: errors.length === 0, errors };
     });
@@ -284,9 +278,18 @@ export async function handleWebhook(req: Request, deps: WebhookDeps): Promise<Re
       const { data, error: insertError } = await deps.insertEvent(dbEvent);
 
       if (insertError) {
+        if (insertError.code !== UNIQUE_VIOLATION) {
+          // IN-05: Postgres messages can include submitted values. Record the
+          // operation and SQLSTATE, never the message, row, signature or secret.
+          console.error(JSON.stringify({
+            event: "webhook.insert_failed",
+            index: i,
+            code: /^[A-Z0-9]{5}$/.test(insertError.code ?? "") ? insertError.code : "unknown",
+          }));
+        }
         errors.push({
           index: i,
-          error: insertError.code === UNIQUE_VIOLATION ? DUPLICATE_ERROR : insertError.message,
+          error: insertError.code === UNIQUE_VIOLATION ? DUPLICATE_ERROR : INSERT_FAILED_ERROR,
         });
       } else {
         processedEvents.push(data);
@@ -325,7 +328,12 @@ export async function handleWebhook(req: Request, deps: WebhookDeps): Promise<Re
         JSON_CORS_HEADERS
       );
     }
-  } catch {
+  } catch (error) {
+    // IN-05: allowlisted classes cannot echo a sender-controlled error message.
+    const errorClass = error instanceof TypeError ? "TypeError"
+      : error instanceof RangeError ? "RangeError"
+      : error instanceof Error ? "Error" : "Unknown";
+    console.error(JSON.stringify({ event: "webhook.unhandled_error", errorClass }));
     return json({ error: "Internal server error" }, 500, JSON_CORS_HEADERS);
   }
 }

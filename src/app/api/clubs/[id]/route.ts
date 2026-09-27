@@ -12,7 +12,7 @@ import {
   ClubDeleteBody,
   ClubUpdateBody,
 } from "@/contracts/clubs";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 interface RouteParams {
@@ -29,22 +29,32 @@ export const GET = withRoute({ cache: "public-60-300", action: "fetch club" }, a
     const supabase = await createClient();
 
     const [clubResult, followerResult] = await Promise.all([
-      supabase.from("clubs").select("*").eq("id", clubId).single(),
+      supabase.from("clubs").select("*").eq("id", clubId).maybeSingle(),
       supabase
         .from("club_followers")
         .select("*", { count: "exact", head: true })
         .eq("club_id", clubId),
     ]);
 
-    if (clubResult.error || !clubResult.data) {
+    // DI-88: a failed read must never become a CDN-cached missing-club result.
+    if (clubResult.error) {
+      logRouteError(clubResult.error);
+      return NextResponse.json({ error: "Failed to fetch club" }, { status: 500 });
+    }
+    if (!clubResult.data) {
       return NextResponse.json({ error: "Club not found" }, { status: 404 });
+    }
+    if (followerResult.error) {
+      logRouteError(followerResult.error);
+      return NextResponse.json({ error: "Failed to fetch club" }, { status: 500 });
     }
 
     return NextResponse.json({
       club: clubResult.data,
       followerCount: followerResult.count ?? 0,
     });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch club" },
       { status: 500 }
@@ -113,6 +123,7 @@ export const PATCH = withRoute({ cache: "private", action: "update club" }, asyn
       .single();
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to update club" },
         { status: 500 }
@@ -120,7 +131,8 @@ export const PATCH = withRoute({ cache: "private", action: "update club" }, asyn
     }
 
     return NextResponse.json({ club });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to update club" },
       { status: 500 }
@@ -188,6 +200,7 @@ export const DELETE = withRoute({ cache: "private", action: "delete club" }, asy
     .eq("id", clubId);
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Failed to delete club" }, { status: 500 });
   }
 

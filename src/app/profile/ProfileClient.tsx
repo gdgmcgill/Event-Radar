@@ -111,11 +111,10 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
   const [year, setYear] = useState(profile.year ?? "");
   const [faculty, setFaculty] = useState(profile.faculty ?? "");
   const [tags, setTags] = useState<string[]>(profile.interest_tags);
-  // The contract's two values. users.visibility is unconstrained text, so a
-  // stored value outside them is held and sent as it always was, and the
-  // handler answers it 400 (plan 06-11: a type assertion, no runtime change).
-  const [visibility, setVisibility] = useState(
-    profile.visibility as NonNullable<UserUpdateBodyInput["visibility"]>
+  // DI-91: a stale invalid value fails closed while the migration normalizes
+  // persisted values; the form can still save an otherwise valid profile.
+  const [visibility, setVisibility] = useState<NonNullable<UserUpdateBodyInput["visibility"]>>(
+    profile.visibility === "public" ? "public" : "private"
   );
 
   // Avatar upload (shared hook)
@@ -193,9 +192,6 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
   };
 
   // Notification prefs (local)
-  const [emailReminders, setEmailReminders] = useState(true);
-  const [newEventAlerts, setNewEventAlerts] = useState(true);
-  const [clubUpdates, setClubUpdates] = useState(true);
 
   // Save state
   const [saving, setSaving] = useState(false);
@@ -886,14 +882,10 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
 
               {settingsSection === "notifications" && (
                 <div className="space-y-6">
-                  <SettingsCard icon={Bell} title="Notification Preferences" description="Choose what you'd like to be notified about">
-                    <div className="divide-y divide-border">
-                      <ToggleRow label="Event Reminders" description="Before events you've saved or RSVP'd to" checked={emailReminders} onChange={setEmailReminders} />
-                      <ToggleRow label="New Event Alerts" description="Events matching your interests" checked={newEventAlerts} onChange={setNewEventAlerts} />
-                      <ToggleRow label="Club Updates" description="News from clubs you follow" checked={clubUpdates} onChange={setClubUpdates} />
-                    </div>
+                  <SettingsCard icon={Bell} title="Notifications" description="Event reminders and updates appear in UNI-VERSE.">
+                    <p className="text-sm text-muted-foreground">You can filter notifications and mark them as read. Delivery preferences and email reminders are not available yet.</p>
+                    <Link href="/notifications" className="inline-block mt-4 text-sm font-medium text-primary hover:underline">Open notifications</Link>
                   </SettingsCard>
-                  <p className="text-xs text-muted-foreground text-center">Notification preferences are saved locally. Email controls coming soon.</p>
                 </div>
               )}
 
@@ -1005,17 +997,5 @@ function CardOption({ icon: Icon, title, desc, selected, onClick }: { icon: type
       <div><p className="font-semibold text-foreground text-sm">{title}</p><p className="text-xs text-muted-foreground mt-0.5">{desc}</p></div>
       {selected && <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white"><Check className="h-3 w-3" /></div>}
     </button>
-  );
-}
-
-function ToggleRow({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-      <div className="pr-4"><p className="text-sm font-medium text-foreground">{label}</p><p className="text-xs text-muted-foreground mt-0.5">{description}</p></div>
-      <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
-        className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200", checked ? "bg-primary" : "bg-muted-foreground/25")}>
-        <span className={cn("pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200", checked ? "translate-x-5" : "translate-x-0")} />
-      </button>
-    </div>
   );
 }

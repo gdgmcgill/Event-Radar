@@ -12,8 +12,8 @@
  *
  * `captureServerError(error, { requestId, route })` captures inside a scope
  * tagged `request_id` (the same id the response carries as `x-request-id`)
- * and `route` (the pathname, never the query). It is called from the catch
- * of `withRoute` (src/server/route.ts) and of the proxy's ring
+ * and `route` (the pathname with UUID identifiers normalized and no query).
+ * It is called for every server-failure response from `withRoute` (src/server/route.ts) and of the proxy's ring
  * (src/proxy.ts), after their log line. With Sentry disabled (no DSN) the
  * SDK's capture is a no-op. It never throws: a failure to report an error
  * must not change the response the caller is building.
@@ -25,7 +25,7 @@
 import { createHash } from "node:crypto";
 import * as Sentry from "@sentry/nextjs";
 import type { ErrorEvent } from "@sentry/nextjs";
-import { scrubEventFields } from "@/lib/observability/scrub";
+import { scrubEventFields, scrubRoutePath } from "@/lib/observability/scrub";
 
 /** The hex SHA-256 of a user id: stable per user, not reversible to the id. */
 export function hashUserId(id: string): string {
@@ -60,7 +60,7 @@ export function captureServerError(error: unknown, { requestId, route }: Capture
   try {
     Sentry.withScope((scope) => {
       if (requestId) scope.setTag("request_id", requestId);
-      if (route) scope.setTag("route", route);
+      if (route) scope.setTag("route", scrubRoutePath(route));
       Sentry.captureException(error);
     });
   } catch {

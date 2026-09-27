@@ -13,7 +13,10 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/server/authz/requireAdminPage";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getRequestContext } from "@/server/context";
 
 interface PendingClub {
   id: string;
@@ -25,6 +28,9 @@ interface PendingClub {
 }
 
 export default async function ModerationDashboardPage() {
+  // Match the layout redirect even when page/layout rendering races.
+  if (!(await getRequestContext()).user) redirect("/admin-login");
+  await requireAdminPage("/");
   const supabase = await createClient();
 
   const [pending, users, approved, pendingClubsCount, recentEvents, recentClubs, auditLogRes, appealEvents, appealClubs] =

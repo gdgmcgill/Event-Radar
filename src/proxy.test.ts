@@ -1,7 +1,7 @@
 /**
  * Characterization tests for the middleware matcher.
  *
- * PRESERVE suite. `src/middleware.ts` is this application's only page-level
+ * PRESERVE + DEFECT (F-090, M0 DI-69) suite. `src/middleware.ts` is this application's only page-level
  * authentication ring; it also carries the rate limiter, the ban check and the
  * onboarding guard. Phase 2 batch 3 renames the file to `src/proxy.ts` in one
  * atomic commit. If that rename silently narrows the matcher, every protected
@@ -84,8 +84,14 @@ describe("middleware matcher (PRESERVE — must be identical after the proxy ren
     expect(matches(url)).toBe(false);
   });
 
-  it("exports exactly one matcher entry", () => {
+  it("adds explicit API coverage without dropping the existing page matcher", () => {
     expect(Array.isArray(config.matcher)).toBe(true);
-    expect(config.matcher).toHaveLength(1);
+    expect(config.matcher).toHaveLength(2);
+    expect(config.matcher).toContain("/api/:path*");
   });
 });
+
+// M0 DI-69: filenames must not be an escape hatch from CSRF and rate limits.
+it.each(["/api/events/avatar.png", "/api/clubs/x.svg", "/api/admin/events/test.webp", "/auth/signout"])(
+  "runs the real Next matcher on %s", (url) => expect(matches(url)).toBe(true)
+);

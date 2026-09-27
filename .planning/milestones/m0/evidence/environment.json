@@ -1,0 +1,9 @@
+{
+  "node --version": "v24.16.0",
+  "npm --version": "11.13.0",
+  "supabase --version": "2.115.0",
+  "git rev-parse HEAD": "2e4c4ff32233e2a59d8258575d9c232bea9e3aa8",
+  "git branch --show-current": "codex/m0-foundation-certification",
+  "recorded_at": "2026-09-27T22:36:47.531765+00:00",
+  "note": "M0 working tree based on recorded commit; final local database replay, pgTAP, Edge and type generation use installed pinned Supabase2.115.0. An intermediate reset/test run used npx2.118.0; it is superseded by the pinned final runs."
+}

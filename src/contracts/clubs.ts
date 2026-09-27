@@ -468,13 +468,10 @@ const CLUB_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 /**
  * The file rule, texts and order (type before size) of each route. Both
  * checks run after the ownership gate, so parseForm defers them and the
- * route calls checkFile after requireClubRole. An unreadable form keeps each
- * route's catch-all 500 body.
+ * route calls checkFile after requireClubRole. M0 CERT-02 classifies malformed
+ * multipart transport as 400 before any upload or storage operation.
  */
-function clubImageUpload(
-  maxMb: number,
-  failure: string
-): FormOptions {
+function clubImageUpload(maxMb: number): FormOptions {
   return {
     file: {
       field: CLUB_IMAGE_FILE_FIELD,
@@ -487,13 +484,13 @@ function clubImageUpload(
         badType: "File must be JPEG, PNG, or WebP",
       },
     },
-    unreadable: { status: 500, error: failure },
+    unreadable: { status: 400, error: "Invalid multipart form data" },
     deferFileChecks: true,
   };
 }
 
-export const CLUB_LOGO_UPLOAD = clubImageUpload(2, "Failed to upload logo");
-export const CLUB_BANNER_UPLOAD = clubImageUpload(5, "Failed to upload banner");
+export const CLUB_LOGO_UPLOAD = clubImageUpload(2);
+export const CLUB_BANNER_UPLOAD = clubImageUpload(5);
 
 // ─── GET /api/clubs/trending ─────────────────────────────────────────────────
 

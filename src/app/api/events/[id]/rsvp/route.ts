@@ -91,31 +91,17 @@ export const GET = withRoute({ cache: "private", action: "fetch RSVPs" }, async 
       return notFound("Event not found");
     }
 
-    // Get RSVP counts (cancelled rows are excluded by counting only the two
-    // live statuses). Two server-side head-only COUNTs — no rows are
-    // returned, so PostgREST's max_rows cap cannot truncate them (F-079,
-    // DEC-23). Same cookie-bound client, same table, same RLS as before.
-    const [going, interested] = await Promise.all([
-      supabase
-        .from("rsvps")
-        .select("id", { count: "exact", head: true })
-        .eq("event_id", eventId)
-        .eq("status", "going"),
-      supabase
-        .from("rsvps")
-        .select("id", { count: "exact", head: true })
-        .eq("event_id", eventId)
-        .eq("status", "interested"),
-    ]);
-
-    const rsvpError = going.error ?? interested.error;
+    // Public counts are a narrow aggregate; attendance rows are private (F-011).
+    // The database counts all matching rows, avoiding PostgREST's row cap (F-079).
+    const { data: counts, error: rsvpError } = await supabase.rpc(
+      "get_public_event_rsvp_counts", { target_event_id: eventId }
+    );
     if (rsvpError) {
       log.error("Error fetching RSVPs", { error: rsvpError });
       return serverError("fetch RSVPs");
     }
-
-    const goingCount = going.count ?? 0;
-    const interestedCount = interested.count ?? 0;
+    const goingCount = counts?.[0]?.going ?? 0;
+    const interestedCount = counts?.[0]?.interested ?? 0;
 
     // Check current user's RSVP (if authenticated)
     let userRsvp = null;

@@ -7,6 +7,7 @@ import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
 import { withRoute } from "@/server/route";
 import { log } from "@/server/log";
+import { getElevatedClient } from "@/server/db/elevated";
 
 export const PATCH = withRoute({ cache: "private", action: "update profile" }, async (
   request: NextRequest,
@@ -43,10 +44,12 @@ export const PATCH = withRoute({ cache: "private", action: "update profile" }, a
       ...parsed.data,
     } as Database["public"]["Tables"]["users"]["Update"];
 
-    // The caller's own row on the cookie client: "Users can update own
-    // profile" permits it, and every column this payload can carry is in the
-    // F-006 column grant (DEC-49).
-    const { data, error } = await ctx.supabase
+    // DI-72: clients cannot set onboarding_completed directly through Data API.
+    // This validated self-only path owns that transition; ordinary profile
+    // changes continue through the caller's RLS policy.
+    const database = parsed.data.onboarding_completed === undefined
+      ? ctx.supabase : getElevatedClient();
+    const { data, error } = await database
       .from("users")
       .update(updatePayload)
       .eq("id", id)

@@ -105,7 +105,11 @@ function as(
     mockCookie.client,
     "recommendation_explicit_feedback"
   );
-  mockElevated = createFakeSupabase(elevatedInit({ persona }));
+  const elevated = elevatedInit({ persona });
+  mockElevated = createFakeSupabase({
+    ...elevated, errors: extra.errors,
+    tables: { ...elevated.tables, recommendation_feedback: extra.tables?.recommendation_feedback ?? [] },
+  });
 }
 
 function writes(fake: FakeSupabase): FakeCall[] {
@@ -329,7 +333,8 @@ describe("recommendations/feedback POST: success and whose feedback is written (
     });
     expect(outcome.status).toBe(200);
     expect(outcome.body).toEqual({ ok: true });
-    const [write] = writes(mockCookie);
+    const [write] = writes(mockElevated);
+    expect(writes(mockCookie)).toHaveLength(0);
     expect(write.table).toBe("recommendation_feedback");
     expect(write.payload).toEqual({
       user_id: STUDENT.id,

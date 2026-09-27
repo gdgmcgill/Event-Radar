@@ -7,7 +7,7 @@ import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { FeaturedUpdateBody } from "@/contracts/admin";
 import type { TablesUpdate } from "@/lib/supabase/types";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 export const PATCH = withRoute({ cache: "private", action: "update featured event" }, async (
@@ -41,6 +41,7 @@ export const PATCH = withRoute({ cache: "private", action: "update featured even
       .single();
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
@@ -58,7 +59,8 @@ export const PATCH = withRoute({ cache: "private", action: "update featured even
     }
 
     return NextResponse.json({ featured: data });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to update featured event" },
       { status: 500 }
@@ -87,6 +89,7 @@ export const DELETE = withRoute({ cache: "private", action: "delete featured eve
       .eq("id", id);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
@@ -103,7 +106,8 @@ export const DELETE = withRoute({ cache: "private", action: "delete featured eve
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to delete featured event" },
       { status: 500 }

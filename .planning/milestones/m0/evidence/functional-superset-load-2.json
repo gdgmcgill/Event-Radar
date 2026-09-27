@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "name": "functional",
+  "namespace": "c0700003",
+  "counts": {
+    "users": 12,
+    "clubs": 5,
+    "club_members": 7,
+    "events": 24,
+    "rsvps": 48,
+    "saved_events": 48,
+    "user_interactions": 48,
+    "notifications": 23,
+    "club_invitations": 2,
+    "club_followers": 1,
+    "user_follows": 1,
+    "event_invites": 1,
+    "organizer_requests": 3,
+    "reviews": 1,
+    "event_reports": 3,
+    "moderation_reviews": 4,
+    "experiments": 4,
+    "experiment_variants": 2,
+    "experiment_assignments": 1,
+    "user_event_scores": 1,
+    "recommendation_feedback": 4,
+    "recommendation_explicit_feedback": 2,
+    "admin_audit_log": 1,
+    "featured_events": 1,
+    "featured_clubs": 1,
+    "feedback": 1,
+    "feedback_request_log": 1
+  },
+  "storage": {
+    "bucket": "avatars",
+    "path": "c0700003-0001-4000-8000-000000000001/certification-functional.png",
+    "owner": "c0700003-0001-4000-8000-000000000001",
+    "sha256": "3fd24bcfdb17a6027c5f3ed896d17a020d6ff9d9e4d06362461a9b44b6ac1b52",
+    "clubBranding": {
+      "bucket": "club-logos",
+      "path": "c0700003-0002-4000-8000-000000000001/certification-functional.png",
+      "owner": "c0700003-0001-4000-8000-000000000004",
+      "deniedPath": "c0700003-0002-4000-8000-000000000003/certification-cross-club-probe.png"
+    }
+  },
+  "sha256": "d69637435859e5e4c0337b06a4619f0d9a3d740202274278e09a5475aaef561b",
+  "persistedSha256": "0a38271216765eaab78a28dce0b2c9fc9f791095ab9b7d3fae220fe4c5aa0d4c",
+  "storageSha256": "3fd24bcfdb17a6027c5f3ed896d17a020d6ff9d9e4d06362461a9b44b6ac1b52",
+  "excludedRuntimeColumns": [
+    "updated_at",
+    "auth and storage timestamps",
+    "derived popularity calculated_at/scores"
+  ]
+}

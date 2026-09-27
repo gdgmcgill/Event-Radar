@@ -1,0 +1,9 @@
+PASS node src/__tests__/api/m0-appeal-privacy.test.ts
+PASS node src/__tests__/api/service-role-routing.test.ts
+PASS node src/__tests__/api/review05/notifications-door.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       42 passed, 42 total
+Snapshots:   0 total
+Time:        0.824 s, estimated 1 s
+Ran all test suites matching src/__tests__/api/m0-appeal-privacy.test.ts|src/__tests__/api/service-role-routing.test.ts|src/__tests__/api/review05/notifications-door.test.ts.

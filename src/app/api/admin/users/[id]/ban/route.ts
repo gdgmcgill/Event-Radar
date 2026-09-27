@@ -8,7 +8,7 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { parseBody } from "@/server/body";
 import { CanonicalId } from "@/contracts/common";
 import { BanBody } from "@/contracts/admin";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 /**
@@ -98,6 +98,7 @@ export const POST = withRoute({ cache: "private", action: "ban user" }, async (
     .eq("id", id);
 
   if (updateError) {
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -285,6 +286,7 @@ export const DELETE = withRoute({ cache: "private", action: "unban user" }, asyn
     .eq("id", id);
 
   if (updateError) {
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

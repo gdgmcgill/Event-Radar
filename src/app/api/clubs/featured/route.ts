@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 export const GET = withRoute({ cache: "public-60-120", action: "fetch featured clubs" }, async () => {
@@ -30,7 +30,8 @@ export const GET = withRoute({ cache: "public-60-120", action: "fetch featured c
     // The public-60-120 class (withRoute above) sends the header this
     // response set itself before 06-13, byte for byte.
     return NextResponse.json({ featured });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch featured clubs" },
       { status: 500 }

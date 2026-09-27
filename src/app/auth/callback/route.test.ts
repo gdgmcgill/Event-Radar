@@ -257,7 +257,7 @@ describe("GET /auth/callback (PRESERVE — REFAC-08)", () => {
   });
 
   // ── 3. Exchange failure (route.ts:89-94) ───────────────────────────────────
-  it("redirects with error=auth_failed and the provider message when the exchange fails", async () => {
+  it("DI-98: redirects with auth_failed and omits provider details when exchange fails", async () => {
     mockExchangeCodeForSession.mockResolvedValue({
       error: { message: "invalid grant" },
     });
@@ -267,7 +267,8 @@ describe("GET /auth/callback (PRESERVE — REFAC-08)", () => {
 
     expect(mockExchangeCodeForSession).toHaveBeenCalledWith("abc");
     expect(location(res).searchParams.get("error")).toBe("auth_failed");
-    expect(location(res).searchParams.get("message")).toBe("invalid grant");
+    expect(location(res).searchParams.get("message")).toBeNull();
+    expect(location(res).search).toBe("?error=auth_failed");
     // A failed exchange must not fall through into the user read.
     expect(mockGetUser).not.toHaveBeenCalled();
   });

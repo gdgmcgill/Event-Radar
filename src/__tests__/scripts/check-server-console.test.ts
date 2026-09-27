@@ -78,14 +78,14 @@ const CONSOLE_ROUTE = lines(
 );
 
 const MESSAGE_ROUTE = lines(
-  'import { NextResponse } from "next/server";',
-  "export async function GET() {",
+  'import { NextResponse } from "next/server"; import { withRoute } from "@/server/route";',
+  'export const GET = withRoute({ cache: "private" }, async () => {',
   "  try {",
   "    return NextResponse.json({ ok: true });",
   "  } catch (error) {",
   "    return NextResponse.json({ error: (error as Error).message }, { status: 500 });",
   "  }",
-  "}"
+  "});"
 );
 
 const CLEAN_ROUTE = lines(
@@ -313,4 +313,29 @@ describe("check-server-console.mjs", () => {
       { file: "src/lib/tagMapping.ts", rule: "S1", count: 1, reason: "shared with the client" },
     ]);
   });
+});
+
+
+it("S3 rejects a generic 500 without the central route observer", () => {
+  const root = tree({ [ROUTE]: 'export async function GET() { return Response.json({ error: "Failed" }, { status: 500 }); }' });
+  const result = run(root, []);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain("S3");
+});
+
+it("S3 rejects an unwrapped handler even when its sibling is wrapped", () => {
+  const root = tree({ [ROUTE]: lines(
+    'import { withRoute } from "@/server/route";',
+    'export const GET = withRoute({ cache: "private" }, async () => Response.json({}));',
+    'export const POST = async () => Response.json({}, { status: 500 });'
+  ) });
+  expect(run(root, []).status).toBe(1);
+});
+
+it("S3 accepts generic 500s protected by the central observer, without requiring duplicate logs", () => {
+  const root = tree({ [ROUTE]: lines(
+    'import { withRoute } from "@/server/route";',
+    'export const GET = withRoute({ cache: "private" }, async () => Response.json({}, { status: 500 }));'
+  ) });
+  expect(run(root, []).status).toBe(0);
 });

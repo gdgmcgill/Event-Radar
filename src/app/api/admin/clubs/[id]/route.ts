@@ -8,7 +8,7 @@ import { logAdminAction } from "@/lib/audit";
 import { REJECTION_CATEGORIES } from "@/types";
 import { parseBody } from "@/server/body";
 import { AdminClubDecisionBody } from "@/contracts/admin";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 export const PATCH = withRoute({ cache: "private", action: "update club status" }, async (
@@ -71,6 +71,7 @@ export const PATCH = withRoute({ cache: "private", action: "update club status" 
     .eq("id", id);
 
   if (updateError) {
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

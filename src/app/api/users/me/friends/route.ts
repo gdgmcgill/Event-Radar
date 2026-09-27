@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 /**
  * GET /api/users/me/friends — Returns the current user's friends (mutual follows)
@@ -21,11 +21,13 @@ export const GET = withRoute({ cache: "private", action: "fetch friends" }, asyn
     });
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
     }
 
     return NextResponse.json({ friends: friends ?? [] });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }
 });

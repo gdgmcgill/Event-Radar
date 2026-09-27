@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { readQuery } from "@/server/body";
 import { UserSearchQuery } from "@/contracts/users";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 /**
  * GET /api/users/search?q=name — Search users by name
@@ -33,6 +33,7 @@ export const GET = withRoute({ cache: "private", action: "search users" }, async
       .limit(20);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Search failed" }, { status: 500 });
     }
 
@@ -57,7 +58,8 @@ export const GET = withRoute({ cache: "private", action: "search users" }, async
     }));
 
     return NextResponse.json({ users: results });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }
 });

@@ -5,7 +5,7 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { NextRequest, NextResponse } from "next/server";
 import { parseBody } from "@/server/body";
 import { EventInviteBody } from "@/contracts/events";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 interface RouteParams {
@@ -142,7 +142,8 @@ export const POST = withRoute({ cache: "private", action: "send invites" }, asyn
 
     // Every valid invitee now holds an invite (new or pre-existing).
     return NextResponse.json({ sent: validInvitees.length });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Failed to send invites" }, { status: 500 });
   }
 });

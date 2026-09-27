@@ -1,0 +1,17 @@
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ................... ok
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql:164: ERROR:  access to library "safeupdate" is not allowed
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql .. 
+Dubious, test returned 3 (wstat 768, 0x300)
+Failed 47/49 subtests 
+
+Test Summary Report
+-------------------
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql (Wstat: 768 (exited 3) Tests: 2 Failed: 0)
+  Non-zero exit status: 3
+  Parse errors: Bad plan.  You planned 49 tests but ran 2.
+Files=2, Tests=7,  0 wallclock secs ( 0.01 usr +  0.00 sys =  0.01 CPU)
+Result: FAIL
+error running container: exit 1

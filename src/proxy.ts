@@ -62,7 +62,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import * as env from "@/lib/env";
 import { isBanned } from "@/lib/ban";
-import { applyRateLimit, getRateLimitStore } from "@/server/ratelimit";
+import { applyRateLimit, getRateLimitStore, DistributedStoreRequiredError } from "@/server/ratelimit";
 import { crossSiteBlocked, isCrossSiteMutation } from "@/server/csrf";
 import { log, runWithRequest } from "@/server/log";
 import { REQUEST_ID_HEADER } from "@/server/route";
@@ -99,6 +99,8 @@ export async function proxy(request: NextRequest): Promise<Response> {
 function stampRequestId(response: Response, requestId: string): Response {
   try {
     response.headers.set(REQUEST_ID_HEADER, requestId);
+    // M0 matrix: proxy denials and auth redirects never reach withRoute.
+    if (response.status >= 300) response.headers.set("Cache-Control", "private, no-store");
   } catch {
     // Immutable headers: the id is still on the forwarded request.
   }
@@ -117,6 +119,9 @@ async function ring(request: NextRequest) {
   try {
     rateLimitResponse = await applyRateLimit(request, getRateLimitStore());
   } catch (err) {
+    if (err instanceof DistributedStoreRequiredError) {
+      return NextResponse.json({ error: "Service temporarily unavailable" }, { status: 503, headers: { "Cache-Control": "private, no-store" } });
+    }
     log.error("Rate limit check failed; allowing request", {
       scope: "Middleware",
       error: err instanceof Error ? err.name : typeof err,
@@ -296,6 +301,8 @@ async function ring(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // M0 DI-69: API identifiers ending in image extensions still need CSRF/limits.
+    "/api/:path*",
     /*
      * Match all request paths except for:
      * - _next/static (static files)

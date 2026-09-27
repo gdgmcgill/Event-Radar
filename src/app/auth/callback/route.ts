@@ -134,11 +134,10 @@ export const GET = withRoute({ cache: "private", action: "complete sign-in" }, a
 
   if (exchangeError) {
     log.error("Code exchange failed", { scope: "Callback", error: exchangeError });
-    // The provider's text reaches the caller's own redirect as `message`
-    // (pinned by the PRESERVE callback suite); it is the one caught-error
-    // text left in a route file outside health (allow-listed with its reason).
+    // M0 / DI-98: provider details belong in server diagnostics, never browser
+    // history or Referer URLs. The stable public error is enough for the UI.
     return NextResponse.redirect(
-      new URL(`/?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin)
+      new URL("/?error=auth_failed", requestUrl.origin)
     );
   }
 

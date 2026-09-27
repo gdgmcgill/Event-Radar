@@ -2,8 +2,8 @@
  * handleWebhook — the events-webhook request logic without Deno globals
  * (plan 06-03 Task 3, F-039, DEC-64, threats T-06-03-02 and T-06-03-03).
  *
- * PRESERVE: rows 1-17 below, with the two F-039 changes applied, are the
- * behaviour every later refactor of the webhook must keep.
+ * PRESERVE + DEFECT (F-039, F-094, F-059): the original response table is
+ * retained except for the intentional corrections enumerated below.
  *
  * The table is slice-6-characterization.txt § 3, rows 1-17: every response
  * the deployed function gives today, read from source because Deno is not
@@ -12,6 +12,10 @@
  *
  *   row 5   a wrong-length signature: 500 Internal server error -> 401 Invalid signature
  *   row 16  a replayed, validly signed payload: inserted again -> each event `duplicate`
+ *
+ * M0 / DI-83 intentionally changes rows 7, 11 and 12 to validation 400s before
+ * inserts. IN-05 changes raw database messages to insert_failed and records
+ * redacted diagnostics. Other signature, dedupe and partial-batch rows hold.
  *
  * The insert is injected. The fake stores rows in a Map keyed by content_hash
  * and answers { code: "23505" } on a repeated key, which is what the unique
@@ -35,6 +39,10 @@ const TITLE = "title is required and must be a non-empty string";
 const DESCRIPTION = "description is required and must be a non-empty string";
 const DATE_REQUIRED = "date is required and must be a string";
 const LOCATION = "location is required and must be a non-empty string";
+
+let errorLog: jest.SpyInstance;
+beforeEach(() => { errorLog = jest.spyOn(console, "error").mockImplementation(() => {}); });
+afterEach(() => { errorLog.mockRestore(); });
 
 // ─── Harness ─────────────────────────────────────────────────────────────────
 
@@ -273,11 +281,16 @@ describe("rows 6-9: the envelope", () => {
     expect(r.headers.get("Access-Control-Allow-Origin")).toBeNull();
   });
 
-  it("row 7 (preserved): a JSON null body -> 500 Internal server error", async () => {
-    const r = await run(signedRaw("null"), deps(makeStore()));
-    expect(r.status).toBe(500);
-    expect(r.body).toEqual({ error: "Internal server error" });
-    expect(r.headers.get("Access-Control-Allow-Origin")).toBe("*");
+  it("row 7 (INTENTIONAL, DI-83): a JSON null body -> 400 structure error", async () => {
+    const store = makeStore();
+    const r = await run(signedRaw("null"), deps(store));
+    expect(r.status).toBe(400);
+    expect(r.body).toEqual({
+      error: "Invalid payload structure. Expected event_count (number) and events (array)",
+    });
+    expect(r.headers.get("Access-Control-Allow-Origin")).toBeNull();
+    expect(store.calls).toHaveLength(0);
+    expect(errorLog).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -344,12 +357,16 @@ describe("rows 10-12: per-event validation", () => {
     expect(r.body.details).toEqual([{ index: 0, errors: ["date must be a valid date string"] }]);
   });
 
-  it("row 11 (preserved): a null element -> 500 Internal server error, nothing inserted", async () => {
+  it("row 11 (INTENTIONAL, DI-83): a null element -> 400 required-field errors, nothing inserted", async () => {
     const store = makeStore();
     const r = await run(signed({ event_count: 2, events: [ev(), null] }), deps(store));
-    expect(r.status).toBe(500);
-    expect(r.body).toEqual({ error: "Internal server error" });
+    expect(r.status).toBe(400);
+    expect(r.body).toEqual({
+      error: "Invalid events found",
+      details: [{ index: 1, errors: [TITLE, DESCRIPTION, DATE_REQUIRED, LOCATION] }],
+    });
     expect(store.calls).toHaveLength(0);
+    expect(errorLog).not.toHaveBeenCalled();
   });
 
   it("a primitive element reads as having no fields -> 400 with the four required messages", async () => {
@@ -360,12 +377,16 @@ describe("rows 10-12: per-event validation", () => {
     ]);
   });
 
-  it("row 12 (preserved): a non-string tag -> 500 Internal server error", async () => {
+  it.each([1, null, true, {}, []])("row 12 (INTENTIONAL, DI-83): non-string tag %j -> 400 before any insert", async (tag) => {
     const store = makeStore();
-    const r = await run(signed({ event_count: 1, events: [ev({ tags: [1] })] }), deps(store));
-    expect(r.status).toBe(500);
-    expect(r.body).toEqual({ error: "Internal server error" });
-    expect(store.rows.size).toBe(0);
+    const r = await run(signed({ event_count: 2, events: [ev(), ev({ tags: ["valid", tag] })] }), deps(store));
+    expect(r.status).toBe(400);
+    expect(r.body).toEqual({
+      error: "Invalid events found",
+      details: [{ index: 1, errors: ["tags must contain only strings"] }],
+    });
+    expect(store.calls).toHaveLength(0);
+    expect(errorLog).not.toHaveBeenCalled();
   });
 });
 
@@ -470,7 +491,7 @@ describe("row 14: some insert, some fail -> 207", () => {
     expect(store.rows.size).toBe(1);
   });
 
-  it("a non-23505 insert error keeps today's per-event reporting (the message is echoed)", async () => {
+  it("IN-05: a non-23505 error retains partial reporting without database text", async () => {
     const store = makeStore((row) =>
       row.title === "Broken" ? { code: "23502", message: "null value in column violates not-null constraint" } : null
     );
@@ -480,8 +501,11 @@ describe("row 14: some insert, some fail -> 207", () => {
     );
     expect(r.status).toBe(207);
     expect(r.body.errors).toEqual([
-      { index: 1, error: "null value in column violates not-null constraint" },
+      { index: 1, error: "insert_failed" },
     ]);
+    expect(r.body.events).toHaveLength(1);
+    expect(errorLog).toHaveBeenCalledWith(JSON.stringify({ event: "webhook.insert_failed", index: 1, code: "23502" }));
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("constraint");
   });
 });
 
@@ -495,10 +519,11 @@ describe("row 15: nothing inserts -> 400", () => {
       success: false,
       message: "Failed to process all events",
       errors: [
-        { index: 0, error: "permission denied for table events" },
-        { index: 1, error: "permission denied for table events" },
+        { index: 0, error: "insert_failed" },
+        { index: 1, error: "insert_failed" },
       ],
     });
+    expect(errorLog).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -523,6 +548,7 @@ describe("row 16 (INTENTIONAL, F-039): a replayed payload inserts nothing new", 
     });
     expect(store.rows.size).toBe(2);
     expect(store.calls).toHaveLength(4);
+    expect(errorLog).not.toHaveBeenCalled();
   });
 
   it("a replay under a different accepted header is still duplicate", async () => {
@@ -571,5 +597,20 @@ describe("row 17: anything thrown after the configuration check", () => {
     expect(r.status).toBe(500);
     expect(r.body).toEqual({ error: "Internal server error" });
     expect(r.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(errorLog).toHaveBeenCalledWith(JSON.stringify({ event: "webhook.unhandled_error", errorClass: "Error" }));
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("connection reset");
+  });
+
+  it("IN-05: diagnostics never echo unknown SQL codes or thrown values", async () => {
+    const privateText = `sender@example.com ${SECRET}`;
+    const store = makeStore(() => ({ code: privateText, message: privateText }));
+    const rejected = await run(signed(TWO_EVENTS), deps(store));
+    expect(rejected.body.errors).toEqual([
+      { index: 0, error: "insert_failed" }, { index: 1, error: "insert_failed" },
+    ]);
+    const failed = await run(signed(TWO_EVENTS), deps(store, { insertEvent: async () => { throw privateText; } }));
+    expect(failed.status).toBe(500);
+    expect(errorLog).toHaveBeenLastCalledWith(JSON.stringify({ event: "webhook.unhandled_error", errorClass: "Unknown" }));
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain(privateText);
   });
 });

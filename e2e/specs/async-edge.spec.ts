@@ -19,18 +19,10 @@
  *
  * THE FIXTURES. The student's report, the admin's experiment, its two
  * variants and its activation are created through the product routes. The
- * student's score row is inserted through the LOCAL service client from
- * `localStackEnv()` (already passed through `assertSeedTargetAllowed` by
- * playwright.config.ts): the admin batch route cannot produce it, because
- * `compute_user_scores()` begins with an unqualified `DELETE FROM
- * user_event_scores`, which pg_safeupdate refuses for every PostgREST
- * request (`authenticator` preloads safeupdate), so POST
- * /api/recommendations/batch answers 500 `DELETE requires a WHERE clause`
- * (21000) on this stack; pg_cron, which runs as postgres, is unaffected.
- * That is registered as DI-82, not worked around in product code. Every row
- * is removed in afterAll; the seeded baseline has no user_event_scores rows
- * (asserted before the fixture row is written), so all of them are removed.
- * No seeded row is written.
+ * student's scores are computed through the admin batch route. M0 fixes DI-82:
+ * both intentional rebuild DELETEs now have WHERE true, so pg_safeupdate accepts
+ * the operation without changing the scoring formula. Fixture scores and
+ * experiments are removed in afterAll; no pre-existing scores are permitted.
  *
  * NOTHING SECRET IS PRINTED.
  */
@@ -229,22 +221,12 @@ test.describe.serial("FIXED F-017: a non-admin is assigned an A/B variant", () =
       });
       expect(activated.status()).toBe(200);
       expect((await activated.json()).experiment.status).toBe("running");
+
+      const scored = await admin.post("/api/recommendations/batch");
+      expect(scored.status(), "DI-82: real scoring RPC succeeds through PostgREST").toBe(200);
     } finally {
       await admin.dispose();
     }
-
-    // The student's precomputed score for the seeded approved future event,
-    // so the route takes the personalized path and reaches the experiment
-    // block (the batch route cannot write it: DI-82, see the header).
-    ok(
-      "score fixture",
-      await service.from("user_event_scores").insert({
-        user_id: STUDENT,
-        event_id: IDS.approvedEvent,
-        score: 0.5,
-        breakdown: { tag: 0.35, interaction: 0, popularity: 0.1, recency: 0.05, social: 0 },
-      })
-    );
 
     const student = await playwright.request.newContext({
       baseURL,

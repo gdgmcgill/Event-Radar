@@ -1,0 +1,43 @@
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql .......................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/031-cron-jobs.test.sql .............................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql .......................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/065-events-moderated-update.test.sql ................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql ................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql ...................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/075-feedback-write-boundary.test.sql ................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/080-interaction-popularity-write-boundary.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/085-club-storage-owner-policies.test.sql ............ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/085-engagement-visibility.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/085-rsvp-attendance-privacy.test.sql ................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/086-reminder-naming.test.sql ........................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/090-client-destructive-grants.test.sql .............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/095-atomic-moderation-workflows.test.sql ............ ok
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/100-public-table-rls-matrix.test.sql:288: ERROR:  duplicate key value violates unique constraint "event_reports_unique_per_user"
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/100-public-table-rls-matrix.test.sql ................ 
+# Failed test 123: "club_invitations admin read allow"
+#         have: 0
+#         want: 2
+# Failed test 144: "rsvps admin read deny"
+#         have: 2
+#         want: 0
+Dubious, test returned 3 (wstat 768, 0x300)
+Failed 47/209 subtests 
+
+Test Summary Report
+-------------------
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/100-public-table-rls-matrix.test.sql              (Wstat: 768 (exited 3) Tests: 164 Failed: 2)
+  Failed tests:  123, 144
+  Non-zero exit status: 3
+  Parse errors: Bad plan.  You planned 209 tests but ran 164.
+Files=22, Tests=580,  1 wallclock secs ( 0.04 usr  0.03 sys +  0.07 cusr  0.05 csys =  0.19 CPU)
+Result: FAIL
+error running container: exit 1

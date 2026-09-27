@@ -67,6 +67,14 @@ function withoutQuery(value: string): string {
   return cut === -1 ? value : value.slice(0, cut);
 }
 
+/** Replace identifiers in URLs and route tags before telemetry leaves the app. */
+export function scrubRoutePath(value: string): string {
+  return withoutQuery(value).replace(
+    /(^|\/)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi,
+    "$1[id]"
+  );
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== "object") return false;
   const proto = Object.getPrototypeOf(value);
@@ -98,10 +106,14 @@ function scrubRequest(request: NonNullable<Event["request"]>): void {
   delete request.data;
   delete request.query_string;
   delete (request as { env?: unknown }).env;
-  if (typeof request.url === "string") request.url = withoutQuery(request.url);
+  if (typeof request.url === "string") request.url = scrubRoutePath(request.url);
   if (request.headers) {
     for (const name of Object.keys(request.headers)) {
-      if (DROPPED_HEADERS.has(name.toLowerCase())) delete request.headers[name];
+      const lower = name.toLowerCase();
+      if (DROPPED_HEADERS.has(lower)) delete request.headers[name];
+      else if (lower === "referer" || lower === "referrer") {
+        request.headers[name] = scrubRoutePath(request.headers[name]);
+      }
     }
   }
 }
@@ -109,7 +121,7 @@ function scrubRequest(request: NonNullable<Event["request"]>): void {
 function scrubBreadcrumbData(data: Record<string, unknown>): void {
   for (const key of ["url", "from", "to"]) {
     const value = data[key];
-    if (typeof value === "string") data[key] = withoutQuery(value);
+    if (typeof value === "string") data[key] = scrubRoutePath(value);
   }
 }
 
@@ -119,10 +131,11 @@ function scrubBreadcrumbData(data: Record<string, unknown>): void {
  */
 export function scrubEventFields<T extends Event>(event: T): T {
   if (event.request) scrubRequest(event.request);
+  if (typeof event.tags?.route === "string") event.tags.route = scrubRoutePath(event.tags.route);
 
   const nextjs = event.contexts?.nextjs as Record<string, unknown> | undefined;
   if (nextjs && typeof nextjs.request_path === "string") {
-    nextjs.request_path = withoutQuery(nextjs.request_path);
+    nextjs.request_path = scrubRoutePath(nextjs.request_path);
   }
 
   for (const breadcrumb of event.breadcrumbs ?? []) {

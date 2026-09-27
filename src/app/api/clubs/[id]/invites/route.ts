@@ -6,7 +6,7 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { parseBody } from "@/server/body";
 import { ClubInviteBody } from "@/contracts/clubs";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -44,6 +44,7 @@ export const GET = withRoute({ cache: "private", action: "fetch invitations" }, 
       .order("created_at", { ascending: false });
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to fetch invitations" },
         { status: 500 }
@@ -51,7 +52,8 @@ export const GET = withRoute({ cache: "private", action: "fetch invitations" }, 
     }
 
     return NextResponse.json(invites);
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch invitations" },
       { status: 500 }
@@ -142,6 +144,7 @@ export const POST = withRoute({ cache: "private", action: "create invitation" },
       .single();
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to create invitation" },
         { status: 500 }
@@ -149,7 +152,8 @@ export const POST = withRoute({ cache: "private", action: "create invitation" },
     }
 
     return NextResponse.json({ invite: { token: invite.token } }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to create invitation" },
       { status: 500 }

@@ -254,13 +254,11 @@ describe("EventEditsDecisionBody (admin/events/[id]/edits PATCH)", () => {
     expect(await refused(EventEditsDecisionBody, input)).toEqual({ error });
   });
 
-  it("approve needs no reason; a reject reason is kept as sent", async () => {
-    expect(await accepted(EventEditsDecisionBody, { action: "approve" })).toEqual({
-      action: "approve",
-    });
-    expect(
-      await accepted(EventEditsDecisionBody, { action: "reject", reason: "no" })
-    ).toEqual({ action: "reject", reason: "no" });
+  it("approve needs a reviewed snapshot but no reason; reject retains its reason", async () => {
+    const expected_pending_edits = { title: "Reviewed", submitted_at: "v1" };
+    expect(await accepted(EventEditsDecisionBody, { action: "approve", expected_pending_edits })).toEqual({ action: "approve", expected_pending_edits });
+    expect(await accepted(EventEditsDecisionBody, { action: "reject", reason: "no", expected_pending_edits })).toEqual({ action: "reject", reason: "no", expected_pending_edits });
+    expect(await refused(EventEditsDecisionBody, { action: "approve" })).toEqual({ error: "The reviewed pending edits are required. Refresh and try again." });
   });
 });
 
@@ -604,11 +602,11 @@ describe("the other admin list queries", () => {
     });
   });
 
-  it("admin/audit-log: page defaults to 1; page=0 is 0 (06-07 P2: a negative offset)", () => {
+  it("admin/audit-log: invalid pages default to 1 (M0 IN-07)", () => {
     expect(q(AuditLogQuery, "")).toEqual({ action: null, page: 1 });
-    expect(q(AuditLogQuery, "page=0&action=banned")).toEqual({ action: "banned", page: 0 });
-    expect(q(AuditLogQuery, "page=abc")).toEqual({ action: null, page: Number.NaN });
-    expect(q(AuditLogQuery, "page=0x2")).toEqual({ action: null, page: 2 });
+    expect(q(AuditLogQuery, "page=0&action=banned")).toEqual({ action: "banned", page: 1 });
+    expect(q(AuditLogQuery, "page=abc")).toEqual({ action: null, page: 1 });
+    expect(q(AuditLogQuery, "page=0x2")).toEqual({ action: null, page: 1 });
   });
 
   it("admin/organizers: search defaults to '', status to all, an empty status stays empty", () => {

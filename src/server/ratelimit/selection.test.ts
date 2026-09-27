@@ -14,6 +14,7 @@
 
 const env = process.env as Record<string, string | undefined>;
 const KEYS = [
+  "RATE_LIMIT_REQUIRE_DISTRIBUTED",
   "UPSTASH_REDIS_REST_URL",
   "UPSTASH_REDIS_REST_TOKEN",
   "KV_REST_API_URL",
@@ -144,5 +145,21 @@ describe("getRateLimitStore() with a usable pair padded by whitespace", () => {
     expect(() => getRateLimitStore()).not.toThrow();
     expect(rateLimitStoreKind()).toBe("upstash");
     expect(errorSpy).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("M0 DI-61 configuration", () => {
+  it("uses a valid KV pair when a complete primary pair is invalid", async () => {
+    env.UPSTASH_REDIS_REST_URL = "rediss://invalid"; env.UPSTASH_REDIS_REST_TOKEN = "token";
+    env.KV_REST_API_URL = "https://valid.upstash.io"; env.KV_REST_API_TOKEN = "kv-token";
+    const { rateLimitStoreKind } = await loadIndex();
+    expect(rateLimitStoreKind()).toBe("upstash");
+  });
+  it("never silently selects memory when distributed operation is required", async () => {
+    env.RATE_LIMIT_REQUIRE_DISTRIBUTED = "true";
+    const { getRateLimitStore, DistributedStoreRequiredError } = await loadIndex();
+    expect(() => getRateLimitStore()).toThrow(DistributedStoreRequiredError);
+    expect(() => getRateLimitStore()).toThrow(DistributedStoreRequiredError);
   });
 });

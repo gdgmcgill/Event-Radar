@@ -8,7 +8,7 @@ import { logAdminAction } from "@/lib/audit";
 import { REJECTION_CATEGORIES } from "@/types";
 import { parseBody, parseWith } from "@/server/body";
 import { EventStatusBody, ModerationReason } from "@/contracts/admin";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 export const PATCH = withRoute({ cache: "private", action: "update event status" }, async (
@@ -79,6 +79,7 @@ export const PATCH = withRoute({ cache: "private", action: "update event status"
     .eq("id", id);
 
   if (updateError) {
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

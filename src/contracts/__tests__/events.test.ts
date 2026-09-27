@@ -13,6 +13,7 @@
  * answers the contract's 400 where the handler threw, coerced or wrote it.
  */
 
+import { imageBytes } from "../../__tests__/helpers/imageBytes";
 import { z } from "zod";
 import { parseForm, parseQuery, parseWith, readQuery } from "@/server/body";
 import { encodeEventCursor } from "@/lib/eventCursor";
@@ -359,7 +360,7 @@ describe("UploadImageForm + EVENT_IMAGE_UPLOAD (events/upload-image POST)", () =
   }
 
   const blob = (size: number, type: string, name = "x.png") =>
-    new File([new Uint8Array(size)], name, { type });
+    new File([imageBytes(size, type)], name, { type });
 
   async function answer(request: Request) {
     const result = await parseForm(request, UploadImageForm, EVENT_IMAGE_UPLOAD);
@@ -381,15 +382,16 @@ describe("UploadImageForm + EVENT_IMAGE_UPLOAD (events/upload-image POST)", () =
     expect(outcome).toMatchObject({ ok: true });
   });
 
-  it("answers today's 500 when the body is not multipart", async () => {
+  // M0 CERT-02 intentionally replaces the old accidental transport 500.
+  it.each(["application/json", "multipart/form-data; boundary=missing"])("rejects unreadable %s as a client error", async (contentType) => {
     const request = new Request("http://localhost/api/events/upload-image", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": contentType },
       body: "{}",
     });
     await expect(answer(request)).resolves.toEqual({
-      status: 500,
-      body: { error: "Internal server error" },
+      status: 400,
+      body: { error: "Invalid multipart form data" },
     });
   });
 });

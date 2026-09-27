@@ -15,7 +15,7 @@
  * WHAT IT REFUSES
  *   A request to `/api/*` whose method is not GET, HEAD or OPTIONS, when
  *     - `Sec-Fetch-Site` is `cross-site`, or
- *     - an `Origin` header is present and its host differs from
+ *     - an `Origin` header is present and its origin differs from
  *       `x-forwarded-host` (first entry), else `host`, else the URL's host.
  *       The literal "null" Origin (sandboxed frames, some redirects) and one
  *       that does not parse are refused too.
@@ -26,7 +26,7 @@
  *     header-less mutation is not a browser acting for a victim. Curl, cron
  *     callers and server-to-server calls (Phase 6's machine routes) send
  *     neither and must keep working.
- *   - Safe methods, and every path outside `/api/`.
+ *   - Safe methods, and paths outside `/api/` other than `/auth/signout`.
  *
  * The proxy calls it after the rate limiter and before any env read or
  * session work, and answers `crossSiteBlocked()` when it returns true.
@@ -36,17 +36,17 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-/** The host the request was addressed to, lower-cased. */
-function requestHost(req: NextRequest): string {
+/** The full origin, including scheme and normalized default port. */
+function requestOrigin(req: NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
   const host = forwarded || req.headers.get("host")?.trim() || req.nextUrl.host;
-  return host.toLowerCase();
+  return new URL(`${req.nextUrl.protocol}//${host}`).origin;
 }
 
-/** True when this request is a state-changing `/api/*` call from another site. */
+/** True for cross-site API mutations and sign-out POSTs. */
 export function isCrossSiteMutation(req: NextRequest): boolean {
   if (SAFE_METHODS.has(req.method.toUpperCase())) return false;
-  if (!req.nextUrl.pathname.startsWith("/api/")) return false;
+  if (!req.nextUrl.pathname.startsWith("/api/") && req.nextUrl.pathname !== "/auth/signout") return false;
 
   if (req.headers.get("sec-fetch-site") === "cross-site") return true;
 
@@ -54,7 +54,9 @@ export function isCrossSiteMutation(req: NextRequest): boolean {
   if (origin === null) return false; // curl, cron, server-to-server
 
   try {
-    return new URL(origin).host !== requestHost(req);
+    const parsed = new URL(origin);
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) return true;
+    return parsed.origin !== requestOrigin(req);
   } catch {
     return true; // "null" or unparseable: refuse
   }

@@ -162,3 +162,28 @@ describe("scrubEventFields", () => {
     expect((event.extra as Record<string, Record<string, unknown>>).loop.email).toBe("[email]");
   });
 });
+
+
+describe("M0 telemetry privacy regressions", () => {
+  it.each(["referer", "Referer", "REFERRER", "referrer"])("scrubs query and fragment from %s", (header) => {
+    const event: ErrorEvent = { type: undefined, request: { headers: { [header]: "https://example.test/auth/callback?code=secret#private" } } };
+    scrubEventFields(event);
+    expect(event.request?.headers?.[header]).toBe("https://example.test/auth/callback");
+    expect(JSON.stringify(event)).not.toContain("secret");
+  });
+
+  it("replaces raw user identifiers in request URLs, route tags, Next paths and navigation breadcrumbs", () => {
+    const id = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+    const path = `/api/admin/users/${id}/ban`;
+    const event: ErrorEvent = {
+      type: undefined,
+      request: { url: `https://example.test${path}?private=yes`, headers: { Referer: `https://example.test/users/${id}?private=yes` } },
+      tags: { route: path }, contexts: { nextjs: { request_path: path } },
+      breadcrumbs: [{ data: { from: `/users/${id}`, to: `/events/${id}` } }],
+    };
+    scrubEventFields(event);
+    expect(event.tags?.route).toBe("/api/admin/users/[id]/ban");
+    expect(event.request?.url).toBe("https://example.test/api/admin/users/[id]/ban");
+    expect(JSON.stringify(event)).not.toContain(id);
+  });
+});

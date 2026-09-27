@@ -4,7 +4,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { readQuery } from "@/server/body";
 import { OrganizersQuery } from "@/contracts/admin";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 export const GET = withRoute({ cache: "private", action: "fetch organizers" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
@@ -55,6 +55,7 @@ export const GET = withRoute({ cache: "private", action: "fetch organizers" }, a
   });
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

@@ -56,7 +56,7 @@ function sentryIngestOrigin(dsn) {
 }
 
 /** The Content-Security-Policy header value for the environment `env`. */
-function contentSecurityPolicy(env) {
+function contentSecurityPolicy(env, { docs = false } = {}) {
   const scriptSrc = ["'self'", "'unsafe-inline'"];
   if (env.NODE_ENV === "development") scriptSrc.push("'unsafe-eval'");
 
@@ -83,6 +83,7 @@ function contentSecurityPolicy(env) {
   }
   const sentry = sentryIngestOrigin(env.NEXT_PUBLIC_SENTRY_DSN);
   if (sentry !== null) connectSrc.push(sentry);
+  if (docs) imgSrc.push("https://cdn.redoc.ly/redoc/logo-mini.svg");
 
   return [
     "default-src 'self'",
@@ -91,6 +92,7 @@ function contentSecurityPolicy(env) {
     `img-src ${imgSrc.join(" ")}`,
     "font-src 'self'",
     `connect-src ${connectSrc.join(" ")}`,
+    ...(docs ? ["worker-src 'self' blob:"] : []),
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -141,6 +143,14 @@ const nextConfig = {
             value: contentSecurityPolicy(process.env),
           },
         ],
+      },
+      // Last matching same-key header wins in Next; this replaces the base
+      // CSP on /docs, rather than sending two intersecting CSP policies.
+      // Redoc's installed search worker uses a same-origin blob, and its
+      // attribution logo uses this exact URL. Other pages retain the base CSP.
+      {
+        source: "/docs",
+        headers: [{ key: "Content-Security-Policy", value: contentSecurityPolicy(process.env, { docs: true }) }],
       },
     ];
   },

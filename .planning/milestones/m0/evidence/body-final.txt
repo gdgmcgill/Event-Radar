@@ -1,0 +1,50 @@
+PASS node src/server/__tests__/body.test.ts
+  parseWith
+    ✓ returns the parsed data on success (1 ms)
+    ✓ answers 400 with the first issue's message, in schema key order (1 ms)
+    ✓ omits field unless the first issue's top-level key is in fieldFor (1 ms)
+    ✓ names the top-level key for a nested issue
+  parseBody
+    ✓ answers 400 Invalid JSON body for not JSON at all (1 ms)
+    ✓ answers 400 Invalid JSON body for an empty body
+    ✓ answers 400 Request body must be a JSON object for null
+    ✓ answers 400 Request body must be a JSON object for a string
+    ✓ answers 400 Request body must be a JSON object for a number
+    ✓ answers 400 Request body must be a JSON object for an array
+    ✓ hands an object to the schema, which decides
+    ✓ gives the same two 400 bodies as readJsonObject (1 ms)
+  parseQuery
+    ✓ turns URLSearchParams into a plain object the schema reads
+    ✓ keeps the FIRST value of a repeated scalar key, as searchParams.get does
+    ✓ collects a repeated key as an array only when the schema asks for one
+    ✓ answers the schema's 400 when a value is refused (1 ms)
+  readQuery (plan 06-08)
+    ✓ reads the query as parseQuery does, first value per key, arrays on request
+    ✓ throws when a schema refuses, which a no-400 query contract must never do (6 ms)
+  parseForm
+    ✓ returns the file and the parsed non-file fields (2 ms)
+    ✓ answers the route's missing text when there is no file (1 ms)
+    ✓ treats a string in the file field as no file
+    ✓ answers the route's size text for an oversize file
+    ✓ answers the route's type text, naming the type, for a wrong type (1 ms)
+    ✓ checks size before type by default, and type first when the route did
+    ✓ accepts a file exactly at the size limit (1 ms)
+    ✓ validates the non-file fields with the schema after the file is present
+    ✓ leaves size and type to the route when it defers them past a guard (06-09)
+    ✓ answers the route's own status and body when the form cannot be read (1 ms)
+  contracts/common
+    ✓ Uuid accepts any-case canonical UUIDs and outputs lower case
+    ✓ Uuid rejects a short string with the caller's message
+    ✓ Uuid rejects braces with the caller's message (1 ms)
+    ✓ Uuid rejects no hyphens with the caller's message
+    ✓ Uuid rejects a number with the caller's message
+    ✓ Uuid rejects undefined with the caller's message
+    ✓ IsoDateString accepts an ISO date and refuses anything else with one message (1 ms)
+    ✓ NonEmptyTrimmedString refuses non-strings and blank strings with the same message (1 ms)
+    ✓ ErrorBody describes { error, field? } (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       37 passed, 37 total
+Snapshots:   0 total
+Time:        0.257 s, estimated 1 s
+Ran all test suites matching src/server/__tests__/body.test.ts.

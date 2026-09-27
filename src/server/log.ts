@@ -42,7 +42,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 /** What the request store carries. `route` is the pathname, never the query. */
-export type RequestStore = { requestId: string; route?: string };
+export type RequestStore = { requestId: string; route?: string; lastError?: { cause: unknown } };
 
 export type LogFields = Record<string, unknown>;
 
@@ -56,6 +56,11 @@ export function runWithRequest<T>(store: RequestStore, fn: () => T): T {
 /** The current request's id, or undefined outside a request store. */
 export function currentRequestId(): string | undefined {
   return storage.getStore()?.requestId;
+}
+
+/** Last error logged in this request; used to report returned 5xx responses. */
+export function currentRequestError(): { cause: unknown } | undefined {
+  return storage.getStore()?.lastError;
 }
 
 // ─── Redaction ───────────────────────────────────────────────────────────────
@@ -149,6 +154,9 @@ function emit(level: LogLevel, msg: string, fields: LogFields = {}): void {
   let line: string;
   try {
     const store = storage.getStore();
+    if (level === "error" && store) {
+      store.lastError = { cause: fields.error ?? new Error(msg) };
+    }
     const requestId =
       typeof fields.requestId === "string" ? fields.requestId : store?.requestId;
     const record: Record<string, unknown> = {

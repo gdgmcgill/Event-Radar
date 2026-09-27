@@ -6,7 +6,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { parseBody } from "@/server/body";
 import { CLUB_CREATE_FIELD_KEYS, ClubCreateBody } from "@/contracts/clubs";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 /**
  * GET /api/clubs
@@ -23,6 +23,7 @@ export const GET = withRoute({ cache: "public-60-300", action: "fetch clubs" }, 
       .order("name", { ascending: true });
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to fetch clubs" },
         { status: 500 }
@@ -30,7 +31,8 @@ export const GET = withRoute({ cache: "public-60-300", action: "fetch clubs" }, 
     }
 
     return NextResponse.json({ clubs: clubs ?? [] });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch clubs" },
       { status: 500 }
@@ -118,6 +120,7 @@ export const POST = withRoute({ cache: "private", action: "create club" }, async
     .single();
 
   if (clubError) {
+    logRouteError(clubError);
     return NextResponse.json({ error: "Failed to create club" }, { status: 500 });
   }
 

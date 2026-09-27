@@ -6,7 +6,7 @@ import { requireRole } from "@/server/authz/requireRole";
 import { parseBody } from "@/server/body";
 import { ExperimentUpdateBody } from "@/contracts/admin";
 import type { TablesUpdate } from "@/lib/supabase/types";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -38,6 +38,7 @@ export const GET = withRoute({ cache: "private", action: "fetch experiment" }, a
     .eq("experiment_id", id);
 
   if (variantsError) {
+    logRouteError(variantsError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -53,6 +54,7 @@ export const GET = withRoute({ cache: "private", action: "fetch experiment" }, a
       .in("variant_id", variantIds);
 
     if (assignmentsError) {
+      logRouteError(assignmentsError);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
@@ -121,6 +123,7 @@ export const PATCH = withRoute({ cache: "private", action: "update experiment" }
     .single();
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -163,6 +166,7 @@ export const DELETE = withRoute({ cache: "private", action: "delete experiment" 
     .eq("id", id);
 
   if (deleteError) {
+    logRouteError(deleteError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

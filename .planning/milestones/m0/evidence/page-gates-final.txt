@@ -1,0 +1,22 @@
+PASS node src/__tests__/pages/docs-gate-defect.test.ts
+  /docs is admin-only (F-054 fixed by 06-17)
+    ✓ G1 src/app/docs has a layout beside page.tsx, and it calls requireAdminPage("/") (1 ms)
+    ✓ G2 the docs layout redirects anonymous to "/" (10 ms)
+    ✓ G2 the docs layout redirects a signed-in student to "/" (1 ms)
+    ✓ G2 the docs layout redirects a banned admin to "/"
+    ✓ G2 the docs layout renders its children for an active admin; the page still renders getApiDocs() (1 ms)
+    ✓ G3 the proxy does not protect /docs
+    ✓ G4 control: the admin layout carries the gate shape
+    ✓ G5 the /health layout carries the same gate (DEC-79)
+    WR-01 / F-054: standalone pages authorize before reading data
+      ✓ refuses anonymous even when neither layout executes (55 ms)
+      ✓ refuses student even when neither layout executes (1 ms)
+      ✓ refuses missing profile even when neither layout executes
+      ✓ refuses banned admin even when neither layout executes
+      ✓ allows an active admin to render both pages without their layouts (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       13 passed, 13 total
+Snapshots:   0 total
+Time:        0.319 s, estimated 1 s
+Ran all test suites matching src/__tests__/pages/docs-gate-defect.test.ts.

@@ -10,7 +10,8 @@
  * restored after. The policy is built from the environment the build sees.
  *
  * What is pinned (after the 06-16 move; defect-ledger rows cite F-055):
- *   - P1 exactly one rule, source `/(.*)`, carries a Content-Security-Policy;
+ *   - P1 the base rule remains `/(.*)`; /docs alone replaces its CSP for
+ *     Redoc's blob search worker and exact vendor-logo URL (M0 browser smoke);
  *   - P2 MOVED: production script-src is exactly `'self' 'unsafe-inline'`:
  *     no 'unsafe-eval', and 'unsafe-inline' remains (the open half, DI-80);
  *   - P3 a production build (its Supabase URL under `*.supabase.co`) keeps
@@ -26,6 +27,8 @@
  *   - P5 an https Sentry DSN adds its ingest origin (never the key) to
  *     connect-src; an unusable one adds nothing.
  */
+
+import { unstable_getResponseFromNextConfig } from "next/experimental/testing/server";
 
 interface HeaderRule {
   source: string;
@@ -90,12 +93,28 @@ const PRODUCTION: BuildEnv = {
 };
 
 describe("next.config.js: the production CSP", () => {
-  it("P1 one rule, source /(.*), carries the Content-Security-Policy", async () => {
+  it("P1 base CSP is followed only by the scoped /docs override", async () => {
     const { rules } = await cspUnder(PRODUCTION);
     const withCsp = rules.filter((rule) =>
       rule.headers.some((header) => header.key === "Content-Security-Policy")
     );
-    expect(withCsp.map((rule) => rule.source)).toEqual(["/(.*)"]);
+    expect(withCsp.map((rule) => rule.source)).toEqual(["/(.*)", "/docs"]);
+  });
+
+  it("the real Next header resolver replaces /docs CSP once and leaves other paths unchanged", async () => {
+    const { rules, csp: base } = await cspUnder(PRODUCTION);
+    const nextConfig = { headers: async () => rules };
+    const docs = await unstable_getResponseFromNextConfig({ url: "https://app.test/docs", nextConfig });
+    const ordinary = await unstable_getResponseFromNextConfig({ url: "https://app.test/about", nextConfig });
+    const docsPolicy = docs.headers.get("content-security-policy")!;
+    expect(docsPolicy).toBe(rules.find((rule) => rule.source === "/docs")!.headers[0].value);
+    expect(docsPolicy.match(/default-src/g)).toHaveLength(1);
+    expect(directive(docsPolicy, "worker-src")).toBe("'self' blob:");
+    expect(directive(docsPolicy, "img-src")).toBe(`${directive(base, "img-src")} https://cdn.redoc.ly/redoc/logo-mini.svg`);
+    expect(directive(docsPolicy, "script-src")).toBe(directive(base, "script-src"));
+    expect(ordinary.headers.get("content-security-policy")).toBe(base);
+    expect(directive(base, "worker-src")).toBeUndefined();
+    expect(base).not.toContain("redoc.ly");
   });
 
   it("P2 production script-src has no 'unsafe-eval' and still has 'unsafe-inline' (DI-80)", async () => {

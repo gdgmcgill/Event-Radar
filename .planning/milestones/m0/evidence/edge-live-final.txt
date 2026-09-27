@@ -1,0 +1,23 @@
+running 19 tests from ./supabase/functions/tests/webhook.test.ts
+CORS preflight request ... ok (13ms)
+Missing signature header returns 401 ... ok (9ms)
+Wrong-length signature returns 401 (was 500 before 06-03) ... ok (7ms)
+Wrong signature of the right length returns 401 ... ok (6ms)
+Replayed payload is reported as duplicate, not inserted again ... ok (75ms)
+Invalid JSON payload returns 400 ... ok (3ms)
+Invalid payload structure returns 400 ... ok (3ms)
+DI-83: null envelope returns 400 ... ok (3ms)
+DI-83: null event returns 400 ... ok (4ms)
+DI-83: non-string tag returns 400 ... ok (2ms)
+Event count mismatch returns 400 ... ok (2ms)
+Invalid event data returns 400 ... ok (2ms)
+Valid webhook with organizer processes successfully ... ok (9ms)
+Valid webhook with organizer and image_url processes successfully ... ok (8ms)
+Multiple events processed successfully ... ok (11ms)
+Partial failure returns 207 with errors ... ok (3ms)
+Supports x-hub-signature-256 header format ... ok (7ms)
+Supports x-webhook-signature header ... ok (7ms)
+Event tags and category are properly processed ... ok (9ms)
+
+ok | 19 passed | 0 failed (193ms)
+

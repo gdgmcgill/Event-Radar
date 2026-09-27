@@ -43,6 +43,10 @@ human_verification:
 **Status:** gaps_found
 **Re-verification:** No — initial verification
 
+## M0 follow-up — 2026-09-27
+
+The report/frontmatter below records the original Phase 6 verification, not the current M0 tree. M0 corrects DI-83 locally: all three malformed payloads return 400 before any insert; shared Jest, 3 Deno handler tests and 19 real local Edge tests pass. The seven review warnings also have local repairs and regression evidence. See the [M0 report](../../milestones/m0/REPORT.md) for the final local results, remaining requirement gaps and unchanged external gates. This follow-up does not claim remote Edge deployment, Sentry receipt, CDN isolation or full foundation certification; historical findings below remain provenance.
+
 ## Method
 
 This report does not restate `evidence/PHASE-6-COMPLETION.md`'s claims. Every load-bearing claim below was

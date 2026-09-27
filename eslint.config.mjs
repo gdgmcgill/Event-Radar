@@ -13,7 +13,8 @@ const ELEVATED_KEY_MESSAGE =
   "Do not read SUPABASE_SERVICE_ROLE_KEY outside src/lib/supabase/. Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md.";
 
 const eslintConfig = [
-  { ignores: [".claude/**", ".next/**", "AI/**", "node_modules/**", "demo-video/**"] },
+  // Playwright trace reports bundle third-party JavaScript, not repository source.
+  { ignores: [".claude/**", ".next/**", "AI/**", "node_modules/**", "demo-video/**", "playwright-report/**", "test-results/**", "playwright/.auth/**"] },
   ...coreWebVitals,
   {
     // REFAC-05: src/server/db/elevated/ is the only door to the service-role

@@ -6,5 +6,7 @@ interface BanStatus {
 export function isBanned(user: BanStatus): boolean {
   if (!user.banned_at) return false;
   if (!user.ban_expires_at) return true; // permanent
-  return new Date(user.ban_expires_at) > new Date();
+  const expiresAt = Date.parse(user.ban_expires_at);
+  // DI-76: corrupted expiry data must not turn an active ban into admission.
+  return !Number.isFinite(expiresAt) || expiresAt > Date.now();
 }

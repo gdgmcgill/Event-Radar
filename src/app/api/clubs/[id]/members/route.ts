@@ -6,7 +6,7 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 import { parseBody } from "@/server/body";
 import { ClubMemberBody } from "@/contracts/clubs";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -43,6 +43,7 @@ export const GET = withRoute({ cache: "private", action: "fetch members" }, asyn
       .order("created_at", { ascending: true });
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to fetch members" },
         { status: 500 }
@@ -68,7 +69,8 @@ export const GET = withRoute({ cache: "private", action: "fetch members" }, asyn
     }));
 
     return NextResponse.json({ members: membersWithUsers });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch members" },
       { status: 500 }
@@ -142,6 +144,7 @@ export const DELETE = withRoute({ cache: "private", action: "remove member" }, a
       .eq("club_id", clubId);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to remove member" },
         { status: 500 }
@@ -149,7 +152,8 @@ export const DELETE = withRoute({ cache: "private", action: "remove member" }, a
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to remove member" },
       { status: 500 }

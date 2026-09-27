@@ -17,7 +17,7 @@
  */
 
 import type { NextRequest, NextResponse } from "next/server";
-import { upstashConfig, upstashConfigProblem } from "@/lib/env";
+import { upstashConfig, upstashConfigProblem, rateLimitRequireDistributed } from "@/lib/env";
 import { MemoryRateLimitStore } from "./memoryStore";
 import { rateLimitPolicy, tooManyRequests } from "./policy";
 import type { RateLimitStore } from "./types";
@@ -29,6 +29,10 @@ export type { RateDecision, RateLimitStore } from "./types";
 const memoryStore = new MemoryRateLimitStore();
 
 export type RateLimitStoreKind = "upstash" | "memory";
+
+export class DistributedStoreRequiredError extends Error {
+  constructor() { super("A distributed rate-limit store is required but unavailable"); this.name = "DistributedStoreRequiredError"; }
+}
 
 let selected: { kind: RateLimitStoreKind; store: RateLimitStore } | undefined;
 
@@ -74,6 +78,7 @@ function select(): { kind: RateLimitStoreKind; store: RateLimitStore } {
       selected = { kind: "memory", store: memoryStore };
     }
   }
+  if (selected.kind === "memory" && rateLimitRequireDistributed()) throw new DistributedStoreRequiredError();
   return selected;
 }
 

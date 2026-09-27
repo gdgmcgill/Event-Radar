@@ -9,11 +9,9 @@
  * order because zod reports issues in declaration order and parseWith answers
  * the first.
  *
- * QUERY VALUES KEEP TODAY'S SILENT COERCION. top_k is
- * `parseInt(value || "10", 10)` and diversity `value ? parseFloat(value) : 0.7`,
- * so a missing, empty or non-numeric value gives the number the handler used
- * before (NaN included) and never a 400. The handler still clamps diversity
- * and falls back to 0.7 on NaN.
+ * top_k keeps parseInt compatibility, with invalid input defaulting to 10
+ * and finite results clamped to 1..50 (M0 WR-06). Diversity retains its
+ * existing parseFloat handling and is clamped by the handler.
  *
  * NO USER ID IN THE FEEDBACK BODY (DI-44). Neither feedback shape declares
  * `user_id`, so a body naming one parses without it and the handler can only
@@ -61,7 +59,10 @@ export const RecommendationsQuery = z.object({
   top_k: z
     .string()
     .optional()
-    .transform((value) => parseInt(value || "10", 10)),
+    .transform((value) => {
+      const parsed = parseInt(value || "10", 10);
+      return Number.isFinite(parsed) ? Math.max(1, Math.min(50, parsed)) : 10;
+    }),
   diversity: z
     .string()
     .optional()
@@ -117,7 +118,8 @@ export const ThumbsFeedbackBody = z
  * the action list, then the rank. The rank rule is today's JavaScript
  * comparison `rank < 1`, so a numeric string such as "0" is refused and a
  * value that is not comparable passes through to the database as before.
- * session_id and experiment_variant_id are passed through unvalidated.
+ * session_id is passed through. Client experiment_variant_id is ignored;
+ * attribution is resolved from the authenticated caller's stored assignment.
  */
 export const AnalyticsFeedbackBody = z
   .object({
@@ -129,7 +131,6 @@ export const AnalyticsFeedbackBody = z
       error: M.missing,
     }),
     session_id: z.unknown().optional(),
-    experiment_variant_id: z.unknown().optional(),
   })
   .refine(
     (body) =>

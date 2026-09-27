@@ -348,3 +348,33 @@ describe("GET /api/events/:id/reviews", () => {
     expect(json).toHaveProperty("user_review");
   });
 });
+
+// M0 review-window regression: both POST eligibility and GET affordance must
+// use the actual end, falling back to start only for legacy end-less rows.
+describe("M0 review eligibility respects event end", () => {
+  it.each([
+    ["ongoing event", "2020-01-01T00:00:00Z", "2099-01-01T00:00:00Z", false],
+    ["ended event", "2020-01-01T00:00:00Z", "2020-01-02T00:00:00Z", true],
+    ["legacy past event", "2020-01-01T00:00:00Z", null, true],
+    ["legacy future event", "2099-01-01T00:00:00Z", null, false],
+  ])("GET can_review for %s", async (_label, start_date, end_date, expected) => {
+    mockUser = { id: "user-123" };
+    mockQueryResults.set("events", { data: { id: "test-event-id", start_date, end_date, club_id: "club-1" }, error: null });
+    mockQueryResults.set("reviews", { data: [], error: null });
+    mockQueryResults.set("club_members", { data: null, error: null });
+    mockQueryResults.set("rsvps", { data: { id: "rsvp-1", status: "going" }, error: null });
+    const response = await GET(createMockRequest("GET"), createRouteContext());
+    expect(response.status).toBe(200);
+    expect((await response.json()).can_review).toBe(expected);
+  });
+
+  it("POST denies a going attendee until the event ends, before reading/writing reviews", async () => {
+    mockUser = { id: "user-123" };
+    mockQueryResults.set("events", { data: { id: "test-event-id", start_date: "2020-01-01", end_date: "2099-01-01", club_id: "club-1" }, error: null });
+    mockQueryResults.set("rsvps", { data: { id: "rsvp-1", status: "going" }, error: null });
+    const response = await POST(createMockRequest("POST", { rating: 4 }), createRouteContext());
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Reviews can only be submitted after the event has ended" });
+    expect(mockCallCounters.get("reviews") ?? 0).toBe(0);
+  });
+});

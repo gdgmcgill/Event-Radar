@@ -72,6 +72,9 @@ jobs:
       - name: Migration filename parse check
         run: node scripts/check-migration-filenames.mjs
 
+      - name: Public-table RLS coverage and client-role guard
+        run: node scripts/check-rls-coverage.mjs
+
       # DI-31 (plan 04-03). The shrink-only census of files under src/** that
       # reach the service-role client. Fails when a file the committed
       # allow-list does not hold reaches it; the list may only shrink.
@@ -104,6 +107,9 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Edge handler contracts in Deno
+        run: npx --yes --package=deno@2.9.6 deno test --frozen --config supabase/functions/events-webhook/deno.json supabase/functions/tests/webhook-handler.test.ts
 
       - name: Production vulnerability gate
         run: npm audit --audit-level=high --omit=dev
@@ -214,6 +220,12 @@ jobs:
 
       - name: Seed coverage and RLS assertions
         run: supabase test db --local
+
+      - name: Competing moderation transactions
+        run: python3 scripts/test-m0-atomic-concurrency.py
+
+      - name: Live local Edge webhook contracts
+        run: npx tsx scripts/test-edge-local.ts
 
       - name: Install the browser engine
         run: npx playwright install --with-deps chromium

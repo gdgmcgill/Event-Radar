@@ -314,41 +314,41 @@ describe("admin/clubs/[id] PATCH", () => {
 describe("admin/events/[id]/edits PATCH", () => {
   type Route = typeof import("@/app/api/admin/events/[id]/edits/route");
 
-  it("approve: event read and update on the cookie client; notification through the door", async () => {
+  it("approve: reviewed edits and side effects use one elevated transaction", async () => {
     asAdmin({
       "events.select": {
         data: { id: EVENT_ID, title: "Routing Event", pending_edits: { title: "New" }, created_by: OTHER },
       },
       "events.update": { data: [{ id: EVENT_ID }] },
-    });
+    }, { "rpc:review_event_edits_atomic": { data: "ok" } });
     const { PATCH }: Route = await import("@/app/api/admin/events/[id]/edits/route");
     const res = await PATCH(
-      jsonRequest(`admin/events/${EVENT_ID}/edits`, "PATCH", { action: "approve" }),
+      jsonRequest(`admin/events/${EVENT_ID}/edits`, "PATCH", { action: "approve", expected_pending_edits: { title: "New" } }),
       idParams(EVENT_ID)
     );
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true, message: "Edits approved" });
-    expect(mockCookie.calls).toEqual(["events.select", "events.update"]);
-    expect(mockElevated.calls).toEqual(["notifications.insert", "admin_audit_log.insert"]);
+    expect(mockCookie.calls).toEqual([]);
+    expect(mockElevated.calls).toEqual(["rpc:review_event_edits_atomic"]);
   });
 
-  it("reject: the same split", async () => {
+  it("reject: the same atomic boundary", async () => {
     asAdmin({
       "events.select": {
         data: { id: EVENT_ID, title: "Routing Event", pending_edits: { title: "New" }, created_by: OTHER },
       },
       "events.update": { data: [{ id: EVENT_ID }] },
-    });
+    }, { "rpc:review_event_edits_atomic": { data: "ok" } });
     const { PATCH }: Route = await import("@/app/api/admin/events/[id]/edits/route");
     const res = await PATCH(
-      jsonRequest(`admin/events/${EVENT_ID}/edits`, "PATCH", { action: "reject", reason: "No" }),
+      jsonRequest(`admin/events/${EVENT_ID}/edits`, "PATCH", { action: "reject", reason: "No", expected_pending_edits: { title: "New" } }),
       idParams(EVENT_ID)
     );
 
     expect(res.status).toBe(200);
-    expect(mockCookie.calls).toEqual(["events.select", "events.update"]);
-    expect(mockElevated.calls).toEqual(["notifications.insert", "admin_audit_log.insert"]);
+    expect(mockCookie.calls).toEqual([]);
+    expect(mockElevated.calls).toEqual(["rpc:review_event_edits_atomic"]);
   });
 });
 
@@ -417,7 +417,7 @@ describe("admin/events/[id]/status PATCH", () => {
 describe("admin/organizer-requests/[id] PATCH", () => {
   type Route = typeof import("@/app/api/admin/organizer-requests/[id]/route");
 
-  it("approve: request, roles read, membership and club read on the cookie client; roles write and notification through the door", async () => {
+  it("approve: preflight on cookie client, decision and all side effects in elevated transaction", async () => {
     asAdmin({
       "organizer_requests.select": {
         data: { id: REQUEST_ID, user_id: OTHER, club_id: CLUB_ID, status: "pending" },
@@ -426,7 +426,7 @@ describe("admin/organizer-requests/[id] PATCH", () => {
       "organizer_requests.update": { data: [{ id: REQUEST_ID }] },
       "users.select": { data: { roles: ["user"] } },
       "clubs.select": { data: { name: "Routing Club" } },
-    });
+    }, { "rpc:review_organizer_request_atomic": { data: "ok" } });
     const { PATCH }: Route = await import("@/app/api/admin/organizer-requests/[id]/route");
     const res = await PATCH(
       jsonRequest(`admin/organizer-requests/${REQUEST_ID}`, "PATCH", { status: "approved" }),
@@ -435,18 +435,8 @@ describe("admin/organizer-requests/[id] PATCH", () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
-    expect(mockCookie.calls).toEqual([
-      "organizer_requests.select",
-      "organizer_requests.update",
-      "users.select",
-      "club_members.upsert",
-      "clubs.select",
-    ]);
-    expect(mockElevated.calls).toEqual([
-      "admin_audit_log.insert",
-      "users.update",
-      "notifications.insert",
-    ]);
+    expect(mockCookie.calls).toEqual(["organizer_requests.select"]);
+    expect(mockElevated.calls).toEqual(["rpc:review_organizer_request_atomic"]);
   });
 });
 
@@ -594,58 +584,25 @@ describe("clubs/[id]/appeal POST", () => {
 
 describe("events/[id]/appeal POST", () => {
   type Route = typeof import("@/app/api/events/[id]/appeal/route");
-
-  it("review, status reset and re-read on the cookie client; pre-read, admin lookup and notifications through the door", async () => {
-    asStudent(
-      {
-        "events.update": { data: [{ id: EVENT_ID }] },
-        "events.select": { data: { id: EVENT_ID, title: "Routing Event", status: "pending" } },
-      },
-      {
-        "events.select": {
-          data: { id: EVENT_ID, title: "Routing Event", created_by: STUDENT.id, status: "rejected", appeal_count: 0 },
-        },
-        "users.select": { data: [{ id: ADMIN.id }] },
-      }
-    );
+  it("M0 DI-74: creator-scoped reads and writes use cookies; only notifications elevate", async () => {
+    const event = { id: EVENT_ID, title: "Routing Event", created_by: STUDENT.id, status: "rejected", appeal_count: 0 };
+    asStudent({ "events.update": { data: [{ id: EVENT_ID }] }, "events.select": { data: event } },
+      { "users.select": { data: [{ id: ADMIN.id }] } });
     const { POST }: Route = await import("@/app/api/events/[id]/appeal/route");
-    const res = await POST(
-      jsonRequest(`events/${EVENT_ID}/appeal`, "POST", { message: "Please reconsider" }),
-      idParams(EVENT_ID)
-    );
-
+    const res = await POST(jsonRequest(`events/${EVENT_ID}/appeal`, "POST", { message: "Please reconsider" }), idParams(EVENT_ID));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      success: true,
-      event: { id: EVENT_ID, title: "Routing Event", status: "pending" },
-    });
-    expect(mockCookie.calls).toEqual([
-      "moderation_reviews.insert",
-      "events.update",
-      "events.select",
-    ]);
-    expect(mockElevated.calls).toEqual(["events.select", "users.select", "notifications.insert"]);
+    expect(await res.json()).toEqual({ success: true, event });
+    expect(mockCookie.calls).toEqual(["events.select", "moderation_reviews.insert", "events.update", "events.select"]);
+    expect(mockElevated.calls).toEqual(["users.select", "notifications.insert"]);
   });
-
-  it("a non-creator still gets 403 Forbidden (the pre-read sees the row whatever its status)", async () => {
-    asStudent(
-      {},
-      {
-        "events.select": {
-          data: { id: EVENT_ID, title: "Routing Event", created_by: OTHER, status: "rejected", appeal_count: 0 },
-        },
-      }
-    );
+  it("M0 DI-74: inaccessible events return 404 without elevated pre-read", async () => {
+    asStudent({ "events.select": { data: null } });
     const { POST }: Route = await import("@/app/api/events/[id]/appeal/route");
-    const res = await POST(
-      jsonRequest(`events/${EVENT_ID}/appeal`, "POST", { message: "Please reconsider" }),
-      idParams(EVENT_ID)
-    );
-
-    expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "Forbidden" });
-    expect(mockCookie.calls).toEqual([]);
-    expect(mockElevated.calls).toEqual(["events.select"]);
+    const res = await POST(jsonRequest(`events/${EVENT_ID}/appeal`, "POST", { message: "Please reconsider" }), idParams(EVENT_ID));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Event not found" });
+    expect(mockCookie.calls).toEqual(["events.select"]);
+    expect(mockElevated.calls).toEqual([]);
   });
 });
 
@@ -751,7 +708,7 @@ function uploadRequest(path: string): NextRequest {
   const form = new FormData();
   form.append(
     "file",
-    new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "routing.png", {
+    new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10])], "routing.png", {
       type: "image/png",
     })
   );
@@ -839,7 +796,7 @@ describe("users/[id] PATCH", () => {
 });
 
 describe("users/me/suggestions GET", () => {
-  it("own rows and club followers on the cookie client; other users' profiles, memberships and RSVPs through the door", async () => {
+  it("own rows and club followers on the cookie client; other users' profiles, memberships through the door; attendance is never read", async () => {
     asStudent(
       {
         "users.select": { data: { interest_tags: ["academic"], faculty: "Science", year: "2027" } },
@@ -879,12 +836,10 @@ describe("users/me/suggestions GET", () => {
       "user_follows.select",
       "club_members.select",
       "club_followers.select",
-      "rsvps.select",
       "club_followers.select",
     ]);
     expect(mockElevated.calls).toEqual([
       "club_members.select",
-      "rsvps.select",
       "users.select",
       "users.select",
       "users.select",

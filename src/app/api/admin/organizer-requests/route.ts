@@ -5,7 +5,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { readQuery } from "@/server/body";
 import { OrganizerRequestsQuery } from "@/contracts/admin";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 export const GET = withRoute({ cache: "private", action: "fetch organizer requests" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
@@ -22,7 +22,8 @@ export const GET = withRoute({ cache: "private", action: "fetch organizer reques
 
   let query = supabase
     .from("organizer_requests")
-    .select("*, club:clubs(*), user:users(*)", { count: "exact" })
+    // DI-87: user_id and reviewed_by both reference users; name the subject FK.
+    .select("*, club:clubs(*), user:users!organizer_requests_user_id_fkey(*)", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -33,6 +34,7 @@ export const GET = withRoute({ cache: "private", action: "fetch organizer reques
   const { data, error, count } = await query;
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

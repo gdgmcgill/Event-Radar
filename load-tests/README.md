@@ -62,3 +62,25 @@ Default thresholds:
 
 - k6 virtual users are not the same as real browser tabs; this measures backend/API capacity.
 - If you need full browser-level load (JS rendering + assets), pair k6 with browser-based monitoring and infrastructure metrics.
+
+## M0 discovery certification (CERT-12)
+
+Load `npx tsx scripts/seed/certification.ts scale --load` into the guarded local
+stack or dedicated staging database. Run a production Next build connected to
+that database, then:
+
+```sh
+k6 run --summary-export=discovery-summary.json load-tests/k6-discovery.js
+```
+
+The default is 3 VUs for 60 seconds from one address, below the current 300/min
+list budget. This measures hot-path latency against the scale dataset; it does
+not claim 500-user capacity. A staging run explicitly sets `BASE_URL`, matching
+`CERT_STAGING_ORIGIN`, and `CERT_LOAD_ACK=staging-only`. Production is prohibited.
+Use representative distributed load origins for larger user loads; do not spoof
+forwarding headers or disable rate limits. Keep 429s in the failure rate.
+
+Before each run, preserve the dataset manifest, commit, deployment identifier,
+VUs/duration, runner topology, and these fixed gates: list and detail p95 <800 ms,
+request errors <1%, every payload/identity check passing. Preserve raw output and
+summary JSON even on failure. A local run does not satisfy staging certification.

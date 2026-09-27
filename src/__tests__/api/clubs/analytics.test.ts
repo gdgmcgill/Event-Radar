@@ -51,6 +51,15 @@ jest.mock("@/lib/supabase/server", () => ({
   createClient: jest.fn(() => Promise.resolve(mockSupabase)),
 }));
 
+const mockElevatedBuilders: { table: string; builder: ReturnType<typeof createMockQueryBuilder> }[] = [];
+const mockElevated = { from: jest.fn((table: string) => {
+  const builder = createMockQueryBuilder(mockQueryResults.get(table) ?? { data: [], error: null });
+  mockElevatedBuilders.push({ table, builder });
+  return builder;
+}) };
+const mockGetElevatedClient = jest.fn(() => mockElevated);
+jest.mock("@/server/db/elevated", () => ({ getElevatedClient: () => mockGetElevatedClient() }));
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function createMockRequest(): NextRequest {
@@ -74,6 +83,7 @@ beforeEach(async () => {
   mockUser = null;
   mockAuthError = null;
   mockQueryResults = new Map();
+  mockElevatedBuilders.length = 0;
 
   const routeModule = await import("@/app/api/clubs/[id]/analytics/route");
   GET = routeModule.GET;
@@ -87,6 +97,7 @@ describe("GET /api/clubs/:id/analytics", () => {
 
     expect(res.status).toBe(401);
     expect(json.error).toBe("Unauthorized");
+    expect(mockGetElevatedClient).not.toHaveBeenCalled();
   });
 
   it("returns 403 when user is not a club member", async () => {
@@ -99,6 +110,7 @@ describe("GET /api/clubs/:id/analytics", () => {
 
     expect(res.status).toBe(403);
     expect(json.error).toBeDefined();
+    expect(mockGetElevatedClient).not.toHaveBeenCalled();
   });
 
   it("returns empty analytics for club with no data", async () => {
@@ -123,6 +135,7 @@ describe("GET /api/clubs/:id/analytics", () => {
     expect(json.total_attendees).toBe(0);
     expect(json.popular_tags).toEqual([]);
     expect(json.events).toEqual([]);
+    expect(mockGetElevatedClient).not.toHaveBeenCalled();
   });
 
   it("returns follower growth bucketed by day", async () => {
@@ -187,5 +200,21 @@ describe("GET /api/clubs/:id/analytics", () => {
       expect(json.popular_tags[0].tag).toBe("social");
       expect(json.popular_tags[0].count).toBe(3);
     }
+    expect(mockElevatedBuilders).toHaveLength(2);
+    for (const { table, builder } of mockElevatedBuilders) {
+      expect(builder.in).toHaveBeenCalledWith("event_id", ["e1", "e2", "e3"]);
+      expect(builder.select).toHaveBeenCalledWith(table === "saved_events" ? "event_id" : "created_at");
+      expect(mockSupabase.from).not.toHaveBeenCalledWith(table);
+    }
+  });
+
+  it.each(["saved_events", "user_interactions"])("fails privately when cross-user %s cannot be read", async (table) => {
+    mockUser = { id: "user-123" };
+    mockQueryResults.set("club_members", { data: { role: "owner" }, error: null });
+    mockQueryResults.set("events", { data: [{ id: "e1", title: "Event", start_date: "2036-04-01", tags: [] }], error: null });
+    mockQueryResults.set(table, { data: null, error: { message: "unavailable" } });
+    const response = await GET(createMockRequest(), createRouteContext());
+    expect(response.status).toBe(500);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });

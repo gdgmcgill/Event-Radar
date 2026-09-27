@@ -69,6 +69,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 import { assertSeedTargetAllowed } from "./scripts/seed/guard";
 import { localStackEnv } from "./e2e/env";
+import { LOCAL_HEALTH_TOKEN } from "./e2e/helpers/healthCredential";
 
 export const BASE_URL = "http://127.0.0.1:3000";
 
@@ -142,6 +143,12 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_URL: stack.url,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
       SUPABASE_SERVICE_ROLE_KEY: stack.serviceRoleKey,
+      // Override any production monitor secret inherited by Next's env loader.
+      // This known test token belongs only to the local guarded server above.
+      HEALTH_TOKEN: LOCAL_HEALTH_TOKEN,
+      // The local server has no /_vercel/* script endpoints. Explicitly blank
+      // deployment detection instead of inheriting a shell or .env value.
+      VERCEL: "",
       // The rate-limit store (plan 05-18, DEC-50, research C8/C13). All four
       // Upstash names are set to the empty string, never left unset: Next's
       // env loader (@next/env) never overrides a variable that is already

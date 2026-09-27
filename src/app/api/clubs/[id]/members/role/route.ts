@@ -6,7 +6,7 @@ import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { parseBody } from "@/server/body";
 import { ClubMemberRoleBody } from "@/contracts/clubs";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 /** PostgREST's code when `.single()` matches no row. */
 const NO_ROW = "PGRST116";
@@ -88,6 +88,7 @@ export const PATCH = withRoute({ cache: "private", action: "update role" }, asyn
   }
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Failed to update role" }, { status: 500 });
   }
 

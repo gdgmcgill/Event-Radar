@@ -240,12 +240,13 @@ describe("UpstashRateLimitStore.consume", () => {
       level: "error",
       scope: "RateLimit",
       msg: "store timeout; request allowed",
-      key: "GET:/api/events:10.0.0.3",
+      limit: 300, windowMs: WINDOW_MS,
     });
+    expect(JSON.stringify(errorLine())).not.toContain("10.0.0.3");
     nowSpy.mockRestore();
   });
 
-  it("a store error allows the request and logs the error message, never throwing", async () => {
+  it("a store error allows the request and logs only the error class, never throwing", async () => {
     const store = new UpstashRateLimitStore(CONFIG);
     mockLimit.mockRejectedValueOnce(new Error("fetch failed"));
     const decision = await store.consume("POST:/api/x:10.0.0.4", 30, WINDOW_MS);
@@ -255,8 +256,8 @@ describe("UpstashRateLimitStore.consume", () => {
       level: "error",
       scope: "RateLimit",
       msg: "store error; request allowed",
-      key: "POST:/api/x:10.0.0.4",
-      error: "fetch failed",
+      limit: 30, windowMs: WINDOW_MS,
+      error: "Error",
     });
   });
 });
@@ -393,4 +394,15 @@ describe("getRateLimitStore() selection", () => {
     expect(res?.headers.get("X-RateLimit-Limit")).toBe("30");
     expect(mockLimit).toHaveBeenCalledWith("POST:/api/events/x/save:10.9.9.9");
   });
+});
+
+
+it("does not log endpoint URLs or credentials echoed by a failed Redis request", async () => {
+  const endpoint = "https://private-redis.example.test?token=secret-value";
+  mockLimit.mockRejectedValueOnce(new TypeError(`fetch failed: ${endpoint}`));
+  const decision = await new UpstashRateLimitStore(CONFIG).consume("test-key", 30, WINDOW_MS);
+  expect(decision.allowed).toBe(true);
+  expect(errorLine()).toMatchObject({ error: "TypeError" });
+  expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(endpoint);
+  expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("secret-value");
 });

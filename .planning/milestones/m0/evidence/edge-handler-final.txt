@@ -1,0 +1,7 @@
+running 3 tests from ./supabase/functions/tests/webhook-handler.test.ts
+DI-83: malformed inputs validate atomically in Deno ... ok (6ms)
+Deno preserves HMAC, content-hash replay and partial-batch behavior ... ok (1ms)
+IN-05: Deno error responses and diagnostics omit database text ... ok (511µs)
+
+ok | 3 passed | 0 failed (10ms)
+

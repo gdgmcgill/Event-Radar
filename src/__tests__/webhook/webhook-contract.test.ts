@@ -84,10 +84,18 @@ describe("WebhookEvent: a valid event", () => {
     expect(webhookEventErrors({ ...VALID, ...patch })).toEqual([]);
   });
 
-  it("does not check fields validateEvent does not check (duration, organizer, tags)", () => {
+  it("keeps legacy duration/organizer behavior and ignores non-array tags", () => {
     expect(
       webhookEventErrors({ ...VALID, duration: "90", organizer: 5, tags: "x" })
     ).toEqual([]);
+  });
+
+  it.each([{ tags: [] }, { tags: ["Tech", "FOOD"] }, { tags: null }, { tags: "legacy ignored value" }])("DI-83: keeps accepted tag values %j", ({ tags }) => {
+    expect(webhookEventErrors({ ...VALID, tags })).toEqual([]);
+  });
+
+  it.each([[1], [null], [true], [{}], [["nested"]]])("DI-83: rejects non-string tag elements %j", (tag) => {
+    expect(webhookEventErrors({ ...VALID, tags: [tag] })).toEqual(["tags must contain only strings"]);
   });
 });
 
@@ -155,6 +163,8 @@ describe("WebhookEvent: the full list, in validateEvent's order", () => {
     ["a number", 5],
     ["a string", "event"],
     ["an array", []],
+    ["null (DI-83)", null],
+    ["undefined (DI-83)", undefined],
   ])(
     "a non-object element (%s) reads as having no fields, as validateEvent's property reads do",
     (_l, input) => {
@@ -188,6 +198,7 @@ describe("WebhookPayload", () => {
     ["the payload a string", "payload"],
     ["the payload a number", 7],
     ["the payload an array", [VALID]],
+    ["the payload null (DI-83)", null],
   ])("%s yields today's structure message, once", (_l, input) => {
     expect(webhookPayloadError(input)).toBe(STRUCTURE);
   });

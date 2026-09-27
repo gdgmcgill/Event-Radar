@@ -178,7 +178,6 @@ SELECT results_eq(
             faculty = 'Science',
             visibility = 'private',
             interest_tags = '{academic,tech}',
-            onboarding_completed = true,
             updated_at = now()
       WHERE id = '00000000-0000-4000-8000-000000005001'
       RETURNING name$q$,
@@ -209,7 +208,7 @@ SELECT tests.act_as_owner();
 SELECT results_eq(
   $q$SELECT name, visibility, onboarding_completed, interest_tags, inferred_tags, roles::text
        FROM public.users WHERE id = '00000000-0000-4000-8000-000000005001'$q$,
-  $q$VALUES ('T050 Student Renamed', 'private', true, '{academic,tech}'::text[], '{music}'::text[], '{user}')$q$,
+  $q$VALUES ('T050 Student Renamed', 'private', false, '{academic,tech}'::text[], '{music}'::text[], '{user}')$q$,
   'with RLS bypassed: S''s profile columns hold the new values and roles is still {user}');
 
 

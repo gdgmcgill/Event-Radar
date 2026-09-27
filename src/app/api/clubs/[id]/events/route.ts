@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -47,6 +47,7 @@ export const GET = withRoute({ cache: "private", action: "fetch events" }, async
     const { data: events, error } = await query;
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to fetch events" },
         { status: 500 }
@@ -91,7 +92,8 @@ export const GET = withRoute({ cache: "private", action: "fetch events" }, async
     }
 
     return NextResponse.json({ events: eventList, isOrganizer: false });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch events" },
       { status: 500 }

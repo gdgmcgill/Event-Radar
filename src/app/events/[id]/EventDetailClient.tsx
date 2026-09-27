@@ -62,7 +62,9 @@ export default function EventDetailClient() {
     created_at: string;
   } | null>(null);
   const { data: reviewData, mutate: mutateReviews } = useEventReviews(
-    id ?? ""
+    // Review aggregates include caller eligibility and require authentication.
+    // A null SWR key avoids anonymous 401 requests and automatic retries.
+    user ? id ?? "" : ""
   );
 
   // Build ReviewAggregate for EventDetailView

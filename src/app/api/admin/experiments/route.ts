@@ -5,7 +5,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { parseBody } from "@/server/body";
 import { ExperimentCreateBody } from "@/contracts/admin";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 export const GET = withRoute({ cache: "private", action: "fetch experiments" }, async (_request: NextRequest) => {
   const ctx = await createRequestContext();
@@ -21,6 +21,7 @@ export const GET = withRoute({ cache: "private", action: "fetch experiments" }, 
     .order("created_at", { ascending: false });
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -36,6 +37,7 @@ export const GET = withRoute({ cache: "private", action: "fetch experiments" }, 
     .in("experiment_id", experimentIds);
 
   if (variantsError) {
+    logRouteError(variantsError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -45,6 +47,7 @@ export const GET = withRoute({ cache: "private", action: "fetch experiments" }, 
     .in("experiment_id", experimentIds);
 
   if (assignmentsError) {
+    logRouteError(assignmentsError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -98,6 +101,7 @@ export const POST = withRoute({ cache: "private", action: "create experiment" },
     .single();
 
   if (expError) {
+    logRouteError(expError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -116,6 +120,7 @@ export const POST = withRoute({ cache: "private", action: "create experiment" },
   if (varError) {
     // Clean up the experiment on variant creation failure
     await supabase.from("experiments").delete().eq("id", experiment.id);
+    logRouteError(varError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

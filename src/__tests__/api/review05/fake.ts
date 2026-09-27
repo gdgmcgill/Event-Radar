@@ -151,9 +151,9 @@ export function makeFake(options: FakeOptions = {}): Fake {
       }),
     },
     from: (table: string) => builder(table),
-    rpc: (name: string) => {
+    rpc: (name: string, args?: unknown) => {
       const settle = () => {
-        calls.push({ table: `rpc:${name}`, operation: "select", filters: [], columns: null });
+        calls.push({ table: `rpc:${name}`, operation: "select", payload: args, filters: [], columns: null });
         const answer = answerFor(`rpc:${name}`);
         return { data: answer.data ?? null, error: answer.error ?? null };
       };

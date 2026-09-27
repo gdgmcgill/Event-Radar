@@ -7,7 +7,7 @@ import { logAdminAction } from "@/lib/audit";
 import { parseBody, readQuery } from "@/server/body";
 import { AdminEventCreateBody, AdminEventsQuery } from "@/contracts/admin";
 import { computeEventContentHash } from "@/lib/contentHash";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 type MetricsSortField = "popularity_score" | "trending_score" | "view_count" | "click_count" | "save_count";
@@ -71,6 +71,7 @@ export const GET = withRoute({ cache: "private", action: "fetch admin events" },
   const { data, error, count } = await query;
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -178,6 +179,7 @@ export const POST = withRoute({ cache: "private", action: "create event" }, asyn
     .single();
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

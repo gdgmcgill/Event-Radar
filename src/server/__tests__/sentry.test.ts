@@ -28,6 +28,7 @@ import * as Sentry from "@sentry/nextjs";
 import type { ErrorEvent, Event, EventHint } from "@sentry/nextjs";
 import { captureServerError, hashUserId, scrubEvent } from "@/server/observability/sentry";
 import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 import { sentryServerOptions } from "@/sentry.server.config";
 
 const EMAIL_SHAPE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/;
@@ -357,5 +358,48 @@ describe("captureServerError", () => {
   it("never throws, whatever it is handed", () => {
     expect(() => captureServerError(undefined, { requestId: "x", route: "/r" })).not.toThrow();
     expect(() => captureServerError("a string", { requestId: "x" })).not.toThrow();
+  });
+});
+
+
+describe("M0 handled-failure transport proof", () => {
+  it("sends exactly one actual logged exception for a handled 500 and preserves the client body", async () => {
+    const cause = new TypeError("handled database failure");
+    const handler = withRoute({ cache: "public-60-300" }, async (_request: Request) => {
+      log.error("read failed", { error: cause });
+      return Response.json({ error: "Existing error contract" }, { status: 500 });
+    });
+    const response = await handler(new Request(`https://example.test/api/admin/users/${USER_ID}/ban`));
+    await Sentry.flush(2000);
+    expect(await response.json()).toEqual({ error: "Existing error contract" });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const events = sentEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0].exception?.values?.[0]).toMatchObject({ type: "TypeError", value: "handled database failure" });
+    expect(events[0].tags).toMatchObject({ request_id: response.headers.get("x-request-id"), route: "/api/admin/users/[id]/ban" });
+  });
+
+  it("reports a previously silent returned 500", async () => {
+    const handler = withRoute({ cache: "private", action: "fetch featured events" }, async (_request: Request) =>
+      Response.json({ error: "Internal server error" }, { status: 500 })
+    );
+    const response = await handler(new Request("https://example.test/api/admin/featured"));
+    await Sentry.flush(2000);
+    const events = sentEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0].exception?.values?.[0]?.value).toBe("Failed to fetch featured events");
+    expect(events[0].tags?.request_id).toBe(response.headers.get("x-request-id"));
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not report a recovered failure as an HTTP server failure", async () => {
+    const handler = withRoute({ cache: "private" }, async (_request: Request) => {
+      log.error("optional audit unavailable", { error: new Error("recovered") });
+      return Response.json({ ok: true });
+    });
+    await handler(new Request("https://example.test/api/probe"));
+    await Sentry.flush(2000);
+    expect(sentEvents()).toHaveLength(0);
   });
 });

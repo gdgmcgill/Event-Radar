@@ -104,6 +104,15 @@ jest.mock("@/lib/supabase/server", () => ({
   createClient: jest.fn(() => Promise.resolve(mockSupabase)),
 }));
 
+// This suite exercises the authorized dashboard's audit data shape. The actual
+// guard, including standalone page execution, is covered by docs-gate-defect.
+jest.mock("@/server/context", () => ({
+  getRequestContext: jest.fn().mockResolvedValue({ user: { id: "authorized-audit-admin" } }),
+}));
+jest.mock("@/server/authz/requireAdminPage", () => ({
+  requireAdminPage: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("@/lib/supabase/service", () => ({
   createServiceClient: jest.fn(() => mockElevatedSupabase),
 }));

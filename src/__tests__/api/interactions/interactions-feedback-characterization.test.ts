@@ -43,9 +43,15 @@ type InteractionsPOST = (typeof import("@/app/api/interactions/route"))["POST"];
 type FeedbackPOST = (typeof import("@/app/api/feedback/route"))["POST"];
 
 let mockCookie: FakeSupabase;
+let mockElevated: FakeSupabase;
 
 jest.mock("@/lib/supabase/server", () => ({
   createClient: () => Promise.resolve(mockCookie.client),
+}));
+
+jest.mock("@/lib/supabase/service", () => ({
+  createServiceClient: () => mockElevated.client,
+  serviceRoleKey: () => "test-key",
 }));
 
 beforeEach(() => {
@@ -104,7 +110,7 @@ function init(persona: "anonymous" | "student" | "unonboarded"): FakeSupabaseIni
 }
 
 function writes(): FakeCall[] {
-  return mockCookie.calls.filter((c) =>
+  return [...mockCookie.calls, ...(mockElevated?.calls ?? [])].filter((c) =>
     ["insert", "update", "delete"].includes(c.operation)
   );
 }
@@ -119,6 +125,7 @@ function jsonRequest(path: string, body: unknown): NextRequest {
 
 async function interact(persona: Parameters<typeof init>[0], body: unknown) {
   mockCookie = createFakeSupabase(init(persona));
+  mockElevated = createFakeSupabase({ now: "2026-09-25T12:00:00.000Z" });
   const POST: InteractionsPOST = (await import("@/app/api/interactions/route")).POST;
   const response = await POST(jsonRequest("interactions", body));
   return { status: response.status, body: await response.json() };
@@ -126,6 +133,7 @@ async function interact(persona: Parameters<typeof init>[0], body: unknown) {
 
 async function feedback(persona: Parameters<typeof init>[0], body: unknown) {
   mockCookie = createFakeSupabase(init(persona));
+  mockElevated = createFakeSupabase({ now: "2026-09-25T12:00:00.000Z" });
   const POST: FeedbackPOST = (await import("@/app/api/feedback/route")).POST;
   const response = await POST(jsonRequest("feedback", body));
   return { status: response.status, body: await response.json() };

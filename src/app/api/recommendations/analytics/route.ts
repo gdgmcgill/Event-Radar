@@ -1,8 +1,7 @@
 /**
  * GET /api/recommendations/analytics
  * Admin-only: recommendation quality metrics (CTR, save rate, dismiss rate, avg rank).
- * Uses current user's session; with RLS, returns only that user's feedback.
- * For org-wide metrics, use a Supabase client with service role key.
+ * Reads aggregate feedback across participants after active-admin authorization.
  */
 
 import { NextResponse } from "next/server";
@@ -13,6 +12,7 @@ import { parseQuery } from "@/server/body";
 import { AnalyticsQuery } from "@/contracts/recommendations";
 import type { NextRequest } from "next/server";
 import { withRoute } from "@/server/route";
+import { getElevatedClient } from "@/server/db/elevated";
 import { log } from "@/server/log";
 
 export const GET = withRoute({ cache: "private", action: "fetch analytics" }, async (request: NextRequest) => {
@@ -34,7 +34,9 @@ export const GET = withRoute({ cache: "private", action: "fetch analytics" }, as
     since.setDate(since.getDate() - days);
     const sinceIso = since.toISOString();
 
-    const { data: rawRows, error } = await supabase
+    // Feedback RLS permits only own-row SELECT; admin metrics need all users.
+    const elevated = getElevatedClient();
+    const { data: rawRows, error } = await elevated
       .from("recommendation_feedback")
       .select("action, recommendation_rank, created_at")
       .gte("created_at", sinceIso);
@@ -74,20 +76,24 @@ export const GET = withRoute({ cache: "private", action: "fetch analytics" }, as
         : null;
 
     // Tag distribution from recent recommendation feedback
-    const { data: recentEvents } = await supabase
+    const { data: recentEvents, error: recentError } = await elevated
       .from("recommendation_feedback")
       .select("event_id")
       .gte("created_at", sinceIso)
       .eq("action", "impression");
 
+    if (recentError) throw recentError;
+
     const eventIds = [...new Set((recentEvents ?? []).map((r: { event_id: string }) => r.event_id))];
 
     let tagDistribution: Record<string, number> = {};
     if (eventIds.length > 0) {
-      const { data: events } = await supabase
+      const { data: events, error: eventsError } = await supabase
         .from("events")
         .select("tags")
         .in("id", eventIds);
+
+      if (eventsError) throw eventsError;
 
       for (const ev of (events ?? []) as { tags: string[] }[]) {
         for (const tag of ev.tags ?? []) {

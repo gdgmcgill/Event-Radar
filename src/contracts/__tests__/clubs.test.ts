@@ -17,6 +17,7 @@
  * contract's 400 where the handler threw or coerced it.
  */
 
+import { imageBytes } from "../../__tests__/helpers/imageBytes";
 import { z } from "zod";
 import { checkFile, parseForm, parseWith, readQuery } from "@/server/body";
 import {
@@ -454,7 +455,7 @@ describe("ClubImageForm with CLUB_BANNER_UPLOAD and CLUB_LOGO_UPLOAD", () => {
   const MB = 1024 * 1024;
 
   function file(size: number, type: string, name = "x.png"): File {
-    return new File([new Uint8Array(size)], name, { type });
+    return new File([imageBytes(size, type)], name, { type });
   }
 
   function formRequest(entries: [string, string | File][]): Request {
@@ -510,25 +511,15 @@ describe("ClubImageForm with CLUB_BANNER_UPLOAD and CLUB_LOGO_UPLOAD", () => {
     expect(checkFile(file(5 * MB, "image/jpeg"), CLUB_BANNER_UPLOAD.file)).toBeNull();
   });
 
-  it("an unreadable form keeps the route's own 500 body", async () => {
-    const request = new Request("http://localhost/api/clubs/logo", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}",
-    });
-    await expect(body(await parseForm(request, ClubImageForm, CLUB_LOGO_UPLOAD))).resolves.toEqual({
-      status: 500,
-      body: { error: "Failed to upload logo" },
-    });
-    const banner = new Request("http://localhost/api/clubs/banner", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}",
-    });
-    await expect(body(await parseForm(banner, ClubImageForm, CLUB_BANNER_UPLOAD))).resolves.toEqual({
-      status: 500,
-      body: { error: "Failed to upload banner" },
-    });
+  // M0 CERT-02: transport errors are client 400s, not storage failures.
+  it.each([CLUB_LOGO_UPLOAD, CLUB_BANNER_UPLOAD])("rejects unreadable forms before upload", async (opts) => {
+    for (const contentType of ["application/json", "multipart/form-data; boundary=missing"]) {
+      const request = new Request("http://localhost/api/clubs/logo", {
+        method: "POST", headers: { "content-type": contentType }, body: "{}",
+      });
+      await expect(body(await parseForm(request, ClubImageForm, opts)))
+        .resolves.toEqual({ status: 400, body: { error: "Invalid multipart form data" } });
+    }
   });
 });
 

@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: verifying
-stopped_at: Completed 06-18-PLAN.md
-last_updated: "2026-09-27T18:36:53.048Z"
-last_activity: 2026-09-25
-last_activity_desc: Phase 06 execution started
+stopped_at: M0 implementation delivered; local verification passed; external certification and stated requirement gaps pending
+last_updated: "2026-09-27T23:02:01.086492+00:00"
+last_activity: 2026-09-27
+last_activity_desc: Product M0 foundation hardening and certification
 progress:
   total_phases: 8
   completed_phases: 6
@@ -19,19 +19,24 @@ progress:
 
 # Project State
 
+## M0 continuation — 2026-09-27
+
+Product milestone M0 is being implemented on `codex/m0-foundation-certification`, starting from review commit `2e4c4ff`. This continues the existing foundation program; it does not start M1 or relax McGill admission. Phase 6 gap/review repairs and additional database/API hardening are implemented locally, and the final local verification suite passed (1,800 browser tests; 3,667 unit tests; 626 database assertions).
+
+Current evidence and unresolved requirements: [M0 report](milestones/m0/REPORT.md). Local implementation, verified tests, hosted deployment, and owner sign-off are separate states. No production migration, push to main, deployed certification, or owner risk acceptance has occurred. The historical entries below are retained as provenance and are superseded by the M0 report for current status.
+
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Every critical workflow in the existing app is verified correct, secure, and reproducible across all user roles before any new product feature is started. If a foundation change breaks a workflow that worked before, the program has failed.
-**Current focus:** Phase 06 — Slices 6–7 — Async Edge, Contracts, Caching, Observability
+**Current focus:** Product M0 — Phase6 gap/review closure plus Foundation7–8 certification. See [M0 report](milestones/m0/REPORT.md).
 
 ## Current Position
 
-Phase: 06 (Slices 6–7 — Async Edge, Contracts, Caching, Observability) — EXECUTING
-Plan: 18 of 18
-Status: Phase complete — ready for verification
-Last activity: 2026-09-25 — Phase 06 execution started
+Phase6 executed 18/18 plans; M0 repairs are implemented locally.
+Status: M0 IN PROGRESS — local verification green; stated requirement gaps, hosted certification and operational sign-off pending.
+Last activity: 2026-09-27 — foundation repairs, reproducible datasets, expanded RLS/API/browser certification.
 
 Progress: [███████░░░] 73%
 
@@ -425,6 +430,8 @@ Items acknowledged and carried forward from previous milestone close:
 | Quality | Visual regression, axe accessibility smoke, scheduled staging refresh (QUAL-01..03) | Deferred to post-certification | 2026-09-13 |
 
 ## Session Continuity
+
+Current continuation: resume from [M0 report](milestones/m0/REPORT.md) and `codex/m0-foundation-certification`. The following pre-M0 note is historical; do not restart Phase5 work from it.
 
 Last session: 2026-09-27T18:35:44.860Z
 Stopped at: Completed 06-18-PLAN.md

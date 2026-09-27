@@ -8,7 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { currentRequestId } from "../log";
+import { notFound, redirect } from "next/navigation";
+import { captureServerError } from "../observability/sentry";
+
+jest.mock("../observability/sentry", () => ({ captureServerError: jest.fn() }));
+import { currentRequestId, log } from "../log";
 import { withRoute } from "../route";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -98,6 +102,16 @@ describe("withRoute: request id", () => {
     expect(seen).toBe(header);
   });
 
+  it.each(["/auth/callback", "/auth/callback/nested", "/events/avatar.png"])(
+    "rejects client correlation ids on proxy-excluded path %s",
+    async (path) => {
+      const GET = withRoute({ cache: "private" }, async (_req: NextRequest) => NextResponse.json({ ok: true }));
+      const res = await GET(request(path, { id: INCOMING }));
+      expect(res.headers.get("x-request-id")).toMatch(UUID);
+      expect(res.headers.get("x-request-id")).not.toBe(INCOMING);
+    }
+  );
+
   it("mints an id for a zero-argument handler", async () => {
     const res = await wrappedZero();
     expect(res.headers.get("x-request-id")).toMatch(UUID);
@@ -120,6 +134,7 @@ describe("withRoute: request id", () => {
 describe("withRoute: uncaught throw (F-058)", () => {
   let err: jest.SpyInstance;
   beforeEach(() => {
+    jest.mocked(captureServerError).mockClear();
     err = jest.spyOn(console, "error").mockImplementation(() => {});
   });
   afterEach(() => err.mockRestore());
@@ -159,14 +174,64 @@ describe("withRoute: uncaught throw (F-058)", () => {
     await expect(res.json()).resolves.toEqual({ error: "Failed to create event" });
   });
 
-  it("does not log on a returned 500", async () => {
+  it("logs and captures a returned 500 without changing its body", async () => {
     const GET = withRoute({ cache: "private" }, async (_req: NextRequest) =>
       NextResponse.json({ error: "Failed to fetch" }, { status: 500 })
     );
     const res = await GET(request("/api/x"));
     expect(res.status).toBe(500);
-    expect(err).not.toHaveBeenCalled();
+    expect(await res.json()).toEqual({ error: "Failed to fetch" });
+    expect(err).toHaveBeenCalledTimes(1);
+    expect(captureServerError).toHaveBeenCalledTimes(1);
+    expect(captureServerError).toHaveBeenCalledWith(expect.any(Error), {
+      requestId: res.headers.get("x-request-id"), route: "/api/x",
+    });
   });
+
+  it("captures the original logged failure once without adding another log line", async () => {
+    const cause = new TypeError("database failed");
+    const GET = withRoute({ cache: "private" }, async (_req: NextRequest) => {
+      log.error("read failed", { error: cause });
+      return NextResponse.json({ error: "Try again" }, { status: 503 });
+    });
+    const res = await GET(request("/api/x"));
+    expect(err).toHaveBeenCalledTimes(1);
+    expect(captureServerError).toHaveBeenCalledTimes(1);
+    expect(captureServerError).toHaveBeenCalledWith(cause, {
+      requestId: res.headers.get("x-request-id"), route: "/api/x",
+    });
+  });
+
+  it.each([redirect, notFound])("lets Next control-flow errors escape without reporting", async (controlFlow) => {
+    const GET = withRoute({ cache: "private" }, async (_req: NextRequest) => {
+      controlFlow("/signin");
+      return NextResponse.json({});
+    });
+    await expect(GET(request("/api/x"))).rejects.toThrow();
+    expect(err).not.toHaveBeenCalled();
+    expect(captureServerError).not.toHaveBeenCalled();
+  });
+
+  it("does not reuse another concurrent request's logged cause", async () => {
+    const cause = new Error("first request failed");
+    let unblock!: () => void;
+    const barrier = new Promise<void>((resolve) => { unblock = resolve; });
+    const first = withRoute({ cache: "private" }, async (_req: NextRequest) => {
+      log.error("first failure", { error: cause });
+      await barrier;
+      return NextResponse.json({}, { status: 500 });
+    });
+    const second = withRoute({ cache: "private" }, async (_req: NextRequest) => NextResponse.json({}, { status: 500 }));
+    const pending = first(request("/api/first"));
+    await second(request("/api/second"));
+    unblock();
+    await pending;
+    const calls = jest.mocked(captureServerError).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][0]).not.toBe(cause);
+    expect(calls[1][0]).toBe(cause);
+  });
+
 });
 
 describe("withRoute: cache classes on every path", () => {

@@ -1,0 +1,16 @@
+PASS node src/__tests__/moderation/audit-shape.test.ts
+  F-072 / F-073 — admin_audit_log.admin_email does not exist (FIXED in 05-14)
+    ✓ the generated types have no admin_email column, so no migration creates one (2 ms)
+    ✓ fixed: the moderation dashboard selects the table's real columns, no email column (23 ms)
+    ✓ fixed: the dashboard source carries no client cast and no shape assertion on the audit read
+    ✓ today's behaviour: the panel renders its empty state, not an error (6 ms)
+    ✓ fixed: audit rows render with the actor read from users by id on the cookie client (9 ms)
+    ✓ fixed: the audit write carries no email column and goes to the elevated client (2 ms)
+    ✓ fixed: a rejected insert is logged loudly with the request id, and the call still resolves (1 ms)
+    ✓ an accepted insert logs nothing
+
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        0.233 s, estimated 1 s
+Ran all test suites matching src/__tests__/moderation/audit-shape.test.ts.

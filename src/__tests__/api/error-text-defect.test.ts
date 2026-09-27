@@ -238,7 +238,12 @@ const SITES: Site[] = [
   {
     site: "src/app/api/events/[id]/appeal/route.ts:77", n: 7, persona: "student", status: 500,
     elevated: (i) => { i.tables!.events = i.tables!.events.map((e) => (e.id === EVENT_OWN ? { ...e, status: "rejected" } : e)); },
-    cookie: (i) => { i.errors = { "moderation_reviews.insert": pg(7) }; },
+    cookie: (i) => {
+      // DI-74 moved the event pre-read to the subject's RLS client. Preserve
+      // the rejected-state precondition so this still reaches the real fault.
+      i.tables!.events = i.tables!.events.map((e) => e.id === EVENT_OWN ? { ...e, status: "rejected" } : e);
+      i.errors = { "moderation_reviews.insert": pg(7) };
+    },
     invoke: async () =>
       (await import("@/app/api/events/[id]/appeal/route")).POST(
         send(`events/${EVENT_OWN}/appeal`, "POST", { message: "please" }),
@@ -690,7 +695,10 @@ const ADDED: { row: Site; at: (body: any) => unknown; generic: unknown }[] = [
     row: {
       site: "src/app/api/events/[id]/appeal/route.ts:88", n: 37, persona: "student", status: 500,
       elevated: (i) => { i.tables!.events = i.tables!.events.map((e) => (e.id === EVENT_OWN ? { ...e, status: "rejected" } : e)); },
-      cookie: (i) => { i.errors = { "events.update": pg(37) }; },
+      cookie: (i) => {
+        i.tables!.events = i.tables!.events.map((e) => e.id === EVENT_OWN ? { ...e, status: "rejected" } : e);
+        i.errors = { "events.update": pg(37) };
+      },
       invoke: async () =>
         (await import("@/app/api/events/[id]/appeal/route")).POST(
           send(`events/${EVENT_OWN}/appeal`, "POST", { message: "please" }),
@@ -704,11 +712,12 @@ const ADDED: { row: Site; at: (body: any) => unknown; generic: unknown }[] = [
 
 /** NOT_DRIVEN lines the sweep rewrote so that no `.message` token remains. */
 const RETIRED: Record<string, string> = {
+  "src/app/auth/callback/route.ts:129":
+    "M0 / DI-98: stable auth_failed redirect omits the provider message; callback route.test.ts asserts exact query and no message",
   "src/app/api/admin/events/[id]/status/route.ts:244":
     "06-13: the notification copy reads `const { title, message } = row`, so the line no longer carries a `.message` token (no behaviour change; it was never a response)",
-  // 06-14 Task 2: the callback's log lines and internal throws. Its :129
-  // redirect `message` stays live: the PRESERVE callback suite pins it and
-  // 06-14 changes only the callback's logging and wrapper.
+  // 06-14 Task 2 retired log/internal-throw tokens. M0 / DI-98 additionally
+  // retires the provider-message redirect, with its new exact-query test.
   "src/app/auth/callback/route.ts:127":
     "06-14: the code-exchange log line is log.error(msg, { scope, error }); the logger reduces the error to { name, message, code }",
   "src/app/auth/callback/route.ts:141":
@@ -790,7 +799,7 @@ describe("E0: the rows plus NOT_DRIVEN are census C7", () => {
     }
     expect(listed).toEqual(censusC7());
     expect(LIVE_SITES).toHaveLength(0);
-    expect(LIVE_NOT_DRIVEN).toHaveLength(1);
+    expect(LIVE_NOT_DRIVEN).toHaveLength(0);
     expect(FIXED_SITES).toHaveLength(36);
   });
 

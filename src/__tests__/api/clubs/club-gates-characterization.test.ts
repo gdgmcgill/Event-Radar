@@ -269,7 +269,7 @@ function upload(path: string, clubId: string): NextRequest {
   const form = new FormData();
   form.append(
     "file",
-    new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "gate.png", {
+    new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10])], "gate.png", {
       type: "image/png",
     })
   );

@@ -13,20 +13,17 @@ import { withRoute } from "@/server/route";
  * pages do not poll it.
  */
 export const GET = withRoute({ cache: "private", action: "fetch notification count" }, async () => {
-  try {
-    const ctx = await createRequestContext();
-    const auth = requireUser(ctx);
-    if (!auth.ok) return auth.response;
-    const user = auth.user;
+  const ctx = await createRequestContext();
+  const auth = requireUser(ctx);
+  if (!auth.ok) return auth.response;
+  const user = auth.user;
 
-    const { count } = await ctx.supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("read", false);
+  const { count, error } = await ctx.supabase
+    .from("notifications")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("read", false);
 
-    return NextResponse.json({ unread_count: count || 0 });
-  } catch {
-    return NextResponse.json({ unread_count: 0 });
-  }
+  if (error) throw error;
+  return NextResponse.json({ unread_count: count || 0 });
 });

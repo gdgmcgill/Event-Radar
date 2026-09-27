@@ -5,8 +5,8 @@
  * src/__tests__/api/interactions/interactions-feedback-characterization.test.ts:
  * one presence message for event_id and interaction_type together, then the
  * interaction_type list, then the source list (checked only when source is
- * truthy, so an empty source passes). session_id and metadata pass through
- * unvalidated, as before.
+ * truthy, so an empty source passes). Optional session ids and metadata are
+ * bounded before anonymous callers can write them (M0 IN-08).
  *
  * event_id must be a non-empty string. Today only its truthiness was checked,
  * so a numeric id reached the database lookup and failed there (a 500); it is
@@ -60,8 +60,13 @@ export const InteractionBody = z.object({
     (value) => !value || (INTERACTION_SOURCES as readonly unknown[]).includes(value),
     { error: M.badSource }
   ).optional(),
-  session_id: z.unknown().optional(),
-  metadata: z.unknown().optional(),
+  session_id: z.string().max(64).optional(),
+  metadata: z.record(
+    z.string().min(1).max(64),
+    z.union([z.string().max(256), z.number(), z.boolean()])
+  ).refine((value) => Object.keys(value).length <= 20, {
+    error: "metadata must have at most 20 keys",
+  }).optional(),
 });
 
 export type InteractionBodyInput = z.input<typeof InteractionBody>;

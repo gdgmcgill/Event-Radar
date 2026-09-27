@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -33,7 +33,8 @@ export const GET = withRoute({ cache: "private", action: "check follow status" }
       .maybeSingle();
 
     return NextResponse.json({ following: !!data });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to check follow status" },
       { status: 500 }
@@ -63,6 +64,7 @@ export const POST = withRoute({ cache: "private", action: "follow club" }, async
     );
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to follow club" },
         { status: 500 }
@@ -70,7 +72,8 @@ export const POST = withRoute({ cache: "private", action: "follow club" }, async
     }
 
     return NextResponse.json({ following: true }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to follow club" },
       { status: 500 }
@@ -101,6 +104,7 @@ export const DELETE = withRoute({ cache: "private", action: "unfollow club" }, a
       .eq("club_id", clubId);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to unfollow club" },
         { status: 500 }
@@ -108,7 +112,8 @@ export const DELETE = withRoute({ cache: "private", action: "unfollow club" }, a
     }
 
     return NextResponse.json({ following: false });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to unfollow club" },
       { status: 500 }

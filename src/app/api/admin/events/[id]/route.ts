@@ -7,7 +7,7 @@ import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { AdminEventPutBody } from "@/contracts/admin";
 import type { TablesUpdate } from "@/lib/supabase/types";
-import { withRoute } from "@/server/route";
+import { logRouteError, withRoute } from "@/server/route";
 import { log } from "@/server/log";
 
 export const PUT = withRoute({ cache: "private", action: "update event" }, async (
@@ -52,6 +52,7 @@ export const PUT = withRoute({ cache: "private", action: "update event" }, async
     if (error.code === "PGRST116") {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -95,6 +96,7 @@ export const DELETE = withRoute({ cache: "private", action: "delete event" }, as
     .is("deleted_at", null);
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 

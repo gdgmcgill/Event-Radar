@@ -476,7 +476,7 @@ export const BAD_REQUEST_ROWS: readonly BadRequestRow[] = [
   row({ id: "admin edits: action missing", route: "admin/events/[id]/edits", verb: "PATCH", persona: "admin" }, { params: ev, body: {} }, "action must be 'approve' or 'reject'"),
   row({ id: "admin edits: action unknown", route: "admin/events/[id]/edits", verb: "PATCH", persona: "admin" }, { params: ev, body: { action: "merge" } }, "action must be 'approve' or 'reject'"),
   row({ id: "admin edits: reject without reason", route: "admin/events/[id]/edits", verb: "PATCH", persona: "admin" }, { params: ev, body: { action: "reject" } }, "reason is required when rejecting edits"),
-  row({ id: "admin edits: no pending edits", route: "admin/events/[id]/edits", verb: "PATCH", persona: "admin" }, { params: ev, body: { action: "approve" } }, "This event has no pending edits", { kind: "rule" }),
+  row({ id: "admin edits: reviewed snapshot required", route: "admin/events/[id]/edits", verb: "PATCH", persona: "admin" }, { params: ev, body: { action: "approve" } }, "The reviewed pending edits are required. Refresh and try again.", { kind: "rule" }),
 
   // ── admin/events/[id]/status PATCH (pending → rejected, approved → suspended) ──
   row({ id: "admin status: status missing", route: "admin/events/[id]/status", verb: "PATCH", persona: "admin" }, { params: ev, body: {} }, "Invalid status"),
@@ -619,12 +619,12 @@ export const QUERY_COERCION_ROWS: readonly QueryCoercionRow[] = [
     expected: { from: Number.NaN, to: Number.NaN },
   },
   {
-    id: "admin/audit-log: page=0 becomes a negative offset",
+    id: "M0 IN-07: admin/audit-log page=0 uses the first page",
     route: "admin/audit-log",
     persona: "admin",
     query: "?page=0",
     observe: (o) => callOn(o, "admin_audit_log")?.range,
-    expected: { from: -20, to: -1 },
+    expected: { from: 0, to: 19 },
   },
   {
     id: "admin/clubs: an unknown status is passed to the filter",
