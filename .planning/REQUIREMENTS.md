@@ -84,7 +84,7 @@ Constraint for every REFAC requirement: characterize current behavior with a tes
 - [x] **REFAC-19**: Slice 7 (close-out): the blanket `s-maxage=60` on `/api/*` is removed from `vercel.json`, personalized routes return `private, no-store`, public routes opt in explicitly, and a cross-user cache regression test passes
 - [x] **REFAC-20**: A structured JSON logger with levels and a request correlation id replaces `console.*` calls in server code, working on both Node and middleware runtimes
 - [ ] **REFAC-21**: Sentry is installed with a Turbopack-aware setup, source maps, environment and release tagging, and PII scrubbing rules decided before install; a deliberately triggered error appears in Sentry with the correlation id
-- [ ] **REFAC-22**: `/api/health` checks DB, auth, storage, pg_cron freshness, and last webhook receipt, returns a documented shape, and does not use `getSession()` for access control
+- [x] **REFAC-22**: `/api/health` checks DB, auth, storage, pg_cron freshness, and last webhook receipt, returns a documented shape, and does not use `getSession()` for access control
 - [ ] **REFAC-23**: After each slice, the Playwright happy-path specs (REFAC-06) pass and the Validated workflow list in PROJECT.md is re-confirmed
 
 ### Stage 4 — Test-Data Certification (CERT)
@@ -220,7 +220,7 @@ No phase crosses a stage boundary.
 | REFAC-19 | Phase 6 | Complete |
 | REFAC-20 | Phase 6 | Complete |
 | REFAC-21 | Phase 6 | Pending |
-| REFAC-22 | Phase 6 | Pending |
+| REFAC-22 | Phase 6 | Complete |
 | REFAC-23 | Phase 6 | Pending |
 | CERT-01 | Phase 7 | Pending |
 | CERT-02 | Phase 7 | Pending |

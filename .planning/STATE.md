@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: executing
-stopped_at: Completed 06-16-PLAN.md
-last_updated: "2026-09-27T15:22:50.737Z"
+stopped_at: Completed 06-17-PLAN.md
+last_updated: "2026-09-27T17:59:46.926Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 80
-  completed_plans: 78
+  completed_plans: 79
   percent: 63
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 06 (Slices 6–7 — Async Edge, Contracts, Caching, Observability) — EXECUTING
-Plan: 17 of 18
+Plan: 18 of 18
 Status: Ready to execute
 Last activity: 2026-09-25 — Phase 06 execution started
 
@@ -132,6 +132,7 @@ Progress: [███████░░░] 73%
 | Phase 06 P14 | 21min | 2 tasks | 64 files |
 | Phase 06 P15 | 22min | 3 tasks | 12 files |
 | Phase 06 P16 | 575min | 3 tasks | 26 files |
+| Phase 06 P17 | 22min | 2 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -365,6 +366,9 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-16: the Sentry transport proof runs the real SDK (A3) with the production options and only an in-memory transport substituted, plus a beforeSend positive control; no jest.mock fallback was needed — A mock would only prove the call shape; the real SDK proves the tag request_id equals x-request-id and that the scrubber removes cookies, bodies, query strings and emails from the envelope actually sent
 - [Phase 06]: 06-16: withSentryConfig from @sentry/nextjs/config with telemetry false; the Playwright harness blanks SENTRY_DSN, NEXT_PUBLIC_SENTRY_DSN and SENTRY_AUTH_TOKEN — No build and no harness run may send anything to a real Sentry project; the root export is deprecated for v11
 - [Phase 06]: 06-16: the CSP is built in headers() from the build environment: 'unsafe-eval' only under next dev, a non-*.supabase.co Supabase origin admitted with its ws twin, an https Sentry DSN's ingest origin in connect-src; all else byte-identical — Closes F-055's eval half and DI-21 without touching production's policy beyond eval; lets the harness run with bypassCSP false as a CSP regression suite (C13, DEC-77)
+- [Phase 06]: 06-17: requireAdminPage(redirectTo) returns an AdminPageContext (user and profile non-null); the moderation layout keeps its anonymous redirect to /admin-login and then calls requireAdminPage("/"), so both redirect targets are unchanged — DEC-44/DEC-79 require each layout to keep its targets; one helper with one target cannot express moderation's two, and getRequestContext is render-pass memoized so the extra anonymous check costs no second read
+- [Phase 06]: 06-17: the moderation reviews ban check runs on the admin path only (requireActiveUser when hasRole admin); the creator path is unchanged — DEC-79 and DI-55 name the admin path; applying requireActiveUser to creators would refuse banned or profile-less creators reading their own reviews, a behaviour change neither the plan nor a finding asks for
+- [Phase 06]: 06-17: the /health page parses /api/health with HealthReport and HealthLiveness from @/contracts/health and renders a liveness or unexpected body as such instead of crashing (C18) — The page is admin-gated, but a report can still be refused (a stale session) and the old page read fields that no longer exist; parsing at the boundary keeps the page correct on every body the route can send
 
 ### Pending Todos
 
@@ -417,7 +421,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T15:22:50.731Z
-Stopped at: Completed 06-16-PLAN.md
+Last session: 2026-09-27T17:59:46.921Z
+Stopped at: Completed 06-17-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None
