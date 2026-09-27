@@ -11,7 +11,8 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import type { TrackInteractionPayload } from "@/types";
+import { parseBody } from "@/server/body";
+import { InteractionBody } from "@/contracts/interactions";
 
 /**
  * @swagger
@@ -66,33 +67,13 @@ export async function POST(request: NextRequest) {
     const user = ctx.user;
     const supabase = ctx.supabase;
 
-    const body: TrackInteractionPayload = await request.json();
-
-    // Validate required fields
-    if (!body.event_id || !body.interaction_type) {
-      return NextResponse.json(
-        { error: "event_id and interaction_type are required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate interaction_type
-    const validTypes = ['view', 'click', 'save', 'unsave', 'share', 'calendar_add'];
-    if (!validTypes.includes(body.interaction_type)) {
-      return NextResponse.json(
-        { error: `Invalid interaction_type. Must be one of: ${validTypes.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // Validate source if provided (must match user_interactions.source CHECK constraint)
-    const validSources = ['home', 'search', 'recommendation', 'calendar', 'direct', 'modal', 'my-events'];
-    if (body.source && !validSources.includes(body.source)) {
-      return NextResponse.json(
-        { error: `Invalid source. Must be one of: ${validSources.join(', ')}` },
-        { status: 400 }
-      );
-    }
+    // The contract carries today's three 400s in today's order: presence of
+    // event_id and interaction_type, the interaction_type list, then the
+    // source list (user_interactions.source CHECK constraint). A body that is
+    // not a JSON object answers 400 instead of 500 (F-094).
+    const parsed = await parseBody(request, InteractionBody);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
 
     // Verify the event exists
     const { data: eventExists, error: eventError } = await supabase

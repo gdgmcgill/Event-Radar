@@ -12,37 +12,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { parseBody, parseQuery } from "@/server/body";
+import {
+  FeedbackEventIdsQuery,
+  RecommendationFeedbackBody,
+  THUMBS_FEEDBACK,
+  type ThumbsFeedback,
+} from "@/contracts/recommendations";
 import type { NextRequest } from "next/server";
-import type { RecommendationFeedbackAction } from "@/types";
-import type { Database } from "@/lib/supabase/types";
-
-type RecommendationFeedbackInsert =
-  Database["public"]["Tables"]["recommendation_feedback"]["Insert"];
-
-const VALID_ACTIONS: RecommendationFeedbackAction[] = [
-  "impression",
-  "click",
-  "save",
-  "dismiss",
-];
-
-const VALID_THUMBS = ["positive", "negative"] as const;
-type ThumbsFeedback = (typeof VALID_THUMBS)[number];
-
-interface ThumbsBody {
-  event_id: string;
-  feedback: ThumbsFeedback;
-  user_id?: string;
-}
-
-interface AnalyticsBody {
-  user_id?: string;
-  event_id: string;
-  recommendation_rank: number;
-  action: RecommendationFeedbackAction;
-  session_id?: string;
-  experiment_variant_id?: string;
-}
 
 /** GET: fetch current user's thumbs feedback for given event_ids */
 export async function GET(request: NextRequest) {
@@ -56,7 +33,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const eventIds = request.nextUrl.searchParams.get("event_ids")?.split(",").map((id) => id.trim()).filter(Boolean) ?? [];
+    const query = parseQuery(request.nextUrl.searchParams, FeedbackEventIdsQuery);
+    if (!query.ok) return query.response;
+    const eventIds = query.data.event_ids;
     if (eventIds.length === 0) {
       return NextResponse.json({ feedback: {} });
     }
@@ -70,7 +49,7 @@ export async function GET(request: NextRequest) {
     const list = (rawRows ?? []) as { event_id: string; feedback_type: string }[];
     const feedback: Record<string, ThumbsFeedback> = {};
     for (const row of list) {
-      if (VALID_THUMBS.includes(row.feedback_type as ThumbsFeedback)) {
+      if (THUMBS_FEEDBACK.includes(row.feedback_type as ThumbsFeedback)) {
         feedback[row.event_id] = row.feedback_type as ThumbsFeedback;
       }
     }
@@ -90,10 +69,9 @@ export async function POST(request: NextRequest) {
   try {
     const ctx = await createRequestContext();
 
-    // Keeps this arm's own anonymous bytes (DEC-34). Because an anonymous
-    // caller stops here, the body `user_id` fallbacks below are unreachable:
-    // a request with no session can no longer write feedback attributed to a
-    // user id it names.
+    // Keeps this arm's own anonymous bytes (DEC-34). Every row below is
+    // written with the authenticated caller's id only: the contract declares
+    // no user id, so a body naming one is parsed without it (DI-44).
     if (!ctx.user) {
       return NextResponse.json(
         { error: "Unauthorized. Must be logged in to submit feedback." },
@@ -108,37 +86,22 @@ export async function POST(request: NextRequest) {
     const authUser = active.user;
     const supabase = ctx.supabase;
 
-    const body = (await request.json()) as ThumbsBody | AnalyticsBody;
+    // Thumbs (a string `feedback`) or analytics, branched as before; each
+    // shape carries today's 400s in today's order. A body that is not a JSON
+    // object answers 400 instead of 500 (F-094).
+    const parsed = await parseBody(request, RecommendationFeedbackBody);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
 
     // --- Thumbs up/down: event_id + feedback (positive | negative) ---
-    if ("feedback" in body && typeof body.feedback === "string") {
-      const feedback = body.feedback as string;
-      if (!VALID_THUMBS.includes(feedback as ThumbsFeedback)) {
-        return NextResponse.json(
-          { error: "Invalid feedback. Must be 'positive' or 'negative'" },
-          { status: 400 }
-        );
-      }
-      const event_id = body.event_id;
-      if (!event_id) {
-        return NextResponse.json(
-          { error: "Missing event_id" },
-          { status: 400 }
-        );
-      }
-      const userId = authUser?.id ?? (body as ThumbsBody).user_id;
-      if (!userId) {
-        return NextResponse.json(
-          { error: "Unauthorized. Must be logged in to submit feedback." },
-          { status: 401 }
-        );
-      }
+    if (body.kind === "thumbs") {
+      const { feedback, event_id } = body;
 
       const { error: upsertError } = await supabase
         .from("recommendation_explicit_feedback")
         .upsert(
           {
-            user_id: userId,
+            user_id: authUser.id,
             event_id,
             feedback_type: feedback,
           },
@@ -156,44 +119,15 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Analytics: impression, click, save, dismiss ---
-    const { event_id, recommendation_rank, action, session_id } = body as AnalyticsBody;
-
-    if (!event_id || recommendation_rank == null || !action) {
-      return NextResponse.json(
-        { error: "Missing required fields: event_id, recommendation_rank, action" },
-        { status: 400 }
-      );
-    }
-
-    if (!VALID_ACTIONS.includes(action as RecommendationFeedbackAction)) {
-      return NextResponse.json(
-        { error: `Invalid action. Must be one of: ${VALID_ACTIONS.join(", ")}` },
-        { status: 400 }
-      );
-    }
-
-    if (recommendation_rank < 1) {
-      return NextResponse.json(
-        { error: "recommendation_rank must be >= 1" },
-        { status: 400 }
-      );
-    }
-
-    const userId = authUser?.id ?? (body as AnalyticsBody).user_id;
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized. Must be logged in to submit feedback." },
-        { status: 401 }
-      );
-    }
+    const { event_id, recommendation_rank, action, session_id } = body;
 
     const row = {
-      user_id: userId,
+      user_id: authUser.id,
       event_id,
       recommendation_rank,
       action: action as string,
       session_id: session_id ?? null,
-      experiment_variant_id: (body as AnalyticsBody).experiment_variant_id ?? null,
+      experiment_variant_id: body.experiment_variant_id ?? null,
     };
 
     const { error } = await supabase

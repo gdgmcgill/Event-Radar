@@ -1,35 +1,32 @@
 /**
- * DEFECT characterization — F-094: the slice-6 raw-parse sites have no input
- * schema (plan 06-02, REFAC-15)
+ * DEFECT characterization — F-094: the slice-6 raw-parse sites had no input
+ * schema (plan 06-02 pinned it; plan 06-04 fixed it, REFAC-15, DEC-65)
  *
  * Three slice-6 handlers read their body with a raw `await request.json()`
- * and check it with their own `if` ladder:
+ * and checked it with their own `if` ladder:
  *   - `src/app/api/interactions/route.ts` POST
  *   - `src/app/api/feedback/route.ts` POST
  *   - `src/app/api/recommendations/feedback/route.ts` POST
  *
- * The matrix pins, for each site, today's status and body for three
- * malformed inputs (3 × 3 = 9 rows):
- *   not-json   a body that is not JSON: the parse throws inside the `try`,
- *              and the catch answers a JSON 500 with the route's generic text;
- *   array      a JSON array: accepted as if it were an object with no keys,
- *              so it answers the route's first "missing field" 400;
- *   number     a required string field sent as a number (interactions'
- *              `interaction_type`, feedback's `message`, recommendations
- *              feedback's `action`): each answers a list or presence 400.
+ * Plan 06-04 put a contract at each boundary (`parseBody` with
+ * `InteractionBody`, `FeedbackBody`, `RecommendationFeedbackBody`). The rows
+ * MOVED to the fixed shape (INTENTIONAL BEHAVIOUR CHANGE, one defect-ledger
+ * row each, citing F-094):
+ *   not-json   was the route's generic 500; now 400 `Invalid JSON body`;
+ *   array      was the route's first "missing field" 400; now 400
+ *              `Request body must be a JSON object`;
+ *   null       was a 500 at all three sites (the handlers dereferenced it);
+ *              now 400 `Request body must be a JSON object`;
+ *   subject    feedback's `subject` sent as a number threw on `.trim()` and
+ *              answered 500; now 400 `Subject must be a string`.
+ * The three `number` rows did NOT move: each contract carries today's text
+ * for a wrongly typed required field (a list or presence 400), so their
+ * bytes are unchanged.
  *
- * Beyond the matrix, measured at the same time and pinned because they are
- * the same defect: a JSON `null` body answers 500 at all three sites (the
- * handlers dereference it), and feedback's optional `subject` sent as a
- * number throws on `.trim()` and answers 500.
- *
- * DEC-65 fixes these at the contract boundary (06-04): an invalid body
- * answers 400 `Invalid JSON body`, a non-object body 400
- * `Request body must be a JSON object`, and a non-string field a 400 rather
- * than a 500. Each moved byte is an INTENTIONAL BEHAVIOUR CHANGE with a
- * defect-ledger row citing F-094. Rows whose bytes the contract reproduces
- * (the number rows keep today's texts if the schema carries them) are
- * expected not to move; the ledger records which did.
+ * The pre-fix values (the "old" column of each ledger row) were measured with
+ * a temporary harness at 06-02; that run is in `slice-6-characterization.txt`.
+ * All rows use a signed-in, onboarded caller, which every site admits, so the
+ * body is always read.
  *
  * Every value was measured with a temporary harness first; the run is in the
  * phase evidence `slice-6-characterization.txt`. All rows use a signed-in,
@@ -118,9 +115,12 @@ function writes(): number {
 const NOT_JSON = "{not json";
 const ARRAY = "[]";
 
+const INVALID_JSON = { error: "Invalid JSON body" };
+const NOT_OBJECT = { error: "Request body must be a JSON object" };
+
 const MATRIX: Array<[Site, string, string, number, unknown]> = [
-  ["interactions", "not-json", NOT_JSON, 500, { error: "Internal server error" }],
-  ["interactions", "array", ARRAY, 400, { error: "event_id and interaction_type are required" }],
+  ["interactions", "not-json", NOT_JSON, 400, INVALID_JSON],
+  ["interactions", "array", ARRAY, 400, NOT_OBJECT],
   [
     "interactions",
     "number (interaction_type: 5)",
@@ -131,8 +131,8 @@ const MATRIX: Array<[Site, string, string, number, unknown]> = [
         "Invalid interaction_type. Must be one of: view, click, save, unsave, share, calendar_add",
     },
   ],
-  ["feedback", "not-json", NOT_JSON, 500, { error: "Internal server error" }],
-  ["feedback", "array", ARRAY, 400, { error: "Message is required" }],
+  ["feedback", "not-json", NOT_JSON, 400, INVALID_JSON],
+  ["feedback", "array", ARRAY, 400, NOT_OBJECT],
   [
     "feedback",
     "number (message: 5)",
@@ -140,14 +140,8 @@ const MATRIX: Array<[Site, string, string, number, unknown]> = [
     400,
     { error: "Message is required" },
   ],
-  ["recommendations/feedback", "not-json", NOT_JSON, 500, { error: "Failed to submit feedback" }],
-  [
-    "recommendations/feedback",
-    "array",
-    ARRAY,
-    400,
-    { error: "Missing required fields: event_id, recommendation_rank, action" },
-  ],
+  ["recommendations/feedback", "not-json", NOT_JSON, 400, INVALID_JSON],
+  ["recommendations/feedback", "array", ARRAY, 400, NOT_OBJECT],
   [
     "recommendations/feedback",
     "number (action: 5)",
@@ -157,13 +151,13 @@ const MATRIX: Array<[Site, string, string, number, unknown]> = [
   ],
 ];
 
-describe("DEFECT F-094: malformed bodies at the three slice-6 raw-parse sites", () => {
+describe("F-094 fixed: malformed bodies at the three slice-6 sites answer 400", () => {
   it("the matrix is three sites by three inputs", () => {
     expect(MATRIX).toHaveLength(9);
     expect(new Set(MATRIX.map(([site]) => site)).size).toBe(3);
   });
 
-  it.each(MATRIX)("%s, %s → today's status and body", async (site, _label, raw, status, body) => {
+  it.each(MATRIX)("%s, %s → the contract's status and body", async (site, _label, raw, status, body) => {
     const response = await call(site, raw);
     expect(response.status).toBe(status);
     expect(await response.json()).toEqual(body);
@@ -171,22 +165,22 @@ describe("DEFECT F-094: malformed bodies at the three slice-6 raw-parse sites", 
   });
 });
 
-describe("DEFECT F-094: beyond the matrix, same defect", () => {
+describe("F-094 fixed: beyond the matrix, same defect", () => {
   it.each([
-    ["interactions", { error: "Internal server error" }],
-    ["feedback", { error: "Internal server error" }],
-    ["recommendations/feedback", { error: "Failed to submit feedback" }],
-  ] as const)("%s, a JSON null body → 500", async (site, body) => {
+    ["interactions"],
+    ["feedback"],
+    ["recommendations/feedback"],
+  ] as const)("%s, a JSON null body → 400 Request body must be a JSON object", async (site) => {
     const response = await call(site, "null");
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual(body);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual(NOT_OBJECT);
     expect(writes()).toBe(0);
   });
 
-  it("feedback, subject sent as a number → 500 (subject.trim throws)", async () => {
+  it("feedback, subject sent as a number → 400 Subject must be a string", async () => {
     const response = await call("feedback", JSON.stringify({ message: "hi", subject: 5 }));
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Internal server error" });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Subject must be a string" });
     expect(writes()).toBe(0);
   });
 });

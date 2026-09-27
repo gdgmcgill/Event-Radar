@@ -1,20 +1,21 @@
 /**
- * DEFECT characterization — F-028: notifications/count answers an anonymous
- * caller 200 (plan 06-02, REFAC-15)
+ * DEFECT characterization — F-028: notifications/count answered an anonymous
+ * caller 200 (plan 06-02 pinned it; plan 06-04 fixed it, REFAC-15, DEC-69)
  *
- * `src/app/api/notifications/count/route.ts:12-14` returns
- * `200 {"unread_count":0}` when there is no user or `getUser` reports an
- * error, where every other protected read answers 401. DEC-69 moves this arm
- * to `requireUser`, so both rows below become
+ * `src/app/api/notifications/count/route.ts` returned `200 {"unread_count":0}`
+ * when there was no user or `getUser` reported an error, where every other
+ * protected read answers 401. Plan 06-04 moved this arm to
+ * `createRequestContext()` + `requireUser`, so both rows now assert
  * `401 {"error":"Unauthorized"}` (INTENTIONAL BEHAVIOUR CHANGE, with a
- * defect-ledger row citing F-028).
+ * defect-ledger row each citing F-028). The side navigation requests the
+ * count only for a signed-in user, so anonymous pages do not poll it.
  *
- * Pinned today:
- *   D1  anonymous → 200 `{ unread_count: 0 }`, and no notifications read;
- *   D2  a `getUser` auth error (expired token) → the same 200, no read.
+ * Pinned after the fix:
+ *   D1  anonymous → 401 `{ error: "Unauthorized" }`, and no notifications read;
+ *   D2  a `getUser` auth error (expired token) → the same 401, no read.
  *
  * The signed-in count is pinned in `notifications-characterization.test.ts`
- * and does not move. Values were measured before they were written.
+ * and did not move.
  *
  * Seam: `@/lib/supabase/server` returns the cookie fake.
  */
@@ -59,22 +60,22 @@ async function count(init: FakeSupabaseInit) {
   return { status: response.status, body: await response.json() };
 }
 
-describe("DEFECT F-028: anonymous notifications/count answers 200", () => {
-  it("D1: anonymous → 200 { unread_count: 0 }, no notifications read", async () => {
+describe("F-028 fixed: anonymous notifications/count answers 401", () => {
+  it("D1: anonymous → 401 Unauthorized, no notifications read", async () => {
     expect(
       await count({ user: null, tables: { notifications: UNREAD } })
-    ).toEqual({ status: 200, body: { unread_count: 0 } });
+    ).toEqual({ status: 401, body: { error: "Unauthorized" } });
     expect(mockCookie.calls.filter((c) => c.table === "notifications")).toHaveLength(0);
   });
 
-  it("D2: getUser auth error → the same 200 { unread_count: 0 }, no read", async () => {
+  it("D2: getUser auth error → the same 401 Unauthorized, no read", async () => {
     expect(
       await count({
         user: null,
         authError: { message: "invalid JWT: token is expired", status: 401 },
         tables: { notifications: UNREAD },
       })
-    ).toEqual({ status: 200, body: { unread_count: 0 } });
+    ).toEqual({ status: 401, body: { error: "Unauthorized" } });
     expect(mockCookie.calls.filter((c) => c.table === "notifications")).toHaveLength(0);
   });
 });

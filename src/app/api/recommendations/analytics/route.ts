@@ -9,9 +9,9 @@ import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { parseQuery } from "@/server/body";
+import { AnalyticsQuery } from "@/contracts/recommendations";
 import type { NextRequest } from "next/server";
-
-type Period = "7d" | "30d";
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,14 +22,10 @@ export async function GET(request: NextRequest) {
     if (!auth.ok) return auth.response;
     const supabase = ctx.supabase;
 
-    const searchParams = request.nextUrl.searchParams;
-    const period = (searchParams.get("period") || "7d") as Period;
-    if (period !== "7d" && period !== "30d") {
-      return NextResponse.json(
-        { error: "Invalid period. Use 7d or 30d" },
-        { status: 400 }
-      );
-    }
+    // `period` defaults to 7d; anything but 7d or 30d is today's 400.
+    const query = parseQuery(request.nextUrl.searchParams, AnalyticsQuery);
+    if (!query.ok) return query.response;
+    const { period } = query.data;
 
     const days = period === "7d" ? 7 : 30;
     const since = new Date();

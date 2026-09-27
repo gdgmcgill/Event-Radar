@@ -10,7 +10,18 @@ export function notifyCountChanged() {
   window.dispatchEvent(new Event(SYNC_EVENT));
 }
 
-export function useNotificationCount() {
+export interface UseNotificationCountOptions {
+  /**
+   * When false the hook neither fetches nor polls, and reports 0. The count
+   * route answers an anonymous caller 401 (F-028, DEC-69), so a caller that
+   * knows no user is signed in passes `enabled: false`. Defaults to true.
+   */
+  enabled?: boolean;
+}
+
+export function useNotificationCount({
+  enabled = true,
+}: UseNotificationCountOptions = {}) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchCount = useCallback(async () => {
@@ -25,6 +36,7 @@ export function useNotificationCount() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     fetchCount(); // eslint-disable-line react-hooks/set-state-in-effect -- fetch on mount
     const interval = setInterval(fetchCount, 60000);
 
@@ -35,7 +47,7 @@ export function useNotificationCount() {
       clearInterval(interval);
       window.removeEventListener(SYNC_EVENT, fetchCount);
     };
-  }, [fetchCount]);
+  }, [fetchCount, enabled]);
 
-  return unreadCount;
+  return enabled ? unreadCount : 0;
 }

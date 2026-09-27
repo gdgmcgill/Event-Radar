@@ -22,6 +22,8 @@ import {
   type ScoreBreakdown,
 } from "@/lib/recommendations";
 import { getESTNowISO } from "@/lib/timezone";
+import { parseQuery } from "@/server/body";
+import { RecommendationsQuery } from "@/contracts/recommendations";
 
 /**
  * GET handler - recommendations for the current user (or anonymous fallback)
@@ -29,8 +31,11 @@ import { getESTNowISO } from "@/lib/timezone";
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const searchParams = request.nextUrl.searchParams;
-    const topK = parseInt(searchParams.get("top_k") || "10", 10);
+    // top_k and diversity keep today's silent parse-with-default semantics
+    // (the contract never answers 400 for them).
+    const query = parseQuery(request.nextUrl.searchParams, RecommendationsQuery);
+    if (!query.ok) return query.response;
+    const topK = query.data.top_k;
 
     // --- 1. Authenticate user (anonymous is OK) ---
     const {
@@ -242,8 +247,7 @@ export async function GET(request: NextRequest) {
     }
 
     // --- 6b. MMR diversity re-ranking ---
-    const diversityParam = searchParams.get("diversity");
-    const baseLambda = diversityParam ? parseFloat(diversityParam) : 0.7;
+    const baseLambda = query.data.diversity;
     const lambda =
       experimentLambda ??
       (isNaN(baseLambda) ? 0.7 : Math.max(0, Math.min(1, baseLambda)));

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { parseBody } from "@/server/body";
+import { FeedbackBody } from "@/contracts/feedback";
 
 export async function POST(request: Request) {
   try {
@@ -17,22 +19,11 @@ export async function POST(request: Request) {
     const user = ctx.user;
     const supabase = ctx.supabase;
 
-    const { type, subject, message } = await request.json();
-
-    if (!message || typeof message !== "string" || !message.trim()) {
-      return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
-      );
-    }
-
-    const validTypes = ["bug", "feature", "general"];
-    if (type && !validTypes.includes(type)) {
-      return NextResponse.json(
-        { error: "Invalid feedback type" },
-        { status: 400 }
-      );
-    }
+    // Today's two 400s in today's order (message, then type); a non-object
+    // body or a non-string subject answers 400 instead of 500 (F-094).
+    const parsed = await parseBody(request, FeedbackBody);
+    if (!parsed.ok) return parsed.response;
+    const { type, subject, message } = parsed.data;
 
     const { error } = await supabase.from("feedback").insert({
       type: type || "general",

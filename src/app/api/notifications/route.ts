@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { parseQuery } from "@/server/body";
+import {
+  NotificationsListQuery,
+  NotificationsQuery,
+} from "@/contracts/notifications";
 
 const PAGE_SIZE = 20;
 
@@ -25,7 +30,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const cursor = request.nextUrl.searchParams.get("cursor");
+    const params = parseQuery(request.nextUrl.searchParams, NotificationsListQuery);
+    if (!params.ok) return params.response;
+    const { cursor } = params.data;
 
     let query = supabase
       .from("notifications")
@@ -82,23 +89,22 @@ export async function POST(request: NextRequest) {
     const user = active.user;
     const supabase = ctx.supabase;
 
-    const action = request.nextUrl.searchParams.get("action");
+    // `mark-all-read` is the only action; any other, or none, is today's 400
+    // `Invalid action`, read after the guards as before.
+    const query = parseQuery(request.nextUrl.searchParams, NotificationsQuery);
+    if (!query.ok) return query.response;
 
-    if (action === "mark-all-read") {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("user_id", user.id)
-        .eq("read", false);
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-
-      return NextResponse.json({ success: true });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error updating notifications:", error);
     return NextResponse.json(
