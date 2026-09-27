@@ -4,7 +4,8 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { ClubAppealBody } from "@/contracts/clubs";
 
 export async function POST(
   request: NextRequest,
@@ -18,17 +19,10 @@ export async function POST(
   const user = active.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { message } = body;
-
-  if (!message?.trim()) {
-    return NextResponse.json(
-      { error: "Appeal message is required" },
-      { status: 400 }
-    );
-  }
+  // "Appeal message is required" for a missing, blank or non-string message.
+  const parsed = await parseBody(request, ClubAppealBody);
+  if (!parsed.ok) return parsed.response;
+  const { message } = parsed.data;
 
   // The club read ("Anyone can read clubs") and the appeal review ("Creators
   // can appeal their items") run on the caller's cookie client (DEC-49). The

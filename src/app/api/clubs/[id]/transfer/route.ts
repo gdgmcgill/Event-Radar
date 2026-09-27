@@ -4,7 +4,8 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { ClubTransferBody } from "@/contracts/clubs";
 
 export async function POST(
   request: NextRequest,
@@ -30,13 +31,9 @@ export async function POST(
   );
   if (!gate.ok) return gate.response;
 
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const { newOwnerId } = parsedBody.body;
-
-  if (!newOwnerId) {
-    return NextResponse.json({ error: "newOwnerId is required" }, { status: 400 });
-  }
+  const parsed = await parseBody(request, ClubTransferBody);
+  if (!parsed.ok) return parsed.response;
+  const { newOwnerId } = parsed.data;
 
   // A self-transfer would promote and then demote the same row, leaving the
   // club with no owner (REVIEW-05 WR-02). Refused before any write. This is

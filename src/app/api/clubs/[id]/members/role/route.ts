@@ -4,7 +4,8 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { ClubMemberRoleBody } from "@/contracts/clubs";
 
 /** PostgREST's code when `.single()` matches no row. */
 const NO_ROW = "PGRST116";
@@ -33,13 +34,10 @@ export async function PATCH(
   );
   if (!gate.ok) return gate.response;
 
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const { memberId, role } = parsedBody.body;
-
-  if (!memberId || role !== "organizer") {
-    return NextResponse.json({ error: "Invalid request. Role must be 'organizer'." }, { status: 400 });
-  }
+  // `!memberId || role !== "organizer"`, one message for both.
+  const parsed = await parseBody(request, ClubMemberRoleBody);
+  if (!parsed.ok) return parsed.response;
+  const { memberId, role } = parsed.data;
 
   // Cannot change own role
   const { data: targetMember } = await supabase

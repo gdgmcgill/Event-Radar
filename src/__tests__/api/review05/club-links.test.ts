@@ -7,12 +7,14 @@
  *
  *   PATCH /api/clubs/[id]: every whitelisted value must be a string or null;
  *     every link field (website, discord, twitter, linkedin, logo, banner)
- *     must be an absolute http(s) URL (unparseable values were already
- *     refused and still are).
+ *     must not carry a non-http(s) scheme.
  *   POST /api/clubs: the optional fields must be strings when present, and a
- *     link that parses to a non-http(s) scheme is refused. A value that does
- *     not parse (for example "yourclub.com" typed into the free-text form) is
- *     still accepted, as before.
+ *     link that parses to a non-http(s) scheme is refused.
+ *
+ * Since plan 06-09 both follow one rule (ClubLinkFields, DEC-66): a
+ * scheme-less host path such as "yourclub.com" is stored with https://
+ * prefixed on create and on edit. The pin that stored it verbatim moved to
+ * club-links-defect.test.ts (F-094, defect ledger).
  */
 
 import {
@@ -191,18 +193,4 @@ describe("POST /api/clubs", () => {
       expect(writes(mockElevated)).toEqual([]);
     }
   );
-
-  it("still accepts a scheme-less website typed into the form, and an https one", async () => {
-    asStudent();
-    const res = await post({
-      website_url: "yourclub.com",
-      linkedin_url: "https://linkedin.com/company/x",
-    });
-    expect(res.status).toBe(201);
-    const [insert] = callsTo(mockElevated, "clubs", "insert");
-    expect(insert.payload).toMatchObject({
-      website_url: "yourclub.com",
-      linkedin_url: "https://linkedin.com/company/x",
-    });
-  });
 });

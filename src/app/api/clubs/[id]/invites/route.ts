@@ -1,10 +1,11 @@
-import { isMcGillEmail } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
+import { parseBody } from "@/server/body";
+import { ClubInviteBody } from "@/contracts/clubs";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -83,24 +84,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
     if (!gate.ok) return gate.response;
 
-    const body = await request.json();
-    const { email } = body as { email: string };
-
-    if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" },
-        { status: 400 }
-      );
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!isMcGillEmail(normalizedEmail)) {
-      return NextResponse.json(
-        { error: "Must be a McGill email" },
-        { status: 400 }
-      );
-    }
+    // "Email is required", then (trimmed and lower-cased) "Must be a McGill
+    // email"; the output is the normalized address.
+    const parsed = await parseBody(request, ClubInviteBody);
+    if (!parsed.ok) return parsed.response;
+    const normalizedEmail = parsed.data.email;
 
     // Check if already a member (look up user by email, then check membership)
     const { data: existingUser } = await supabase

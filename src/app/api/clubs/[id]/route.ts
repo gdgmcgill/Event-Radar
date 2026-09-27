@@ -6,8 +6,12 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import type { TablesUpdate } from "@/lib/supabase/types";
-import { readJsonObject } from "@/server/body";
-import { isHttpUrl } from "@/lib/sanitize";
+import { parseBody } from "@/server/body";
+import {
+  CLUB_UPDATE_FIELD_KEYS,
+  ClubDeleteBody,
+  ClubUpdateBody,
+} from "@/contracts/clubs";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -53,7 +57,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
  * The write runs on the elevated door AFTER the owner gate (F-087, DEC-41):
  * `clubs` has no owner UPDATE policy, so on the cookie client the update
  * matched 0 rows and the owner got a 500. The control that replaces RLS here
- * is the column whitelist: `updates` is built only from `allowedFields`, so
+ * is the column whitelist: `updates` is built only from the contract's
+ * `EDITABLE_CLUB_FIELDS` (src/contracts/clubs.ts), so
  * `status`, `created_by` and `id` can never be written through this path.
  * REGISTRY.md row: "Owner edits club details or soft-deletes the club".
  */
@@ -79,78 +84,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
     if (!gate.ok) return gate.response;
 
-    const body = await request.json();
-    const allowedFields = [
-      "name",
-      "description",
-      "category",
-      "instagram_handle",
-      "logo_url",
-      "banner_url",
-      "website_url",
-      "discord_url",
-      "twitter_url",
-      "linkedin_url",
-      "contact_email",
-    ] as const;
-
-    // DI-25: typed with the generated update type. Only whitelisted columns.
-    // The whitelist is the control that replaces RLS on this elevated write,
-    // so every value must be a string or null (REVIEW-05 WR-09): any other
-    // JSON type is refused rather than passed through.
-    const updates: TablesUpdate<"clubs"> = {};
-    for (const field of allowedFields) {
-      if (field in body) {
-        const value: unknown = body[field];
-        if (value !== null && typeof value !== "string") {
-          return NextResponse.json(
-            { error: `Invalid value for ${field}`, field },
-            { status: 400 }
-          );
-        }
-        // A blank string or null clears the column, as before; a NOT NULL
-        // column refuses the null at the database, as before.
-        (updates as Record<string, string | null>)[field] =
-          typeof value === "string" ? value.trim() || null : null;
-      }
-    }
-
-    // Validate URL fields: absolute http(s) only (REVIEW-05 WR-09). `new
-    // URL()` alone accepted `javascript:`, and the club page renders these as
-    // `href`. logo_url and banner_url, previously unchecked, are held to the
-    // same rule.
-    const urlFields = [
-      "website_url",
-      "discord_url",
-      "twitter_url",
-      "linkedin_url",
-      "logo_url",
-      "banner_url",
-    ] as const;
-    for (const field of urlFields) {
-      const value = updates[field];
-      if (typeof value === "string" && !isHttpUrl(value)) {
-        return NextResponse.json(
-          { error: `Invalid URL for ${field}` },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate contact_email format
-    if (updates.contact_email !== undefined && updates.contact_email !== null) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(updates.contact_email)) {
-        return NextResponse.json({ error: "Invalid email format for contact_email" }, { status: 400 });
-      }
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: "No valid fields to update" },
-        { status: 400 }
-      );
-    }
+    // The contract (src/contracts/clubs.ts) is the handler's ladder, in its
+    // order, after the owner gate: every whitelisted value a string or null
+    // ("Invalid value for <field>", with field; REVIEW-05 WR-09); then each
+    // link under ClubLinkFields (DEC-66: an absolute http(s) URL kept, a
+    // scheme-less host path saved with https:// prefixed, any other scheme
+    // refused as `Invalid URL for <field>`, so `javascript:` never reaches an
+    // `href`); then the contact email format; then "No valid fields to
+    // update". Its output is `updates`: only whitelisted keys that were sent,
+    // each trimmed, a blank or null cleared to null. The whitelist is the
+    // control that replaces RLS on this elevated write, so `status`,
+    // `created_by` and `id` can never be written through this path.
+    const parsed = await parseBody(request, ClubUpdateBody, {
+      fieldFor: CLUB_UPDATE_FIELD_KEYS,
+    });
+    if (!parsed.ok) return parsed.response;
+    // DI-25: the generated update type. A null for a NOT NULL column is
+    // refused at the database, as before.
+    const updates = parsed.data as TablesUpdate<"clubs">;
 
     const { data: club, error } = await getElevatedClient()
       .from("clubs")
@@ -211,10 +162,11 @@ export async function DELETE(
   );
   if (!gate.ok) return gate.response;
 
-  // Verify confirmation name
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
+  // Verify confirmation name. The body is read after the owner gate; the
+  // match against the club's name is a business rule and stays here.
+  const parsed = await parseBody(request, ClubDeleteBody);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const { data: club } = await supabase
     .from("clubs")
     .select("name")

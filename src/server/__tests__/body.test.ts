@@ -15,6 +15,7 @@
 
 import { z } from "zod";
 import {
+  checkFile,
   parseBody,
   parseForm,
   parseQuery,
@@ -311,6 +312,21 @@ describe("parseForm", () => {
     await expect(refusal(result)).resolves.toEqual({
       status: 400,
       body: { error: "clubId is required" },
+    });
+  });
+
+  it("leaves size and type to the route when it defers them past a guard (06-09)", async () => {
+    const deferred = { ...OPTS, deferFileChecks: true };
+    const result = await parseForm(formRequest([["file", file(11, "text/plain")]]), NoFields, deferred);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const late = checkFile(result.data.file, RULE);
+    expect(late?.status).toBe(400);
+    await expect(late?.json()).resolves.toEqual({ error: "File too large" });
+    // Presence is still checked.
+    await expect(refusal(await parseForm(formRequest([]), NoFields, deferred))).resolves.toEqual({
+      status: 400,
+      body: { error: "No file provided" },
     });
   });
 

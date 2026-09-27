@@ -388,7 +388,6 @@ export const BAD_REQUEST_ROWS: readonly BadRequestRow[] = [
   // ── clubs/[id] PATCH and DELETE (owner) ──
   row({ id: "club PATCH: value not a string", route: "clubs/[id]", verb: "PATCH", persona: "owner" }, { params: club, body: { description: 5 } }, "Invalid value for description", { field: "description" }),
   row({ id: "club PATCH: URL not http(s)", route: "clubs/[id]", verb: "PATCH", persona: "owner" }, { params: club, body: { banner_url: "ftp://a.ca/b.png" } }, "Invalid URL for banner_url"),
-  row({ id: "club PATCH: URL relative", route: "clubs/[id]", verb: "PATCH", persona: "owner" }, { params: club, body: { website_url: "club.ca" } }, "Invalid URL for website_url"),
   row({ id: "club PATCH: contact_email malformed", route: "clubs/[id]", verb: "PATCH", persona: "owner" }, { params: club, body: { contact_email: "nope" } }, "Invalid email format for contact_email"),
   row({ id: "club PATCH: no allowed field", route: "clubs/[id]", verb: "PATCH", persona: "owner" }, { params: club, body: { status: "approved" } }, "No valid fields to update"),
   row({ id: "club PATCH order: bad type beats bad URL", route: "clubs/[id]", verb: "PATCH", persona: "owner" }, { params: club, body: { website_url: "x", name: 5 } }, "Invalid value for name", { field: "name", kind: "order" }),

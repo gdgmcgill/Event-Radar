@@ -1,10 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { readQuery } from "@/server/body";
+import { TrendingQuery } from "@/contracts/clubs";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get("limit") ?? "15", 10) || 15, 100);
+    // limit: default 15, capped at 100, never a 400 (as before).
+    const { limit } = readQuery(
+      new URL(request.url).searchParams,
+      TrendingQuery
+    );
 
     const supabase = await createClient();
 

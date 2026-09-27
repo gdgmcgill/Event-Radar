@@ -16,8 +16,9 @@
  * What is pinned:
  *   - D0 the site lists are the tree: `RAW_SITES` equals every raw
  *     `request.json()` in a route file (18 sites, 17 files at 06-07; 12 sites,
- *     12 files after 06-08), and `RJO_SITES` equals every route file calling
- *     `readJsonObject` (15 at 06-07; 13 after 06-08). A route that
+ *     12 files after 06-08; 9 after 06-09 Task 1), and `RJO_SITES` equals
+ *     every route file calling `readJsonObject` (15 at 06-07; 13 after 06-08;
+ *     7 after 06-09 Task 1). A route that
  *     adopts `parseBody` leaves a list, so D0 goes red on the fix commit;
  *     that red is expected and is resolved by moving the site's rows;
  *   - D1 each raw site, a body that is not JSON: the route's generic 500
@@ -45,6 +46,21 @@
  * refused by a ladder rule (invite, rsvp status, rsvp DELETE's 403, reviews,
  * report) keep their outcome, now from the contract. Each moved row has a
  * defect-ledger row.
+ *
+ * MOVED (plan 06-09 Task 1, F-094, INTENTIONAL BEHAVIOUR CHANGE). The clubs
+ * family and organizer-requests adopted `parseBody` with
+ * src/contracts/clubs.ts: three raw sites (clubs/[id] PATCH, members DELETE,
+ * invites POST) left `RAW_SITES` and six readJsonObject files left
+ * `RJO_SITES`. At the raw sites a body that is not JSON now answers 400
+ * `Invalid JSON body` (was the route's 500) and an array 400 `Request body
+ * must be a JSON object` (was the first "missing" 400). A numeric invite
+ * email and appeal message answer their required text (were a 500 and a
+ * rejected promise on `.trim()`), and a numeric club name answers "Name,
+ * description, and category are required" (sanitizeText had coerced it to
+ * "5"). The rows already refused by a ladder rule or answered by a lookup
+ * (members 404, role, DELETE confirmation, transfer membership,
+ * organizer-requests 404, the PATCH type) keep their outcome, now behind the
+ * contract. Each moved row has a defect-ledger row.
  *
  * Personas and the world come from `badRequestTable.ts` (student, owner of
  * the club and creator of the approved event, admin). Seams as in the
@@ -123,11 +139,8 @@ interface Site {
 const club = { id: CLUB_ID };
 const ev = { id: EVENT_OWN };
 
-/** Every raw `await request.json()` in a route file today (12 sites). */
+/** Every raw `await request.json()` in a route file today (9 sites). */
 const RAW_SITES: Record<string, Site> = {
-  "clubs/[id] PATCH": { route: "clubs/[id]", verb: "PATCH", persona: "owner", params: club },
-  "clubs/[id]/members DELETE": { route: "clubs/[id]/members", verb: "DELETE", persona: "owner", params: club },
-  "clubs/[id]/invites POST": { route: "clubs/[id]/invites", verb: "POST", persona: "owner", params: club },
   "admin/experiments/[id] PATCH": { route: "admin/experiments/[id]", verb: "PATCH", persona: "admin", params: { id: EXPERIMENT_ID } },
   "admin/experiments POST": { route: "admin/experiments", verb: "POST", persona: "admin" },
   "admin/featured POST": { route: "admin/featured", verb: "POST", persona: "admin" },
@@ -139,7 +152,7 @@ const RAW_SITES: Record<string, Site> = {
   "users/[id] PATCH": { route: "users/[id]", verb: "PATCH", persona: "student", params: { id: CALLER.id } },
 };
 
-/** The raw sites that adopted `parseBody` in plan 06-08 (F-094 fixed there). */
+/** The raw sites that adopted `parseBody` in plans 06-08 and 06-09 (F-094 fixed there). */
 const ADOPTED_RAW_SITES: Record<string, Site> = {
   "events/[id]/invite POST": { route: "events/[id]/invite", verb: "POST", persona: "student", params: ev },
   "events/[id] PATCH": { route: "events/[id]", verb: "PATCH", persona: "owner", params: ev },
@@ -147,9 +160,13 @@ const ADOPTED_RAW_SITES: Record<string, Site> = {
   "events/[id]/rsvp DELETE": { route: "events/[id]/rsvp", verb: "DELETE", persona: "student", params: ev },
   "events/[id]/reviews POST": { route: "events/[id]/reviews", verb: "POST", persona: "student", params: ev },
   "events/create POST": { route: "events/create", verb: "POST", persona: "student" },
+  // plan 06-09 Task 1
+  "clubs/[id] PATCH": { route: "clubs/[id]", verb: "PATCH", persona: "owner", params: club },
+  "clubs/[id]/members DELETE": { route: "clubs/[id]/members", verb: "DELETE", persona: "owner", params: club },
+  "clubs/[id]/invites POST": { route: "clubs/[id]/invites", verb: "POST", persona: "owner", params: club },
 };
 
-/** Every route file that reads its body through `readJsonObject` today (13). */
+/** Every route file that reads its body through `readJsonObject` today (7). */
 const RJO_SITES: Record<string, Site> = {
   "admin/clubs/[id] PATCH": { route: "admin/clubs/[id]", verb: "PATCH", persona: "admin", params: club },
   "admin/events/[id]/edits PATCH": { route: "admin/events/[id]/edits", verb: "PATCH", persona: "admin", params: ev },
@@ -158,18 +175,19 @@ const RJO_SITES: Record<string, Site> = {
   "admin/reports/[id] PATCH": { route: "admin/reports/[id]", verb: "PATCH", persona: "admin", params: { id: REPORT_ID } },
   "admin/users/[id]/ban POST": { route: "admin/users/[id]/ban", verb: "POST", persona: "admin", params: { id: OTHER_USER_ID } },
   "admin/users/[id] PATCH": { route: "admin/users/[id]", verb: "PATCH", persona: "admin", params: { id: OTHER_USER_ID } },
+};
+
+/** The readJsonObject files that adopted `parseBody` in plans 06-08 and 06-09. */
+const ADOPTED_RJO_SITES: Record<string, Site> = {
+  "events/[id]/appeal POST": { route: "events/[id]/appeal", verb: "POST", persona: "student", params: ev },
+  "events/[id]/report POST": { route: "events/[id]/report", verb: "POST", persona: "student", params: ev },
+  // plan 06-09 Task 1
   "clubs/[id]/appeal POST": { route: "clubs/[id]/appeal", verb: "POST", persona: "student", params: club },
   "clubs/[id]/members/role PATCH": { route: "clubs/[id]/members/role", verb: "PATCH", persona: "owner", params: club },
   "clubs/[id] DELETE": { route: "clubs/[id]", verb: "DELETE", persona: "owner", params: club },
   "clubs/[id]/transfer POST": { route: "clubs/[id]/transfer", verb: "POST", persona: "owner", params: club },
   "clubs POST": { route: "clubs", verb: "POST", persona: "student" },
   "organizer-requests POST": { route: "organizer-requests", verb: "POST", persona: "student" },
-};
-
-/** The readJsonObject files that adopted `parseBody` in plan 06-08. */
-const ADOPTED_RJO_SITES: Record<string, Site> = {
-  "events/[id]/appeal POST": { route: "events/[id]/appeal", verb: "POST", persona: "student", params: ev },
-  "events/[id]/report POST": { route: "events/[id]/report", verb: "POST", persona: "student", params: ev },
 };
 
 // ─── Expected outcomes (measured) ──────────────────────────────────────────
@@ -199,9 +217,6 @@ const TRIM = /trim is not a function/;
 
 /** D1: the body `{not json`. */
 const NOT_JSON: Record<string, Expected> = {
-  "clubs/[id] PATCH": err(500, "Failed to update club"),
-  "clubs/[id]/members DELETE": err(500, "Failed to remove member"),
-  "clubs/[id]/invites POST": err(500, "Failed to create invitation"),
   "admin/experiments/[id] PATCH": { status: "threw", threw: SYNTAX, writes: [] },
   "admin/experiments POST": { status: "threw", threw: SYNTAX, writes: [] },
   "admin/featured POST": err(500, "Failed to create featured event"),
@@ -221,13 +236,16 @@ const NOT_JSON: Record<string, Expected> = {
   "events/[id]/rsvp DELETE": err(400, "Invalid JSON body"),
   "events/[id]/reviews POST": err(400, "Invalid JSON body"),
   "events/create POST": err(400, "Invalid JSON body"),
+  // Moved in 06-09 (F-094): 500 "Failed to update club", 500 "Failed to
+  // remove member" and 500 "Failed to create invitation" (the raw read threw
+  // inside each route's try) became parseBody's 400.
+  "clubs/[id] PATCH": err(400, "Invalid JSON body"),
+  "clubs/[id]/members DELETE": err(400, "Invalid JSON body"),
+  "clubs/[id]/invites POST": err(400, "Invalid JSON body"),
 };
 
 /** D2: the body `[1,2]`. */
 const ARRAY: Record<string, Expected> = {
-  "clubs/[id] PATCH": err(400, "No valid fields to update"),
-  "clubs/[id]/members DELETE": err(400, "memberId is required"),
-  "clubs/[id]/invites POST": err(400, "Email is required"),
   "admin/experiments/[id] PATCH": {
     status: 200,
     bodyMatch: { experiment: { id: EXPERIMENT_ID, status: "running" } },
@@ -253,6 +271,12 @@ const ARRAY: Record<string, Expected> = {
   "events/[id]/rsvp DELETE": err(400, "Request body must be a JSON object"),
   "events/[id]/reviews POST": err(400, "Request body must be a JSON object"),
   "events/create POST": err(400, "Request body must be a JSON object"),
+  // Moved in 06-09 (F-094): "No valid fields to update", "memberId is
+  // required" and "Email is required" (an array read as an object with no
+  // keys); parseBody now refuses the array itself.
+  "clubs/[id] PATCH": err(400, "Request body must be a JSON object"),
+  "clubs/[id]/members DELETE": err(400, "Request body must be a JSON object"),
+  "clubs/[id]/invites POST": err(400, "Request body must be a JSON object"),
 };
 
 const CREATE = {
@@ -268,7 +292,9 @@ const NON_STRING: Record<string, { body: Record<string, unknown>; expected: Expe
   // raw sites
   "clubs/[id] PATCH": { body: { name: 5 }, expected: err(400, "Invalid value for name", "name") },
   "clubs/[id]/members DELETE": { body: { memberId: 5 }, expected: err(404, "Member not found") },
-  "clubs/[id]/invites POST": { body: { email: 5 }, expected: err(500, "Failed to create invitation") },
+  // Moved in 06-09 (F-094): was 500 "Failed to create invitation" (`.trim()`
+  // on a number inside the try).
+  "clubs/[id]/invites POST": { body: { email: 5 }, expected: err(400, "Email is required") },
   "admin/experiments/[id] PATCH": {
     body: { status: 5 },
     expected: { status: 200, bodyMatch: { experiment: { status: 5 } }, writes: ["experiments.update"] },
@@ -345,18 +371,20 @@ const NON_STRING: Record<string, { body: Record<string, unknown>; expected: Expe
     body: { name: 5 },
     expected: err(400, "Name must be between 2 and 50 characters long", "name"),
   },
-  "clubs/[id]/appeal POST": { body: { message: 5 }, expected: { status: "threw", threw: TRIM, writes: [] } },
+  // Moved in 06-09 (F-094): the handler threw on `.trim()` of a number.
+  "clubs/[id]/appeal POST": { body: { message: 5 }, expected: err(400, "Appeal message is required") },
   "clubs/[id]/members/role PATCH": {
     body: { memberId: MEMBER_ORGANIZER, role: 5 },
     expected: err(400, "Invalid request. Role must be 'organizer'."),
   },
   "clubs/[id] DELETE": { body: { confirmName: 5 }, expected: err(400, "Club name confirmation does not match") },
   "clubs/[id]/transfer POST": { body: { newOwnerId: 5 }, expected: err(400, "Target user is not a member of this club") },
-  // A numeric name passes the required check (sanitizeText coerces it to
-  // "5"); the missing email is what answers.
+  // Moved in 06-09 (F-094): a numeric name passed the required check
+  // (sanitizeText coerced it to "5") and the missing email answered; the
+  // contract refuses the non-string name with its required text first.
   "clubs POST": {
     body: { name: 5, description: "We write schemas", category: "academic" },
-    expected: err(400, "Contact email is required"),
+    expected: err(400, "Name, description, and category are required"),
   },
   // Moved in 06-08 (F-094): the handler threw on `.trim()` of a number.
   "events/[id]/appeal POST": { body: { message: 5 }, expected: err(400, "Appeal message is required") },
@@ -398,7 +426,7 @@ function routeFiles(): { route: string; source: string }[] {
 }
 
 describe("D0: the site lists are the tree", () => {
-  it("RAW_SITES covers every raw request.json() in a route file (12 sites)", () => {
+  it("RAW_SITES covers every raw request.json() in a route file (9 sites)", () => {
     const counted = routeFiles()
       .map(({ route, source }) => [route, (source.match(/(?:request|req)\.json\(\)/g) ?? []).length] as const)
       .filter(([, n]) => n > 0)
@@ -408,24 +436,26 @@ describe("D0: the site lists are the tree", () => {
       return acc;
     }, {});
     expect(Object.fromEntries(counted)).toEqual(listed);
-    expect(Object.keys(RAW_SITES)).toHaveLength(12);
+    expect(Object.keys(RAW_SITES)).toHaveLength(9);
   });
 
-  it("RJO_SITES is every route file calling readJsonObject (13)", () => {
+  it("RJO_SITES is every route file calling readJsonObject (7)", () => {
     const files = routeFiles()
       .filter(({ source }) => source.includes("readJsonObject("))
       .map(({ route }) => route)
       .sort();
     expect([...new Set(Object.values(RJO_SITES).map((site) => site.route))].sort()).toEqual(files);
-    expect(Object.keys(RJO_SITES)).toHaveLength(13);
+    expect(Object.keys(RJO_SITES)).toHaveLength(7);
   });
 
-  it("the adopted sites read their body through parseBody and nothing raw (06-08)", () => {
+  it("the adopted sites read their body through parseBody and nothing raw (06-08, 06-09)", () => {
     const sources = new Map(routeFiles().map(({ route, source }) => [route, source]));
     const adopted = [...new Set(
       Object.values({ ...ADOPTED_RAW_SITES, ...ADOPTED_RJO_SITES }).map((site) => site.route)
     )].sort();
-    expect(adopted).toHaveLength(7);
+    // 7 files from 06-08; 8 from 06-09 Task 1 (clubs/[id] holds a raw site
+    // and a readJsonObject site).
+    expect(adopted).toHaveLength(15);
     for (const route of adopted) {
       const source = sources.get(route) ?? "";
       expect([route, /parseBody\(request, /.test(source)]).toEqual([route, true]);

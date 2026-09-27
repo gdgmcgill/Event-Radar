@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { getElevatedClient } from "@/server/db/elevated";
-import { hasUnsafeUrlScheme, sanitizeText } from "@/lib/sanitize";
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { CLUB_CREATE_FIELD_KEYS, ClubCreateBody } from "@/contracts/clubs";
 
 /**
  * GET /api/clubs
@@ -49,77 +49,29 @@ export async function POST(request: NextRequest) {
   if (!onboarded.ok) return onboarded.response;
   const user = active.user;
 
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { contact_email, logo_url, instagram_handle, website_url, discord_url, twitter_url, linkedin_url } = body;
-
-  // The optional text fields reach an elevated insert: each must be a string
-  // when present, and a link may not carry a non-http(s) scheme such as
-  // `javascript:` (REVIEW-05 WR-09). A value that does not parse as a URL at
-  // all is still accepted, as before: the create form's inputs are free text
-  // and a browser can only resolve such a value as a relative link.
-  const optionalText = {
+  // The contract (src/contracts/clubs.ts) runs the handler's ladder in its
+  // order: each optional field's type ("Invalid value for <field>", with
+  // field), then its link under ClubLinkFields (DEC-66: an absolute http(s)
+  // URL kept, a scheme-less host path stored with https:// prefixed, any
+  // other scheme refused as `Invalid URL for <field>`); then name,
+  // description and category (sanitized), the contact email and its format,
+  // and the lengths.
+  const parsed = await parseBody(request, ClubCreateBody, {
+    fieldFor: CLUB_CREATE_FIELD_KEYS,
+  });
+  if (!parsed.ok) return parsed.response;
+  const {
+    name,
+    description,
+    category,
+    contact_email,
     logo_url,
     instagram_handle,
     website_url,
     discord_url,
     twitter_url,
     linkedin_url,
-  } as const;
-  for (const [field, value] of Object.entries(optionalText)) {
-    if (value !== undefined && value !== null && typeof value !== "string") {
-      return NextResponse.json(
-        { error: `Invalid value for ${field}`, field },
-        { status: 400 }
-      );
-    }
-    if (
-      field !== "instagram_handle" &&
-      typeof value === "string" &&
-      hasUnsafeUrlScheme(value.trim())
-    ) {
-      return NextResponse.json(
-        { error: `Invalid URL for ${field}` },
-        { status: 400 }
-      );
-    }
-  }
-
-  // Sanitize text inputs to prevent XSS
-  const name = sanitizeText(body.name ?? "");
-  const description = sanitizeText(body.description ?? "");
-  const category = sanitizeText(body.category ?? "");
-
-  // Name, description, category, and contact email are all required
-  if (!name || !description || !category) {
-    return NextResponse.json(
-      { error: "Name, description, and category are required" },
-      { status: 400 }
-    );
-  }
-
-  if (!contact_email || typeof contact_email !== "string") {
-    return NextResponse.json(
-      { error: "Contact email is required" },
-      { status: 400 }
-    );
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(contact_email.trim())) {
-    return NextResponse.json(
-      { error: "Please provide a valid email address" },
-      { status: 400 }
-    );
-  }
-
-  if (name.length > 100 || description.length > 500) {
-    return NextResponse.json(
-      { error: "Name max 100 chars, description max 500 chars" },
-      { status: 400 }
-    );
-  }
+  } = parsed.data;
 
   // The duplicate-name read ("Anyone can read clubs") and the caller's own
   // roles read ("Users can read own profile") run on the cookie client

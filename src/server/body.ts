@@ -232,6 +232,13 @@ export interface FormOptions extends ParseOptions {
    * bytes.
    */
   unreadable: { status: number; error: string };
+  /**
+   * The route checked the file's size and type only after a guard (06-09:
+   * clubs/logo and clubs/banner check them after the ownership gate, so a
+   * non-owner still gets the 403). parseForm then checks presence and the
+   * fields only, and the route calls checkFile where the checks sat.
+   */
+  deferFileChecks?: boolean;
 }
 
 /** An uploaded file as the platform's FormData hands it back. */
@@ -270,8 +277,9 @@ export function checkFile(file: File, rule: FileRule): NextResponse | null {
  * Reads a multipart form: the file under `opts.file.field` (missing, or a
  * string where a file belongs, answers the route's missing text), the
  * non-file fields through `schema` (first value per key, as `formData.get`
- * returned it), then the route's size and type checks. Called after the
- * handler's guards, where `request.formData()` sat.
+ * returned it), then the route's size and type checks (unless the route
+ * defers them past a guard: `deferFileChecks`). Called after the handler's
+ * guards, where `request.formData()` sat.
  */
 export async function parseForm<S extends z.ZodType>(
   request: Request,
@@ -305,8 +313,10 @@ export async function parseForm<S extends z.ZodType>(
   const fields = parseWith(schema, input, opts);
   if (!fields.ok) return fields;
 
-  const refused = checkFile(file, opts.file);
-  if (refused) return { ok: false, response: refused };
+  if (!opts.deferFileChecks) {
+    const refused = checkFile(file, opts.file);
+    if (refused) return { ok: false, response: refused };
+  }
 
   return { ok: true, data: { fields: fields.data, file } };
 }

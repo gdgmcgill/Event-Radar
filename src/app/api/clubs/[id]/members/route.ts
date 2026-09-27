@@ -4,6 +4,8 @@ import { requireUser } from "@/server/authz/requireUser";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
+import { parseBody } from "@/server/body";
+import { ClubMemberBody } from "@/contracts/clubs";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -99,15 +101,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
     if (!gate.ok) return gate.response;
 
-    const body = await request.json();
-    const { memberId } = body as { memberId: string };
-
-    if (!memberId) {
-      return NextResponse.json(
-        { error: "memberId is required" },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, ClubMemberBody);
+    if (!parsed.ok) return parsed.response;
+    const { memberId } = parsed.data;
 
     // Fetch the target member to verify they're not the owner
     const { data: targetMember } = await supabase

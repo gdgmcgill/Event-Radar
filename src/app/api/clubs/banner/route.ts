@@ -3,9 +3,8 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
-
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB — banners are larger than logos
+import { checkFile, parseForm } from "@/server/body";
+import { CLUB_BANNER_UPLOAD, ClubImageForm } from "@/contracts/clubs";
 
 /**
  * POST /api/clubs/banner
@@ -22,16 +21,12 @@ export async function POST(request: NextRequest) {
     const user = active.user;
     const supabase = ctx.supabase;
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    const clubId = formData.get("clubId") as string | null;
-
-    if (!file || !clubId) {
-      return NextResponse.json(
-        { error: "File and clubId are required" },
-        { status: 400 }
-      );
-    }
+    // "File and clubId are required" for a missing file or clubId. The type
+    // and size checks wait for the ownership gate (deferFileChecks).
+    const parsed = await parseForm(request, ClubImageForm, CLUB_BANNER_UPLOAD);
+    if (!parsed.ok) return parsed.response;
+    const { file } = parsed.data;
+    const { clubId } = parsed.data.fields;
 
     // Verify ownership
     const gate = await requireClubRole(
@@ -43,19 +38,9 @@ export async function POST(request: NextRequest) {
     );
     if (!gate.ok) return gate.response;
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: "File must be JPEG, PNG, or WebP" },
-        { status: 400 }
-      );
-    }
-
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: "File must be under 5MB" },
-        { status: 400 }
-      );
-    }
+    // Type, then size, with the route's texts.
+    const refused = checkFile(file, CLUB_BANNER_UPLOAD.file);
+    if (refused) return refused;
 
     const ext = file.name.split(".").pop() || "png";
     const path = `${clubId}/banner-${Date.now()}.${ext}`;

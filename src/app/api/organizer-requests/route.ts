@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { OrganizerRequestBody } from "@/contracts/clubs";
 
 export async function POST(request: NextRequest) {
   const ctx = await createRequestContext();
@@ -15,17 +16,10 @@ export async function POST(request: NextRequest) {
   const user = active.user;
   const supabase = ctx.supabase;
 
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { club_id, message } = body;
-
-  if (!club_id) {
-    return NextResponse.json(
-      { error: "club_id is required" },
-      { status: 400 }
-    );
-  }
+  // club_id is required (its existence is the lookup below); message as sent.
+  const parsed = await parseBody(request, OrganizerRequestBody);
+  if (!parsed.ok) return parsed.response;
+  const { club_id, message } = parsed.data;
 
   // Verify the club exists
   const { data: club, error: clubError } = await supabase
