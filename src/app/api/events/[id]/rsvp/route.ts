@@ -12,7 +12,9 @@ import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { badRequest, forbidden, notFound, serverError } from "@/server/errors";
+import { forbidden, notFound, serverError } from "@/server/errors";
+import { parseBody, parseWith } from "@/server/body";
+import { RsvpBody, RsvpDeleteBody, RsvpStatus } from "@/contracts/events";
 import { created, ok } from "@/server/http";
 import type { NextRequest } from "next/server";
 
@@ -20,13 +22,6 @@ interface RouteContext {
   params: Promise<{
     id: string;
   }>;
-}
-
-const VALID_STATUSES = ["going", "interested"] as const;
-type RsvpStatus = (typeof VALID_STATUSES)[number];
-
-function isValidStatus(status: unknown): status is RsvpStatus {
-  return typeof status === "string" && VALID_STATUSES.includes(status as RsvpStatus);
 }
 
 // ─── GET /api/events/:id/rsvp ───────────────────────────────────────────────
@@ -209,38 +204,19 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     const { id: eventId } = await params;
 
-    // Parse body
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return badRequest("Invalid JSON body");
-    }
+    // The contract (plan 06-08, REFAC-15): user_id first, then the handler's
+    // mismatch 403, then the status rules, in today's order. F-094: a non-
+    // object body is a 400 (INTENTIONAL BEHAVIOUR CHANGE).
+    const parsed = await parseBody(request, RsvpBody);
+    if (!parsed.ok) return parsed.response;
 
-    const { user_id: userIdFromBody, status } = body as {
-      user_id?: string;
-      status?: string;
-    };
-
-    // Validate user_id
-    if (!userIdFromBody) {
-      return badRequest("user_id is required");
-    }
-
-    if (userIdFromBody !== user.id) {
+    if (parsed.data.user_id !== user.id) {
       return forbidden("user_id does not match authenticated user");
     }
 
-    // Validate status
-    if (!status) {
-      return badRequest("status is required");
-    }
-
-    if (!isValidStatus(status)) {
-      return badRequest(
-        `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`
-      );
-    }
+    const statusParsed = parseWith(RsvpStatus, parsed.data.status);
+    if (!statusParsed.ok) return statusParsed.response;
+    const status = statusParsed.data;
 
     // Verify event exists
     const { data: eventExists, error: eventError } = await supabase
@@ -373,21 +349,14 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
     const { id: eventId } = await params;
 
-    // Parse body
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      body = {};
-    }
+    // The contract (plan 06-08, REFAC-15). F-094: a body that is not JSON
+    // answers 400 "Invalid JSON body" (it was read as {} and answered
+    // "user_id is required"), a non-object body 400 "Request body must be a
+    // JSON object" (INTENTIONAL BEHAVIOUR CHANGE).
+    const parsed = await parseBody(request, RsvpDeleteBody);
+    if (!parsed.ok) return parsed.response;
 
-    const userIdFromBody = (body as { user_id?: string }).user_id;
-
-    if (!userIdFromBody) {
-      return badRequest("user_id is required");
-    }
-
-    if (userIdFromBody !== user.id) {
+    if (parsed.data.user_id !== user.id) {
       return forbidden("user_id does not match authenticated user");
     }
 

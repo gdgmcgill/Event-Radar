@@ -3,6 +3,8 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { getElevatedClient } from "@/server/db/elevated";
 import { NextRequest, NextResponse } from "next/server";
+import { parseBody } from "@/server/body";
+import { EventInviteBody } from "@/contracts/events";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -24,12 +26,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { id: eventId } = await params;
 
-    const body = await request.json();
-    const inviteeIds: string[] = body.invitee_ids;
-
-    if (!Array.isArray(inviteeIds) || inviteeIds.length === 0) {
-      return NextResponse.json({ error: "No invitees provided" }, { status: 400 });
-    }
+    // The contract (plan 06-08, REFAC-15): "No invitees provided" unless
+    // invitee_ids is a non-empty array. F-094: a non-JSON or non-object body
+    // is a 400 (INTENTIONAL BEHAVIOUR CHANGE).
+    const parsed = await parseBody(request, EventInviteBody);
+    if (!parsed.ok) return parsed.response;
+    const inviteeIds = parsed.data.invitee_ids;
 
     // Verify each invitee is a friend (mutual follow)
     const { data: friends } = await supabase.rpc("get_friends", {
@@ -37,7 +39,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     });
 
     const friendIds = new Set((friends ?? []).map((f: any) => f.id));
-    const validInvitees = inviteeIds.filter((id) => friendIds.has(id));
+    // Every friend id is a string, so a kept element is one.
+    const validInvitees = inviteeIds.filter((id): id is string =>
+      friendIds.has(id)
+    );
 
     if (validInvitees.length === 0) {
       return NextResponse.json({ error: "No valid friends to invite" }, { status: 400 });

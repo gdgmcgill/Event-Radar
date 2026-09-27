@@ -3,8 +3,8 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+import { parseForm } from "@/server/body";
+import { EVENT_IMAGE_UPLOAD, UploadImageForm } from "@/contracts/events";
 
 export async function POST(request: NextRequest) {
     try {
@@ -15,30 +15,12 @@ export async function POST(request: NextRequest) {
         if (!onboarded.ok) return onboarded.response;
         const supabase = ctx.supabase;
 
-        const formData = await request.formData();
-        const file = formData.get("file") as File | null;
-
-        if (!file) {
-            return NextResponse.json({ error: "No file provided" }, { status: 400 });
-        }
-
-        if (file.size > MAX_FILE_SIZE) {
-            return NextResponse.json({ error: "File too large. Maximum size is 5MB" }, { status: 400 });
-        }
-
-        const ALLOWED_MIME_TYPES = [
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "image/gif",
-        ];
-
-        if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-            return NextResponse.json(
-                { error: `Invalid file type "${file.type}". Allowed: JPEG, PNG, WebP, GIF.` },
-                { status: 400 }
-            );
-        }
+        // The multipart contract (plan 06-08, REFAC-15): the route's own
+        // texts and order (missing, size, then type), and its 500 for a body
+        // that is not a form, unchanged.
+        const parsed = await parseForm(request, UploadImageForm, EVENT_IMAGE_UPLOAD);
+        if (!parsed.ok) return parsed.response;
+        const { file } = parsed.data;
 
         const fileExt = file.name.split(".").pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;

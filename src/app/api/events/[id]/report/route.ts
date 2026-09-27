@@ -4,8 +4,8 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { sanitizeText } from "@/lib/sanitize";
-import { REJECTION_CATEGORIES } from "@/types";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { EventReportBody } from "@/contracts/events";
 
 export async function POST(
   request: NextRequest,
@@ -20,15 +20,12 @@ export async function POST(
   const supabase = ctx.supabase;
 
   const { id: eventId } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { category, message } = body;
-
-  // Validate category
-  if (!category || !(category in REJECTION_CATEGORIES)) {
-    return NextResponse.json({ error: "Invalid category" }, { status: 400 });
-  }
+  // The contract (plan 06-08, REFAC-15): "Invalid category" unless the
+  // category is one of REJECTION_CATEGORIES. F-094: a non-string message is
+  // a 400 (it threw inside sanitizeText) (INTENTIONAL BEHAVIOUR CHANGE).
+  const parsed = await parseBody(request, EventReportBody);
+  if (!parsed.ok) return parsed.response;
+  const { category, message } = parsed.data;
 
   // Validate event exists and is approved
   const { data: event, error: eventError } = await supabase

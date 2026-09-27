@@ -12,7 +12,12 @@ import { hasRole } from "@/lib/roles";
 import type { TablesUpdate } from "@/lib/supabase/types";
 import { transformEventFromDB } from "@/lib/tagMapping";
 import type { NextRequest } from "next/server";
-import { validateEventDates, isValidISODate } from "@/lib/dateValidation";
+import { parseBody } from "@/server/body";
+import {
+  EDITABLE_EVENT_FIELDS,
+  EVENT_UPDATE_FIELD_KEYS,
+  EventUpdateBody,
+} from "@/contracts/events";
 
 interface RouteParams {
   params: Promise<{
@@ -145,20 +150,6 @@ export async function GET(
   }
 }
 
-const EDITABLE_FIELDS = [
-  "title",
-  "description",
-  "start_date",
-  "end_date",
-  "location",
-  "tags",
-  "image_url",
-  "category",
-  "is_free",
-  "price",
-  "rsvp_link",
-] as const;
-
 const MODERATED_FIELDS = ["title", "image_url"] as const;
 
 export async function PATCH(
@@ -244,15 +235,24 @@ export async function PATCH(
       );
     }
 
-    // Build update payload from allowed fields only
-    const body = await request.json();
+    // The contract (plan 06-08, REFAC-15), read where the raw body was, after
+    // the 404 and permission checks: only the whitelisted keys, as sent;
+    // "No valid fields to update" first, then today's date rules with field
+    // on start_date and end_date (the end_date-only branch included). F-094:
+    // a non-JSON or non-object body, or a non-string title, description or
+    // location, is a 400 (INTENTIONAL BEHAVIOUR CHANGE).
+    const parsed = await parseBody(request, EventUpdateBody, {
+      fieldFor: EVENT_UPDATE_FIELD_KEYS,
+    });
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
     // DI-25: typed with the generated update type. The body's values are
     // carried as they arrive; the column set is EDITABLE_FIELDS plus
     // pending_edits, all of which are columns of events.
     const directUpdates: TablesUpdate<"events"> = {};
     const pendingEdits: Record<string, string> = {};
 
-    for (const field of EDITABLE_FIELDS) {
+    for (const field of EDITABLE_EVENT_FIELDS) {
       if (!(field in body)) continue;
 
       const needsModeration =
@@ -275,37 +275,6 @@ export async function PATCH(
       );
       if (adminEditedModeratedField) {
         directUpdates.pending_edits = null;
-      }
-    }
-
-    if (Object.keys(directUpdates).length === 0 && Object.keys(pendingEdits).length === 0) {
-      return NextResponse.json(
-        { error: "No valid fields to update" },
-        { status: 400 }
-      );
-    }
-
-    // Validate date fields when present in the direct update payload
-    if ("start_date" in directUpdates) {
-      const dateError = validateEventDates(
-        directUpdates.start_date,
-        "end_date" in directUpdates ? directUpdates.end_date : undefined
-      );
-      if (dateError) {
-        return NextResponse.json(
-          { error: dateError.message, field: dateError.field },
-          { status: 400 }
-        );
-      }
-    } else if ("end_date" in directUpdates) {
-      if (!isValidISODate(directUpdates.end_date)) {
-        return NextResponse.json(
-          {
-            error: 'end_date must be a valid ISO 8601 date (e.g. "2026-03-15" or "2026-03-15T11:00:00Z")',
-            field: "end_date",
-          },
-          { status: 400 }
-        );
       }
     }
 

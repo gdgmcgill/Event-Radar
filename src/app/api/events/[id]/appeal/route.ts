@@ -4,7 +4,8 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { EventAppealBody } from "@/contracts/events";
 
 export async function POST(
   request: NextRequest,
@@ -18,17 +19,12 @@ export async function POST(
   const user = active.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { message } = body;
-
-  if (!message?.trim()) {
-    return NextResponse.json(
-      { error: "Appeal message is required" },
-      { status: 400 }
-    );
-  }
+  // The contract (plan 06-08, REFAC-15): "Appeal message is required" for a
+  // missing or blank message. F-094: a non-string message is that 400 (it
+  // threw on .trim(), an HTML 500) (INTENTIONAL BEHAVIOUR CHANGE).
+  const parsed = await parseBody(request, EventAppealBody);
+  if (!parsed.ok) return parsed.response;
+  const { message } = parsed.data;
 
   // The appeal review ("Creators can appeal their items"), the status reset
   // ("Organizers can update own events") and the final re-read ("Organizers

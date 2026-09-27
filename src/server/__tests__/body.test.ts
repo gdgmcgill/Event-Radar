@@ -6,10 +6,21 @@
  * so parseBody is asserted against exactly those. parseWith reports the FIRST
  * issue in schema key order, with today's message, and names `field` only
  * where the call site asks for it (C10).
+ *
+ * parseForm (plan 06-08) keeps each multipart route's own file texts: the
+ * missing, oversize and wrong-type answers are the route's strings, in the
+ * route's order, and an unreadable form answers what the route answered
+ * before (its catch's status and body).
  */
 
 import { z } from "zod";
-import { parseBody, parseQuery, parseWith, readJsonObject } from "../body";
+import {
+  parseBody,
+  parseForm,
+  parseQuery,
+  parseWith,
+  readJsonObject,
+} from "../body";
 import {
   ErrorBody,
   IsoDateString,
@@ -167,6 +178,130 @@ describe("parseQuery", () => {
     expect(result.response.status).toBe(400);
     await expect(result.response.json()).resolves.toEqual({
       error: "Invalid period. Use 7d or 30d",
+    });
+  });
+});
+
+// ─── parseForm (plan 06-08) ────────────────────────────────────────────────
+
+describe("parseForm", () => {
+  const RULE = {
+    field: "file",
+    types: ["image/png", "image/jpeg"],
+    maxBytes: 10,
+    messages: {
+      missing: "No file provided",
+      tooLarge: "File too large",
+      badType: (type: string) => `Invalid file type "${type}"`,
+    },
+  } as const;
+  const OPTS = {
+    file: RULE,
+    unreadable: { status: 500, error: "Internal server error" },
+  };
+  const NoFields = z.object({});
+  const WithClub = z.object({
+    clubId: z.string({ error: "clubId is required" }),
+  });
+
+  function file(size: number, type: string, name = "x.bin"): File {
+    return new File([new Uint8Array(size)], name, { type });
+  }
+
+  function formRequest(entries: [string, string | File][]): Request {
+    const form = new FormData();
+    for (const [key, value] of entries) form.append(key, value);
+    return new Request("http://localhost/api/x", { method: "POST", body: form });
+  }
+
+  async function refusal(result: Awaited<ReturnType<typeof parseForm>>) {
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("unreachable");
+    return { status: result.response.status, body: await result.response.json() };
+  }
+
+  it("returns the file and the parsed non-file fields", async () => {
+    const upload = file(4, "image/png", "a.png");
+    const result = await parseForm(
+      formRequest([["file", upload], ["clubId", "c1"], ["clubId", "c2"], ["extra", "x"]]),
+      WithClub,
+      OPTS
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // The first value of a repeated key, as formData.get returned it.
+    expect(result.data.fields).toEqual({ clubId: "c1" });
+    expect(result.data.file.name).toBe("a.png");
+    expect(result.data.file.size).toBe(4);
+    expect(result.data.file.type).toBe("image/png");
+  });
+
+  it("answers the route's missing text when there is no file", async () => {
+    await expect(refusal(await parseForm(formRequest([]), NoFields, OPTS))).resolves.toEqual({
+      status: 400,
+      body: { error: "No file provided" },
+    });
+  });
+
+  it("treats a string in the file field as no file", async () => {
+    const result = await parseForm(formRequest([["file", "not a file"]]), NoFields, OPTS);
+    await expect(refusal(result)).resolves.toEqual({
+      status: 400,
+      body: { error: "No file provided" },
+    });
+  });
+
+  it("answers the route's size text for an oversize file", async () => {
+    const result = await parseForm(formRequest([["file", file(11, "image/png")]]), NoFields, OPTS);
+    await expect(refusal(result)).resolves.toEqual({
+      status: 400,
+      body: { error: "File too large" },
+    });
+  });
+
+  it("answers the route's type text, naming the type, for a wrong type", async () => {
+    const result = await parseForm(formRequest([["file", file(4, "text/plain")]]), NoFields, OPTS);
+    await expect(refusal(result)).resolves.toEqual({
+      status: 400,
+      body: { error: 'Invalid file type "text/plain"' },
+    });
+  });
+
+  it("checks size before type by default, and type first when the route did", async () => {
+    const both = () => formRequest([["file", file(11, "text/plain")]]);
+    await expect(refusal(await parseForm(both(), NoFields, OPTS))).resolves.toEqual({
+      status: 400,
+      body: { error: "File too large" },
+    });
+    const typeFirst = { ...OPTS, file: { ...RULE, order: ["type", "size"] as const } };
+    await expect(refusal(await parseForm(both(), NoFields, typeFirst))).resolves.toEqual({
+      status: 400,
+      body: { error: 'Invalid file type "text/plain"' },
+    });
+  });
+
+  it("accepts a file exactly at the size limit", async () => {
+    const result = await parseForm(formRequest([["file", file(10, "image/jpeg")]]), NoFields, OPTS);
+    expect(result.ok).toBe(true);
+  });
+
+  it("validates the non-file fields with the schema after the file is present", async () => {
+    const result = await parseForm(formRequest([["file", file(4, "image/png")]]), WithClub, OPTS);
+    await expect(refusal(result)).resolves.toEqual({
+      status: 400,
+      body: { error: "clubId is required" },
+    });
+  });
+
+  it("answers the route's own status and body when the form cannot be read", async () => {
+    const request = new Request("http://localhost/api/x", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    await expect(refusal(await parseForm(request, NoFields, OPTS))).resolves.toEqual({
+      status: 500,
+      body: { error: "Internal server error" },
     });
   });
 });

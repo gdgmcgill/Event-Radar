@@ -5,6 +5,8 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 import type { Review } from "@/types";
+import { parseBody } from "@/server/body";
+import { ReviewBody } from "@/contracts/events";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -27,23 +29,13 @@ export async function POST(request: Request, context: RouteContext) {
     const userId = active.user.id;
     const { id: eventId } = await context.params;
 
-    // Parse body
-    let body: { rating: number; comment?: string };
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const { rating, comment } = body;
-
-    // Validate rating
-    if (!rating || !Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return NextResponse.json(
-        { error: "Rating must be an integer between 1 and 5" },
-        { status: 400 }
-      );
-    }
+    // The contract (plan 06-08, REFAC-15): "Invalid JSON body" and the
+    // rating rule keep their bytes. F-094: a non-object body is a 400
+    // (INTENTIONAL BEHAVIOUR CHANGE). The "after the event has ended" rule
+    // needs the event row and stays below.
+    const parsed = await parseBody(request, ReviewBody);
+    if (!parsed.ok) return parsed.response;
+    const { rating, comment } = parsed.data;
 
     // Check 1: Event exists and has ended
     const { data: event, error: eventError } = await supabase
