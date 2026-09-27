@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { hasRole } from "@/lib/roles";
 import { getRequestContext } from "@/server/context";
+import { requireAdminPage } from "@/server/authz/requireAdminPage";
 import { ModerationNav } from "./ModerationNav";
 import { Bell, Settings, Shield } from "lucide-react";
 
@@ -10,17 +10,16 @@ export default async function ModerationLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const ctx = await getRequestContext();
-  const user = ctx.user;
-
-  if (!user) {
+  // Anonymous callers go to the admin sign-in page, as they always have.
+  if (!(await getRequestContext()).user) {
     redirect("/admin-login");
   }
 
-  // The admin decision reads the request context's profile slice.
-  if (ctx.profile === null || !hasRole(ctx.profile, "admin")) {
-    redirect("/");
-  }
+  // Signed in: a non-admin, profile-less or banned caller goes to "/"
+  // (DEC-79; the ban check is DI-55). The context is the same render-pass
+  // read as above, not a second one.
+  const ctx = await requireAdminPage("/");
+  const user = ctx.user;
 
   // A display read, not an authorization decision: the header's name and
   // avatar. Same client and same row as before; `roles` is no longer read here.

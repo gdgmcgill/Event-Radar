@@ -1,0 +1,414 @@
+# 06-17 Task 2 evidence: requireAdminPage, the /docs and /health gates, the moderation reviews ban check (F-054, DI-55, DEC-79)
+# Written incrementally; each block is the verbatim command, its exit code, then its output.
+# Started 2026-09-27T17:51:24Z at HEAD 747ef77.
+
+## Red first: requireAdminPage.test.ts before src/server/authz/requireAdminPage.ts exists
+$ npx jest --ci src/server/__tests__/requireAdminPage.test.ts
+exit=1
+FAIL node src/server/__tests__/requireAdminPage.test.ts
+  ● Test suite failed to run
+
+    Cannot find module '../authz/requireAdminPage' from 'src/server/__tests__/requireAdminPage.test.ts'
+
+      29 | }));
+      30 |
+    > 31 | import { requireAdminPage } from "../authz/requireAdminPage";
+         | ^
+      32 |
+      33 | const USER = { id: "user-1", email: "someone@mail.mcgill.ca" };
+      34 | const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/index.js:863:11)
+      at Object.<anonymous> (src/server/__tests__/requireAdminPage.test.ts:31:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.195 s
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/index.js:863:11)
+      at Object.<anonymous> (src/server/__tests__/requireAdminPage.test.ts:31:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.195 s
+Ran all test suites matching src/server/__tests__/requireAdminPage.test.ts.
+
+## Green: requireAdminPage.test.ts with src/server/authz/requireAdminPage.ts
+$ npx jest --ci src/server/__tests__/requireAdminPage.test.ts
+exit=0
+PASS node src/server/__tests__/requireAdminPage.test.ts
+  requireAdminPage
+    ✓ anonymous → redirect to the given target (3 ms)
+    ✓ signed in with no profile row → redirect to the given target
+    ✓ signed-in non-admin → redirect to the given target (1 ms)
+    ✓ organizer without admin → redirect to the given target
+    ✓ admin banned permanently → redirect to the given target
+    ✓ admin banned until tomorrow → redirect to the given target
+    ✓ passes the target through unchanged (the layouts keep their own targets)
+    ✓ active admin → returns the request context and never redirects (1 ms)
+    ✓ admin whose ban has expired → active, returns the context
+
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        0.164 s
+Ran all test suites matching src/server/__tests__/requireAdminPage.test.ts.
+
+## Moderation reviews: the banned-admin row (added to src/__tests__/api/service-role-routing.test.ts, a plain suite)
+Red: the row run against the HEAD route (git show HEAD:<route> swapped in)
+$ npx jest --ci src/__tests__/api/service-role-routing.test.ts -t "moderation/reviews"
+exit=1
+    ✓ creator: target gate and reviews on the cookie client; only author names through the door (369 ms)
+    ✓ admin: reviews on the cookie client; only author names through the door
+    ✕ banned admin: refused with the seam's 403 before any read (DI-55, DEC-79, 06-17)
+    Expected: 403
+    Received: 200
+Tests:       1 failed, 22 skipped, 2 passed, 25 total
+Green: the fixed route restored
+$ cmp <route> <fixed copy>  exit=0
+$ npx jest --ci src/__tests__/api/service-role-routing.test.ts
+exit=0
+Test Suites: 1 passed, 1 total
+Tests:       25 passed, 25 total
+
+## F-054 ledger protocol: src/__tests__/pages/docs-gate-defect.test.ts
+Step 1: src/app/docs/layout.tsx (requireAdminPage("/")) is in the working tree.
+Step 2: the suite as committed (unedited) against the fixed tree: must be RED
+$ npx jest --ci src/__tests__/pages/docs-gate-defect.test.ts
+exit=1
+    ✕ G1 src/app/docs has no layout, only page.tsx (1 ms)
+    ✓ G2 the page imports no guard and renders getApiDocs()
+    ✓ G3 the proxy does not protect /docs
+    ✓ G4 control: the admin layout carries the gate shape G2 looks for
+    Expected: false
+    Received: true
+Tests:       1 failed, 3 passed, 4 total
+
+Step 3: the moved suite against the fixed tree: must be GREEN
+$ npx jest --ci src/__tests__/pages/docs-gate-defect.test.ts
+exit=0
+    ✓ G1 src/app/docs has a layout beside page.tsx, and it calls requireAdminPage("/") (1 ms)
+    ✓ G2 the docs layout redirects anonymous to "/" (10 ms)
+    ✓ G2 the docs layout redirects a signed-in student to "/" (1 ms)
+    ✓ G2 the docs layout redirects a banned admin to "/"
+    ✓ G2 the docs layout renders its children for an active admin; the page still renders getApiDocs()
+    ✓ G3 the proxy does not protect /docs
+    ✓ G4 control: the admin layout carries the gate shape (2 ms)
+    ✓ G5 the /health layout carries the same gate (DEC-79)
+Tests:       8 passed, 8 total
+
+Step 4: the moved suite against the pre-fix tree (0c9bf70 has no src/app/docs/layout.tsx; it is moved aside): must be RED
+$ npx jest --ci src/__tests__/pages/docs-gate-defect.test.ts
+exit=1
+    ✕ G1 src/app/docs has a layout beside page.tsx, and it calls requireAdminPage("/") (1 ms)
+    ✕ G2 the docs layout redirects anonymous to "/"
+    ✕ G2 the docs layout redirects a signed-in student to "/"
+    ✕ G2 the docs layout redirects a banned admin to "/"
+    ✕ G2 the docs layout renders its children for an active admin; the page still renders getApiDocs()
+    ✓ G3 the proxy does not protect /docs
+    ✓ G4 control: the admin layout carries the gate shape
+    ✓ G5 the /health layout carries the same gate (DEC-79)
+    Expected: true
+    Received: false
+Tests:       5 failed, 3 passed, 8 total
+
+$ cmp src/app/docs/layout.tsx <fixed copy>  exit=0
+Step 5: no PRESERVE suite covers /docs; the admin-guard PRESERVE suites run in the full Jest run below.
+Protocol verdict: step2 RED (above); step3 GREEN (ok); step4 RED (ok); cmp identical
+
+## Playwright from a fresh reset (supabase db reset --local, then the seed)
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   (before)
+exit=1 (1 = port free)
+$ supabase db reset --local
+exit=0
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+$ npx tsx scripts/seed/load.ts
+exit=0
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+
+$ npx playwright test e2e/specs/health.spec.ts --reporter=list
+exit=0
+[WebServer] ✓ Running next.config.js took 241ms
+[WebServer] ✓ Compiled successfully in 3.6s
+[WebServer] ✓ Completed runAfterProductionCompile in 123ms
+[WebServer] ✓ Generating static pages using 9 workers (98/98) in 357ms
+[WebServer] ✓ Ready in 58ms
+[WebServer] ✓ Running next.config.js took 170ms
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (453ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (326ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (253ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (253ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (252ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (261ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (253ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (218ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (221ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (244ms)
+  ✓  11 [chromium] › e2e/specs/health.spec.ts:31:7 › an anonymous caller › GET /api/health answers liveness only, private, with a request id (47ms)
+  ✓  12 [chromium] › e2e/specs/health.spec.ts:50:7 › an anonymous caller › the /health page redirects to / (488ms)
+  ✓  13 [chromium] › e2e/specs/health.spec.ts:59:7 › an admin › GET /api/health answers the documented report (153ms)
+  ✓  14 [chromium] › e2e/specs/health.spec.ts:85:7 › an admin › the /health page renders the overall status (979ms)
+  14 passed (22.3s)
+
+$ npx playwright test e2e/specs/admin-page-gates.spec.ts --reporter=list
+exit=0
+[WebServer] ✓ Running next.config.js took 162ms
+[WebServer] ✓ Compiled successfully in 1431ms
+[WebServer] ✓ Completed runAfterProductionCompile in 64ms
+[WebServer] ✓ Generating static pages using 9 workers (98/98) in 330ms
+[WebServer] ✓ Ready in 50ms
+[WebServer] ✓ Running next.config.js took 97ms
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (332ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (258ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (243ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (254ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (252ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (249ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (243ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (211ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (201ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (242ms)
+  ✓  11 [chromium] › e2e/specs/admin-page-gates.spec.ts:29:9 › /docs, anonymous › /docs redirects an anonymous caller to / (213ms)
+  ✓  12 [chromium] › e2e/specs/admin-page-gates.spec.ts:38:9 › /docs, onboarded student › /docs redirects a signed-in non-admin to / (519ms)
+  ✓  13 [chromium] › e2e/specs/admin-page-gates.spec.ts:29:9 › /health, anonymous › /health redirects an anonymous caller to / (380ms)
+  ✓  14 [chromium] › e2e/specs/admin-page-gates.spec.ts:38:9 › /health, onboarded student › /health redirects a signed-in non-admin to / (588ms)
+  ✓  15 [chromium] › e2e/specs/admin-page-gates.spec.ts:48:7 › admin › /docs answers 200 and renders the API description (567ms)
+  ✓  16 [chromium] › e2e/specs/admin-page-gates.spec.ts:55:7 › admin › /health answers 200 and renders the dashboard (463ms)
+  16 passed (16.4s)
+
+$ npx playwright test e2e/specs/admin-guard.spec.ts --reporter=list
+exit=0
+[WebServer] ✓ Running next.config.js took 98ms
+[WebServer] ✓ Compiled successfully in 435ms
+[WebServer] ✓ Completed runAfterProductionCompile in 38ms
+[WebServer] ✓ Generating static pages using 9 workers (98/98) in 335ms
+[WebServer] ✓ Ready in 53ms
+[WebServer] ✓ Running next.config.js took 99ms
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (285ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (254ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (243ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (248ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (251ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (248ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (243ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (209ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (197ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (279ms)
+  ✓  11 [chromium] › e2e/specs/admin-guard.spec.ts:43:7 › an anonymous caller › FIXED F-061: anonymous admin call answers 401 (47ms)
+  ✓  12 [chromium] › e2e/specs/admin-guard.spec.ts:62:7 › an onboarded student › PRESERVE: a non-admin gets 403 Forbidden (135ms)
+  ✓  13 [chromium] › e2e/specs/admin-guard.spec.ts:70:7 › an admin › PRESERVE: the admin gets 200 with the stats body (120ms)
+  13 passed (10.1s)
+
+$ npx playwright test e2e/specs/admin-moderation-queue.spec.ts --reporter=list
+exit=0
+[WebServer] ✓ Running next.config.js took 99ms
+[WebServer] ✓ Compiled successfully in 424ms
+[WebServer] ✓ Completed runAfterProductionCompile in 39ms
+[WebServer] ✓ Generating static pages using 9 workers (98/98) in 296ms
+[WebServer] ✓ Ready in 50ms
+[WebServer] ✓ Running next.config.js took 98ms
+  ✓   1 [setup] › e2e/auth.setup.ts:59:8 › authenticate as onboarded_student (342ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:8 › authenticate as mid_onboarding_student (262ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_member (241ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:8 › authenticate as club_owner (250ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:8 › authenticate as multi_club_organizer (248ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:8 › authenticate as cross_club_attacker (248ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:8 › authenticate as admin (248ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:8 › authenticate as banned_permanent (203ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspended_active (207ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:8 › authenticate as suspension_expired (243ms)
+  ✓  11 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:28:7 › an admin › reaches the moderation surface and sees the pending event and pending club (528ms)
+  ✓  12 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:44:7 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  13 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:75:7 › a student › does not reach the moderation queue (249ms)
+  13 passed (11.8s)
+
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   (after)
+exit=1 (1 = port free)
+
+## Build route table (Pitfall 11: /docs and /health must be dynamic)
+$ npm run build
+exit=0
+✓ Compiled successfully in 2.6s
+Route (app)
+├ ƒ /api/health
+├ ƒ /docs
+├ ƒ /health
+├ ƒ /moderation
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+## Plan-level checks on the combined Task 1 + Task 2 tree
+$ npx jest --ci
+exit=0
+Test Suites: 1 skipped, 129 passed, 129 of 130 total
+Tests:       1 skipped, 3439 passed, 3440 total
+Snapshots:   0 total
+Time:        4.944 s, estimated 6 s
+
+$ node scripts/check-server-console.mjs
+exit=0
+committed=2 live=2 delta=0
+PASS: the live census is within the committed allow-list
+
+$ node scripts/check-contracts.mjs
+exit=0
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+
+$ node scripts/check-contracts.mjs --client
+exit=0
+client files=38 violations=0
+
+$ node scripts/check-elevated-ratchet.mjs
+exit=0
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+
+$ node scripts/check-characterization-tags.mjs --all
+exit=0
+ok   PRESERVE+DEFECT src/__tests__/api/admin/admin-arm-tree-defect.test.ts (F-058)
+ok   PRESERVE src/__tests__/api/admin/admin-guard-characterization.test.ts (F-058, F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-guard-defect.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-reports-defect.test.ts (F-092)
+ok   DEFECT   src/__tests__/api/admin/admin-users-patch-defect.test.ts (F-091)
+ok   PRESERVE+DEFECT src/__tests__/api/auth-ring/write-arm-tree-defect.test.ts (F-058)
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts (F-058)
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   DEFECT   src/__tests__/api/cache-headers-defect.test.ts (F-026, F-025)
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/error-text-defect.test.ts (F-059, F-029)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/events/ban-asymmetry-defect.test.ts (F-088, F-062, F-089)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071, F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   DEFECT   src/__tests__/api/events/pending-edits-defect.test.ts (F-086)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/api/health/health-defect.test.ts (F-029)
+ok   PRESERVE src/__tests__/api/interactions/interactions-feedback-characterization.test.ts (F-094)
+ok   PRESERVE src/__tests__/api/notifications/notifications-characterization.test.ts (F-028, F-059)
+ok   DEFECT   src/__tests__/api/notifications/notifications-count-defect.test.ts (F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/recommendations/batch-error-text-defect.test.ts (F-059)
+ok   DEFECT   src/__tests__/api/recommendations/experiment-assignment-defect.test.ts (F-017)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-characterization.test.ts (F-017, F-041)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-family-characterization.test.ts (F-059)
+ok   PRESERVE+DEFECT src/__tests__/api/review05/club-links-defect.test.ts (F-094)
+ok   DEFECT   src/__tests__/api/slice6-malformed-input-defect.test.ts (F-094)
+ok   DEFECT   src/__tests__/api/uncaught-throw-defect.test.ts (F-058)
+ok   DEFECT   src/__tests__/config/csp-defect.test.ts (F-055)
+ok   DEFECT   src/__tests__/config/vercel-json-defect.test.ts (F-025, F-026)
+ok   PRESERVE src/__tests__/contracts/bad-request-characterization.test.ts
+ok   DEFECT   src/__tests__/contracts/malformed-input-defect.test.ts (F-094, F-058)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   DEFECT   src/__tests__/pages/docs-gate-defect.test.ts (F-054)
+ok   DEFECT   src/__tests__/pages/public-profile-defect.test.tsx (F-005)
+ok   PRESERVE src/__tests__/webhook/verify-signature.test.ts (F-039)
+ok   PRESERVE src/__tests__/webhook/webhook-handler.test.ts (F-039)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089, F-058)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 57 files
+
+$ npx tsc --noEmit
+exit=0
+
+
+$ npm run lint
+exit=0
+
+> uni-verse@0.1.0 lint
+> eslint .
+
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-onboarding.js
+  67:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-online-users.js
+  33:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/calendar/page.tsx
+  788:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/contributors/page.tsx
+  74:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/events/[id]/EventDetailClient.tsx
+  242:5  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/moderation/organizers/page.tsx
+  252:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/my-events/page.tsx
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 159) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 167) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 181) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/page.tsx
+  65:17  warning  The ref value 'timerRefs.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'timerRefs.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/auth/SignOutButton.tsx
+  42:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  44:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubDiscoveryCard.tsx
+  44:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubSettingsTab.tsx
+  240:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  265:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/FollowButton.tsx
+  40:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/onboarding/OnboardingWizard.tsx
+  127:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 17 problems (0 errors, 17 warnings)
+
+## Task 2 <verify> (the Jest half; the Playwright half is the per-spec runs above, from a fresh reset)
+$ npx jest --ci src/server/__tests__/requireAdminPage.test.ts src/__tests__/pages
+exit=0
+PASS jsdom src/__tests__/pages/public-profile-defect.test.tsx
+PASS node src/__tests__/pages/docs-gate-defect.test.ts
+PASS node src/server/__tests__/requireAdminPage.test.ts
+Test Suites: 3 passed, 3 total
+Tests:       23 passed, 23 total
+
+$ supabase status   (stack health after the runs)
+exit=0
+Stopped services: [supabase_imgproxy_Event-Radar supabase_edge_runtime_Event-Radar supabase_pooler_Event-Radar]   (the optional services; the stack answers at API_URL http://127.0.0.1:54321, DB 127.0.0.1:54322; key material omitted)
+
+## Deviations and notes for Task 2
+1. The moderation layout keeps its anonymous branch (redirect "/admin-login") and then calls requireAdminPage("/"):
+   one helper has one target, and DEC-44/DEC-79 require the layout's two targets to stay. getRequestContext is
+   render-pass memoized, so this is one user read and one profile read.
+2. The reviews route's ban check runs on the admin path only (DEC-79: "the moderation reviews route's admin path runs
+   requireActiveUser before the role"); the creator path is unchanged. The banned-admin row lives in
+   src/__tests__/api/service-role-routing.test.ts (a plain, untagged suite that already drives this route's admin and
+   creator paths), recorded red against the HEAD route and green against the fix above.
+3. requireAdminPage returns AdminPageContext (user and profile narrowed to non-null) so the moderation layout needs
+   no non-null assertion.
+4. docs-gate-defect.test.ts gained G5 (the /health layout carries the same gate) as an added row, beyond the moved G1/G2.
+5. The banned-admin arm is unit-pinned only: the seed has no banned admin persona (the banned personas are students),
+   and adding one would move rows other specs read.
+6. The build's route table comes from a standalone `npm run build` (above) and matches each Playwright webServer build.

@@ -4,6 +4,7 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { hasRole } from "@/lib/roles";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { parseWith } from "@/server/body";
 import { ReviewTargetParams } from "@/contracts/admin";
 import { withRoute } from "@/server/route";
@@ -33,6 +34,14 @@ export const GET = withRoute({ cache: "private", action: "fetch moderation revie
   // The admin decision reads the request context's profile slice, the same
   // one read every admin guard uses; the creator path below is unchanged.
   const isAdmin = ctx.profile !== null && hasRole(ctx.profile, "admin");
+
+  // The admin path runs the active-user guard before the role takes effect
+  // (DI-55, DEC-79): a banned admin gets the seam's 403 "Account suspended"
+  // instead of every review. The creator path below is unchanged.
+  if (isAdmin) {
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+  }
 
   if (!isAdmin) {
     const table = targetType === "event" ? "events" : "clubs";

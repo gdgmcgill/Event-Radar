@@ -725,6 +725,26 @@ describe("moderation/reviews/[targetType]/[targetId] GET", () => {
     expect(mockCookie.calls).toEqual(["moderation_reviews.select"]);
     expect(mockElevated.calls).toEqual(["users.select"]);
   });
+
+  it("banned admin: refused with the seam's 403 before any read (DI-55, DEC-79, 06-17)", async () => {
+    mockCookie = makeFake({
+      user: ADMIN,
+      profile: { ...profileOf(ADMIN.id, ["user", "admin"]), banned_at: "2026-01-01T00:00:00.000Z" },
+      answers: {
+        "moderation_reviews.select": {
+          data: [{ id: "r1", author_id: ADMIN.id, action: "rejection", target_id: EVENT_ID }],
+        },
+      },
+    });
+    mockElevated = makeFake({ answers: {} });
+    const { GET }: Route = await import("@/app/api/moderation/reviews/[targetType]/[targetId]/route");
+    const res = await GET(new NextRequest(`${BASE}/moderation/reviews/event/${EVENT_ID}`), reviewParams());
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "Account suspended" });
+    expect(mockCookie.calls).toEqual([]);
+    expect(mockElevated.calls).toEqual([]);
+  });
 });
 
 function uploadRequest(path: string): NextRequest {
