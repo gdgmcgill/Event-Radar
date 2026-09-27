@@ -263,9 +263,29 @@ Source: 06-RESEARCH.md § Assumptions Log.
 - **Why not cosmetic.** Without them the Sentry, CDN and webhook guarantees are proven locally only.
 - **Owner:** the phase owner, before Phase 8's deploy.
 
+## DI-82 — The admin batch-scoring route always answers 500 through PostgREST
+
+- **Found by:** 06-04 Task 3 (the async-edge e2e spec, on the reset and seeded local stack).
+- **What it is.** `POST /api/recommendations/batch` calls `compute_user_scores()` through the elevated
+  door. The function's body begins with `DELETE FROM user_event_scores;` (no WHERE,
+  `baseline.sql:159`, and `DELETE FROM tag_interaction_counts;` at `:108`). The `authenticator` role
+  that every PostgREST request runs under has `session_preload_libraries=safeupdate` (measured:
+  `pg_roles.rolconfig`), so the call fails with `21000 DELETE requires a WHERE clause` and the route
+  answers `500 {"error":"Batch scoring failed","details":"DELETE requires a WHERE clause"}`. The
+  pg_cron job runs as `postgres` without safeupdate and is unaffected, so scores still refresh every
+  6 hours; only the admin's manual trigger is broken. The Jest PRESERVE row (admin → 200) passes
+  because the fake rpc has no safeupdate.
+- **Why deferred.** The fix changes `compute_user_scores`' body (for example `DELETE … WHERE true`),
+  which DEC-68 pins by `md5(prosrc)` and 06-05's pgTAP 070 asserts; it belongs to the plan that owns
+  that function, as a DEFECT-then-fix with the md5 pin re-derived, not to a route plan.
+- **Why not cosmetic.** An admin-facing control that always fails, with the database error text in the
+  body (F-059 territory).
+- **Owner:** Phase 6 (06-05 or the slice-6 close, 06-06) to disposition; 06-04 worked around it in the
+  e2e fixture only (a service-client score row), with no product-code change.
+
 ---
 
-**Next new item id: DI-82.**
+**Next new item id: DI-83.**
 
 *Phase: 06-slices-6-7-async-edge-contracts-caching-observability*
 *Plan: 06-01*

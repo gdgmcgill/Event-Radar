@@ -1,24 +1,26 @@
 /**
- * DEFECT characterization — F-017: A/B assignment silently degrades for every
- * non-admin caller (plan 06-02, REFAC-14)
+ * DEFECT characterization — F-017: A/B assignment silently degraded for every
+ * non-admin caller (plan 06-02 pinned it; plan 06-04 fixed it, REFAC-14,
+ * DEC-68)
  *
  * `experiments` and `experiment_variants` carry only admin policies, and
  * `experiment_assignments` carries admin-ALL plus own-row SELECT (06-RESEARCH
- * § H, measured by probe). GET /api/recommendations reads all three on the
- * cookie client (route.ts:189-234), so a non-admin reads no running
- * experiment, is never assigned a variant, and nothing is written. The
- * experiment silently measures admins only.
+ * § H, measured by probe). GET /api/recommendations read all three on the
+ * cookie client, so a non-admin read no running experiment, was never
+ * assigned a variant, and nothing was written: the experiment silently
+ * measured admins only.
  *
- * Pinned today (the rows expected to move when F-017's fix lands, which moves
- * the three reads and the insert to the elevated door):
- *   D1  a non-admin with scores, while an experiment is running, gets
- *       `experiment_variant_id: null`, the diversity parameter's λ, and no
- *       experiment_assignments insert on either client.
- *       Fixed shape: `pickVariant`'s variant ("control", λ 1) and exactly one
- *       insert carrying the caller's id.
- *   D2  a non-admin who already holds an assignment row (own-row SELECT lets
- *       them read it) is still not given that variant, because the
- *       experiments read returns nothing first.
+ * Plan 06-04 moved the three reads and the insert to the elevated door
+ * (`getElevatedClient()`, REGISTRY.md row "A/B experiment reads and the
+ * caller's own variant assignment"). The rows MOVED (INTENTIONAL BEHAVIOUR
+ * CHANGE, one defect-ledger row each citing F-017):
+ *   D1  was: a non-admin with scores, while an experiment is running, got
+ *       `experiment_variant_id: null`, the diversity parameter's λ (0.5) and
+ *       no insert. Now: `pickVariant`'s variant ("control", λ 1) and exactly
+ *       one experiment_assignments insert, on the elevated client, whose
+ *       `user_id` is the caller's own id;
+ *   D2  was: a non-admin holding an assignment row was not given it. Now:
+ *       that variant ("diverse", λ 0) and no insert.
  *
  * Controls in this file that do not move:
  *   C1  an admin with scores is assigned `pickVariant`'s variant ("diverse",
@@ -108,8 +110,8 @@ describe("fixture sanity: pickVariant's choice for each fixture user", () => {
   });
 });
 
-describe("DEFECT F-017: a non-admin is never assigned a variant", () => {
-  it("D1: running experiment, no assignment yet — variant null, diversity λ, zero experiment_assignments inserts", async () => {
+describe("F-017 fixed: a non-admin is assigned a variant through the elevated door", () => {
+  it("D1: running experiment, no assignment yet — pickVariant's variant, its λ, one insert carrying the caller's id", async () => {
     const outcome = await run({
       persona: "student",
       scores: "all",
@@ -118,21 +120,37 @@ describe("DEFECT F-017: a non-admin is never assigned a variant", () => {
 
     expect(outcome.status).toBe(200);
     expect(outcome.body.source).toBe("personalized");
-    expect(outcome.body.experiment_variant_id).toBeNull();
-    expect(reportedLambda(outcome.body)).toBe(0.5);
-    expect(assignmentInserts()).toHaveLength(0);
-    // The experiments read ran and found nothing, so the variants were never read.
+    expect(outcome.body.experiment_variant_id).toBe(VARIANT_CONTROL);
+    expect(reportedLambda(outcome.body)).toBe(1);
+    const inserts = assignmentInserts();
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].payload).toEqual({
+      experiment_id: EXPERIMENT_ID,
+      variant_id: VARIANT_CONTROL,
+      user_id: STUDENT.id,
+    });
+    // The insert and all three reads are on the elevated client; none on the cookie client.
     expect(
-      mockCookie.calls.filter((c) => c.table === "experiments")
+      mockElevated.calls.filter(
+        (c) => c.table === "experiment_assignments" && c.operation === "insert"
+      )
     ).toHaveLength(1);
     expect(
-      [...mockCookie.calls, ...mockElevated.calls].filter(
-        (c) => c.table === "experiment_variants"
+      mockCookie.calls.filter((c) =>
+        ["experiments", "experiment_variants", "experiment_assignments"].includes(
+          c.table
+        )
       )
     ).toHaveLength(0);
+    expect(
+      mockElevated.calls.filter((c) => c.table === "experiments")
+    ).toHaveLength(1);
+    expect(
+      mockElevated.calls.filter((c) => c.table === "experiment_variants")
+    ).toHaveLength(1);
   });
 
-  it("D2: an existing own assignment row is not honoured — variant null, zero inserts", async () => {
+  it("D2: an existing own assignment row is honoured — that variant, its λ, zero inserts", async () => {
     const outcome = await run({
       persona: "student",
       scores: "all",
@@ -141,8 +159,8 @@ describe("DEFECT F-017: a non-admin is never assigned a variant", () => {
     });
 
     expect(outcome.status).toBe(200);
-    expect(outcome.body.experiment_variant_id).toBeNull();
-    expect(reportedLambda(outcome.body)).toBe(0.5);
+    expect(outcome.body.experiment_variant_id).toBe(VARIANT_DIVERSE);
+    expect(reportedLambda(outcome.body)).toBe(0);
     expect(assignmentInserts()).toHaveLength(0);
   });
 });

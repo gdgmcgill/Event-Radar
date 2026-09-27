@@ -24,12 +24,15 @@ export async function GET(request: NextRequest) {
   // elevated client is needed (DEC-49).
   const supabase = ctx.supabase;
 
+  // No reporter embed: event_reports.reporter_id references auth.users, not
+  // public.users, so an embed of users hinted by the reporter foreign key
+  // failed with PGRST200 and the route always answered 500 (F-092, DEC-69).
+  // The reporters are read separately below.
   let query = supabase
     .from("event_reports")
     .select(`
       *,
-      event:events!inner(id, title, status, deleted_at),
-      reporter:users!event_reports_reporter_id_fkey(id, display_name, avatar_url)
+      event:events!inner(id, title, status, deleted_at)
     `)
     .is("event.deleted_at", null)
     .order("created_at", { ascending: false })
@@ -67,8 +70,40 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Each report's reporter, read from public.users ("Admins can view all
+  // profiles") and mapped to the shape the moderation page renders:
+  // { id, display_name, avatar_url }, or null when there is no such profile.
+  // Only id, name and avatar_url are selected; no email leaves this route.
+  const reporterIds = [
+    ...new Set(
+      (reports || [])
+        .map((r: any) => r.reporter_id as string | null)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const reporters = new Map<
+    string,
+    { id: string; display_name: string | null; avatar_url: string | null }
+  >();
+
+  if (reporterIds.length > 0) {
+    const { data: reporterRows } = await supabase
+      .from("users")
+      .select("id, name, avatar_url")
+      .in("id", reporterIds);
+
+    for (const row of reporterRows ?? []) {
+      reporters.set(row.id, {
+        id: row.id,
+        display_name: row.name,
+        avatar_url: row.avatar_url,
+      });
+    }
+  }
+
   const enriched = (reports || []).map((r: any) => ({
     ...r,
+    reporter: reporters.get(r.reporter_id) ?? null,
     report_count: eventCounts[r.event_id] || 1,
   }));
 

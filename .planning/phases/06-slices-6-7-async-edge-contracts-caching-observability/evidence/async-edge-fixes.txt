@@ -1,0 +1,274 @@
+# Async-edge route fixes — plan 06-04 Task 3 evidence (F-017, F-092, the async-edge e2e spec)
+# Phase 06 · Plan 04 · recorded 2026-09-26 · base 2617b7b (Task 2)
+# Commands verbatim with exit codes. Playwright output has the production server [WebServer] lines
+# removed except where quoted; every test line and summary is verbatim. Nothing secret is printed.
+
+==============================================================================
+1. F-017 — experiments, variants and the caller's assignment through the elevated door
+==============================================================================
+src/app/api/recommendations/route.ts: the three reads (experiments running, experiment_variants, the
+caller's experiment_assignments row) and the insert use getElevatedClient(); the insert's user_id is
+user.id from the route's own supabase.auth.getUser(), never a request value. Every other query stays
+on the cookie client. A caller with no running experiment gets unchanged bytes (PRESERVE suites green).
+
+[1.1 step 2] fix applied, DEFECT suite UNEDITED -> red
+$ npx jest --ci --verbose src/__tests__/api/recommendations
+FAIL node src/__tests__/api/recommendations/experiment-assignment-defect.test.ts
+    ✕ D1: running experiment, no assignment yet — variant null, diversity λ, zero experiment_assignments inserts (81 ms)
+    ✕ D2: an existing own assignment row is not honoured — variant null, zero inserts (1 ms)
+PASS node src/__tests__/api/recommendations/recommendations-family-characterization.test.ts
+PASS node src/__tests__/api/recommendations/recommendations-characterization.test.ts
+Test Suites: 1 failed, 2 passed, 3 total
+Tests:       2 failed, 51 passed, 53 total
+exit=1  (D1, D2 red: the before-assertions fail against the fix; C1, C2 and both PRESERVE suites green)
+
+[1.2 step 3] D1/D2 moved to the fixed shape -> green
+$ npx jest --ci --verbose src/__tests__/api/recommendations/experiment-assignment-defect.test.ts
+PASS node src/__tests__/api/recommendations/experiment-assignment-defect.test.ts
+    ✓ the student falls in control and the admin in diverse (1 ms)
+    ✓ D1: running experiment, no assignment yet — pickVariant's variant, its λ, one insert carrying the caller's id (47 ms)
+    ✓ D2: an existing own assignment row is honoured — that variant, its λ, zero inserts (1 ms)
+    ✓ C1: admin with scores is assigned pickVariant's variant with exactly one insert carrying the admin's id (2 ms)
+    ✓ C2: admin with an existing assignment is given that variant and nothing is inserted (1 ms)
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+exit=0
+
+==============================================================================
+2. F-092 — the reports list without the broken embed
+==============================================================================
+src/app/api/admin/reports/route.ts: the reporter:users!event_reports_reporter_id_fkey embed is gone; the
+distinct reporter ids are read from users (id, name, avatar_url only — no email, T-06-04-05) on
+ctx.supabase ("Admins can view all profiles") and mapped to reporter: { id, display_name: name,
+avatar_url } (null when absent), the shape src/app/moderation/reports/page.tsx renders.
+$ grep -c "!event_reports_reporter_id_fkey" src/app/api/admin/reports/route.ts
+0
+exit=1 (0 matches)
+
+[2.1 step 2] fix applied, DEFECT suite UNEDITED -> red
+FAIL node src/__tests__/api/admin/admin-reports-defect.test.ts
+    ✕ D1: admin → 500 Internal server error; the count query never runs (36 ms)
+    ✓ anonymous → 401 Unauthorized, no event_reports read
+    ✓ non-admin → 403 Forbidden, no event_reports read
+    ✓ the schema-cache model answers a select without the broken embed normally
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 passed, 4 total
+exit=1
+
+[2.2 step 3] D1 moved -> green
+PASS node src/__tests__/api/admin/admin-reports-defect.test.ts
+    ✓ D1: admin → 200 with reporter.display_name mapped from users.name; no broken embed (7 ms)
+    ✓ anonymous → 401 Unauthorized, no event_reports read
+    ✓ non-admin → 403 Forbidden, no event_reports read (1 ms)
+    ✓ the schema-cache model answers a select without the broken embed normally
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+exit=0
+
+==============================================================================
+3. Step 4 for both: pre-fix source (git show HEAD:<file>, HEAD = 2617b7b) put back temporarily -> moved suites red; fixed source restored
+==============================================================================
+FAIL node src/__tests__/api/recommendations/experiment-assignment-defect.test.ts
+    ✓ the student falls in control and the admin in diverse (1 ms)
+    ✕ D1: running experiment, no assignment yet — pickVariant's variant, its λ, one insert carrying the caller's id (49 ms)
+    ✕ D2: an existing own assignment row is honoured — that variant, its λ, zero inserts (1 ms)
+    ✓ C1: admin with scores is assigned pickVariant's variant with exactly one insert carrying the admin's id (1 ms)
+    ✓ C2: admin with an existing assignment is given that variant and nothing is inserted
+FAIL node src/__tests__/api/admin/admin-reports-defect.test.ts
+    ✕ D1: admin → 200 with reporter.display_name mapped from users.name; no broken embed (5 ms)
+    ✓ anonymous → 401 Unauthorized, no event_reports read
+    ✓ non-admin → 403 Forbidden, no event_reports read
+    ✓ the schema-cache model answers a select without the broken embed normally
+Test Suites: 2 failed, 2 total
+Tests:       3 failed, 6 passed, 9 total
+exit=1
+cmp exit=0 src/app/api/recommendations/route.ts
+cmp exit=0 src/app/api/admin/reports/route.ts
+
+==============================================================================
+4. REGISTRY row, ratchet, floor
+==============================================================================
+$ grep -n F-017 src/server/db/elevated/REGISTRY.md
+32:| A/B experiment reads and the caller's own variant assignment | `src/app/api/recommendations/route.ts` | experiments and experiment_variants carry admin-only policies; assignment is a server decision keyed by the authenticated caller's id, never a request value (F-017) | 06 |
+$ node scripts/check-elevated-ratchet.mjs
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+exit=0
+$ node scripts/check-contracts.mjs
+committed=86 live=86 delta=0
+PASS: the live census is within the committed allow-list
+exit=0
+$ npx jest --ci src/__tests__/api/recommendations src/__tests__/api/admin/admin-reports-defect.test.ts
+PASS node src/__tests__/api/recommendations/experiment-assignment-defect.test.ts
+PASS node src/__tests__/api/admin/admin-reports-defect.test.ts
+PASS node src/__tests__/api/recommendations/recommendations-family-characterization.test.ts
+PASS node src/__tests__/api/recommendations/recommendations-characterization.test.ts
+Test Suites: 4 passed, 4 total
+Tests:       57 passed, 57 total
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ npm run lint
+✖ 18 problems (0 errors, 18 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
+exit=0
+$ npx jest --ci
+Test Suites: 1 skipped, 102 passed, 102 of 103 total
+Tests:       1 skipped, 1995 passed, 1996 total
+exit=0
+
+==============================================================================
+5. e2e — first attempt (reset + seed, then the spec as the plan wrote it)
+==============================================================================
+$ supabase db reset --local   (tail)
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   -> exit=1 (free)
+$ npx playwright test e2e/specs/async-edge.spec.ts --reporter=list
+Running 13 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:18 › authenticate as onboarded_student (340ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:18 › authenticate as mid_onboarding_student (286ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_member (471ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_owner (677ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:18 › authenticate as multi_club_organizer (240ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:18 › authenticate as cross_club_attacker (441ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:18 › authenticate as admin (253ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:18 › authenticate as banned_permanent (200ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspended_active (204ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspension_expired (229ms)
+  ✓  11 [chromium] › e2e/specs/async-edge.spec.ts:52:5 › FIXED F-028: an anonymous notifications count answers 401 (13ms)
+  ✓  12 [chromium] › e2e/specs/async-edge.spec.ts:91:7 › FIXED F-092: the admin reports list › a student's report reaches the admin list with the reporter's name (133ms)
+  ✘  13 [chromium] › e2e/specs/async-edge.spec.ts:190:7 › FIXED F-017: a non-admin is assigned an A/B variant › the student's recommendations assign exactly one variant, keyed by the student (118ms)
+
+
+  1) [chromium] › e2e/specs/async-edge.spec.ts:190:7 › FIXED F-017: a non-admin is assigned an A/B variant › the student's recommendations assign exactly one variant, keyed by the student 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 500
+
+      225 |
+      226 |       const batch = await admin.post("/api/recommendations/batch");
+    > 227 |       expect(batch.status()).toBe(200);
+          |                              ^
+      228 |       expect((await batch.json()).success).toBe(true);
+      229 |     } finally {
+      230 |       await admin.dispose();
+        at /Users/adyan/Documents/GitHub/Event-Radar/e2e/specs/async-edge.spec.ts:227:30
+
+
+
+  1 failed
+    [chromium] › e2e/specs/async-edge.spec.ts:190:7 › FIXED F-017: a non-admin is assigned an A/B variant › the student's recommendations assign exactly one variant, keyed by the student 
+  12 passed (15.3s)
+exit=1
+server log (the route logs the rpc error object):
+[WebServer] Batch scoring error: {
+[WebServer]   code: '21000',
+[WebServer]   details: null,
+[WebServer]   hint: null,
+[WebServer]   message: 'DELETE requires a WHERE clause'
+[WebServer] }
+
+Diagnosis: $ docker exec supabase_db_Event-Radar psql -U postgres -c "SELECT rolname, rolconfig FROM pg_roles WHERE rolname IN (...)"
+    rolname    |                                  rolconfig                                  
+---------------+-----------------------------------------------------------------------------
+ postgres      | {"search_path=\"\\$user\", public, extensions"}
+ authenticator | {session_preload_libraries=safeupdate,statement_timeout=8s,lock_timeout=8s}
+(2 rows)
+
+exit=0
+compute_user_scores() begins with DELETE FROM tag_interaction_counts; / DELETE FROM user_event_scores;
+(baseline.sql:108, :159, no WHERE). PostgREST runs as authenticator, which preloads safeupdate, so the
+admin batch route answers 500 on every call; pg_cron (postgres) is unaffected. Pre-existing, not
+introduced here, and not fixable in this plan (the body is md5-pinned by DEC-68). Registered as DI-82
+in evidence/deferred-items.md. The spec now inserts the student's score row through the local service
+client instead of calling the batch route (deviation recorded in the SUMMARY).
+
+==============================================================================
+6. e2e — from a fresh reset and seed
+==============================================================================
+$ supabase db reset --local   (tail)
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   -> exit=1 (free)
+$ npx playwright test e2e/specs/async-edge.spec.ts --reporter=list
+(the webServer built the app: "> next build", "✓ Compiled successfully", then "✓ Ready")
+Running 13 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:18 › authenticate as onboarded_student (419ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:18 › authenticate as mid_onboarding_student (290ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_member (233ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_owner (453ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:18 › authenticate as multi_club_organizer (260ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:18 › authenticate as cross_club_attacker (255ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:18 › authenticate as admin (235ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:18 › authenticate as banned_permanent (206ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspended_active (203ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspension_expired (246ms)
+  ✓  11 [chromium] › e2e/specs/async-edge.spec.ts:59:5 › FIXED F-028: an anonymous notifications count answers 401 (13ms)
+  ✓  12 [chromium] › e2e/specs/async-edge.spec.ts:98:7 › FIXED F-092: the admin reports list › a student's report reaches the admin list with the reporter's name (118ms)
+  ✓  13 [chromium] › e2e/specs/async-edge.spec.ts:197:7 › FIXED F-017: a non-admin is assigned an A/B variant › the student's recommendations assign exactly one variant, keyed by the student (138ms)
+
+  13 passed (11.5s)
+exit=0
+
+$ npx playwright test e2e/specs/admin-moderation-queue.spec.ts e2e/specs/event-read-path.spec.ts --reporter=list
+Running 25 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:59:18 › authenticate as onboarded_student (377ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:18 › authenticate as mid_onboarding_student (275ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_member (233ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_owner (243ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:18 › authenticate as multi_club_organizer (251ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:18 › authenticate as cross_club_attacker (246ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:18 › authenticate as admin (243ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:18 › authenticate as banned_permanent (224ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspended_active (199ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspension_expired (446ms)
+  ✓  11 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:29:18 › an admin › reaches the moderation surface and sees the pending event and pending club (518ms)
+  ✓  12 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:40:18 › an admin › sees every seeded event in the queue, and the Pending filter narrows it (1.1s)
+  ✓  13 [chromium] › e2e/specs/admin-moderation-queue.spec.ts:69:18 › a student › does not reach the moderation queue (208ms)
+  ✓  14 [chromium] › e2e/specs/event-read-path.spec.ts:84:5 › PRESERVE: GET /api/events?limit=1 returns 200 with the approved event first and total 2 (15ms)
+  ✓  15 [chromium] › e2e/specs/event-read-path.spec.ts:95:5 › PRESERVE: GET /api/events?search=Music Night returns exactly the second approved event (6ms)
+  ✓  16 [chromium] › e2e/specs/event-read-path.spec.ts:104:5 › PRESERVE: typing a,b into the search box shows the No events found state (624ms)
+  ✓  17 [chromium] › e2e/specs/event-read-path.spec.ts:117:5 › PRESERVE: the approved event's detail page renders its title (228ms)
+  ✓  18 [chromium] › e2e/specs/event-read-path.spec.ts:149:5 › PRESERVE: limit=1 then its nextCursor traverses both approved events in start_date order, total 2 on each page (16ms)
+  ✓  19 [chromium] › e2e/specs/event-read-path.spec.ts:163:5 › PRESERVE: the same cursor traversal with search=Seed yields the same two pages (the search or() and the keyset or() are both applied) (20ms)
+  ✓  20 [chromium] › e2e/specs/event-read-path.spec.ts:174:5 › PRESERVE: cursor=not-a-valid-cursor is a 400 with Invalid cursor (24ms)
+  ✓  21 [chromium] › e2e/specs/event-read-path.spec.ts:182:5 › DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix) (219ms)
+  ✓  22 [chromium] › e2e/specs/event-read-path.spec.ts:203:5 › DEFECT F-081: the feed files the academic+tech event under a Social row, and there is no Tech row (moves only if 04-11 ships the identity mappings) (318ms)
+  ✓  23 [chromium] › e2e/specs/event-read-path.spec.ts:226:5 › FIXED F-082: search=a,b is a 200 with an empty events list (moved in 04-08) (10ms)
+  ✓  24 [chromium] › e2e/specs/event-read-path.spec.ts:238:5 › FIXED F-082: search=% matches only a literal percent, so no seeded event (moved in 04-08) (8ms)
+  ✓  25 [chromium] › e2e/specs/event-read-path.spec.ts:250:5 › FIXED F-083: the list body carries a nextCursor when more rows remain (moved in 04-09) (7ms)
+
+  25 passed (13.4s)
+exit=0
+
+Residue after both runs:
+ event_reports | experiments | experiment_variants | experiment_assignments | user_event_scores | events | users 
+---------------+-------------+---------------------+------------------------+-------------------+--------+-------
+             0 |           0 |                   0 |                      0 |                 0 |      5 |    10
+(1 row)
+
+exit=0  (event_reports, experiments, variants, assignments, scores 0: every fixture removed; events 5, users 10: the seed)
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN   -> exit=1 (free)
+
+Note: after the e2e runs, one comment line in src/app/api/admin/reports/route.ts was reworded so the file
+no longer contains the literal embed hint (acceptance grep). No code changed; the admin-reports and
+recommendations suites were re-run: 4 suites, 57 tests, exit=0.

@@ -23,6 +23,7 @@ import {
 } from "@/lib/recommendations";
 import { getESTNowISO } from "@/lib/timezone";
 import { parseQuery } from "@/server/body";
+import { getElevatedClient } from "@/server/db/elevated";
 import { RecommendationsQuery } from "@/contracts/recommendations";
 
 /**
@@ -187,11 +188,18 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // --- 6. A/B experiment framework (preserved) ---
+    // --- 6. A/B experiment framework ---
+    // experiments and experiment_variants carry admin-only policies, so on the
+    // cookie client a non-admin read no running experiment and was never
+    // assigned (F-017). The three reads and the assignment insert go through
+    // the elevated door (REGISTRY.md row, DEC-68). The insert's user_id is the
+    // authenticated caller's id from getUser() above and nothing else; no
+    // request value reaches this block.
     let experimentVariantId: string | null = null;
     let experimentLambda: number | null = null;
+    const elevated = getElevatedClient();
 
-    const { data: activeExperiments } = await supabase
+    const { data: activeExperiments } = await elevated
       .from("experiments")
       .select("id, name, status")
       .eq("status", "running");
@@ -199,7 +207,7 @@ export async function GET(request: NextRequest) {
     if (activeExperiments && activeExperiments.length > 0) {
       const experiment = activeExperiments[0] as { id: string; name: string };
 
-      const { data: variantRows } = await supabase
+      const { data: variantRows } = await elevated
         .from("experiment_variants")
         .select("*")
         .eq("experiment_id", experiment.id);
@@ -214,7 +222,7 @@ export async function GET(request: NextRequest) {
       const variants = (variantRows ?? []) as VRow[];
 
       if (variants.length >= 2) {
-        const { data: existingAssignment } = await supabase
+        const { data: existingAssignment } = await elevated
           .from("experiment_assignments")
           .select("variant_id")
           .eq("experiment_id", experiment.id)
@@ -232,7 +240,7 @@ export async function GET(request: NextRequest) {
             experiment.id,
             variants
           ) as VRow;
-          await supabase.from("experiment_assignments").insert({
+          await elevated.from("experiment_assignments").insert({
             experiment_id: experiment.id,
             variant_id: assignedVariant.id,
             user_id: user.id,
