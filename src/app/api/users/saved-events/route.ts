@@ -18,6 +18,7 @@ import { readQuery } from "@/server/body";
 import { SavedEventsQuery } from "@/contracts/users";
 import { withRoute } from "@/server/route";
 import { log } from "@/server/log";
+import { getESTNowISO } from "@/lib/timezone";
 
 /**
  * @swagger
@@ -92,8 +93,10 @@ export const GET = withRoute({ cache: "private", action: "fetch saved events" },
       .eq("status", "approved")
       .is("deleted_at", null);
 
+    // start_date is Eastern wall-clock stored with a +00 offset, so "now" is
+    // expressed the same way: the floor /api/events uses (F-085).
     if (!includePast) {
-      eventsQuery = eventsQuery.gte("start_date", new Date().toISOString());
+      eventsQuery = eventsQuery.gte("start_date", getESTNowISO());
     }
 
     const { data: eventsData, error: eventsError } = await eventsQuery;

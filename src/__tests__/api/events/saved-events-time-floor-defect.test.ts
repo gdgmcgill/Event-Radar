@@ -1,48 +1,39 @@
 /**
- * DEFECT characterization — F-085
+ * DEFECT characterization — F-085 (fixed in plan 06-18; assertions moved)
  *
  * Subject: `src/app/api/users/saved-events/route.ts`, the default "upcoming"
- * floor at lines 99-101:
+ * floor:
  *
  *     if (!includePast) {
- *       eventsQuery = eventsQuery.gte("start_date", new Date().toISOString());
+ *       eventsQuery = eventsQuery.gte("start_date", getESTNowISO());
  *     }
  *
- * The defect: `start_date` is stored as Eastern wall-clock with a `+00` offset
- * (`src/lib/timezone.ts:1-10`), so "now" has to be expressed in that same
- * naive-UTC form before it is compared — which is what `/api/events` does with
- * `getESTNowISO()` (`src/app/api/events/route.ts:245-246`). This route compares
- * against TRUE UTC instead. At 14:30 EDT the true-UTC instant is 18:30Z, so an
- * event stored as 16:00Z — 16:00 Eastern, ninety minutes away — is upcoming in
- * the feed and already gone from the caller's upcoming saved list. The band is
- * four hours wide under EDT and five under EST, and it moves with the clock.
+ * The defect this file pinned until 06-18: `start_date` is stored as Eastern
+ * wall-clock with a `+00` offset (`src/lib/timezone.ts:1-10`), so "now" has to
+ * be expressed in that same naive-UTC form before it is compared — which is
+ * what `/api/events` does with `getESTNowISO()`. The route compared against
+ * TRUE UTC (`new Date().toISOString()`) instead, so at 14:30 EDT (18:30Z) an
+ * event stored as 16:00Z — 16:00 Eastern, ninety minutes away — was upcoming in
+ * the feed and already gone from the caller's upcoming saved list.
  *
- * What this file is and is not:
- *
- *   - It is a DEFECT test. It pins what the handler does TODAY: with the system
- *     clock pinned, the floor it sends is the true-UTC ISO string of that
- *     instant, not the Eastern wall-clock string. It passes today and is
- *     expected to keep passing until the fixing change lands.
- *   - It is NOT a failing test and NOT a fix. Unifying the two floors is a
- *     timezone-dependent behaviour change with no characterization behind it
- *     yet (04-RESEARCH.md Pitfall 6), so Phase 4 registers and pins it and
- *     Phase 6 fixes it. When a shared floor function lands in Phase 6, these
- *     assertions move — deliberately and visibly, in that commit.
+ * INTENTIONAL BEHAVIOUR CHANGE (06-18, DEC-80): an event is upcoming in saved
+ * events exactly when it is upcoming in the feed. The assertions below moved
+ * from the true-UTC values to the Eastern wall-clock values in the fixing
+ * commit, under the ledger protocol (`evidence/defect-ledger.md`, F-085 row;
+ * `evidence/f-085-fix.txt` in the Phase 6 directory). They go red against the
+ * pre-fix source.
  *
  * Why the expected Eastern values are literals and not `getESTNowISO()`: the
  * worked instants are chosen so the arithmetic is checkable by eye (18:30Z is
  * 14:30 EDT; 19:30Z in January is 14:30 EST), and a literal cannot drift with
- * the helper it is being contrasted with.
+ * the helper it is asserting.
  *
  * The clock is pinned with Jest's modern fake timers faking `Date` only. The
  * subject is driven through the in-memory fake (`../../helpers/fakeSupabase.ts`)
  * behind a mock of "@/lib/supabase/server", the same seam as
- * `saved-events-characterization.test.ts`, so it survives 04-05's seam
- * adoption unedited.
+ * `saved-events-characterization.test.ts`.
  *
- * Registered as F-085 in .planning/audit/findings.json. Closes in Phase 6.
- * Observed red under a mutation of the floor; see
- * `evidence/slice-1-mutation-check.txt`.
+ * Registered as F-085 in .planning/audit/findings.json.
  */
 
 import { NextRequest } from "next/server";
@@ -126,34 +117,35 @@ afterEach(() => {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe("F-085 — the saved-events upcoming floor is true UTC", () => {
-  it("at 14:30 EDT (18:30Z) the floor is 2026-09-23T18:30:00.000Z, not the Eastern 2026-09-23T14:30:00.000Z", async () => {
+describe("F-085 — the saved-events upcoming floor is the feed's Eastern wall-clock floor", () => {
+  it("at 14:30 EDT (18:30Z) the floor is the Eastern 2026-09-23T14:30:00.000Z, not the true-UTC 2026-09-23T18:30:00.000Z", async () => {
     pinClock("2026-09-23T18:30:00.000Z");
     const fake = setup();
     const res = await GET(new NextRequest("http://localhost:3000/api/users/saved-events"));
     expect(res.status).toBe(200);
     expect(floorFilters(fake)).toEqual([
-      { op: "gte", column: "start_date", value: "2026-09-23T18:30:00.000Z" },
+      { op: "gte", column: "start_date", value: "2026-09-23T14:30:00.000Z" },
     ]);
-    expect(floorFilters(fake)[0].value).not.toBe("2026-09-23T14:30:00.000Z");
+    expect(floorFilters(fake)[0].value).not.toBe("2026-09-23T18:30:00.000Z");
   });
 
-  it("at 14:30 EST (19:30Z in January) the floor is the true-UTC 2026-01-15T19:30:00.000Z — five hours ahead", async () => {
+  it("at 14:30 EST (19:30Z in January) the floor is the Eastern 2026-01-15T14:30:00.000Z — five hours behind true UTC", async () => {
     pinClock("2026-01-15T19:30:00.000Z");
     const fake = setup();
     await GET(new NextRequest("http://localhost:3000/api/users/saved-events"));
     expect(floorFilters(fake)).toEqual([
-      { op: "gte", column: "start_date", value: "2026-01-15T19:30:00.000Z" },
+      { op: "gte", column: "start_date", value: "2026-01-15T14:30:00.000Z" },
     ]);
   });
 
-  it("drops an event ninety minutes away in Eastern time from the upcoming saved list", async () => {
+  it("keeps an event ninety minutes away in Eastern time in the upcoming saved list", async () => {
     pinClock("2026-09-23T18:30:00.000Z");
     setup();
     const res = await GET(new NextRequest("http://localhost:3000/api/users/saved-events"));
     const body = await res.json();
-    // SOON (16:00 Eastern) is still upcoming at 14:30 Eastern, and is dropped.
-    expect(body.savedEventIds).toEqual([LATER.id]);
+    // SOON (16:00 Eastern) is still upcoming at 14:30 Eastern, and is kept.
+    // Default sort is "recent": LATER was saved after SOON, so it comes first.
+    expect(body.savedEventIds).toEqual([LATER.id, SOON.id]);
   });
 
   it("sends no floor at all when include_past=true", async () => {

@@ -1,0 +1,115 @@
+# 06-18 Task 1 evidence: F-085 — saved-events 'upcoming' uses the feed's Eastern wall-clock floor (DEC-80)
+# Each block is the verbatim command, its exit code, then its output. Recorded 2026-09-27T18:03:27Z at HEAD 02177c5 (fix uncommitted in the tree).
+# INTENTIONAL BEHAVIOUR CHANGE: an event is upcoming in saved events exactly when it is upcoming in the feed.
+
+## The fix (git diff -- src/app/api/users/saved-events/route.ts)
+diff --git a/src/app/api/users/saved-events/route.ts b/src/app/api/users/saved-events/route.ts
+index a8459ac..e1da9cc 100644
+--- a/src/app/api/users/saved-events/route.ts
++++ b/src/app/api/users/saved-events/route.ts
+@@ -18,6 +18,7 @@ import { readQuery } from "@/server/body";
+ import { SavedEventsQuery } from "@/contracts/users";
+ import { withRoute } from "@/server/route";
+ import { log } from "@/server/log";
++import { getESTNowISO } from "@/lib/timezone";
+ 
+ /**
+  * @swagger
+@@ -92,8 +93,10 @@ export const GET = withRoute({ cache: "private", action: "fetch saved events" },
+       .eq("status", "approved")
+       .is("deleted_at", null);
+ 
++    // start_date is Eastern wall-clock stored with a +00 offset, so "now" is
++    // expressed the same way: the floor /api/events uses (F-085).
+     if (!includePast) {
+-      eventsQuery = eventsQuery.gte("start_date", new Date().toISOString());
++      eventsQuery = eventsQuery.gte("start_date", getESTNowISO());
+     }
+ 
+     const { data: eventsData, error: eventsError } = await eventsQuery;
+
+## Step 0 (baseline): the pin unedited against the unfixed source
+$ npx jest --ci src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+    ✓ at 14:30 EDT (18:30Z) the floor is 2026-09-23T18:30:00.000Z, not the Eastern 2026-09-23T14:30:00.000Z (5 ms)
+    ✓ at 14:30 EST (19:30Z in January) the floor is the true-UTC 2026-01-15T19:30:00.000Z — five hours ahead
+    ✓ drops an event ninety minutes away in Eastern time from the upcoming saved list (1 ms)
+    ✓ sends no floor at all when include_past=true
+Tests:       4 passed, 4 total
+exit=0
+
+## Step 2: fix applied, the pin UNEDITED — must go red
+$ npx jest --ci src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+    ✕ at 14:30 EDT (18:30Z) the floor is 2026-09-23T18:30:00.000Z, not the Eastern 2026-09-23T14:30:00.000Z (13 ms)
+    ✕ at 14:30 EST (19:30Z in January) the floor is the true-UTC 2026-01-15T19:30:00.000Z — five hours ahead (1 ms)
+    ✕ drops an event ninety minutes away in Eastern time from the upcoming saved list (1 ms)
+    ✓ sends no floor at all when include_past=true
+    - Expected  - 1
+    + Received  + 1
+    - Expected  - 1
+    + Received  + 1
+    - Expected  - 0
+    + Received  + 1
+Tests:       3 failed, 1 passed, 4 total
+exit=1
+
+## Step 3: assertions moved to the Eastern floor — must go green
+$ git diff --stat -- src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+ .../events/saved-events-time-floor-defect.test.ts  | 66 ++++++++++------------
+ 1 file changed, 29 insertions(+), 37 deletions(-)
+$ npx jest --ci src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+    ✓ at 14:30 EDT (18:30Z) the floor is the Eastern 2026-09-23T14:30:00.000Z, not the true-UTC 2026-09-23T18:30:00.000Z (13 ms)
+    ✓ at 14:30 EST (19:30Z in January) the floor is the Eastern 2026-01-15T14:30:00.000Z — five hours behind true UTC (1 ms)
+    ✓ keeps an event ninety minutes away in Eastern time in the upcoming saved list (1 ms)
+    ✓ sends no floor at all when include_past=true
+Tests:       4 passed, 4 total
+exit=0
+
+## Step 4: pre-fix source put back temporarily, moved pin run — must go red; fixed source restored and cmp'd
+$ cp route.prefix.ts src/app/api/users/saved-events/route.ts && npx jest --ci src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+    ✕ at 14:30 EDT (18:30Z) the floor is the Eastern 2026-09-23T14:30:00.000Z, not the true-UTC 2026-09-23T18:30:00.000Z (6 ms)
+    ✕ at 14:30 EST (19:30Z in January) the floor is the Eastern 2026-01-15T14:30:00.000Z — five hours behind true UTC
+    ✕ keeps an event ninety minutes away in Eastern time in the upcoming saved list (1 ms)
+    ✓ sends no floor at all when include_past=true (1 ms)
+Tests:       3 failed, 1 passed, 4 total
+exit=1
+$ cp route.fixed.ts src/app/api/users/saved-events/route.ts && cmp route.fixed.ts src/app/api/users/saved-events/route.ts
+cmp exit=0
+
+## Step 5: the PRESERVE suite covering the surface is unedited and passes
+$ git diff --stat -- src/__tests__/api/events/saved-events-characterization.test.ts   (empty = unedited)
+(empty)
+$ npx jest --ci src/__tests__/api/events
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/__tests__/api/events/analytics.test.ts
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+PASS node src/__tests__/api/events/ban-asymmetry-defect.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/api/events/pending-edits-defect.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+Test Suites: 20 passed, 20 total
+Tests:       250 passed, 250 total
+exit=0
+
+## Type-check, lint on the touched files, characterization tag gate
+$ npx tsc --noEmit
+exit=0
+$ npx eslint src/app/api/users/saved-events/route.ts src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+exit=0
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok 57 files
+exit=0
