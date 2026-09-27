@@ -24,6 +24,12 @@ permissions:
 env:
   NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder-key"
+  # DEC-61 (plan 06-16). @sentry/nextjs pulls in @sentry/cli, whose postinstall
+  # downloads a platform binary from the network when the optional platform
+  # package is absent. The binary only uploads source maps, which the build
+  # disables without SENTRY_AUTH_TOKEN. Set at workflow level so every job's
+  # `npm ci` skips that install-time download.
+  SENTRYCLI_SKIP_DOWNLOAD: "1"
 
 # WR-07, half two — THIRD-PARTY ACTIONS ARE PINNED BY COMMIT SHA, NOT BY TAG.
 # A tag is a mutable pointer: `@v4` can be force-moved to any commit by whoever
