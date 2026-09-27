@@ -204,7 +204,8 @@ exit=0
 TASK 3 - the non-route server modules on the logger; the server-console and cache censuses; CI step
 ======================================================================================================
 
-Task 2's commit: 4ad1fae (filled into the two proxy-defect ledger rows by this task's commit).
+Task 1's commit: d790b21. Task 2's commit: 4ad1fae (filled into the two proxy-defect ledger rows by Task 3's
+commit). Task 3's commit: f044f02 (filled into the audit-shape ledger row by the plan's docs commit).
 
 [3.1] Four modules converted: src/server/ratelimit/index.ts (3 calls), src/server/ratelimit/upstashStore.ts (2),
 src/server/afterResponse.ts (1), src/lib/audit.ts (1). Scopes from the old bracket prefixes (RateLimit,

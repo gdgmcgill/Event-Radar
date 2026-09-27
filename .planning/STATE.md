@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: executing
-stopped_at: Completed 06-11-PLAN.md
-last_updated: "2026-09-27T04:09:33.615Z"
+stopped_at: Completed 06-12-PLAN.md
+last_updated: "2026-09-27T04:30:32.569Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 80
-  completed_plans: 73
+  completed_plans: 74
   percent: 63
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 06 (Slices 6–7 — Async Edge, Contracts, Caching, Observability) — EXECUTING
-Plan: 12 of 18
+Plan: 13 of 18
 Status: Ready to execute
 Last activity: 2026-09-25 — Phase 06 execution started
 
@@ -127,6 +127,7 @@ Progress: [███████░░░] 73%
 | Phase 06 P09 | 18min | 2 tasks | 31 files |
 | Phase 06 P10 | 22min | 2 tasks | 29 files |
 | Phase 06 P11 | 23min | 2 tasks | 57 files |
+| Phase 06 P12 | 19min | 3 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -346,6 +347,8 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-11: each hook's development-only response check lives in a module-level function whose dynamic import() sits inside if (process.env.NODE_ENV !== "production"); no hook body holds an import() — Next inlines NODE_ENV so the branch and its import() are removed from production chunks (zod markers 0; a forced-live build finds them). An import() inside a hook body also made the React-Compiler lint rules skip the hook (an eslint-disable directive went unused), so module level keeps lint coverage.
 - [Phase 06]: 06-11: client senders reach contracts through import type only; bodiless mutations name a BodilessRequestInit alias per route, and FormData field names are type-only literals (ProfileImageFileField, ClubImageFormField, EventImageFileField) — A value import from a contract module pulls zod (and sanitize-html) into the client bundle, so the plan's field-name constant is exported but consumed as a type ('file' satisfies X). A bodiless alias makes every mutation file name its route's contract and turns an added body into a type error until the handler's contract declares one.
 - [Phase 06]: 06-11: response schemas are loose and list what each handler returns on success; the hooks keep their public data types (domain types from @/types), and the response types type only what a hook reads itself — Loose objects mean a warning signals a real drift, not an unlisted field. Typing SWR data with the looser contract types would ripple through every consumer component (index-signature unknowns), which is a rendered-code change the plan forbids; compile-time coupling is carried by request bodies, query keys and typed loaders instead.
+- [Phase 06]: 06-12: A1 holds in the direct form - request.headers.set on the proxy's NextRequest is forwarded by every NextResponse.next({ request }), the setAll one included; the proxy also stamps x-request-id on its pass-through and its own responses, and runs the unchanged ring body inside runWithRequest — Next's adapter builds the proxy request from a fresh mutable Headers; measured in a scratch Jest test and on the real runtime (evidence/logger-foundation.txt 2.1, 3.9). Moving the body into ring() keeps the createServerClient-getUser region, PROTECTED_ROUTES, the matcher and the rate-limit call byte-identical.
+- [Phase 06]: 06-12: the server-console census S2 keeps C7's broad .message rule and measures 42 sites in 22 route files (C7 said 40); the F-059 worklist is 35 response-body sites plus the callback redirect — updateError.message 500 bodies at clubs/[id]/appeal:83 and events/[id]/appeal:88 existed at the floor's base but were missing from C7's list; S1 reconciles exactly with C1 (160 - 2 cron - 12 converted = 146).
 
 ### Pending Todos
 
@@ -398,7 +401,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T04:08:18.205Z
-Stopped at: Completed 06-11-PLAN.md
+Last session: 2026-09-27T04:30:32.564Z
+Stopped at: Completed 06-12-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None
