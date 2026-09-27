@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: executing
-stopped_at: Completed 06-09-PLAN.md
-last_updated: "2026-09-27T03:20:29.863Z"
+stopped_at: Completed 06-10-PLAN.md
+last_updated: "2026-09-27T03:43:56.249Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 80
-  completed_plans: 71
+  completed_plans: 72
   percent: 63
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 06 (Slices 6–7 — Async Edge, Contracts, Caching, Observability) — EXECUTING
-Plan: 10 of 18
+Plan: 11 of 18
 Status: Ready to execute
 Last activity: 2026-09-25 — Phase 06 execution started
 
@@ -125,6 +125,7 @@ Progress: [███████░░░] 73%
 | Phase 06 P07 | 26min | 3 tasks | 12 files |
 | Phase 06 P08 | 21min | 2 tasks | 20 files |
 | Phase 06 P09 | 18min | 2 tasks | 31 files |
+| Phase 06 P10 | 22min | 2 tasks | 29 files |
 
 ## Accumulated Context
 
@@ -338,6 +339,9 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-08: RSVP POST parses RsvpBody (user_id), then the handler's mismatch 403, then RsvpStatus via parseWith; parseForm keeps each route's texts, order and unreadable answer, and exports checkFile for checks that follow a guard — Today's order puts the 403 between user_id and status, and clubs/logo and clubs/banner check type and size after the ownership gate; one monolithic schema would reorder 403 and 400
 - [Phase 06]: 06-09: DEC-66 club links are one rule on POST and PATCH (ClubLinkFields). An absolute http(s) URL is kept byte for byte. A scheme-less host path (not an absolute URL, and with https:// in front its host has a dot) is saved with https:// prefixed. Anything else, another scheme or a non-host value such as 'x', answers 400 'Invalid URL for <field>'. — The dotted-host definition keeps the PRESERVE order row 'bad URL beats bad email' (linkedin_url 'x') green unedited, and it stops POST storing non-URL values as relative links. Only the table row 'club PATCH: URL relative' and the club-links scheme-less POST pin moved (F-094 ledger).
 - [Phase 06]: 06-09: parseForm gained deferFileChecks. clubs/logo and clubs/banner check type and size after requireClubRole, and profile uploads keep them in parseForm. Each route keeps its own link check order: PATCH checks all types, then links; POST checks type then link, field by field. — Lesson 3: a 400 never moves ahead of a 403 or ahead of an earlier rule. parseForm always ran checkFile, which would have answered a non-owner's bad file with 400 before the ownership gate.
+- [Phase 06]: 06-10: split admin contracts where a rule sits between two input checks (status route: status, transition guard, ModerationReason; admin/users: roles, own-roles 403, name) — Keeps today's order where a 404/409 or 403 answers between two 400s, as 06-08 did for RSVP; the PRESERVE order rows pass unedited.
+- [Phase 06]: 06-10: CanonicalId canonicalizes the whole route id (and the caller's id) in ban POST and admin/users PATCH; a non-UUID id passes through with no new 400 — DI-64/DEC-66: Postgres matches a uuid in any case, so a string compare let an admin's own upper-case id past the self-check; lower-casing once makes the compare, lookup, write and audit target agree.
+- [Phase 06]: 06-10: admin/events/[id] PUT gained its first 400s (F-094), so one row was added to badRequestTable.ts (title must be a string); the PRESERVE test file is unedited — The unedited PRESERVE P0 counts any route calling parseBody( as able to answer a 400; the route really can now, so an additive pin (with a ledger row) is honest where readQuery would hide a real 400.
 
 ### Pending Todos
 
@@ -390,7 +394,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T03:20:29.857Z
-Stopped at: Completed 06-09-PLAN.md
+Last session: 2026-09-27T03:43:56.244Z
+Stopped at: Completed 06-10-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None
