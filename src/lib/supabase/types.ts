@@ -1286,6 +1286,16 @@ export type Database = {
         Returns: boolean
       }
       compute_user_scores: { Args: never; Returns: undefined }
+      cron_job_status: {
+        Args: never
+        Returns: {
+          active: boolean
+          jobname: string
+          last_start: string
+          last_status: string
+          schedule: string
+        }[]
+      }
       get_event_ids_by_time_filter: {
         Args: { day_type?: string; time_of_day?: string }
         Returns: {
