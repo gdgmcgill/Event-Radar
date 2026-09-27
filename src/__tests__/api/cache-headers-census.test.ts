@@ -13,13 +13,18 @@
  *     literal Cache-Control (the wrapper owns the header on every status).
  *
  * The classification is `.planning/audit/inventory/endpoints.json`'s
- * `cache_policy_target` with the OVERRIDES below applied. P0 checks that the
- * tree and the inventory agree, so a new route cannot arrive unclassified.
+ * `cache_policy_target`, read through INVENTORY_CLASS (header text to class
+ * name). Since 06-15 the inventory carries the C7/C8/C9 and DEC-69 corrections
+ * itself (classify-inventory.mjs CACHE_TARGET_OVERRIDES, classification-rules.md
+ * § C2), so this file keeps no override list. The target never reads the
+ * wrapper, so the comparison below is between two independent sources. P0
+ * checks that the tree and the inventory agree, so a new route cannot arrive
+ * unclassified.
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
-import { CACHE_CLASSES, type CacheClass } from "@/server/http";
+import { CACHE_CLASSES, cachePolicy, type CacheClass } from "@/server/http";
 
 const REPO = resolve(__dirname, "../../..");
 
@@ -36,7 +41,7 @@ const ENDPOINTS: EndpointRow[] = JSON.parse(
 
 /**
  * Rows whose file no longer exists. They are skipped, never classified; the
- * inventory is regenerated in 06-15 (DI-58).
+ * classifier retains them byte-for-byte (DEC-55, classification-rules.md § 8).
  */
 const DELETED: Record<string, string> = {
   "src/app/api/auth-debug/route.ts": "deleted in Phase 5",
@@ -46,39 +51,6 @@ const DELETED: Record<string, string> = {
     "deleted in 06-03 (pg_cron runs send_feedback_requests)",
 };
 
-/** Where the corrected classification differs from, or pins, the inventory. */
-const OVERRIDES: Record<string, { cache: CacheClass; reason: string }> = {
-  "/api/events/[id]": {
-    cache: "private",
-    reason:
-      "C7: viewer-dependent (admins and the creator read pending and rejected rows; pending_edits for creator and admins), and Vercel caches 404s",
-  },
-  "/api/health": {
-    cache: "private",
-    reason: "C8: a cached liveness answer would mask an origin outage",
-  },
-  "/api/clubs/[id]/events": {
-    cache: "private",
-    reason: "DEC-69: members see the club's pending events",
-  },
-  "/api/events/[id]/rsvp": {
-    cache: "private",
-    reason: "DEC-69: the caller's own RSVP state",
-  },
-  "/api/events": {
-    cache: "public-30-60",
-    reason: "C9: the value production serves today (route.ts sets s-maxage=30, swr=60)",
-  },
-  "/api/events/featured": {
-    cache: "public-60-120",
-    reason: "C9: the value production serves today (s-maxage=60, swr=120)",
-  },
-  "/api/clubs/featured": {
-    cache: "public-60-120",
-    reason: "C9: the value production serves today (s-maxage=60, swr=120)",
-  },
-};
-
 /**
  * Every route file not yet wrapped. Only ever shrank: 91 at 06-12, 48 after
  * 06-13, empty after 06-14 (asserted empty below). A new route file must be
@@ -86,16 +58,17 @@ const OVERRIDES: Record<string, { cache: CacheClass; reason: string }> = {
  */
 const PENDING_WRAP: readonly string[] = [];
 
+/** Each `cache_policy_target` value the inventory uses, to its class name. */
 const INVENTORY_CLASS: Record<string, CacheClass> = {
   "private, no-store": "private",
   "no-store": "private",
   "public, s-maxage=60, stale-while-revalidate=300": "public-60-300",
+  "public, s-maxage=30, stale-while-revalidate=60": "public-30-60",
+  "public, s-maxage=60, stale-while-revalidate=120": "public-60-120",
 };
 
 /** The GET class a route's file must declare. */
 function classify(row: EndpointRow): CacheClass {
-  const override = OVERRIDES[row.route];
-  if (override) return override.cache;
   const cls = INVENTORY_CLASS[row.cache_policy_target];
   if (!cls) throw new Error(`unmapped cache_policy_target ${row.cache_policy_target}`);
   return cls;
@@ -149,11 +122,25 @@ describe("cache census: the tree and the inventory (P0)", () => {
     expect(TREE).toHaveLength(ENDPOINTS.length - Object.keys(DELETED).length);
   });
 
-  it("every override names a live route and carries a reason", () => {
-    for (const [route, { cache, reason }] of Object.entries(OVERRIDES)) {
-      expect(LIVE_ROWS.some((row) => row.route === route)).toBe(true);
-      expect(CACHE_CLASSES).toContain(cache);
-      expect(reason.length).toBeGreaterThan(10);
+  it("every public target value maps to a class, and every class's header is a target value", () => {
+    for (const row of LIVE_ROWS) expect(INVENTORY_CLASS).toHaveProperty([row.cache_policy_target]);
+    for (const [value, cls] of Object.entries(INVENTORY_CLASS)) {
+      if (cls !== "private") expect(cachePolicy(cls)).toBe(value);
+    }
+  });
+
+  it("the C7, C8 and DEC-69 routes are private in the data", () => {
+    for (const route of [
+      "/api/events/[id]",
+      "/api/health",
+      "/api/events/[id]/rsvp",
+      "/api/clubs/[id]/events",
+    ]) {
+      const row = LIVE_ROWS.find((r) => r.route === route) as EndpointRow;
+      expect({ route, target: row.cache_policy_target }).toEqual({
+        route,
+        target: "private, no-store",
+      });
     }
   });
 

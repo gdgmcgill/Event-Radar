@@ -32,6 +32,10 @@
  * When 06-12's `cachePolicy` lands on an arm, C1 and C2 for that arm MOVE to
  * `private, no-store`, with a defect-ledger row citing F-026.
  *
+ * Since 06-15 the inventory carries research C7 and C8, so `/api/events/[id]`
+ * and `/api/health` are in the worklist too (46 drivable rows); both were
+ * wrapped private by 06-14 and enter at C4/C5 without a C1/C2 history.
+ *
  * Moved so far (`ADOPTED` below): C4 and C5 pin the adopted arms at
  * `private, no-store` with a UUID `x-request-id`, signed in and anonymous
  * (06-13: the admin and moderation arms; the club, organizer-request and
@@ -216,6 +220,17 @@ const GET_ARMS: Record<string, { path: string; invoke: GetInvoke }> = {
     invoke: async (r) =>
       (await import("@/app/api/events/[id]/reviews/route")).GET(r, idOf(EVENT_OWN)),
   },
+  // 06-15: the inventory now carries C7 and C8, so these two GET rows joined the
+  // worklist; both were wrapped private by 06-14 and pin at C4/C5 directly.
+  "/api/events/[id]": {
+    path: `events/${EVENT_OWN}`,
+    invoke: async (r) =>
+      (await import("@/app/api/events/[id]/route")).GET(r, idOf(EVENT_OWN)),
+  },
+  "/api/health": {
+    path: "health",
+    invoke: async () => (await import("@/app/api/health/route")).GET(),
+  },
   "/api/events/[id]/rsvp": {
     path: `events/${EVENT_OWN}/rsvp`,
     invoke: async (r) =>
@@ -318,7 +333,7 @@ const CONTROL = "/api/recommendations";
 /** Inventory rows with no invoker, and why. */
 const NOT_DRIVABLE: Record<string, string> = {
   "/api/auth-debug":
-    "the route file was deleted in Phase 5; the inventory row is stale (DI-58)",
+    "the route file was deleted in Phase 5; the classifier retains its audit-time row (DEC-55)",
   "/auth/callback":
     "not under /api and a redirect, not a JSON GET, and its client comes from @supabase/ssr, not this fake; 06-14 wraps it with the private class (the cache census checks the declaration)",
 };
@@ -405,6 +420,9 @@ const ADOPTED: ReadonlySet<string> = new Set([
   "/api/users/me/suggestions",
   "/api/users/saved-events",
   "/api/users/search",
+  // 06-15: the regenerated inventory's C7 and C8 targets (already private, 06-14)
+  "/api/events/[id]",
+  "/api/health",
 ]);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -421,13 +439,13 @@ describe("C0: the worklist is the inventory", () => {
       (route) => !(route in GET_ARMS) && !(route in NOT_DRIVABLE)
     );
     expect(missing).toEqual([]);
-    expect(drivable).toHaveLength(44);
+    expect(drivable).toHaveLength(46);
   });
 
   it("every ADOPTED route is a drivable worklist row", () => {
     const routes = drivable.map(([route]) => route);
     expect([...ADOPTED].filter((r) => !routes.includes(r))).toEqual([]);
-    expect(pending.length + adopted.length).toBe(44);
+    expect(pending.length + adopted.length).toBe(46);
   });
 
   it("every NOT_DRIVABLE route is in the worklist", () => {

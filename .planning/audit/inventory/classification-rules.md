@@ -83,8 +83,17 @@ trade for an audit: an attacker reads the weakest method too.
 (`verifyAdmin()` until 05-13), an inline roles check, a `club_members` lookup, or a
 `club_members.role === "owner"` lookup. Two handlers enforce an admin role **without**
 `verifyAdmin()`
-(`/api/moderation/reviews/[targetType]/[targetId]` uses an inline check on the service client);
+(`/api/moderation/reviews/[targetType]/[targetId]` uses an inline check);
 naming the mechanism is what makes that visible.
+
+**Corrected in 06-15 (DI-58 (a)).** The moderation reviews row read "inline roles check on the
+service client … not verifyAdmin()" until 06-15, although 05-13 had moved the route onto the request
+context. It now reads: `admin or the item's creator (inline hasRole(ctx.profile, "admin") after
+requireUser(ctx) on the request context, not requireRole(); a non-admin caller must be the target's
+created_by)`. The same regeneration corrects `/auth/callback`'s text, which still said "ADMIN_EMAILS
+drives a service-role role GRANT inside it (FO-05)" after 05-05 removed the grant (F-004): it now
+reads `none for the route itself; no role is granted at sign-in since 05-05 (F-004, FO-05 fixed); the
+profile upsert runs through getElevatedClient() and roles change only through the admin users route`.
 
 ### A3 — `rls_reliance`
 
@@ -140,8 +149,33 @@ disclosure channel, and it is the set plan 01-12 must probe first:
 
 ### C1 — `cache_policy_today` is the header the response actually carries
 
-The handler's own `Cache-Control` value where `signals.sets_cache_control` is true (three rows),
-otherwise the blanket platform header, quoted exactly from `vercel.json`:
+**Since 06-15 (REFAC-19, DEC-73).** 06-14 removed `vercel.json`'s `headers` rule and every route file
+declares each export as `export const VERB = withRoute({ cache: "<class>" }, …)`. The script reads
+that declaration and maps the class to its header text through the `POLICIES` table in
+`src/server/http.ts` (read from the source, not restated):
+
+| Class | Header on a GET/HEAD 200 or 404 |
+|---|---|
+| `private` | `private, no-store` |
+| `public-60-300` | `public, s-maxage=60, stale-while-revalidate=300` |
+| `public-30-60` | `public, s-maxage=30, stale-while-revalidate=60` |
+| `public-60-120` | `public, s-maxage=60, stale-while-revalidate=120` |
+
+`cache_policy_today` is the header each export's success carries, in export order, distinct values
+joined with ` ; `. A public class applies to GET and HEAD only, so a mutation export records
+`private, no-store` whatever it declares; every 401 and 500 is `private, no-store` too (a status
+rule, not recorded per row). On the 91 live rows: 80 read `private, no-store`, 9 read one public
+value, and 2 read `public, s-maxage=60, stale-while-revalidate=300 ; private, no-store` (`/api/clubs`
+GET/POST and `/api/clubs/[id]` GET/PATCH/DELETE). All 26 live personalized rows read
+`private, no-store`. `signals.sets_cache_control` is true and `signals.cache_control_values` holds the
+same values on every live row. `vercel.json` no longer contributes. A live route file with an export
+outside `withRoute` is a FATAL error, so this column cannot silently fall back to a blanket value.
+
+The three retained rows for deleted handlers (§ 8) keep their audit-time value.
+
+**Until 06-15 (history, the audit-time rule).** The handler's own `Cache-Control` value where
+`signals.sets_cache_control` is true (three rows), otherwise the blanket platform header, quoted
+exactly from `vercel.json`:
 
 ```
 s-maxage=60, stale-while-revalidate=300
@@ -168,7 +202,39 @@ The last line is the one that matters: the target policy is opt-*in* to sharing.
 inverts today's default, where every `/api/*` route is shared unless it opts out, and exactly
 one route ever has.
 
+**Recorded corrections (06-15, `CACHE_TARGET_OVERRIDES` in the script).** The four rules above
+cannot express these; each carries its decision. The target is the GET's policy, and it never reads
+the wrapper, so `src/__tests__/api/cache-headers-census.test.ts` compares the declared class against
+an independent source.
+
+| Row | Target | Why |
+|---|---|---|
+| `/api/events/[id]` | `private, no-store` | research C7, DEC-73: viewer-dependent (admins and the creator read pending and rejected rows; `pending_edits` for the creator and admins), and Vercel caches 404s. The rule above said public |
+| `/api/health` | `private, no-store` | research C8, DEC-73: a cached liveness answer masks an origin outage. The rule above said public |
+| `/api/events/[id]/rsvp` | `private, no-store` | DEC-69: the GET stays 200 for anonymous callers and answers the caller's own state. Already private under P1; pinned |
+| `/api/clubs/[id]/events` | `private, no-store` | DEC-69: members see the club's pending events. Already private under P1; pinned |
+| `/api/events` | `public, s-maxage=30, stale-while-revalidate=60` | research C9, DEC-73: the route's own value before 06-14, kept byte-identical |
+| `/api/events/featured` | `public, s-maxage=60, stale-while-revalidate=120` | research C9, DEC-73: the same |
+| `/api/clubs/featured` | `public, s-maxage=60, stale-while-revalidate=120` | research C9, DEC-73: the same |
+
+The corrected public set is 11 live rows, research § Inventory E exactly: eight at
+`public, s-maxage=60, stale-while-revalidate=300` (`/api/clubs`, `/api/clubs/[id]`, `/api/clubs/new`,
+`/api/clubs/trending`, `/api/events/export`, `/api/events/happening-now`, `/api/events/new`,
+`/api/events/popular`), `/api/events` and the two featured routes. Every other live GET is
+`private, no-store`; mutation-only rows stay `no-store`, which the census reads as the private
+class.
+
 ### V1 — `input_validation`
+
+**Since 06-15.** A handler that reads its body, query, form or params through the seam's contract
+boundary (`parseBody`, `parseQuery`, `readQuery`, `parseForm` or `parseWith` in
+`src/server/body.ts`, validating with a zod schema from `src/contracts/`, added by 06-04..06-10) is
+`zod`. Before this clause, the regeneration read 24 rows as `manual` → `none`, because the contracts
+replaced their inline `status: 400` lines; recording that would have said the best-validated
+handlers validate nothing. After it: 56 live rows `zod`, 35 `none`, 0 `manual`. No live `none` row
+reads a request body (`request.json()`, `request.formData()` or `readJsonObject`), so the REFAC-15
+candidate set below is empty in the tree. The rest of this section is the audit-time rule, which
+still applies to a handler outside the boundary.
 
 Schema enum is `none | manual | zod | unknown`. **No schema validator is imported anywhere in
 `src/`** — `signals.has_zod` is false on all ninety-four rows — so only `manual` and `none`
@@ -416,8 +482,29 @@ git diff --exit-code -- src/
 **Deleted handlers keep their row (DEC-55).** A row whose handler file no longer exists is left
 byte-for-byte as classified, and the script says so on stdout. The inventory mirrors the audit
 baseline (`baseline/versions.txt` `route_ts_count=94`), so dropping the row would make
-`--check endpoints` disagree with its own baseline. Today this applies to one row,
-`api.auth-debug`, deleted by 05-04 for F-027.
+`--check endpoints` disagree with its own baseline. Today this applies to three rows, each
+`handler_deleted`:
+
+| Row | Deleted by | Note |
+|---|---|---|
+| `api.auth-debug` | 05-04 (F-027) | handler_deleted; its audit-time `cache_policy_today` (the old blanket value) is history, not a live header |
+| `api.cron.send-reminders` | 06-03 (pg_cron runs `send_event_reminders()`) | handler_deleted; the same |
+| `api.cron.send-feedback-requests` | 06-03 (pg_cron runs `send_feedback_requests()`) | handler_deleted; the same |
+
+These three are the only rows whose `cache_policy_today` still reads
+`s-maxage=60, stale-while-revalidate=300`; no live row does.
+
+**Signals the script refreshes (06-15, DI-58 (b)).** `signals` are audit-time and owned by
+`gen-endpoint-inventory.mjs`, with four exceptions the script now re-derives from each live
+handler, because a stale value would misstate a derived field or a gate that no longer exists:
+`sets_cache_control` and `cache_control_values` (from the wrapper, rule C1), and
+`env_vars_referenced` and `env_gated_auth` (with the generator's own regexes). The last two changed
+on three rows: `/api/admin/calculate-popularity` no longer references `ADMIN_API_KEY` and is no longer
+`env_gated_auth` (05-14 deleted the gate, F-001), and `/auth/callback` and `/auth/signout` read no
+`process.env` directly (both go through `src/lib/env.ts`). The other signals are deliberately not
+refreshed: the generator's regexes predate the seam, and a blanket refresh would, for example, flip
+`uses_service_client` to false on the twenty elevated-door rows and so rewrite their `rls_reliance`.
+`gen-endpoint-inventory.mjs` is also not re-run, because it drops rows whose file is gone (DEC-55).
 
 The script merges by `id` and touches only the human-verdict fields, so
 `gen-endpoint-inventory.mjs` can be re-run afterwards without discarding a single classified
