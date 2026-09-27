@@ -32,6 +32,14 @@
  * and the report's `Message must be a string` (an object threw inside
  * sanitizeText). The report category is looked up as an own key, so an
  * inherited name such as "toString" is refused like any unknown category.
+ *
+ * QUERY VALUES KEEP TODAY'S SILENT COERCION (Task 2). A value the handler
+ * parsed with a default (`parseInt(value || "50", 10)`, `value || "popularity"`)
+ * gets the same number or default here, NaN included, and never a new 400.
+ * A text parameter the handler read with `searchParams.get` is the string as
+ * sent (the first of a repeated key) or null when absent, so every `if (x)`
+ * and `x ?? undefined` in the handlers reads exactly as before. Only the
+ * 400s the handlers answered are 400s here, in their order.
  */
 import { z } from "zod";
 import { NonEmptyTrimmedString } from "@/contracts/common";
@@ -39,6 +47,7 @@ import { isValidISODate, validateEventDates } from "@/lib/dateValidation";
 import { sanitizeText } from "@/lib/sanitize";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
 import type { FormOptions } from "@/server/body";
+import { decodeEventCursor, type EventCursor } from "@/lib/eventCursor";
 
 // ─── Shared ──────────────────────────────────────────────────────────────────
 
@@ -365,3 +374,186 @@ export const EVENT_IMAGE_UPLOAD: FormOptions = {
   },
   unreadable: { status: 500, error: "Internal server error" },
 };
+
+// ─── Query helpers ───────────────────────────────────────────────────────────
+
+/** `searchParams.get(key)`: the string as sent, or null when absent. */
+const queryText = () =>
+  z
+    .string()
+    .optional()
+    .transform((value) => value ?? null);
+
+/** `parseInt(get(key) || fallback, 10)`: NaN included, never a 400. */
+const queryInt = (fallback: string) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => parseInt(value || fallback, 10));
+
+/** The export route's UUID test (any case, no version check; kept as sent). */
+const EXPORT_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ─── GET /api/events ─────────────────────────────────────────────────────────
+
+export const TIME_OF_DAY_VALUES = [
+  "morning",
+  "afternoon",
+  "evening",
+  "night",
+] as const;
+export const DAY_TYPE_VALUES = ["weekday", "weekend"] as const;
+
+export const EVENTS_LIST_MESSAGES = {
+  limit: "limit must be an integer from 1 to 100",
+  page: "page must be a positive integer",
+  timeOfDay: `Invalid timeOfDay value. Must be one of: ${TIME_OF_DAY_VALUES.join(", ")}`,
+  dayType: `Invalid dayType value. Must be one of: ${DAY_TYPE_VALUES.join(", ")}`,
+  cursor: "Invalid cursor",
+} as const;
+
+/** The list's limit and page 400s carry field (pinned by the list suites). */
+export const EVENTS_LIST_FIELD_KEYS = ["limit", "page"] as const;
+
+const L = EVENTS_LIST_MESSAGES;
+
+/**
+ * The list's ladder, in its order: limit, page, timeOfDay, dayType, cursor.
+ * An empty timeOfDay or dayType is not refused and stays "" (the handler
+ * tested truthiness); an empty cursor is absent. The other filters are read
+ * as sent.
+ */
+export const EventsListQuery = z.object({
+  limit: queryInt("50").refine(
+    (value) => Number.isInteger(value) && value >= 1 && value <= 100,
+    { error: L.limit }
+  ),
+  page: queryInt("1").refine(
+    (value) => Number.isInteger(value) && value >= 1,
+    { error: L.page }
+  ),
+  timeOfDay: queryText().refine(
+    (value) =>
+      !value || (TIME_OF_DAY_VALUES as readonly string[]).includes(value),
+    { error: L.timeOfDay }
+  ),
+  dayType: queryText().refine(
+    (value) => !value || (DAY_TYPE_VALUES as readonly string[]).includes(value),
+    { error: L.dayType }
+  ),
+  cursor: z
+    .string()
+    .optional()
+    .transform((value, ctx): EventCursor | null => {
+      if (!value) return null;
+      const cursor = decodeEventCursor(value);
+      if (!cursor) {
+        ctx.issues.push({ code: "custom", message: L.cursor, input: value });
+        return z.NEVER;
+      }
+      return cursor;
+    }),
+  tags: queryText(),
+  search: queryText(),
+  dateFrom: queryText(),
+  dateTo: queryText(),
+  ids: queryText(),
+});
+
+export type EventsListQueryInput = z.input<typeof EventsListQuery>;
+export type EventsListQueryOutput = z.infer<typeof EventsListQuery>;
+
+// ─── GET /api/events/export ──────────────────────────────────────────────────
+
+export const EXPORT_MESSAGES = {
+  format: "format parameter must be 'csv' or 'ical'",
+  eventId: "eventId must be a valid UUID",
+  eventIds: "eventIds must be a comma-separated list of valid UUIDs",
+  both: "Provide either eventId or eventIds, not both",
+} as const;
+
+const X = EXPORT_MESSAGES;
+
+/**
+ * format, then eventId, then each of eventIds (split on commas, trimmed,
+ * blanks dropped), then "not both". Ids keep the case they were sent in.
+ */
+export const ExportQuery = z
+  .object({
+    format: z.custom<"csv" | "ical">(
+      (value) => value === "csv" || value === "ical",
+      { error: X.format }
+    ),
+    eventId: queryText().refine((value) => !value || EXPORT_UUID.test(value), {
+      error: X.eventId,
+    }),
+    eventIds: z
+      .string()
+      .optional()
+      .transform((value) =>
+        value
+          ? value
+              .split(",")
+              .map((id) => id.trim())
+              .filter(Boolean)
+          : []
+      )
+      .refine((ids) => ids.every((id) => EXPORT_UUID.test(id)), {
+        error: X.eventIds,
+      }),
+    tags: queryText(),
+    search: queryText(),
+    dateFrom: queryText(),
+    dateTo: queryText(),
+    clubId: queryText(),
+  })
+  .superRefine((query, ctx) => {
+    if (query.eventId && query.eventIds.length > 0) {
+      ctx.addIssue({ code: "custom", message: X.both });
+    }
+  });
+
+export type ExportQueryInput = z.input<typeof ExportQuery>;
+export type ExportQueryOutput = z.infer<typeof ExportQuery>;
+
+// ─── GET /api/events/popular ─────────────────────────────────────────────────
+
+export const POPULAR_SORTS = ["popularity", "trending"] as const;
+export type PopularSort = (typeof POPULAR_SORTS)[number];
+
+/**
+ * sort (default popularity) is the one 400. limit is capped at 50, offset and
+ * min_score parse with today's defaults; none of them is ever refused.
+ */
+export const PopularQuery = z.object({
+  sort: z
+    .string()
+    .optional()
+    .transform((value) => value || "popularity")
+    .pipe(
+      z.custom<PopularSort>(
+        (value) => (POPULAR_SORTS as readonly unknown[]).includes(value),
+        { error: "sort must be 'popularity' or 'trending'" }
+      )
+    ),
+  limit: queryInt("10").transform((value) => Math.min(value, 50)),
+  offset: queryInt("0"),
+  min_score: z
+    .string()
+    .optional()
+    .transform((value) => parseFloat(value || "0")),
+});
+
+export type PopularQueryInput = z.input<typeof PopularQuery>;
+export type PopularQueryOutput = z.infer<typeof PopularQuery>;
+
+// ─── GET /api/calendar/events ────────────────────────────────────────────────
+
+/** from and to pass to the query as sent (no 400 today; garbage included). */
+export const CalendarQuery = z.object({
+  from: queryText(),
+  to: queryText(),
+});
+
+export type CalendarQueryOutput = z.infer<typeof CalendarQuery>;

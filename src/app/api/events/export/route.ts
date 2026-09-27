@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
+import { parseQuery } from "@/server/body";
+import { ExportQuery } from "@/contracts/events";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"] & {
     approved_by?: string | null;
@@ -14,8 +16,6 @@ type EventRow = Database["public"]["Tables"]["events"]["Row"] & {
 };
 
 type ClubRow = Database["public"]["Tables"]["clubs"]["Row"];
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CSV_HEADERS = [
     "event_id",
@@ -131,35 +131,13 @@ const escapeICalText = (value: string) =>
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
-        const searchParams = request.nextUrl.searchParams;
-
-        const format = searchParams.get('format');
-        if (format !== 'csv' && format !== 'ical') {
-            return NextResponse.json({ error: "format parameter must be 'csv' or 'ical'" }, { status: 400 });
-        }
-
-        const tags = searchParams.get("tags");
-        const search = searchParams.get("search");
-        const dateFrom = searchParams.get("dateFrom");
-        const dateTo = searchParams.get("dateTo");
-        const clubId = searchParams.get("clubId");
-        const eventId = searchParams.get("eventId");
-        const eventIdsParam = searchParams.get("eventIds");
-        const eventIds = eventIdsParam
-            ? eventIdsParam.split(",").map((id) => id.trim()).filter(Boolean)
-            : [];
-
-        if (eventId && !UUID_RE.test(eventId)) {
-            return NextResponse.json({ error: "eventId must be a valid UUID" }, { status: 400 });
-        }
-
-        if (eventIds.some((id) => !UUID_RE.test(id))) {
-            return NextResponse.json({ error: "eventIds must be a comma-separated list of valid UUIDs" }, { status: 400 });
-        }
-
-        if (eventId && eventIds.length > 0) {
-            return NextResponse.json({ error: "Provide either eventId or eventIds, not both" }, { status: 400 });
-        }
+        // The query contract (plan 06-08, REFAC-15): format, eventId,
+        // eventIds (split, trimmed, blanks dropped), then "not both", with
+        // today's texts; the filters are read as sent.
+        const query = parseQuery(request.nextUrl.searchParams, ExportQuery);
+        if (!query.ok) return query.response;
+        const { format, tags, search, dateFrom, dateTo, clubId, eventId, eventIds } =
+            query.data;
 
         let eventsQuery = supabase
             .from("events")

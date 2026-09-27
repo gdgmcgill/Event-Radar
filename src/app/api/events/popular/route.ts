@@ -8,6 +8,8 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { getESTNowISO } from "@/lib/timezone";
+import { parseQuery } from "@/server/body";
+import { PopularQuery } from "@/contracts/events";
 
 /** The shared event-with-club select plus this route's popularity embed. */
 const POPULAR_EVENTS_SELECT =
@@ -56,19 +58,12 @@ const POPULAR_EVENTS_SELECT =
  */
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const sortBy = searchParams.get("sort") || "popularity";
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50);
-    const offset = parseInt(searchParams.get("offset") || "0", 10);
-    const minScore = parseFloat(searchParams.get("min_score") || "0");
-
-    // Validate sort parameter
-    if (sortBy !== "popularity" && sortBy !== "trending") {
-      return NextResponse.json(
-        { error: "sort must be 'popularity' or 'trending'" },
-        { status: 400 }
-      );
-    }
+    // The query contract (plan 06-08, REFAC-15): sort (default popularity)
+    // is the one 400; limit is capped at 50 and offset and min_score keep
+    // today's parse-with-default, never refused.
+    const query = parseQuery(request.nextUrl.searchParams, PopularQuery);
+    if (!query.ok) return query.response;
+    const { sort: sortBy, limit, offset, min_score: minScore } = query.data;
 
     const supabase = await createClient();
 

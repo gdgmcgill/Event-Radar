@@ -20,6 +20,7 @@ import {
   parseQuery,
   parseWith,
   readJsonObject,
+  readQuery,
 } from "../body";
 import {
   ErrorBody,
@@ -179,6 +180,26 @@ describe("parseQuery", () => {
     await expect(result.response.json()).resolves.toEqual({
       error: "Invalid period. Use 7d or 30d",
     });
+  });
+});
+
+describe("readQuery (plan 06-08)", () => {
+  const Range = z.object({
+    from: z.string().optional().transform((value) => value ?? null),
+    tags: z.array(z.string()).optional(),
+  });
+
+  it("reads the query as parseQuery does, first value per key, arrays on request", () => {
+    expect(readQuery(new URLSearchParams("from=a&from=b&tags=x&tags=y"), Range)).toEqual({
+      from: "a",
+      tags: ["x", "y"],
+    });
+    expect(readQuery(new URLSearchParams(""), Range)).toEqual({ from: null });
+  });
+
+  it("throws when a schema refuses, which a no-400 query contract must never do", () => {
+    const Refusing = z.object({ n: z.enum(["1"]) });
+    expect(() => readQuery(new URLSearchParams("n=2"), Refusing)).toThrow();
   });
 });
 

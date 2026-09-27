@@ -172,6 +172,14 @@ export function parseQuery<S extends z.ZodType>(
   schema: S,
   opts?: ParseOptions
 ): Parsed<z.output<S>> {
+  return parseWith(schema, queryInput(params, schema), opts);
+}
+
+/** The plain object parseQuery and readQuery hand to a schema. */
+function queryInput(
+  params: URLSearchParams,
+  schema: z.ZodType
+): Record<string, string | string[]> {
   const shape = (schema as unknown as SchemaInternals).shape ?? {};
   const input: Record<string, string | string[]> = {};
   for (const key of new Set(params.keys())) {
@@ -179,7 +187,21 @@ export function parseQuery<S extends z.ZodType>(
       ? params.getAll(key)
       : (params.get(key) as string);
   }
-  return parseWith(schema, input, opts);
+  return input;
+}
+
+/**
+ * parseQuery for a query that answers no 400 today (plan 06-08): every value
+ * is read as sent or coerced silently, so the schema cannot refuse and the
+ * route carries no 400 branch it could never take. A refusal would be a
+ * programming error in the schema, and throws (the route's catch answers it).
+ * A schema with a 400 goes through parseQuery.
+ */
+export function readQuery<S extends z.ZodType>(
+  params: URLSearchParams,
+  schema: S
+): z.output<S> {
+  return schema.parse(queryInput(params, schema));
 }
 
 // ─── The multipart door (plan 06-08, DEC-65) ─────────────────────────────────

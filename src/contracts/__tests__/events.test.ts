@@ -14,16 +14,22 @@
  */
 
 import { z } from "zod";
-import { parseForm, parseWith } from "@/server/body";
+import { parseForm, parseQuery, parseWith, readQuery } from "@/server/body";
+import { encodeEventCursor } from "@/lib/eventCursor";
 import {
   CREATE_EVENT_FIELD_KEYS,
+  CalendarQuery,
   CreateEventBody,
   EVENT_IMAGE_UPLOAD,
   EVENT_UPDATE_FIELD_KEYS,
+  EVENTS_LIST_FIELD_KEYS,
   EventAppealBody,
   EventInviteBody,
   EventReportBody,
   EventUpdateBody,
+  EventsListQuery,
+  ExportQuery,
+  PopularQuery,
   ReviewBody,
   RsvpBody,
   RsvpDeleteBody,
@@ -385,5 +391,186 @@ describe("UploadImageForm + EVENT_IMAGE_UPLOAD (events/upload-image POST)", () =
       status: 500,
       body: { error: "Internal server error" },
     });
+  });
+});
+
+// ─── Query contracts (Task 2): events GET, export, popular, calendar ────────
+
+async function queryAnswer(schema: z.ZodType, qs: string, fieldFor?: readonly string[]) {
+  const result = parseQuery(new URLSearchParams(qs), schema, { fieldFor });
+  if (result.ok) return { ok: true as const, data: result.data };
+  return { status: result.response.status, body: await result.response.json() };
+}
+
+async function queryData(schema: z.ZodType, qs: string) {
+  const outcome = await queryAnswer(schema, qs);
+  if (!("ok" in outcome)) throw new Error(`unexpected 400 for ?${qs}: ${JSON.stringify(outcome.body)}`);
+  return outcome.data as Record<string, unknown>;
+}
+
+const EVENT_A = "5eed0000-0000-4000-8000-0000000000e1";
+const EVENT_B = "5eed0000-0000-4000-8000-0000000000e2";
+
+describe("EventsListQuery (events GET)", () => {
+  const F = EVENTS_LIST_FIELD_KEYS;
+  // Copied from events-list-characterization.test.ts and
+  // pagination-contract-defect.test.ts (the list's 400s carry field on
+  // limit and page only).
+  const LIMIT_400 = { error: "limit must be an integer from 1 to 100", field: "limit" };
+  const PAGE_400 = { error: "page must be a positive integer", field: "page" };
+  const TIME_400 = { error: "Invalid timeOfDay value. Must be one of: morning, afternoon, evening, night" };
+  const DAY_400 = { error: "Invalid dayType value. Must be one of: weekday, weekend" };
+
+  it("names limit and page, and only those, in fieldFor", () => {
+    expect([...F]).toEqual(["limit", "page"]);
+  });
+
+  it.each<[string, Record<string, string>]>([
+    ["limit=abc", LIMIT_400],
+    ["limit=0", LIMIT_400],
+    ["limit=-5", LIMIT_400],
+    ["limit=101", LIMIT_400],
+    ["page=abc", PAGE_400],
+    ["page=0", PAGE_400],
+    ["page=-1", PAGE_400],
+    ["timeOfDay=noon", TIME_400],
+    ["dayType=holiday", DAY_400],
+    ["limit=3&cursor=not-a-valid-cursor", { error: "Invalid cursor" }],
+    ["order: timeOfDay=noon&dayType=holiday", TIME_400],
+    ["order: dayType=holiday&cursor=zzz", DAY_400],
+    ["order: page=0&limit=0 → limit first", LIMIT_400],
+    ["order: page=0&timeOfDay=noon → page first", PAGE_400],
+  ])("%s", async (label, expected) => {
+    const qs = label.replace(/^order: /, "").replace(/ → .*$/, "");
+    await expect(queryAnswer(EventsListQuery, qs, F)).resolves.toEqual({ status: 400, body: expected });
+  });
+
+  it("defaults limit to 50 and page to 1, and missing text to null", async () => {
+    await expect(queryData(EventsListQuery, "")).resolves.toEqual({
+      limit: 50,
+      page: 1,
+      timeOfDay: null,
+      dayType: null,
+      cursor: null,
+      tags: null,
+      search: null,
+      dateFrom: null,
+      dateTo: null,
+      ids: null,
+    });
+  });
+
+  it("keeps parseInt's truncation and today's empty-value defaults", async () => {
+    await expect(queryData(EventsListQuery, "limit=5.9&page=2.7")).resolves.toMatchObject({ limit: 5, page: 2 });
+    await expect(queryData(EventsListQuery, "limit=&page=")).resolves.toMatchObject({ limit: 50, page: 1 });
+    await expect(queryData(EventsListQuery, "limit=1")).resolves.toMatchObject({ limit: 1 });
+    await expect(queryData(EventsListQuery, "limit=100")).resolves.toMatchObject({ limit: 100 });
+  });
+
+  it("passes empty timeOfDay, dayType and cursor through as today (no 400, no decode)", async () => {
+    await expect(queryData(EventsListQuery, "timeOfDay=&dayType=&cursor=")).resolves.toMatchObject({
+      timeOfDay: "",
+      dayType: "",
+      cursor: null,
+    });
+  });
+
+  it("decodes a valid cursor and keeps the first value of a repeated key", async () => {
+    const token = encodeEventCursor({ sortValue: "2030-06-01T18:00:00+00:00", id: EVENT_A });
+    await expect(
+      queryData(EventsListQuery, `cursor=${encodeURIComponent(token)}&tags=a,b&tags=c&search=x&ids=${EVENT_A}`)
+    ).resolves.toMatchObject({
+      cursor: { sortValue: "2030-06-01T18:00:00+00:00", id: EVENT_A },
+      tags: "a,b",
+      search: "x",
+      ids: EVENT_A,
+    });
+  });
+});
+
+describe("ExportQuery (events/export GET)", () => {
+  it.each<[string, string]>([
+    ["", "format parameter must be 'csv' or 'ical'"],
+    ["format=pdf", "format parameter must be 'csv' or 'ical'"],
+    ["format=csv&eventId=abc", "eventId must be a valid UUID"],
+    [`format=csv&eventIds=${EVENT_A},abc`, "eventIds must be a comma-separated list of valid UUIDs"],
+    [`format=ical&eventId=${EVENT_A}&eventIds=${EVENT_B}`, "Provide either eventId or eventIds, not both"],
+    ["format=pdf&eventId=abc", "format parameter must be 'csv' or 'ical'"],
+    ["format=csv&eventId=abc&eventIds=def", "eventId must be a valid UUID"],
+  ])("?%s", async (qs, error) => {
+    await expect(queryAnswer(ExportQuery, qs)).resolves.toEqual({ status: 400, body: { error } });
+  });
+
+  it("drops blank eventIds elements and keeps ids in the case sent", async () => {
+    await expect(queryData(ExportQuery, "format=csv&eventIds=,%20,")).resolves.toMatchObject({ eventIds: [] });
+    const upper = EVENT_A.toUpperCase();
+    await expect(queryData(ExportQuery, `format=csv&eventIds=%20${upper}%20,`)).resolves.toMatchObject({
+      eventIds: [upper],
+    });
+    await expect(queryData(ExportQuery, `format=ical&eventId=${upper}`)).resolves.toMatchObject({
+      format: "ical",
+      eventId: upper,
+    });
+  });
+
+  it("passes the filters through as sent, null when absent", async () => {
+    await expect(
+      queryData(ExportQuery, "format=csv&tags=a,b&search=x&dateFrom=2030-01-01&clubId=c1")
+    ).resolves.toEqual({
+      format: "csv",
+      eventId: null,
+      eventIds: [],
+      tags: "a,b",
+      search: "x",
+      dateFrom: "2030-01-01",
+      dateTo: null,
+      clubId: "c1",
+    });
+  });
+});
+
+describe("PopularQuery (events/popular GET)", () => {
+  it("sort=newest is today's 400", async () => {
+    await expect(queryAnswer(PopularQuery, "sort=newest")).resolves.toEqual({
+      status: 400,
+      body: { error: "sort must be 'popularity' or 'trending'" },
+    });
+  });
+
+  it("defaults and caps silently, never refusing a number", async () => {
+    await expect(queryData(PopularQuery, "")).resolves.toEqual({
+      sort: "popularity",
+      limit: 10,
+      offset: 0,
+      min_score: 0,
+    });
+    await expect(queryData(PopularQuery, "sort=&limit=999&offset=abc&min_score=0.5")).resolves.toEqual({
+      sort: "popularity",
+      limit: 50,
+      offset: Number.NaN,
+      min_score: 0.5,
+    });
+    await expect(queryData(PopularQuery, "sort=trending&limit=3")).resolves.toMatchObject({
+      sort: "trending",
+      limit: 3,
+    });
+  });
+});
+
+describe("CalendarQuery (calendar/events GET, read through readQuery)", () => {
+  it("never refuses, so the route reads it with readQuery and has no 400 branch", () => {
+    expect(readQuery(new URLSearchParams("from=garbage&to="), CalendarQuery)).toEqual({
+      from: "garbage",
+      to: "",
+    });
+  });
+
+  it("passes from and to as sent, garbage included, and null when absent", async () => {
+    await expect(queryData(CalendarQuery, "from=garbage")).resolves.toEqual({ from: "garbage", to: null });
+    await expect(queryData(CalendarQuery, "from=2026-10-01&to=2026-10-31")).resolves.toEqual({
+      from: "2026-10-01",
+      to: "2026-10-31",
+    });
+    await expect(queryData(CalendarQuery, "")).resolves.toEqual({ from: null, to: null });
   });
 });

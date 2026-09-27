@@ -4,6 +4,8 @@ import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { ok } from "@/server/http";
+import { readQuery } from "@/server/body";
+import { CalendarQuery } from "@/contracts/events";
 
 /**
  * GET /api/calendar/events
@@ -20,8 +22,9 @@ export async function GET(request: NextRequest) {
     const user = auth.user;
     const supabase = ctx.supabase;
 
-    const from = request.nextUrl.searchParams.get("from");
-    const to = request.nextUrl.searchParams.get("to");
+    // The query contract (plan 06-08, REFAC-15): from and to as sent. The
+    // route answers no 400 for its query, so it reads through readQuery.
+    const { from, to } = readQuery(request.nextUrl.searchParams, CalendarQuery);
 
     // Fetch saved event IDs
     const { data: savedRows } = await supabase
