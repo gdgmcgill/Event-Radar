@@ -55,24 +55,14 @@
  *   `npm run build && npm run start` has no HMR, hydrates, and is also the
  *   honest target: it is the artifact that deploys. The plan sanctions either.
  *
- * `bypassCSP` IS ON, AND THAT IS A LIMITATION THIS HARNESS OWNS RATHER THAN HIDES.
- *   `next.config.js` sets an unconditional
- *   `connect-src 'self' https://*.supabase.co wss://*.supabase.co ...`.
- *   The LOCAL stack is `http://127.0.0.1:54321`, which that list does not admit,
- *   so the browser refuses every client-side Supabase call before it leaves —
- *   `Refused to connect because it violates the document's Content Security
- *   Policy`, surfacing in the UI as a bare "Failed to fetch". The server side is
- *   unaffected, which makes the symptom read like a cookie bug for a while.
- *
- *   The CSP is CORRECT for production, where the app really does talk to
- *   `https://<ref>.supabase.co`. It has no local-development entry, and adding
- *   one is a change to application source — which this plan prohibits by name
- *   and which is a behaviour change in a phase whose core value is behaviour
- *   preservation. Registered as a finding for a later phase; see
- *   `evidence/harness-note.md`.
- *
- *   The consequence to state plainly: **this harness does not exercise the CSP.**
- *   Nothing here would notice if that header were weakened or removed.
+ * THE CSP IS ENFORCED (`bypassCSP: false`; research C13, DEC-77, plan 06-16).
+ *   `next.config.js` builds the policy from the build's environment: the
+ *   harness build's NEXT_PUBLIC_SUPABASE_URL (`http://127.0.0.1:54321`, from
+ *   the `env` block below) is admitted to img-src and connect-src with its
+ *   `ws://` twin, and production never carries 'unsafe-eval'. So every spec is
+ *   also a CSP regression check, and `e2e/specs/csp.spec.ts` asserts the header
+ *   and the absence of CSP console violations directly. (Until 06-16 this was
+ *   `bypassCSP: true`, and the harness did not exercise the CSP at all.)
  */
 
 import { defineConfig, devices } from "@playwright/test";
@@ -105,9 +95,8 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    // See the CSP note above. Without this, every client-side Supabase call the
-    // application makes is refused by the browser before it leaves.
-    bypassCSP: true,
+    // The CSP is enforced (see the header; C13, DEC-77).
+    bypassCSP: false,
   },
   projects: [
     // One sign-in per persona per run. The local stack rate-limits sign-ins
@@ -167,6 +156,12 @@ export default defineConfig({
       KV_REST_API_URL: "",
       KV_REST_API_TOKEN: "",
       RATE_LIMIT_REQUIRE_DISTRIBUTED: "",
+      // Sentry (plan 06-16): blank for the same reason, so a developer's .env
+      // can never make the harness report its deliberate errors to a real
+      // project, or its build upload source maps.
+      SENTRY_DSN: "",
+      NEXT_PUBLIC_SENTRY_DSN: "",
+      SENTRY_AUTH_TOKEN: "",
     },
   },
 });

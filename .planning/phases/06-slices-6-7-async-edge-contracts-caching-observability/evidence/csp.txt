@@ -1,0 +1,173 @@
+CSP: no 'unsafe-eval' in production; the harness enforces the CSP — plan 06-16 Task 3 (F-055 unsafe-eval half, DI-21, C13, DEC-77)
+Recorded 2026-09-27T15:21:13Z · HEAD=848034e + Task 3 working tree
+
+INTENTIONAL BEHAVIOUR CHANGE: production pages no longer permit eval; local builds admit the local Supabase origin.
+
+=== 1. What changed ===
+
+next.config.js builds the policy in headers() from the environment the build sees (contentSecurityPolicy(env)):
+  - script-src 'self' 'unsafe-inline', plus 'unsafe-eval' only when NODE_ENV === "development" (next dev);
+  - NEXT_PUBLIC_SUPABASE_URL: when its origin is not covered by https://*.supabase.co, that origin joins img-src
+    and connect-src and its ws/wss twin joins connect-src (production unchanged; harness gets 127.0.0.1:54321);
+  - NEXT_PUBLIC_SENTRY_DSN: when it is an https DSN (key and project id), its ingest origin joins connect-src;
+  - every other directive and every other header is byte-identical (compare the strings below).
+'unsafe-inline' stays: the inline theme script (src/app/layout.tsx) and Next's inline bootstrap need it; the
+nonce policy is DI-80 and F-055 stays Open for that half.
+playwright.config.ts: bypassCSP: false; the long bypass comment replaced by a short one citing C13 and DEC-77;
+SENTRY_DSN, NEXT_PUBLIC_SENTRY_DSN and SENTRY_AUTH_TOKEN blanked in the webServer env (as the Upstash names are).
+
+=== 2. Before and after CSP strings (next.config.js headers() evaluated per build environment) ===
+
+[before] production build (NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co):
+  default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+[before] harness build (NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321):
+  default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+[before] next dev (NODE_ENV=development, production Supabase URL):
+  default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+[after] production build (NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co):
+  default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+[after] harness build (NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321):
+  default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://*.cdninstagram.com https://*.fbcdn.net http://127.0.0.1:54321; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com http://127.0.0.1:54321 ws://127.0.0.1:54321; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+[after] next dev (NODE_ENV=development, production Supabase URL):
+  default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+Live check: e2e/specs/csp.spec.ts row 1 reads the header from the harness server (a production build with
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321) and asserts script-src ['self','unsafe-inline'], no 'unsafe-eval',
+and 127.0.0.1:54321 / ws://127.0.0.1:54321 in connect-src and img-src (section 5).
+
+=== 3. The F-055 pin moved under the ledger protocol ===
+
+Step 1: fix applied (next.config.js). Pre-fix copy saved to the scratchpad first.
+
+Step 2: the DEFECT suite UNEDITED against the fix must go red:
+$ npx jest --ci src/__tests__/config/csp-defect.test.ts   # UNEDITED, against the fixed next.config.js
+    ✓ P1 one rule, source /(.*), carries the Content-Security-Policy (139 ms)
+    ✕ P2 script-src allows 'unsafe-inline' and 'unsafe-eval' (29 ms)
+    ✓ P3 connect-src does not admit the local stack http://127.0.0.1:54321 (35 ms)
+    ✕ P4 the development policy is the production policy (58 ms)
+Tests:       2 failed, 2 passed, 4 total
+exit=1
+
+Step 3: assertions moved (P2, P3 → P3 + P3b, P4; P5 new); green:
+$ npx jest --ci src/__tests__/config/csp-defect.test.ts --verbose   # MOVED (final text), against the fixed next.config.js
+    ✓ P1 one rule, source /(.*), carries the Content-Security-Policy (181 ms)
+    ✓ P2 production script-src has no 'unsafe-eval' and still has 'unsafe-inline' (DI-80) (28 ms)
+    ✓ P3 a production build keeps connect-src and does not admit the local stack (35 ms)
+    ✓ P3b a build whose Supabase URL is the local stack admits it (and its ws twin) (26 ms)
+    ✓ P4 the development policy is the production policy plus 'unsafe-eval' in script-src (53 ms)
+    ✓ P5 an https Sentry DSN adds its ingest origin to connect-src, never the key (53 ms)
+Tests:       6 passed, 6 total
+exit=0
+
+Step 4: pre-fix next.config.js put back temporarily; the moved suite must go red; fixed source restored, cmp:
+$ npx jest --ci src/__tests__/config/csp-defect.test.ts --verbose   # MOVED (final text), against the PRE-FIX next.config.js restored temporarily
+    ✓ P1 one rule, source /(.*), carries the Content-Security-Policy (100 ms)
+    ✕ P2 production script-src has no 'unsafe-eval' and still has 'unsafe-inline' (DI-80) (31 ms)
+    ✓ P3 a production build keeps connect-src and does not admit the local stack (30 ms)
+    ✕ P3b a build whose Supabase URL is the local stack admits it (and its ws twin) (25 ms)
+    ✕ P4 the development policy is the production policy plus 'unsafe-eval' in script-src (53 ms)
+    ✕ P5 an https Sentry DSN adds its ingest origin to connect-src, never the key (35 ms)
+Tests:       4 failed, 2 passed, 6 total
+exit=1
+$ cmp next.config.js <fixed copy saved before the swap>
+cmp exit=0
+(Steps 3 and 4 were run twice: once before and once after renaming a module-level constant, KEYS → CSP_ENV_KEYS,
+that collided with another import-free test file under tsc; the results above are the second, final-text runs.)
+
+Step 5: the PRESERVE and sibling suites on the same surface pass unedited:
+$ npx jest --ci src/__tests__/config
+Test Suites: 2 passed, 2 total
+Tests:       9 passed, 9 total
+exit=0
+  plus the full Jest run (section 6).
+
+Ledger rows (evidence/defect-ledger.md; commit cell filled by the following docs commit):
+| F-055 | `src/__tests__/config/csp-defect.test.ts` (P2) | production script-src is exactly `'self' 'unsafe-inline' 'unsafe-eval'` | production script-src is exactly `'self' 'unsafe-inline'`, and the policy contains no `'unsafe-eval'`; `'unsafe-inline'` stays pinned as the open half of F-055 (DI-80). Pre-fix restore: red; `cmp` exit 0 (evidence/csp.txt § 3) | `(06-16 Task 3)` | 06-16 |
+| F-055 | `src/__tests__/config/csp-defect.test.ts` (P3 → P3, P3b) | connect-src is exactly `'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com` and never admits `http://127.0.0.1:54321`, whatever the build's Supabase URL (C13: why the harness ran with `bypassCSP: true`) | P3: a production build (`https://<ref>.supabase.co`) keeps that connect-src exactly; P3b: a build whose `NEXT_PUBLIC_SUPABASE_URL` is `http://127.0.0.1:54321` adds it to img-src and connect-src and `ws://127.0.0.1:54321` to connect-src; the harness runs with `bypassCSP: false` (DI-21) | `(06-16 Task 3)` | 06-16 |
+| F-055 | `src/__tests__/config/csp-defect.test.ts` (P4) | the development policy equals the production policy | the development policy is the production policy with `'unsafe-eval'` added to script-src and nothing else different (React's development-only eval, per Next's CSP guide) | `(06-16 Task 3)` | 06-16 |
+
+=== 4. csp.spec.ts: first attempt, fix, and a positive control ===
+
+Attempt 1 (fresh reset and seed): 14 passed, 2 failed, exit=1 — neither failure was a CSP report:
+  - /events/<id> never reached networkidle (a request stays open on that page): Test timeout at waitForLoadState;
+  - /profile: the first getByText match for the persona name is a hidden sidebar copy (unexpected value "hidden").
+Fix in the spec only: filter({ visible: true }) on the anchor; load + a 2 s settle window instead of networkidle.
+
+Attempt 2:
+$ npx playwright test e2e/specs/csp.spec.ts --reporter=list
+  ✓  11 [chromium] › e2e/specs/csp.spec.ts:72:7 › the CSP header › has no 'unsafe-eval', keeps 'unsafe-inline', and admits the local Supabase origin (14ms)
+  ✓  12 [chromium] › e2e/specs/csp.spec.ts:111:9 › / as anonymous › reports no CSP violation (2.4s)
+  ✓  13 [chromium] › e2e/specs/csp.spec.ts:111:9 › /events/5eed0000-0000-4000-8000-0000000000e1 as anonymous › reports no CSP violation (2.3s)
+  ✓  14 [chromium] › e2e/specs/csp.spec.ts:111:9 › /profile as onboarded_student › reports no CSP violation (2.6s)
+  ✓  15 [chromium] › e2e/specs/csp.spec.ts:111:9 › /clubs/5eed0000-0000-4000-8000-0000000000c1 as club_owner › reports no CSP violation (2.6s)
+  ✓  16 [chromium] › e2e/specs/csp.spec.ts:111:9 › /moderation as admin › reports no CSP violation (2.5s)
+  16 passed (27.2s)
+exit=0
+
+POSITIVE CONTROL (proves the spec can fail): the pre-fix next.config.js swapped in temporarily, bypassCSP false:
+$ npx playwright test e2e/specs/csp.spec.ts --reporter=list   # POSITIVE CONTROL: pre-fix next.config.js swapped in temporarily, bypassCSP false
+  ✘  11 [chromium] › e2e/specs/csp.spec.ts:72:7 › the CSP header › has no 'unsafe-eval', keeps 'unsafe-inline', and admits the local Supabase origin (13ms)
+  ✓  12 [chromium] › e2e/specs/csp.spec.ts:111:9 › / as anonymous › reports no CSP violation (2.3s)
+  ✓  13 [chromium] › e2e/specs/csp.spec.ts:111:9 › /events/5eed0000-0000-4000-8000-0000000000e1 as anonymous › reports no CSP violation (2.2s)
+  ✘  14 [chromium] › e2e/specs/csp.spec.ts:111:9 › /profile as onboarded_student › reports no CSP violation (2.6s)
+  ✘  15 [chromium] › e2e/specs/csp.spec.ts:111:9 › /clubs/5eed0000-0000-4000-8000-0000000000c1 as club_owner › reports no CSP violation (2.7s)
+  ✘  16 [chromium] › e2e/specs/csp.spec.ts:111:9 › /moderation as admin › reports no CSP violation (2.6s)
+  4 failed
+  12 passed (28.0s)
+exit=1
+$ cmp next.config.js <fixed copy saved before the swap>
+cmp exit=0
+The failures, verbatim excerpts:
+    Expected substring: not "'unsafe-eval'"
+    Received string:        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    +   "Connecting to 'http://127.0.0.1:54321/rest/v1/users?select=roles%2Cinterest_tags%2Cinferred_tags%2Cfaculty%2Cyear%2Cavatar_url&id=eq.5eed0000-0000-4000-8000-000000000001' violates the following Content Security Policy directive: \"connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com\". The action has been blocked.",
+    +   "Fetch API cannot load http://127.0.0.1:54321/rest/v1/users?select=roles%2Cinterest_tags%2Cinferred_tags%2Cfaculty%2Cyear%2Cavatar_url&id=eq.5eed0000-0000-4000-8000-000000000001. Refused to connect because it violates the document's Content Security Policy.",
+The two anonymous pages make no client-side Supabase call, so the pre-fix policy blocks nothing there; the
+signed-in pages' store reads (users, club_members) are refused — the C13 failure bypassCSP used to hide.
+
+=== 5. The task's <verify> command, verbatim ===
+
+$ npx jest --ci src/__tests__/config && npx playwright test e2e/specs/csp.spec.ts && grep -q 'bypassCSP: false' playwright.config.ts   # Sun Sep 27 11:19:42 EDT 2026
+Test Suites: 2 passed, 2 total
+Tests:       9 passed, 9 total
+  ✓  11 [chromium] › e2e/specs/csp.spec.ts:72:7 › the CSP header › has no 'unsafe-eval', keeps 'unsafe-inline', and admits the local Supabase origin (14ms)
+  ✓  12 [chromium] › e2e/specs/csp.spec.ts:111:9 › / as anonymous › reports no CSP violation (2.3s)
+  ✓  13 [chromium] › e2e/specs/csp.spec.ts:111:9 › /events/5eed0000-0000-4000-8000-0000000000e1 as anonymous › reports no CSP violation (2.3s)
+  ✓  14 [chromium] › e2e/specs/csp.spec.ts:111:9 › /profile as onboarded_student › reports no CSP violation (2.5s)
+  ✓  15 [chromium] › e2e/specs/csp.spec.ts:111:9 › /clubs/5eed0000-0000-4000-8000-0000000000c1 as club_owner › reports no CSP violation (2.6s)
+  ✓  16 [chromium] › e2e/specs/csp.spec.ts:111:9 › /moderation as admin › reports no CSP violation (2.5s)
+  16 passed (24.7s)
+exit=0
+
+=== 6. Gates after Task 3 ===
+
+$ npx jest --ci
+Test Suites: 1 skipped, 127 passed, 127 of 128 total
+Tests:       1 skipped, 3391 passed, 3392 total
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ npm run lint
+✖ 17 problems (0 errors, 17 warnings)
+exit=0
+$ node scripts/check-server-console.mjs
+PASS: the live census is within the committed allow-list
+exit=0
+$ node scripts/check-contracts.mjs
+PASS: the allow-list is empty and the live census is empty
+exit=0
+$ node scripts/check-characterization-tags.mjs src/__tests__/config/csp-defect.test.ts
+ok   DEFECT   src/__tests__/config/csp-defect.test.ts (F-055)
+ok 1 files
+exit=0
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 57 files
+exit=0
+
+=== 7. Result ===
+
+Production CSP: no 'unsafe-eval' (F-055's eval half closed; 'unsafe-inline' open, DI-80). DI-21 closed: the
+harness admits the local origin at build time and runs with bypassCSP: false. Full suite under the enforced
+CSP: 259 passed, 0 failed, exit=0 from a fresh reset (evidence/playwright.csp.txt).
