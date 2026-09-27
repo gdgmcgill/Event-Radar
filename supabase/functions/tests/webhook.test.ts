@@ -111,7 +111,12 @@ Deno.test("Missing signature header returns 401", async () => {
   assertEquals(body.error, "Missing signature header");
 });
 
-Deno.test("Invalid signature returns 401", async () => {
+// Plan 06-03 (F-039, DEC-64): this signature is the WRONG LENGTH (23 characters,
+// not 64). Before 06-03 the function passed it to crypto.timingSafeEqual, which
+// throws on unequal lengths, so this test received 500 Internal server error.
+// verifySignature now length-checks first and the answer is 401. The expectation
+// holds only once the owner redeploys the function (DI-81).
+Deno.test("Wrong-length signature returns 401 (was 500 before 06-03)", async () => {
   const payload = {
     event_count: 1,
     events: [{
@@ -128,10 +133,86 @@ Deno.test("Invalid signature returns 401", async () => {
 
   const request = createRequest(payload, invalidSignature);
   const response = await fetch(request);
-  
+
   assertEquals(response.status, 401);
   const responseBody = await response.json();
   assertEquals(responseBody.error, "Invalid signature");
+});
+
+Deno.test("Wrong signature of the right length returns 401", async () => {
+  const payload = {
+    event_count: 1,
+    events: [{
+      title: "Test Event",
+      description: "Test Description",
+      category: "workshop",
+      date: "2024-12-31",
+      location: "Test Location",
+      organizer: "Test Organizer",
+    }],
+  };
+
+  const request = createRequest(payload, "0".repeat(64));
+  const response = await fetch(request);
+
+  assertEquals(response.status, 401);
+  const responseBody = await response.json();
+  assertEquals(responseBody.error, "Invalid signature");
+});
+
+// Plan 06-03 (F-039, DEC-64): each row now carries content_hash, so the unique
+// partial index idx_events_content_hash refuses a replayed event with 23505 and
+// the function reports it per event as "duplicate". Before 06-03 the second send
+// answered 200 and inserted a second set of pending rows. Holds once the owner
+// redeploys the function (DI-81).
+Deno.test("Replayed payload is reported as duplicate, not inserted again", async () => {
+  const webhookSecret = Deno.env.get("WEBHOOK_SECRET")!;
+  const organizerName = `Test Organizer ${Date.now()}`;
+
+  try {
+    const payload = {
+      event_count: 2,
+      events: [
+        {
+          title: "Replay Event A",
+          description: "Replay Description",
+          date: "2024-12-31",
+          time: "14:00",
+          location: "Test Location",
+          organizer: organizerName,
+        },
+        {
+          title: "Replay Event B",
+          description: "Replay Description",
+          date: "2024-12-31",
+          time: "16:00",
+          location: "Test Location",
+          organizer: organizerName,
+        },
+      ],
+    };
+
+    const bodyString = JSON.stringify(payload);
+    const signature = computeHMAC(bodyString, webhookSecret);
+
+    const first = await fetch(createRequest(payload, signature));
+    assertEquals(first.status, 200);
+    const firstBody = await first.json();
+    assertEquals(firstBody.events.length, 2);
+    assertExists(firstBody.events[0].content_hash);
+
+    const replay = await fetch(createRequest(payload, signature));
+    assertEquals(replay.status, 400);
+    const replayBody = await replay.json();
+    assertEquals(replayBody.success, false);
+    assertEquals(replayBody.message, "Failed to process all events");
+    assertEquals(replayBody.errors, [
+      { index: 0, error: "duplicate" },
+      { index: 1, error: "duplicate" },
+    ]);
+  } finally {
+    await cleanupTestData(organizerName);
+  }
 });
 
 
@@ -250,6 +331,8 @@ Deno.test("Valid webhook with organizer processes successfully", async () => {
     assertEquals(body.events[0].organizer, organizerName);
     assertExists(body.events[0].start_date);
     assertExists(body.events[0].end_date);
+    // Plan 06-03: every webhook row carries its dedupe key.
+    assertExists(body.events[0].content_hash);
   } finally {
     // Ensure response body is consumed even if test fails
     if (response && !response.bodyUsed) {
