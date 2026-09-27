@@ -3,6 +3,9 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { parseBody } from "@/server/body";
+import { ExperimentUpdateBody } from "@/contracts/admin";
+import type { TablesUpdate } from "@/lib/supabase/types";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -83,25 +86,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const supabase = ctx.supabase;
 
   const { id } = await params;
-  const body = await request.json();
+  // status (the table's four values), description and end_date, each only
+  // when sent (src/contracts/admin.ts).
+  const parsed = await parseBody(request, ExperimentUpdateBody);
+  if (!parsed.ok) return parsed.response;
+  const { status, description, end_date } = parsed.data;
 
-  const updateData: Record<string, unknown> = {
+  // Typed as the experiments update (DI-53).
+  const updateData: TablesUpdate<"experiments"> = {
     updated_at: new Date().toISOString(),
   };
 
-  if ("status" in body) {
-    updateData.status = body.status;
-    if (body.status === "running") {
+  if (status !== undefined) {
+    updateData.status = status;
+    if (status === "running") {
       updateData.start_date = new Date().toISOString();
     }
   }
 
-  if ("description" in body) {
-    updateData.description = body.description;
+  if (description !== undefined) {
+    updateData.description = description;
   }
 
-  if ("end_date" in body) {
-    updateData.end_date = body.end_date;
+  if (end_date !== undefined) {
+    updateData.end_date = end_date;
   }
 
   const { data: experiment, error } = await supabase

@@ -5,7 +5,9 @@ import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
 import { isBanned } from "@/lib/ban";
 import { getElevatedClient } from "@/server/db/elevated";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { CanonicalId } from "@/contracts/common";
+import { BanBody } from "@/contracts/admin";
 
 /**
  * POST /api/admin/users/[id]/ban — Ban a user
@@ -21,40 +23,18 @@ export async function POST(
   if (!auth.ok) return auth.response;
   const user = auth.user;
 
-  const { id } = await params;
+  // The canonical (lower-case) id, so the self-check below cannot be
+  // sidestepped by sending the caller's own id in another case: Postgres
+  // matches a uuid in any case (DI-64, DEC-66). Any other string passes
+  // through unchanged and the lookup answers it, as before.
+  const id = CanonicalId.parse((await params).id);
 
-  // An invalid body answers 400 "Invalid JSON body", as before. A valid body
-  // that is not an object (`null`, a string, a number, an array) used to
-  // reach the destructuring below and throw outside any try, which the
-  // framework answered with an HTML 500 (REVIEW-05 iter3 WR-08); it now
-  // answers 400 "Request body must be a JSON object".
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const { reason, duration_days, suspend_content } = parsedBody.body as {
-    reason?: string;
-    duration_days?: number;
-    suspend_content?: boolean;
-  };
-
-  // Validate reason
-  if (!reason || typeof reason !== "string" || !reason.trim()) {
-    return NextResponse.json(
-      { error: "Reason is required" },
-      { status: 400 }
-    );
-  }
-
-  // Validate duration_days if provided
-  if (
-    duration_days !== undefined &&
-    duration_days !== null &&
-    (!Number.isInteger(duration_days) || duration_days <= 0)
-  ) {
-    return NextResponse.json(
-      { error: "duration_days must be a positive integer" },
-      { status: 400 }
-    );
-  }
+  // An invalid body answers 400 "Invalid JSON body" and a non-object body
+  // 400 "Request body must be a JSON object" (REVIEW-05 iter3 WR-08). Then
+  // the reason, then duration_days if provided (src/contracts/admin.ts).
+  const parsed = await parseBody(request, BanBody);
+  if (!parsed.ok) return parsed.response;
+  const { reason, duration_days, suspend_content } = parsed.data;
 
   // Reads, the content suspension and its moderation reviews run on the
   // caller's cookie client: the admin policies on users (SELECT), events,
@@ -63,7 +43,7 @@ export async function POST(
   const supabase = ctx.supabase;
 
   // Prevent self-ban
-  if (id === user.id) {
+  if (id === CanonicalId.parse(user.id)) {
     return NextResponse.json({ error: "Cannot ban your own account" }, { status: 400 });
   }
 

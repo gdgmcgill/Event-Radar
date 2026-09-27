@@ -3,9 +3,10 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { sanitizeText } from "@/lib/sanitize";
 import { logAdminAction } from "@/lib/audit";
-import type { Json } from "@/lib/supabase/types";
+import { parseBody } from "@/server/body";
+import { FeaturedUpdateBody } from "@/contracts/admin";
+import type { TablesUpdate } from "@/lib/supabase/types";
 
 export async function PATCH(
   request: NextRequest,
@@ -21,27 +22,14 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const body = await request.json();
-    // Narrowed from `Record<string, unknown>` to the generated JSON type: this
-    // object is both the PATCH body for `featured_events` and the audit-log
-    // metadata, and `unknown` admits values neither column can hold.
-    const updates: Record<string, Json> = {};
-
-    if (body.sponsor_name !== undefined) {
-      updates.sponsor_name = body.sponsor_name
-        ? sanitizeText(body.sponsor_name)
-        : null;
-    }
-    if (body.priority !== undefined) updates.priority = body.priority;
-    if (body.starts_at !== undefined) updates.starts_at = body.starts_at;
-    if (body.ends_at !== undefined) updates.ends_at = body.ends_at;
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: "No fields to update" },
-        { status: 400 }
-      );
-    }
+    // sponsor_name (sanitized, or null when falsy), priority, starts_at and
+    // ends_at, each only when sent; none sent is "No fields to update"
+    // (src/contracts/admin.ts).
+    const parsed = await parseBody(request, FeaturedUpdateBody);
+    if (!parsed.ok) return parsed.response;
+    // Typed as the featured_events update (DI-53). The same object is the
+    // audit-log metadata below.
+    const updates: TablesUpdate<"featured_events"> = parsed.data;
 
     const { data, error } = await supabase
       .from("featured_events")

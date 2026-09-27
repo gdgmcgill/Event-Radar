@@ -1,7 +1,8 @@
 /**
  * DEFECT characterization — F-094: the slice-7 parse sites read input by hand
  * with no schema (plan 06-07 pins it; plans 06-08, 06-09 and 06-10 fix it,
- * REFAC-15, DEC-65)
+ * REFAC-15, DEC-65). After 06-10 every site has moved: the two site lists
+ * are empty and every row below pins the contract's answer.
  *
  * Every value below was measured on the UNMODIFIED handlers at f550de9 with a
  * temporary harness first (the run is in the phase evidence
@@ -16,10 +17,10 @@
  * What is pinned:
  *   - D0 the site lists are the tree: `RAW_SITES` equals every raw
  *     `request.json()` in a route file (18 sites, 17 files at 06-07; 12 sites,
- *     12 files after 06-08; 9 after 06-09 Task 1; 6 after 06-09 Task 2), and
- *     `RJO_SITES` equals
+ *     12 files after 06-08; 9 after 06-09 Task 1; 6 after 06-09 Task 2; 0
+ *     after 06-10), and `RJO_SITES` equals
  *     every route file calling `readJsonObject` (15 at 06-07; 13 after 06-08;
- *     7 after 06-09 Task 1). A route that
+ *     7 after 06-09 Task 1; 0 after 06-10). A route that
  *     adopts `parseBody` leaves a list, so D0 goes red on the fix commit;
  *     that red is expected and is resolved by moving the site's rows;
  *   - D1 each raw site, a body that is not JSON: the route's generic 500
@@ -71,6 +72,23 @@
  * first 400 of each ladder). Their D3 rows (a numeric name, tag element or
  * tag) were already refused by the ladder and keep their outcome, now from
  * the contract.
+ *
+ * MOVED (plan 06-10 Task 1, F-094, INTENTIONAL BEHAVIOUR CHANGE). The admin
+ * family adopted `parseBody` with src/contracts/admin.ts: its six raw sites
+ * left `RAW_SITES` and its seven readJsonObject files left `RJO_SITES`, so
+ * both lists are empty. At the raw sites a body that is not JSON now answers
+ * 400 `Invalid JSON body` (was a rejected promise at four sites with no outer
+ * try, and the route's 500 at the two featured sites) and an array 400
+ * `Request body must be a JSON object` (was the first "missing" 400, or a 200
+ * that wrote only `updated_at` at experiments/[id] PATCH and events/[id]
+ * PUT). A number where text is written now answers a 400: the handler's
+ * required text (admin events POST title, experiment name, a rejection or
+ * suspension message that threw on `.trim()`) or a new text where none
+ * existed (experiment status `Invalid status`, featured `sponsor_name must be
+ * a string`, events PUT `title must be a string`). The other readJsonObject
+ * rows (edits action, organizer-request and report status, ban reason, admin
+ * user name) were already refused by the ladder and keep their outcome, now
+ * from the contract. Each moved row has a defect-ledger row.
  *
  * Personas and the world come from `badRequestTable.ts` (student, owner of
  * the club and creator of the approved event, admin). Seams as in the
@@ -149,17 +167,10 @@ interface Site {
 const club = { id: CLUB_ID };
 const ev = { id: EVENT_OWN };
 
-/** Every raw `await request.json()` in a route file today (6 sites). */
-const RAW_SITES: Record<string, Site> = {
-  "admin/experiments/[id] PATCH": { route: "admin/experiments/[id]", verb: "PATCH", persona: "admin", params: { id: EXPERIMENT_ID } },
-  "admin/experiments POST": { route: "admin/experiments", verb: "POST", persona: "admin" },
-  "admin/featured POST": { route: "admin/featured", verb: "POST", persona: "admin" },
-  "admin/events POST": { route: "admin/events", verb: "POST", persona: "admin" },
-  "admin/featured/[id] PATCH": { route: "admin/featured/[id]", verb: "PATCH", persona: "admin", params: { id: FEATURED_ID } },
-  "admin/events/[id] PUT": { route: "admin/events/[id]", verb: "PUT", persona: "admin", params: ev },
-};
+/** Every raw `await request.json()` in a route file today (none after 06-10). */
+const RAW_SITES: Record<string, Site> = {};
 
-/** The raw sites that adopted `parseBody` in plans 06-08 and 06-09 (F-094 fixed there). */
+/** The raw sites that adopted `parseBody` in plans 06-08, 06-09 and 06-10 (F-094 fixed there). */
 const ADOPTED_RAW_SITES: Record<string, Site> = {
   "events/[id]/invite POST": { route: "events/[id]/invite", verb: "POST", persona: "student", params: ev },
   "events/[id] PATCH": { route: "events/[id]", verb: "PATCH", persona: "owner", params: ev },
@@ -175,20 +186,19 @@ const ADOPTED_RAW_SITES: Record<string, Site> = {
   "profile/interests PUT": { route: "profile/interests", verb: "PUT", persona: "student" },
   "profile/inferred-tags DELETE": { route: "profile/inferred-tags", verb: "DELETE", persona: "student" },
   "users/[id] PATCH": { route: "users/[id]", verb: "PATCH", persona: "student", params: { id: CALLER.id } },
+  // plan 06-10 Task 1
+  "admin/experiments/[id] PATCH": { route: "admin/experiments/[id]", verb: "PATCH", persona: "admin", params: { id: EXPERIMENT_ID } },
+  "admin/experiments POST": { route: "admin/experiments", verb: "POST", persona: "admin" },
+  "admin/featured POST": { route: "admin/featured", verb: "POST", persona: "admin" },
+  "admin/events POST": { route: "admin/events", verb: "POST", persona: "admin" },
+  "admin/featured/[id] PATCH": { route: "admin/featured/[id]", verb: "PATCH", persona: "admin", params: { id: FEATURED_ID } },
+  "admin/events/[id] PUT": { route: "admin/events/[id]", verb: "PUT", persona: "admin", params: ev },
 };
 
-/** Every route file that reads its body through `readJsonObject` today (7). */
-const RJO_SITES: Record<string, Site> = {
-  "admin/clubs/[id] PATCH": { route: "admin/clubs/[id]", verb: "PATCH", persona: "admin", params: club },
-  "admin/events/[id]/edits PATCH": { route: "admin/events/[id]/edits", verb: "PATCH", persona: "admin", params: ev },
-  "admin/events/[id]/status PATCH": { route: "admin/events/[id]/status", verb: "PATCH", persona: "admin", params: { id: EVENT_PENDING } },
-  "admin/organizer-requests/[id] PATCH": { route: "admin/organizer-requests/[id]", verb: "PATCH", persona: "admin", params: { id: REQUEST_ID } },
-  "admin/reports/[id] PATCH": { route: "admin/reports/[id]", verb: "PATCH", persona: "admin", params: { id: REPORT_ID } },
-  "admin/users/[id]/ban POST": { route: "admin/users/[id]/ban", verb: "POST", persona: "admin", params: { id: OTHER_USER_ID } },
-  "admin/users/[id] PATCH": { route: "admin/users/[id]", verb: "PATCH", persona: "admin", params: { id: OTHER_USER_ID } },
-};
+/** Every route file that reads its body through `readJsonObject` today (none after 06-10). */
+const RJO_SITES: Record<string, Site> = {};
 
-/** The readJsonObject files that adopted `parseBody` in plans 06-08 and 06-09. */
+/** The readJsonObject files that adopted `parseBody` in plans 06-08, 06-09 and 06-10. */
 const ADOPTED_RJO_SITES: Record<string, Site> = {
   "events/[id]/appeal POST": { route: "events/[id]/appeal", verb: "POST", persona: "student", params: ev },
   "events/[id]/report POST": { route: "events/[id]/report", verb: "POST", persona: "student", params: ev },
@@ -199,6 +209,14 @@ const ADOPTED_RJO_SITES: Record<string, Site> = {
   "clubs/[id]/transfer POST": { route: "clubs/[id]/transfer", verb: "POST", persona: "owner", params: club },
   "clubs POST": { route: "clubs", verb: "POST", persona: "student" },
   "organizer-requests POST": { route: "organizer-requests", verb: "POST", persona: "student" },
+  // plan 06-10 Task 1
+  "admin/clubs/[id] PATCH": { route: "admin/clubs/[id]", verb: "PATCH", persona: "admin", params: club },
+  "admin/events/[id]/edits PATCH": { route: "admin/events/[id]/edits", verb: "PATCH", persona: "admin", params: ev },
+  "admin/events/[id]/status PATCH": { route: "admin/events/[id]/status", verb: "PATCH", persona: "admin", params: { id: EVENT_PENDING } },
+  "admin/organizer-requests/[id] PATCH": { route: "admin/organizer-requests/[id]", verb: "PATCH", persona: "admin", params: { id: REQUEST_ID } },
+  "admin/reports/[id] PATCH": { route: "admin/reports/[id]", verb: "PATCH", persona: "admin", params: { id: REPORT_ID } },
+  "admin/users/[id]/ban POST": { route: "admin/users/[id]/ban", verb: "POST", persona: "admin", params: { id: OTHER_USER_ID } },
+  "admin/users/[id] PATCH": { route: "admin/users/[id]", verb: "PATCH", persona: "admin", params: { id: OTHER_USER_ID } },
 };
 
 // ─── Expected outcomes (measured) ──────────────────────────────────────────
@@ -223,17 +241,21 @@ const err = (status: number, error: string, field?: string): Expected => ({
   writes: [],
 });
 
-const SYNTAX = /JSON/;
-const TRIM = /trim is not a function/;
+// SYNTAX (/JSON/) and TRIM (/trim is not a function/) pinned the rejected
+// promises of the raw sites with no outer try; the last of them moved in 06-10.
 
 /** D1: the body `{not json`. */
 const NOT_JSON: Record<string, Expected> = {
-  "admin/experiments/[id] PATCH": { status: "threw", threw: SYNTAX, writes: [] },
-  "admin/experiments POST": { status: "threw", threw: SYNTAX, writes: [] },
-  "admin/featured POST": err(500, "Failed to create featured event"),
-  "admin/events POST": { status: "threw", threw: SYNTAX, writes: [] },
-  "admin/featured/[id] PATCH": err(500, "Failed to update featured event"),
-  "admin/events/[id] PUT": { status: "threw", threw: SYNTAX, writes: [] },
+  // Moved in 06-10 (F-094): four were a rejected promise from the raw read
+  // with no outer try (Next's HTML 500, F-058); the two featured routes
+  // answered their catch's 500 ("Failed to create featured event", "Failed
+  // to update featured event").
+  "admin/experiments/[id] PATCH": err(400, "Invalid JSON body"),
+  "admin/experiments POST": err(400, "Invalid JSON body"),
+  "admin/featured POST": err(400, "Invalid JSON body"),
+  "admin/events POST": err(400, "Invalid JSON body"),
+  "admin/featured/[id] PATCH": err(400, "Invalid JSON body"),
+  "admin/events/[id] PUT": err(400, "Invalid JSON body"),
   // Moved in 06-08 (F-094): 500 "Failed to send invites", 500 "Failed to
   // update event", 400 "user_id is required" (DELETE read it as {}) and 500
   // "Failed to create event" became parseBody's 400. rsvp POST and reviews
@@ -259,20 +281,15 @@ const NOT_JSON: Record<string, Expected> = {
 
 /** D2: the body `[1,2]`. */
 const ARRAY: Record<string, Expected> = {
-  "admin/experiments/[id] PATCH": {
-    status: 200,
-    bodyMatch: { experiment: { id: EXPERIMENT_ID, status: "running" } },
-    writes: ["experiments.update"],
-  },
-  "admin/experiments POST": err(400, "name is required"),
-  "admin/featured POST": err(400, "event_id, starts_at, and ends_at are required"),
-  "admin/events POST": err(400, "title, start_date, and end_date are required"),
-  "admin/featured/[id] PATCH": err(400, "No fields to update"),
-  "admin/events/[id] PUT": {
-    status: 200,
-    bodyMatch: { event: { id: EVENT_OWN, title: "Bad Request Event" } },
-    writes: ["events.update", "admin_audit_log.insert"],
-  },
+  // Moved in 06-10 (F-094): experiments/[id] PATCH and events/[id] PUT
+  // answered 200 and wrote only `updated_at` (events/[id] PUT also an audit
+  // row); the other four answered their first "missing" 400.
+  "admin/experiments/[id] PATCH": err(400, "Request body must be a JSON object"),
+  "admin/experiments POST": err(400, "Request body must be a JSON object"),
+  "admin/featured POST": err(400, "Request body must be a JSON object"),
+  "admin/events POST": err(400, "Request body must be a JSON object"),
+  "admin/featured/[id] PATCH": err(400, "Request body must be a JSON object"),
+  "admin/events/[id] PUT": err(400, "Request body must be a JSON object"),
   // Moved in 06-08 (F-094): each answered its first "missing" 400 (an array
   // read as an object with no keys); parseBody now refuses the array itself.
   "events/[id]/invite POST": err(400, "Request body must be a JSON object"),
@@ -311,50 +328,27 @@ const NON_STRING: Record<string, { body: Record<string, unknown>; expected: Expe
   // Moved in 06-09 (F-094): was 500 "Failed to create invitation" (`.trim()`
   // on a number inside the try).
   "clubs/[id]/invites POST": { body: { email: 5 }, expected: err(400, "Email is required") },
-  "admin/experiments/[id] PATCH": {
-    body: { status: 5 },
-    expected: { status: 200, bodyMatch: { experiment: { status: 5 } }, writes: ["experiments.update"] },
-  },
+  // Moved in 06-10 (F-094): was 200, the number written as the status.
+  "admin/experiments/[id] PATCH": { body: { status: 5 }, expected: err(400, "Invalid status") },
+  // Moved in 06-10 (F-094): was 201, the number written as the name.
   "admin/experiments POST": {
     body: { name: 5, variants: [{ name: "a" }, { name: "b" }] },
-    expected: {
-      status: 201,
-      bodyMatch: { experiment: { name: 5 } },
-      writes: ["experiments.insert", "experiment_variants.insert"],
-    },
+    expected: err(400, "name is required"),
   },
+  // Moved in 06-10 (F-094): was 201 with sponsor_name coerced to "5".
   "admin/featured POST": {
     body: { event_id: EVENT_OWN, starts_at: "2030-01-01", ends_at: "2030-01-02", sponsor_name: 5 },
-    expected: {
-      status: 201,
-      bodyMatch: { featured: { sponsor_name: "5" } },
-      writes: ["featured_events.insert", "admin_audit_log.insert"],
-    },
+    expected: err(400, "sponsor_name must be a string"),
   },
+  // Moved in 06-10 (F-094): was 201 with the title coerced to "5".
   "admin/events POST": {
     body: { title: 5, start_date: "2030-01-01", end_date: "2030-01-02" },
-    expected: {
-      status: 201,
-      bodyMatch: { event: { title: "5" } },
-      writes: ["events.insert", "admin_audit_log.insert"],
-    },
+    expected: err(400, "title, start_date, and end_date are required"),
   },
-  "admin/featured/[id] PATCH": {
-    body: { sponsor_name: 5 },
-    expected: {
-      status: 200,
-      bodyMatch: { featured: { sponsor_name: "5" } },
-      writes: ["featured_events.update", "admin_audit_log.insert"],
-    },
-  },
-  "admin/events/[id] PUT": {
-    body: { title: 5 },
-    expected: {
-      status: 200,
-      bodyMatch: { event: { title: 5 } },
-      writes: ["events.update", "admin_audit_log.insert"],
-    },
-  },
+  // Moved in 06-10 (F-094): was 200 with sponsor_name coerced to "5".
+  "admin/featured/[id] PATCH": { body: { sponsor_name: 5 }, expected: err(400, "sponsor_name must be a string") },
+  // Moved in 06-10 (F-094): was 200, the number written as the title.
+  "admin/events/[id] PUT": { body: { title: 5 }, expected: err(400, "title must be a string") },
   "profile/interests PUT": { body: { interest_tags: [5] }, expected: err(400, "Invalid tag values provided") },
   "profile/inferred-tags DELETE": { body: { tag: 5 }, expected: err(400, "tag is required and must be a string") },
   "users/[id] PATCH": { body: { name: 5 }, expected: err(400, "Name must be between 2 and 50 characters long") },
@@ -371,14 +365,16 @@ const NON_STRING: Record<string, { body: Record<string, unknown>; expected: Expe
   "events/create POST": { body: { ...CREATE, title: 5 }, expected: err(400, "Title is required") },
 
   // readJsonObject sites
+  // Moved in 06-10 (F-094): the handler threw on `.trim()` of a number.
   "admin/clubs/[id] PATCH": {
     body: { status: "rejected", category: "other", message: 5 },
-    expected: { status: "threw", threw: TRIM, writes: [] },
+    expected: err(400, "Rejection requires category and message"),
   },
   "admin/events/[id]/edits PATCH": { body: { action: 5 }, expected: err(400, "action must be 'approve' or 'reject'") },
+  // Moved in 06-10 (F-094): the handler threw on `.trim()` of a number.
   "admin/events/[id]/status PATCH": {
     body: { status: "rejected", category: "other", message: 5 },
-    expected: { status: "threw", threw: TRIM, writes: [] },
+    expected: err(400, "Rejection requires category and message"),
   },
   "admin/organizer-requests/[id] PATCH": { body: { status: 5 }, expected: err(400, "Status must be 'approved' or 'rejected'") },
   "admin/reports/[id] PATCH": { body: { status: 5 }, expected: err(400, "Invalid status") },
@@ -442,7 +438,7 @@ function routeFiles(): { route: string; source: string }[] {
 }
 
 describe("D0: the site lists are the tree", () => {
-  it("RAW_SITES covers every raw request.json() in a route file (6 sites)", () => {
+  it("RAW_SITES covers every raw request.json() in a route file (none after 06-10)", () => {
     const counted = routeFiles()
       .map(({ route, source }) => [route, (source.match(/(?:request|req)\.json\(\)/g) ?? []).length] as const)
       .filter(([, n]) => n > 0)
@@ -452,26 +448,26 @@ describe("D0: the site lists are the tree", () => {
       return acc;
     }, {});
     expect(Object.fromEntries(counted)).toEqual(listed);
-    expect(Object.keys(RAW_SITES)).toHaveLength(6);
+    expect(Object.keys(RAW_SITES)).toHaveLength(0);
   });
 
-  it("RJO_SITES is every route file calling readJsonObject (7)", () => {
+  it("RJO_SITES is every route file calling readJsonObject (none after 06-10)", () => {
     const files = routeFiles()
       .filter(({ source }) => source.includes("readJsonObject("))
       .map(({ route }) => route)
       .sort();
     expect([...new Set(Object.values(RJO_SITES).map((site) => site.route))].sort()).toEqual(files);
-    expect(Object.keys(RJO_SITES)).toHaveLength(7);
+    expect(Object.keys(RJO_SITES)).toHaveLength(0);
   });
 
-  it("the adopted sites read their body through parseBody and nothing raw (06-08, 06-09)", () => {
+  it("the adopted sites read their body through parseBody and nothing raw (06-08, 06-09, 06-10)", () => {
     const sources = new Map(routeFiles().map(({ route, source }) => [route, source]));
     const adopted = [...new Set(
       Object.values({ ...ADOPTED_RAW_SITES, ...ADOPTED_RJO_SITES }).map((site) => site.route)
     )].sort();
     // 7 files from 06-08; 8 from 06-09 Task 1 (clubs/[id] holds a raw site
-    // and a readJsonObject site); 3 from 06-09 Task 2.
-    expect(adopted).toHaveLength(18);
+    // and a readJsonObject site); 3 from 06-09 Task 2; 13 from 06-10 Task 1.
+    expect(adopted).toHaveLength(31);
     for (const route of adopted) {
       const source = sources.get(route) ?? "";
       expect([route, /parseBody\(request, /.test(source)]).toEqual([route, true]);

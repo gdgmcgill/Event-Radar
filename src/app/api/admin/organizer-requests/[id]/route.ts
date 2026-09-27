@@ -5,7 +5,8 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { OrganizerRequestDecisionBody } from "@/contracts/admin";
 
 export async function PATCH(
   request: NextRequest,
@@ -19,17 +20,9 @@ export async function PATCH(
   const user = auth.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { status } = body;
-
-  if (!["approved", "rejected"].includes(status)) {
-    return NextResponse.json(
-      { error: "Status must be 'approved' or 'rejected'" },
-      { status: 400 }
-    );
-  }
+  const parsed = await parseBody(request, OrganizerRequestDecisionBody);
+  if (!parsed.ok) return parsed.response;
+  const { status } = parsed.data;
 
   // The request read and update, the target's roles read, the membership
   // upsert and the club name read run on the caller's cookie client: the admin

@@ -10,64 +10,14 @@
     "count": 1
   },
   {
-    "file": "src/app/api/admin/clubs/[id]/route.ts",
-    "rule": "R4",
-    "count": 1
-  },
-  {
     "file": "src/app/api/admin/clubs/route.ts",
     "rule": "R3",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/events/[id]/edits/route.ts",
-    "rule": "R4",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/events/[id]/route.ts",
-    "rule": "R1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/events/[id]/status/route.ts",
-    "rule": "R4",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/events/route.ts",
-    "rule": "R1",
     "count": 1
   },
   {
     "file": "src/app/api/admin/events/route.ts",
     "rule": "R3",
     "count": 7
-  },
-  {
-    "file": "src/app/api/admin/experiments/[id]/route.ts",
-    "rule": "R1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/experiments/route.ts",
-    "rule": "R1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/featured/[id]/route.ts",
-    "rule": "R1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/featured/route.ts",
-    "rule": "R1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/organizer-requests/[id]/route.ts",
-    "rule": "R4",
-    "count": 1
   },
   {
     "file": "src/app/api/admin/organizer-requests/route.ts",
@@ -80,23 +30,8 @@
     "count": 2
   },
   {
-    "file": "src/app/api/admin/reports/[id]/route.ts",
-    "rule": "R4",
-    "count": 1
-  },
-  {
     "file": "src/app/api/admin/reports/route.ts",
     "rule": "R3",
     "count": 4
-  },
-  {
-    "file": "src/app/api/admin/users/[id]/ban/route.ts",
-    "rule": "R4",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/users/[id]/route.ts",
-    "rule": "R4",
-    "count": 1
   }
 ]

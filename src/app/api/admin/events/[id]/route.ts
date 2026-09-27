@@ -4,6 +4,9 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
+import { parseBody } from "@/server/body";
+import { AdminEventPutBody } from "@/contracts/admin";
+import type { TablesUpdate } from "@/lib/supabase/types";
 
 export async function PUT(
   request: NextRequest,
@@ -18,23 +21,17 @@ export async function PUT(
   const supabase = ctx.supabase;
 
   const { id } = await params;
-  const body = await request.json();
+  // The ten allowed fields, each typed as its column, only when sent; `sent`
+  // is every key of the body, for the audit row (src/contracts/admin.ts).
+  const parsed = await parseBody(request, AdminEventPutBody);
+  if (!parsed.ok) return parsed.response;
+  const { sent, updates } = parsed.data;
 
-  const allowedFields = [
-    "title", "description", "start_date", "end_date",
-    "location", "organizer", "tags", "image_url",
-    "category", "status",
-  ];
-
-  const updateData: Record<string, unknown> = {
+  // Typed as the events update (DI-53): no key outside the contract.
+  const updateData: TablesUpdate<"events"> = {
+    ...updates,
     updated_at: new Date().toISOString(),
   };
-
-  for (const field of allowedFields) {
-    if (field in body) {
-      updateData[field] = body[field];
-    }
-  }
 
   // If admin directly edits title or image_url, clear any pending user edits
   if ("title" in updateData || "image_url" in updateData) {
@@ -65,7 +62,7 @@ export async function PUT(
         action: "updated",
         targetType: "event",
         targetId: id,
-        metadata: { fields_updated: Object.keys(body) },
+        metadata: { fields_updated: sent },
       });
     }
   } catch (auditErr) {

@@ -5,20 +5,14 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
-import { Constants, type TablesUpdate } from "@/lib/supabase/types";
-import { readJsonObject } from "@/server/body";
-
-/** Bounds on an admin-set display name (REVIEW-05 WR-08). */
-const NAME_MIN = 2;
-const NAME_MAX = 50;
-
-type UserRoleValue = (typeof Constants.public.Enums.user_role)[number];
-
-const USER_ROLES: readonly string[] = Constants.public.Enums.user_role;
-
-function isUserRole(value: unknown): value is UserRoleValue {
-  return typeof value === "string" && USER_ROLES.includes(value);
-}
+import type { TablesUpdate } from "@/lib/supabase/types";
+import { parseBody, parseWith } from "@/server/body";
+import { CanonicalId } from "@/contracts/common";
+import {
+  AdminUserNameBody,
+  AdminUserUpdateBody,
+  type UserRoleValue,
+} from "@/contracts/admin";
 
 export async function PATCH(
   request: NextRequest,
@@ -30,30 +24,32 @@ export async function PATCH(
   const auth = requireRole(ctx, "admin");
   if (!auth.ok) return auth.response;
 
-  const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
+  // The canonical (lower-case) id, so the own-roles check below cannot be
+  // sidestepped by sending the caller's own id in another case (DI-64,
+  // DEC-66). Any other string passes through unchanged.
+  const id = CanonicalId.parse((await params).id);
+
+  // The roles first; the name is checked after the own-roles 403, as before
+  // (src/contracts/admin.ts). Both 400s carry `field` (C10).
+  const parsed = await parseBody(request, AdminUserUpdateBody, {
+    fieldFor: ["roles"],
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const updateData: TablesUpdate<"users"> = {
     updated_at: new Date().toISOString(),
   };
 
   let roles: UserRoleValue[] | null = null;
-  if ("roles" in body) {
-    // Every value must be a user_role enum member (F-091, DEC-45). The admin
-    // role is no longer stripped: after F-004 this route is the only path
-    // that grants admin.
-    const submitted: unknown = body.roles;
-    if (!Array.isArray(submitted) || !submitted.every(isUserRole)) {
-      return NextResponse.json(
-        { error: "Invalid role", field: "roles" },
-        { status: 400 }
-      );
-    }
+  if (body.roles !== undefined) {
+    // Every value is a user_role enum member (F-091, DEC-45; the contract
+    // refused anything else). The admin role is no longer stripped: after
+    // F-004 this route is the only path that grants admin.
+    const submitted = body.roles;
     // An admin never changes their own roles, so no admin can demote or
     // re-grant themselves through this route.
-    if (id === auth.user.id) {
+    if (id === CanonicalId.parse(auth.user.id)) {
       return NextResponse.json(
         { error: "You cannot change your own roles" },
         { status: 403 }
@@ -67,20 +63,11 @@ export async function PATCH(
   // WR-08): a trimmed string of 2 to 50 characters, the same bounds the
   // self-profile PATCH (/api/users/[id]) enforces. It used to write any JSON
   // type, unaudited.
+  const nameBody = parseWith(AdminUserNameBody, body, { fieldFor: ["name"] });
+  if (!nameBody.ok) return nameBody.response;
   let name: string | null = null;
-  if ("name" in body) {
-    const submitted: unknown = body.name;
-    const trimmed = typeof submitted === "string" ? submitted.trim() : "";
-    if (trimmed.length < NAME_MIN || trimmed.length > NAME_MAX) {
-      return NextResponse.json(
-        {
-          error: `Name must be between ${NAME_MIN} and ${NAME_MAX} characters long`,
-          field: "name",
-        },
-        { status: 400 }
-      );
-    }
-    name = trimmed;
+  if (nameBody.data.name !== undefined) {
+    name = nameBody.data.name;
     updateData.name = name;
   }
 

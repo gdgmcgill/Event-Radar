@@ -4,7 +4,8 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { ReportDecisionBody } from "@/contracts/admin";
 
 export async function PATCH(
   request: NextRequest,
@@ -18,14 +19,9 @@ export async function PATCH(
   const user = auth.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { status } = body;
-
-  if (!["reviewed", "dismissed"].includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-  }
+  const parsed = await parseBody(request, ReportDecisionBody);
+  if (!parsed.ok) return parsed.response;
+  const { status } = parsed.data;
 
   // "Admins can read all reports" and "Admins can update reports" permit the
   // read and the update on the cookie client, so no elevated client is needed

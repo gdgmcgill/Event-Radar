@@ -490,6 +490,10 @@ export const BAD_REQUEST_ROWS: readonly BadRequestRow[] = [
   row({ id: "admin event POST: title missing", route: "admin/events", verb: "POST", persona: "admin" }, { body: { start_date: "2030-01-01", end_date: "2030-01-02" } }, "title, start_date, and end_date are required"),
   row({ id: "admin event POST: start_date missing", route: "admin/events", verb: "POST", persona: "admin" }, { body: { title: "T", end_date: "2030-01-02" } }, "title, start_date, and end_date are required"),
   row({ id: "admin event POST: end_date missing", route: "admin/events", verb: "POST", persona: "admin" }, { body: { title: "T", start_date: "2030-01-01" } }, "title, start_date, and end_date are required"),
+  // Added by 06-10 (F-094): admin/events/[id] PUT answered no 400 before its
+  // contract, so it had no row; P0 now counts it (parseBody), and this row
+  // pins its first 400, measured on the adopted handler (a ledger row).
+  row({ id: "admin event PUT: title not a string", route: "admin/events/[id]", verb: "PUT", persona: "admin" }, { params: ev, body: { title: 5 } }, "title must be a string"),
   row({ id: "experiment POST: name missing", route: "admin/experiments", verb: "POST", persona: "admin" }, { body: { variants: [{}, {}] } }, "name is required"),
   row({ id: "experiment POST: one variant", route: "admin/experiments", verb: "POST", persona: "admin" }, { body: { name: "x", variants: [{}] } }, "At least 2 variants are required"),
   row({ id: "experiment POST: variants not an array", route: "admin/experiments", verb: "POST", persona: "admin" }, { body: { name: "x", variants: "ab" } }, "At least 2 variants are required"),

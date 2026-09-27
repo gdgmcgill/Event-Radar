@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { parseBody } from "@/server/body";
+import { ExperimentCreateBody } from "@/contracts/admin";
 
 export async function GET(_request: NextRequest) {
   const ctx = await createRequestContext();
@@ -76,23 +78,11 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const supabase = ctx.supabase;
 
-  const body = await request.json();
+  // The name, then at least two variants (src/contracts/admin.ts).
+  const parsed = await parseBody(request, ExperimentCreateBody);
+  if (!parsed.ok) return parsed.response;
   const { name, description, target_metric, start_date, end_date, variants } =
-    body;
-
-  if (!name) {
-    return NextResponse.json(
-      { error: "name is required" },
-      { status: 400 }
-    );
-  }
-
-  if (!variants || !Array.isArray(variants) || variants.length < 2) {
-    return NextResponse.json(
-      { error: "At least 2 variants are required" },
-      { status: 400 }
-    );
-  }
+    parsed.data;
 
   const { data: experiment, error: expError } = await supabase
     .from("experiments")
@@ -110,14 +100,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
-  const variantRows = variants.map(
-    (v: { name: string; config?: Record<string, unknown>; weight?: number }) => ({
-      experiment_id: experiment.id,
-      name: v.name,
-      config: (v.config ?? {}) as import("@/lib/supabase/types").Json,
-      weight: v.weight ?? 1,
-    })
-  );
+  const variantRows = variants.map((v) => ({
+    experiment_id: experiment.id,
+    name: v.name,
+    config: (v.config ?? {}) as import("@/lib/supabase/types").Json,
+    weight: v.weight ?? 1,
+  }));
 
   const { data: createdVariants, error: varError } = await supabase
     .from("experiment_variants")

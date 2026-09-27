@@ -5,8 +5,9 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
-import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
-import { readJsonObject } from "@/server/body";
+import { REJECTION_CATEGORIES } from "@/types";
+import { parseBody } from "@/server/body";
+import { AdminClubDecisionBody } from "@/contracts/admin";
 
 export async function PATCH(
   request: NextRequest,
@@ -20,47 +21,11 @@ export async function PATCH(
   const user = auth.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { status, category, message: rejectionMessage } = body;
-
-  if (!["approved", "rejected", "suspended"].includes(status)) {
-    return NextResponse.json(
-      { error: "Status must be 'approved', 'rejected', or 'suspended'" },
-      { status: 400 }
-    );
-  }
-
-  if (status === "rejected") {
-    if (!category || !rejectionMessage?.trim()) {
-      return NextResponse.json(
-        { error: "Rejection requires category and message" },
-        { status: 400 }
-      );
-    }
-    if (!(category in REJECTION_CATEGORIES)) {
-      return NextResponse.json(
-        { error: "Invalid rejection category" },
-        { status: 400 }
-      );
-    }
-  }
-
-  if (status === "suspended") {
-    if (!category || !rejectionMessage?.trim()) {
-      return NextResponse.json(
-        { error: "Suspension requires category and message" },
-        { status: 400 }
-      );
-    }
-    if (!(category in REJECTION_CATEGORIES)) {
-      return NextResponse.json(
-        { error: "Invalid suspension category" },
-        { status: 400 }
-      );
-    }
-  }
+  // The status, then a rejection's or suspension's category and message, in
+  // the ladder's order and texts (src/contracts/admin.ts).
+  const parsed = await parseBody(request, AdminClubDecisionBody);
+  if (!parsed.ok) return parsed.response;
+  const { status, category, message: rejectionMessage } = parsed.data;
 
   // The club read and update, the moderation review and the owner membership
   // run on the caller's cookie client: the admin policies on clubs
@@ -113,7 +78,7 @@ export async function PATCH(
       target_type: "club",
       target_id: id,
       action: "rejection",
-      category: category as RejectionCategory,
+      category,
       message: rejectionMessage.trim(),
       author_id: user.id,
     });
@@ -122,7 +87,7 @@ export async function PATCH(
       target_type: "club",
       target_id: id,
       action: "suspension",
-      category: category as RejectionCategory,
+      category,
       message: rejectionMessage.trim(),
       author_id: user.id,
     });
@@ -214,7 +179,7 @@ export async function PATCH(
 
   if (status === "suspended" && club.created_by) {
     try {
-      const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
+      const categoryLabel = REJECTION_CATEGORIES[category];
       await getElevatedClient().from("notifications").insert({
         user_id: club.created_by,
         type: "club_suspended",
@@ -229,7 +194,7 @@ export async function PATCH(
 
   if (status === "rejected" && club.created_by) {
     try {
-      const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
+      const categoryLabel = REJECTION_CATEGORIES[category];
       await getElevatedClient().from("notifications").insert({
         user_id: club.created_by,
         type: "club_rejected",

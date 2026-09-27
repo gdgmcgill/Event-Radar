@@ -3,8 +3,9 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { sanitizeText } from "@/lib/sanitize";
 import { logAdminAction } from "@/lib/audit";
+import { parseBody } from "@/server/body";
+import { AdminEventCreateBody } from "@/contracts/admin";
 import { computeEventContentHash } from "@/lib/contentHash";
 
 type MetricsSortField = "popularity_score" | "trending_score" | "view_count" | "click_count" | "save_count";
@@ -121,20 +122,21 @@ export async function POST(request: NextRequest) {
   const user = auth.user;
   const supabase = ctx.supabase;
 
-  const body = await request.json();
-  const { start_date, end_date, organizer, tags, image_url, category } = body;
-
-  // Sanitize text inputs to prevent XSS
-  const title = sanitizeText(body.title ?? "");
-  const description = sanitizeText(body.description ?? "");
-  const location = sanitizeText(body.location ?? "");
-
-  if (!title || !start_date || !end_date) {
-    return NextResponse.json(
-      { error: "title, start_date, and end_date are required" },
-      { status: 400 }
-    );
-  }
+  // title, description and location arrive sanitized (to prevent XSS), the
+  // required rule already applied (src/contracts/admin.ts).
+  const parsed = await parseBody(request, AdminEventCreateBody);
+  if (!parsed.ok) return parsed.response;
+  const {
+    title,
+    description,
+    location,
+    start_date,
+    end_date,
+    organizer,
+    tags,
+    image_url,
+    category,
+  } = parsed.data;
 
   // Compute content hash for duplicate detection
   const contentHash = await computeEventContentHash(title, start_date, organizer || "");

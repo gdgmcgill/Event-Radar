@@ -5,8 +5,9 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
-import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
-import { readJsonObject } from "@/server/body";
+import { REJECTION_CATEGORIES } from "@/types";
+import { parseBody, parseWith } from "@/server/body";
+import { EventStatusBody, ModerationReason } from "@/contracts/admin";
 
 export async function PATCH(
   request: NextRequest,
@@ -20,14 +21,11 @@ export async function PATCH(
   const user = auth.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { status, category, message } = body;
-
-  if (!["approved", "rejected", "suspended"].includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-  }
+  // The status first; the reason is checked after the transition guard below,
+  // as before (src/contracts/admin.ts).
+  const statusBody = await parseBody(request, EventStatusBody);
+  if (!statusBody.ok) return statusBody.response;
+  const requestedStatus = statusBody.data.status;
 
   // The event read and update and the moderation review run on the caller's
   // cookie client: the admin policies on events and moderation_reviews permit
@@ -56,44 +54,18 @@ export async function PATCH(
   };
 
   const allowed = allowedTransitions[event.status] || [];
-  if (!allowed.includes(status)) {
+  if (!allowed.includes(requestedStatus)) {
     return NextResponse.json(
-      { error: `Cannot transition from '${event.status}' to '${status}'` },
+      { error: `Cannot transition from '${event.status}' to '${requestedStatus}'` },
       { status: 409 }
     );
   }
 
-  // Validate rejection fields
-  if (status === "rejected") {
-    if (!category || !message?.trim()) {
-      return NextResponse.json(
-        { error: "Rejection requires category and message" },
-        { status: 400 }
-      );
-    }
-    if (!(category in REJECTION_CATEGORIES)) {
-      return NextResponse.json(
-        { error: "Invalid rejection category" },
-        { status: 400 }
-      );
-    }
-  }
-
-  // Validate suspension fields (same requirements as rejection)
-  if (status === "suspended") {
-    if (!category || !message?.trim()) {
-      return NextResponse.json(
-        { error: "Suspension requires category and message" },
-        { status: 400 }
-      );
-    }
-    if (!(category in REJECTION_CATEGORIES)) {
-      return NextResponse.json(
-        { error: "Invalid suspension category" },
-        { status: 400 }
-      );
-    }
-  }
+  // Validate rejection and suspension fields (category and message, in the
+  // same order and texts as before).
+  const decision = parseWith(ModerationReason, statusBody.data);
+  if (!decision.ok) return decision.response;
+  const { status, category, message } = decision.data;
 
   // Update event status
   const { error: updateError } = await supabase
@@ -114,7 +86,7 @@ export async function PATCH(
       target_type: "event",
       target_id: id,
       action: "rejection",
-      category: category as RejectionCategory,
+      category,
       message: message.trim(),
       author_id: user.id,
     });
@@ -123,7 +95,7 @@ export async function PATCH(
       target_type: "event",
       target_id: id,
       action: "suspension",
-      category: category as RejectionCategory,
+      category,
       message: message.trim(),
       author_id: user.id,
     });
@@ -177,7 +149,7 @@ export async function PATCH(
           event_id: id,
         });
       } else if (status === "suspended") {
-        const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
+        const categoryLabel = REJECTION_CATEGORIES[category];
         await notifyEventCreator({
           user_id: event.created_by,
           type: "event_suspended",
@@ -186,7 +158,7 @@ export async function PATCH(
           event_id: id,
         });
       } else {
-        const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
+        const categoryLabel = REJECTION_CATEGORIES[category];
         await notifyEventCreator({
           user_id: event.created_by,
           type: "event_rejected",

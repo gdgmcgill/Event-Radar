@@ -3,8 +3,9 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { sanitizeText } from "@/lib/sanitize";
 import { logAdminAction } from "@/lib/audit";
+import { parseBody } from "@/server/body";
+import { FeaturedCreateBody } from "@/contracts/admin";
 import { getESTNowISO } from "@/lib/timezone";
 
 export async function GET() {
@@ -51,19 +52,12 @@ export async function POST(request: NextRequest) {
   const supabase = ctx.supabase;
 
   try {
-    const body = await request.json();
-    const { event_id, priority, starts_at, ends_at } = body;
-
-    if (!event_id || !starts_at || !ends_at) {
-      return NextResponse.json(
-        { error: "event_id, starts_at, and ends_at are required" },
-        { status: 400 }
-      );
-    }
-
-    const sponsor_name = body.sponsor_name
-      ? sanitizeText(body.sponsor_name)
-      : null;
+    // The three required keys, then the sponsor name, sanitized when truthy
+    // and null otherwise (src/contracts/admin.ts).
+    const parsed = await parseBody(request, FeaturedCreateBody);
+    if (!parsed.ok) return parsed.response;
+    const { event_id, priority, starts_at, ends_at, sponsor_name } =
+      parsed.data;
 
     const { data, error } = await supabase
       .from("featured_events")

@@ -5,7 +5,9 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { EventEditsDecisionBody } from "@/contracts/admin";
+import type { TablesUpdate } from "@/lib/supabase/types";
 
 /**
  * The fields PATCH /api/events/[id] routes through pending_edits (its
@@ -26,24 +28,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const user = auth.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { action, reason } = body;
-
-  if (!action || !["approve", "reject"].includes(action)) {
-    return NextResponse.json(
-      { error: "action must be 'approve' or 'reject'" },
-      { status: 400 }
-    );
-  }
-
-  if (action === "reject" && !reason) {
-    return NextResponse.json(
-      { error: "reason is required when rejecting edits" },
-      { status: 400 }
-    );
-  }
+  // The action, then a rejection's reason (src/contracts/admin.ts). "This
+  // event has no pending edits" is a rule on the row and stays below.
+  const parsed = await parseBody(request, EventEditsDecisionBody);
+  if (!parsed.ok) return parsed.response;
+  const { action, reason } = parsed.data;
 
   // The event read and both updates run on the caller's cookie client: the
   // admin policies on events ("Admins can view all events", "Admins can
@@ -77,11 +66,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // /api/events/[id] writes nothing else into pending_edits, but the column
     // is creator-writable, and this update runs with admin privileges: an
     // unlisted key (created_by, club_id, status, …) must never be applied.
-    const liveUpdates: Record<string, unknown> = { pending_edits: null };
+    // Typed as the events update (DI-53): each moderated key is assigned by
+    // name, so no other key can reach this admin-privileged write.
+    const liveUpdates: TablesUpdate<"events"> = { pending_edits: null };
     const approvedFields: string[] = [];
     for (const key of MODERATED_FIELDS) {
       if (Object.prototype.hasOwnProperty.call(pendingEdits, key)) {
-        liveUpdates[key] = pendingEdits[key];
+        if (key === "title") liveUpdates.title = pendingEdits.title;
+        else liveUpdates.image_url = pendingEdits.image_url;
         approvedFields.push(key);
       }
     }
