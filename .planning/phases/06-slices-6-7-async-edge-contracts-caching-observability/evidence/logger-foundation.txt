@@ -1,0 +1,52 @@
+evidence/logger-foundation.txt - plan 06-12 (REFAC-20, REFAC-19, DEC-73, DEC-74, DI-45, DI-70): the logger, withRoute,
+the cache classes, the request id through proxy and context, the server-console and cache censuses
+
+Base: a41650d (06-11 complete). Every command below was run on this tree; exit codes are verbatim.
+Host: macOS, Node v24.16.0, Next 16.3.5. Long commands were time-boxed with the scratchpad with-timeout.sh.
+
+======================================================================================================
+TASK 1 - src/server/log.ts, src/server/route.ts, the cache classes in src/server/http.ts (test first)
+======================================================================================================
+
+[1.1 RED] log.test.ts, route.test.ts written and http.test.ts extended before log.ts/route.ts/the classes existed
+$ npx jest --ci src/server/__tests__/log.test.ts src/server/__tests__/route.test.ts src/server/__tests__/http.test.ts
+FAIL node src/server/__tests__/route.test.ts
+    Cannot find module '../log' from 'src/server/__tests__/route.test.ts'
+FAIL node src/server/__tests__/log.test.ts
+    Cannot find module '../log' from 'src/server/__tests__/log.test.ts'
+FAIL node src/server/__tests__/http.test.ts
+    TypeError: http_1.CACHE_CLASSES is not iterable   (Test suite failed to run)
+Test Suites: 3 failed, 3 total
+Tests:       0 total
+exit=1
+
+[1.2 GREEN] after log.ts, route.ts and the http.ts classes
+(one row changed while going green: the route.test row 'a uuid with a newline appended' could not be built -
+ the Fetch Headers class itself throws 'Headers.append: ... is an invalid header value' for a newline, so no
+ request can carry one; it became 'two ids comma-joined', the shape a repeated header actually arrives in)
+$ npx jest --ci src/server/__tests__/log.test.ts src/server/__tests__/route.test.ts src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/route.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/log.test.ts
+Test Suites: 3 passed, 3 total
+Tests:       73 passed, 73 total
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ npm run lint
+
+exit=0 (17 warnings, all pre-existing; none in the new files)
+
+Acceptance rows:
+  log.test.ts  'redacts the cookie key', 'redacts a cookie key whatever its case' -> [redacted];
+               'replaces an email inside the message with [email]' -> 'lookup failed for [email] today';
+               'keeps a newline in msg inside the one line (no log injection)' (T-06-12-03)
+  route.test.ts 'answers the seam's JSON 500 ...': body {"error":"Failed to process request"},
+               Cache-Control 'private, no-store', x-request-id == the incoming UUID, one error line
+  http.test.ts 'public-60-300 on POST 200 sets private, no-store', 'public-60-300 on GET 401 sets private, no-store'
+  src/server/http.ts: ok, created, success bodies unchanged (git diff shows additions only):
+ src/server/http.ts | 65 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 65 insertions(+)
+  removed lines in http.ts: 0
