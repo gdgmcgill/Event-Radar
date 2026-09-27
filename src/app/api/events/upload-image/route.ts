@@ -5,8 +5,10 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { parseForm } from "@/server/body";
 import { EVENT_IMAGE_UPLOAD, UploadImageForm } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "upload image" }, async (request: NextRequest) => {
     try {
         const ctx = await createRequestContext();
         const active = requireActiveUser(ctx);
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
             });
 
         if (uploadError) {
-            console.error("Storage upload error:", uploadError);
+            log.error("Storage upload error", { error: uploadError });
             return NextResponse.json({ error: "Failed to upload image" }, { status: 500 });
         }
 
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ url: urlData.publicUrl }, { status: 200 });
     } catch (error) {
-        console.error("Error uploading image:", error);
+        log.error("Error uploading image", { error });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
-}
+});

@@ -15,6 +15,8 @@ import {
   EVENTS_LIST_FIELD_KEYS,
   EventsListQuery,
 } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /** Shape of event row from DB */
 type EventRow = {
@@ -257,7 +259,7 @@ function cursorFor(row: EventRow | undefined): string | null {
  *      500:
  *        description: Internal server error
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "public-30-60", action: "fetch events" }, async (request: NextRequest) => {
   try {
     const supabase = await createClient();
     // The query contract (plan 06-08, REFAC-15), before any query, in
@@ -315,7 +317,7 @@ export async function GET(request: NextRequest) {
       );
 
       if (searchError) {
-        console.error('Fuzzy search RPC error:', searchError);
+        log.error("Fuzzy search RPC error", { error: searchError });
         // Fallback to basic ILIKE search if RPC fails. The term is escaped for
         // LIKE and double-quoted for PostgREST (F-082, see searchFilter.ts).
         searchFallback = [
@@ -409,8 +411,11 @@ export async function GET(request: NextRequest) {
 
     if (eventsError) {
       // Handle range errors gracefully (e.g., page beyond available data)
-      const errorCode = (eventsError as { code?: string }).code;
-      const errorMessage = eventsError.message;
+      // Read only to recognise the benign cases below; never sent (F-059).
+      const { code: errorCode, message: errorMessage } = eventsError as {
+        code?: string;
+        message?: unknown;
+      };
 
       // Check for known benign error codes or malformed responses
       const isBenignError =
@@ -431,15 +436,12 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      console.error("Supabase error fetching events:", JSON.stringify(eventsError));
-      const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
-        ? errorMessage
-        : 'Failed to fetch events';
-      return NextResponse.json({ error: safeMessage }, { status: 500 });
+      log.error("Supabase error fetching events", { error: eventsError });
+      return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
     }
 
     if (totalResult?.error) {
-      console.error("Supabase error counting events:", JSON.stringify(totalResult.error));
+      log.error("Supabase error counting events", { error: totalResult.error });
       return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
     }
 
@@ -476,27 +478,23 @@ export async function GET(request: NextRequest) {
       transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
     );
 
-    return NextResponse.json(
-      {
-        events,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        nextCursor,
-        prevCursor,
-      },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-        },
-      }
-    );
+    // The public-30-60 class (withRoute above) sends the header this
+    // response set itself before 06-14, byte for byte (DI-26: kept, now
+    // declared).
+    return NextResponse.json({
+      events,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      nextCursor,
+      prevCursor,
+    });
   } catch (error) {
-    console.error("Error fetching events:", error);
+    log.error("Error fetching events", { error });
     return NextResponse.json(
       { error: "Failed to fetch events" },
       { status: 500 }
     );
   }
-}
+});

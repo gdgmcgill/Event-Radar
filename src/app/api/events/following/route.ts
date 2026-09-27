@@ -8,8 +8,10 @@ import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { getESTToday } from "@/lib/timezone";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch followed club events" }, async () => {
   try {
     const ctx = await createRequestContext();
     const auth = requireUser(ctx);
@@ -41,7 +43,7 @@ export async function GET() {
       .limit(15);
 
     if (error) {
-      console.error("Error fetching followed club events:", error);
+      log.error("Error fetching followed club events", { error });
       return NextResponse.json({ events: [] });
     }
 
@@ -51,7 +53,7 @@ export async function GET() {
 
     return NextResponse.json({ events });
   } catch (error) {
-    console.error("Error in GET /api/events/following:", error);
+    log.error("Error in GET /api/events/following", { error });
     return NextResponse.json({ events: [] });
   }
-}
+});

@@ -7,6 +7,7 @@ import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 import type { Review } from "@/types";
 import { parseBody } from "@/server/body";
 import { ReviewBody } from "@/contracts/events";
+import { withRoute } from "@/server/route";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -17,7 +18,7 @@ interface RouteContext {
  * Submit a review for a past event. Requires authentication, valid rating (1-5),
  * event must have ended, user must have RSVP'd going, and no prior review.
  */
-export async function POST(request: Request, context: RouteContext) {
+export const POST = withRoute({ cache: "private", action: "create review" }, async (request: Request, context: RouteContext) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -112,14 +113,14 @@ export async function POST(request: Request, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/events/:id/reviews
  * Returns aggregate review data, user's review (if any), and can_review eligibility.
  * Organizers see anonymized comments; non-organizers get empty comments array.
  */
-export async function GET(request: Request, context: RouteContext) {
+export const GET = withRoute({ cache: "private", action: "fetch reviews" }, async (request: Request, context: RouteContext) => {
   try {
     const supabase = await createClient();
     const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -216,4 +217,4 @@ export async function GET(request: Request, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});

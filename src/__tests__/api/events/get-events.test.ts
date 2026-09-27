@@ -388,7 +388,8 @@ describe("GET /api/events — error handling", () => {
     expect(body).toHaveProperty("error");
   });
 
-  it("includes the Supabase error message in the 500 response", async () => {
+  // F-059 (plan 06-14): the caught error's text no longer reaches the caller.
+  it("answers the generic text, not the Supabase error message, in the 500 response", async () => {
     const errorMessage = "relation \"events\" does not exist";
     mockQueryResult = {
       data: null,
@@ -399,7 +400,8 @@ describe("GET /api/events — error handling", () => {
     const res = await GET(makeRequest());
     const body = await res.json();
 
-    expect(body.error).toBe(errorMessage);
+    expect(body).toEqual({ error: "Failed to fetch events" });
+    expect(JSON.stringify(body)).not.toContain(errorMessage);
   });
 
   it("returns 500 with generic message when an unexpected exception is thrown", async () => {

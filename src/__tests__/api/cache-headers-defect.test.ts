@@ -35,7 +35,8 @@
  * Moved so far (`ADOPTED` below): C4 and C5 pin the adopted arms at
  * `private, no-store` with a UUID `x-request-id`, signed in and anonymous
  * (06-13: the admin and moderation arms; the club, organizer-request and
- * my-clubs arms). C1 and C2 keep the arms not yet wrapped.
+ * my-clubs arms; 06-14 Task 1: the events and calendar arms). C1 and C2 keep
+ * the arms not yet wrapped.
  *
  * The cookie fake is served through the table's `withContainsAndNot`
  * wrapper for every row (admin/organizers and events/happening-now call
@@ -380,6 +381,16 @@ const ADOPTED: ReadonlySet<string> = new Set([
   "/api/clubs/friends",
   "/api/my-clubs",
   "/api/organizer-requests",
+  // 06-14 Task 1: events and calendar
+  "/api/calendar/events",
+  "/api/events/[id]/analytics",
+  "/api/events/[id]/friends",
+  "/api/events/[id]/reviews",
+  "/api/events/[id]/rsvp",
+  "/api/events/following",
+  "/api/events/friends-activity",
+  "/api/events/friends-organizing",
+  "/api/events/my-events",
 ]);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

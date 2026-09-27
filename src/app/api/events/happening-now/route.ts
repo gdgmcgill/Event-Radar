@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { getESTNow } from "@/lib/timezone";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withRoute({ cache: "public-60-300", action: "fetch happening now events" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -36,8 +38,11 @@ export async function GET() {
       .limit(10);
 
     if (error) {
-      console.error("Supabase error fetching happening now events:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Supabase error fetching happening now events", { error });
+      return NextResponse.json(
+        { error: "Failed to fetch happening now events" },
+        { status: 500 }
+      );
     }
 
     const events = (eventsData || []).map(event =>
@@ -48,11 +53,10 @@ export async function GET() {
       events,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("Error fetching happening now events:", message, error);
+    log.error("Error fetching happening now events", { error });
     return NextResponse.json(
-      { error: "Failed to fetch happening now events", details: message },
+      { error: "Failed to fetch happening now events" },
       { status: 500 }
     );
   }
-}
+});

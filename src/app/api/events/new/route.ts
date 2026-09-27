@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/events/new
  * Returns the 10 most recently created approved upcoming events.
  */
-export async function GET() {
+export const GET = withRoute({ cache: "public-60-300", action: "fetch new events" }, async () => {
   try {
     const supabase = await createClient();
     const today = new Date().toISOString().split("T")[0];
@@ -32,4 +33,4 @@ export async function GET() {
   } catch {
     return NextResponse.json({ error: "Failed to fetch new events" }, { status: 500 });
   }
-}
+});

@@ -4,6 +4,8 @@ import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
 import { parseQuery } from "@/server/body";
 import { ExportQuery } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"] & {
     approved_by?: string | null;
@@ -128,7 +130,7 @@ const escapeICalText = (value: string) =>
  *      500:
  *        description: Internal server error
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "public-60-300", action: "generate export" }, async (request: NextRequest) => {
     try {
         const supabase = await createClient();
         // The query contract (plan 06-08, REFAC-15): format, eventId,
@@ -185,8 +187,8 @@ export async function GET(request: NextRequest) {
         const { data: eventsData, error: eventsError } = await eventsQuery;
 
         if (eventsError) {
-            console.error("Supabase error fetching events for export:", eventsError);
-            return NextResponse.json({ error: eventsError.message }, { status: 500 });
+            log.error("Supabase error fetching events for export", { error: eventsError });
+            return NextResponse.json({ error: "Failed to generate export" }, { status: 500 });
         }
 
         const dbEvents = (eventsData ?? []) as unknown as EventRow[];
@@ -222,7 +224,9 @@ export async function GET(request: NextRequest) {
                     'Content-Disposition': 'attachment; filename="events.csv"',
                 },
             });
-        } else if (format === "ical") {
+        } else {
+            // format is "ical": ExportQuery admits "csv" and "ical" only, so
+            // the handler always answers (withRoute's type needs a Response).
             const lineBreak = "\r\n";
             const dtstamp = formatDateForICal(new Date().toISOString());
 
@@ -263,10 +267,10 @@ export async function GET(request: NextRequest) {
             });
         }
     } catch (error) {
-        console.error("Error generating export:", error);
+        log.error("Error generating export", { error });
         return NextResponse.json(
             { error: "Failed to generate export" },
             { status: 500 }
         );
     }
-}
+});

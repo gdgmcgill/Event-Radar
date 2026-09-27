@@ -5,6 +5,8 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { NextRequest, NextResponse } from "next/server";
 import { parseBody } from "@/server/body";
 import { EventInviteBody } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -14,7 +16,7 @@ interface RouteParams {
  * POST /api/events/[id]/invite — Invite friends to an event
  * Body: { invitee_ids: string[] }
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withRoute({ cache: "private", action: "send invites" }, async (request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .select("invitee_id");
 
     if (inviteError) {
-      console.error("Error inserting event invites:", inviteError);
+      log.error("Error inserting event invites", { error: inviteError });
       return NextResponse.json({ error: "Failed to send invites" }, { status: 500 });
     }
 
@@ -129,10 +131,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // 23505: this invitee already holds an event_invite notification
         // for this event, so they are notified; not a failure.
         if (!notifyError || notifyError.code === "23505") return;
-        console.error(
-          `Error inserting invite notifications (row ${index + 1} of ${results.length}):`,
-          notifyError
-        );
+        log.error("Error inserting invite notifications", {
+          eventId,
+          row: index + 1,
+          of: results.length,
+          error: notifyError,
+        });
       });
     }
 
@@ -141,4 +145,4 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   } catch {
     return NextResponse.json({ error: "Failed to send invites" }, { status: 500 });
   }
-}
+});

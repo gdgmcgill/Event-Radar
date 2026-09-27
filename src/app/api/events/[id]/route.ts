@@ -18,6 +18,8 @@ import {
   EVENT_UPDATE_FIELD_KEYS,
   EventUpdateBody,
 } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 interface RouteParams {
   params: Promise<{
@@ -78,10 +80,10 @@ interface RouteParams {
  *      500:
  *        description: Internal server error
  */
-export async function GET(
+export const GET = withRoute({ cache: "private", action: "fetch event" }, async (
   request: NextRequest,
   { params }: RouteParams
-) {
+) => {
   try {
     const { id } = await params;
     const ctx = await createRequestContext();
@@ -101,14 +103,14 @@ export async function GET(
       .single();
 
     if (error) {
-      console.error("Supabase error fetching event:", error);
+      log.error("Supabase error fetching event", { eventId: id, error });
       if (error.code === "PGRST116") {
         return NextResponse.json(
           { error: "Event not found" },
           { status: 404 }
         );
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to fetch event" }, { status: 500 });
     }
 
     if (!data) {
@@ -142,20 +144,20 @@ export async function GET(
       event as unknown as Record<string, unknown>;
     return NextResponse.json({ event: publicEvent });
   } catch (error) {
-    console.error("Error fetching event:", error);
+    log.error("Error fetching event", { error });
     return NextResponse.json(
       { error: "Failed to fetch event" },
       { status: 500 }
     );
   }
-}
+});
 
 const MODERATED_FIELDS = ["title", "image_url"] as const;
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update event" }, async (
   request: NextRequest,
   { params }: RouteParams
-) {
+) => {
   try {
     const ctx = await createRequestContext();
 
@@ -296,8 +298,8 @@ export async function PATCH(
       .single();
 
     if (error) {
-      console.error("Error updating event:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Error updating event", { eventId: id, error });
+      return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
     }
 
     const hasPendingEdits = Object.keys(pendingEdits).length > 0;
@@ -309,18 +311,18 @@ export async function PATCH(
       pending_fields: hasPendingEdits ? Object.keys(pendingEdits).filter(k => k !== "submitted_at") : [],
     });
   } catch (error) {
-    console.error("Error in edit event:", error);
+    log.error("Error in edit event", { error });
     return NextResponse.json(
       { error: "Failed to update event" },
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withRoute({ cache: "private", action: "delete event" }, async (
   request: NextRequest,
   { params }: RouteParams
-) {
+) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -367,12 +369,13 @@ export async function DELETE(
       .eq("id", id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Error deleting event", { eventId: id, error });
+      return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting event:", error);
+    log.error("Error deleting event", { error });
     return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });
   }
-}
+});

@@ -33,12 +33,13 @@
  * Moved so far (`FIXED` below): E2 drives each fixed site the same way and
  * pins the route's generic text where the sentinel was, with the sentinel
  * nowhere in the body (06-13: admin, moderation, clubs and organizer
- * requests). A NOT_DRIVEN line that the sweep rewrote so that it no longer
- * holds a `.message` token moves to `RETIRED` with its reason. C7's
+ * requests; 06-14 Task 1: events and calendar). A NOT_DRIVEN line that the
+ * sweep rewrote so that it no longer holds a `.message` token moves to
+ * `RETIRED` with its reason. C7's
  * exclusion of `dateError.message` also skips `updateError.message` (the
  * substring match), which is why the two appeal `updateError.message` 500s
- * were never in C7; the one in this plan's families is added to E2 as an
- * addition (`ADDED`), driven the same way.
+ * were never in C7; each is added to E2 as an addition (`ADDED`) by the plan
+ * that fixes it, driven the same way (06-13: clubs; 06-14: events).
  *
  * Seams: `@/lib/supabase/server` returns the cookie fake, with
  * `auth.getSession` and `auth.signInWithOAuth` added for the health rows;
@@ -460,6 +461,59 @@ const FIXED: Readonly<Record<string, { at: (body: any) => unknown; generic: unkn
     at: (b) => b,
     generic: { error: "Failed to fetch organizer requests" },
   },
+  // 06-14 Task 1: events and calendar
+  "src/app/api/calendar/events/route.ts:67": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch calendar events" },
+  },
+  "src/app/api/events/[id]/appeal/route.ts:77": {
+    at: (b) => b,
+    generic: { error: "Failed to submit appeal" },
+  },
+  "src/app/api/events/[id]/report/route.ts:73": {
+    at: (b) => b,
+    generic: { error: "Failed to report event" },
+  },
+  "src/app/api/events/[id]/route.ts:106": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch event" },
+  },
+  "src/app/api/events/[id]/route.ts:331": {
+    at: (b) => b,
+    generic: { error: "Failed to update event" },
+  },
+  "src/app/api/events/[id]/route.ts:401": {
+    at: (b) => b,
+    generic: { error: "Failed to delete event" },
+  },
+  "src/app/api/events/create/route.ts:196": {
+    at: (b) => b,
+    generic: { error: "Failed to create event" },
+  },
+  "src/app/api/events/export/route.ts:211": {
+    at: (b) => b,
+    generic: { error: "Failed to generate export" },
+  },
+  "src/app/api/events/featured/route.ts:17": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch featured events" },
+  },
+  "src/app/api/events/happening-now/route.ts:40": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch happening now events" },
+  },
+  "src/app/api/events/happening-now/route.ts:51": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch happening now events" },
+  },
+  "src/app/api/events/my-events/route.ts:24": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch your events" },
+  },
+  "src/app/api/events/route.ts:448": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch events" },
+  },
 };
 
 /**
@@ -479,6 +533,22 @@ const ADDED: { row: Site; at: (body: any) => unknown; generic: unknown }[] = [
         (await import("@/app/api/clubs/[id]/appeal/route")).POST(
           send(`clubs/${CLUB_ID}/appeal`, "POST", { message: "please" }),
           idOf(CLUB_ID)
+        ),
+    },
+    at: (b) => b,
+    generic: { error: "Failed to submit appeal" },
+  },
+  // 06-14 Task 1: the events appeal's status-reset error (line 88 at the
+  // base of 06-14), on the cookie client's events update.
+  {
+    row: {
+      site: "src/app/api/events/[id]/appeal/route.ts:88", n: 37, persona: "student", status: 500,
+      elevated: (i) => { i.tables!.events = i.tables!.events.map((e) => (e.id === EVENT_OWN ? { ...e, status: "rejected" } : e)); },
+      cookie: (i) => { i.errors = { "events.update": pg(37) }; },
+      invoke: async () =>
+        (await import("@/app/api/events/[id]/appeal/route")).POST(
+          send(`events/${EVENT_OWN}/appeal`, "POST", { message: "please" }),
+          idOf(EVENT_OWN)
         ),
     },
     at: (b) => b,
@@ -562,9 +632,9 @@ describe("E0: the rows plus NOT_DRIVEN are census C7", () => {
       listed[file] = (listed[file] ?? 0) + 1;
     }
     expect(listed).toEqual(censusC7());
-    expect(LIVE_SITES).toHaveLength(27);
+    expect(LIVE_SITES).toHaveLength(14);
     expect(LIVE_NOT_DRIVEN).toHaveLength(5);
-    expect(FIXED_SITES).toHaveLength(8);
+    expect(FIXED_SITES).toHaveLength(22);
   });
 
   it("the census at f550de9 is unchanged: 34 driven + 6 listed = 40, and every move is accounted for", () => {

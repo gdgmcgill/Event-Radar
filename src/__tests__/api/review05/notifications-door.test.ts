@@ -201,11 +201,18 @@ describe("POST /api/events/[id]/invite", () => {
     const res = await invite();
     expect(res.status).toBe(200);
     expect(callsTo(mockElevated, "notifications", "insert")).toHaveLength(2);
-    const logged = errorSpy.mock.calls.filter((c) =>
-      String(c[0]).includes("invite notifications")
-    );
+    // One JSON line from src/server/log.ts (06-14): the row numbers are fields.
+    const logged = errorSpy.mock.calls
+      .filter((c) => String(c[0]).includes("invite notifications"))
+      .map((c) => JSON.parse(String(c[0])));
     expect(logged).toHaveLength(1);
-    expect(String(logged[0][0])).toContain("row 2 of 2");
+    expect(logged[0]).toMatchObject({
+      level: "error",
+      msg: "Error inserting invite notifications",
+      row: 2,
+      of: 2,
+      error: { message: "boom" },
+    });
   });
 });
 

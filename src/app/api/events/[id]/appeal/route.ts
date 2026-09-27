@@ -6,11 +6,13 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { parseBody } from "@/server/body";
 import { EventAppealBody } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(
+export const POST = withRoute({ cache: "private", action: "submit appeal" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -70,7 +72,8 @@ export async function POST(
     });
 
   if (reviewError) {
-    return NextResponse.json({ error: reviewError.message }, { status: 500 });
+    log.error("Failed to insert appeal review", { scope: "Appeal", eventId: id, error: reviewError });
+    return NextResponse.json({ error: "Failed to submit appeal" }, { status: 500 });
   }
 
   const { data: updateData, error: updateError } = await supabase
@@ -85,7 +88,8 @@ export async function POST(
     .select("id");
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    log.error("Failed to reset event to pending", { scope: "Appeal", eventId: id, error: updateError });
+    return NextResponse.json({ error: "Failed to submit appeal" }, { status: 500 });
   }
 
   if (!updateData || updateData.length === 0) {
@@ -114,7 +118,7 @@ export async function POST(
       );
     }
   } catch (notifErr) {
-    console.error("[Appeal] Failed to send admin notifications:", notifErr);
+    log.error("Failed to send admin notifications", { scope: "Appeal", eventId: id, error: notifErr });
   }
 
   const { data: updatedEvent } = await supabase
@@ -124,4 +128,4 @@ export async function POST(
     .single();
 
   return NextResponse.json({ success: true, event: updatedEvent });
-}
+});

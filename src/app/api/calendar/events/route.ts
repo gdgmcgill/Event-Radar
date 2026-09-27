@@ -6,6 +6,8 @@ import { requireUser } from "@/server/authz/requireUser";
 import { ok } from "@/server/http";
 import { readQuery } from "@/server/body";
 import { CalendarQuery } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * GET /api/calendar/events
@@ -14,7 +16,7 @@ import { CalendarQuery } from "@/contracts/events";
  * Optional query params for date-range filtering:
  *   ?from=2026-01-01&to=2026-03-31
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch calendar events" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const auth = requireUser(ctx);
@@ -67,7 +69,11 @@ export async function GET(request: NextRequest) {
     const { data: events, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Calendar events query failed", { error });
+      return NextResponse.json(
+        { error: "Failed to fetch calendar events" },
+        { status: 500 }
+      );
     }
 
     // Transform DB rows → frontend Event shape (passes through start_date/end_date directly)
@@ -84,10 +90,10 @@ export async function GET(request: NextRequest) {
 
     return ok({ events: annotated });
   } catch (error) {
-    console.error("Calendar events error:", error);
+    log.error("Calendar events error", { error });
     return NextResponse.json(
       { error: "Failed to fetch calendar events" },
       { status: 500 }
     );
   }
-}
+});

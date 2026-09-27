@@ -6,11 +6,13 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { sanitizeText } from "@/lib/sanitize";
 import { parseBody } from "@/server/body";
 import { EventReportBody } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(
+export const POST = withRoute({ cache: "private", action: "report event" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -67,8 +69,9 @@ export async function POST(
         { status: 409 }
       );
     }
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+    log.error("Failed to insert event report", { eventId, error: insertError });
+    return NextResponse.json({ error: "Failed to report event" }, { status: 500 });
   }
 
   return NextResponse.json({ success: true }, { status: 201 });
-}
+});

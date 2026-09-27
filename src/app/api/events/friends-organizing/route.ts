@@ -2,11 +2,12 @@ import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { NextResponse } from "next/server";
 import { getESTToday } from "@/lib/timezone";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/events/friends-organizing — Upcoming events created by friends
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch friends organizing" }, async () => {
   try {
     const ctx = await createRequestContext();
     const auth = requireUser(ctx);
@@ -58,4 +59,4 @@ export async function GET() {
   } catch {
     return NextResponse.json({ events: [] });
   }
-}
+});

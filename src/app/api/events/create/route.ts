@@ -13,8 +13,10 @@ import {
   CREATE_EVENT_FIELD_KEYS,
   CreateEventBody,
 } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create event" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
 
@@ -166,8 +168,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Error creating event:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Error creating event", { error });
+      return NextResponse.json({ error: "Failed to create event" }, { status: 500 });
     }
 
     const message = status === "approved"
@@ -208,11 +210,11 @@ export async function POST(request: NextRequest) {
                 }))
               );
             if (notifyError) {
-              console.error("Notification fanout insert failed:", notifyError);
+              log.error("Notification fanout insert failed", { error: notifyError });
             }
           }
         } catch (err) {
-          console.error("Notification fanout error:", err);
+          log.error("Notification fanout error", { error: err });
         }
       };
       // Scheduled with after() so the platform keeps the instance alive for
@@ -226,10 +228,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error in create event:", error);
+    log.error("Error in create event", { error });
     return NextResponse.json(
       { error: "Failed to create event" },
       { status: 500 }
     );
   }
-}
+});
