@@ -17,7 +17,10 @@
  *     value other than "true"/"false" is rejected rather than read as false;
  *   - sentryDsn() (plan 06-16, DEC-76) is optional: absent, blank or not an
  *     https DSN reads as null and never throws; sentryDsnProblem() names why,
- *     never the value.
+ *     never the value;
+ *   - healthToken() (plan 06-17, DEC-78) is optional: absent or blank is
+ *     null; shorter than 32 characters is null plus ONE warn line that never
+ *     carries the value; it never throws.
  *
  * Each case sets and deletes process.env keys itself and the originals are
  * restored after every test.
@@ -39,6 +42,7 @@ const MANAGED_KEYS = [
   "VERCEL_ENV",
   "NODE_ENV",
   "SENTRY_DSN",
+  "HEALTH_TOKEN",
 ] as const;
 
 type ManagedKey = (typeof MANAGED_KEYS)[number];
@@ -405,5 +409,62 @@ describe("sentryDsn() and sentryDsnProblem() (optional, DEC-76)", () => {
     expect(usableSentryDsn(DSN)).toBe(DSN);
     expect(usableSentryDsn(undefined)).toBeNull();
     expect(usableSentryDsn("http://k@h/1")).toBeNull();
+  });
+});
+
+// ─── The uptime monitor's token (plan 06-17, DEC-78) ────────────────────────
+
+describe("healthToken() (optional, DEC-78)", () => {
+  const TOKEN = "t".repeat(32);
+  const SHORT = "s".repeat(31);
+
+  it("is null, with no warn line, when HEALTH_TOKEN is unset, empty or whitespace", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      delete env.HEALTH_TOKEN;
+      const { healthToken } = await loadEnv();
+      expect(healthToken()).toBeNull();
+      env.HEALTH_TOKEN = "";
+      expect(healthToken()).toBeNull();
+      env.HEALTH_TOKEN = "   ";
+      expect(healthToken()).toBeNull();
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("returns the token, trimmed, when it has 32 or more characters", async () => {
+    env.HEALTH_TOKEN = `  ${TOKEN}\n`;
+    const { healthToken } = await loadEnv();
+    expect(healthToken()).toBe(TOKEN);
+    env.HEALTH_TOKEN = `${TOKEN}x`;
+    expect(healthToken()).toBe(`${TOKEN}x`);
+  });
+
+  it("is null plus exactly one warn line, never carrying the value, when shorter than 32", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      env.HEALTH_TOKEN = SHORT;
+      const { healthToken } = await loadEnv();
+      expect(() => healthToken()).not.toThrow();
+      expect(healthToken()).toBeNull();
+      expect(healthToken()).toBeNull();
+      expect(warn).toHaveBeenCalledTimes(1);
+      const line = warn.mock.calls.flat().map(String).join(" ");
+      expect(line).toContain("HEALTH_TOKEN");
+      expect(line).toContain("32");
+      expect(line).not.toContain(SHORT);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("reads at call time, not at import time", async () => {
+    delete env.HEALTH_TOKEN;
+    const { healthToken } = await loadEnv();
+    expect(healthToken()).toBeNull();
+    env.HEALTH_TOKEN = TOKEN;
+    expect(healthToken()).toBe(TOKEN);
   });
 });

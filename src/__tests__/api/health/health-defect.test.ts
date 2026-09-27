@@ -29,16 +29,28 @@
  *     is 503;
  *   - H5 memory figures reach the anonymous body.
  *
- * When 06-17 lands, H1-H5 MOVE: an anonymous caller gets `{ status, version }`
- * only and the report needs an admin session; the session read, the OAuth
- * probe and the environment and memory checks are deleted. Each move takes a
- * defect-ledger row citing F-029.
+ * MOVED by 06-17 (F-029 FIXED, DEC-78, INTENTIONAL BEHAVIOUR CHANGE): an
+ * anonymous caller gets `{ status, version }` only and the report needs an
+ * active admin session or the uptime monitor's HEALTH_TOKEN; the session read,
+ * the OAuth probe and the environment and memory checks are deleted. Each
+ * row now pins the fixed shape, with a defect-ledger row citing F-029:
+ *   - H1 the anonymous body is exactly `{ status: "ok", version }`, 200,
+ *     `private, no-store`, no check, no table or provider name;
+ *   - H2 the route reads the caller through `getUser` and makes neither the
+ *     OAuth probe nor the session read;
+ *   - H3 a provider error (the probe scripted to fail) reaches nothing: the
+ *     probe is never made and the anonymous body is liveness;
+ *   - H4 a missing variable is named nowhere: the anonymous answer is 200
+ *     liveness;
+ *   - H5 no memory figure reaches the anonymous body.
+ * The admin and token rows live in `health.test.ts`.
  *
  * Seam: `@/lib/supabase/server` returns the shared fake's client with
  * `auth.getSession` and `auth.signInWithOAuth` added as jest mocks (the fake
  * models only `getUser`), spied so H2 can read the calls.
  */
 
+import { NextRequest } from "next/server";
 import {
   createFakeSupabase,
   type FakeSupabase,
@@ -63,7 +75,7 @@ jest.mock("@/lib/supabase/server", () => ({
 }));
 
 const ENV = process.env as Record<string, string | undefined>;
-const KEYS = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"] as const;
+const KEYS = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "HEALTH_TOKEN"] as const;
 const saved: Partial<Record<(typeof KEYS)[number], string | undefined>> = {};
 
 beforeAll(() => {
@@ -83,12 +95,13 @@ beforeEach(() => {
   jest.spyOn(console, "warn").mockImplementation(() => {});
   ENV.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
   ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
+  delete ENV.HEALTH_TOKEN;
   getSession.mockReset().mockResolvedValue({ data: { session: null }, error: null });
   signInWithOAuth.mockReset().mockResolvedValue({
     data: { provider: "azure", url: `${SUPABASE_URL}/auth/v1/authorize?provider=azure` },
     error: null,
   });
-  getUser.mockReset();
+  getUser.mockReset().mockResolvedValue({ data: { user: null }, error: null });
   const fake = createFakeSupabase({
     user: null,
     tables: { events: [{ id: "e" }], users: [{ id: "u" }], saved_events: [] },
@@ -105,101 +118,64 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-async function health(): Promise<{ status: number; body: Record<string, any> }> {
+async function health(): Promise<{
+  status: number;
+  body: Record<string, any>;
+  cacheControl: string | null;
+}> {
   const GET: HealthGET = (await import("@/app/api/health/route")).GET;
-  const response = await GET();
-  return { status: response.status, body: await response.json() };
+  const response = await GET(new NextRequest("http://localhost:3000/api/health"));
+  return {
+    status: response.status,
+    body: await response.json(),
+    cacheControl: response.headers.get("Cache-Control"),
+  };
 }
 
-describe("F-029: GET /api/health, anonymous caller", () => {
-  it("H1 answers the full report: six named checks, table names, provider name", async () => {
-    const { status, body } = await health();
+describe("F-029 fixed: GET /api/health, anonymous caller gets liveness only", () => {
+  it("H1 answers exactly { status: \"ok\", version }: no check, no table or provider name", async () => {
+    const { status, body, cacheControl } = await health();
     expect(status).toBe(200);
-    expect(Object.keys(body).sort()).toEqual(["checks", "status", "timestamp", "uptime", "version"]);
-    expect(Object.keys(body.checks)).toEqual([
-      "server",
-      "database",
-      "supabase_auth",
-      "azure_oauth",
-      "environment",
-      "memory",
-    ]);
-    expect(body.checks.database).toMatchObject({
-      status: "healthy",
-      message: "All database tables accessible",
-      details: { tables: { events: true, users: true, saved_events: true } },
-    });
-    expect(body.checks.supabase_auth).toMatchObject({
-      status: "healthy",
-      message: "Supabase Auth is operational",
-    });
-    expect(body.checks.azure_oauth).toMatchObject({
-      status: "healthy",
-      message: "Azure OAuth is configured and operational",
-      details: { provider: "azure", configured: true },
-    });
-    expect(body.checks.environment).toEqual({
-      status: "healthy",
-      message: "All required environment variables are set",
-      details: { variables_checked: 2 },
-    });
-    expect(typeof body.uptime).toBe("number");
+    expect(Object.keys(body).sort()).toEqual(["status", "version"]);
+    expect(body.status).toBe("ok");
     expect(typeof body.version).toBe("string");
+    expect(cacheControl).toBe("private, no-store");
+    const text = JSON.stringify(body);
+    for (const name of ["checks", "events", "users", "saved_events", "azure", "uptime", "timestamp"]) {
+      expect(text).not.toContain(name);
+    }
   });
 
-  it("H2 makes the live OAuth probe and the session read, and never reads the caller", async () => {
+  it("H2 reads the caller through getUser and makes neither the OAuth probe nor the session read", async () => {
     await health();
-    expect(signInWithOAuth).toHaveBeenCalledTimes(1);
-    expect(signInWithOAuth).toHaveBeenCalledWith({
-      provider: "azure",
-      options: {
-        redirectTo: `${SUPABASE_URL}/auth/callback`,
-        skipBrowserRedirect: true,
-      },
-    });
-    expect(getSession).toHaveBeenCalledTimes(1);
-    expect(getUser).not.toHaveBeenCalled();
+    expect(signInWithOAuth).not.toHaveBeenCalled();
+    expect(getSession).not.toHaveBeenCalled();
+    expect(getUser).toHaveBeenCalledTimes(1);
   });
 
-  it("H3 a provider error's text reaches the anonymous body (503)", async () => {
+  it("H3 a provider error reaches nothing: the probe is never made, the answer is 200 liveness", async () => {
     signInWithOAuth.mockResolvedValue({
       data: { provider: "azure", url: null },
       error: { message: "Unsupported provider: provider is not enabled" },
     });
     const { status, body } = await health();
-    expect(status).toBe(503);
-    expect(body.status).toBe("unhealthy");
-    expect(body.checks.azure_oauth).toMatchObject({
-      status: "unhealthy",
-      message: "Azure OAuth not configured: Unsupported provider: provider is not enabled",
-      details: {
-        error: "Unsupported provider: provider is not enabled",
-        hint: "Configure Azure OAuth provider in Supabase dashboard",
-      },
-    });
+    expect(status).toBe(200);
+    expect(Object.keys(body).sort()).toEqual(["status", "version"]);
+    expect(JSON.stringify(body)).not.toContain("Unsupported provider");
+    expect(signInWithOAuth).not.toHaveBeenCalled();
   });
 
-  it("H4 a missing variable is named in the anonymous body (503)", async () => {
+  it("H4 a missing variable is named nowhere: the anonymous answer is 200 liveness", async () => {
     delete ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     const { status, body } = await health();
-    expect(status).toBe(503);
-    expect(body.checks.environment).toEqual({
-      status: "unhealthy",
-      message: "Missing required environment variables",
-      details: { missing: ["NEXT_PUBLIC_SUPABASE_ANON_KEY"] },
-    });
+    expect(status).toBe(200);
+    expect(Object.keys(body).sort()).toEqual(["status", "version"]);
+    expect(JSON.stringify(body)).not.toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   });
 
-  it("H5 memory figures reach the anonymous body", async () => {
+  it("H5 no memory figure reaches the anonymous body", async () => {
     const { body } = await health();
-    expect(Object.keys(body.checks.memory.details).sort()).toEqual([
-      "external",
-      "heapPercentage",
-      "heapTotal",
-      "heapUsed",
-      "rss",
-    ]);
-    expect(body.checks.memory.details.heapUsed).toMatch(/^\d+MB$/);
-    expect(body.checks.memory.details.rss).toMatch(/^\d+MB$/);
+    expect(body.checks).toBeUndefined();
+    expect(JSON.stringify(body)).not.toMatch(/heap|rss|external|MB"/);
   });
 });

@@ -30,6 +30,7 @@ exception that nobody wrote down is indistinguishable from an oversight.
 | Friend suggestions read other users' profiles, memberships and RSVPs | `src/app/api/users/me/suggestions/route.ts` | users has own-row and admin reads only, and club_members shows another user's membership only to that club's owner; the RSVP-mates read stays with them because its events(title) embed names events the events SELECT policy hides from non-creators. The caller's own rows and the world-readable follow tables are read on the cookie client | 05 |
 | Public profile of another user | `src/app/users/[id]/page.tsx` | users has no public-read policy; adding one would expose email, roles and ban columns at row level; the select is narrowed and anonymous viewers of private profiles get 404 (DEC-48). The target's saved events, created events, friends, memberships and RSVPs are read through the same door, because each is readable under RLS only by the target | 05 |
 | A/B experiment reads and the caller's own variant assignment | `src/app/api/recommendations/route.ts` | experiments and experiment_variants carry admin-only policies; assignment is a server decision keyed by the authenticated caller's id, never a request value (F-017) | 06 |
+| Health diagnostics: cron job status and the newest scraper-sourced insert | `src/app/api/health/route.ts` | cron is not an API schema and service_role lacks USAGE on it, so a service-only SECURITY DEFINER function reads it (C4); pending instagram events are visible only to admins through RLS | 06 |
 
 Rows added from Phase 5 (05-05 onward).
 

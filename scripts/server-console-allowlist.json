@@ -1,10 +1,5 @@
 [
   {
-    "file": "src/app/api/health/route.ts",
-    "rule": "S2",
-    "count": 9
-  },
-  {
     "file": "src/app/auth/callback/route.ts",
     "rule": "S2",
     "count": 1,

@@ -229,7 +229,7 @@ const GET_ARMS: Record<string, { path: string; invoke: GetInvoke }> = {
   },
   "/api/health": {
     path: "health",
-    invoke: async () => (await import("@/app/api/health/route")).GET(),
+    invoke: async (r) => (await import("@/app/api/health/route")).GET(r),
   },
   "/api/events/[id]/rsvp": {
     path: `events/${EVENT_OWN}/rsvp`,

@@ -1,0 +1,313 @@
+# 06-17 Task 1 evidence: /api/health liveness + documented diagnostics (REFAC-22, F-029)
+# Written incrementally; each block is the verbatim command, its exit code, then its output.
+# Recorded 2026-09-27T17:37:31Z at HEAD 0c9bf70 with Task 1 uncommitted.
+
+## Red-first record
+The red run of health.test.ts and the env.test.ts reader rows was recorded by the first 06-17 executor
+(scratchpad p17/t1-red.txt); verbatim tail below.
+  ● healthToken() (optional, DEC-78) › is null plus exactly one warn line, never carrying the value, when shorter than 32
+
+    expect(received).not.toThrow()
+
+    Error name:    "TypeError"
+    Error message: "healthToken is not a function"
+
+          448 |       env.HEALTH_TOKEN = SHORT;
+          449 |       const { healthToken } = await loadEnv();
+        > 450 |       expect(() => healthToken()).not.toThrow();
+              |                    ^
+          451 |       expect(healthToken()).toBeNull();
+          452 |       expect(healthToken()).toBeNull();
+          453 |       expect(warn).toHaveBeenCalledTimes(1);
+
+      at src/lib/env.test.ts:450:20
+      at Object.<anonymous> (node_modules/expect/build/index.js:1824:9)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:2235:93)
+      at Object.<anonymous> (src/lib/env.test.ts:450:39)
+      at Object.<anonymous> (src/lib/env.test.ts:450:39)
+
+  ● healthToken() (optional, DEC-78) › reads at call time, not at import time
+
+    TypeError: healthToken is not a function
+
+      464 |     delete env.HEALTH_TOKEN;
+      465 |     const { healthToken } = await loadEnv();
+    > 466 |     expect(healthToken()).toBeNull();
+          |            ^
+      467 |     env.HEALTH_TOKEN = TOKEN;
+      468 |     expect(healthToken()).toBe(TOKEN);
+      469 |   });
+
+      at Object.<anonymous> (src/lib/env.test.ts:466:12)
+
+Test Suites: 2 failed, 2 total
+Tests:       4 failed, 53 passed, 57 total
+Snapshots:   0 total
+Time:        0.259 s, estimated 1 s
+Ran all test suites matching src/__tests__/api/health/health.test.ts|src/lib/env.test.ts.
+
+## (a1) $ npx jest --ci src/__tests__/api/health src/lib/env.test.ts src/server/__tests__/getsession-gate.test.ts src/__tests__/api/error-text-defect.test.ts src/__tests__/api/cache-headers-defect.test.ts
+exit=0
+PASS node src/lib/env.test.ts
+PASS node src/server/__tests__/getsession-gate.test.ts
+PASS node src/__tests__/api/health/health-defect.test.ts
+PASS node src/__tests__/api/error-text-defect.test.ts
+PASS node src/__tests__/api/cache-headers-defect.test.ts
+PASS node src/__tests__/api/health/health.test.ts
+Test Suites: 6 passed, 6 total
+Tests:       232 passed, 232 total
+
+## (a2) $ npx tsc --noEmit
+exit=0
+
+## (b) Five-step ledger protocol for the moved pins (F-029 H1-H5; F-059 health's nine rows + E0; cache-headers 2 lines)
+Pre-fix sources are `git show 0c9bf70:<path>`; swaps are copies; the fixed tree is restored and cmp'd at the end.
+Step 1 (apply the fix): the rewritten src/app/api/health/route.ts is in the working tree.
+
+### Step 2: the DEFECT suites as committed at 0c9bf70 (unedited), against the fixed route: must be RED
+$ npx jest --ci src/__tests__/api/health/health-defect.test.ts src/__tests__/api/error-text-defect.test.ts src/__tests__/api/cache-headers-defect.test.ts
+exit=1
+FAIL node src/__tests__/api/health/health-defect.test.ts
+  ● F-029: GET /api/health, anonymous caller › H1 answers the full report: six named checks, table names, provider name
+  ● F-029: GET /api/health, anonymous caller › H2 makes the live OAuth probe and the session read, and never reads the caller
+  ● F-029: GET /api/health, anonymous caller › H3 a provider error's text reaches the anonymous body (503)
+  ● F-029: GET /api/health, anonymous caller › H4 a missing variable is named in the anonymous body (503)
+  ● F-029: GET /api/health, anonymous caller › H5 memory figures reach the anonymous body
+FAIL node src/__tests__/api/error-text-defect.test.ts
+  ● E0: the rows plus NOT_DRIVEN are census C7 › file by file, the live driven rows plus the live NOT_DRIVEN lines are the census
+  ● E1: a caught error's text reaches the response body today › src/app/api/health/route.ts:118
+  ● E1: a caught error's text reaches the response body today › src/app/api/health/route.ts:143
+  ● E1: a caught error's text reaches the response body today › src/app/api/health/route.ts:167
+  ● E1: a caught error's text reaches the response body today › src/app/api/health/route.ts:181
+  ● E1: a caught error's text reaches the response body today › src/app/api/health/route.ts:211
+  ● E1: a caught error's text reaches the response body today › src/app/api/health/route.ts:214
+  ● E1: a caught error's text reaches the response body today › src/app/api/health/route.ts:247
+  ● E1: a caught error's text reaches the response body today › src/app/api/health/route.ts:322
+  ● E1: a caught error's text reaches the response body today › src/app/api/health/route.ts:383
+PASS node src/__tests__/api/cache-headers-defect.test.ts
+Test Suites: 2 failed, 1 passed, 3 total
+Tests:       15 failed, 127 passed, 142 total
+
+### Step 3: the moved DEFECT suites against the fixed route: must be GREEN
+(Step 2 above took ~9 min wall-clock only because an orphaned `sleep 400` from with-timeout.sh held the output pipe; jest itself ran in 1.5 s. Steps 3-5 re-run with spawnSync timeout and file stdio.)
+### Step 3: the moved DEFECT suites against the fixed route: must be GREEN
+$ npx jest --ci src/__tests__/api/health/health-defect.test.ts src/__tests__/api/error-text-defect.test.ts src/__tests__/api/cache-headers-defect.test.ts src/__tests__/api/health/health.test.ts src/__tests__/api/cache-headers-census.test.ts
+exit=0
+PASS node src/__tests__/api/cache-headers-census.test.ts
+PASS node src/__tests__/api/health/health-defect.test.ts
+PASS node src/__tests__/api/cache-headers-defect.test.ts
+PASS node src/__tests__/api/error-text-defect.test.ts
+PASS node src/__tests__/api/health/health.test.ts
+Test Suites: 5 passed, 5 total
+Tests:       451 passed, 451 total
+
+### Step 4: the moved DEFECT suites against the PRE-FIX route (0c9bf70): must be RED
+$ npx jest --ci src/__tests__/api/health/health-defect.test.ts src/__tests__/api/error-text-defect.test.ts
+exit=1
+FAIL node src/__tests__/api/error-text-defect.test.ts
+  ● E0: the rows plus NOT_DRIVEN are census C7 › file by file, the live driven rows plus the live NOT_DRIVEN lines are the census
+  ● E2: fixed, the caller gets the route's generic text (F-059 fixed) › src/app/api/health/route.ts:118
+  ● E2: fixed, the caller gets the route's generic text (F-059 fixed) › src/app/api/health/route.ts:143
+  ● E2: fixed, the caller gets the route's generic text (F-059 fixed) › src/app/api/health/route.ts:167
+  ● E2: fixed, the caller gets the route's generic text (F-059 fixed) › src/app/api/health/route.ts:181
+  ● E2: fixed, the caller gets the route's generic text (F-059 fixed) › src/app/api/health/route.ts:211
+  ● E2: fixed, the caller gets the route's generic text (F-059 fixed) › src/app/api/health/route.ts:214
+  ● E2: fixed, the caller gets the route's generic text (F-059 fixed) › src/app/api/health/route.ts:247
+  ● E2: fixed, the caller gets the route's generic text (F-059 fixed) › src/app/api/health/route.ts:322
+  ● E2: fixed, the caller gets the route's generic text (F-059 fixed) › src/app/api/health/route.ts:383
+FAIL node src/__tests__/api/health/health-defect.test.ts
+  ● F-029 fixed: GET /api/health, anonymous caller gets liveness only › H1 answers exactly { status: "ok", version }: no check, no table or provider name
+  ● F-029 fixed: GET /api/health, anonymous caller gets liveness only › H2 reads the caller through getUser and makes neither the OAuth probe nor the session read
+  ● F-029 fixed: GET /api/health, anonymous caller gets liveness only › H3 a provider error reaches nothing: the probe is never made, the answer is 200 liveness
+  ● F-029 fixed: GET /api/health, anonymous caller gets liveness only › H4 a missing variable is named nowhere: the anonymous answer is 200 liveness
+  ● F-029 fixed: GET /api/health, anonymous caller gets liveness only › H5 no memory figure reaches the anonymous body
+Test Suites: 2 failed, 2 total
+Tests:       15 failed, 29 passed, 44 total
+
+### Step 4 restore: cmp of every swapped file against its saved fixed copy
+$ cmp src/app/api/health/route.ts <fixed copy>  exit=0
+$ cmp src/__tests__/api/health/health-defect.test.ts <fixed copy>  exit=0
+$ cmp src/__tests__/api/error-text-defect.test.ts <fixed copy>  exit=0
+$ cmp src/__tests__/api/cache-headers-defect.test.ts <fixed copy>  exit=0
+$ cmp src/server/__tests__/getsession-gate.test.ts <fixed copy>  exit=0
+
+### Step 5: PRESERVE suite on the same surface
+src/server/__tests__/getsession-gate.test.ts (PRESERVE, REFAC-11 clause 1) carries the ONE change its own header
+anticipated: "If Phase 6 removes the health route's call, the expected set becomes empty in that commit". The
+single assertion tightens from ["src/app/api/health/route.ts"] to [] and loosens nothing (orchestrator ruling:
+keep). The plan's Task 1 action directs it. It passes against the fixed route:
+$ npx jest --ci src/server/__tests__/getsession-gate.test.ts
+exit=0
+PASS node src/server/__tests__/getsession-gate.test.ts
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+
+Protocol verdict: step2 RED (ok); step3 GREEN (ok); step4 RED (ok); step5 GREEN (ok)
+
+## (c) Censuses, ratchet, tag gate, acceptance greps, lint
+$ node scripts/check-server-console.mjs
+exit=0
+committed=2 live=2 delta=0
+PASS: the live census is within the committed allow-list
+
+$ node scripts/check-contracts.mjs
+exit=0
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+
+$ node scripts/check-contracts.mjs --client
+exit=0
+client files=38 violations=0
+
+$ node scripts/check-elevated-ratchet.mjs
+exit=0
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+
+$ node scripts/check-characterization-tags.mjs --all
+exit=0
+ok   PRESERVE+DEFECT src/__tests__/api/admin/admin-arm-tree-defect.test.ts (F-058)
+ok   PRESERVE src/__tests__/api/admin/admin-guard-characterization.test.ts (F-058, F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-guard-defect.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-reports-defect.test.ts (F-092)
+ok   DEFECT   src/__tests__/api/admin/admin-users-patch-defect.test.ts (F-091)
+ok   PRESERVE+DEFECT src/__tests__/api/auth-ring/write-arm-tree-defect.test.ts (F-058)
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts (F-058)
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   DEFECT   src/__tests__/api/cache-headers-defect.test.ts (F-026, F-025)
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/error-text-defect.test.ts (F-059, F-029)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/events/ban-asymmetry-defect.test.ts (F-088, F-062, F-089)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071, F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   DEFECT   src/__tests__/api/events/pending-edits-defect.test.ts (F-086)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/api/health/health-defect.test.ts (F-029)
+ok   PRESERVE src/__tests__/api/interactions/interactions-feedback-characterization.test.ts (F-094)
+ok   PRESERVE src/__tests__/api/notifications/notifications-characterization.test.ts (F-028, F-059)
+ok   DEFECT   src/__tests__/api/notifications/notifications-count-defect.test.ts (F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/recommendations/batch-error-text-defect.test.ts (F-059)
+ok   DEFECT   src/__tests__/api/recommendations/experiment-assignment-defect.test.ts (F-017)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-characterization.test.ts (F-017, F-041)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-family-characterization.test.ts (F-059)
+ok   PRESERVE+DEFECT src/__tests__/api/review05/club-links-defect.test.ts (F-094)
+ok   DEFECT   src/__tests__/api/slice6-malformed-input-defect.test.ts (F-094)
+ok   DEFECT   src/__tests__/api/uncaught-throw-defect.test.ts (F-058)
+ok   DEFECT   src/__tests__/config/csp-defect.test.ts (F-055)
+ok   DEFECT   src/__tests__/config/vercel-json-defect.test.ts (F-025, F-026)
+ok   PRESERVE src/__tests__/contracts/bad-request-characterization.test.ts
+ok   DEFECT   src/__tests__/contracts/malformed-input-defect.test.ts (F-094, F-058)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   DEFECT   src/__tests__/pages/docs-gate-defect.test.ts (F-054)
+ok   DEFECT   src/__tests__/pages/public-profile-defect.test.tsx (F-005)
+ok   PRESERVE src/__tests__/webhook/verify-signature.test.ts (F-039)
+ok   PRESERVE src/__tests__/webhook/webhook-handler.test.ts (F-039)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089, F-058)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 57 files
+
+$ bash -c 'grep -rn 'getSession(' src | grep -v '\.test\.' ; echo "lines=$(grep -rn 'getSession(' src | grep -v '\.test\.' | wc -l | tr -d ' ')"'
+exit=0
+lines=0
+
+$ node -e 'const l=require("./scripts/server-console-allowlist.json");const f=[...new Set(l.map(e=>e.file))].sort();console.log(JSON.stringify(f));process.exit(f.join()==="src/lib/tagMapping.ts"?0:1)'
+exit=1
+["src/app/auth/callback/route.ts","src/lib/tagMapping.ts"]
+
+$ bash -c 'grep -n 'src/app/api/health/route.ts' src/server/db/elevated/REGISTRY.md'
+exit=0
+33:| Health diagnostics: cron job status and the newest scraper-sourced insert | `src/app/api/health/route.ts` | cron is not an API schema and service_role lacks USAGE on it, so a service-only SECURITY DEFINER function reads it (C4); pending instagram events are visible only to admins through RLS | 06 |
+
+$ bash -c 'for w in HEALTH_TOKEN last_ingest_at unknown 503; do printf '%s ' $w; grep -c "$w" docs/health.md; done; wc -l docs/health.md src/app/api/health/route.ts'
+exit=0
+HEALTH_TOKEN 3
+last_ingest_at 3
+unknown 4
+503 5
+     189 docs/health.md
+     286 src/app/api/health/route.ts
+     475 total
+
+$ npm run lint
+exit=0
+
+> uni-verse@0.1.0 lint
+> eslint .
+
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-onboarding.js
+  67:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-online-users.js
+  33:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/calendar/page.tsx
+  788:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/contributors/page.tsx
+  74:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/events/[id]/EventDetailClient.tsx
+  242:5  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/moderation/organizers/page.tsx
+  252:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/my-events/page.tsx
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 159) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 167) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 181) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/page.tsx
+  65:17  warning  The ref value 'timerRefs.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'timerRefs.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/auth/SignOutButton.tsx
+  42:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  44:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubDiscoveryCard.tsx
+  44:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubSettingsTab.tsx
+  240:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  265:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/FollowButton.tsx
+  40:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/onboarding/OnboardingWizard.tsx
+  127:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 17 problems (0 errors, 17 warnings)
+
+## Deviations recorded for Task 1
+1. KNOWN DEVIATION (allow-list end state): the plan's acceptance check "the server-console allow-list holds only
+   src/lib/tagMapping.ts" exits 1 above. 06-14 deliberately kept a reasoned entry for src/app/auth/callback/route.ts
+   (its failed-sign-in redirect carries the provider error text, pinned by a PRESERVE suite; Phase 7 owns that
+   decision). Task 1 removed every health entry; the correct end state for 06-17 is exactly two entries,
+   callback and tagMapping, and the live census agrees (committed=2 live=2 delta=0).
+2. ANTICIPATED PRESERVE TIGHTENING: src/server/__tests__/getsession-gate.test.ts changes one assertion from
+   ["src/app/api/health/route.ts"] to [] (plus its header text). The suite's own header anticipated exactly this
+   commit; the plan's Task 1 action directs it; nothing is loosened. Orchestrator ruling: keep.
+3. src/__tests__/helpers/fakeSupabase.ts (listed in the plan's files) needed no change: health.test.ts scripts the
+   cron_job_status rows and the PGRST202 error through the existing rpc/error scripting.
+4. The full `npx jest --ci` run is recorded once, on the combined Task 1 + Task 2 tree, in evidence/admin-page-gates.txt.

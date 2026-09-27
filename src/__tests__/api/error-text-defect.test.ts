@@ -34,8 +34,14 @@
  * pins the route's generic text where the sentinel was, with the sentinel
  * nowhere in the body (06-13: admin, moderation, clubs and organizer
  * requests; 06-14 Task 1: events and calendar; 06-14 Task 2: notifications,
- * recommendations/batch and user/following, which leaves only health's nine
- * rows in E1 for 06-17). A NOT_DRIVEN line that the
+ * recommendations/batch and user/following, which left only health's nine
+ * rows in E1 for 06-17; 06-17 Task 1: health, rewritten to the documented
+ * shape, so E1 is empty and asserts so). Health's nine moved rows are driven
+ * as the admin, the only caller that still sees checks (an anonymous caller
+ * gets liveness only, F-029), with the auth and storage probes answered by a
+ * spied `fetch`; the six sites whose check was deleted (the session read,
+ * the OAuth probe, memory, the outer catch) pin that the check is gone and
+ * the sentinel reaches nothing. A NOT_DRIVEN line that the
  * sweep rewrote so that it no longer holds a `.message` token moves to
  * `RETIRED` with its reason. C7's
  * exclusion of `dateError.message` also skips `updateError.message` (the
@@ -166,7 +172,21 @@ const send = (path: string, method: string, body?: unknown) =>
       : { body: JSON.stringify(body), headers: { "content-type": "application/json" } }),
   });
 const idOf = (id: string) => ({ params: Promise.resolve({ id }) });
-const health = async () => (await import("@/app/api/health/route")).GET();
+const health = async () => (await import("@/app/api/health/route")).GET(get("health"));
+
+/** The five documented checks (docs/health.md); no removed check comes back. */
+const HEALTH_CHECKS = ["auth", "db", "pg_cron", "storage", "webhook"];
+
+/**
+ * 06-17: the auth and storage probes are `fetch` calls. Every moved health
+ * row answers both with 200 unless its own `before` scripts a failure.
+ */
+function probesAnswer(auth: () => Promise<Response>): void {
+  jest.spyOn(global, "fetch").mockImplementation(async (input) =>
+    String(input).includes("/auth/v1/health") ? auth() : new Response("{}", { status: 200 })
+  );
+}
+const probesOk = () => probesAnswer(async () => new Response("{}", { status: 200 }));
 
 const CREATE = {
   title: "Error Text Night",
@@ -432,7 +452,14 @@ const NOT_DRIVEN: Record<string, string> = {
  * now stands where the sentinel was. `at` reads it; the whole body must not
  * contain the sentinel. One defect-ledger row per moved row.
  */
-const FIXED: Readonly<Record<string, { at: (body: any) => unknown; generic: unknown }>> = {
+type Fix = {
+  at: (body: any) => unknown;
+  generic: unknown;
+  /** How the moved row is driven when it differs from the E1 row (06-17). */
+  drive?: Partial<Site>;
+};
+
+const FIXED: Readonly<Record<string, Fix>> = {
   // 06-13 Task 1: admin and moderation
   "src/app/api/admin/calculate-popularity/route.ts:108": {
     at: (b) => b.results.errors,
@@ -537,6 +564,102 @@ const FIXED: Readonly<Record<string, { at: (body: any) => unknown; generic: unkn
     at: (b) => b,
     generic: { error: "Failed to fetch followed clubs" },
   },
+  // 06-17 Task 1: health, rewritten (F-029, DEC-78). Driven as the admin.
+  "src/app/api/health/route.ts:118": {
+    at: (b) => [b.status, b.checks.db.status],
+    generic: ["down", "down"],
+    drive: { persona: "admin", status: 503, before: probesOk },
+  },
+  "src/app/api/health/route.ts:143": {
+    at: (b) => [b.status, b.checks.db.status],
+    generic: ["down", "down"],
+    drive: { persona: "admin", status: 503, before: probesOk },
+  },
+  "src/app/api/health/route.ts:167": {
+    at: (b) => [b.status, b.checks.auth.status],
+    generic: ["degraded", "down"],
+    drive: {
+      persona: "admin",
+      status: 503,
+      before: () => probesAnswer(async () => new Response(S(21), { status: 500 })),
+    },
+  },
+  "src/app/api/health/route.ts:181": {
+    at: (b) => [b.status, b.checks.auth.status],
+    generic: ["degraded", "down"],
+    drive: {
+      persona: "admin",
+      status: 503,
+      before: () => probesAnswer(async () => { throw new Error(S(22)); }),
+    },
+  },
+  "src/app/api/health/route.ts:211": {
+    at: (b) => Object.keys(b.checks).sort(),
+    generic: HEALTH_CHECKS,
+    drive: {
+      persona: "admin",
+      status: 200,
+      before: () => {
+        probesOk();
+        signInWithOAuth.mockResolvedValue({ data: { provider: "azure", url: null }, error: { message: S(23) } });
+      },
+    },
+  },
+  "src/app/api/health/route.ts:214": {
+    at: (b) => Object.keys(b.checks).sort(),
+    generic: HEALTH_CHECKS,
+    drive: {
+      persona: "admin",
+      status: 200,
+      before: () => {
+        probesOk();
+        signInWithOAuth.mockResolvedValue({ data: { provider: "azure", url: null }, error: { message: S(24) } });
+      },
+    },
+  },
+  "src/app/api/health/route.ts:247": {
+    at: (b) => Object.keys(b.checks).sort(),
+    generic: HEALTH_CHECKS,
+    drive: {
+      persona: "admin",
+      status: 200,
+      before: () => {
+        probesOk();
+        signInWithOAuth.mockRejectedValue(new Error(S(25)));
+      },
+    },
+  },
+  "src/app/api/health/route.ts:322": {
+    at: (b) => Object.keys(b.checks).sort(),
+    generic: HEALTH_CHECKS,
+    drive: {
+      persona: "admin",
+      status: 200,
+      before: () => {
+        probesOk();
+        jest.spyOn(process, "memoryUsage").mockImplementation(() => {
+          throw new Error(S(26));
+        });
+      },
+    },
+  },
+  "src/app/api/health/route.ts:383": {
+    at: (b) => [b.status, b.checks.auth.status, b.checks.storage.status],
+    generic: ["degraded", "down", "down"],
+    drive: {
+      persona: "admin",
+      status: 503,
+      before: () => {
+        probesOk();
+        process.env = new Proxy(ORIGINAL_ENV, {
+          get(target, key, receiver) {
+            if (key === "NEXT_PUBLIC_SUPABASE_ANON_KEY") throw new Error(S(27));
+            return Reflect.get(target, key, receiver);
+          },
+        });
+      },
+    },
+  },
 };
 
 /**
@@ -597,12 +720,12 @@ const RETIRED: Record<string, string> = {
 };
 
 const LIVE_SITES = SITES.filter((row) => !(row.site in FIXED));
-const FIXED_SITES: [string, Site, { at: (body: any) => unknown; generic: unknown }][] = [
+const FIXED_SITES: [string, Site, Fix][] = [
   ...SITES.filter((row) => row.site in FIXED).map(
-    (row): [string, Site, (typeof FIXED)[string]] => [row.site, row, FIXED[row.site]]
+    (row): [string, Site, Fix] => [row.site, { ...row, ...FIXED[row.site].drive }, FIXED[row.site]]
   ),
   ...ADDED.map(
-    ({ row, at, generic }): [string, Site, (typeof FIXED)[string]] => [row.site, row, { at, generic }]
+    ({ row, at, generic }): [string, Site, Fix] => [row.site, row, { at, generic }]
   ),
 ];
 const LIVE_NOT_DRIVEN = Object.keys(NOT_DRIVEN).filter((site) => !(site in RETIRED));
@@ -666,9 +789,9 @@ describe("E0: the rows plus NOT_DRIVEN are census C7", () => {
       listed[file] = (listed[file] ?? 0) + 1;
     }
     expect(listed).toEqual(censusC7());
-    expect(LIVE_SITES).toHaveLength(9);
+    expect(LIVE_SITES).toHaveLength(0);
     expect(LIVE_NOT_DRIVEN).toHaveLength(1);
-    expect(FIXED_SITES).toHaveLength(27);
+    expect(FIXED_SITES).toHaveLength(36);
   });
 
   it("the census at f550de9 is unchanged: 34 driven + 6 listed = 40, and every move is accounted for", () => {
@@ -686,6 +809,12 @@ describe("E0: the rows plus NOT_DRIVEN are census C7", () => {
 // ─── E1: the sentinel reaches the caller ───────────────────────────────────
 
 describe("E1: a caught error's text reaches the response body today", () => {
+  if (LIVE_SITES.length === 0) {
+    it("no driven site is left (06-17 moved health's nine to E2)", () => {
+      expect(LIVE_SITES).toEqual([]);
+    });
+    return;
+  }
   it.each(LIVE_SITES.map((row): [string, Site] => [row.site, row]))("%s", async (_label, row) => {
     const { status, body } = await drive(row);
     expect(status).toBe(row.status);
