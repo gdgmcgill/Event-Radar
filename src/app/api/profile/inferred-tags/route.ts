@@ -3,6 +3,8 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import type { NextRequest } from "next/server";
+import { parseBody } from "@/server/body";
+import { InferredTagBody } from "@/contracts/users";
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -14,14 +16,9 @@ export async function DELETE(request: NextRequest) {
     const user = active.user;
     const supabase = ctx.supabase;
 
-    const { tag } = await request.json();
-
-    if (!tag || typeof tag !== "string") {
-      return NextResponse.json(
-        { error: "tag is required and must be a string" },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, InferredTagBody);
+    if (!parsed.ok) return parsed.response;
+    const { tag } = parsed.data;
 
     // Fetch current inferred_tags
     const { data: profile } = await supabase

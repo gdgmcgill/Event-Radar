@@ -14,6 +14,8 @@ import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { serverError } from "@/server/errors";
 import { ok } from "@/server/http";
+import { readQuery } from "@/server/body";
+import { SavedEventsQuery } from "@/contracts/users";
 
 /**
  * @swagger
@@ -49,7 +51,11 @@ export async function GET(request: NextRequest) {
     const user = auth.user;
     const supabase = ctx.supabase;
 
-    const sort = request.nextUrl.searchParams.get("sort") || "recent";
+    // sort defaults to "recent"; include_past is exactly "true". No 400.
+    const { sort, include_past: includePast } = readQuery(
+      request.nextUrl.searchParams,
+      SavedEventsQuery
+    );
 
     // Step 1: Get saved event rows for this user
      
@@ -77,8 +83,6 @@ export async function GET(request: NextRequest) {
     const eventIds = Array.from(savedAtMap.keys());
 
     // Step 2: Fetch full event details (only approved, non-past events)
-    const includePast = request.nextUrl.searchParams.get("include_past") === "true";
-
     let eventsQuery = supabase
       .from("events")
       .select(EVENT_WITH_CLUB_SELECT)

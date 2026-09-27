@@ -98,40 +98,5 @@
     "file": "src/app/api/admin/users/[id]/route.ts",
     "rule": "R4",
     "count": 1
-  },
-  {
-    "file": "src/app/api/profile/avatar/route.ts",
-    "rule": "R2",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/profile/banner/route.ts",
-    "rule": "R2",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/profile/inferred-tags/route.ts",
-    "rule": "R1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/profile/interests/route.ts",
-    "rule": "R1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/users/[id]/route.ts",
-    "rule": "R1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/users/saved-events/route.ts",
-    "rule": "R3",
-    "count": 2
-  },
-  {
-    "file": "src/app/api/users/search/route.ts",
-    "rule": "R3",
-    "count": 1
   }
 ]

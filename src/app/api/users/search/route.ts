@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { readQuery } from "@/server/body";
+import { UserSearchQuery } from "@/contracts/users";
 
 /**
  * GET /api/users/search?q=name — Search users by name
@@ -15,7 +17,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const q = request.nextUrl.searchParams.get("q")?.trim();
+    // q, trimmed; fewer than 2 characters answers an empty list (no 400).
+    const { q } = readQuery(request.nextUrl.searchParams, UserSearchQuery);
     if (!q || q.length < 2) {
       return NextResponse.json({ users: [] });
     }

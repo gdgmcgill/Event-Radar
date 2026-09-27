@@ -16,7 +16,8 @@
  * What is pinned:
  *   - D0 the site lists are the tree: `RAW_SITES` equals every raw
  *     `request.json()` in a route file (18 sites, 17 files at 06-07; 12 sites,
- *     12 files after 06-08; 9 after 06-09 Task 1), and `RJO_SITES` equals
+ *     12 files after 06-08; 9 after 06-09 Task 1; 6 after 06-09 Task 2), and
+ *     `RJO_SITES` equals
  *     every route file calling `readJsonObject` (15 at 06-07; 13 after 06-08;
  *     7 after 06-09 Task 1). A route that
  *     adopts `parseBody` leaves a list, so D0 goes red on the fix commit;
@@ -61,6 +62,15 @@
  * (members 404, role, DELETE confirmation, transfer membership,
  * organizer-requests 404, the PATCH type) keep their outcome, now behind the
  * contract. Each moved row has a defect-ledger row.
+ *
+ * MOVED (plan 06-09 Task 2, F-094, INTENTIONAL BEHAVIOUR CHANGE). users/[id]
+ * PATCH, profile/interests PUT and profile/inferred-tags DELETE adopted
+ * `parseBody` with src/contracts/users.ts and left `RAW_SITES`. A body that
+ * is not JSON now answers 400 `Invalid JSON body` (was 500 "Internal server
+ * error") and an array 400 `Request body must be a JSON object` (was the
+ * first 400 of each ladder). Their D3 rows (a numeric name, tag element or
+ * tag) were already refused by the ladder and keep their outcome, now from
+ * the contract.
  *
  * Personas and the world come from `badRequestTable.ts` (student, owner of
  * the club and creator of the approved event, admin). Seams as in the
@@ -139,7 +149,7 @@ interface Site {
 const club = { id: CLUB_ID };
 const ev = { id: EVENT_OWN };
 
-/** Every raw `await request.json()` in a route file today (9 sites). */
+/** Every raw `await request.json()` in a route file today (6 sites). */
 const RAW_SITES: Record<string, Site> = {
   "admin/experiments/[id] PATCH": { route: "admin/experiments/[id]", verb: "PATCH", persona: "admin", params: { id: EXPERIMENT_ID } },
   "admin/experiments POST": { route: "admin/experiments", verb: "POST", persona: "admin" },
@@ -147,9 +157,6 @@ const RAW_SITES: Record<string, Site> = {
   "admin/events POST": { route: "admin/events", verb: "POST", persona: "admin" },
   "admin/featured/[id] PATCH": { route: "admin/featured/[id]", verb: "PATCH", persona: "admin", params: { id: FEATURED_ID } },
   "admin/events/[id] PUT": { route: "admin/events/[id]", verb: "PUT", persona: "admin", params: ev },
-  "profile/interests PUT": { route: "profile/interests", verb: "PUT", persona: "student" },
-  "profile/inferred-tags DELETE": { route: "profile/inferred-tags", verb: "DELETE", persona: "student" },
-  "users/[id] PATCH": { route: "users/[id]", verb: "PATCH", persona: "student", params: { id: CALLER.id } },
 };
 
 /** The raw sites that adopted `parseBody` in plans 06-08 and 06-09 (F-094 fixed there). */
@@ -164,6 +171,10 @@ const ADOPTED_RAW_SITES: Record<string, Site> = {
   "clubs/[id] PATCH": { route: "clubs/[id]", verb: "PATCH", persona: "owner", params: club },
   "clubs/[id]/members DELETE": { route: "clubs/[id]/members", verb: "DELETE", persona: "owner", params: club },
   "clubs/[id]/invites POST": { route: "clubs/[id]/invites", verb: "POST", persona: "owner", params: club },
+  // plan 06-09 Task 2
+  "profile/interests PUT": { route: "profile/interests", verb: "PUT", persona: "student" },
+  "profile/inferred-tags DELETE": { route: "profile/inferred-tags", verb: "DELETE", persona: "student" },
+  "users/[id] PATCH": { route: "users/[id]", verb: "PATCH", persona: "student", params: { id: CALLER.id } },
 };
 
 /** Every route file that reads its body through `readJsonObject` today (7). */
@@ -223,9 +234,6 @@ const NOT_JSON: Record<string, Expected> = {
   "admin/events POST": { status: "threw", threw: SYNTAX, writes: [] },
   "admin/featured/[id] PATCH": err(500, "Failed to update featured event"),
   "admin/events/[id] PUT": { status: "threw", threw: SYNTAX, writes: [] },
-  "profile/interests PUT": err(500, "Internal server error"),
-  "profile/inferred-tags DELETE": err(500, "Internal server error"),
-  "users/[id] PATCH": err(500, "Internal server error"),
   // Moved in 06-08 (F-094): 500 "Failed to send invites", 500 "Failed to
   // update event", 400 "user_id is required" (DELETE read it as {}) and 500
   // "Failed to create event" became parseBody's 400. rsvp POST and reviews
@@ -242,6 +250,11 @@ const NOT_JSON: Record<string, Expected> = {
   "clubs/[id] PATCH": err(400, "Invalid JSON body"),
   "clubs/[id]/members DELETE": err(400, "Invalid JSON body"),
   "clubs/[id]/invites POST": err(400, "Invalid JSON body"),
+  // Moved in 06-09 Task 2 (F-094): each was 500 "Internal server error" (the
+  // raw read threw inside the route's try).
+  "profile/interests PUT": err(400, "Invalid JSON body"),
+  "profile/inferred-tags DELETE": err(400, "Invalid JSON body"),
+  "users/[id] PATCH": err(400, "Invalid JSON body"),
 };
 
 /** D2: the body `[1,2]`. */
@@ -260,9 +273,6 @@ const ARRAY: Record<string, Expected> = {
     bodyMatch: { event: { id: EVENT_OWN, title: "Bad Request Event" } },
     writes: ["events.update", "admin_audit_log.insert"],
   },
-  "profile/interests PUT": err(400, "interest_tags must be an array"),
-  "profile/inferred-tags DELETE": err(400, "tag is required and must be a string"),
-  "users/[id] PATCH": err(400, "No fields to update"),
   // Moved in 06-08 (F-094): each answered its first "missing" 400 (an array
   // read as an object with no keys); parseBody now refuses the array itself.
   "events/[id]/invite POST": err(400, "Request body must be a JSON object"),
@@ -277,6 +287,12 @@ const ARRAY: Record<string, Expected> = {
   "clubs/[id] PATCH": err(400, "Request body must be a JSON object"),
   "clubs/[id]/members DELETE": err(400, "Request body must be a JSON object"),
   "clubs/[id]/invites POST": err(400, "Request body must be a JSON object"),
+  // Moved in 06-09 Task 2 (F-094): "interest_tags must be an array", "tag is
+  // required and must be a string" and "No fields to update" (an array read
+  // as an object with no keys); parseBody now refuses the array itself.
+  "profile/interests PUT": err(400, "Request body must be a JSON object"),
+  "profile/inferred-tags DELETE": err(400, "Request body must be a JSON object"),
+  "users/[id] PATCH": err(400, "Request body must be a JSON object"),
 };
 
 const CREATE = {
@@ -426,7 +442,7 @@ function routeFiles(): { route: string; source: string }[] {
 }
 
 describe("D0: the site lists are the tree", () => {
-  it("RAW_SITES covers every raw request.json() in a route file (9 sites)", () => {
+  it("RAW_SITES covers every raw request.json() in a route file (6 sites)", () => {
     const counted = routeFiles()
       .map(({ route, source }) => [route, (source.match(/(?:request|req)\.json\(\)/g) ?? []).length] as const)
       .filter(([, n]) => n > 0)
@@ -436,7 +452,7 @@ describe("D0: the site lists are the tree", () => {
       return acc;
     }, {});
     expect(Object.fromEntries(counted)).toEqual(listed);
-    expect(Object.keys(RAW_SITES)).toHaveLength(9);
+    expect(Object.keys(RAW_SITES)).toHaveLength(6);
   });
 
   it("RJO_SITES is every route file calling readJsonObject (7)", () => {
@@ -454,8 +470,8 @@ describe("D0: the site lists are the tree", () => {
       Object.values({ ...ADOPTED_RAW_SITES, ...ADOPTED_RJO_SITES }).map((site) => site.route)
     )].sort();
     // 7 files from 06-08; 8 from 06-09 Task 1 (clubs/[id] holds a raw site
-    // and a readJsonObject site).
-    expect(adopted).toHaveLength(15);
+    // and a readJsonObject site); 3 from 06-09 Task 2.
+    expect(adopted).toHaveLength(18);
     for (const route of adopted) {
       const source = sources.get(route) ?? "";
       expect([route, /parseBody\(request, /.test(source)]).toEqual([route, true]);

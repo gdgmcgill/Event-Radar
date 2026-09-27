@@ -8,9 +8,8 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import type { NextRequest } from "next/server";
-
-const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB (banners are larger)
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+import { parseForm } from "@/server/body";
+import { PROFILE_BANNER_UPLOAD, ProfileImageForm } from "@/contracts/users";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,26 +21,10 @@ export async function POST(request: NextRequest) {
     const user = active.user;
     const supabase = ctx.supabase;
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Allowed: JPEG, PNG, WebP" },
-        { status: 400 }
-      );
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "File too large. Maximum size is 8MB" },
-        { status: 400 }
-      );
-    }
+    // "No file provided", then type, then size (8MB), with the route's texts.
+    const parsed = await parseForm(request, ProfileImageForm, PROFILE_BANNER_UPLOAD);
+    if (!parsed.ok) return parsed.response;
+    const { file } = parsed.data;
 
     const ext = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
     const filePath = `${user.id}/banner.${ext}`;
