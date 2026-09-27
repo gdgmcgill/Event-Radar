@@ -4,17 +4,17 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
-status: executing
-stopped_at: Completed 06-17-PLAN.md
-last_updated: "2026-09-27T17:59:46.926Z"
+status: verifying
+stopped_at: Completed 06-18-PLAN.md
+last_updated: "2026-09-27T18:36:53.048Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 8
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 80
-  completed_plans: 79
-  percent: 63
+  completed_plans: 80
+  percent: 75
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 Phase: 06 (Slices 6–7 — Async Edge, Contracts, Caching, Observability) — EXECUTING
 Plan: 18 of 18
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-25 — Phase 06 execution started
 
 Progress: [███████░░░] 73%
@@ -133,6 +133,7 @@ Progress: [███████░░░] 73%
 | Phase 06 P15 | 22min | 3 tasks | 12 files |
 | Phase 06 P16 | 575min | 3 tasks | 26 files |
 | Phase 06 P17 | 22min | 2 tasks | 27 files |
+| Phase 06 P18 | 34min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -369,6 +370,10 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-17: requireAdminPage(redirectTo) returns an AdminPageContext (user and profile non-null); the moderation layout keeps its anonymous redirect to /admin-login and then calls requireAdminPage("/"), so both redirect targets are unchanged — DEC-44/DEC-79 require each layout to keep its targets; one helper with one target cannot express moderation's two, and getRequestContext is render-pass memoized so the extra anonymous check costs no second read
 - [Phase 06]: 06-17: the moderation reviews ban check runs on the admin path only (requireActiveUser when hasRole admin); the creator path is unchanged — DEC-79 and DI-55 name the admin path; applying requireActiveUser to creators would refuse banned or profile-less creators reading their own reviews, a behaviour change neither the plan nor a finding asks for
 - [Phase 06]: 06-17: the /health page parses /api/health with HealthReport and HealthLiveness from @/contracts/health and renders a liveness or unexpected body as such instead of crashing (C18) — The page is admin-gated, but a report can still be refused (a stale session) and the old page read fields that no longer exist; parsing at the boundary keeps the page correct on every body the route can send
+- [Phase 06]: 06-18: DI-83 (three malformed webhook payloads still 500) recorded as F-094's stated residue, owner Phase 8 with the CI redeploy; F-094 Fixed, REFAC-15 PARTIAL on that clause — The plan makes the supabase-js bump the last code change and does not name the webhook; F-094's criterion names route handlers and DEFECT suites, while REFAC-15's sentence says every handler, so the requirement is PARTIAL rather than rounded up.
+- [Phase 06]: 06-18: F-026, F-029, F-054, F-058, F-059, F-085, F-094 Fixed; F-025, F-055, F-028 Open at 08 with the unmet clause named; REFAC-21 PARTIAL (source maps, live Sentry event) — Each resolution is measured against its own validation criterion; the real-CDN probe, 'unsafe-inline', the two DEC-69 reads and the live Sentry event are owner-dependent (DI-81, DI-80).
+- [Phase 06]: 06-18: @supabase/supabase-js 2.116.0 exact taken as the last code change; the lockfile's four non-@supabase entries are dependencies @supabase packages added or dropped (@supabase/phoenix, iceberg-js, @types/phoenix, @types/ws, ws dev-only) — Worktree tsc 0 errors and Jest green on 2.116.0; integrities match the registry facts recorded before install; audit gate exit 0.
+- [Phase 06]: 06-18: CLAUDE.md corrections delivered as evidence/claude-md-corrections.patch and not applied — DI-46 carries no owner-signed authorization (DEC-81); git apply --check exits 0 so the owner can apply it after signing.
 
 ### Pending Todos
 
@@ -421,7 +426,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T17:59:46.921Z
-Stopped at: Completed 06-17-PLAN.md
+Last session: 2026-09-27T18:35:44.860Z
+Stopped at: Completed 06-18-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None

@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Refactor Foundations — Schema Truth and the Seam Kit** - Reconcile schema, generate types, build the server seam, the persona harness, and the seed (completed 2026-09-16)
 - [x] **Phase 4: Slices 1–2 — Saved Events/RSVP and the Event Read Path** - Prove the seam on the two highest-traffic workflows and settle the event data shape (completed 2026-09-23)
 - [x] **Phase 5: Slices 3–5 — Auth, Club Authorization, Admin Containment** - One fails-closed authorization ring; cross-tenant and escalation paths denied twice (completed 2026-09-25)
-- [ ] **Phase 6: Slices 6–7 — Async Edge, Contracts, Caching, Observability** - Credential the edge, validate every input, kill the shared cache on personalized routes, make failures visible
+- [x] **Phase 6: Slices 6–7 — Async Edge, Contracts, Caching, Observability** - Credential the edge, validate every input, kill the shared cache on personalized routes, make failures visible (completed 2026-09-27)
 - [ ] **Phase 7: Certification Datasets and Persona Coverage** - Three datasets and a 13-persona matrix proving what is allowed and what is denied
 - [ ] **Phase 8: Operational Certification and Sign-Off** - Load, rollback, restore, alerting, chaos — then the written certification
 
@@ -359,7 +359,7 @@ Plans:
 - F-074, F-075, F-076, F-093 and migration `20260926120000` are closed only on the local stack, and each waits for DI-23. F-025, F-028, F-039 and F-055 are Open at "08" with their unmet clauses named.
 - See `evidence/PHASE-6-COMPLETION.md` (§ 8 lists the Phase 8 deploy prerequisites in order).
 
-**Plans:** 17/18 plans executed
+**Plans:** 18/18 plans complete
 
 **Wave 1**
 
@@ -431,7 +431,7 @@ Plans:
 
 **Wave 18**
 
-- [ ] 06-18-PLAN.md — F-085, then @supabase/supabase-js 2.116.0 as the last code change; phase after-floor; slice 7 close; PHASE-6-COMPLETION.md with Phase 8 deploy prerequisites; requirement states
+- [x] 06-18-PLAN.md — F-085, then @supabase/supabase-js 2.116.0 as the last code change; phase after-floor; slice 7 close; PHASE-6-COMPLETION.md with Phase 8 deploy prerequisites; requirement states
 
 ### Phase 7: Certification Datasets and Persona Coverage
 
@@ -488,7 +488,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 11/11 | Complete   | 2026-09-23 |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 19/19 | Complete    | 2026-09-25 |
-| 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 17/18 | In Progress|  |
+| 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 18/18 | Complete   | 2026-09-27 |
 | 7. Certification Datasets and Persona Coverage | 0/TBD | Not started | - |
 | 8. Operational Certification and Sign-Off | 0/TBD | Not started | - |
 
