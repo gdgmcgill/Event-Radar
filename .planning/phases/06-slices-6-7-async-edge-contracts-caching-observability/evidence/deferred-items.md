@@ -38,7 +38,7 @@ re-plans the item, and its existing owner stands.
 | **DI-43** | `@supabase/ssr` 0.7 → 0.12, the major | **Phase 8** (CONTEXT out of scope; DEC-80) | Phase 8 |
 | **DI-44** | `recommendations/feedback` keeps an unreachable body-`user_id` fallback; the anon-role write is unprobed | **Split.** The code half goes **to 06-04** (the feedback contract has no user id, so the fallback is deleted; DEC-68). The anon-role RLS probe stays with Phase 7. **Code half CLOSED at the slice-6 close (06-06):** `2617b7b` removed both `authUser?.id ?? body.user_id` fallbacks and their dead 401s; the four remaining `user_id` lines all use the caller's id (`evidence/contracts-slice-6.txt` [2.9]), and the DI-44 rows of `recommendations-family-characterization.test.ts` pass unedited | ~~06-04 (code)~~ closed; Phase 7 (probe) |
 | **DI-45** | Auth-failure log lines removed by the context adoption | **To 06-12** (DEC-74): a warn line when the user lookup errors with anything but a missing session | 06-12 |
-| **DI-46** | CLAUDE.md cites stale lines and a deleted helper | **Unchanged in ownership.** 06-18 prepares a fact-only patch; it is applied only if the owner signs an authorization here (DEC-81) | the phase owner |
+| **DI-46** | CLAUDE.md cites stale lines and a deleted helper | **Unchanged in ownership.** 06-18 prepares a fact-only patch; it is applied only if the owner signs an authorization here (DEC-81). **06-18: no owner-signed authorization is present in this register, so neither `CLAUDE.md` nor `.claude/CLAUDE.md` was edited. The fact-only corrections are `evidence/claude-md-corrections.patch` (`git apply --check` exit 0 at `3902768`); the patch awaits the owner. To authorize, append a signed paragraph below this table naming the patch, then run `git apply` on it** | the phase owner |
 | **DI-47** | Branches and prose left behind by the handler ring | **To 06-14's comment-only sweep**, with DI-59, under ledger rows where a characterization file is touched | 06-14 |
 | **DI-49** | The club member list is shaped by RLS | **Unchanged** | the phase owner |
 | **DI-50** | The ownership-transfer rollback does not restore the target's previous role | **CLOSED by record.** Fixed by `9daa291` (REVIEW-05 WR-02): `src/app/api/clubs/[id]/transfer/route.ts` rolls back with `.update({ role: targetMember.role })` and logs a failed rollback (06-RESEARCH.md C16). No code | — |
@@ -571,7 +571,7 @@ host, not personal data, 06-16).
 | DI-43 | Unchanged: `@supabase/ssr` stays 0.7.0; its peer range admits 2.116.0 | `evidence/di-53-bump.txt` block 11 | Phase 8 |
 | DI-44 | Code half CLOSED (06-04); the anon-role probe stays | `evidence/slice-6-close.md` § 7 | Phase 7 (probe) |
 | DI-45 | **CLOSED** by `4ad1fae` (06-12): a warn line when the user lookup fails with anything but a missing session | `evidence/logger-foundation.txt` | — |
-| DI-46 | See the DI-46 row of Part 1 and the 06-18 paragraph appended below it (Task 3) | `evidence/claude-md-corrections.patch` | the phase owner |
+| DI-46 | **Open, awaiting the owner**: the patch is prepared and not applied; no signed authorization exists (see its Part 1 row) | `evidence/claude-md-corrections.patch` | the phase owner |
 | DI-47 | **Partly done** by 06-14's comment sweep. (a), the inferred-tags 404, is reachable and stays with a comment; (b) names files 06-14 did not touch | `06-14-SUMMARY.md` § Measured differences | Phase 7 |
 | DI-49, DI-51 | Unchanged | — | the phase owner |
 | DI-50 | CLOSED by record (06-01) | — | — |

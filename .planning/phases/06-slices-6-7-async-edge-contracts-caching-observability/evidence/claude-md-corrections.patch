@@ -1,0 +1,127 @@
+# Fact-only corrections to CLAUDE.md and .claude/CLAUDE.md made necessary by Phase 6.
+# Prepared by plan 06-18 (DEC-81, DI-46). NOT APPLIED: evidence/deferred-items.md § DI-46 carries no
+# owner-signed authorization. To apply after signing: git apply <this file> (from the repository root).
+# Every added line states a fact with a committed source; nothing here changes a rule or a workflow.
+# The PROTECTED_ROUTES line reference the plan names needs no correction: CLAUDE.md already says the
+# line number moves and gives the command that re-derives the list.
+diff --git a/.claude/CLAUDE.md b/.claude/CLAUDE.md
+index 27569ff..e6ba3c6 100644
+--- a/.claude/CLAUDE.md
++++ b/.claude/CLAUDE.md
+@@ -73,7 +73,9 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
+ 
+ ## Key Dependencies
+ 
+-- `@supabase/supabase-js` ^2.49.0 - Supabase client SDK (database, auth, storage)
++- `@supabase/supabase-js` 2.116.0 (exact) - Supabase client SDK (database, auth, storage)
++- `zod` 4.6.5 (exact) - request contracts in `src/contracts/`, parsed at the boundary by `src/server/body.ts`, and the events-webhook payload contract
++- `@sentry/nextjs` 10.75.3 (exact) - error reporting, disabled unless `SENTRY_DSN` is set; scrubbing and request-id tags in `src/server/observability/sentry.ts` (`docs/observability.md`)
+ - `@supabase/ssr` ^0.7.0 - SSR-compatible Supabase client (cookie-based auth)
+ - `swr` ^2.3.7 - Data fetching/caching for client components
+ - `zustand` ^5.0.9 - Client-side state management; the single store is `src/store/useAuthStore.ts` (auth state), initialized once by `AuthProvider`
+@@ -102,7 +104,8 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
+ - Ignores: `.claude/**`, `.next/**`, `AI/**`, `node_modules/**`, `demo-video/**`
+ - Config: `next.config.js`
+ - Remote image patterns: `**.supabase.co`, `**.supabase.in`, `images.unsplash.com`
+-- Security headers: X-Frame-Options DENY, HSTS, X-Content-Type-Options nosniff, X-XSS-Protection, strict Referrer-Policy
++- Security headers: X-Frame-Options DENY, HSTS, X-Content-Type-Options nosniff, X-XSS-Protection, strict Referrer-Policy, and a Content-Security-Policy from `contentSecurityPolicy(env)` (no `'unsafe-eval'` outside `next dev`; `'unsafe-inline'` remains)
++- Wrapped by `withSentryConfig` (no tunnel route, telemetry off, source maps uploaded only when `SENTRY_AUTH_TOKEN` is set)
+ - `.env.local` - Local secrets (not committed)
+ - `.env.local.example` - Template with required var names
+ - Required vars:
+@@ -117,11 +120,12 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
+ - Vercel (see `vercel.json`)
+ - Region: `iad1` (US East)
+ - Framework: `nextjs`
+-- API cache headers: `s-maxage=60, stale-while-revalidate=300`
++- No `headers` rule: each route sets its own Cache-Control through its `withRoute` cache class (`CACHE_CLASSES` in `src/server/http.ts`); personalized and auth-gated routes answer `private, no-store`
+ - GitHub Actions (`.github/workflows/ci.yml`)
+ - Runs on: push to `main`, PRs to `main`
+ - Node comes from `node-version-file: '.nvmrc'`; there is no competing `node-version` literal
+-- Steps, in order: `npm ci`, lint, TypeScript type-check (`tsc --noEmit`), **`npm test`**, **`npm audit --audit-level=high --omit=dev`**, build
++- Steps, in order: `npm ci`, lint, TypeScript type-check (`tsc --noEmit`), migration filename parse check, elevated-callsite ratchet, contracts census (server and `--client`), server console census, characterization tag gate, **`npm test`**, **`npm audit --audit-level=high --omit=dev`**, build
++- Workflow-level `SENTRYCLI_SKIP_DOWNLOAD: "1"`; separate jobs run the schema type-drift gate with pgTAP and the Playwright persona harness
+ - The production vulnerability gate is unsuppressed - no `continue-on-error`, no `|| true`
+ 
+ <!-- GSD:stack-end -->
+@@ -183,11 +187,12 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
+ 
+ ## Error Handling
+ 
++- Export the handler through `withRoute({ cache, action }, handler)` (`src/server/route.ts`); an uncaught throw becomes `{ "error": "Failed to <action>" }` 500 with one log line
+ - Wrap entire handler in try/catch
+-- Return `NextResponse.json({ error: message }, { status: code })` for errors
++- Return `NextResponse.json({ error: message }, { status: code })` for errors; never put a caught error's `.message` in the body
+ - Use specific HTTP status codes: 400 for validation, 401 for auth, 403 for authorization, 404 for not found, 500 for server errors
+ - Include `field` property in validation errors: `{ error: "message", field: "start_date" }`
+-- Log errors with `console.error()` before returning error responses
++- Log errors with `log.error("msg", { error })` from `@/server/log` before returning error responses (server code; `console.*` is refused by CI's server console census)
+ - Outer catch returns generic message: `{ error: "Failed to [action]" }`
+ - Try/catch around async operations (fetch calls)
+ - Log errors with `console.error()`
+@@ -198,10 +203,10 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
+ 
+ ## Logging
+ 
+-- API routes: `console.error("Error context:", error)` before returning error responses
++- Server code (routes, the proxy, `src/server/`, instrumentation): `log.debug/info/warn/error` from `src/server/log.ts` - one redacted JSON line `{ ts, level, msg, requestId, route, scope, ... }`; the request id comes from the proxy's `x-request-id`
+ - Auth store: prefixed with `[Auth]` tag: `console.log("[Auth] Initializing...")`
+-- Middleware: prefixed with `[Middleware]`: `console.error("[Middleware] Error:", e)`
+-- No structured logging library in use
++- Proxy: JSON lines through the same logger (the file is `src/proxy.ts`)
++- The one server console call left is `src/lib/tagMapping.ts` (shared with client components), allow-listed in `scripts/server-console-allowlist.json`
+ 
+ ## Comments
+ 
+@@ -350,13 +355,14 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
+ - Location: `src/app/api/events/route.ts`
+ - Triggers: GET requests from `useEvents` hook
+ - Responsibilities: Paginated event query with tag/search/date filters, DB-to-frontend field transformation
+-- Location: `src/app/api/cron/send-reminders/route.ts`
+-- Triggers: Scheduled (likely Vercel cron)
+-- Responsibilities: Send event reminders to users
++- Reminders and feedback requests: pg_cron jobs `send-event-reminders` (every 15 minutes) and `send-feedback-requests` (every 30) call `public.send_event_reminders()` and `public.send_feedback_requests()`; there is no Next.js cron route (deleted in Phase 6)
++- Location: `src/app/api/health/route.ts`
++- Triggers: uptime monitors and the admin `/health` page
++- Responsibilities: liveness `{ status, version }` for anyone; the documented report (`docs/health.md`) for an admin or a `HEALTH_TOKEN` bearer
+ 
+ ## Error Handling
+ 
+-- API routes wrap entire handler in try/catch, return 500 with error message
++- API routes wrap entire handler in try/catch and return a generic 500 body; `withRoute` turns anything uncaught into a JSON 500 and reports it to Sentry when a DSN is set
+ - Client hooks store `Error | null` in state, expose to components
+ - `ErrorBoundary` component (`src/components/ErrorBoundary.tsx`) wraps page sections
+ - Recommendation service failures fall back gracefully: returns empty recommendations, client falls back to `PopularEventsSection`
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 9a47040..15e3006 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -37,7 +37,7 @@ The project has three distinct Supabase client factories — using the wrong one
+ |--------|------|----------|
+ | `createClient()` | `lib/supabase/client.ts` | Client components, React hooks (browser) |
+ | `createClient()` | `lib/supabase/server.ts` | Server Components, API routes (async, reads cookies) |
+-| `createServiceClient()` | `lib/supabase/service.ts` | Admin/cron routes that bypass RLS (uses service role key) |
++| `createServiceClient()` | `lib/supabase/service.ts` | Never imported by a route: the only importer is the elevated door `getElevatedClient()` in `src/server/db/elevated/`, each use registered in its `REGISTRY.md` (bypasses RLS; service role key). There are no cron routes: pg_cron runs the jobs in Postgres |
+ 
+ All three are typed with `Database` from `lib/supabase/types.ts`.
+ 
+@@ -88,6 +88,10 @@ All three are typed with `Database` from `lib/supabase/types.ts`.
+ 
+ - **Path alias**: `@/` maps to `src/`
+ - **API routes**: Return `NextResponse`; admin endpoints use `requireActiveUser` + `requireRole(ctx, "admin")` from `src/server/authz/`; state-changing user endpoints use `requireActiveUser` + `requireOnboarded`
++- **Route wrapper**: every export in `src/app/**/route.ts` is `export const VERB = withRoute({ cache, action }, handler)` (`src/server/route.ts`). The cache class (`CACHE_CLASSES` in `src/server/http.ts`) sets Cache-Control; personalized and auth-gated routes are `private` (`private, no-store`) and public reads opt in with a named `public-*` class. `vercel.json` sets no headers. An uncaught throw answers `{ "error": "Failed to <action>" }` 500
++- **Input contracts**: handlers read input only through zod schemas in `src/contracts/` via `parseBody`, `parseQuery`, `readQuery`, `parseForm` or `parseWith` in `src/server/body.ts`; CI's "Contracts census" (`scripts/check-contracts.mjs`) fails on a raw `request.json()`, `.formData()` or route-file `searchParams` read. Client callers type their bodies from the same contracts (`--client` mode)
++- **Logging and errors**: server code logs through `log` from `src/server/log.ts` (one redacted JSON line with `requestId`), never `console.*` (CI's "Server console census"). The proxy mints `x-request-id` and every response carries it. A caught error's message never goes into a response body. Sentry (`@sentry/nextjs`) is disabled unless `SENTRY_DSN` is set; see `docs/observability.md`
++- **Health**: `/api/health` answers `{ status, version }` to anyone; the documented report (`docs/health.md`) needs an active admin or a `HEALTH_TOKEN` bearer
+ - **Event status flow**: `pending` → `approved` | `rejected` (moderation pipeline)
+ - **Club status flow**: Same as events — clubs must be approved before becoming visible
+ - **Tags**: Use the `EventTag` enum from `src/types/index.ts`, not raw strings
+@@ -118,6 +122,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
+ SUPABASE_SERVICE_ROLE_KEY=
+ ```
+ 
++Optional, used in deployed environments (see `docs/observability.md` and `docs/health.md`): `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `HEALTH_TOKEN` (at least 32 characters).
++
+ ## Important Notes
+ 
+ - Never modify `.env.local` — contains actual Supabase credentials

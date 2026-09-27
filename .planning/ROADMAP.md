@@ -348,6 +348,17 @@ Plans:
   4. Server code emits structured JSON logs with levels and a request correlation id on both Node and middleware runtimes, a deliberately triggered error appears in Sentry carrying that correlation id (Turbopack-aware setup, source maps, environment and release tagging, PII scrubbing decided before install), and `/api/health` reports DB, auth, storage, pg_cron freshness, and last webhook receipt in a documented shape without using `getSession()` for access control.
   5. After the final slice the Playwright happy-path specs pass and every Validated workflow in PROJECT.md is re-confirmed, with each slice landing as one reviewable change naming the finding IDs it closes and any intentional behavior change logged.
 
+**Requirement states (recorded by plan 06-18)** *(2026-09-27; these must agree with `.planning/REQUIREMENTS.md` and they do)*:
+
+- **REFAC-14, REFAC-16, REFAC-19, REFAC-20, REFAC-22 and REFAC-23 are Complete**, each measured clause by clause against its own sentence.
+- **REFAC-15 is PARTIAL**, naming its unmet clause: "returns a consistent 400 shape on malformed input", at the events-webhook edge function only. Its three malformed payload shapes still answer 500 (DI-83); the change ships with the webhook's CI redeploy in Phase 8. Every route handler is on a zod contract (census 0/0).
+- **REFAC-21 is PARTIAL**, naming its unmet clauses: "source maps" (never uploaded; no token) and "a deliberately triggered error appears in Sentry with the correlation id" (proven through the real SDK in Jest; no Sentry project exists). Both are owner actions (DI-81).
+- **Success criteria 1 and 5 are MET.** **Criteria 2, 3 and 4 are PARTIAL**: 2 on the webhook's three shapes (DI-83); 3 on the real-CDN run of the cross-user test (MET locally through the stand-in; the probe is owed as DI-81); 4 on the live Sentry event and the source-map upload.
+- **DI-53 / DI-25 is closed:** `@supabase/supabase-js` 2.116.0 exact (`f4c59e4`), the last code change of the phase, after a throwaway-worktree tsc with 0 errors. `@supabase/ssr` stays 0.7.0 (DI-43).
+- The phase's decisions DEC-60..DEC-81 were **resolved by rule**; no owner was present. The DEC-60 (zod) and DEC-61 (Sentry) countersignatures, the Sentry and `HEALTH_TOKEN` variables, the `.env.local.example` update and the Phase 5 Upstash actions come **before any push to `main`**.
+- F-074, F-075, F-076, F-093 and migration `20260926120000` are closed only on the local stack, and each waits for DI-23. F-025, F-028, F-039 and F-055 are Open at "08" with their unmet clauses named.
+- See `evidence/PHASE-6-COMPLETION.md` (§ 8 lists the Phase 8 deploy prerequisites in order).
+
 **Plans:** 17/18 plans executed
 
 **Wave 1**
