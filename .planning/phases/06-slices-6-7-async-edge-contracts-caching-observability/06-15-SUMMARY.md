@@ -158,3 +158,9 @@ None beyond the plan's model. The stand-in is a local test process with no produ
   - the cross-user cache regression test passes through a stand-in with both controls (`eaed119`).
   F-025's own criterion, the real-CDN probe, is a separate finding and stays Open at "08".
 - **REFAC-23: left open.** It closes in 06-18, which re-confirms the harness and the Validated list at the slice close. This plan's full-suite pass (243/243) is its input.
+
+## Self-Check: PASSED
+
+- Created files exist: the stand-in, both specs, both evidence files, this SUMMARY.
+- Commits `83e2f7e`, `eaed119`, `64939b2` and `0c98aff` are in `git log`.
+- `cache-e2e.txt` contains `cache-probe.sh` and `DI-81`. No TODO, FIXME or placeholder text in the three new e2e files; the artifact line counts meet the plan's minimums (281, 381 and 239 lines against 80, 80 and 60).
