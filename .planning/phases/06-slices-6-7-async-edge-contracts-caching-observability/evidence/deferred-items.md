@@ -359,6 +359,41 @@ reason.
   gate reads `ok 44 files` at the slice-6 close (`evidence/floor.slice-6-after.txt` block 7).
 - **Owner:** none (closed).
 
+## DI-87 — Three GET routes always answer 500 on the reset schema
+
+- **Found by:** 06-15 Task 3 (the live header sweep, `evidence/cache-e2e.txt` § 3.3). Their headers are
+  correct (`private, no-store`, a request id); the bodies are the defect.
+- **What it is.**
+  (a) `GET /api/admin/clubs` selects `*, users!created_by(name, email)`; `clubs.created_by` has no
+  foreign key to `users`, so PostgREST answers `PGRST200` and the admin gets 500.
+  (b) `GET /api/admin/organizer-requests` selects `*, club:clubs(*), user:users(*)`;
+  `organizer_requests` has two foreign keys to `users` (`user_id`, `reviewed_by`), so the embed is
+  ambiguous (`PGRST201`). The route logs nothing: a silent 500.
+  (c) `GET /api/user/engagement` reads `user_engagement_summary`, which no migration declares since
+  03-04 retired its migration (F-048 closed on that disjunct), so it answers `PGRST205` and 500.
+  (a) and (b) are the embed class F-092 fixed on `/api/admin/reports`. Reproduced on the local stack with
+  the routes' own select strings (the evidence quotes both probes).
+- **Why deferred.** A select or schema change on three handlers, outside 06-15's allowed files; no
+  earlier spec drove these reads as their authorized persona.
+- **Why not cosmetic.** The admin club list, the organizer-request queue and the engagement read are
+  broken for every caller whose request reaches the query; production has the same schema.
+- **Owner:** Phase 7 (the persona matrix drives every GET as its authorized persona), or the phase owner
+  if registered as findings first.
+
+## DI-88 — A failed club-detail read answers a shareable 404
+
+- **Found by:** 06-13 (threat flag `cached-404`), observed in shape by 06-15
+  (`evidence/cache-e2e.txt` § 4).
+- **What it is.** `GET /api/clubs/[id]` is `public-60-300`, and a public class shares a 404 (06-12:
+  Vercel caches 404s). The route answers 404 both for an unknown id and when its database read errors,
+  so a transient database error on a real club is cached by the CDN for up to 60 s plus
+  stale-while-revalidate. 06-15's stand-in shows the class behaviour (an unknown id: MISS, then HIT);
+  the error trigger needs a fault the local stack cannot inject without editing the route.
+- **Why deferred.** The fix is a status change on an error path (a read error answering 500, which the
+  wrapper makes private), a behaviour change outside 06-15's files.
+- **Why not cosmetic.** A 60-second club-page outage from one failed read, served to every visitor.
+- **Owner:** Phase 7 (error-path sweep), or the phase owner.
+
 **Also extended:** DI-67 (the mutation harness covers only `CREATE POLICY`; see its section).
 
 **Named in the SUMMARYs and not deferrals:** F-078's fuzzy-search 0A000 in the Playwright server log
@@ -370,7 +405,7 @@ different rows (06-02 § 2, a note on the source, both pinned); the census's R3 
 
 ---
 
-**Next new item id: DI-87.**
+**Next new item id: DI-89.** (DI-87 and DI-88 added by 06-15.)
 
 *Phase: 06-slices-6-7-async-edge-contracts-caching-observability*
 *Plan: 06-01*
