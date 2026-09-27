@@ -137,7 +137,7 @@ metrics:
 ## Issues
 
 - The resumed state was exactly as described. Nothing had to be redone; the only fix needed was the typegen regeneration.
-- No state-tool failures (see the STATE update commit).
+- `state.add-decision` rejected `--summary-file` paths in the session scratchpad ("Path escapes allowed directory"). The second attempt wrote the files under the gitignored `.planning/research/.cache/` and succeeded for all three decisions; the files were then removed. Every other state call succeeded first time.
 
 ## Requirements
 
