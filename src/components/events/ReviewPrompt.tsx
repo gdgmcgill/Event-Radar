@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { StarRating } from "@/components/events/StarRating";
+import type { ReviewBodyInput } from "@/contracts/events";
 
 interface ReviewPromptProps {
   eventId: string;
@@ -33,7 +34,10 @@ export function ReviewPrompt({ eventId, onReviewSubmitted }: ReviewPromptProps) 
       const res = await fetch(`/api/events/${eventId}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rating, comment: comment || null }),
+        body: JSON.stringify({
+          rating,
+          comment: comment || null,
+        } satisfies ReviewBodyInput),
       });
 
       if (!res.ok) {

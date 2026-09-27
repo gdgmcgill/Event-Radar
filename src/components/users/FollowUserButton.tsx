@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { UserPlus, UserCheck, Users, Loader2 } from "lucide-react";
+import type { UserFollowRequestInit } from "@/contracts/users";
 
 type FollowUserButtonProps = {
   userId: string;
@@ -32,7 +33,9 @@ export default function FollowUserButton({
     }
 
     try {
-      const res = await fetch(`/api/users/${userId}/follow`, { method });
+      const res = await fetch(`/api/users/${userId}/follow`, {
+        method,
+      } satisfies UserFollowRequestInit);
       const data = await res.json();
 
       if (!res.ok) {

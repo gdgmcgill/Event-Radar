@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { BanUserModal } from "@/components/moderation/BanUserModal";
 import { Search, UserPlus, UserMinus, Shield, Users, Ban, ShieldCheck } from "lucide-react";
 import type { UserRole } from "@/types";
+import type {
+  AdminUserUpdateBodyInput,
+  BanBodyInput,
+  UnbanRequestInit,
+} from "@/contracts/admin";
 
 interface AdminUser {
   id: string;
@@ -53,7 +58,7 @@ export default function ModerationUsersPage() {
     const res = await fetch(`/api/admin/users/${userId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roles: newRoles }),
+      body: JSON.stringify({ roles: newRoles } satisfies AdminUserUpdateBodyInput),
     });
     if (res.ok) {
       setUsers((prev) =>
@@ -70,7 +75,7 @@ export default function ModerationUsersPage() {
     const res = await fetch(`/api/admin/users/${banningUser.id}/ban`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(data satisfies BanBodyInput),
     });
     if (res.ok) {
       await fetchUsers();
@@ -81,7 +86,7 @@ export default function ModerationUsersPage() {
     if (!window.confirm(`Are you sure you want to unban ${userName || "this user"}?`)) return;
     const res = await fetch(`/api/admin/users/${userId}/ban`, {
       method: "DELETE",
-    });
+    } satisfies UnbanRequestInit);
     if (res.ok) {
       await fetchUsers();
     }

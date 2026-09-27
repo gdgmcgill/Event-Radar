@@ -32,6 +32,7 @@
 import { z } from "zod";
 import { VALID_INTEREST_TAGS } from "@/lib/constants";
 import type { FormOptions } from "@/server/body";
+import type { BodilessRequestInit } from "@/contracts/common";
 
 // ─── Shared ──────────────────────────────────────────────────────────────────
 
@@ -169,6 +170,7 @@ export const InferredTagBody = z.object({
   ),
 });
 
+export type InferredTagBodyInput = z.input<typeof InferredTagBody>;
 export type InferredTagBodyOutput = z.infer<typeof InferredTagBody>;
 
 // ─── POST /api/profile/avatar and /api/profile/banner (multipart) ────────────
@@ -222,6 +224,14 @@ export const PROFILE_BANNER_UPLOAD = profileImageUpload(
   8,
   "Invalid file type. Allowed: JPEG, PNG, WebP"
 );
+
+// ─── Mutations that read no body (plan 06-11, REFAC-16) ──────────────────────
+
+/** POST and DELETE /api/users/[id]/follow read only the route id. */
+export type UserFollowRequestInit = BodilessRequestInit;
+
+/** POST /api/onboarding/complete reads nothing: the caller is the subject. */
+export type OnboardingCompleteRequestInit = BodilessRequestInit;
 
 // ─── GET /api/users/saved-events and /api/users/search (no 400) ──────────────
 

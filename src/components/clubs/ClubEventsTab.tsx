@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import type { EventTag } from "@/types";
 import { getESTNow } from "@/lib/timezone";
+import type { EventDeleteRequestInit } from "@/contracts/events";
 
 interface ClubEventsTabProps {
   clubId: string;
@@ -91,7 +92,9 @@ export function ClubEventsTab({ clubId, clubName }: ClubEventsTabProps) {
 
     setDeletingId(eventId);
     try {
-      const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "DELETE",
+      } satisfies EventDeleteRequestInit);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to delete event");

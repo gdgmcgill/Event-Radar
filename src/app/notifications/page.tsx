@@ -17,6 +17,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { notifyCountChanged } from "@/hooks/useNotificationCount";
+import type {
+  NotificationReadRequestInit,
+  NotificationsActionRequestInit,
+  NotificationsQueryInput,
+} from "@/contracts/notifications";
 
 type FilterTab = "all" | "events" | "social" | "clubs";
 
@@ -95,7 +100,9 @@ export default function NotificationsPage() {
     setUnreadCount((prev) => Math.max(0, prev - 1));
 
     try {
-      await fetch(`/api/notifications/${id}`, { method: "PATCH" });
+      await fetch(`/api/notifications/${id}`, {
+        method: "PATCH",
+      } satisfies NotificationReadRequestInit);
       notifyCountChanged();
     } catch {
       fetchNotifications();
@@ -107,7 +114,10 @@ export default function NotificationsPage() {
     setUnreadCount(0);
 
     try {
-      await fetch("/api/notifications?action=mark-all-read", { method: "POST" });
+      const action: NotificationsQueryInput["action"] = "mark-all-read";
+      await fetch(`/api/notifications?action=${action}`, {
+        method: "POST",
+      } satisfies NotificationsActionRequestInit);
       notifyCountChanged();
     } catch {
       fetchNotifications();

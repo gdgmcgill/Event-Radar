@@ -13,6 +13,7 @@ import {
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { EventTag } from "@/types";
 import type { RejectionCategory } from "@/types";
+import type { AdminClubDecisionBodyInput } from "@/contracts/admin";
 import { RejectionModal } from "@/components/moderation/RejectionModal";
 import { SuspensionModal } from "@/components/moderation/SuspensionModal";
 import { AppealBadge } from "@/components/moderation/AppealBadge";
@@ -86,7 +87,7 @@ export default function ClubModerationPage() {
       const res = await fetch(`/api/admin/clubs/${clubId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status } satisfies AdminClubDecisionBodyInput),
       });
 
       if (res.ok) {
@@ -104,7 +105,11 @@ export default function ClubModerationPage() {
       const res = await fetch(`/api/admin/clubs/${rejectingClub.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rejected", category, message }),
+        body: JSON.stringify({
+          status: "rejected",
+          category,
+          message,
+        } satisfies AdminClubDecisionBodyInput),
       });
       if (res.ok) {
         setClubs((prev) => prev.filter((c) => c.id !== rejectingClub.id));
@@ -121,7 +126,11 @@ export default function ClubModerationPage() {
       const res = await fetch(`/api/admin/clubs/${suspendingClub.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "suspended", category, message }),
+        body: JSON.stringify({
+          status: "suspended",
+          category,
+          message,
+        } satisfies AdminClubDecisionBodyInput),
       });
       if (res.ok) {
         setClubs((prev) =>
@@ -139,7 +148,9 @@ export default function ClubModerationPage() {
       const res = await fetch(`/api/admin/clubs/${clubId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
+        body: JSON.stringify({
+          status: "approved",
+        } satisfies AdminClubDecisionBodyInput),
       });
       if (res.ok) {
         setClubs((prev) =>

@@ -1,10 +1,13 @@
 /**
- * The contracts census gate (plan 06-04, REFAC-15, F-094, DEC-65).
+ * The contracts census gate (plan 06-04, REFAC-15, F-094, DEC-65), and its
+ * client mode (plan 06-11, REFAC-16, DEC-67).
  *
  * scripts/check-contracts.mjs is run as CI runs it, against fixture trees
  * written under the OS temp directory, through its --root and --allowlist
  * flags. The gate is only worth having if an unlisted raw read fails it, so
- * the red cases come first (T-06-04-03).
+ * the red cases come first (T-06-04-03). The same holds for `--client`: a
+ * file that sends a mutation to /api/ without importing from @/contracts/
+ * must fail it (T-06-11-03).
  */
 
 import { execFileSync } from "node:child_process";
@@ -218,5 +221,120 @@ describe("check-contracts.mjs", () => {
       status = (error as { status: number }).status;
     }
     expect(status).toBe(1);
+  });
+});
+
+// ─── --client (plan 06-11, REFAC-16) ─────────────────────────────────────────
+
+function runClient(root: string): RunResult {
+  try {
+    const stdout = execFileSync("node", [SCRIPT, "--root", root, "--client"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return { status: 0, stdout, stderr: "" };
+  } catch (error) {
+    const e = error as { status: number; stdout: string; stderr: string };
+    return { status: e.status, stdout: e.stdout, stderr: e.stderr };
+  }
+}
+
+const SENDER = "src/components/ThingForm.tsx";
+
+const RAW_SENDER = [
+  '"use client";',
+  "export async function save(name: string) {",
+  '  await fetch("/api/things", {',
+  '    method: "POST",',
+  '    headers: { "Content-Type": "application/json" },',
+  "    body: JSON.stringify({ name }),",
+  "  });",
+  "}",
+  "",
+].join("\n");
+
+const TYPED_SENDER = [
+  '"use client";',
+  'import type { ThingBodyInput } from "@/contracts/things";',
+  "export async function save(name: string) {",
+  '  await fetch("/api/things", {',
+  '    method: "POST",',
+  '    headers: { "Content-Type": "application/json" },',
+  "    body: JSON.stringify({ name } satisfies ThingBodyInput),",
+  "  });",
+  "}",
+  "",
+].join("\n");
+
+describe("check-contracts.mjs --client", () => {
+  it("fails a mutation sender with no @/contracts/ import, naming file:line", () => {
+    const result = runClient(tree({ [SENDER]: RAW_SENDER }));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`${SENDER}:4`);
+    expect(result.stdout).toContain("client files=1 violations=1");
+  });
+
+  it("passes the same sender once it imports its contract type", () => {
+    const result = runClient(tree({ [SENDER]: TYPED_SENDER }));
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("client files=1 violations=0");
+  });
+
+  it("catches a method held in a variable, as { method } and as a ternary", () => {
+    const shorthand = [
+      "export async function toggle(on: boolean) {",
+      '  const method = on ? "DELETE" : "POST";',
+      "  await fetch(`/api/users/${id}/follow`, { method });",
+      "}",
+      "",
+    ].join("\n");
+    const ternary = [
+      "export async function toggle(on: boolean) {",
+      "  await fetch(`/api/clubs/${id}/follow`, {",
+      '    method: on ? "DELETE" : "POST",',
+      "  });",
+      "}",
+      "",
+    ].join("\n");
+    const result = runClient(
+      tree({
+        "src/components/A.tsx": shorthand,
+        "src/components/B.tsx": ternary,
+      })
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("src/components/A.tsx:2");
+    expect(result.stderr).toContain("src/components/B.tsx:3");
+    expect(result.stdout).toContain("client files=2 violations=2");
+  });
+
+  it("ignores route files, tests, GET-only callers, non-/api/ posts and comments", () => {
+    const result = runClient(
+      tree({
+        [ROUTE]: RAW_SENDER,
+        "src/components/ThingForm.test.tsx": RAW_SENDER,
+        "src/components/Reader.tsx":
+          'export const load = () => fetch("/api/things");\n',
+        "src/store/auth.ts":
+          'export const out = () => fetch("/auth/signout", { method: "POST" });\n',
+        "src/components/Doc.tsx": [
+          '// fetch("/api/things", { method: "POST" }) is only a comment',
+          "export const x = 1;",
+          "",
+        ].join("\n"),
+      })
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("client files=0 violations=0");
+  });
+
+  it("does not read the allow-list: the server census and --client are independent", () => {
+    const root = tree({ [ROUTE]: RAW_ROUTE, [SENDER]: TYPED_SENDER });
+    const client = runClient(root);
+    expect(client.status).toBe(0);
+    expect(client.stdout).toContain("client files=1 violations=0");
+    const server = run(root, []);
+    expect(server.status).toBe(1);
+    expect(server.stderr).toContain(`${ROUTE}:3`);
   });
 });

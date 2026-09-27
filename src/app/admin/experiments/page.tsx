@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Plus, Play, Pause, CheckCircle, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { ExperimentCreateBodyInput } from "@/contracts/admin";
 
 interface ExperimentVariant {
   id: string;
@@ -88,7 +89,7 @@ export default function ExperimentsPage() {
         description: formDescription,
         target_metric: formMetric,
         variants,
-      }),
+      } satisfies ExperimentCreateBodyInput),
     });
 
     if (res.ok) {

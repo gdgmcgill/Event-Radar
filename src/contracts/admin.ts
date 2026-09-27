@@ -53,7 +53,10 @@
  * as "toString" is refused like any unknown category (the 06-08 report rule).
  */
 import { z } from "zod";
-import { NonEmptyTrimmedString } from "@/contracts/common";
+import {
+  NonEmptyTrimmedString,
+  type BodilessRequestInit,
+} from "@/contracts/common";
 import { sanitizeText } from "@/lib/sanitize";
 import { Constants } from "@/lib/supabase/types";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
@@ -412,6 +415,20 @@ export const BanBody = z.object({
 });
 
 export type BanBodyInput = z.input<typeof BanBody>;
+
+// ─── Mutations that read no body (plan 06-11, REFAC-16) ──────────────────────
+
+/** DELETE /api/admin/users/[id]/ban (unban) reads only the route id. */
+export type UnbanRequestInit = BodilessRequestInit;
+
+/** DELETE /api/admin/events/[id] reads only the route id (PUT reads AdminEventPutBody). */
+export type AdminEventDeleteRequestInit = BodilessRequestInit;
+
+/** DELETE /api/admin/featured/[id] reads only the route id. */
+export type FeaturedDeleteRequestInit = BodilessRequestInit;
+
+/** DELETE /api/admin/experiments/[id] reads only the route id. */
+export type ExperimentDeleteRequestInit = BodilessRequestInit;
 
 // ─── PATCH /api/admin/users/[id] ─────────────────────────────────────────────
 

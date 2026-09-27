@@ -76,8 +76,11 @@ jobs:
       # input reads: request.json()/formData() outside src/server/body.ts, and
       # query reads or schema-less readJsonObject in route files. Fails when a
       # site the committed scripts/contracts-allowlist.json does not hold appears.
+      # Plan 06-11 (REFAC-16, DEC-67) adds --client: every non-route file that
+      # sends a mutation to /api/ must import its contract from @/contracts/, so
+      # a contract change that breaks a caller fails the type-check.
       - name: Contracts census
-        run: node scripts/check-contracts.mjs
+        run: node scripts/check-contracts.mjs && node scripts/check-contracts.mjs --client
 
       # Plan 04-01's gate: every characterization suite carries its tag, a
       # defect-tagged suite cites a finding id, and every F-nnn cited is in

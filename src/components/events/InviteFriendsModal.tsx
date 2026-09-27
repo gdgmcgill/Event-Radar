@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Send, Check } from "lucide-react";
+import type { EventInviteBodyInput } from "@/contracts/events";
 
 type FriendInfo = { id: string; name: string; avatar_url: string | null };
 
@@ -76,7 +77,9 @@ export function InviteFriendsModal({
       const res = await fetch(`/api/events/${eventId}/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invitee_ids: Array.from(selected) }),
+        body: JSON.stringify({
+          invitee_ids: Array.from(selected),
+        } satisfies EventInviteBodyInput),
       });
       const data = await res.json();
       if (res.ok) {

@@ -42,7 +42,10 @@
  * 400s the handlers answered are 400s here, in their order.
  */
 import { z } from "zod";
-import { NonEmptyTrimmedString } from "@/contracts/common";
+import {
+  NonEmptyTrimmedString,
+  type BodilessRequestInit,
+} from "@/contracts/common";
 import { isValidISODate, validateEventDates } from "@/lib/dateValidation";
 import { sanitizeText } from "@/lib/sanitize";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
@@ -288,6 +291,7 @@ export const RsvpDeleteBody = z.object({ user_id: presentUserId });
 
 export type RsvpBodyInput = z.input<typeof RsvpBody>;
 export type RsvpBodyOutput = z.infer<typeof RsvpBody>;
+export type RsvpDeleteBodyInput = z.input<typeof RsvpDeleteBody>;
 export type RsvpDeleteBodyOutput = z.infer<typeof RsvpDeleteBody>;
 
 // ─── POST /api/events/[id]/invite ────────────────────────────────────────────
@@ -304,6 +308,7 @@ export const EventInviteBody = z.object({
   ),
 });
 
+export type EventInviteBodyInput = z.input<typeof EventInviteBody>;
 export type EventInviteBodyOutput = z.infer<typeof EventInviteBody>;
 
 // ─── POST /api/events/[id]/reviews ───────────────────────────────────────────
@@ -320,6 +325,7 @@ export const ReviewBody = z.object({
   comment: asSent(),
 });
 
+export type ReviewBodyInput = z.input<typeof ReviewBody>;
 export type ReviewBodyOutput = z.infer<typeof ReviewBody>;
 
 // ─── POST /api/events/[id]/report ────────────────────────────────────────────
@@ -340,6 +346,7 @@ export const EventReportBody = z.object({
     .optional(),
 });
 
+export type EventReportBodyInput = z.input<typeof EventReportBody>;
 export type EventReportBodyOutput = z.infer<typeof EventReportBody>;
 
 // ─── POST /api/events/[id]/appeal ────────────────────────────────────────────
@@ -348,6 +355,7 @@ export const EventAppealBody = z.object({
   message: NonEmptyTrimmedString("Appeal message is required"),
 });
 
+export type EventAppealBodyInput = z.input<typeof EventAppealBody>;
 export type EventAppealBodyOutput = z.infer<typeof EventAppealBody>;
 
 // ─── POST /api/events/upload-image (multipart) ───────────────────────────────
@@ -356,12 +364,20 @@ export type EventAppealBodyOutput = z.infer<typeof EventAppealBody>;
 export const UploadImageForm = z.object({});
 
 /**
+ * The multipart field the route reads the image from. A client sender types
+ * its `formData.append` name as EventImageFileField through an `import type`
+ * (plan 06-11, REFAC-16), so nothing from this module ships to the browser.
+ */
+export const EVENT_IMAGE_FILE_FIELD = "file";
+export type EventImageFileField = typeof EVENT_IMAGE_FILE_FIELD;
+
+/**
  * The route's file rule, texts and order (size before type), and its answer
  * to an unreadable form (its catch's 500, unchanged).
  */
 export const EVENT_IMAGE_UPLOAD: FormOptions = {
   file: {
-    field: "file",
+    field: EVENT_IMAGE_FILE_FIELD,
     types: ["image/jpeg", "image/png", "image/webp", "image/gif"],
     maxBytes: 5 * 1024 * 1024,
     order: ["size", "type"],
@@ -374,6 +390,14 @@ export const EVENT_IMAGE_UPLOAD: FormOptions = {
   },
   unreadable: { status: 500, error: "Internal server error" },
 };
+
+// ─── Mutations that read no body (plan 06-11, REFAC-16) ──────────────────────
+
+/** POST and DELETE /api/events/[id]/save read only the route id. */
+export type EventSaveRequestInit = BodilessRequestInit;
+
+/** DELETE /api/events/[id] reads only the route id (PATCH reads EventUpdateBody). */
+export type EventDeleteRequestInit = BodilessRequestInit;
 
 // ─── Query helpers ───────────────────────────────────────────────────────────
 

@@ -13,6 +13,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { CONTACT_EMAILS } from "@/lib/contact";
 import type { EventTag } from "@/types";
+import type {
+  ProfileImageFileField,
+  UserUpdateBodyInput,
+} from "@/contracts/users";
 import {
   User,
   Settings,
@@ -107,7 +111,12 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
   const [year, setYear] = useState(profile.year ?? "");
   const [faculty, setFaculty] = useState(profile.faculty ?? "");
   const [tags, setTags] = useState<string[]>(profile.interest_tags);
-  const [visibility, setVisibility] = useState(profile.visibility);
+  // The contract's two values. users.visibility is unconstrained text, so a
+  // stored value outside them is held and sent as it always was, and the
+  // handler answers it 400 (plan 06-11: a type assertion, no runtime change).
+  const [visibility, setVisibility] = useState(
+    profile.visibility as NonNullable<UserUpdateBodyInput["visibility"]>
+  );
 
   // Avatar upload (shared hook)
   const avatar = useAvatarUpload(profile.avatar_url);
@@ -128,7 +137,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
     setBannerError(null);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file" satisfies ProfileImageFileField, file);
       const res = await fetch("/api/profile/banner", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
@@ -149,7 +158,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
       const res = await fetch(`/api/users/${profile.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ banner_url: null }),
+        body: JSON.stringify({ banner_url: null } satisfies UserUpdateBodyInput),
       });
       if (!res.ok) throw new Error("Failed to remove banner");
       setBannerUrl(null);
@@ -210,7 +219,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
           year: year || null,
           faculty: faculty || null,
           visibility,
-        }),
+        } satisfies UserUpdateBodyInput),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to save");

@@ -29,6 +29,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { uploadEventImage } from "@/lib/upload-utils";
 import { EventImageUpload } from "@/components/events/EventImageUpload";
+import type { EventUpdateBodyInput } from "@/contracts/events";
 
 const iconMap: Record<string, LucideIcon> = {
   GraduationCap,
@@ -152,7 +153,7 @@ export function EditEventModal({
           tags,
           image_url: finalImageUrl,
           category: tags[0],
-        }),
+        } satisfies EventUpdateBodyInput),
       });
 
       const data = await res.json();

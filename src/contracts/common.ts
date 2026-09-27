@@ -70,3 +70,13 @@ export const ErrorBody = z.object({
 });
 
 export type ErrorBody = z.infer<typeof ErrorBody>;
+
+/**
+ * The fetch init of a mutation whose handler reads no body (plan 06-11,
+ * REFAC-16, DEC-67): only its route id and, where named, a query. A client
+ * sender declares its init with the route's alias of this type (for example
+ * ClubFollowRequestInit), so the file names the route's contract and a body
+ * added to it fails the type-check until the handler's contract declares one.
+ * A type only: nothing from a contract module ships to the browser.
+ */
+export type BodilessRequestInit = Omit<RequestInit, "body"> & { body?: never };

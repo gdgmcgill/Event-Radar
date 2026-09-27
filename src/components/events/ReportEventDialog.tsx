@@ -12,6 +12,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
 import { Flag, Loader2 } from "lucide-react";
+import type { EventReportBodyInput } from "@/contracts/events";
 
 interface ReportEventDialogProps {
   eventId: string;
@@ -52,7 +53,7 @@ export function ReportEventDialog({
         body: JSON.stringify({
           category,
           message: message.trim() || undefined,
-        }),
+        } satisfies EventReportBodyInput),
       });
 
       if (res.status === 409) {

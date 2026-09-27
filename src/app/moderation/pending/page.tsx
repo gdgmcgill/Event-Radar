@@ -25,6 +25,11 @@ import { RejectionModal } from "@/components/moderation/RejectionModal";
 import { AppealBadge } from "@/components/moderation/AppealBadge";
 import { ReviewThread } from "@/components/moderation/ReviewThread";
 import type { RejectionCategory } from "@/types";
+import type {
+  AdminEventPutBodyInput,
+  EventEditsDecisionBodyInput,
+  EventStatusBodyInput,
+} from "@/contracts/admin";
 
 interface PendingEvent {
   id: string;
@@ -81,7 +86,7 @@ export default function ModerationPendingEventsPage() {
       const res = await fetch(`/api/admin/events/${eventId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status } satisfies EventStatusBodyInput),
       });
 
       if (res.ok) {
@@ -99,7 +104,11 @@ export default function ModerationPendingEventsPage() {
       const res = await fetch(`/api/admin/events/${rejectingEvent.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rejected", category, message }),
+        body: JSON.stringify({
+          status: "rejected",
+          category,
+          message,
+        } satisfies EventStatusBodyInput),
       });
       if (res.ok) {
         setEvents((prev) => prev.filter((e) => e.id !== rejectingEvent.id));
@@ -129,7 +138,7 @@ export default function ModerationPendingEventsPage() {
       const res = await fetch(`/api/admin/events/${editingEvent.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(editForm satisfies AdminEventPutBodyInput),
       });
       if (res.ok) {
         setEvents((prev) =>
@@ -151,12 +160,12 @@ export default function ModerationPendingEventsPage() {
       await fetch(`/api/admin/events/${editingEvent.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(editForm satisfies AdminEventPutBodyInput),
       });
       const res = await fetch(`/api/admin/events/${editingEvent.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
+        body: JSON.stringify({ status: "approved" } satisfies EventStatusBodyInput),
       });
       if (res.ok) {
         setEvents((prev) => prev.filter((e) => e.id !== editingEvent.id));
@@ -173,7 +182,9 @@ export default function ModerationPendingEventsPage() {
       const res = await fetch(`/api/admin/events/${eventId}/edits`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "approve" }),
+        body: JSON.stringify({
+          action: "approve",
+        } satisfies EventEditsDecisionBodyInput),
       });
       if (res.ok) {
         fetchPending();
@@ -190,7 +201,10 @@ export default function ModerationPendingEventsPage() {
       const res = await fetch(`/api/admin/events/${editRejectEventId}/edits`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reject", reason: editRejectReason.trim() }),
+        body: JSON.stringify({
+          action: "reject",
+          reason: editRejectReason.trim(),
+        } satisfies EventEditsDecisionBodyInput),
       });
       if (res.ok) {
         fetchPending();

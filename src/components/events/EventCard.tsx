@@ -19,6 +19,7 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
 import { exportEventIcal } from "@/lib/exportUtils";
+import type { EventSaveRequestInit } from "@/contracts/events";
 
 interface EventCardProps {
   event: Event;
@@ -115,7 +116,7 @@ export function EventCard({
       const response = await fetch(`/api/events/${event.id}/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-      });
+      } satisfies EventSaveRequestInit);
       if (!response.ok) throw new Error("Failed to save event");
 
       const data = await response.json();

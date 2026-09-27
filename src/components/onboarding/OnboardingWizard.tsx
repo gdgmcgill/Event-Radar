@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import InterestTagSelector from "@/components/profile/InterestTagSelector";
 import { PRONOUNS, YEARS, FACULTIES } from "@/lib/constants";
 import { ChevronRight, ChevronLeft, Sparkles, Check } from "lucide-react";
+import type {
+  OnboardingCompleteRequestInit,
+  UserUpdateBodyInput,
+} from "@/contracts/users";
 
 type OnboardingWizardProps = {
   userId: string;
@@ -68,7 +72,7 @@ export function OnboardingWizard({
           faculty: faculty || null,
           interest_tags: tags,
           onboarding_completed: true,
-        }),
+        } satisfies UserUpdateBodyInput),
       });
 
       if (!res.ok) {
@@ -78,7 +82,7 @@ export function OnboardingWizard({
 
       const onboardingCompleteRes = await fetch("/api/onboarding/complete", {
         method: "POST",
-      });
+      } satisfies OnboardingCompleteRequestInit);
 
       if (!onboardingCompleteRes.ok) {
         const data = await onboardingCompleteRes.json().catch(() => ({}));

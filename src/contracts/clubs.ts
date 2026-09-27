@@ -47,7 +47,10 @@
  * and the appeal message (a number threw on `.trim()`).
  */
 import { z } from "zod";
-import { NonEmptyTrimmedString } from "@/contracts/common";
+import {
+  NonEmptyTrimmedString,
+  type BodilessRequestInit,
+} from "@/contracts/common";
 import { sanitizeText } from "@/lib/sanitize";
 import { isMcGillEmail } from "@/lib/utils";
 import type { FormOptions } from "@/server/body";
@@ -350,6 +353,7 @@ export type ClubUpdateBodyOutput = z.infer<typeof ClubUpdateBody>;
  */
 export const ClubDeleteBody = z.object({ confirmName: asSent() });
 
+export type ClubDeleteBodyInput = z.input<typeof ClubDeleteBody>;
 export type ClubDeleteBodyOutput = z.infer<typeof ClubDeleteBody>;
 
 // ─── POST /api/clubs/[id]/invites ────────────────────────────────────────────
@@ -384,6 +388,7 @@ export const ClubMemberBody = z.object({
   memberId: present("memberId is required"),
 });
 
+export type ClubMemberBodyInput = z.input<typeof ClubMemberBody>;
 export type ClubMemberBodyOutput = z.infer<typeof ClubMemberBody>;
 
 const ROLE_MESSAGE = "Invalid request. Role must be 'organizer'.";
@@ -396,6 +401,7 @@ export const ClubMemberRoleBody = z.object({
   }),
 });
 
+export type ClubMemberRoleBodyInput = z.input<typeof ClubMemberRoleBody>;
 export type ClubMemberRoleBodyOutput = z.infer<typeof ClubMemberRoleBody>;
 
 // ─── POST /api/clubs/[id]/transfer and .../appeal ────────────────────────────
@@ -405,6 +411,7 @@ export const ClubTransferBody = z.object({
   newOwnerId: present("newOwnerId is required"),
 });
 
+export type ClubTransferBodyInput = z.input<typeof ClubTransferBody>;
 export type ClubTransferBodyOutput = z.infer<typeof ClubTransferBody>;
 
 /** The message as sent (the handler trims what it stores). */
@@ -412,6 +419,7 @@ export const ClubAppealBody = z.object({
   message: NonEmptyTrimmedString("Appeal message is required"),
 });
 
+export type ClubAppealBodyInput = z.input<typeof ClubAppealBody>;
 export type ClubAppealBodyOutput = z.infer<typeof ClubAppealBody>;
 
 // ─── POST /api/organizer-requests ────────────────────────────────────────────
@@ -424,6 +432,11 @@ export const OrganizerRequestBody = z.object({
 
 export type OrganizerRequestBodyInput = z.input<typeof OrganizerRequestBody>;
 export type OrganizerRequestBodyOutput = z.infer<typeof OrganizerRequestBody>;
+
+// ─── POST and DELETE /api/clubs/[id]/follow ──────────────────────────────────
+
+/** Both arms read only the route id (plan 06-11, REFAC-16). */
+export type ClubFollowRequestInit = BodilessRequestInit;
 
 // ─── POST /api/clubs/logo and /api/clubs/banner (multipart) ──────────────────
 
@@ -439,6 +452,17 @@ export const ClubImageForm = z.object({
 
 export type ClubImageFormOutput = z.infer<typeof ClubImageForm>;
 
+/**
+ * The multipart field both routes read the image from. With ClubImageForm's
+ * keys it names every field a sender appends: a client types its
+ * `formData.append` names as ClubImageFormField through an `import type`
+ * (plan 06-11, REFAC-16), so nothing from this module ships to the browser.
+ */
+export const CLUB_IMAGE_FILE_FIELD = "file";
+export type ClubImageFormField =
+  | keyof z.input<typeof ClubImageForm>
+  | typeof CLUB_IMAGE_FILE_FIELD;
+
 const CLUB_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 /**
@@ -453,7 +477,7 @@ function clubImageUpload(
 ): FormOptions {
   return {
     file: {
-      field: "file",
+      field: CLUB_IMAGE_FILE_FIELD,
       types: CLUB_IMAGE_TYPES,
       maxBytes: maxMb * 1024 * 1024,
       order: ["type", "size"],

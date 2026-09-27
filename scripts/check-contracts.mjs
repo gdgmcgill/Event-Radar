@@ -39,8 +39,33 @@
  *   R4  a `readJsonObject(` call in src/app/**\/route.ts: a body read with no
  *       schema. readJsonObject stays exported for parseBody's use.
  *
+ * CLIENT MODE (--client, plan 06-11, REFAC-16, DEC-67)
+ *   A second, independent rule over the code that CALLS the handlers. Every
+ *   non-route file that sends a mutation to /api/ must import (type or value)
+ *   from `@/contracts/`, so the body it builds is typed from the handler's
+ *   contract and a contract change that breaks the caller fails
+ *   `npx tsc --noEmit` (threat T-06-11-03). There is no allow-list: the rule
+ *   is met in full, so any new sender without a contract import fails.
+ *
+ *   Files: src/**\/*.{ts,tsx,js,jsx,mjs,cjs}, minus test files and
+ *   src/app/**\/route.* (a handler is the other side of the contract). Lines
+ *   whose trimmed text starts with a comment marker are skipped. A file is a
+ *   mutation sender when it holds all three of:
+ *     - a `fetch(` call,
+ *     - a string literal ("…", '…' or `…`) that starts with `/api/`,
+ *     - a quoted mutation method: "POST", "PUT", "PATCH" or "DELETE".
+ *   The test is per file, not per call, and deliberately broad: it also
+ *   catches a sender whose URL or method sits in a variable (`{ method }`,
+ *   `method: wasFollowing ? "DELETE" : "POST"`). Over-inclusion costs a type
+ *   import; a miss would let a caller drift silently.
+ *   A sender complies when some line imports `from "@/contracts/…"`.
+ *
+ *   Output: each violator's mutation-method lines as file:line, then
+ *   `client files=<senders> violations=<violators>`. Exit 1 on any violator.
+ *
  * INVOCATION
  *   node scripts/check-contracts.mjs                     # check (CI)
+ *   node scripts/check-contracts.mjs --client            # client callers (CI)
  *   node scripts/check-contracts.mjs --write             # regenerate the list
  *   node scripts/check-contracts.mjs --root <dir> --allowlist <file>
  *                                                         # fixture trees (tests)
@@ -188,6 +213,58 @@ function toEntries(sites) {
 }
 
 const total = (entries) => entries.reduce((sum, entry) => sum + entry.count, 0);
+
+// ─── --client: every mutation sender imports its contract ───────────────────
+
+const API_LITERAL = /["'`]\/api\//;
+const FETCH_CALL = /\bfetch\(/;
+const MUTATION_METHOD = /["'`](POST|PUT|PATCH|DELETE)["'`]/;
+const CONTRACT_IMPORT = /\bfrom\s+["']@\/contracts\//;
+
+function clientCensus() {
+  const senders = [];
+  for (const full of walk(SCAN_DIR)) {
+    const file = relative(ROOT, full).split(sep).join("/");
+    if (ROUTE_FILE.test(file)) continue;
+    const lines = readFileSync(full, "utf8")
+      .split("\n")
+      .map((text, index) => ({ text, line: index + 1 }))
+      .filter(({ text }) => !COMMENT_LINE.test(text.trim()));
+    const has = (pattern) => lines.some(({ text }) => pattern.test(text));
+    if (!has(FETCH_CALL) || !has(API_LITERAL) || !has(MUTATION_METHOD)) continue;
+    senders.push({
+      file,
+      compliant: has(CONTRACT_IMPORT),
+      methodLines: lines
+        .filter(({ text }) => MUTATION_METHOD.test(text))
+        .map(({ line }) => line),
+    });
+  }
+  return senders;
+}
+
+if (process.argv.includes("--client")) {
+  const senders = clientCensus();
+  const violators = senders.filter((sender) => !sender.compliant);
+  if (violators.length > 0) {
+    console.error(
+      `FAIL: ${violators.length} file(s) send a mutation to /api/ without importing from @/contracts/:`
+    );
+    for (const sender of violators) {
+      for (const line of sender.methodLines) {
+        console.error(`  ${sender.file}:${line}`);
+      }
+    }
+    console.error("");
+    console.error("Type the body the file builds as z.input<typeof …> of the");
+    console.error("handler's contract through an `import type` from @/contracts/");
+    console.error("(a type import, so zod stays out of the client bundle).");
+  }
+  console.log(
+    `client files=${senders.length} violations=${violators.length}`
+  );
+  process.exit(violators.length > 0 ? 1 : 0);
+}
 
 const sites = liveSites();
 const live = toEntries(sites);

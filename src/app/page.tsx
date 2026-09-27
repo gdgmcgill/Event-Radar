@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import type { Event, EventTag } from "@/types";
 import { EVENT_TAGS, EVENT_CATEGORIES, QUICK_FILTERS } from "@/lib/constants";
 import { useAuthStore } from "@/store/useAuthStore";
+import type { InferredTagBodyInput } from "@/contracts/users";
 
 // ── Inferred Tags Toast ───────────────────────────────────────────────────────
 
@@ -82,7 +83,7 @@ function useInferredTagsToast(inferredTags: string[] | null | undefined) {
         await fetch("/api/profile/inferred-tags", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tag: toast.tag }),
+          body: JSON.stringify({ tag: toast.tag } satisfies InferredTagBodyInput),
         });
       } catch {
         // silently fail — best effort

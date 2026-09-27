@@ -7,6 +7,7 @@
  * parsed from plan 06-10, DEC-66) and count reads nothing.
  */
 import { z } from "zod";
+import type { BodilessRequestInit } from "@/contracts/common";
 
 /**
  * GET: `?cursor=<created_at ISO string>`. Not validated, as today: an absent
@@ -25,7 +26,15 @@ export const NotificationsQuery = z.object({
 });
 
 export type NotificationsListQueryOutput = z.infer<typeof NotificationsListQuery>;
+export type NotificationsQueryInput = z.input<typeof NotificationsQuery>;
 export type NotificationsQueryOutput = z.infer<typeof NotificationsQuery>;
+
+/**
+ * POST /api/notifications (its query is NotificationsQuery) and PATCH
+ * /api/notifications/[id] read no body (plan 06-11, REFAC-16).
+ */
+export type NotificationsActionRequestInit = BodilessRequestInit;
+export type NotificationReadRequestInit = BodilessRequestInit;
 
 // ─── Responses the client reads (plan 06-11, REFAC-16, DEC-67) ───────────────
 

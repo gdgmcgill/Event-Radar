@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Play, Pause, CheckCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import type {
+  ExperimentDeleteRequestInit,
+  ExperimentUpdateBodyInput,
+} from "@/contracts/admin";
 
 interface Variant {
   id: string;
@@ -143,13 +147,15 @@ export default function ExperimentDetailPage({
     fetchData();
   }, [fetchData]);
 
-  const updateStatus = async (status: string) => {
+  const updateStatus = async (
+    status: NonNullable<ExperimentUpdateBodyInput["status"]>
+  ) => {
     setActionLoading(true);
     try {
       const res = await fetch(`/api/admin/experiments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status } satisfies ExperimentUpdateBodyInput),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -169,7 +175,7 @@ export default function ExperimentDetailPage({
     try {
       const res = await fetch(`/api/admin/experiments/${id}`, {
         method: "DELETE",
-      });
+      } satisfies ExperimentDeleteRequestInit);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Failed to delete experiment");

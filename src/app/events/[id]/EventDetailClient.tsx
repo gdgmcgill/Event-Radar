@@ -31,6 +31,8 @@ import { REJECTION_CATEGORIES } from "@/types";
 import { AppealForm } from "@/components/AppealForm";
 import { ReviewThread } from "@/components/moderation/ReviewThread";
 import { Loader2, UserPlus, AlertTriangle } from "lucide-react";
+import type { EventSaveRequestInit } from "@/contracts/events";
+import type { ThumbsFeedbackBodyInput } from "@/contracts/recommendations";
 
 export default function EventDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -194,7 +196,9 @@ export default function EventDetailClient() {
     if (!id || savingInProgress) return;
     setSavingInProgress(true);
     try {
-      const res = await fetch(`/api/events/${id}/save`, { method: "POST" });
+      const res = await fetch(`/api/events/${id}/save`, {
+        method: "POST",
+      } satisfies EventSaveRequestInit);
       if (!res.ok) throw new Error("Failed to toggle save");
       const data = await res.json();
       setSaved(data.saved);
@@ -221,7 +225,10 @@ export default function EventDetailClient() {
       const res = await fetch("/api/recommendations/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event_id: id, feedback: "positive" }),
+        body: JSON.stringify({
+          event_id: id,
+          feedback: "positive",
+        } satisfies ThumbsFeedbackBodyInput),
       });
       if (!res.ok) throw new Error("Failed to like event");
     } catch {

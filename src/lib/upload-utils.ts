@@ -1,3 +1,5 @@
+import type { EventImageFileField } from "@/contracts/events";
+
 /**
  * Utility function to upload an event image to the backend.
  * Proxies the file through /api/events/upload-image to avoid client-side Supabase timeout issues.
@@ -5,7 +7,7 @@
 export async function uploadEventImage(file: File): Promise<string | null> {
     try {
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file" satisfies EventImageFileField, file);
 
         const res = await fetch("/api/events/upload-image", {
             method: "POST",

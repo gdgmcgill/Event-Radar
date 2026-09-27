@@ -7,6 +7,10 @@ import { SuspensionModal } from "@/components/moderation/SuspensionModal";
 import { AppealBadge } from "@/components/moderation/AppealBadge";
 import { ReviewThread } from "@/components/moderation/ReviewThread";
 import type { RejectionCategory } from "@/types";
+import type {
+  AdminEventDeleteRequestInit,
+  EventStatusBodyInput,
+} from "@/contracts/admin";
 import {
   Trash2,
   Search,
@@ -96,7 +100,9 @@ export default function ModerationEventsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/admin/events/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/events/${id}`, {
+      method: "DELETE",
+    } satisfies AdminEventDeleteRequestInit);
     if (res.ok) {
       setEvents((prev) => prev.filter((e) => e.id !== id));
       setTotal((prev) => prev - 1);
@@ -104,11 +110,14 @@ export default function ModerationEventsPage() {
     setDeleteConfirm(null);
   };
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
+  const handleStatusChange = async (
+    id: string,
+    newStatus: EventStatusBodyInput["status"]
+  ) => {
     const res = await fetch(`/api/admin/events/${id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify({ status: newStatus } satisfies EventStatusBodyInput),
     });
     if (res.ok) {
       setEvents((prev) =>
@@ -122,7 +131,11 @@ export default function ModerationEventsPage() {
     const res = await fetch(`/api/admin/events/${rejectingEvent.id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "rejected", category, message }),
+      body: JSON.stringify({
+        status: "rejected",
+        category,
+        message,
+      } satisfies EventStatusBodyInput),
     });
     if (res.ok) {
       setEvents((prev) =>
@@ -136,7 +149,11 @@ export default function ModerationEventsPage() {
     const res = await fetch(`/api/admin/events/${suspendingEvent.id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "suspended", category, message }),
+      body: JSON.stringify({
+        status: "suspended",
+        category,
+        message,
+      } satisfies EventStatusBodyInput),
     });
     if (res.ok) {
       setEvents((prev) =>
@@ -149,7 +166,7 @@ export default function ModerationEventsPage() {
     const res = await fetch(`/api/admin/events/${id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "approved" }),
+      body: JSON.stringify({ status: "approved" } satisfies EventStatusBodyInput),
     });
     if (res.ok) {
       setEvents((prev) =>

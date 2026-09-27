@@ -13,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { cn, formatTimeFromISO } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
 import { exportEventsCsv } from "@/lib/exportUtils";
+import type {
+  EventSaveRequestInit,
+  RsvpBodyInput,
+  RsvpDeleteBodyInput,
+  RsvpStatusValue,
+} from "@/contracts/events";
 import {
   ChevronLeft,
   ChevronRight,
@@ -629,7 +635,7 @@ export default function CalendarPage() {
     try {
       const res = await fetch(`/api/events/${event.id}/save`, {
         method: "POST",
-      });
+      } satisfies EventSaveRequestInit);
       if (!res.ok) throw new Error();
       const data = await res.json();
 
@@ -672,7 +678,7 @@ export default function CalendarPage() {
         const res = await fetch(`/api/events/${event.id}/rsvp`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: user.id }),
+          body: JSON.stringify({ user_id: user.id } satisfies RsvpDeleteBodyInput),
         });
         if (!res.ok) throw new Error();
 
@@ -683,7 +689,10 @@ export default function CalendarPage() {
         const res = await fetch(`/api/events/${event.id}/rsvp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: user.id, status }),
+          body: JSON.stringify({
+            user_id: user.id,
+            status,
+          } satisfies RsvpBodyInput & { status: RsvpStatusValue }),
         });
         if (!res.ok) throw new Error();
       }

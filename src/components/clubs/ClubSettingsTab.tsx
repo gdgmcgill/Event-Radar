@@ -27,6 +27,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Club, ClubMember } from "@/types";
+import type {
+  ClubDeleteBodyInput,
+  ClubImageFormField,
+  ClubTransferBodyInput,
+  ClubUpdateBodyInput,
+} from "@/contracts/clubs";
 
 const CLUB_CATEGORIES = [
   "Academic",
@@ -120,8 +126,8 @@ export function ClubSettingsTab({ club, onUpdate, members = [] }: ClubSettingsTa
     setUploadingLogo(true);
     try {
       const formData = new FormData();
-      formData.append("file", logoFile);
-      formData.append("clubId", club.id);
+      formData.append("file" satisfies ClubImageFormField, logoFile);
+      formData.append("clubId" satisfies ClubImageFormField, club.id);
       const res = await fetch("/api/clubs/logo", {
         method: "POST",
         body: formData,
@@ -165,8 +171,7 @@ export function ClubSettingsTab({ club, onUpdate, members = [] }: ClubSettingsTa
 
       const cleanHandle = instagramHandle.trim().replace(/^@/, "") || null;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updateBody: Record<string, any> = {
+      const updateBody: ClubUpdateBodyInput = {
         name: trimmedName,
         description: description.trim() || null,
         category: category.trim() || null,
@@ -182,8 +187,8 @@ export function ClubSettingsTab({ club, onUpdate, members = [] }: ClubSettingsTa
       if (bannerFile) {
         setUploadingBanner(true);
         const formData = new FormData();
-        formData.append("file", bannerFile);
-        formData.append("clubId", club.id);
+        formData.append("file" satisfies ClubImageFormField, bannerFile);
+        formData.append("clubId" satisfies ClubImageFormField, club.id);
         const uploadRes = await fetch("/api/clubs/banner", { method: "POST", body: formData });
         setUploadingBanner(false);
         if (!uploadRes.ok) { setError("Failed to upload banner"); return; }
@@ -223,7 +228,9 @@ export function ClubSettingsTab({ club, onUpdate, members = [] }: ClubSettingsTa
       const res = await fetch(`/api/clubs/${club.id}/transfer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newOwnerId: transferTargetId }),
+        body: JSON.stringify({
+          newOwnerId: transferTargetId,
+        } satisfies ClubTransferBodyInput),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -246,7 +253,9 @@ export function ClubSettingsTab({ club, onUpdate, members = [] }: ClubSettingsTa
       const res = await fetch(`/api/clubs/${club.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmName: deleteConfirmName }),
+        body: JSON.stringify({
+          confirmName: deleteConfirmName,
+        } satisfies ClubDeleteBodyInput),
       });
       if (!res.ok) {
         const data = await res.json();

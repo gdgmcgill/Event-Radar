@@ -7,6 +7,7 @@ import {
   UserCheck,
   Loader2,
 } from "lucide-react";
+import type { OrganizerRequestDecisionBodyInput } from "@/contracts/admin";
 
 interface OrganizerRequest {
   id: string;
@@ -65,7 +66,9 @@ export default function OrganizerRequestsPage() {
       const res = await fetch(`/api/admin/organizer-requests/${requestId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+        } satisfies OrganizerRequestDecisionBodyInput),
       });
 
       if (res.ok) {

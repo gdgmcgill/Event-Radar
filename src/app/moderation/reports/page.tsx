@@ -11,6 +11,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
+import type { ReportDecisionBodyInput } from "@/contracts/admin";
 
 interface ReportItem {
   id: string;
@@ -58,7 +59,7 @@ export default function ReportsPage() {
       const res = await fetch(`/api/admin/reports/${reportId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status } satisfies ReportDecisionBodyInput),
       });
       if (res.ok) {
         await fetchReports();

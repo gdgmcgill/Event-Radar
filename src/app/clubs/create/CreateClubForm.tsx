@@ -7,6 +7,11 @@ import { Building2, Upload, Loader2, CheckCircle2, Instagram, AlertCircle, Globe
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/store/useAuthStore";
+import type {
+  ClubCreateBodyInput,
+  ClubImageFormField,
+  ClubUpdateBodyInput,
+} from "@/contracts/clubs";
 
 const CLUB_CATEGORIES = [
   "Academic",
@@ -131,7 +136,7 @@ export function CreateClubForm() {
           discord_url: discordUrl.trim() || null,
           twitter_url: twitterUrl.trim() || null,
           linkedin_url: linkedinUrl.trim() || null,
-        }),
+        } satisfies ClubCreateBodyInput),
       });
 
       if (!res.ok) {
@@ -142,12 +147,12 @@ export function CreateClubForm() {
       const club = await res.json();
 
       // Step 2: Upload logo and banner now that club exists and user is owner
-      const patchUpdates: Record<string, string> = {};
+      const patchUpdates: ClubUpdateBodyInput = {};
 
       if (logoFile) {
         const fd = new FormData();
-        fd.append("file", logoFile);
-        fd.append("clubId", club.id);
+        fd.append("file" satisfies ClubImageFormField, logoFile);
+        fd.append("clubId" satisfies ClubImageFormField, club.id);
         const logoRes = await fetch("/api/clubs/logo", { method: "POST", body: fd });
         if (logoRes.ok) {
           const logoData = await logoRes.json();
@@ -157,8 +162,8 @@ export function CreateClubForm() {
 
       if (bannerFile) {
         const fd = new FormData();
-        fd.append("file", bannerFile);
-        fd.append("clubId", club.id);
+        fd.append("file" satisfies ClubImageFormField, bannerFile);
+        fd.append("clubId" satisfies ClubImageFormField, club.id);
         const bannerRes = await fetch("/api/clubs/banner", { method: "POST", body: fd });
         if (bannerRes.ok) {
           const bannerData = await bannerRes.json();
