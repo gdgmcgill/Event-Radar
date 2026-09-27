@@ -6,11 +6,13 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { parseBody } from "@/server/body";
 import { ClubAppealBody } from "@/contracts/clubs";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(
+export const POST = withRoute({ cache: "private", action: "submit appeal" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -63,7 +65,8 @@ export async function POST(
     });
 
   if (reviewError) {
-    return NextResponse.json({ error: reviewError.message }, { status: 500 });
+    log.error("Failed to insert appeal review", { scope: "Appeal", clubId: id, error: reviewError });
+    return NextResponse.json({ error: "Failed to submit appeal" }, { status: 500 });
   }
 
   // clubs has no owner UPDATE policy (DEC-41). REGISTRY.md row: "Club appeal:
@@ -80,7 +83,8 @@ export async function POST(
     .select("id");
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    log.error("Failed to reset club to pending", { scope: "Appeal", clubId: id, error: updateError });
+    return NextResponse.json({ error: "Failed to submit appeal" }, { status: 500 });
   }
 
   if (!updateData || updateData.length === 0) {
@@ -109,8 +113,8 @@ export async function POST(
       );
     }
   } catch (notifErr) {
-    console.error("[Appeal] Failed to send admin notifications:", notifErr);
+    log.error("Failed to send admin notifications", { scope: "Appeal", error: notifErr });
   }
 
   return NextResponse.json({ success: true });
-}
+});

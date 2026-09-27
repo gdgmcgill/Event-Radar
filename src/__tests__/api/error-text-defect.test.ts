@@ -443,10 +443,48 @@ const FIXED: Readonly<Record<string, { at: (body: any) => unknown; generic: unkn
     at: (b) => b,
     generic: { error: "Failed to fetch moderation reviews" },
   },
+  // 06-13 Task 2: clubs and organizer-requests
+  "src/app/api/clubs/[id]/appeal/route.ts:72": {
+    at: (b) => b,
+    generic: { error: "Failed to submit appeal" },
+  },
+  "src/app/api/clubs/featured/route.ts:17": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch featured clubs" },
+  },
+  "src/app/api/organizer-requests/route.ts:59": {
+    at: (b) => b,
+    generic: { error: "Failed to create organizer request" },
+  },
+  "src/app/api/organizer-requests/route.ts:84": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch organizer requests" },
+  },
 };
 
-/** Sites outside census C7 that a sweep fixed; pinned in E2 like a moved row. */
-const ADDED: Site[] = [];
+/**
+ * Sites outside census C7 that a sweep fixed, pinned in E2 like a moved row:
+ * the `updateError.message` 500s, which C7's `dateError.message` exclusion
+ * skipped by substring. The site label is the line at the base of 06-13.
+ */
+const ADDED: { row: Site; at: (body: any) => unknown; generic: unknown }[] = [
+  {
+    row: {
+      site: "src/app/api/clubs/[id]/appeal/route.ts:83", n: 36, persona: "student", status: 500,
+      cookie: (i) => {
+        i.tables!.clubs = [{ id: CLUB_ID, name: "Club", status: "rejected", created_by: CALLER.id, appeal_count: 0 }];
+      },
+      elevated: (i) => { i.errors = { ...(i.errors ?? {}), "clubs.update": pg(36) }; },
+      invoke: async () =>
+        (await import("@/app/api/clubs/[id]/appeal/route")).POST(
+          send(`clubs/${CLUB_ID}/appeal`, "POST", { message: "please" }),
+          idOf(CLUB_ID)
+        ),
+    },
+    at: (b) => b,
+    generic: { error: "Failed to submit appeal" },
+  },
+];
 
 /** NOT_DRIVEN lines the sweep rewrote so that no `.message` token remains. */
 const RETIRED: Record<string, string> = {
@@ -455,7 +493,14 @@ const RETIRED: Record<string, string> = {
 };
 
 const LIVE_SITES = SITES.filter((row) => !(row.site in FIXED));
-const FIXED_SITES = [...SITES.filter((row) => row.site in FIXED), ...ADDED];
+const FIXED_SITES: [string, Site, { at: (body: any) => unknown; generic: unknown }][] = [
+  ...SITES.filter((row) => row.site in FIXED).map(
+    (row): [string, Site, (typeof FIXED)[string]] => [row.site, row, FIXED[row.site]]
+  ),
+  ...ADDED.map(
+    ({ row, at, generic }): [string, Site, (typeof FIXED)[string]] => [row.site, row, { at, generic }]
+  ),
+];
 const LIVE_NOT_DRIVEN = Object.keys(NOT_DRIVEN).filter((site) => !(site in RETIRED));
 
 // ─── Running a row ─────────────────────────────────────────────────────────
@@ -517,8 +562,9 @@ describe("E0: the rows plus NOT_DRIVEN are census C7", () => {
       listed[file] = (listed[file] ?? 0) + 1;
     }
     expect(listed).toEqual(censusC7());
-    expect(LIVE_SITES).toHaveLength(31);
+    expect(LIVE_SITES).toHaveLength(27);
     expect(LIVE_NOT_DRIVEN).toHaveLength(5);
+    expect(FIXED_SITES).toHaveLength(8);
   });
 
   it("the census at f550de9 is unchanged: 34 driven + 6 listed = 40, and every move is accounted for", () => {
@@ -547,8 +593,7 @@ describe("E1: a caught error's text reaches the response body today", () => {
 // ─── E2: fixed, the generic text instead of the sentinel ──────────────────
 
 describe("E2: fixed, the caller gets the route's generic text (F-059 fixed)", () => {
-  it.each(FIXED_SITES.map((row): [string, Site] => [row.site, row]))("%s", async (_label, row) => {
-    const fix = FIXED[row.site];
+  it.each(FIXED_SITES)("%s", async (_label, row, fix) => {
     const { status, body } = await drive(row);
     expect(status).toBe(row.status);
     expect(JSON.stringify(body)).not.toContain(S(row.n));

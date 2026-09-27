@@ -6,6 +6,7 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { parseBody } from "@/server/body";
 import { ClubInviteBody } from "@/contracts/clubs";
+import { withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -15,10 +16,10 @@ interface RouteParams {
  * GET /api/clubs/[id]/invites
  * List pending invitations for a club. Owner-only.
  */
-export async function GET(
+export const GET = withRoute({ cache: "private", action: "fetch invitations" }, async (
   _request: NextRequest,
   { params }: RouteParams
-) {
+) => {
   try {
     const { id: clubId } = await params;
     const ctx = await createRequestContext();
@@ -56,13 +57,13 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/clubs/[id]/invites
  * Create an invitation for a McGill email. Owner-only.
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withRoute({ cache: "private", action: "create invitation" }, async (request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -154,4 +155,4 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

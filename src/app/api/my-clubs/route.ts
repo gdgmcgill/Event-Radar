@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/my-clubs
  * Returns the current user's clubs with role and member count.
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch your clubs" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -88,4 +89,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

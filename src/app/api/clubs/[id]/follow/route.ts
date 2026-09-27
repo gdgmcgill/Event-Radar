@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -12,7 +13,7 @@ interface RouteParams {
  * GET /api/clubs/[id]/follow
  * Returns whether the current user follows this club.
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "check follow status" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const { id: clubId } = await params;
     const supabase = await createClient();
@@ -38,13 +39,13 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/clubs/[id]/follow
  * Follow a club.
  */
-export async function POST(_request: NextRequest, { params }: RouteParams) {
+export const POST = withRoute({ cache: "private", action: "follow club" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -75,13 +76,13 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/clubs/[id]/follow
  * Unfollow a club.
  */
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export const DELETE = withRoute({ cache: "private", action: "unfollow club" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -113,4 +114,4 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

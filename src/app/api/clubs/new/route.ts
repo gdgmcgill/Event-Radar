@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/clubs/new
  * Returns recently approved clubs, ordered by created_at desc. Limit 10.
  */
-export async function GET() {
+export const GET = withRoute({ cache: "public-60-300", action: "fetch new clubs" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -55,4 +56,4 @@ export async function GET() {
   } catch {
     return NextResponse.json({ error: "Failed to fetch new clubs" }, { status: 500 });
   }
-}
+});

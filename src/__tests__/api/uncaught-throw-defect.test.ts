@@ -358,6 +358,11 @@ const ADOPTED: Readonly<Record<string, string>> = {
   "api/admin/users/[id] PATCH": "update user",
   "api/admin/users GET": "fetch users",
   "api/moderation/reviews/[targetType]/[targetId] GET": "fetch moderation reviews",
+  // 06-13 Task 2: clubs and organizer-requests
+  "api/clubs/[id]/members/role PATCH": "update role",
+  "api/clubs/[id]/transfer POST": "transfer ownership",
+  "api/organizer-requests POST": "create organizer request",
+  "api/organizer-requests GET": "fetch organizer requests",
 };
 
 const armId = (arm: Arm) => `${arm.file} ${arm.verb}`;

@@ -6,12 +6,13 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { parseBody } from "@/server/body";
 import { CLUB_CREATE_FIELD_KEYS, ClubCreateBody } from "@/contracts/clubs";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/clubs
  * Public endpoint - returns all approved clubs.
  */
-export async function GET() {
+export const GET = withRoute({ cache: "public-60-300", action: "fetch clubs" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -35,13 +36,13 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/clubs
  * Authenticated endpoint - creates a new club (pending approval).
  */
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create club" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -141,4 +142,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(club, { status: 201 });
-}
+});

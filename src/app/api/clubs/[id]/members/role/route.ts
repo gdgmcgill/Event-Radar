@@ -6,14 +6,15 @@ import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { parseBody } from "@/server/body";
 import { ClubMemberRoleBody } from "@/contracts/clubs";
+import { withRoute } from "@/server/route";
 
 /** PostgREST's code when `.single()` matches no row. */
 const NO_ROW = "PGRST116";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update role" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -91,4 +92,4 @@ export async function PATCH(
   }
 
   return NextResponse.json({ member: updated });
-}
+});

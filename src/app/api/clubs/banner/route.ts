@@ -5,13 +5,14 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { checkFile, parseForm } from "@/server/body";
 import { CLUB_BANNER_UPLOAD, ClubImageForm } from "@/contracts/clubs";
+import { withRoute } from "@/server/route";
 
 /**
  * POST /api/clubs/banner
  * Upload a club banner image. Owner-only.
  * Accepts FormData with "file" and "clubId" fields.
  */
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "upload banner" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -67,4 +68,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

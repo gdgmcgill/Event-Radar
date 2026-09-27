@@ -12,6 +12,8 @@ import {
   ClubDeleteBody,
   ClubUpdateBody,
 } from "@/contracts/clubs";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,7 +23,7 @@ interface RouteParams {
  * GET /api/clubs/[id]
  * Public endpoint - returns club details with follower count.
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "public-60-300", action: "fetch club" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const { id: clubId } = await params;
     const supabase = await createClient();
@@ -48,7 +50,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PATCH /api/clubs/[id]
@@ -62,7 +64,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
  * `status`, `created_by` and `id` can never be written through this path.
  * REGISTRY.md row: "Owner edits club details or soft-deletes the club".
  */
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withRoute({ cache: "private", action: "update club" }, async (request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -124,7 +126,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/clubs/[id]
@@ -138,10 +140,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  * soft-deletes the club" and "Record a club deletion or ownership transfer in
  * admin_audit_log".
  */
-export async function DELETE(
+export const DELETE = withRoute({ cache: "private", action: "delete club" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -199,11 +201,13 @@ export async function DELETE(
     metadata: { club_name: club.name },
   });
   if (auditError) {
-    console.error(
-      `[clubs/delete] audit insert failed (requestId ${ctx.requestId}):`,
-      auditError
-    );
+    log.error("audit insert failed", {
+      scope: "clubs/delete",
+      requestId: ctx.requestId,
+      clubId,
+      error: auditError,
+    });
   }
 
   return NextResponse.json({ success: true });
-}
+});

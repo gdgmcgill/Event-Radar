@@ -6,11 +6,13 @@ import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { parseBody } from "@/server/body";
 import { ClubTransferBody } from "@/contracts/clubs";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(
+export const POST = withRoute({ cache: "private", action: "transfer ownership" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -116,10 +118,12 @@ export async function POST(
       .update({ role: targetMember.role })
       .eq("id", targetMember.id);
     if (rollbackError) {
-      console.error(
-        `[clubs/transfer] rollback failed (requestId ${ctx.requestId}):`,
-        rollbackError
-      );
+      log.error("rollback failed", {
+        scope: "clubs/transfer",
+        requestId: ctx.requestId,
+        clubId,
+        error: rollbackError,
+      });
     }
     return NextResponse.json({ error: "Failed to transfer ownership" }, { status: 500 });
   }
@@ -134,11 +138,13 @@ export async function POST(
     metadata: { new_owner_id: newOwnerId, previous_owner_id: user.id },
   });
   if (auditError) {
-    console.error(
-      `[clubs/transfer] audit insert failed (requestId ${ctx.requestId}):`,
-      auditError
-    );
+    log.error("audit insert failed", {
+      scope: "clubs/transfer",
+      requestId: ctx.requestId,
+      clubId,
+      error: auditError,
+    });
   }
 
   return NextResponse.json({ success: true });
-}
+});

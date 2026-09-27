@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
+import { withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -16,7 +17,7 @@ interface RsvpRow {
  * Returns approved events for public visitors.
  * Returns all events with RSVP counts for club organizers/members.
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "fetch events" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const { id: clubId } = await params;
     const ctx = await createRequestContext();
@@ -96,4 +97,4 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

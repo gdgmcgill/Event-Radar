@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withRoute } from "@/server/route";
 
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch friends' clubs" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -95,4 +96,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

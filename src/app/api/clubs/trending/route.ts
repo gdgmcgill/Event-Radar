@@ -2,8 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { readQuery } from "@/server/body";
 import { TrendingQuery } from "@/contracts/clubs";
+import { withRoute } from "@/server/route";
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "public-60-300", action: "fetch trending clubs" }, async (request: NextRequest) => {
   try {
     // limit: default 15, capped at 100, never a 400 (as before).
     const { limit } = readQuery(
@@ -83,4 +84,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

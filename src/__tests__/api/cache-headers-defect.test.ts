@@ -371,6 +371,15 @@ const ADOPTED: ReadonlySet<string> = new Set([
   "/api/admin/stats",
   "/api/admin/users",
   "/api/moderation/reviews/[targetType]/[targetId]",
+  // 06-13 Task 2: clubs, organizer-requests, my-clubs
+  "/api/clubs/[id]/analytics",
+  "/api/clubs/[id]/events",
+  "/api/clubs/[id]/follow",
+  "/api/clubs/[id]/invites",
+  "/api/clubs/[id]/members",
+  "/api/clubs/friends",
+  "/api/my-clubs",
+  "/api/organizer-requests",
 ]);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

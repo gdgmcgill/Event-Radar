@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function GET() {
+export const GET = withRoute({ cache: "public-60-120", action: "fetch featured clubs" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -14,25 +16,24 @@ export async function GET() {
       .order("starts_at", { ascending: true });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Failed to fetch featured clubs", { error });
+      return NextResponse.json(
+        { error: "Failed to fetch featured clubs" },
+        { status: 500 }
+      );
     }
 
     const featured = (data ?? []).filter(
       (row: any) => row.club && row.club.status === "approved"
     );
 
-    return NextResponse.json(
-      { featured },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      }
-    );
+    // The public-60-120 class (withRoute above) sends the header this
+    // response set itself before 06-13, byte for byte.
+    return NextResponse.json({ featured });
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch featured clubs" },
       { status: 500 }
     );
   }
-}
+});

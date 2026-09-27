@@ -4,6 +4,7 @@ import type { EventAnalytics } from "@/types";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
+import { withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -14,7 +15,7 @@ interface RouteParams {
  * Returns club-level analytics: follower growth, total attendees, popular tags, per-event metrics.
  * Requires authentication and club membership.
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "fetch club analytics" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const { id: clubId } = await params;
     const ctx = await createRequestContext();
@@ -316,4 +317,4 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

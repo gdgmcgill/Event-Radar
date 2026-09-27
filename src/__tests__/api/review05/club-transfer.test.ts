@@ -113,11 +113,15 @@ it("a failed audit insert still answers success but is logged", async () => {
   const res = await transfer(OTHER);
   expect(res.status).toBe(200);
   expect(await res.json()).toEqual({ success: true });
-  expect(
-    errorSpy.mock.calls.some((c) =>
-      String(c[0]).startsWith("[clubs/transfer] audit insert failed")
-    )
-  ).toBe(true);
+  const lines = errorSpy.mock.calls.map((c) => JSON.parse(String(c[0])));
+  expect(lines).toContainEqual(
+    expect.objectContaining({
+      level: "error",
+      scope: "clubs/transfer",
+      msg: "audit insert failed",
+      error: expect.objectContaining({ message: "audit down" }),
+    })
+  );
 });
 
 it("iter3 WR-01: an upper-cased spelling of the caller's own id is refused with 400 and writes nothing", async () => {
