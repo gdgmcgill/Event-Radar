@@ -8,14 +8,16 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { parseBody } from "@/server/body";
 import { CanonicalId } from "@/contracts/common";
 import { BanBody } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * POST /api/admin/users/[id]/ban — Ban a user
  */
-export async function POST(
+export const POST = withRoute({ cache: "private", action: "ban user" }, async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -111,7 +113,7 @@ export async function POST(
       .eq("status", "approved");
 
     if (evtFetchErr) {
-      console.error("Failed to fetch user events for suspension:", evtFetchErr);
+      log.error("Failed to fetch user events for suspension", { error: evtFetchErr });
       warnings.push("Failed to fetch events for suspension");
     }
 
@@ -122,7 +124,7 @@ export async function POST(
       .eq("status", "approved");
 
     if (clubFetchErr) {
-      console.error("Failed to fetch user clubs for suspension:", clubFetchErr);
+      log.error("Failed to fetch user clubs for suspension", { error: clubFetchErr });
       warnings.push("Failed to fetch clubs for suspension");
     }
 
@@ -135,7 +137,7 @@ export async function POST(
         .eq("status", "approved");
 
       if (evtUpdateErr) {
-        console.error("Failed to suspend user events:", evtUpdateErr);
+        log.error("Failed to suspend user events", { error: evtUpdateErr });
         warnings.push("Some events may not have been suspended");
       }
 
@@ -152,7 +154,7 @@ export async function POST(
       );
 
       if (evtReviewErr) {
-        console.error("Failed to create event moderation reviews:", evtReviewErr);
+        log.error("Failed to create event moderation reviews", { error: evtReviewErr });
         warnings.push("Some event moderation reviews may not have been created");
       }
     }
@@ -166,7 +168,7 @@ export async function POST(
         .eq("status", "approved");
 
       if (clubUpdateErr) {
-        console.error("Failed to suspend user clubs:", clubUpdateErr);
+        log.error("Failed to suspend user clubs", { error: clubUpdateErr });
         warnings.push("Some clubs may not have been suspended");
       }
 
@@ -183,7 +185,7 @@ export async function POST(
       );
 
       if (clubReviewErr) {
-        console.error("Failed to create club moderation reviews:", clubReviewErr);
+        log.error("Failed to create club moderation reviews", { error: clubReviewErr });
         warnings.push("Some club moderation reviews may not have been created");
       }
     }
@@ -205,7 +207,7 @@ export async function POST(
       created_at: now.toISOString(),
     });
   } catch (notifErr) {
-    console.error("[Admin] Failed to send ban notification:", notifErr);
+    log.error("Failed to send ban notification", { scope: "Admin", error: notifErr });
   }
 
   // Log audit action
@@ -225,22 +227,22 @@ export async function POST(
       },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   return NextResponse.json({
     success: true,
     ...(warnings.length > 0 && { warnings }),
   });
-}
+});
 
 /**
  * DELETE /api/admin/users/[id]/ban — Unban a user
  */
-export async function DELETE(
+export const DELETE = withRoute({ cache: "private", action: "unban user" }, async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -299,7 +301,7 @@ export async function DELETE(
       created_at: new Date().toISOString(),
     });
   } catch (notifErr) {
-    console.error("[Admin] Failed to send unban notification:", notifErr);
+    log.error("Failed to send unban notification", { scope: "Admin", error: notifErr });
   }
 
   // Log audit action
@@ -315,8 +317,8 @@ export async function DELETE(
       },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   return NextResponse.json({ success: true });
-}
+});

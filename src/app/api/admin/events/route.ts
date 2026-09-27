@@ -7,6 +7,8 @@ import { logAdminAction } from "@/lib/audit";
 import { parseBody, readQuery } from "@/server/body";
 import { AdminEventCreateBody, AdminEventsQuery } from "@/contracts/admin";
 import { computeEventContentHash } from "@/lib/contentHash";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 type MetricsSortField = "popularity_score" | "trending_score" | "view_count" | "click_count" | "save_count";
 const METRICS_SORT_FIELDS = new Set<string>(["popularity_score", "trending_score", "view_count", "click_count", "save_count"]);
@@ -22,7 +24,7 @@ interface PopularityScores {
   unique_viewers: number;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch admin events" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -112,9 +114,9 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ events, total: count ?? 0 });
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create event" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -190,8 +192,8 @@ export async function POST(request: NextRequest) {
       metadata: { title },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   return NextResponse.json({ event: data }, { status: 201 });
-}
+});

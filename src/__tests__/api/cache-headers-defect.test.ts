@@ -32,6 +32,11 @@
  * When 06-12's `cachePolicy` lands on an arm, C1 and C2 for that arm MOVE to
  * `private, no-store`, with a defect-ledger row citing F-026.
  *
+ * Moved so far (`ADOPTED` below): C4 and C5 pin the adopted arms at
+ * `private, no-store` with a UUID `x-request-id`, signed in and anonymous
+ * (06-13: the admin and moderation arms; the club, organizer-request and
+ * my-clubs arms). C1 and C2 keep the arms not yet wrapped.
+ *
  * The cookie fake is served through the table's `withContainsAndNot`
  * wrapper for every row (admin/organizers and events/happening-now call
  * `contains`/`not`, which the shared fake lacks); `users/search` still meets
@@ -324,7 +329,7 @@ const WORKLIST = INVENTORY.filter(
 
 type Who = "signed-in" | "anonymous";
 
-async function cacheControl(route: string, auth: string, who: Who): Promise<string | null> {
+async function headersOf(route: string, auth: string, who: Who): Promise<Headers> {
   const persona = auth === "admin" ? "admin" : "owner";
   const init = PERSONAS[persona]();
   if (who === "anonymous") init.user = null;
@@ -336,12 +341,45 @@ async function cacheControl(route: string, auth: string, who: Who): Promise<stri
     new NextRequest(`http://localhost:3000/api/${arm.path}`)
   );
   if (!response) throw new Error(`${route} returned no response`);
-  return response.headers.get("Cache-Control");
+  return response.headers;
 }
+
+async function cacheControl(route: string, auth: string, who: Who): Promise<string | null> {
+  return (await headersOf(route, auth, who)).get("Cache-Control");
+}
+
+/**
+ * Arms whose handler now wears `withRoute({ cache: "private" })`: their C1 and
+ * C2 rows moved to C4 and C5 (F-026 fixed for the arm; one defect-ledger row
+ * per moved row). Only ever grows, until C1 and C2 are empty (06-14).
+ */
+const ADOPTED: ReadonlySet<string> = new Set([
+  // 06-13 Task 1: admin and moderation
+  "/api/admin/analytics/events",
+  "/api/admin/analytics/users",
+  "/api/admin/audit-log",
+  "/api/admin/calculate-popularity",
+  "/api/admin/clubs",
+  "/api/admin/events",
+  "/api/admin/experiments/[id]/results",
+  "/api/admin/experiments/[id]",
+  "/api/admin/experiments",
+  "/api/admin/featured",
+  "/api/admin/organizer-requests",
+  "/api/admin/organizers",
+  "/api/admin/reports",
+  "/api/admin/stats",
+  "/api/admin/users",
+  "/api/moderation/reviews/[targetType]/[targetId]",
+]);
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const drivable = WORKLIST.filter((row) => !(row.route in NOT_DRIVABLE)).map(
   (row): [string, InventoryRow] => [row.route, row]
 );
+const pending = drivable.filter(([route]) => !ADOPTED.has(route));
+const adopted = drivable.filter(([route]) => ADOPTED.has(route));
 
 describe("C0: the worklist is the inventory", () => {
   it("every private-target GET row has an invoker or a NOT_DRIVABLE reason", () => {
@@ -352,6 +390,12 @@ describe("C0: the worklist is the inventory", () => {
     expect(drivable).toHaveLength(44);
   });
 
+  it("every ADOPTED route is a drivable worklist row", () => {
+    const routes = drivable.map(([route]) => route);
+    expect([...ADOPTED].filter((r) => !routes.includes(r))).toEqual([]);
+    expect(pending.length + adopted.length).toBe(44);
+  });
+
   it("every NOT_DRIVABLE route is in the worklist", () => {
     const routes = WORKLIST.map((row) => row.route);
     expect(Object.keys(NOT_DRIVABLE).filter((r) => !routes.includes(r))).toEqual([]);
@@ -359,14 +403,14 @@ describe("C0: the worklist is the inventory", () => {
 });
 
 describe("C1: signed in, no private, no-store today", () => {
-  it.each(drivable)("%s", async (route, row) => {
+  it.each(pending)("%s", async (route, row) => {
     const value = await cacheControl(route, row.auth_requirement, "signed-in");
     expect(value).toBeNull();
   });
 });
 
 describe("C2: anonymous, no private, no-store today", () => {
-  it.each(drivable)("%s", async (route, row) => {
+  it.each(pending)("%s", async (route, row) => {
     const value = await cacheControl(route, row.auth_requirement, "anonymous");
     expect(value).toBeNull();
   });
@@ -375,5 +419,23 @@ describe("C2: anonymous, no private, no-store today", () => {
 describe("C3: the control already sends it", () => {
   it.each<Who>(["signed-in", "anonymous"])("/api/recommendations, %s", async (who) => {
     expect(await cacheControl(CONTROL, "anonymous", who)).toBe("private, no-store");
+  });
+});
+
+describe("C4: adopted, signed in: private, no-store and a request id (F-026 fixed)", () => {
+  it.each(adopted)("%s", async (route, row) => {
+    const headers = await headersOf(route, row.auth_requirement, "signed-in");
+    expect(headers.get("Cache-Control")).toBe("private, no-store");
+    expect(headers.get("x-request-id")).toMatch(UUID);
+    expect(headers.get("Vary")).toBeNull();
+  });
+});
+
+describe("C5: adopted, anonymous: private, no-store and a request id (F-026 fixed)", () => {
+  it.each(adopted)("%s", async (route, row) => {
+    const headers = await headersOf(route, row.auth_requirement, "anonymous");
+    expect(headers.get("Cache-Control")).toBe("private, no-store");
+    expect(headers.get("x-request-id")).toMatch(UUID);
+    expect(headers.get("Vary")).toBeNull();
   });
 });

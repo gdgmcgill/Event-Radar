@@ -8,11 +8,13 @@ import { logAdminAction } from "@/lib/audit";
 import { REJECTION_CATEGORIES } from "@/types";
 import { parseBody, parseWith } from "@/server/body";
 import { EventStatusBody, ModerationReason } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update event status" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -134,7 +136,7 @@ export async function PATCH(
       metadata: { event_title: event.title },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   // Send notification to event creator
@@ -169,11 +171,11 @@ export async function PATCH(
       }
     }
   } catch (notifErr) {
-    console.error("[Admin] Failed to send notification:", notifErr);
+    log.error("Failed to send notification", { scope: "Admin", error: notifErr });
   }
 
   return NextResponse.json({ success: true });
-}
+});
 
 interface CreatorNotification {
   user_id: string;
@@ -207,13 +209,14 @@ async function notifyEventCreator(row: CreatorNotification): Promise<void> {
     .eq("type", row.type)
     .maybeSingle();
   if (readError) {
-    console.error("[Admin] Failed to read existing notification:", readError);
+    log.error("Failed to read existing notification", { scope: "Admin", error: readError });
     return;
   }
 
+  const { title, message } = row;
   const fresh = {
-    title: row.title,
-    message: row.message,
+    title,
+    message,
     read: false,
     created_at: new Date().toISOString(),
   };
@@ -221,6 +224,6 @@ async function notifyEventCreator(row: CreatorNotification): Promise<void> {
     ? await elevated.from("notifications").update(fresh).eq("id", existing.id)
     : await elevated.from("notifications").insert({ ...row, ...fresh });
   if (writeError) {
-    console.error("[Admin] Failed to send notification:", writeError);
+    log.error("Failed to send notification", { scope: "Admin", error: writeError });
   }
 }

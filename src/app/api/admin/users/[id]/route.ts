@@ -13,11 +13,12 @@ import {
   AdminUserUpdateBody,
   type UserRoleValue,
 } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update user" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -103,4 +104,4 @@ export async function PATCH(
   }
 
   return NextResponse.json({ user: data });
-}
+});

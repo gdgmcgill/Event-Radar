@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { withRoute } from "@/server/route";
 
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch users" }, async () => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -21,4 +22,4 @@ export async function GET() {
   }
 
   return NextResponse.json({ users: data });
-}
+});

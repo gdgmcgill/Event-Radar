@@ -26,6 +26,14 @@
  * wrapper's generic body), with a defect-ledger row citing F-058, and U0's
  * list shrinks with it.
  *
+ * Moved so far (`ADOPTED` below, the handler's `withRoute` action): U3 pins
+ * each adopted arm's answer to the same throw, `500 {"error":"Failed to
+ * <action>"}` as JSON with `private, no-store` and a UUID `x-request-id`
+ * (06-13: the admin, moderation, club and organizer-request arms). U0 now
+ * reads both export forms, `export async function VERB` and `export const
+ * VERB = withRoute(`, so the arm list stays the no-try tree (22 files, 26
+ * arms) while the rows move.
+ *
  * Personas and the world come from `src/__tests__/contracts/badRequestTable.ts`.
  */
 
@@ -284,7 +292,8 @@ function arrange(persona: PersonaName, throws: Throws): void {
 // ─── U0: the arm list is the tree ──────────────────────────────────────────
 
 const APP = join(process.cwd(), "src", "app");
-const VERB = /export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/g;
+const VERB =
+  /export\s+(?:async\s+function|const)\s+(GET|POST|PUT|PATCH|DELETE)\b/g;
 
 function noTryRouteFiles(): Record<string, string[]> {
   const out: Record<string, string[]> = {};
@@ -308,12 +317,55 @@ describe("U0: the arm list is the tree", () => {
     expect(Object.keys(tree)).toHaveLength(22);
     expect(ARMS).toHaveLength(26);
   });
+
+  it("every ADOPTED key is an arm, and its file declares that verb through withRoute", () => {
+    const ids = ARMS.map(armId);
+    expect(Object.keys(ADOPTED).filter((id) => !ids.includes(id))).toEqual([]);
+    for (const arm of adoptedArms) {
+      const source = readFileSync(join(APP, arm.file, "route.ts"), "utf8");
+      expect(source).toMatch(
+        new RegExp(`export const ${arm.verb} = withRoute\\(\\{ cache: "private", action: "${ADOPTED[armId(arm)]}" \\}`)
+      );
+    }
+    expect(pendingArms.length + adoptedArms.length).toBe(26);
+  });
 });
 
 // ─── U1: a throw inside the handler rejects its promise ────────────────────
 
+/**
+ * Arms whose file adopted `withRoute`, keyed "<file> <verb>", valued by the
+ * handler's action: their U1 row moved to U3 (F-058 fixed for the arm; one
+ * defect-ledger row per moved row). Only ever grows, until U1 is empty.
+ */
+const ADOPTED: Readonly<Record<string, string>> = {
+  // 06-13 Task 1: admin and moderation
+  "api/admin/analytics/events GET": "fetch event analytics",
+  "api/admin/analytics/users GET": "fetch user analytics",
+  "api/admin/audit-log GET": "fetch audit log",
+  "api/admin/clubs GET": "fetch admin clubs",
+  "api/admin/events/[id]/edits PATCH": "review event edits",
+  "api/admin/experiments/[id]/results GET": "fetch experiment results",
+  "api/admin/experiments/[id] GET": "fetch experiment",
+  "api/admin/experiments/[id] PATCH": "update experiment",
+  "api/admin/experiments/[id] DELETE": "delete experiment",
+  "api/admin/experiments GET": "fetch experiments",
+  "api/admin/experiments POST": "create experiment",
+  "api/admin/organizer-requests GET": "fetch organizer requests",
+  "api/admin/organizers GET": "fetch organizers",
+  "api/admin/reports GET": "fetch reports",
+  "api/admin/stats GET": "fetch stats",
+  "api/admin/users/[id] PATCH": "update user",
+  "api/admin/users GET": "fetch users",
+  "api/moderation/reviews/[targetType]/[targetId] GET": "fetch moderation reviews",
+};
+
+const armId = (arm: Arm) => `${arm.file} ${arm.verb}`;
+const pendingArms = ARMS.filter((arm) => !(armId(arm) in ADOPTED));
+const adoptedArms = ARMS.filter((arm) => armId(arm) in ADOPTED);
+
 describe("U1: a throwing dependency rejects the handler promise (no JSON body)", () => {
-  it.each(ARMS.map((arm): [string, Arm] => [`${arm.file} ${arm.verb}`, arm]))(
+  it.each(pendingArms.map((arm): [string, Arm] => [armId(arm), arm]))(
     "%s",
     async (_label, arm) => {
       arrange(arm.persona, arm.throws);
@@ -331,4 +383,26 @@ describe("U2: control — a route with a try answers a JSON 500 to the same thro
     expect(response.status).toBe(500);
     expect(response.headers.get("content-type")).toMatch(/application\/json/);
   });
+});
+
+// ─── U3: the adopted arms answer the wrapper's JSON 500 ────────────────────
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+describe("U3: adopted, the same throw answers a JSON 500 (F-058 fixed)", () => {
+  it.each(adoptedArms.map((arm): [string, Arm] => [armId(arm), arm]))(
+    "%s",
+    async (_label, arm) => {
+      arrange(arm.persona, arm.throws);
+      const response = await arm.invoke();
+      if (!response) throw new Error(`${armId(arm)}: no response`);
+      expect(response.status).toBe(500);
+      expect(response.headers.get("content-type")).toMatch(/application\/json/);
+      expect(await response.json()).toEqual({
+        error: `Failed to ${ADOPTED[armId(arm)]}`,
+      });
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(response.headers.get("x-request-id")).toMatch(UUID);
+    }
+  );
 });

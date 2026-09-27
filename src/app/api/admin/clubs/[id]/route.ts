@@ -8,11 +8,13 @@ import { logAdminAction } from "@/lib/audit";
 import { REJECTION_CATEGORIES } from "@/types";
 import { parseBody } from "@/server/body";
 import { AdminClubDecisionBody } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update club status" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -126,7 +128,7 @@ export async function PATCH(
       metadata: { club_name: club.name },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   if (status === "approved" && club.created_by) {
@@ -173,7 +175,7 @@ export async function PATCH(
         message: `Your club "${club.name}" has been approved. You are now the owner and can create events.`,
       });
     } catch (notifErr) {
-      console.error("[Admin] Failed to send club notification:", notifErr);
+      log.error("Failed to send club notification", { scope: "Admin", error: notifErr });
     }
   }
 
@@ -188,7 +190,7 @@ export async function PATCH(
         club_id: id,
       });
     } catch (notifErr) {
-      console.error("[Admin] Failed to send club notification:", notifErr);
+      log.error("Failed to send club notification", { scope: "Admin", error: notifErr });
     }
   }
 
@@ -203,9 +205,9 @@ export async function PATCH(
         club_id: id,
       });
     } catch (notifErr) {
-      console.error("[Admin] Failed to send club notification:", notifErr);
+      log.error("Failed to send club notification", { scope: "Admin", error: notifErr });
     }
   }
 
   return NextResponse.json({ success: true });
-}
+});

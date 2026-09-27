@@ -5,8 +5,9 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { parseBody } from "@/server/body";
 import { ExperimentCreateBody } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
 
-export async function GET(_request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch experiments" }, async (_request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -68,9 +69,9 @@ export async function GET(_request: NextRequest) {
   }));
 
   return NextResponse.json({ experiments: enrichedExperiments });
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create experiment" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -122,4 +123,4 @@ export async function POST(request: NextRequest) {
     { experiment: { ...experiment, variants: createdVariants } },
     { status: 201 }
   );
-}
+});

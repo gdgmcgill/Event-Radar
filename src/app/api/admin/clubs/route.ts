@@ -5,8 +5,10 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { readQuery } from "@/server/body";
 import { AdminClubsQuery } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch admin clubs" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -28,9 +30,9 @@ export async function GET(request: NextRequest) {
   const { data, error, count } = await query;
 
   if (error) {
-    console.error("Error fetching admin clubs:", error);
+    log.error("Error fetching admin clubs", { error: error });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ clubs: data ?? [], total: count ?? 0 });
-}
+});

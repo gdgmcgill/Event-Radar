@@ -6,11 +6,13 @@ import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { ReportDecisionBody } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update report" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -79,8 +81,8 @@ export async function PATCH(
       metadata: { event_id: report.event_id },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   return NextResponse.json({ success: true });
-}
+});

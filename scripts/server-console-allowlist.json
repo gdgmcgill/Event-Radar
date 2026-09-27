@@ -1,70 +1,5 @@
 [
   {
-    "file": "src/app/api/admin/calculate-popularity/route.ts",
-    "rule": "S1",
-    "count": 6
-  },
-  {
-    "file": "src/app/api/admin/calculate-popularity/route.ts",
-    "rule": "S2",
-    "count": 2
-  },
-  {
-    "file": "src/app/api/admin/clubs/[id]/route.ts",
-    "rule": "S1",
-    "count": 4
-  },
-  {
-    "file": "src/app/api/admin/clubs/route.ts",
-    "rule": "S1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/events/[id]/route.ts",
-    "rule": "S1",
-    "count": 2
-  },
-  {
-    "file": "src/app/api/admin/events/[id]/status/route.ts",
-    "rule": "S1",
-    "count": 4
-  },
-  {
-    "file": "src/app/api/admin/events/[id]/status/route.ts",
-    "rule": "S2",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/events/route.ts",
-    "rule": "S1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/featured/[id]/route.ts",
-    "rule": "S1",
-    "count": 2
-  },
-  {
-    "file": "src/app/api/admin/featured/route.ts",
-    "rule": "S1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/organizer-requests/[id]/route.ts",
-    "rule": "S1",
-    "count": 2
-  },
-  {
-    "file": "src/app/api/admin/reports/[id]/route.ts",
-    "rule": "S1",
-    "count": 1
-  },
-  {
-    "file": "src/app/api/admin/users/[id]/ban/route.ts",
-    "rule": "S1",
-    "count": 10
-  },
-  {
     "file": "src/app/api/calendar/events/route.ts",
     "rule": "S1",
     "count": 1
@@ -223,11 +158,6 @@
     "file": "src/app/api/interactions/route.ts",
     "rule": "S1",
     "count": 3
-  },
-  {
-    "file": "src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts",
-    "rule": "S2",
-    "count": 1
   },
   {
     "file": "src/app/api/notifications/[id]/route.ts",

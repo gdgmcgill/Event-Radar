@@ -7,11 +7,13 @@ import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { FeaturedUpdateBody } from "@/contracts/admin";
 import type { TablesUpdate } from "@/lib/supabase/types";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update featured event" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -52,7 +54,7 @@ export async function PATCH(
         metadata: updates,
       });
     } catch (auditErr) {
-      console.error("[Admin] Failed to log audit action:", auditErr);
+      log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
     }
 
     return NextResponse.json({ featured: data });
@@ -62,12 +64,12 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withRoute({ cache: "private", action: "delete featured event" }, async (
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -97,7 +99,7 @@ export async function DELETE(
         targetId: id,
       });
     } catch (auditErr) {
-      console.error("[Admin] Failed to log audit action:", auditErr);
+      log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
     }
 
     return NextResponse.json({ success: true });
@@ -107,4 +109,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});

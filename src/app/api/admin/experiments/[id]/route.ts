@@ -6,12 +6,13 @@ import { requireRole } from "@/server/authz/requireRole";
 import { parseBody } from "@/server/body";
 import { ExperimentUpdateBody } from "@/contracts/admin";
 import type { TablesUpdate } from "@/lib/supabase/types";
+import { withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "fetch experiment" }, async (_request: NextRequest, { params }: RouteParams) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -75,9 +76,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       total_assignments: totalAssignments,
     },
   });
-}
+});
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withRoute({ cache: "private", action: "update experiment" }, async (request: NextRequest, { params }: RouteParams) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -124,9 +125,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   return NextResponse.json({ experiment });
-}
+});
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export const DELETE = withRoute({ cache: "private", action: "delete experiment" }, async (_request: NextRequest, { params }: RouteParams) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -166,4 +167,4 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   }
 
   return NextResponse.json({ ok: true });
-}
+});

@@ -5,8 +5,9 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { readQuery } from "@/server/body";
 import { OrganizerRequestsQuery } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch organizer requests" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -36,4 +37,4 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ requests: data, total: count ?? 0 });
-}
+});

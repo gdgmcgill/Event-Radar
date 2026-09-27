@@ -4,6 +4,7 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { chiSquaredTest } from "@/lib/experiments";
+import { withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -18,7 +19,7 @@ type VariantRow = {
 type AssignmentRow = { variant_id: string };
 type FeedbackRow = { action: string; experiment_variant_id: string | null };
 
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "fetch experiment results" }, async (_request: NextRequest, { params }: RouteParams) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -148,4 +149,4 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     variant_metrics: variantMetrics,
     significance,
   });
-}
+});

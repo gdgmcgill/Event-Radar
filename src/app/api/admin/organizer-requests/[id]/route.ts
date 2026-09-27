@@ -7,11 +7,13 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { OrganizerRequestDecisionBody } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "review organizer request" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -88,7 +90,7 @@ export async function PATCH(
       metadata: { user_id: orgRequest.user_id, club_id: orgRequest.club_id },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   if (status === "approved") {
@@ -144,8 +146,8 @@ export async function PATCH(
         : `Your request to become an organizer for ${clubName} was not approved.`,
     });
   } catch (notifErr) {
-    console.error("[Admin] Failed to send notification:", notifErr);
+    log.error("Failed to send notification", { scope: "Admin", error: notifErr });
   }
 
   return NextResponse.json({ success: true });
-}
+});

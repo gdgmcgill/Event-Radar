@@ -5,8 +5,9 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { readQuery } from "@/server/body";
 import { ReportsQuery } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch reports" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -111,4 +112,4 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json({ reports: enriched });
-}
+});

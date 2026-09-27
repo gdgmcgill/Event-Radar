@@ -30,6 +30,16 @@
  * row MOVES to a generic body with no sentinel, with a defect-ledger row
  * citing F-059, and E0's census shrinks with it.
  *
+ * Moved so far (`FIXED` below): E2 drives each fixed site the same way and
+ * pins the route's generic text where the sentinel was, with the sentinel
+ * nowhere in the body (06-13: admin, moderation, clubs and organizer
+ * requests). A NOT_DRIVEN line that the sweep rewrote so that it no longer
+ * holds a `.message` token moves to `RETIRED` with its reason. C7's
+ * exclusion of `dateError.message` also skips `updateError.message` (the
+ * substring match), which is why the two appeal `updateError.message` 500s
+ * were never in C7; the one in this plan's families is added to E2 as an
+ * addition (`ADDED`), driven the same way.
+ *
  * Seams: `@/lib/supabase/server` returns the cookie fake, with
  * `auth.getSession` and `auth.signInWithOAuth` added for the health rows;
  * `@/lib/supabase/service` and `@supabase/supabase-js` return the elevated
@@ -414,6 +424,40 @@ const NOT_DRIVEN: Record<string, string> = {
     "thrown into the handler's own catch, which logs it and redirects to /?error=profile_sync_failed with no text",
 };
 
+/**
+ * Fixed sites (F-059 fixed for the site, DEC-75): the route's generic text
+ * now stands where the sentinel was. `at` reads it; the whole body must not
+ * contain the sentinel. One defect-ledger row per moved row.
+ */
+const FIXED: Readonly<Record<string, { at: (body: any) => unknown; generic: unknown }>> = {
+  // 06-13 Task 1: admin and moderation
+  "src/app/api/admin/calculate-popularity/route.ts:108": {
+    at: (b) => b.results.errors,
+    generic: [{ event_id: EVENT_OWN, error: "Failed to update popularity" }],
+  },
+  "src/app/api/admin/calculate-popularity/route.ts:118": {
+    at: (b) => b.results.errors,
+    generic: [{ event_id: EVENT_OWN, error: "Failed to update popularity" }],
+  },
+  "src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts:55": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch moderation reviews" },
+  },
+};
+
+/** Sites outside census C7 that a sweep fixed; pinned in E2 like a moved row. */
+const ADDED: Site[] = [];
+
+/** NOT_DRIVEN lines the sweep rewrote so that no `.message` token remains. */
+const RETIRED: Record<string, string> = {
+  "src/app/api/admin/events/[id]/status/route.ts:244":
+    "06-13: the notification copy reads `const { title, message } = row`, so the line no longer carries a `.message` token (no behaviour change; it was never a response)",
+};
+
+const LIVE_SITES = SITES.filter((row) => !(row.site in FIXED));
+const FIXED_SITES = [...SITES.filter((row) => row.site in FIXED), ...ADDED];
+const LIVE_NOT_DRIVEN = Object.keys(NOT_DRIVEN).filter((site) => !(site in RETIRED));
+
 // ─── Running a row ─────────────────────────────────────────────────────────
 
 function withHealthAuth(client: Client): Client {
@@ -466,26 +510,48 @@ function censusC7(): Record<string, number> {
 }
 
 describe("E0: the rows plus NOT_DRIVEN are census C7", () => {
-  it("file by file, 34 driven + 6 listed = 40", () => {
+  it("file by file, the live driven rows plus the live NOT_DRIVEN lines are the census", () => {
     const listed: Record<string, number> = {};
-    for (const site of [...SITES.map((row) => row.site), ...Object.keys(NOT_DRIVEN)]) {
+    for (const site of [...LIVE_SITES.map((row) => row.site), ...LIVE_NOT_DRIVEN]) {
       const file = site.replace(/:\d+$/, "");
       listed[file] = (listed[file] ?? 0) + 1;
     }
     expect(listed).toEqual(censusC7());
+    expect(LIVE_SITES).toHaveLength(31);
+    expect(LIVE_NOT_DRIVEN).toHaveLength(5);
+  });
+
+  it("the census at f550de9 is unchanged: 34 driven + 6 listed = 40, and every move is accounted for", () => {
     expect(SITES).toHaveLength(34);
     expect(Object.keys(NOT_DRIVEN)).toHaveLength(6);
     expect(new Set(SITES.map((row) => row.site)).size).toBe(34);
+    for (const site of Object.keys(FIXED)) {
+      expect(SITES.some((row) => row.site === site)).toBe(true);
+    }
+    for (const site of Object.keys(RETIRED)) expect(site in NOT_DRIVEN).toBe(true);
+    expect(LIVE_SITES.length + Object.keys(FIXED).length).toBe(34);
   });
 });
 
 // ─── E1: the sentinel reaches the caller ───────────────────────────────────
 
 describe("E1: a caught error's text reaches the response body today", () => {
-  it.each(SITES.map((row): [string, Site] => [row.site, row]))("%s", async (_label, row) => {
+  it.each(LIVE_SITES.map((row): [string, Site] => [row.site, row]))("%s", async (_label, row) => {
     const { status, body } = await drive(row);
     expect(status).toBe(row.status);
     const where = row.at ? row.at(body) : body;
     expect(JSON.stringify(where)).toContain(S(row.n));
+  });
+});
+
+// ─── E2: fixed, the generic text instead of the sentinel ──────────────────
+
+describe("E2: fixed, the caller gets the route's generic text (F-059 fixed)", () => {
+  it.each(FIXED_SITES.map((row): [string, Site] => [row.site, row]))("%s", async (_label, row) => {
+    const fix = FIXED[row.site];
+    const { status, body } = await drive(row);
+    expect(status).toBe(row.status);
+    expect(JSON.stringify(body)).not.toContain(S(row.n));
+    expect(fix.at(body)).toEqual(fix.generic);
   });
 });

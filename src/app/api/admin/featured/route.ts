@@ -7,8 +7,10 @@ import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { FeaturedCreateBody } from "@/contracts/admin";
 import { getESTNowISO } from "@/lib/timezone";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch featured events" }, async () => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -40,9 +42,9 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create featured event" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
         metadata: { event_id, sponsor_name, starts_at, ends_at },
       });
     } catch (auditErr) {
-      console.error("[Admin] Failed to log audit action:", auditErr);
+      log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
     }
 
     return NextResponse.json({ featured: data }, { status: 201 });
@@ -102,4 +104,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

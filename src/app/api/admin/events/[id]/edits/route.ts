@@ -8,6 +8,7 @@ import { logAdminAction } from "@/lib/audit";
 import { parseBody } from "@/server/body";
 import { EventEditsDecisionBody } from "@/contracts/admin";
 import type { TablesUpdate } from "@/lib/supabase/types";
+import { withRoute } from "@/server/route";
 
 /**
  * The fields PATCH /api/events/[id] routes through pending_edits (its
@@ -19,7 +20,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withRoute({ cache: "private", action: "review event edits" }, async (request: NextRequest, { params }: RouteParams) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -161,4 +162,4 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   });
 
   return NextResponse.json({ success: true, message: "Edits rejected" });
-}
+});
