@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: executing
-stopped_at: Completed 06-06-PLAN.md
-last_updated: "2026-09-27T02:05:30.397Z"
+stopped_at: Completed 06-07-PLAN.md
+last_updated: "2026-09-27T02:35:02.550Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 80
-  completed_plans: 68
+  completed_plans: 69
   percent: 63
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 06 (Slices 6–7 — Async Edge, Contracts, Caching, Observability) — EXECUTING
-Plan: 7 of 18
+Plan: 8 of 18
 Status: Ready to execute
 Last activity: 2026-09-25 — Phase 06 execution started
 
@@ -122,6 +122,7 @@ Progress: [███████░░░] 73%
 | Phase 06 P04 | 20min | 3 tasks | 32 files |
 | Phase 06 P05 | 25min | 3 tasks | 7 files |
 | Phase 06 P06 | 18min | 2 tasks | 6 files |
+| Phase 06 P07 | 26min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -326,6 +327,10 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-06: REFAC-14 marked Complete — All four clauses MET by committed evidence (slice-6-close.md section 3); the webhook redeploy (DI-81) is F-039's deployment-record clause, not a REFAC-14 clause, and the deployed function already requires credentials and fails closed
 - [Phase 06]: 06-06: DI-82 dispositioned to Phase 7, compute_user_scores() unchanged — 06-06 forbids source changes and 06-05 never directs a change; target is a fix-forward migration writing the unqualified deletes as DELETE ... WHERE true, 070 row 1 md5 re-derived under a signed DEC-68 amendment, a DEFECT row moved on the real stack
 - [Phase 06]: 06-06: the contracts gate's 'no slice-6 file' means the four slice-6 contract families — recommendations, interactions, feedback, notifications have 0 allow-list entries; the two admin/reports entries belong to the admin family that 06-10 adopts
+- [Phase 06]: 06-07: the shared fakeSupabase.ts is not extended; admin/organizers and events/happening-now are driven through a test-local withContainsAndNot wrapper (contains delegates to overlaps, exact for a one-element array; not is recorded through or) — PRESERVE suites (writeHandlerTable's fake-gap outcomes) pin the throw the missing contains/ilike/not produce; extending the fake would shift them. The 06-02 precedent, fakeSupabase.ts git diff empty
+- [Phase 06]: 06-07: field is pinned where the handlers emit it today, which is more than C10's four sites: clubs POST and clubs/[id] PATCH 'Invalid value for <field>' carry field, and so does the end_date-only branch of events/[id] PATCH — Measured on the unmodified handlers; bad-request-characterization.test.ts FIELD_SITES lists every measured site, so 06-08 and 06-09 must name these keys in parseBody's fieldFor or the PRESERVE rows go red
+- [Phase 06]: 06-07: the F-059 worklist is census C7 as 34 driven sites plus 6 listed lines (40); events/route.ts:448 is a body site, not the benign-error-only line floor.before.txt's C7 cell called it — Measured: the text reaches the 500 body through safeMessage (route.ts:470-473) unless it starts with '{'; the 6 listed lines are the status:244 notification copy, two callback log lines, the callback redirect Location (pinned by route.test.ts:269) and two internally caught callback throws
+- [Phase 06]: 06-07: of 110 console spy sites (56 files) 13 are exact-argument (kind B); only src/lib/eventTags.test.ts is a PRESERVE file with B assertions, so 06-14 moves its two [tags] assertions to a -defect file citing F-058; the other 11 B sites are edited in place by 06-12 (8), 06-13 (2) and 06-14 (1) — The logger writes warn and error through console.error and info and debug through console.log, so the 97 A sites need no edit; the three B sites spying on console.warn (upstashStore :96, eventTags :190 and :267) must switch to console.error; research's 42/68 was exact at f215fb7 and the +14 files are silencing-only
 
 ### Pending Todos
 
@@ -378,7 +383,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T02:05:30.392Z
-Stopped at: Completed 06-06-PLAN.md
+Last session: 2026-09-27T02:35:02.545Z
+Stopped at: Completed 06-07-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None
