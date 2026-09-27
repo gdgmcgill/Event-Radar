@@ -6,7 +6,7 @@ current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: verifying
 stopped_at: M0 implementation delivered; local verification passed; external certification and stated requirement gaps pending
-last_updated: "2026-09-27T23:02:01.086492+00:00"
+last_updated: "2026-09-27T23:10:42.471569+00:00"
 last_activity: 2026-09-27
 last_activity_desc: Product M0 foundation hardening and certification
 progress:
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 ## Current Position
 
-Phase6 executed 18/18 plans; M0 repairs are implemented locally.
+Phase6 executed 18/18 plans; M0 repairs are implemented and locally verified at `aabca3b`.
 Status: M0 IN PROGRESS — local verification green; stated requirement gaps, hosted certification and operational sign-off pending.
 Last activity: 2026-09-27 — foundation repairs, reproducible datasets, expanded RLS/API/browser certification.
 

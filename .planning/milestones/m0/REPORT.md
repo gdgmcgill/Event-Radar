@@ -3,7 +3,7 @@
 **Status: IN PROGRESS — local implementation and verification delivered; foundation NOT certified.**  
 **Prepared:** 2026-09-27.  
 **Workspace:** `codex/m0-foundation-certification`, based on `2e4c4ff32233e2a59d8258575d9c232bea9e3aa8`. The implementation commit is recorded in `evidence/environment.json`; the base SHA is not a tested M0 release SHA.  
-**Tested implementation commit:** see `evidence/environment.json`. **Remote CI / deployed build:** pending.
+**Tested implementation commit:** `aabca3b6bcf523a849449ddf93c6771dc4bb194e` (metadata-only follow-up records this SHA). **Remote CI / deployed build:** pending.
 
 This report implements the reporting requirement in [P1-M0](../../../docs/plans/2026-09-27-universe-phase-1-milestones.md) and [F0](../../../docs/plans/2026-09-27-universe-phase-1-implementation-plan.md). The authoritative finding and deferred-item ledgers remain under `.planning/audit/` and the foundation phase records. This is evidence and status reporting, not a competing remediation ledger or an owner risk acceptance.
 
