@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * PATCH /api/notifications/[id] - Mark a single notification as read
  */
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update notification" }, async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -29,15 +31,16 @@ export async function PATCH(
       .eq("user_id", user.id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Error marking notification read", { notificationId: id, error });
+      return NextResponse.json({ error: "Failed to update notification" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error updating notification:", error);
+    log.error("Error updating notification", { error });
     return NextResponse.json(
       { error: "Failed to update notification" },
       { status: 500 }
     );
   }
-}
+});

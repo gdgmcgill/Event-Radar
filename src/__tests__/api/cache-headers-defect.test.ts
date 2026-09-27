@@ -35,8 +35,10 @@
  * Moved so far (`ADOPTED` below): C4 and C5 pin the adopted arms at
  * `private, no-store` with a UUID `x-request-id`, signed in and anonymous
  * (06-13: the admin and moderation arms; the club, organizer-request and
- * my-clubs arms; 06-14 Task 1: the events and calendar arms). C1 and C2 keep
- * the arms not yet wrapped.
+ * my-clubs arms; 06-14 Task 1: the events and calendar arms; 06-14 Task 2:
+ * the rest). C1 and C2 kept the arms not yet wrapped; after 06-14 none is
+ * left, and each asserts its list is empty (Jest refuses an empty
+ * `it.each`).
  *
  * The cookie fake is served through the table's `withContainsAndNot`
  * wrapper for every row (admin/organizers and events/happening-now call
@@ -318,7 +320,7 @@ const NOT_DRIVABLE: Record<string, string> = {
   "/api/auth-debug":
     "the route file was deleted in Phase 5; the inventory row is stale (DI-58)",
   "/auth/callback":
-    "not under /api and a redirect, not a JSON GET; its Cache-Control is pinned by the callback suites and set by 06-14",
+    "not under /api and a redirect, not a JSON GET, and its client comes from @supabase/ssr, not this fake; 06-14 wraps it with the private class (the cache census checks the declaration)",
 };
 
 const WORKLIST = INVENTORY.filter(
@@ -391,6 +393,18 @@ const ADOPTED: ReadonlySet<string> = new Set([
   "/api/events/friends-activity",
   "/api/events/friends-organizing",
   "/api/events/my-events",
+  // 06-14 Task 2: notifications, recommendations, user, users
+  "/api/notifications/count",
+  "/api/notifications",
+  "/api/recommendations/analytics",
+  "/api/recommendations/feedback",
+  "/api/user/engagement",
+  "/api/user/following",
+  "/api/users/me/friends",
+  "/api/users/me/requests",
+  "/api/users/me/suggestions",
+  "/api/users/saved-events",
+  "/api/users/search",
 ]);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -423,6 +437,12 @@ describe("C0: the worklist is the inventory", () => {
 });
 
 describe("C1: signed in, no private, no-store today", () => {
+  if (pending.length === 0) {
+    it("no arm is pending (06-14 moved the last to C4)", () => {
+      expect(pending).toEqual([]);
+    });
+    return;
+  }
   it.each(pending)("%s", async (route, row) => {
     const value = await cacheControl(route, row.auth_requirement, "signed-in");
     expect(value).toBeNull();
@@ -430,6 +450,12 @@ describe("C1: signed in, no private, no-store today", () => {
 });
 
 describe("C2: anonymous, no private, no-store today", () => {
+  if (pending.length === 0) {
+    it("no arm is pending (06-14 moved the last to C5)", () => {
+      expect(pending).toEqual([]);
+    });
+    return;
+  }
   it.each(pending)("%s", async (route, row) => {
     const value = await cacheControl(route, row.auth_requirement, "anonymous");
     expect(value).toBeNull();

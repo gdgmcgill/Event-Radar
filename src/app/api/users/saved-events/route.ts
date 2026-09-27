@@ -16,6 +16,8 @@ import { serverError } from "@/server/errors";
 import { ok } from "@/server/http";
 import { readQuery } from "@/server/body";
 import { SavedEventsQuery } from "@/contracts/users";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * @swagger
@@ -41,7 +43,7 @@ import { SavedEventsQuery } from "@/contracts/users";
  *       500:
  *         description: Internal server error
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch saved events" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
 
@@ -66,7 +68,7 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (savedError) {
-      console.error("Fetch saved events error:", savedError);
+      log.error("Fetch saved events error", { error: savedError });
       return serverError("fetch saved events");
     }
 
@@ -97,7 +99,7 @@ export async function GET(request: NextRequest) {
     const { data: eventsData, error: eventsError } = await eventsQuery;
 
     if (eventsError) {
-      console.error("Fetch event details error:", eventsError);
+      log.error("Fetch event details error", { error: eventsError });
       return serverError("fetch event details");
     }
 
@@ -130,10 +132,10 @@ export async function GET(request: NextRequest) {
       savedEventIds: events.map((e) => e.id),
     });
   } catch (error) {
-    console.error("Unexpected error fetching saved events:", error);
+    log.error("Unexpected error fetching saved events", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

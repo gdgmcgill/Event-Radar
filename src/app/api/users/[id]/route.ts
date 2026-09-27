@@ -5,11 +5,13 @@ import { parseBody } from "@/server/body";
 import { UserUpdateBody } from "@/contracts/users";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update profile" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     // Onboarding exemption (DEC-34, research C2): the onboarding wizard calls
     // this self-update before onboarding is complete, so requireOnboarded is
@@ -52,7 +54,7 @@ export async function PATCH(
       .single();
 
     if (error) {
-      console.error("Database error while updating profile:", error);
+      log.error("Database error while updating profile", { error });
       return NextResponse.json(
         { error: "Failed to update profile" },
         { status: 500 }
@@ -67,10 +69,10 @@ export async function PATCH(
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error updating profile:", error);
+    log.error("Error updating profile", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

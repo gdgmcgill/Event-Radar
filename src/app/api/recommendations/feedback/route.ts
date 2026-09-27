@@ -20,9 +20,11 @@ import {
   type ThumbsFeedback,
 } from "@/contracts/recommendations";
 import type { NextRequest } from "next/server";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /** GET: fetch current user's thumbs feedback for given event_ids */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch feedback" }, async (request: NextRequest) => {
   try {
     const supabase = await createClient();
     const {
@@ -56,16 +58,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ feedback });
   } catch (error) {
-    console.error("Recommendation feedback GET error:", error);
+    log.error("Recommendation feedback GET error", { error });
     return NextResponse.json(
       { error: "Failed to fetch feedback" },
       { status: 500 }
     );
   }
-}
+});
 
 /** POST: thumbs (event_id + feedback) or analytics (event_id + recommendation_rank + action) */
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "submit feedback" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
 
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
         );
 
       if (upsertError) {
-        console.error("Recommendation explicit feedback upsert error:", upsertError);
+        log.error("Recommendation explicit feedback upsert error", { error: upsertError });
         return NextResponse.json(
           { error: "Failed to store feedback" },
           { status: 500 }
@@ -135,7 +137,7 @@ export async function POST(request: NextRequest) {
       .insert(row as any);
 
     if (error) {
-      console.error("Recommendation feedback insert error:", error);
+      log.error("Recommendation feedback insert error", { error });
       return NextResponse.json(
         { error: "Failed to store feedback" },
         { status: 500 }
@@ -144,10 +146,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Recommendation feedback error:", error);
+    log.error("Recommendation feedback error", { error });
     return NextResponse.json(
       { error: "Failed to submit feedback" },
       { status: 500 }
     );
   }
-}
+});

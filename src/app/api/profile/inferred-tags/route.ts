@@ -5,8 +5,10 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import type { NextRequest } from "next/server";
 import { parseBody } from "@/server/body";
 import { InferredTagBody } from "@/contracts/users";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withRoute({ cache: "private", action: "remove tag" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -27,6 +29,10 @@ export async function DELETE(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
+    // DI-47(a): a caller with no users row never gets here (requireActiveUser
+    // answers 403 first). This 404 still answers a read error, or a row
+    // deleted after the context read, so it stays; Phase 7's persona matrix
+    // decides the one status for "Profile not found".
     if (!profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
@@ -40,7 +46,7 @@ export async function DELETE(request: NextRequest) {
       .eq("id", user.id);
 
     if (updateError) {
-      console.error("Failed to remove inferred tag:", updateError);
+      log.error("Failed to remove inferred tag", { error: updateError });
       return NextResponse.json(
         { error: "Failed to remove tag" },
         { status: 500 }
@@ -49,10 +55,10 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true, inferred_tags: updatedTags });
   } catch (error) {
-    console.error("Error removing inferred tag:", error);
+    log.error("Error removing inferred tag", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

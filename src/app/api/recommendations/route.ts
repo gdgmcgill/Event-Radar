@@ -25,11 +25,15 @@ import { getESTNowISO } from "@/lib/timezone";
 import { parseQuery } from "@/server/body";
 import { getElevatedClient } from "@/server/db/elevated";
 import { RecommendationsQuery } from "@/contracts/recommendations";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * GET handler - recommendations for the current user (or anonymous fallback)
  */
-export async function GET(request: NextRequest) {
+// The private class sends the `private, no-store` each 200 below set itself
+// before 06-14, and now the 500 carries it too.
+export const GET = withRoute({ cache: "private", action: "fetch recommendations" }, async (request: NextRequest) => {
   try {
     const supabase = await createClient();
     // top_k and diversity keep today's silent parse-with-default semantics
@@ -69,8 +73,7 @@ export async function GET(request: NextRequest) {
           recommendations,
           source: "anonymous" as const,
           total_events: recommendations.length,
-        },
-        { headers: { "Cache-Control": "private, no-store" } }
+        }
       );
     }
 
@@ -142,8 +145,7 @@ export async function GET(request: NextRequest) {
           recommendations,
           source,
           total_events: recommendations.length,
-        },
-        { headers: { "Cache-Control": "private, no-store" } }
+        }
       );
     }
 
@@ -320,14 +322,13 @@ export async function GET(request: NextRequest) {
         },
         experiment_variant_id: experimentVariantId,
         total_events: recommendations.length,
-      },
-      { headers: { "Cache-Control": "private, no-store" } }
+      }
     );
   } catch (error) {
-    console.error("Error fetching recommendations:", error);
+    log.error("Error fetching recommendations", { error });
     return NextResponse.json(
       { error: "Failed to fetch recommendations" },
       { status: 500 }
     );
   }
-}
+});

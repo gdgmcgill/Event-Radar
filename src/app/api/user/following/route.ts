@@ -7,8 +7,10 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch followed clubs" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -41,16 +43,19 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching followed clubs:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Error fetching followed clubs", { error });
+      return NextResponse.json(
+        { error: "Failed to fetch followed clubs" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ following: following ?? [] });
   } catch (error) {
-    console.error("Error in GET user following:", error);
+    log.error("Error in GET user following", { error });
     return NextResponse.json(
       { error: "Failed to fetch followed clubs" },
       { status: 500 }
     );
   }
-}
+});

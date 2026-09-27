@@ -1,53 +1,56 @@
 /**
- * DEFECT characterization — F-025 and F-026: vercel.json applies one shared
- * cache directive to every API route (plan 06-07 pins it; plan 06-14 deletes
- * the rule once every route sets its own class, REFAC-19)
+ * DEFECT characterization — F-025 and F-026: vercel.json applied one shared
+ * cache directive to every API route (plan 06-07 pinned it; plan 06-14
+ * deleted the rule once every route declared its own class, REFAC-19)
  *
- * Measured at f550de9 by reading the file. `vercel.json` carries a single
+ * Measured at f550de9 by reading the file. `vercel.json` carried a single
  * `headers` rule, source `/api/(.*)`, setting
  * `Cache-Control: s-maxage=60, stale-while-revalidate=300`. With no
- * `private` and no `no-store`, Vercel's CDN may store any API answer that
- * does not set its own header, keyed on the URL alone (F-025), including all
- * the admin and authenticated GET arms (F-026; their missing header is
- * pinned by `src/__tests__/api/cache-headers-defect.test.ts`).
+ * `private` and no `no-store`, Vercel's CDN could store any API answer that
+ * did not set its own header, keyed on the URL alone (F-025), including all
+ * the admin and authenticated GET arms (F-026; their header is pinned by
+ * `src/__tests__/api/cache-headers-defect.test.ts`).
  *
- * What is pinned:
- *   - V1 the rule exists, exactly once, with that source, key and value;
- *   - V2 the value names neither `private` nor `no-store`;
- *   - V3 it is the file's only headers rule.
- *
- * When 06-14 deletes the rule, V1-V3 MOVE: the `headers` key is absent, with
- * a defect-ledger row citing F-025 and F-026.
+ * Moved in 06-14 (defect-ledger rows, F-025 and F-026): every route handler
+ * now wears `withRoute` with a declared cache class
+ * (`src/__tests__/api/cache-headers-census.test.ts`, PENDING_WRAP empty), so
+ * the rule is gone. What is pinned now:
+ *   - V1 the file has no `headers` key at all, so no path-level rule can
+ *     add a shareable directive to a response;
+ *   - V2 no value anywhere in the file names `s-maxage` (a rule cannot come
+ *     back under another key such as `routes`);
+ *   - V3 the deploy settings are unchanged: `$schema`, `buildCommand`,
+ *     `framework` and `regions` keep their values, and they are the only
+ *     keys.
+ * The change takes effect on the owner's next deploy.
  */
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-interface HeaderRule {
-  source: string;
-  headers: { key: string; value: string }[];
+function raw(): string {
+  return readFileSync(join(process.cwd(), "vercel.json"), "utf8");
 }
 
-function vercelJson(): { headers?: HeaderRule[] } {
-  return JSON.parse(readFileSync(join(process.cwd(), "vercel.json"), "utf8"));
+function vercelJson(): Record<string, unknown> {
+  return JSON.parse(raw());
 }
 
-describe("vercel.json: the blanket /api cache rule", () => {
-  it("V1 carries /api/(.*) → Cache-Control: s-maxage=60, stale-while-revalidate=300", () => {
-    const rules = (vercelJson().headers ?? []).filter((rule) => rule.source === "/api/(.*)");
-    expect(rules).toHaveLength(1);
-    expect(rules[0].headers).toEqual([
-      { key: "Cache-Control", value: "s-maxage=60, stale-while-revalidate=300" },
-    ]);
+describe("vercel.json: no blanket /api cache rule (F-025, F-026 fixed)", () => {
+  it("V1 has no headers key", () => {
+    expect(vercelJson()).not.toHaveProperty("headers");
   });
 
-  it("V2 the value is shareable: neither private nor no-store", () => {
-    const value = vercelJson().headers?.[0]?.headers[0]?.value ?? "";
-    expect(value).not.toMatch(/private/);
-    expect(value).not.toMatch(/no-store/);
+  it("V2 names no s-maxage anywhere", () => {
+    expect(raw()).not.toMatch(/s-maxage/i);
   });
 
-  it("V3 it is the only headers rule in the file", () => {
-    expect((vercelJson().headers ?? []).map((rule) => rule.source)).toEqual(["/api/(.*)"]);
+  it("V3 keeps the deploy settings, and only them", () => {
+    expect(vercelJson()).toEqual({
+      $schema: "https://openapi.vercel.sh/vercel.json",
+      buildCommand: "npm run build",
+      framework: "nextjs",
+      regions: ["iad1"],
+    });
   });
 });

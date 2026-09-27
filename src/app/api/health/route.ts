@@ -34,6 +34,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { withRoute } from "@/server/route";
 
 // Store server start time
 const serverStartTime = Date.now();
@@ -327,7 +328,7 @@ function checkMemory(): HealthCheck {
 /**
  * Main health check endpoint
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "check health" }, async () => {
   try {
     const timestamp = new Date().toISOString();
     const uptime = Math.floor((Date.now() - serverStartTime) / 1000); // in seconds
@@ -385,5 +386,5 @@ export async function GET() {
       { status: 503 }
     );
   }
-}
+});
 

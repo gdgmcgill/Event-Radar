@@ -79,35 +79,12 @@ const OVERRIDES: Record<string, { cache: CacheClass; reason: string }> = {
   },
 };
 
-/** Every route file not yet wrapped. Only ever shrinks (06-13, 06-14). */
-const PENDING_WRAP: readonly string[] = [
-  "src/app/api/feedback/route.ts",
-  "src/app/api/health/route.ts",
-  "src/app/api/interactions/route.ts",
-  "src/app/api/notifications/[id]/route.ts",
-  "src/app/api/notifications/count/route.ts",
-  "src/app/api/notifications/route.ts",
-  "src/app/api/onboarding/complete/route.ts",
-  "src/app/api/profile/avatar/route.ts",
-  "src/app/api/profile/banner/route.ts",
-  "src/app/api/profile/inferred-tags/route.ts",
-  "src/app/api/profile/interests/route.ts",
-  "src/app/api/recommendations/analytics/route.ts",
-  "src/app/api/recommendations/batch/route.ts",
-  "src/app/api/recommendations/feedback/route.ts",
-  "src/app/api/recommendations/route.ts",
-  "src/app/api/user/engagement/route.ts",
-  "src/app/api/user/following/route.ts",
-  "src/app/api/users/[id]/follow/route.ts",
-  "src/app/api/users/[id]/route.ts",
-  "src/app/api/users/me/friends/route.ts",
-  "src/app/api/users/me/requests/route.ts",
-  "src/app/api/users/me/suggestions/route.ts",
-  "src/app/api/users/saved-events/route.ts",
-  "src/app/api/users/search/route.ts",
-  "src/app/auth/callback/route.ts",
-  "src/app/auth/signout/route.ts",
-];
+/**
+ * Every route file not yet wrapped. Only ever shrank: 91 at 06-12, 48 after
+ * 06-13, empty after 06-14 (asserted empty below). A new route file must be
+ * wrapped when it lands; it can no longer be parked here.
+ */
+const PENDING_WRAP: readonly string[] = [];
 
 const INVENTORY_CLASS: Record<string, CacheClass> = {
   "private, no-store": "private",
@@ -199,6 +176,10 @@ describe("cache census: the tree and the inventory (P0)", () => {
         "/api/clubs/featured public-60-120",
       ].sort()
     );
+  });
+
+  it("PENDING_WRAP is empty: every route file is wrapped (06-14)", () => {
+    expect(PENDING_WRAP).toEqual([]);
   });
 
   it("PENDING_WRAP names live route files only, each once", () => {

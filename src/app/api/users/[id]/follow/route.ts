@@ -3,6 +3,8 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { getElevatedClient } from "@/server/db/elevated";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -11,7 +13,7 @@ interface RouteParams {
 /**
  * POST /api/users/[id]/follow — Follow a user
  */
-export async function POST(_request: NextRequest, { params }: RouteParams) {
+export const POST = withRoute({ cache: "private", action: "follow user" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -110,19 +112,19 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       .from("notifications")
       .insert(notifications);
     if (notifyError) {
-      console.error("Error inserting follow notifications:", notifyError);
+      log.error("Error inserting follow notifications", { error: notifyError });
     }
 
     return NextResponse.json({ following: true, isFriend }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed to follow user" }, { status: 500 });
   }
-}
+});
 
 /**
  * DELETE /api/users/[id]/follow — Unfollow a user
  */
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export const DELETE = withRoute({ cache: "private", action: "unfollow user" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -148,4 +150,4 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   } catch {
     return NextResponse.json({ error: "Failed to unfollow user" }, { status: 500 });
   }
-}
+});

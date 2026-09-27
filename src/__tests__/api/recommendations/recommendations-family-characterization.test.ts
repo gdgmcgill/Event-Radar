@@ -9,8 +9,9 @@
  *
  *   batch POST      anonymous 401 Unauthorized, non-admin 403 Forbidden, both
  *                   with no rpc on either client; admin 200 with the
- *                   compute_user_scores rpc on the elevated client; an rpc
- *                   error answers 500 with `details` (today's bytes);
+ *                   compute_user_scores rpc on the elevated client (the rpc
+ *                   error row moved to batch-error-text-defect.test.ts in
+ *                   06-14, F-059);
  *   analytics GET   anonymous 401, non-admin 403; admin `period=90d` 400
  *                   "Invalid period. Use 7d or 30d"; admin 7d 200 with the
  *                   metrics computed from the fixture rows;
@@ -153,25 +154,6 @@ describe("recommendations/batch POST", () => {
     expect(writes(mockElevated).map((c) => c.table)).toEqual([
       "compute_user_scores",
     ]);
-  });
-
-  it("admin, rpc error → 500 with the error message in details (today's bytes)", async () => {
-    as("admin");
-    mockElevated = createFakeSupabase({
-      ...elevatedInit({ persona: "admin" }),
-      rpc: {
-        compute_user_scores: {
-          data: null,
-          error: { code: "XX000", message: "scoring exploded" },
-        },
-      },
-    });
-    const outcome = await batch();
-    expect(outcome.status).toBe(500);
-    expect(outcome.body).toEqual({
-      error: "Batch scoring failed",
-      details: "scoring exploded",
-    });
   });
 });
 

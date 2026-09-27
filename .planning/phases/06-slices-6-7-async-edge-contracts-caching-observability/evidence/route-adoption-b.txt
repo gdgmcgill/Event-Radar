@@ -1,0 +1,441 @@
+route-adoption-b.txt — plan 06-14 (route adoption sweep B: every remaining handler, vercel.json without headers, census at zero)
+Phase 06 · recorded 2026-09-27 · base 6796919 · Task 1 commit 29ced7e · Task 2 commit: the commit that adds this file
+Every command below was run from the repo root; exit codes verbatim. Scratch outputs are summarized, never edited.
+
+== 1. Adoption, per file (read back from the committed sources: VERB class "action") ==
+Task 1 (events + calendar): 22 files, 28 handlers. Task 2 (users, user, profile, notifications, recommendations,
+interactions, feedback, onboarding, health, auth/callback, auth/signout): 26 files, 30 handlers. Total 48 files, 58 handlers.
+  src/app/api/calendar/events/route.ts: GET private "fetch calendar events"
+  src/app/api/events/[id]/analytics/route.ts: GET private "fetch event analytics"
+  src/app/api/events/[id]/appeal/route.ts: POST private "submit appeal"
+  src/app/api/events/[id]/friends/route.ts: GET private "fetch friends going"
+  src/app/api/events/[id]/invite/route.ts: POST private "send invites"
+  src/app/api/events/[id]/report/route.ts: POST private "report event"
+  src/app/api/events/[id]/reviews/route.ts: POST private "create review", GET private "fetch reviews"
+  src/app/api/events/[id]/route.ts: GET private "fetch event", PATCH private "update event", DELETE private "delete event"
+  src/app/api/events/[id]/rsvp/route.ts: GET private "fetch RSVPs", POST private "create RSVP", DELETE private "cancel RSVP"
+  src/app/api/events/[id]/save/route.ts: DELETE private "unsave event", POST private "save event"
+  src/app/api/events/create/route.ts: POST private "create event"
+  src/app/api/events/export/route.ts: GET public-60-300 "generate export"
+  src/app/api/events/featured/route.ts: GET public-60-120 "fetch featured events"
+  src/app/api/events/following/route.ts: GET private "fetch followed club events"
+  src/app/api/events/friends-activity/route.ts: GET private "fetch friends activity"
+  src/app/api/events/friends-organizing/route.ts: GET private "fetch friends organizing"
+  src/app/api/events/happening-now/route.ts: GET public-60-300 "fetch happening now events"
+  src/app/api/events/my-events/route.ts: GET private "fetch your events"
+  src/app/api/events/new/route.ts: GET public-60-300 "fetch new events"
+  src/app/api/events/popular/route.ts: GET public-60-300 "fetch popular events"
+  src/app/api/events/route.ts: GET public-30-60 "fetch events"
+  src/app/api/events/upload-image/route.ts: POST private "upload image"
+  src/app/api/feedback/route.ts: POST private "save feedback"
+  src/app/api/health/route.ts: GET private "check health"
+  src/app/api/interactions/route.ts: POST private "record interaction"
+  src/app/api/notifications/[id]/route.ts: PATCH private "update notification"
+  src/app/api/notifications/count/route.ts: GET private "fetch notification count"
+  src/app/api/notifications/route.ts: GET private "fetch notifications", POST private "update notifications"
+  src/app/api/onboarding/complete/route.ts: POST private "complete onboarding"
+  src/app/api/profile/avatar/route.ts: POST private "upload avatar"
+  src/app/api/profile/banner/route.ts: POST private "upload banner"
+  src/app/api/profile/inferred-tags/route.ts: DELETE private "remove tag"
+  src/app/api/profile/interests/route.ts: PUT private "update interests"
+  src/app/api/recommendations/analytics/route.ts: GET private "fetch analytics"
+  src/app/api/recommendations/batch/route.ts: POST private "run batch scoring"
+  src/app/api/recommendations/feedback/route.ts: GET private "fetch feedback", POST private "submit feedback"
+  src/app/api/recommendations/route.ts: GET private "fetch recommendations"
+  src/app/api/user/engagement/route.ts: GET private "fetch engagement data", POST private "recalculate engagement"
+  src/app/api/user/following/route.ts: GET private "fetch followed clubs"
+  src/app/api/users/[id]/follow/route.ts: POST private "follow user", DELETE private "unfollow user"
+  src/app/api/users/[id]/route.ts: PATCH private "update profile"
+  src/app/api/users/me/friends/route.ts: GET private "fetch friends"
+  src/app/api/users/me/requests/route.ts: GET private "fetch requests"
+  src/app/api/users/me/suggestions/route.ts: GET private "fetch suggestions"
+  src/app/api/users/saved-events/route.ts: GET private "fetch saved events"
+  src/app/api/users/search/route.ts: GET private "search users"
+  src/app/auth/callback/route.ts: GET private "complete sign-in"
+  src/app/auth/signout/route.ts: POST private "sign out"
+Public classes (all GET): /api/events public-30-60 and /api/events/featured public-60-120 (each route's own header line
+removed; the class emits the same value); /api/events/export, /api/events/happening-now, /api/events/new, /api/events/popular
+public-60-300. Every other export private, including /api/events/[id] (C7), /api/events/[id]/rsvp GET (DEC-69),
+/api/recommendations (its three own `private, no-store` headers removed; the class emits the same value), /api/health (C8,
+only wrapped; body is 06-17's) and both auth routes. Form: `export const VERB = withRoute({ cache, action }, async (<same
+parameter list>) => { … })`; parameter lists unchanged; guards first, then parsing, then logic (the wrapper does not reorder).
+Seam change (Task 2): src/server/route.ts gains a NextResponse overload, so a handler that answers only NextResponses keeps
+`Promise<NextResponse>` (the PRESERVE callback suites read `res.cookies`; without it tsc failed with TS2339 at
+route.test.ts:288/311/327 and route-defect.test.ts:171/315). Runtime unchanged.
+events/export: `else if (format === "ical")` became `else` with a comment (ExportQuery admits csv and ical only), so the
+handler provably always answers (withRoute needs a Response; tsc TS2345 otherwise). No behaviour change.
+
+== 2. Logging and caught-error bodies ==
+S1 console sites converted: Task 1 50 (calendar 1, events appeal 1, [id]/friends 5, [id]/invite 2, [id] 5, [id]/rsvp 11,
+  [id]/save 7, create 4, export 2, following 2, happening-now 2, popular 2, events 4, upload-image 2); Task 2 57 (feedback 2,
+  interactions 3, notifications/[id] 1, notifications 2, profile/avatar 3, banner 3, inferred-tags 2, interests 2,
+  recommendations/analytics 2, batch 2, feedback 4, recommendations 1, user/engagement 6, user/following 2, users/[id]/follow 1,
+  users/[id] 2, users/saved-events 3, auth/callback 13, src/app/clubs/page.tsx 3). Total 107.
+  Each is log.<level>(msg, { scope?, ids, error }); [Prefix] became `scope`; console.log became log.info, console.warn log.warn.
+  Callback fields: scope "Callback", oauthError/description (provider text), origin, userId, stage, needsOnboarding, cookie
+  counts and names. Never the email (the not-McGill line logs userId only), never the code, never the redirect target (it
+  carries `next`). The clubs page is a Server Component: no request store, so its lines carry no requestId.
+S2 caught-error text lines removed: Task 1 14 (13 census-C7 sites + events appeal updateError outside C7); Task 2 9
+  (notifications/[id] 1, notifications 2, recommendations/batch 1 (`details` key gone), user/following 1, auth/callback 4:
+  two log lines and two internal throws). Each removed body logs the error first.
+Left: auth/callback/route.ts:141 `message=${encodeURIComponent(exchangeError.message)}` in the auth_failed redirect, pinned
+  by the PRESERVE suite src/app/auth/callback/route.test.ts; allow-listed with its reason (see § 9).
+
+== 3. Census and allow-list, before -> after ==
+cache-headers-census PENDING_WRAP: 48 (base) -> 26 (Task 1) -> 0 (Task 2); the census now asserts it is [].
+server-console allow-list: 50 entries / 141 sites (base) -> 26 / 77 (Task 1) -> 3 / 11 (Task 2):
+  src/app/api/health/route.ts S2 9 (06-17 rewrites it); src/lib/tagMapping.ts S1 1 (reason: shared with client components);
+  src/app/auth/callback/route.ts S2 1 (reason: the PRESERVE-pinned redirect message). 130 sites retired = 107 S1 + 23 S2 (the callback S2 went 5 -> 1).
+ 
+$ node scripts/check-server-console.mjs
+committed=11 live=11 delta=0
+PASS: the live census is within the committed allow-list
+scc exit 0
+Plan acceptance one-liners:
+  Task 1 allow-list (no api/(events|calendar)/ entry): exit 0.
+  Task 2 allow-list (files exactly health + tagMapping): exit 1 — the callback S2 residue (see § 9, deviation).
+  vercel.json: node -e "process.exit(require('./vercel.json').headers?1:0)" -> exit 0.
+  events/route.ts: grep -c public-30-60 = 2, grep -ci cache-control = 0; events/[id]/route.ts has
+  `export const GET = withRoute({ cache: "private", action: "fetch event" }`.
+
+== 4. vercel.json ==
+$ git diff 6796919 -- vercel.json
+diff --git a/vercel.json b/vercel.json
+index a6bb09b..aaba23f 100644
+--- a/vercel.json
++++ b/vercel.json
+@@ -2,16 +2,5 @@
+   "$schema": "https://openapi.vercel.sh/vercel.json",
+   "buildCommand": "npm run build",
+   "framework": "nextjs",
+-  "regions": ["iad1"],
+-  "headers": [
+-    {
+-      "source": "/api/(.*)",
+-      "headers": [
+-        {
+-          "key": "Cache-Control",
+-          "value": "s-maxage=60, stale-while-revalidate=300"
+-        }
+-      ]
+-    }
+-  ]
++  "regions": ["iad1"]
+ }
+$schema, buildCommand, framework and regions byte-identical; the headers array gone. Takes effect on the owner's next deploy.
+
+== 5. Pins moved (defect-ledger rows; 72 rows) ==
+Task 1 (37 rows, commit 29ced7e):
+  F-026 cache-headers C1 -> C4 and C2 -> C5: 9 routes x 2 = 18 rows
+  F-058 uncaught-throw U1 -> U3: events/[id]/report POST, events/my-events GET (2) + U0 adoption row (1)
+  F-059 error-text E1 -> E2: 13 rows; ADDED events/[id]/appeal:88 (updateError, outside C7): 1; E0: 1
+  F-059 search-escaping-defect's "F-059 echo" describe -> the generic 500: 1
+Task 2 (35 rows, commit filled by the plan's docs commit):
+  F-026 C1 -> C4 and C2 -> C5: 11 routes x 2 = 22 rows (C1 and C2 now empty; each asserts `pending` is [])
+  F-058 U1 -> U3: onboarding/complete POST, auth/signout POST (2) + U0/U1 row (1; U1 now empty)
+  F-059 E1 -> E2: 5 rows; E0 row (9 health rows + 1 NOT_DRIVEN; RETIRED gains callback :127, :141, :204, :216): 1
+  F-059 moved out of PRESERVE: recommendations-family-characterization's batch rpc-error row -> new
+    batch-error-text-defect.test.ts B1: 1
+  F-025/F-026 vercel-json-defect V1-V3 -> no headers key, no s-maxage, deploy settings unchanged: 3
+Untagged suites edited in place (no ledger row, per the ledger's rule): review05/notifications-door (WR-03 parses the JSON
+  line: level, msg, row 2, of 2, error.message); events/get-events (the 500 answers "Failed to fetch events", not the
+  Supabase text).
+Not moved (plan and inventory named them; measured, no move was owed):
+  src/lib/eventTags.test.ts :195 and :279 (PRESERVE, `[tags]` console.warn): the warn lives in src/lib/tagMapping.ts, which
+    the plan keeps on console (S1 allow-listed), so both assertions stay green unedited; moving them would have no red step.
+  events-console-defect.test.ts and auth/callback/route-console-defect.test.ts were not created: every console spy in the
+    events and callback PRESERVE suites is kind A (silenced, never asserted), per evidence/console-coupled-tests.md.
+
+== 6. The five-step protocol ==
+Task 1 step 2 (fix applied, DEFECT suites unedited): npx jest --ci src/__tests__ src/server src/app src/contracts src/lib -> exit 1
+Test Suites: 7 failed, 1 skipped, 105 passed, 112 of 113 total
+Tests:       59 failed, 1 skipped, 3029 passed, 3089 total
+   9 ● C1: signed in, no private, no-store today
+   9 ● C2: anonymous, no private, no-store today
+   1 ● E0: the rows plus NOT_DRIVEN are census C7
+   13 ● E1: a caught error's text reaches the response body today
+   1 ● F-059 echo — a PGRST100 from the events query is returned to the caller verbatim (stays after 04-08; Phase 5)
+   1 ● GET /api/events — error handling
+   1 ● POST /api/events/[id]/invite
+   2 ● U1: a throwing dependency rejects the handler promise (no JSON body)
+   1 ● cache census: src/app/api/calendar/events/route.ts
+   1 ● cache census: src/app/api/events/[id]/analytics/route.ts
+   1 ● cache census: src/app/api/events/[id]/appeal/route.ts
+   1 ● cache census: src/app/api/events/[id]/friends/route.ts
+   1 ● cache census: src/app/api/events/[id]/invite/route.ts
+   1 ● cache census: src/app/api/events/[id]/report/route.ts
+   1 ● cache census: src/app/api/events/[id]/reviews/route.ts
+   1 ● cache census: src/app/api/events/[id]/route.ts
+   1 ● cache census: src/app/api/events/[id]/rsvp/route.ts
+   1 ● cache census: src/app/api/events/[id]/save/route.ts
+   1 ● cache census: src/app/api/events/create/route.ts
+   1 ● cache census: src/app/api/events/export/route.ts
+   1 ● cache census: src/app/api/events/featured/route.ts
+   1 ● cache census: src/app/api/events/following/route.ts
+   1 ● cache census: src/app/api/events/friends-activity/route.ts
+   1 ● cache census: src/app/api/events/friends-organizing/route.ts
+   1 ● cache census: src/app/api/events/happening-now/route.ts
+   1 ● cache census: src/app/api/events/my-events/route.ts
+   1 ● cache census: src/app/api/events/new/route.ts
+   1 ● cache census: src/app/api/events/popular/route.ts
+   1 ● cache census: src/app/api/events/route.ts
+   1 ● cache census: src/app/api/events/upload-image/route.ts
+Task 1 step 3: same command -> exit 0
+Test Suites: 1 skipped, 112 passed, 112 of 113 total
+Tests:       1 skipped, 3133 passed, 3134 total
+Task 1 step 4 (22 pre-fix route files swapped in; the 6 moved suites run; fixed files restored): jest exit 1; cmp: restored 22 differences=0
+Test Suites: 6 failed, 6 total
+Tests:       39 failed, 165 passed, 204 total
+   9   ● C4: adopted, signed in: private, no-store and a request id (F-026 fixed)
+   9   ● C5: adopted, anonymous: private, no-store and a request id (F-026 fixed)
+   1   ● E0: the rows plus NOT_DRIVEN are census C7
+  14   ● E2: fixed, the caller gets the route's generic text (F-059 fixed)
+   1   ● F-059 fixed (06-14) — a PGRST100 from the events query answers the generic text, no logic tree
+   1   ● GET /api/events — error handling
+   1   ● POST /api/events/[id]/invite
+   1   ● U0: the arm list is the tree
+   2   ● U3: adopted, the same throw answers a JSON 500 (F-058 fixed)
+Task 2 step 2: npx jest --ci -> exit 1
+Test Suites: 6 failed, 1 skipped, 118 passed, 124 of 125 total
+Tests:       59 failed, 1 skipped, 3220 passed, 3280 total
+   11 ● C1: signed in, no private, no-store today
+   11 ● C2: anonymous, no private, no-store today
+   1 ● E0: the rows plus NOT_DRIVEN are census C7
+   5 ● E1: a caught error's text reaches the response body today
+   2 ● U1: a throwing dependency rejects the handler promise (no JSON body)
+   1 ● cache census: src/app/api/feedback/route.ts
+   1 ● cache census: src/app/api/health/route.ts
+   1 ● cache census: src/app/api/interactions/route.ts
+   1 ● cache census: src/app/api/notifications/[id]/route.ts
+   1 ● cache census: src/app/api/notifications/count/route.ts
+   1 ● cache census: src/app/api/notifications/route.ts
+   1 ● cache census: src/app/api/onboarding/complete/route.ts
+   1 ● cache census: src/app/api/profile/avatar/route.ts
+   1 ● cache census: src/app/api/profile/banner/route.ts
+   1 ● cache census: src/app/api/profile/inferred-tags/route.ts
+   1 ● cache census: src/app/api/profile/interests/route.ts
+   1 ● cache census: src/app/api/recommendations/analytics/route.ts
+   1 ● cache census: src/app/api/recommendations/batch/route.ts
+   1 ● cache census: src/app/api/recommendations/feedback/route.ts
+   1 ● cache census: src/app/api/recommendations/route.ts
+   1 ● cache census: src/app/api/user/engagement/route.ts
+   1 ● cache census: src/app/api/user/following/route.ts
+   1 ● cache census: src/app/api/users/[id]/follow/route.ts
+   1 ● cache census: src/app/api/users/[id]/route.ts
+   1 ● cache census: src/app/api/users/me/friends/route.ts
+   1 ● cache census: src/app/api/users/me/requests/route.ts
+   1 ● cache census: src/app/api/users/me/suggestions/route.ts
+   1 ● cache census: src/app/api/users/saved-events/route.ts
+   1 ● cache census: src/app/api/users/search/route.ts
+   1 ● cache census: src/app/auth/callback/route.ts
+   1 ● cache census: src/app/auth/signout/route.ts
+   1 ● recommendations/batch POST
+   2 ● vercel.json: the blanket /api cache rule
+Task 2 step 3: npx jest --ci -> exit 0
+Test Suites: 1 skipped, 125 passed, 125 of 126 total
+Tests:       1 skipped, 3335 passed, 3336 total
+Task 2 step 4 (26 pre-fix route files + clubs page + vercel.json swapped in; the 5 moved suites run; restored): jest exit 1; cmp: restored 28 differences=0
+Test Suites: 5 failed, 5 total
+Tests:       35 failed, 132 passed, 167 total
+   1   ● B1 (F-059 fixed): the batch-scoring 500 carries no rpc error text
+  11   ● C4: adopted, signed in: private, no-store and a request id (F-026 fixed)
+  11   ● C5: adopted, anonymous: private, no-store and a request id (F-026 fixed)
+   1   ● E0: the rows plus NOT_DRIVEN are census C7
+   5   ● E2: fixed, the caller gets the route's generic text (F-059 fixed)
+   1   ● U0: the arm list is the tree
+   2   ● U3: adopted, the same throw answers a JSON 500 (F-058 fixed)
+   3   ● vercel.json: no blanket /api cache rule (F-025, F-026 fixed)
+(Step-2 counts are halved: Jest prints each failure twice, inline and in the summary.)
+Step 5, PRESERVE suites on these surfaces, all PASS in both full runs, unedited (git diff 6796919 empty):
+  events-list, events-detail, calendar-events, rsvp, save, saved-events characterization; pagination-contract-defect
+  (PRESERVE+DEFECT); src/app/api/events/route.test.ts; src/app/auth/callback/route.test.ts (F-004, F-040) and
+  route-defect.test.ts; interactions-feedback, notifications, recommendations characterization; bad-request-characterization;
+  contracts/__tests__ events and users; service-role-routing; src/lib/eventTags.test.ts.
+  Moved out of (removal only + a docblock pointer): recommendations-family-characterization's batch rpc-error row.
+
+== 7. Public event reads: headers probe (throwaway jest file, deleted; badRequestTable fakes, anonymous) ==
+pre-06-14 sources:
+PROBE events GET [ok] status=200 cache-control="public, s-maxage=30, stale-while-revalidate=60" vary=null x-request-id=none
+PROBE events GET [db-error] status=500 cache-control=null vary=null x-request-id=none
+PROBE events/featured GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=120" vary=null x-request-id=none
+PROBE events/featured GET [db-error] status=500 cache-control=null vary=null x-request-id=none
+PROBE events/export GET [ok] status=200 cache-control=null vary=null x-request-id=none
+PROBE events/export GET [db-error] status=500 cache-control=null vary=null x-request-id=none
+PROBE events/happening-now GET [ok] status=200 cache-control=null vary=null x-request-id=none
+PROBE events/happening-now GET [db-error] status=500 cache-control=null vary=null x-request-id=none
+PROBE events/new GET [ok] status=200 cache-control=null vary=null x-request-id=none
+PROBE events/new GET [db-error] status=200 cache-control=null vary=null x-request-id=none
+PROBE events/popular GET [ok] status=200 cache-control=null vary=null x-request-id=none
+PROBE events/popular GET [db-error] status=500 cache-control=null vary=null x-request-id=none
+06-14 sources:
+PROBE events GET [ok] status=200 cache-control="public, s-maxage=30, stale-while-revalidate=60" vary=null x-request-id=uuid
+PROBE events GET [db-error] status=500 cache-control="private, no-store" vary=null x-request-id=uuid
+PROBE events/featured GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=120" vary=null x-request-id=uuid
+PROBE events/featured GET [db-error] status=500 cache-control="private, no-store" vary=null x-request-id=uuid
+PROBE events/export GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE events/export GET [db-error] status=500 cache-control="private, no-store" vary=null x-request-id=uuid
+PROBE events/happening-now GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE events/happening-now GET [db-error] status=500 cache-control="private, no-store" vary=null x-request-id=uuid
+PROBE events/new GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE events/new GET [db-error] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE events/popular GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE events/popular GET [db-error] status=500 cache-control="private, no-store" vary=null x-request-id=uuid
+Reading: /api/events and /api/events/featured 200s are byte-identical at the origin (public, s-maxage=30,
+stale-while-revalidate=60 and public, s-maxage=60, stale-while-revalidate=120). export, happening-now, new and popular set no
+header at the origin before; production gave them vercel.json's s-maxage=60, stale-while-revalidate=300; the class now sends
+the same directives with an explicit `public`. Every 500 is private, no-store. No Vary on any response. The empty-list 200s of
+/api/events (fuzzy miss, time-filter miss, benign range error) had no own header before and now carry public-30-60.
+
+== 8. Gates at the Task 2 tree ==
+$ npx jest --ci (Task 2 step 3, the final tree) -> exit 0
+Test Suites: 1 skipped, 125 passed, 125 of 126 total
+Tests:       1 skipped, 3335 passed, 3336 total
+$ Task 1 verify: npx jest --ci src/__tests__/api && node scripts/check-server-console.mjs && npx tsc --noEmit
+Test Suites: 55 passed, 55 total
+Tests:       1477 passed, 1477 total
+jest exit 0
+committed=77 live=77 delta=0
+PASS: the live census is within the committed allow-list
+scc exit 0
+tsc exit 0
+  tsc exit 0
+  ✖ 17 problems (0 errors, 17 warnings)
+  lint exit 0
+  committed=0 live=0 delta=0
+  PASS: the allow-list is empty and the live census is empty
+  contracts exit 0
+  client files=38 violations=0
+  contracts --client exit 0
+  committed=11 live=11 delta=0
+  PASS: the live census is within the committed allow-list
+  scc exit 0
+  ok 57 files
+  tags exit 0
+  committed=0 live=0 delta=0
+  PASS: the allow-list is empty and the live census is empty
+  ratchet exit 0
+  (lint: 17 warnings, all pre-existing, the same count as the floor; tags: 57 = 56 + batch-error-text-defect)
+$ npm run build -> exit 0 (Next.js 16.3.5, Turbopack; "Compiled successfully"; TypeScript finished). Route table (api and auth rows):
+Route (app)
+├ ƒ /api/admin/analytics/events
+├ ƒ /api/admin/analytics/users
+├ ƒ /api/admin/audit-log
+├ ƒ /api/admin/calculate-popularity
+├ ƒ /api/admin/clubs
+├ ƒ /api/admin/clubs/[id]
+├ ƒ /api/admin/events
+├ ƒ /api/admin/events/[id]
+├ ƒ /api/admin/events/[id]/edits
+├ ƒ /api/admin/events/[id]/status
+├ ƒ /api/admin/experiments
+├ ƒ /api/admin/experiments/[id]
+├ ƒ /api/admin/experiments/[id]/results
+├ ƒ /api/admin/featured
+├ ƒ /api/admin/featured/[id]
+├ ƒ /api/admin/organizer-requests
+├ ƒ /api/admin/organizer-requests/[id]
+├ ƒ /api/admin/organizers
+├ ƒ /api/admin/reports
+├ ƒ /api/admin/reports/[id]
+├ ƒ /api/admin/stats
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[id]
+├ ƒ /api/admin/users/[id]/ban
+├ ƒ /api/calendar/events
+├ ƒ /api/clubs
+├ ƒ /api/clubs/[id]
+├ ƒ /api/clubs/[id]/analytics
+├ ƒ /api/clubs/[id]/appeal
+├ ƒ /api/clubs/[id]/events
+├ ƒ /api/clubs/[id]/follow
+├ ƒ /api/clubs/[id]/invites
+├ ƒ /api/clubs/[id]/members
+├ ƒ /api/clubs/[id]/members/role
+├ ƒ /api/clubs/[id]/transfer
+├ ƒ /api/clubs/banner
+├ ƒ /api/clubs/featured
+├ ƒ /api/clubs/friends
+├ ƒ /api/clubs/logo
+├ ƒ /api/clubs/new
+├ ƒ /api/clubs/trending
+├ ƒ /api/events
+├ ƒ /api/events/[id]
+├ ƒ /api/events/[id]/analytics
+├ ƒ /api/events/[id]/appeal
+├ ƒ /api/events/[id]/friends
+├ ƒ /api/events/[id]/invite
+├ ƒ /api/events/[id]/report
+├ ƒ /api/events/[id]/reviews
+├ ƒ /api/events/[id]/rsvp
+├ ƒ /api/events/[id]/save
+├ ƒ /api/events/create
+├ ƒ /api/events/export
+├ ƒ /api/events/featured
+├ ƒ /api/events/following
+├ ƒ /api/events/friends-activity
+├ ƒ /api/events/friends-organizing
+├ ƒ /api/events/happening-now
+├ ƒ /api/events/my-events
+├ ƒ /api/events/new
+├ ƒ /api/events/popular
+├ ƒ /api/events/upload-image
+├ ƒ /api/feedback
+├ ƒ /api/health
+├ ƒ /api/interactions
+├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+├ ƒ /api/my-clubs
+├ ƒ /api/notifications
+├ ƒ /api/notifications/[id]
+├ ƒ /api/notifications/count
+├ ƒ /api/onboarding/complete
+├ ƒ /api/organizer-requests
+├ ƒ /api/profile/avatar
+├ ƒ /api/profile/banner
+├ ƒ /api/profile/inferred-tags
+├ ƒ /api/profile/interests
+├ ƒ /api/recommendations
+├ ƒ /api/recommendations/analytics
+├ ƒ /api/recommendations/batch
+├ ƒ /api/recommendations/feedback
+├ ƒ /api/user/engagement
+├ ƒ /api/user/following
+├ ƒ /api/users/[id]
+├ ƒ /api/users/[id]/follow
+├ ƒ /api/users/me/friends
+├ ƒ /api/users/me/requests
+├ ƒ /api/users/me/suggestions
+├ ƒ /api/users/saved-events
+├ ƒ /api/users/search
+├ ƒ /auth/callback
+├ ƒ /auth/signout
+
+== 9. Playwright, the full suite in three time-boxed parts, each from a fresh reset and seed ==
+port 3000 before each part: lsof -nP -iTCP:3000 -sTCP:LISTEN exit=1 (free); the harness builds and starts its own server
+(never reused). Each part: supabase db reset --local -> exit 0; npx tsx scripts/seed/load.ts -> exit 0
+("seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events"; pinned now 2026-06-01T16:00:00.000Z).
+Part A: admin-audit-row, admin-guard, admin-login-cookie-equivalence, admin-moderation-queue, admin-write-paths, anonymous-browse -> playwright exit 0
+Running 27 tests using 1 worker
+  27 passed (18.3s)
+Part B: async-edge, ban-and-onboarding-ring, banned-redirect, club-authorization, club-invitation-acceptance, club-owner-surfaces, csrf-origin -> playwright exit 0
+Running 57 tests using 1 worker
+  57 passed (18.6s)
+Part C: event-moderation-notifications, event-read-path, no-profile-row, protected-route-redirect, public-profile-privacy, save-and-rsvp -> playwright exit 0
+Running 36 tests using 1 worker
+  36 passed (20.2s)
+Total: all 19 specs in e2e/specs, 90 spec tests passed + 10 setup authentications per part; 0 failed, 0 flaky, no retry,
+first run of each part. port 3000 after: exit=1 (free).
+Observed in the server output (pre-existing, not caused here): search_events_fuzzy fails with 0A000 "SET is not allowed in a
+non-volatile function" and the route falls back to ILIKE; already recorded in .planning/audit (phase-04-slice-defects.md,
+findings.json). It now appears as a JSON log line with a request id.
+
+== 10. Measured against the plan ==
+- Files 48 (plan: about 48), handlers 58. Console S1 107, S2 23 removed.
+- The plan's Task 2 allow-list one-liner expects health + tagMapping only; the callback's auth_failed redirect `message`
+  (PRESERVE-pinned; the callback must stay byte-identical) keeps one S2 site, allow-listed with its reason. See SUMMARY.
+- recommendations/batch's `details` was pinned by a PRESERVE row; that row moved out to a new DEFECT suite (ledger row).
+- eventTags.test.ts's two `[tags]` pins did not move: tagMapping.ts stays on console by the plan's own must-have.
+- No PRESERVE console pin in the events or callback suites (all kind A): the two conditional -defect console files not created.
+- DI-47(a): profile/inferred-tags' 404 is reachable (a read error or a row deleted after the context read), so it stays with
+  a comment and is recorded for Phase 7. DI-47(b) and DI-59 (a)-(c) name files this plan does not touch
+  (write-handlers-characterization, writeHandlerTable, check-elevated-ratchet, middlewareRateLimit.test, smoke.sh,
+  adminArmTable): carried forward unchanged.

@@ -4,8 +4,10 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { parseBody } from "@/server/body";
 import { FeedbackBody } from "@/contracts/feedback";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(request: Request) {
+export const POST = withRoute({ cache: "private", action: "save feedback" }, async (request: Request) => {
   try {
     // Anonymous feedback stays open (DEC-34): the guards apply only when a
     // user is present.
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error("Failed to save feedback:", error);
+      log.error("Failed to save feedback", { error });
       return NextResponse.json(
         { error: "Failed to save feedback" },
         { status: 500 }
@@ -43,10 +45,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Feedback API error:", error);
+    log.error("Feedback API error", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

@@ -29,6 +29,8 @@ import type { Database } from "@/lib/supabase/types";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
 import { isMcGillEmail } from "@/lib/utils";
 import { getElevatedClient } from "@/server/db/elevated";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * The redirect target for `next`, or `/` when `next` could leave the origin
@@ -53,7 +55,7 @@ function safeNextPath(next: string | null, origin: string): string {
   }
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "complete sign-in" }, async (request: NextRequest) => {
   let stage = "init";
   try {
   stage = "parse_request";
@@ -68,14 +70,18 @@ export async function GET(request: NextRequest) {
 
   // Handle OAuth provider errors
   if (errorParam) {
-    console.error("[Callback] OAuth error:", errorParam, errorDescription);
+    log.error("OAuth provider error", {
+      scope: "Callback",
+      oauthError: errorParam,
+      description: errorDescription,
+    });
     return NextResponse.redirect(
       new URL(`/?error=${encodeURIComponent(errorParam)}`, requestUrl.origin)
     );
   }
 
   if (!code) {
-    console.error("[Callback] No code parameter found");
+    log.error("No code parameter found", { scope: "Callback" });
     return NextResponse.redirect(
       new URL(`/?error=no_code`, requestUrl.origin)
     );
@@ -119,12 +125,18 @@ export async function GET(request: NextRequest) {
 
   // Exchange the authorization code for a session
   stage = "exchange_code_for_session";
-  console.log("[Callback] Exchanging code for session, origin:", requestUrl.origin);
+  log.info("Exchanging code for session", {
+    scope: "Callback",
+    origin: requestUrl.origin,
+  });
   const { error: exchangeError } =
     await supabase.auth.exchangeCodeForSession(code);
 
   if (exchangeError) {
-    console.error("[Callback] Code exchange FAILED:", exchangeError.message, exchangeError);
+    log.error("Code exchange failed", { scope: "Callback", error: exchangeError });
+    // The provider's text reaches the caller's own redirect as `message`
+    // (pinned by the PRESERVE callback suite); it is the one caught-error
+    // text left in a route file outside health (allow-listed with its reason).
     return NextResponse.redirect(
       new URL(`/?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin)
     );
@@ -138,7 +150,7 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.error("[Callback] Get user FAILED:", userError?.message);
+    log.error("Get user failed", { scope: "Callback", error: userError });
     return NextResponse.redirect(
       new URL(`/?error=not_authenticated`, requestUrl.origin)
     );
@@ -149,7 +161,8 @@ export async function GET(request: NextRequest) {
   // Enforce McGill domain
   if (!isMcGillEmail(email)) {
     stage = "enforce_mcgill_email";
-    console.error("[Callback] Not a McGill email:", email);
+    // Never the address itself (no PII in logs); the id names the row.
+    log.error("Not a McGill email", { scope: "Callback", userId: user.id });
     await supabase.auth.signOut();
 
     // Delete the orphaned auth.users row — exchangeCodeForSession() already
@@ -158,7 +171,11 @@ export async function GET(request: NextRequest) {
     try {
       await getElevatedClient().auth.admin.deleteUser(user.id);
     } catch (err) {
-      console.error("[Callback] Failed to delete non-McGill auth user:", err);
+      log.error("Failed to delete non-McGill auth user", {
+        scope: "Callback",
+        userId: user.id,
+        error: err,
+      });
     }
 
     return NextResponse.redirect(
@@ -201,7 +218,12 @@ export async function GET(request: NextRequest) {
     );
 
     if (upsertError) {
-      throw new Error(`profile upsert failed: ${upsertError.message}`);
+      log.error("Profile upsert failed", {
+        scope: "Callback",
+        userId: user.id,
+        error: upsertError,
+      });
+      throw new Error("profile upsert failed");
     }
 
     // `roles` is read and unused; the column list is pinned (DEC-38 (e)).
@@ -212,14 +234,21 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (profileError || !profile) {
-      throw new Error(
-        `profile read failed: ${profileError?.message ?? "no row"}`
-      );
+      log.error("Profile read failed", {
+        scope: "Callback",
+        userId: user.id,
+        error: profileError ?? "no row",
+      });
+      throw new Error("profile read failed");
     }
 
     needsOnboarding = !profile.onboarding_completed;
   } catch (err) {
-    console.error("[Callback] Profile sync failed; signing out:", err);
+    log.error("Profile sync failed; signing out", {
+      scope: "Callback",
+      userId: user.id,
+      error: err,
+    });
     await supabase.auth.signOut();
     return redirectWithCookies(
       new URL("/?error=profile_sync_failed", requestUrl.origin)
@@ -232,16 +261,24 @@ export async function GET(request: NextRequest) {
     ? new URL("/onboarding", requestUrl.origin)
     : new URL(next, requestUrl.origin);
 
-  console.log("[Callback] Redirecting to:", redirectUrl.toString());
-  console.log("[Callback] Accumulated cookies:", allCookies.size, [...allCookies.keys()]);
+  // The target is not logged: it carries the `next` value.
+  log.info("Redirecting", {
+    scope: "Callback",
+    needsOnboarding,
+    accumulatedCookies: allCookies.size,
+    cookieNames: [...allCookies.keys()],
+  });
 
   const response = redirectWithCookies(redirectUrl);
 
   // Log cookie names in a runtime-safe way. `headers.getSetCookie()` is not
   // available in all server runtimes and can throw, which would break login.
   const cookieNames = response.cookies.getAll().map((cookie) => cookie.name);
-  console.log("[Callback] Response cookies count:", cookieNames.length);
-  console.log("[Callback] Response cookies:", cookieNames);
+  log.info("Response cookies", {
+    scope: "Callback",
+    count: cookieNames.length,
+    cookieNames,
+  });
 
   // Set onboarding cookie if user needs onboarding
   stage = "set_onboarding_cookie";
@@ -258,10 +295,10 @@ export async function GET(request: NextRequest) {
   return response;
 
   } catch (err) {
-    console.error("[Callback] Unhandled error at stage:", stage, err);
+    log.error("Unhandled error", { scope: "Callback", stage, error: err });
     const origin = new URL(request.url).origin;
     return NextResponse.redirect(
       new URL(`/?error=callback_error&stage=${encodeURIComponent(stage)}`, origin)
     );
   }
-}
+});

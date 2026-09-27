@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import { log } from "@/server/log";
 import type { Database } from "@/lib/supabase/types";
 import { Building2, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { ClubSearch } from "@/components/clubs/ClubSearch";
@@ -63,7 +64,8 @@ export default async function ClubsPage({ searchParams }: PageProps) {
     query = query.range(from, to);
 
     const { data, count, error } = await query;
-    if (error) console.error("[ClubsPage] clubs query error:", error.message);
+    // A Server Component has no request store, so these lines carry no id.
+    if (error) log.error("clubs query error", { scope: "ClubsPage", error });
     clubs = data;
     totalCount = count;
 
@@ -74,7 +76,9 @@ export default async function ClubsPage({ searchParams }: PageProps) {
       .eq("status", "approved")
       .not("category", "is", null);
 
-    if (catError) console.error("[ClubsPage] categories query error:", catError.message);
+    if (catError) {
+      log.error("categories query error", { scope: "ClubsPage", error: catError });
+    }
 
     categories = [
       ...new Set(
@@ -120,7 +124,10 @@ export default async function ClubsPage({ searchParams }: PageProps) {
       }
     }
   } catch (err) {
-    console.error("[ClubsPage] Unexpected error fetching clubs data:", err);
+    log.error("Unexpected error fetching clubs data", {
+      scope: "ClubsPage",
+      error: err,
+    });
   }
 
   const totalPages = Math.ceil((totalCount ?? 0) / CLUBS_PER_PAGE);

@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/users/me/requests — Returns inbound followers who the current user
  * does NOT follow back (i.e. pending "friend requests").
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch requests" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -62,4 +63,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

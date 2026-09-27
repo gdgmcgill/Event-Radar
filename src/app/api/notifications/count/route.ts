@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/notifications/count - Lightweight unread count only
@@ -11,7 +12,7 @@ import { requireUser } from "@/server/authz/requireUser";
  * The navigation requests the count only for a signed-in user, so anonymous
  * pages do not poll it.
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch notification count" }, async () => {
   try {
     const ctx = await createRequestContext();
     const auth = requireUser(ctx);
@@ -28,4 +29,4 @@ export async function GET() {
   } catch {
     return NextResponse.json({ unread_count: 0 });
   }
-}
+});

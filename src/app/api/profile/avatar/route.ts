@@ -10,8 +10,10 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import type { NextRequest } from "next/server";
 import { parseForm } from "@/server/body";
 import { AVATAR_UPLOAD, ProfileImageForm } from "@/contracts/users";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "upload avatar" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error("Storage upload error:", uploadError);
+      log.error("Storage upload error", { error: uploadError });
       return NextResponse.json(
         { error: "Failed to upload avatar" },
         { status: 500 }
@@ -68,7 +70,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (dbError || !dbData) {
-      console.error("Database update error:", dbError ?? "No rows updated");
+      log.error("Database update error", { error: dbError ?? "No rows updated" });
       return NextResponse.json(
         { error: "Failed to save avatar URL" },
         { status: 500 }
@@ -80,10 +82,10 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error uploading avatar:", error);
+    log.error("Error uploading avatar", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

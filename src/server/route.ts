@@ -29,8 +29,14 @@
  *   own parameter list, so Next's route-export type check still sees
  *   `(request: NextRequest, context: { params: Promise<…> })`, a zero-argument
  *   handler stays zero-argument, and tests keep calling `GET(request, { params })`.
+ *   A handler that answers only `NextResponse`s keeps `Promise<NextResponse>`
+ *   (plan 06-14: the auth callback's suites read `res.cookies`): every path
+ *   then yields a NextResponse, since the wrapper's own 500 is `serverError`'s
+ *   NextResponse and a NextResponse's headers are always settable, so
+ *   `withMutableHeaders` returns it unchanged.
  */
 
+import type { NextResponse } from "next/server";
 import { log, runWithRequest } from "./log";
 import { serverError } from "./errors";
 import { applyCachePolicy, type CacheClass } from "./http";
@@ -73,6 +79,14 @@ function withMutableHeaders(response: Response): Response {
   }
 }
 
+export function withRoute<A extends unknown[]>(
+  opts: RouteOptions,
+  fn: (...args: A) => Promise<NextResponse>
+): (...args: A) => Promise<NextResponse>;
+export function withRoute<A extends unknown[]>(
+  opts: RouteOptions,
+  fn: (...args: A) => Promise<Response>
+): (...args: A) => Promise<Response>;
 export function withRoute<A extends unknown[]>(
   opts: RouteOptions,
   fn: (...args: A) => Promise<Response>

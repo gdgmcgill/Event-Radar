@@ -30,7 +30,8 @@
  * each adopted arm's answer to the same throw, `500 {"error":"Failed to
  * <action>"}` as JSON with `private, no-store` and a UUID `x-request-id`
  * (06-13: the admin, moderation, club and organizer-request arms; 06-14
- * Task 1: events/[id]/report and events/my-events). U0 now
+ * Task 1: events/[id]/report and events/my-events; 06-14 Task 2:
+ * onboarding/complete and auth/signout, which empties U1). U0 now
  * reads both export forms, `export async function VERB` and `export const
  * VERB = withRoute(`, so the arm list stays the no-try tree (22 files, 26
  * arms) while the rows move.
@@ -367,6 +368,9 @@ const ADOPTED: Readonly<Record<string, string>> = {
   // 06-14 Task 1: events
   "api/events/[id]/report POST": "report event",
   "api/events/my-events GET": "fetch your events",
+  // 06-14 Task 2: the last two
+  "api/onboarding/complete POST": "complete onboarding",
+  "auth/signout POST": "sign out",
 };
 
 const armId = (arm: Arm) => `${arm.file} ${arm.verb}`;
@@ -374,6 +378,12 @@ const pendingArms = ARMS.filter((arm) => !(armId(arm) in ADOPTED));
 const adoptedArms = ARMS.filter((arm) => armId(arm) in ADOPTED);
 
 describe("U1: a throwing dependency rejects the handler promise (no JSON body)", () => {
+  if (pendingArms.length === 0) {
+    it("no arm is pending (06-14 moved the last to U3)", () => {
+      expect(pendingArms).toEqual([]);
+    });
+    return;
+  }
   it.each(pendingArms.map((arm): [string, Arm] => [armId(arm), arm]))(
     "%s",
     async (_label, arm) => {

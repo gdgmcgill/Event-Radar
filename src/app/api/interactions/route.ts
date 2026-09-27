@@ -13,6 +13,8 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { parseBody } from "@/server/body";
 import { InteractionBody } from "@/contracts/interactions";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * @swagger
@@ -53,7 +55,7 @@ import { InteractionBody } from "@/contracts/interactions";
  *       500:
  *         description: Internal server error
  */
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "record interaction" }, async (request: NextRequest) => {
   try {
     // Anonymous tracking stays open (DEC-34): the guards apply only when a
     // user is present.
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (eventError) {
-      console.error("Error verifying event:", eventError);
+      log.error("Error verifying event", { error: eventError });
       return NextResponse.json(
         { error: "Failed to verify event" },
         { status: 500 }
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error("Error recording interaction:", insertError);
+      log.error("Error recording interaction", { error: insertError });
       return NextResponse.json(
         { error: "Failed to record interaction" },
         { status: 500 }
@@ -134,10 +136,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Unexpected error recording interaction:", error);
+    log.error("Unexpected error recording interaction", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

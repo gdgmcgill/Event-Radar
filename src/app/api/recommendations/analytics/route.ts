@@ -12,8 +12,10 @@ import { requireRole } from "@/server/authz/requireRole";
 import { parseQuery } from "@/server/body";
 import { AnalyticsQuery } from "@/contracts/recommendations";
 import type { NextRequest } from "next/server";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch analytics" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const activeUser = requireActiveUser(ctx);
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
       .gte("created_at", sinceIso);
 
     if (error) {
-      console.error("Analytics query error:", error);
+      log.error("Analytics query error", { error });
       return NextResponse.json(
         { error: "Failed to fetch analytics" },
         { status: 500 }
@@ -114,10 +116,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Recommendation analytics error:", error);
+    log.error("Recommendation analytics error", { error });
     return NextResponse.json(
       { error: "Failed to compute analytics" },
       { status: 500 }
     );
   }
-}
+});

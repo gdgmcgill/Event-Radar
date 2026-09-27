@@ -11,8 +11,10 @@ import type { NextRequest } from "next/server";
 import { parseBody } from "@/server/body";
 import { InterestsBody } from "@/contracts/users";
 import type { Database } from "@/lib/supabase/types";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PUT(request: NextRequest) {
+export const PUT = withRoute({ cache: "private", action: "update interests" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -42,7 +44,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Database error:", error);
+      log.error("Database error", { error });
       return NextResponse.json(
         { error: "Failed to update interests" },
         { status: 500 }
@@ -57,10 +59,10 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error updating interests:", error);
+    log.error("Error updating interests", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

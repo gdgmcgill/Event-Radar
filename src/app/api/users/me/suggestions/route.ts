@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getElevatedClient } from "@/server/db/elevated";
 import { NextResponse } from "next/server";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/users/me/suggestions — Suggest people based on shared clubs,
@@ -11,7 +12,7 @@ import { NextResponse } from "next/server";
  * event RSVPs go through the elevated door. REGISTRY.md row: "Friend
  * suggestions read other users' profiles, memberships and RSVPs".
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch suggestions" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -252,4 +253,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

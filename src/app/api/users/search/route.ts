@@ -2,11 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { readQuery } from "@/server/body";
 import { UserSearchQuery } from "@/contracts/users";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/users/search?q=name — Search users by name
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "search users" }, async (request: NextRequest) => {
   try {
     const supabase = await createClient();
 
@@ -59,4 +60,4 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }
-}
+});

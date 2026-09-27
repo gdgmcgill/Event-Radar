@@ -33,7 +33,9 @@
  * Moved so far (`FIXED` below): E2 drives each fixed site the same way and
  * pins the route's generic text where the sentinel was, with the sentinel
  * nowhere in the body (06-13: admin, moderation, clubs and organizer
- * requests; 06-14 Task 1: events and calendar). A NOT_DRIVEN line that the
+ * requests; 06-14 Task 1: events and calendar; 06-14 Task 2: notifications,
+ * recommendations/batch and user/following, which leaves only health's nine
+ * rows in E1 for 06-17). A NOT_DRIVEN line that the
  * sweep rewrote so that it no longer holds a `.message` token moves to
  * `RETIRED` with its reason. C7's
  * exclusion of `dateError.message` also skips `updateError.message` (the
@@ -514,6 +516,27 @@ const FIXED: Readonly<Record<string, { at: (body: any) => unknown; generic: unkn
     at: (b) => b,
     generic: { error: "Failed to fetch events" },
   },
+  // 06-14 Task 2: notifications, recommendations/batch, user/following
+  "src/app/api/notifications/[id]/route.ts:32": {
+    at: (b) => b,
+    generic: { error: "Failed to update notification" },
+  },
+  "src/app/api/notifications/route.ts:51": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch notifications" },
+  },
+  "src/app/api/notifications/route.ts:104": {
+    at: (b) => b,
+    generic: { error: "Failed to update notifications" },
+  },
+  "src/app/api/recommendations/batch/route.ts:25": {
+    at: (b) => b,
+    generic: { error: "Batch scoring failed" },
+  },
+  "src/app/api/user/following/route.ts:45": {
+    at: (b) => b,
+    generic: { error: "Failed to fetch followed clubs" },
+  },
 };
 
 /**
@@ -560,6 +583,17 @@ const ADDED: { row: Site; at: (body: any) => unknown; generic: unknown }[] = [
 const RETIRED: Record<string, string> = {
   "src/app/api/admin/events/[id]/status/route.ts:244":
     "06-13: the notification copy reads `const { title, message } = row`, so the line no longer carries a `.message` token (no behaviour change; it was never a response)",
+  // 06-14 Task 2: the callback's log lines and internal throws. Its :129
+  // redirect `message` stays live: the PRESERVE callback suite pins it and
+  // 06-14 changes only the callback's logging and wrapper.
+  "src/app/auth/callback/route.ts:127":
+    "06-14: the code-exchange log line is log.error(msg, { scope, error }); the logger reduces the error to { name, message, code }",
+  "src/app/auth/callback/route.ts:141":
+    "06-14: the get-user log line is log.error(msg, { scope, error })",
+  "src/app/auth/callback/route.ts:204":
+    "06-14: the upsert error is logged as a field and the internal throw reads \"profile upsert failed\"; the redirect to /?error=profile_sync_failed is unchanged",
+  "src/app/auth/callback/route.ts:216":
+    "06-14: the read error is logged as a field and the internal throw reads \"profile read failed\"; the redirect to /?error=profile_sync_failed is unchanged",
 };
 
 const LIVE_SITES = SITES.filter((row) => !(row.site in FIXED));
@@ -632,9 +666,9 @@ describe("E0: the rows plus NOT_DRIVEN are census C7", () => {
       listed[file] = (listed[file] ?? 0) + 1;
     }
     expect(listed).toEqual(censusC7());
-    expect(LIVE_SITES).toHaveLength(14);
-    expect(LIVE_NOT_DRIVEN).toHaveLength(5);
-    expect(FIXED_SITES).toHaveLength(22);
+    expect(LIVE_SITES).toHaveLength(9);
+    expect(LIVE_NOT_DRIVEN).toHaveLength(1);
+    expect(FIXED_SITES).toHaveLength(27);
   });
 
   it("the census at f550de9 is unchanged: 34 driven + 6 listed = 40, and every move is accounted for", () => {

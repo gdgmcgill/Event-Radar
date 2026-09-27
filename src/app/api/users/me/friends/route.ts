@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withRoute } from "@/server/route";
 
 /**
  * GET /api/users/me/friends — Returns the current user's friends (mutual follows)
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch friends" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -27,4 +28,4 @@ export async function GET() {
   } catch {
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }
-}
+});
