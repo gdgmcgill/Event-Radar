@@ -121,7 +121,7 @@ None. The migration and both test files went green on their first post-migration
 
 - **DI-82 is not addressed, deliberately.** The plan does not tell this plan to change `compute_user_scores()`, and DEC-68 pins its body by md5, which 070 row 1 now enforces. The fix (for example `DELETE … WHERE true`) belongs to 06-06 as a DEFECT-then-fix with the md5 pin re-derived. The migration header says so. The Playwright `async-edge` spec still passes on 06-04's fixture workaround.
 - **F-078** (the `search_events_fuzzy` 0A000, already in the audit) printed 7 times in the Playwright server log, as it did in 06-04's run. It is out of scope and unchanged.
-- No `gsd` state-call failures at the time of writing (see the state commit).
+- `state.add-decision` rejected summary and rationale files in the scratchpad ("Path escapes allowed directory"). A retry with temporary files in the repo root succeeded, and the files were deleted without being staged. All other state calls succeeded on the first try.
 
 ## Requirements
 
