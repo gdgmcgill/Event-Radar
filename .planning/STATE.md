@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: executing
-stopped_at: Completed 06-05-PLAN.md
-last_updated: "2026-09-27T01:42:28.809Z"
+stopped_at: Completed 06-06-PLAN.md
+last_updated: "2026-09-27T02:05:30.397Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 80
-  completed_plans: 67
+  completed_plans: 68
   percent: 63
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 ## Current Position
 
 Phase: 06 (Slices 6–7 — Async Edge, Contracts, Caching, Observability) — EXECUTING
-Plan: 6 of 18
+Plan: 7 of 18
 Status: Ready to execute
 Last activity: 2026-09-25 — Phase 06 execution started
 
@@ -121,6 +121,7 @@ Progress: [███████░░░] 73%
 | Phase 06 P03 | 14min | 3 tasks | 25 files |
 | Phase 06 P04 | 20min | 3 tasks | 32 files |
 | Phase 06 P05 | 25min | 3 tasks | 7 files |
+| Phase 06 P06 | 18min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -321,6 +322,10 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-04: the async-edge e2e seeds the student's score row through the local service client, because POST /api/recommendations/batch always answers 500 through PostgREST (pg_safeupdate refuses compute_user_scores' unqualified DELETE); registered as DI-82 — The fix changes compute_user_scores' md5-pinned body (DEC-68), which belongs to the plan owning that function, not a route plan
 - [Phase 06]: 06-05: 20260926120000_async_edge_definer_hardening applied locally — two pg_cron jobs byte-identical to cron-job.json; EXECUTE revoked from PUBLIC/anon/authenticated on compute_user_scores, send_event_reminders, send_feedback_requests; search_path pinned via ALTER FUNCTION (md5 pins unchanged); friends RPCs bound to caller or service_role; reminders only for approved non-deleted events; cron_job_status() service_role only — DEC-70 executed; pgTAP 031/070 red before (9/13, 31/47), green after unseeded and seeded; M1-M4 each turn named rows red; LOCAL ONLY until DI-23
 - [Phase 06]: 06-05: DI-82 (batch route 500 under PostgREST safeupdate) left for 06-06 — The fix changes compute_user_scores' body, which DEC-68 pins by md5 and pgTAP 070 row 1 now enforces; the plan text never directs a body change, so the fix belongs to the slice close as DEFECT-then-fix with the pin re-derived
+- [Phase 06]: 06-06: F-037 marked Fixed on the observed local run history — After the cron routes' deletion, send-event-reminders and send-feedback-requests each ran once at 02:00:00Z and succeeded with 0 failed runs (floor.slice-6-after.txt block 16b); probe 1 right after the 33-second Playwright run found 0 runs and is recorded
+- [Phase 06]: 06-06: REFAC-14 marked Complete — All four clauses MET by committed evidence (slice-6-close.md section 3); the webhook redeploy (DI-81) is F-039's deployment-record clause, not a REFAC-14 clause, and the deployed function already requires credentials and fails closed
+- [Phase 06]: 06-06: DI-82 dispositioned to Phase 7, compute_user_scores() unchanged — 06-06 forbids source changes and 06-05 never directs a change; target is a fix-forward migration writing the unqualified deletes as DELETE ... WHERE true, 070 row 1 md5 re-derived under a signed DEC-68 amendment, a DEFECT row moved on the real stack
+- [Phase 06]: 06-06: the contracts gate's 'no slice-6 file' means the four slice-6 contract families — recommendations, interactions, feedback, notifications have 0 allow-list entries; the two admin/reports entries belong to the admin family that 06-10 adopts
 
 ### Pending Todos
 
@@ -373,7 +378,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T01:42:22.524Z
-Stopped at: Completed 06-05-PLAN.md
+Last session: 2026-09-27T02:05:30.392Z
+Stopped at: Completed 06-06-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None

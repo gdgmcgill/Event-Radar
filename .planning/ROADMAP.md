@@ -348,7 +348,7 @@ Plans:
   4. Server code emits structured JSON logs with levels and a request correlation id on both Node and middleware runtimes, a deliberately triggered error appears in Sentry carrying that correlation id (Turbopack-aware setup, source maps, environment and release tagging, PII scrubbing decided before install), and `/api/health` reports DB, auth, storage, pg_cron freshness, and last webhook receipt in a documented shape without using `getSession()` for access control.
   5. After the final slice the Playwright happy-path specs pass and every Validated workflow in PROJECT.md is re-confirmed, with each slice landing as one reviewable change naming the finding IDs it closes and any intentional behavior change logged.
 
-**Plans:** 5/18 plans executed
+**Plans:** 6/18 plans executed
 
 **Wave 1**
 
@@ -372,7 +372,7 @@ Plans:
 
 **Wave 6**
 
-- [ ] 06-06-PLAN.md — Slice 6 close: floor from a clean reset, Validated re-confirmation, register
+- [x] 06-06-PLAN.md — Slice 6 close: floor from a clean reset, Validated re-confirmation, register
 
 **Wave 7**
 
@@ -477,7 +477,7 @@ Stage boundaries are hard gates: 1 (Stage 1) → 2 (Stage 2, exit STAB-17) → 3
 | 3. Refactor Foundations — Schema Truth and the Seam Kit | 8/8 | Complete    | 2026-09-16 |
 | 4. Slices 1–2 — Saved Events/RSVP and the Event Read Path | 11/11 | Complete   | 2026-09-23 |
 | 5. Slices 3–5 — Auth, Club Authorization, Admin Containment | 19/19 | Complete    | 2026-09-25 |
-| 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 5/18 | In Progress|  |
+| 6. Slices 6–7 — Async Edge, Contracts, Caching, Observability | 6/18 | In Progress|  |
 | 7. Certification Datasets and Persona Coverage | 0/TBD | Not started | - |
 | 8. Operational Certification and Sign-Off | 0/TBD | Not started | - |
 
