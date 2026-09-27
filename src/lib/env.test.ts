@@ -14,7 +14,10 @@
  *     then the Marketplace's KV_REST_API_*) or null, and never throws, even
  *     in production (DEC-59 Part 2: the boot check decides, not the reader);
  *   - rateLimitRequireDistributed() is optional: absent means false, and a
- *     value other than "true"/"false" is rejected rather than read as false.
+ *     value other than "true"/"false" is rejected rather than read as false;
+ *   - sentryDsn() (plan 06-16, DEC-76) is optional: absent, blank or not an
+ *     https DSN reads as null and never throws; sentryDsnProblem() names why,
+ *     never the value.
  *
  * Each case sets and deletes process.env keys itself and the originals are
  * restored after every test.
@@ -35,6 +38,7 @@ const MANAGED_KEYS = [
   "RATE_LIMIT_REQUIRE_DISTRIBUTED",
   "VERCEL_ENV",
   "NODE_ENV",
+  "SENTRY_DSN",
 ] as const;
 
 type ManagedKey = (typeof MANAGED_KEYS)[number];
@@ -345,5 +349,61 @@ describe("upstashConfigProblem()", () => {
     expect(problem).not.toContain(PASSWORD);
     expect(problem).not.toContain(TOKEN);
     expect(problem).not.toContain("example-1234");
+  });
+});
+
+// ─── Sentry (plan 06-16, DEC-76) ─────────────────────────────────────────────
+
+describe("sentryDsn() and sentryDsnProblem() (optional, DEC-76)", () => {
+  const DSN = "https://0123abcd@o42.ingest.us.sentry.io/4507";
+
+  it("returns the DSN, trimmed, when it is an https DSN", async () => {
+    env.SENTRY_DSN = `  ${DSN}\n`;
+    const { sentryDsn, sentryDsnProblem } = await loadEnv();
+    expect(sentryDsn()).toBe(DSN);
+    expect(sentryDsnProblem()).toBeNull();
+  });
+
+  it.each([
+    ["unset", undefined, "SENTRY_DSN is not set"],
+    ["empty", "", "SENTRY_DSN is not set"],
+    ["whitespace only", "   ", "SENTRY_DSN is not set"],
+  ])("is null when %s, with the reason", async (_label, value, reason) => {
+    if (value === undefined) delete env.SENTRY_DSN;
+    else env.SENTRY_DSN = value;
+    const { sentryDsn, sentryDsnProblem } = await loadEnv();
+    expect(sentryDsn()).toBeNull();
+    expect(sentryDsnProblem()).toBe(reason);
+  });
+
+  it.each([
+    ["an http URL", "http://0123abcd@o42.ingest.us.sentry.io/4507"],
+    ["an unparseable value", "not a dsn"],
+    ["an https URL with no public key", "https://o42.ingest.us.sentry.io/4507"],
+    ["an https URL with no project id", "https://0123abcd@o42.ingest.us.sentry.io/"],
+  ])("is null for %s, and the reason never contains the value", async (_label, value) => {
+    env.SENTRY_DSN = value;
+    const { sentryDsn, sentryDsnProblem } = await loadEnv();
+    expect(() => sentryDsn()).not.toThrow();
+    expect(sentryDsn()).toBeNull();
+    const problem = sentryDsnProblem();
+    expect(problem).toBe("SENTRY_DSN is not an https Sentry DSN");
+    expect(problem).not.toContain("0123abcd");
+    expect(problem).not.toContain("o42");
+  });
+
+  it("reads at call time, not at import time", async () => {
+    delete env.SENTRY_DSN;
+    const { sentryDsn } = await loadEnv();
+    expect(sentryDsn()).toBeNull();
+    env.SENTRY_DSN = DSN;
+    expect(sentryDsn()).toBe(DSN);
+  });
+
+  it("usableSentryDsn() applies the same rule to a value the caller read (the browser's DSN)", async () => {
+    const { usableSentryDsn } = await loadEnv();
+    expect(usableSentryDsn(DSN)).toBe(DSN);
+    expect(usableSentryDsn(undefined)).toBeNull();
+    expect(usableSentryDsn("http://k@h/1")).toBeNull();
   });
 });

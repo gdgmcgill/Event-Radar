@@ -1,3 +1,5 @@
+const { withSentryConfig } = require("@sentry/nextjs/config");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -57,4 +59,16 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Sentry's build integration (plan 06-16, DEC-61, DEC-76). The build never
+// needs a Sentry credential: with no SENTRY_AUTH_TOKEN, source maps are
+// disabled and nothing is uploaded. There is deliberately no tunnel option
+// (it would add an unauthenticated same-origin endpoint, T-06-16-04), and the
+// plugin's own telemetry is off, so a build sends nothing to Sentry.
+module.exports = withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  telemetry: false,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+});

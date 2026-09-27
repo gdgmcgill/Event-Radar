@@ -21,6 +21,10 @@
  *      one `log.error("unhandled route error")` line. Next's default for an
  *      uncaught throw is an HTML 500; this is the INTENTIONAL change F-058
  *      names, and it lands on a route when that route adopts the wrapper.
+ *      After the log line the throw goes to Sentry through
+ *      `captureServerError(error, { requestId, route })` (plan 06-16,
+ *      REFAC-21): the event is tagged `request_id` with the same id the
+ *      response carries as `x-request-id`. With no DSN the capture is a no-op.
  *   4. Applies the handler's cache class (`applyCachePolicy`) and sets
  *      `x-request-id` on the response.
  *
@@ -40,6 +44,7 @@ import type { NextResponse } from "next/server";
 import { log, runWithRequest } from "./log";
 import { serverError } from "./errors";
 import { applyCachePolicy, type CacheClass } from "./http";
+import { captureServerError } from "./observability/sentry";
 
 export type RouteOptions = {
   /** The handler's cache class; applied to every response it returns. */
@@ -103,6 +108,7 @@ export function withRoute<A extends unknown[]>(
         response = await fn(...args);
       } catch (error) {
         log.error("unhandled route error", { error, method });
+        captureServerError(error, { requestId, route });
         response = serverError(opts.action ?? "process request");
       }
       response = withMutableHeaders(response);

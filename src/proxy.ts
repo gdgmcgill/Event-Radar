@@ -26,9 +26,10 @@
  *   page redirects to sign-in, and every handler re-decides the caller and
  *   answers 401.
  *   Every throw reaches the catch, which logs one error line (scope
- *   "Middleware") and answers 500: `{"error":"Failed to process request"}` as
- *   JSON under `/api/`, plain-text `Internal Server Error` otherwise. It never
- *   passes the request through.
+ *   "Middleware"), reports the error to Sentry tagged with the request id
+ *   (`captureServerError`, plan 06-16; a no-op with no DSN) and answers 500:
+ *   `{"error":"Failed to process request"}` as JSON under `/api/`, plain-text
+ *   `Internal Server Error` otherwise. It never passes the request through.
  *
  * ONE REQUEST ID PER REQUEST (plan 06-12, DEC-74, research C19)
  *   The first statement of `proxy()` mints a UUID and sets it as
@@ -65,6 +66,7 @@ import { applyRateLimit, getRateLimitStore } from "@/server/ratelimit";
 import { crossSiteBlocked, isCrossSiteMutation } from "@/server/csrf";
 import { log, runWithRequest } from "@/server/log";
 import { REQUEST_ID_HEADER } from "@/server/route";
+import { captureServerError } from "@/server/observability/sentry";
 
 /** PostgREST's code when `.single()` finds no row. */
 const NO_PROFILE_ROW = "PGRST116";
@@ -280,6 +282,11 @@ async function ring(request: NextRequest) {
   } catch (e) {
     // Fail closed: the ring's own error is never a pass-through (F-003, F-088).
     log.error("Error", { scope: "Middleware", error: e });
+    // To Sentry with the id this response carries (plan 06-16, REFAC-21).
+    captureServerError(e, {
+      requestId: request.headers.get(REQUEST_ID_HEADER) ?? undefined,
+      route: request.nextUrl.pathname,
+    });
     if (request.nextUrl.pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
     }

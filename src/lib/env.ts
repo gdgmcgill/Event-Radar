@@ -11,7 +11,10 @@
  *   configuration: `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` or the
  *   Vercel Marketplace's `KV_REST_API_URL`/`KV_REST_API_TOKEN`, through
  *   `upstashConfig()`, and the optional `RATE_LIMIT_REQUIRE_DISTRIBUTED`,
- *   through `rateLimitRequireDistributed()`. Every read is a literal `process.env.NAME` member
+ *   through `rateLimitRequireDistributed()`. Plan 06-16 adds the optional
+ *   `SENTRY_DSN`, through `sentryDsn()` and `sentryDsnProblem()`, and the pure
+ *   `usableSentryDsn()` that the browser init applies to the DSN it reads
+ *   itself. Every read is a literal `process.env.NAME` member
  *   access. Nothing is read by computed key: a computed read evades the
  *   service-key lint rule in `eslint.config.mjs`, and Next inlines only literal
  *   `process.env.NEXT_PUBLIC_*` reads into the browser bundle.
@@ -201,4 +204,50 @@ export function rateLimitRequireDistributed(): boolean {
     "RATE_LIMIT_REQUIRE_DISTRIBUTED",
     '"true" or "false"'
   );
+}
+
+// ─── Sentry (plan 06-16, DEC-76) ─────────────────────────────────────────────
+
+/**
+ * The value, trimmed, when it is a Sentry DSN this app will use, else null.
+ *
+ * A usable DSN parses as a URL, uses `https:`, carries the public key as its
+ * username and a project id as its path: `https://<key>@<host>/<project>`.
+ * Anything else reads as absent, which disables Sentry. It never throws.
+ * Pure: it reads nothing, so the browser init can apply it to the
+ * `NEXT_PUBLIC_SENTRY_DSN` it reads with its own literal member access.
+ */
+export function usableSentryDsn(value: string | undefined): string | null {
+  if (!present(value)) return null;
+  const trimmed = value.trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:") return null;
+  if (parsed.username === "") return null;
+  if (parsed.pathname.replace(/\//g, "") === "") return null;
+  return trimmed;
+}
+
+/**
+ * `SENTRY_DSN`, optional (DEC-76): the server's DSN, or null when it is
+ * absent, blank or not an https Sentry DSN. Absent means disabled; it never
+ * throws, so a missing or mistyped DSN can never fail boot.
+ */
+export function sentryDsn(): string | null {
+  return usableSentryDsn(process.env.SENTRY_DSN);
+}
+
+/**
+ * Why `sentryDsn()` is null, or null when it is not. The text names the
+ * variable and never its value: a DSN carries the project's public key.
+ */
+export function sentryDsnProblem(): string | null {
+  const value = process.env.SENTRY_DSN;
+  if (!present(value)) return "SENTRY_DSN is not set";
+  if (usableSentryDsn(value) === null) return "SENTRY_DSN is not an https Sentry DSN";
+  return null;
 }
