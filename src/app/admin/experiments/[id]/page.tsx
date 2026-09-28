@@ -77,7 +77,7 @@ function formatPercent(value: number): string {
 
 function LoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="h-6 w-40 animate-pulse rounded bg-gray-200" />
         <div className="space-y-3 rounded-lg border bg-white p-6">
@@ -191,7 +191,7 @@ export default function ExperimentDetailPage({
 
   if (error || !experiment) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
         <div className="mx-auto max-w-5xl">
           <Link
             href="/admin/experiments"
@@ -215,7 +215,7 @@ export default function ExperimentDetailPage({
       : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Back link */}
         <Link

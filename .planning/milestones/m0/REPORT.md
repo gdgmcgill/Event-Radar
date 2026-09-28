@@ -9,6 +9,8 @@ This report implements the reporting requirement in [P1-M0](../../../docs/plans/
 
 M0 includes the existing foundation's [CERT-01–20 requirements](../../REQUIREMENTS.md) and [Phase 7–8 exit criteria](../../ROADMAP.md), not only the Phase 6 code gap. Local tests do not establish staging parity, remote CI success, production migration application, deployed webhook behavior, a real CDN result, recoverability, or human receipt of alerts. None of those outcomes is claimed here.
 
+**2026-09-28 follow-up:** [Computer-use verification](COMPUTER-USE-VERIFICATION.md) found and corrected four UI defects; the browser rechecks, 20 targeted tests, type/lint/contract checks and production build passed. Complete baseline suite totals below remain tied to the original implementation commit. Deployment is deferred per the user.
+
 ## 1. Delivered implementation
 
 | Scope | Current implementation and validation boundary |

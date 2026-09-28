@@ -7,7 +7,9 @@ export default async function IndexPage() {
     await requireAdminPage("/");
     const spec = await getApiDocs();
     return (
-        <section className="container">
+        // Redoc's default theme uses dark text and a transparent content panel.
+        // Give it a light surface even when the application shell is dark.
+        <section className="container bg-white text-slate-900 [color-scheme:light]">
             <ReactSwagger spec={ spec as Record<string, unknown> } />
         </section>
     );

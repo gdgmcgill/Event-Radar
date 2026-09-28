@@ -6,9 +6,9 @@ current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: verifying
 stopped_at: M0 implementation delivered; local verification passed; external certification and stated requirement gaps pending
-last_updated: "2026-09-27T23:10:42.471569+00:00"
-last_activity: 2026-09-27
-last_activity_desc: Product M0 foundation hardening and certification
+last_updated: "2026-09-28T23:58:39.693558+00:00"
+last_activity: 2026-09-28
+last_activity_desc: M0 computer-use verification and UI fixes
 progress:
   total_phases: 8
   completed_phases: 6
@@ -24,6 +24,8 @@ progress:
 Product milestone M0 is being implemented on `codex/m0-foundation-certification`, starting from review commit `2e4c4ff`. This continues the existing foundation program; it does not start M1 or relax McGill admission. Phase 6 gap/review repairs and additional database/API hardening are implemented locally, and the final local verification suite passed (1,800 browser tests; 3,667 unit tests; 626 database assertions).
 
 Current evidence and unresolved requirements: [M0 report](milestones/m0/REPORT.md). Local implementation, verified tests, hosted deployment, and owner sign-off are separate states. No production migration, push to main, deployed certification, or owner risk acceptance has occurred. The historical entries below are retained as provenance and are superseded by the M0 report for current status.
+
+Computer-use follow-up (2026-09-28): verified local discovery, admin gates/login/logout, saves/RSVPs and experiments; fixed four observed UI issues. See [browser verification](milestones/m0/COMPUTER-USE-VERIFICATION.md). Targeted checks pass; deployment remains deferred by the user and M0 certification remains pending.
 
 ## Project Reference
 

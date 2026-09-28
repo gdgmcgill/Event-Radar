@@ -172,10 +172,12 @@ export default async function ClubsPage({ searchParams }: PageProps) {
 
   // ── Format date for event badge ───────────────────────────────────────
   function formatEventDate(dateStr: string) {
-    const d = new Date(dateStr + "T00:00:00");
+    // start_date is a timestamp, not a date-only field. Preserve the stored
+    // wall-clock calendar day (DEC-80) without appending a second time suffix.
+    const d = new Date(`${dateStr.slice(0, 10)}T00:00:00Z`);
     return {
-      month: d.toLocaleString("en-US", { month: "short" }).toUpperCase(),
-      day: d.getDate().toString(),
+      month: d.toLocaleString("en-US", { month: "short", timeZone: "UTC" }).toUpperCase(),
+      day: d.getUTCDate().toString(),
     };
   }
 
