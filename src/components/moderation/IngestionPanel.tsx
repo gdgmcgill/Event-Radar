@@ -20,15 +20,30 @@ const EXPIRED_REJECTION: EventStatusBodyInput = {
   message: "This event's date passed before it could be reviewed.",
 };
 
+const INSTANT_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "America/Toronto",
+});
+// DEC-80 (docs/time-semantics.md): a legacy start_date already holds Toronto
+// wall-clock digits labelled UTC, so it is formatted in UTC, not converted.
+const WALL_CLOCK_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
+
+/** A true instant (delivery and receipt times), shown in Toronto time. */
 function when(iso: string | null): string {
   if (!iso) return "Never";
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? iso : INSTANT_FORMATTER.format(date);
 }
 
-function isPast(iso: string): boolean {
-  const at = Date.parse(iso);
-  return !Number.isNaN(at) && at < Date.now();
+/** A legacy event start (DEC-80 wall-clock), shown as the Toronto time it is. */
+function wallClock(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : `${WALL_CLOCK_FORMATTER.format(date)} Toronto time`;
 }
 
 function SummaryCard({ label, value, testId }: { label: string; value: string; testId: string }) {
@@ -180,7 +195,8 @@ export function IngestionPanel() {
       <section aria-labelledby="stale-heading" className="grid gap-3">
         <h3 id="stale-heading" className="text-lg font-semibold">Stale pending events</h3>
         <p className="text-sm text-muted-foreground">
-          Pending for more than 72 hours, or already past their start. Past events are hidden from Pending Review.
+          Pending for more than 72 hours, or already past their start (Toronto time). Past events are hidden from
+          Pending Review, so reject them here; upcoming ones can still be reviewed there. Times are Toronto time.
         </p>
         {stale.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nothing stale.</p>
@@ -191,13 +207,15 @@ export function IngestionPanel() {
                 <div className="min-w-0">
                   <p className="font-medium">{event.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    Starts {when(event.start_date)} · received {when(event.created_at)}
+                    {event.is_past ? "Started" : "Starts"} {wallClock(event.start_date)} · received {when(event.created_at)}
                     {event.source ? ` · ${event.source}` : ""}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Link className={button} href="/moderation/pending">Review</Link>
-                  {isPast(event.start_date) && (
+                  {/* Pending Review hides past events, so a past item gets
+                      no Review link; it can only be rejected as expired. */}
+                  {!event.is_past && <Link className={button} href="/moderation/pending">Review</Link>}
+                  {event.is_past && (
                     <button type="button" className={button} disabled={busy !== null} onClick={() => rejectExpired(event)}>
                       {busy === event.id ? "Rejecting…" : "Reject as expired"}
                     </button>

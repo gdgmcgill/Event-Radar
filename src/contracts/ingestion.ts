@@ -44,7 +44,8 @@ export interface IngestionDeliveryRecord {
   error_code: string | null;
 }
 
-/** A pending event that is older than 72 hours or already past its start. */
+/** A pending event that is older than 72 hours or already past its start.
+ * `start_date` is the legacy DEC-80 value: Toronto wall-clock labelled UTC. */
 export interface StalePendingRecord {
   id: string;
   title: string;
@@ -52,6 +53,10 @@ export interface StalePendingRecord {
   start_date: string;
   source: string | null;
   source_url: string | null;
+  /** Whether the start already passed, judged on the server with the DEC-80
+   * wall-clock rule (docs/time-semantics.md). Only past events may be
+   * rejected as expired. */
+  is_past: boolean;
 }
 
 export interface IngestionStatusRecord {

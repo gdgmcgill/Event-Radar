@@ -142,3 +142,45 @@ describe("EventDetailView — hero image fallback (M3 acceptance)", () => {
     expect(screen.getAllByRole("img", { name: "Test Event" })[0].getAttribute("src")).toContain("placeholder-event.png");
   });
 });
+
+describe("EventDetailView — sidebar time agrees with ListingFacts (M3 final review, DEC-80)", () => {
+  // Hackboard-like: 11:59 PM Toronto stored as legacy wall-clock labelled
+  // UTC; discovery_public converts it once to the true instant.
+  const hackboard: Event = {
+    ...baseEvent,
+    start_date: "2026-10-01T23:59:00+00:00",
+    end_date: "2026-10-02T00:59:00+00:00",
+  };
+  const hackboardDiscovery: DiscoveryItem = {
+    ...baseDiscoveryItem,
+    starts_at: "2026-10-02T03:59:00Z",
+    ends_at: null,
+  };
+  let previousTz: string | undefined;
+  beforeAll(() => {
+    // A Toronto viewer is where the legacy formatter reads 4 hours early.
+    previousTz = process.env.TZ;
+    process.env.TZ = "America/Toronto";
+  });
+  afterAll(() => {
+    process.env.TZ = previousTz;
+  });
+
+  it("with discovery present, the page shows 11:59 PM and never 7:59 PM", () => {
+    const { container } = render(
+      <EventDetailView event={hackboard} discovery={hackboardDiscovery} />
+    );
+    const text = container.textContent ?? "";
+    expect(text).toMatch(/11:59\sPM/);
+    expect(text).toMatch(/11:59\sp\.m\./);
+    expect(text).toContain("October 1, 2026");
+    expect(text).not.toMatch(/7:59/);
+  });
+
+  it("with discovery absent (switch off), the legacy sidebar formatting is unchanged", () => {
+    const { container } = render(<EventDetailView event={hackboard} />);
+    // The pre-existing switch-off behaviour (an owner decision, see
+    // docs/time-semantics.md): parseISO in the viewer's zone.
+    expect(container.textContent).toContain("7:59 PM");
+  });
+});

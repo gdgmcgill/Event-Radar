@@ -33,6 +33,21 @@ import {
 import { ReportEventDialog } from "@/components/events/ReportEventDialog";
 import { useAuthStore } from "@/store/useAuthStore";
 
+// The sidebar's date and time when the discovery projection is present:
+// the same zone as ListingFacts, so the two never disagree on one page.
+const SIDEBAR_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "America/Toronto",
+});
+const SIDEBAR_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "America/Toronto",
+  timeZoneName: "short",
+});
+
 interface EventDetailViewProps {
   event: Event;
   similarEvents?: Event[];
@@ -128,7 +143,14 @@ export function EventDetailView({
   }, [onLike]);
 
 
-  const isPast = new Date(event.start_date) < new Date();
+  // DEC-80 (docs/time-semantics.md): with the switch on, the discovery
+  // projection's `starts_at` is the true instant, so the sidebar and the
+  // past notice use it and agree with ListingFacts. With it absent, the
+  // legacy formatting below is unchanged.
+  const discoveryStart = discovery?.starts_at ? new Date(discovery.starts_at) : null;
+  const isPast = discoveryStart
+    ? discoveryStart < new Date()
+    : new Date(event.start_date) < new Date();
   const primaryTag = event.tags[0] as EventTag | undefined;
   const categoryInfo = primaryTag ? EVENT_CATEGORIES[primaryTag] : null;
 
@@ -324,10 +346,14 @@ export function EventDetailView({
                   </div>
                   <div className="flex flex-col">
                     <span className="text-foreground font-bold text-lg">
-                      {formatDate(event.start_date)}
+                      {discoveryStart
+                        ? SIDEBAR_DATE_FORMATTER.format(discoveryStart)
+                        : formatDate(event.start_date)}
                     </span>
                     <span className="text-muted-foreground text-sm mt-0.5">
-                      {formatTimeFromISO(event.start_date)}
+                      {discoveryStart
+                        ? SIDEBAR_TIME_FORMATTER.format(discoveryStart)
+                        : formatTimeFromISO(event.start_date)}
                     </span>
                     <button
                       onClick={() => exportEventIcal(event.id, event.title)}

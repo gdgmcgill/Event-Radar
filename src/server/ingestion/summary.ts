@@ -7,14 +7,12 @@
  * exposes anything but counts, timestamps, short codes and pending titles.
  */
 import { getElevatedClient } from "@/server/db/elevated";
+import { isPastWallClock, staleFilter } from "@/lib/ingest/staleness";
 import type {
   IngestionDeliveryRecord,
   IngestionSummaryRecord,
   StalePendingRecord,
 } from "@/contracts/ingestion";
-
-/** Pending events older than this, or already past their start, are stale. */
-export const STALE_PENDING_HOURS = 72;
 
 /** Outcomes that prove the producer and the webhook both worked. */
 export const SUCCESS_OUTCOMES = ["succeeded", "partial", "duplicate", "heartbeat"] as const;
@@ -22,21 +20,14 @@ export const SUCCESS_OUTCOMES = ["succeeded", "partial", "duplicate", "heartbeat
 /** Outcomes that need an operator's attention. */
 export const FAILURE_OUTCOMES = ["failed", "rejected"] as const;
 
+export { STALE_PENDING_HOURS, isPastWallClock, staleFilter } from "@/lib/ingest/staleness";
+
 export type IngestionSummary = IngestionSummaryRecord;
 
 function iso(value: string | null | undefined): string | null {
   if (!value) return null;
   const at = Date.parse(value);
   return Number.isNaN(at) ? null : new Date(at).toISOString();
-}
-
-/**
- * The PostgREST `or` filter for a stale pending event: created more than
- * STALE_PENDING_HOURS ago, or its start already passed.
- */
-export function staleFilter(now: Date = new Date()): string {
-  const cutoff = new Date(now.getTime() - STALE_PENDING_HOURS * 3_600_000).toISOString();
-  return `created_at.lt.${cutoff},start_date.lt.${now.toISOString()}`;
 }
 
 export async function ingestionSummary(now: Date = new Date()): Promise<IngestionSummary> {
@@ -69,7 +60,9 @@ export async function ingestionSummary(now: Date = new Date()): Promise<Ingestio
   };
 }
 
-/** Stale pending events, oldest first, so the queue drains from the back. */
+/** Stale pending events, oldest first, so the queue drains from the back.
+ * `is_past` is computed here, with the same wall-clock rule as the filter,
+ * so the admin page never re-derives it from the viewer's clock and zone. */
 export async function stalePendingEvents(limit = 50, now: Date = new Date()): Promise<StalePendingRecord[]> {
   const { data, error } = await getElevatedClient()
     .from("events")
@@ -80,7 +73,7 @@ export async function stalePendingEvents(limit = 50, now: Date = new Date()): Pr
     .order("created_at", { ascending: true })
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((row) => ({ ...row, is_past: isPastWallClock(row.start_date, now) }));
 }
 
 /** The newest deliveries first. */

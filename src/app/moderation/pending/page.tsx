@@ -5,6 +5,7 @@ import { FallbackImage } from "@/components/ui/FallbackImage";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { getESTNowISO } from "@/lib/timezone";
+import { staleFilter } from "@/lib/ingest/staleness";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -80,13 +81,14 @@ export default function ModerationPendingEventsPage() {
 
     // M3 P1-07: past-dated pending events are hidden above; count the stale
     // ones (past, or waiting over 72 hours) so moderators can find them.
-    const staleCutoff = new Date(Date.now() - 72 * 3_600_000).toISOString();
     const { count } = await supabase
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending")
       .is("deleted_at", null)
-      .or(`created_at.lt.${staleCutoff},start_date.lt.${new Date().toISOString()}`);
+      // DEC-80: start_date is Toronto wall-clock labelled UTC; staleFilter
+      // compares it with the wall-clock now, as the query above does.
+      .or(staleFilter());
     setStalePending(count ?? 0);
   }, []);
 
