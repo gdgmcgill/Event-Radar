@@ -106,8 +106,18 @@ function makeStore(fail?: (row: Row) => { code?: string; message: string } | nul
   return { rows, calls, insertEvent };
 }
 
+type Delivery = Parameters<Deps["recordDelivery"]>[0];
+
+/** Every delivery record the handler attempted, across the whole test. */
+let deliveries: Delivery[] = [];
+beforeEach(() => { deliveries = []; });
+const recordDelivery: Deps["recordDelivery"] = async (row) => {
+  deliveries.push(row);
+  return { error: null };
+};
+
 function deps(store: FakeStore, overrides: Partial<Deps> = {}): Deps {
-  return { secret: SECRET, configured: true, insertEvent: store.insertEvent, ...overrides };
+  return { secret: SECRET, configured: true, insertEvent: store.insertEvent, recordDelivery, ...overrides };
 }
 
 async function run(req: Request, d: Deps) {
@@ -466,10 +476,13 @@ describe("row 13: every event inserts -> 200", () => {
     );
   });
 
-  it("event_count 0 with events [] -> 200 'Successfully processed 0 event(s)'", async () => {
+  it("M3 P1-07 (INTENTIONAL): event_count 0 with events [] and no run -> 400, recorded as rejected", async () => {
     const r = await run(signed({ event_count: 0, events: [] }), deps(makeStore()));
-    expect(r.status).toBe(200);
-    expect(r.body).toEqual({ success: true, message: "Successfully processed 0 event(s)", events: [] });
+    expect(r.status).toBe(400);
+    expect(r.body).toEqual({ error: "events must not be empty unless run is present" });
+    expect(deliveries).toEqual([
+      expect.objectContaining({ producer: "unknown", outcome: "rejected", event_count: 0, error_code: "invalid_envelope" }),
+    ]);
   });
 });
 
@@ -612,5 +625,155 @@ describe("row 17: anything thrown after the configuration check", () => {
     expect(failed.status).toBe(500);
     expect(errorLog).toHaveBeenLastCalledWith(JSON.stringify({ event: "webhook.unhandled_error", errorClass: "Unknown" }));
     expect(JSON.stringify(errorLog.mock.calls)).not.toContain(privateText);
+  });
+});
+
+// ─── M3 P1-07: the delivery log ──────────────────────────────────────────────
+
+describe("M3 P1-07: every signed delivery is recorded once, with counts only", () => {
+  const RUN_ID = "3f1c2a4e-8b7d-4c1a-9e2f-0a1b2c3d4e5f";
+  const RUN = { id: RUN_ID, producer: "instagram-apify@1", status: "ok", items_seen: 24 };
+
+  it("an all-inserted batch -> succeeded with the inserted count and the run's producer", async () => {
+    const r = await run(signed({ ...TWO_EVENTS, run: RUN }), deps(makeStore()));
+    expect(r.status).toBe(200);
+    expect(deliveries).toEqual([{
+      producer: "instagram-apify@1", run_id: RUN_ID, outcome: "succeeded", event_count: 2,
+      inserted: 2, duplicates: 0, invalid: 0, items_seen: 24, error_code: null,
+    }]);
+  });
+
+  it("a batch without run is recorded under producer 'unknown'", async () => {
+    await run(signed(TWO_EVENTS), deps(makeStore()));
+    expect(deliveries).toEqual([expect.objectContaining({ producer: "unknown", run_id: null, items_seen: null, outcome: "succeeded" })]);
+  });
+
+  it("a duplicate-only batch -> outcome duplicate with duplicates n, and the batch's normal 400", async () => {
+    const store = makeStore();
+    await run(signed(TWO_EVENTS), deps(store));
+    deliveries = [];
+    const replay = await run(signed({ ...TWO_EVENTS, run: RUN }), deps(store));
+    expect(replay.status).toBe(400);
+    expect(replay.body.errors.map((e: { error: string }) => e.error)).toEqual(["duplicate", "duplicate"]);
+    expect(deliveries).toEqual([expect.objectContaining({ outcome: "duplicate", event_count: 2, inserted: 0, duplicates: 2, invalid: 0, error_code: null })]);
+  });
+
+  it("a mixed batch -> partial with inserted and duplicate counts, 207 unchanged", async () => {
+    const store = makeStore();
+    await run(signed({ event_count: 1, events: [ev()] }), deps(store));
+    deliveries = [];
+    const r = await run(signed({ event_count: 2, events: [ev(), ev({ title: "Brand New" })] }), deps(store));
+    expect(r.status).toBe(207);
+    expect(deliveries).toEqual([expect.objectContaining({ outcome: "partial", inserted: 1, duplicates: 1, invalid: 0 })]);
+  });
+
+  it("a mapping failure is counted as invalid", async () => {
+    const r = await run(signed({ event_count: 2, events: [ev(), ev({ title: "Late", time: "25:00" })] }), deps(makeStore()));
+    expect(r.status).toBe(207);
+    expect(deliveries).toEqual([expect.objectContaining({ outcome: "partial", inserted: 1, duplicates: 0, invalid: 1 })]);
+  });
+
+  it("every insert failing (not duplicates) -> failed with insert_failed", async () => {
+    const store = makeStore(() => ({ code: "23502", message: "private" }));
+    const r = await run(signed(TWO_EVENTS), deps(store));
+    expect(r.status).toBe(400);
+    expect(deliveries).toEqual([expect.objectContaining({ outcome: "failed", inserted: 0, duplicates: 0, error_code: "insert_failed" })]);
+  });
+
+  it("a failed run with no events -> 200 { recorded: true }, recorded as failed with its error code", async () => {
+    const store = makeStore();
+    const payload = { event_count: 0, events: [], run: { ...RUN, status: "failed", error_code: "apify_http_401", items_seen: 0 } };
+    const r = await run(signed(payload), deps(store));
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ recorded: true });
+    expect(store.calls).toHaveLength(0);
+    expect(deliveries).toEqual([{
+      producer: "instagram-apify@1", run_id: RUN_ID, outcome: "failed", event_count: 0,
+      inserted: 0, duplicates: 0, invalid: 0, items_seen: 0, error_code: "apify_http_401",
+    }]);
+  });
+
+  it("a failed run without its own code is recorded as producer_failed", async () => {
+    await run(signed({ event_count: 0, events: [], run: { ...RUN, status: "failed" } }), deps(makeStore()));
+    expect(deliveries).toEqual([expect.objectContaining({ outcome: "failed", error_code: "producer_failed" })]);
+  });
+
+  it("an empty ok run -> 200 { recorded: true }, recorded as a heartbeat", async () => {
+    const r = await run(signed({ event_count: 0, events: [], run: RUN }), deps(makeStore()));
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ recorded: true });
+    expect(deliveries).toEqual([expect.objectContaining({ outcome: "heartbeat", event_count: 0, items_seen: 24, error_code: null })]);
+  });
+
+  it("invalid events -> rejected with the invalid count and no event content", async () => {
+    const r = await run(
+      signed({ event_count: 3, events: [ev(), ev({ title: "" }), ev({ description: "" })], run: RUN }),
+      deps(makeStore())
+    );
+    expect(r.status).toBe(400);
+    expect(deliveries).toEqual([{
+      producer: "instagram-apify@1", run_id: RUN_ID, outcome: "rejected", event_count: 3,
+      inserted: 0, duplicates: 0, invalid: 2, items_seen: 24, error_code: "invalid_events",
+    }]);
+    expect(JSON.stringify(deliveries)).not.toMatch(/Robotics|Trottier|robot/i);
+  });
+
+  it("invalid JSON -> rejected as invalid_json under producer unknown", async () => {
+    const r = await run(signedRaw("{ invalid json }"), deps(makeStore()));
+    expect(r.status).toBe(400);
+    expect(deliveries).toEqual([expect.objectContaining({ producer: "unknown", outcome: "rejected", event_count: 0, error_code: "invalid_json" })]);
+  });
+
+  it("an envelope error keeps a valid run's producer", async () => {
+    const r = await run(signed({ event_count: 2, events: [ev()], run: RUN }), deps(makeStore()));
+    expect(r.status).toBe(400);
+    expect(deliveries).toEqual([expect.objectContaining({ producer: "instagram-apify@1", run_id: RUN_ID, outcome: "rejected", event_count: 1, error_code: "invalid_envelope" })]);
+  });
+
+  it("an invalid run block -> 400 run message, recorded as rejected under producer unknown", async () => {
+    const r = await run(signed({ event_count: 0, events: [], run: { ...RUN, producer: "Evil Producer" } }), deps(makeStore()));
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBe("run must be { id: uuid, producer, status: ok|failed, error_code?, items_seen? }");
+    expect(deliveries).toEqual([expect.objectContaining({ producer: "unknown", outcome: "rejected" })]);
+  });
+
+  it.each([
+    ["a missing signature", (body: string) => post(body)],
+    ["a wrong signature", (body: string) => post(body, { "x-signature": "0".repeat(64) })],
+    ["a wrong-length signature", (body: string) => post(body, { "x-signature": "abc" })],
+  ])("%s records nothing", async (_l, make) => {
+    const r = await run(make(JSON.stringify({ ...TWO_EVENTS, run: RUN })), deps(makeStore()));
+    expect(r.status).toBe(401);
+    expect(deliveries).toHaveLength(0);
+  });
+
+  it("the configuration error records nothing", async () => {
+    await run(signed(TWO_EVENTS), deps(makeStore(), { configured: false }));
+    expect(deliveries).toHaveLength(0);
+  });
+
+  it("a delivery insert that throws still returns the batch's normal status, logging only the event name", async () => {
+    const store = makeStore();
+    const throwing: Deps["recordDelivery"] = async () => { throw new Error(`private ${SECRET}`); };
+    const r = await run(signed(TWO_EVENTS), deps(store, { recordDelivery: throwing }));
+    expect(r.status).toBe(200);
+    expect(store.rows.size).toBe(2);
+    expect(errorLog).toHaveBeenCalledWith(JSON.stringify({ event: "webhook.delivery_record_failed", code: "unknown" }));
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("private");
+  });
+
+  it("a delivery insert that returns an error still returns 200 { recorded: true } for a heartbeat", async () => {
+    const failing: Deps["recordDelivery"] = async () => ({ error: { code: "42501", message: "private" } });
+    const r = await run(signed({ event_count: 0, events: [], run: RUN }), deps(makeStore(), { recordDelivery: failing }));
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ recorded: true });
+    expect(errorLog).toHaveBeenCalledWith(JSON.stringify({ event: "webhook.delivery_record_failed", code: "42501" }));
+  });
+
+  it("an unhandled error after a valid signature -> 500, recorded as failed internal_error", async () => {
+    const throwing: InsertEvent = async () => { throw new Error("connection reset"); };
+    const r = await run(signed({ ...TWO_EVENTS, run: RUN }), deps(makeStore(), { insertEvent: throwing }));
+    expect(r.status).toBe(500);
+    expect(deliveries).toEqual([expect.objectContaining({ producer: "instagram-apify@1", outcome: "failed", error_code: "internal_error", inserted: 0 })]);
   });
 });

@@ -35,6 +35,9 @@ export const WEBHOOK_MESSAGES = {
   tags: "tags must contain only strings",
   structure:
     "Invalid payload structure. Expected event_count (number) and events (array)",
+  // M3 P1-07: the producer run envelope and the empty-batch rule.
+  run: "run must be { id: uuid, producer, status: ok|failed, error_code?, items_seen? }",
+  emptyWithoutRun: "events must not be empty unless run is present",
 } as const;
 
 const M = WEBHOOK_MESSAGES;
@@ -93,6 +96,29 @@ export const WebhookEvent = z.object({
   ).optional(),
 });
 
+/** A producer id: lower-case letters, digits and @ . _ - (1-80). */
+export const PRODUCER_PATTERN = /^[a-z0-9@._-]{1,80}$/;
+
+/** A short machine error code a producer reports: snake_case, 1-64. */
+export const ERROR_CODE_PATTERN = /^[a-z0-9_]{1,64}$/;
+
+/**
+ * M3 P1-07: the optional producer run block. It names who sent the batch and
+ * whether the producer's own collection succeeded, so a failed scrape or an
+ * empty but healthy run still reaches the delivery log. Every field failure
+ * reports the one run message.
+ */
+export const WebhookRun = z.object(
+  {
+    id: z.uuid({ error: M.run }),
+    producer: z.string({ error: M.run }).regex(PRODUCER_PATTERN, { error: M.run }),
+    status: z.enum(["ok", "failed"], { error: M.run }),
+    error_code: z.string({ error: M.run }).regex(ERROR_CODE_PATTERN, { error: M.run }).optional(),
+    items_seen: z.number({ error: M.run }).int({ error: M.run }).min(0, { error: M.run }).optional(),
+  },
+  { error: M.run }
+);
+
 /**
  * The envelope. A wrong type for either field, or a payload that is not an
  * object, yields today's single structure message; a count that disagrees
@@ -105,6 +131,7 @@ export const WebhookPayload = z
     {
       event_count: z.number({ error: M.structure }),
       events: z.array(z.unknown(), { error: M.structure }),
+      run: WebhookRun.optional(),
     },
     { error: M.structure }
   )
@@ -113,12 +140,19 @@ export const WebhookPayload = z
       const payload = issue.input as { event_count: number; events: unknown[] };
       return `event_count (${payload.event_count}) does not match events array length (${payload.events.length})`;
     },
+  })
+  // M3 P1-07: an empty batch is only meaningful as a run report (a heartbeat
+  // or a failed collection); without `run` it carries nothing.
+  .refine((payload) => payload.events.length > 0 || payload.run !== undefined, {
+    error: M.emptyWithoutRun,
   });
 
 export type WebhookEventInput = z.input<typeof WebhookEvent>;
 export type WebhookEventOutput = z.infer<typeof WebhookEvent>;
 export type WebhookPayloadInput = z.input<typeof WebhookPayload>;
 export type WebhookPayloadOutput = z.infer<typeof WebhookPayload>;
+export type WebhookRunInput = z.input<typeof WebhookRun>;
+export type WebhookRunOutput = z.infer<typeof WebhookRun>;
 
 // ─── Helpers the handler uses ─────────────────────────────────────────────────
 

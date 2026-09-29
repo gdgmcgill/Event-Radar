@@ -338,7 +338,7 @@ describe("U0: the arm list is the tree", () => {
     for (const verbs of Object.values(listed)) verbs.sort();
     const tree = noTryRouteFiles();
     expect(listed).toEqual(tree);
-    expect(Object.keys(tree)).toHaveLength(48);
+    expect(Object.keys(tree)).toHaveLength(50);
     expect(ARMS).toHaveLength(31);
   });
 

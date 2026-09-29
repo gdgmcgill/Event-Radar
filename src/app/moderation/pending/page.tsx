@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { FallbackImage } from "@/components/ui/FallbackImage";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 import { getESTNowISO } from "@/lib/timezone";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -61,6 +62,7 @@ export default function ModerationPendingEventsPage() {
   const [editRejectReason, setEditRejectReason] = useState("");
   const [editRejectSnapshot, setEditRejectSnapshot] = useState<PendingEvent["pending_edits"]>(null);
   const [editReviewError, setEditReviewError] = useState<string | null>(null);
+  const [stalePending, setStalePending] = useState(0);
 
   const fetchPending = useCallback(async () => {
     setConfirmAction(null);
@@ -75,6 +77,17 @@ export default function ModerationPendingEventsPage() {
 
     setEvents((data ?? []) as PendingEvent[]);
     setLoading(false);
+
+    // M3 P1-07: past-dated pending events are hidden above; count the stale
+    // ones (past, or waiting over 72 hours) so moderators can find them.
+    const staleCutoff = new Date(Date.now() - 72 * 3_600_000).toISOString();
+    const { count } = await supabase
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .is("deleted_at", null)
+      .or(`created_at.lt.${staleCutoff},start_date.lt.${new Date().toISOString()}`);
+    setStalePending(count ?? 0);
   }, []);
 
   useEffect(() => {
@@ -283,6 +296,12 @@ export default function ModerationPendingEventsPage() {
         </Badge>
       </div>
 
+      {stalePending > 0 && (
+        <p role="status" data-testid="pending-stale-banner" className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+          {stalePending} pending event{stalePending === 1 ? " is" : "s are"} stale (past their date or waiting over 72 hours).{" "}
+          <Link href="/moderation/ingestion" className="font-medium underline">Review them on the Ingestion page</Link>.
+        </p>
+      )}
       {editReviewError && <p role="alert" className="text-sm text-red-600">{editReviewError}</p>}
 
       {events.length === 0 ? (

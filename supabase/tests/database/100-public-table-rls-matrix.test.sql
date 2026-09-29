@@ -2,7 +2,7 @@
 -- Owner writes below create fixtures only. Every policy assertion uses anon or
 -- authenticated roles; subject, unrelated caller and administrator have distinct JWTs.
 BEGIN;
-SELECT plan(256);
+SELECT plan(260);
 INSERT INTO auth.users(id,email) VALUES ('00000000-0000-4000-8000-000000100001','m0-00000000-0000-4000-8000-000000100001@example.invalid'),('00000000-0000-4000-8000-000000100002','m0-00000000-0000-4000-8000-000000100002@example.invalid'),('00000000-0000-4000-8000-000000100003','m0-00000000-0000-4000-8000-000000100003@example.invalid'),('00000000-0000-4000-8000-000000100004','m0-00000000-0000-4000-8000-000000100004@example.invalid');
 INSERT INTO public.users (id,email,name,roles) VALUES
  ('00000000-0000-4000-8000-000000100001','m0-00000000-0000-4000-8000-000000100001@example.invalid','M0 matrix','{user}'),
@@ -145,6 +145,8 @@ INSERT INTO public.submissions(id,kind,title,organization,source_url,submitter_u
  ('00000000-0000-4000-8000-000000109995','job','M3 matrix submission','M3 matrix org','https://example.invalid/m3-matrix','00000000-0000-4000-8000-000000100001',repeat('a',64));
 INSERT INTO public.listing_reports(id,event_id,reason,reporter_user_id,client_hash) VALUES
  ('00000000-0000-4000-8000-000000109996','00000000-0000-4000-8000-000000101081','other','00000000-0000-4000-8000-000000100001',repeat('a',64));
+INSERT INTO public.ingestion_deliveries(id,producer,outcome,event_count) VALUES
+ ('00000000-0000-4000-8000-000000109997','instagram-apify@1','heartbeat',0);
 
 -- CERT-07 assertion region start
 
@@ -159,6 +161,7 @@ SELECT is((SELECT count(*)::integer FROM public.resources WHERE id IN ('00000000
 SELECT throws_ok('SELECT * FROM public.resource_actions','42501',NULL,'resource_actions anon read deny');
 SELECT throws_ok('SELECT * FROM public.submissions','42501',NULL,'submissions anon read deny');
 SELECT throws_ok('SELECT * FROM public.listing_reports','42501',NULL,'listing_reports anon read deny');
+SELECT throws_ok('SELECT * FROM public.ingestion_deliveries','42501',NULL,'ingestion_deliveries anon read deny');
 SELECT throws_ok('SELECT * FROM public.saved_opportunities','42501',NULL,'saved_opportunities anon read deny');
 SELECT set_config('request.jwt.claims','{}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),0,'admin_audit_log anon read deny');
@@ -203,6 +206,7 @@ SELECT is((SELECT count(*)::integer FROM public.resources WHERE id IN ('00000000
 SELECT is((SELECT count(*)::integer FROM public.resource_actions WHERE resource_id='00000000-0000-4000-8000-000000109993'),0,'resource_actions subject read deny');
 SELECT is((SELECT count(*)::integer FROM public.submissions WHERE id='00000000-0000-4000-8000-000000109995'),0,'submissions subject read deny');
 SELECT is((SELECT count(*)::integer FROM public.listing_reports WHERE id='00000000-0000-4000-8000-000000109996'),0,'listing_reports subject read deny');
+SELECT is((SELECT count(*)::integer FROM public.ingestion_deliveries WHERE id='00000000-0000-4000-8000-000000109997'),0,'ingestion_deliveries subject read deny');
 SELECT is((SELECT count(*)::integer FROM public.saved_opportunities WHERE user_id='00000000-0000-4000-8000-000000100001'),1,'saved_opportunities subject read allow');
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000100001","role":"authenticated"}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),0,'admin_audit_log subject read deny');
@@ -247,6 +251,7 @@ SELECT is((SELECT count(*)::integer FROM public.resources WHERE id IN ('00000000
 SELECT is((SELECT count(*)::integer FROM public.resource_actions WHERE resource_id='00000000-0000-4000-8000-000000109993'),0,'resource_actions outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.submissions WHERE id='00000000-0000-4000-8000-000000109995'),0,'submissions outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.listing_reports WHERE id='00000000-0000-4000-8000-000000109996'),0,'listing_reports outsider read deny');
+SELECT is((SELECT count(*)::integer FROM public.ingestion_deliveries WHERE id='00000000-0000-4000-8000-000000109997'),0,'ingestion_deliveries outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.saved_opportunities WHERE user_id='00000000-0000-4000-8000-000000100001'),0,'saved_opportunities outsider read deny');
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000100003","role":"authenticated"}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),0,'admin_audit_log outsider read deny');
@@ -291,6 +296,7 @@ SELECT is((SELECT count(*)::integer FROM public.resources WHERE id IN ('00000000
 SELECT is((SELECT count(*)::integer FROM public.resource_actions WHERE resource_id='00000000-0000-4000-8000-000000109993'),1,'resource_actions admin read allow');
 SELECT is((SELECT count(*)::integer FROM public.submissions WHERE id='00000000-0000-4000-8000-000000109995'),1,'submissions admin read allow');
 SELECT is((SELECT count(*)::integer FROM public.listing_reports WHERE id='00000000-0000-4000-8000-000000109996'),1,'listing_reports admin read allow');
+SELECT is((SELECT count(*)::integer FROM public.ingestion_deliveries WHERE id='00000000-0000-4000-8000-000000109997'),1,'ingestion_deliveries admin read allow');
 SELECT is((SELECT count(*)::integer FROM public.saved_opportunities WHERE user_id='00000000-0000-4000-8000-000000100001'),0,'saved_opportunities admin read deny');
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000100004","role":"authenticated"}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),2,'admin_audit_log admin read allow');

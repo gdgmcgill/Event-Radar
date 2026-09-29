@@ -1,5 +1,8 @@
 # Last Scrape Log
 
+> **Current procedure (M3):** ingestion now runs through the in-repo producer and the signed
+> webhook; see [`docs/runbooks/ingestion.md`](docs/runbooks/ingestion.md). The log below is historical.
+
 **Last scrape date:** 2026-03-24
 **14-day window used:** 2026-03-17 to 2026-03-24
 **Events inserted:** 105

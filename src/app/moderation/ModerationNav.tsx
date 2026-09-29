@@ -20,6 +20,7 @@ import {
   Flag,
   BookOpen,
   Inbox,
+  RadioTower,
 } from "lucide-react";
 
 const contentItems = [
@@ -29,6 +30,7 @@ const contentItems = [
   { name: "Opportunities", path: "/moderation/opportunities", icon: Star },
   { name: "Resources", path: "/moderation/resources", icon: BookOpen },
   { name: "Submissions", path: "/moderation/submissions", icon: Inbox },
+  { name: "Ingestion", path: "/moderation/ingestion", icon: RadioTower },
   { name: "Club Approvals", path: "/moderation/clubs", icon: Building2 },
   { name: "Appeals", path: "/moderation/appeals", icon: MessageSquare },
   { name: "Reports", path: "/moderation/reports", icon: Flag },

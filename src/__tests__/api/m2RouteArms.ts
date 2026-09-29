@@ -39,6 +39,8 @@ export const M2_ARMS: M2Arm[] = [
  { route: "admin/submissions/[id]", verb: "PATCH", admin: true, body: { action: "spam",expected_updated_at: "2026-09-29T00:00:00Z" }, invoke: async r => (await import("@/app/api/admin/submissions/[id]/route")).PATCH(r, params()) },
  { route: "admin/listing-reports", verb: "GET", admin: true, query: "limit=abc", invoke: async r => (await import("@/app/api/admin/listing-reports/route")).GET(r) },
  { route: "admin/listing-reports/[id]", verb: "PATCH", admin: true, body: { action: "dismiss" }, invoke: async r => (await import("@/app/api/admin/listing-reports/[id]/route")).PATCH(r, params()) },
+ { route: "admin/ingestion", verb: "GET", admin: true, invoke: async () => (await import("@/app/api/admin/ingestion/route")).GET() },
+ { route: "admin/ingestion/images", verb: "POST", admin: true, body: { limit: 1 }, invoke: async r => (await import("@/app/api/admin/ingestion/images/route")).POST(r) },
 ];
 export const m2ArmIds = (prefix = "") => M2_ARMS.map(a => `${prefix}${a.route} ${a.verb}`);
 /** A valid multipart body for a `form: true` arm: one signed PDF field plus

@@ -121,3 +121,12 @@ than when the first row arrives.
 | `src/server/intake/admin.ts` | Private submission reads (including contact fields); listing-report reads with target titles | Called only after `adminContext` verifies active admin; browser roles have no table grant beyond the admin-only RLS read; the client hash and reporter id are never selected. |
 | `src/app/api/admin/submissions/[id]/route.ts` | `review_submission` convert/reject/spam | Active admin plus expected version; actor rechecked by the RPC; convert creates only a draft (unchecked) and never copies contact data; a retried convert returns the same target; audit row in the same transaction. |
 | `src/app/api/admin/listing-reports/[id]/route.ts` | `resolve_listing_report` resolve/dismiss | Active admin; actor rechecked by the RPC; only open reports change; audit row in the same transaction. |
+
+### M3 ingestion observability and image persistence
+
+| Caller | Operations | Guard / reason |
+| --- | --- | --- |
+| `src/server/ingestion/summary.ts` | Reads `ingestion_deliveries` (newest delivery, success, failure), the newest `instagram` event, pending and stale-pending counts, the stale pending list and recent deliveries | Called by `GET /api/health` only on its report arm (active admin or `HEALTH_TOKEN` bearer, which has no admin session, so RLS cannot answer it) and by `GET /api/admin/ingestion` after `adminContext`. Counts, timestamps, short codes and pending titles only; the delivery log holds no payload text. |
+| `src/app/api/admin/ingestion/route.ts` | The three summary reads above | Active admin via `adminContext` before any read. |
+| `src/server/ingestion/persistImages.ts` | Selects non-deleted `instagram` events in `pending`/`approved` with a CDN `image_url`; uploads to `event-images/ingest/<event id>.<ext>`; conditionally updates `events.image_url` (to the stored copy, or `NULL` on 403/404/410) | Admin-triggered only (`POST /api/admin/ingestion/images` after `adminContext`), host allow-listed (`*.cdninstagram.com`, `*.fbcdn.net`), private-address rejection on every redirect hop, bounded (≤10 per call, 5 MB, 10 s, 3 redirects), content-sniffed; writes only `event-images/ingest/*` and the `image_url` it fetched (compare-and-set). The service role is outside `events_guard_moderated_update`. |
+| `src/app/api/admin/ingestion/images/route.ts` | `persistEventImages(limit)` | Active admin; strict `PersistImagesBody` (limit 1–10). |

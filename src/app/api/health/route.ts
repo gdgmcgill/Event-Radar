@@ -69,6 +69,7 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { createRequestContext, type ServerSupabaseClient } from "@/server/context";
 import { getElevatedClient } from "@/server/db/elevated";
+import { ingestionSummary } from "@/server/ingestion/summary";
 import { log } from "@/server/log";
 import { withRoute } from "@/server/route";
 
@@ -215,24 +216,23 @@ async function checkPgCron(): Promise<HealthPgCron> {
  * a pending instagram event is visible only to admins through RLS, and the
  * token caller has no session.
  */
+/** Every field unknown: the summary read failed. Informational only. */
+const WEBHOOK_UNKNOWN: HealthWebhook = {
+  last_ingest_at: null,
+  last_delivery_at: null,
+  last_success_at: null,
+  last_failure_at: null,
+  last_error_code: null,
+  pending_review: null,
+  stale_pending: null,
+};
+
 async function checkWebhook(): Promise<HealthWebhook> {
   try {
-    const { data, error } = await getElevatedClient()
-      .from("events")
-      .select("created_at")
-      .eq("source", "instagram")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) {
-      log.warn("health check failed", { scope: "Health", check: "webhook", code: codeOf(error) });
-      return { last_ingest_at: null };
-    }
-    const created = data?.created_at ? Date.parse(data.created_at) : Number.NaN;
-    return { last_ingest_at: Number.isNaN(created) ? null : new Date(created).toISOString() };
+    return await ingestionSummary();
   } catch (error) {
     log.warn("health check failed", { scope: "Health", check: "webhook", code: codeOf(error) });
-    return { last_ingest_at: null };
+    return WEBHOOK_UNKNOWN;
   }
 }
 

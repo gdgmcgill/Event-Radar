@@ -6882,7 +6882,7 @@
       "console_count": 0,
       "as_any_count": 0,
       "tables_referenced": [],
-      "loc": 33
+      "loc": 35
     },
     "auth_requirement": "anonymous",
     "role_required": null,
@@ -6941,7 +6941,7 @@
       "console_count": 0,
       "as_any_count": 0,
       "tables_referenced": [],
-      "loc": 36
+      "loc": 38
     },
     "auth_requirement": "anonymous",
     "role_required": null,
@@ -7000,7 +7000,7 @@
       "console_count": 0,
       "as_any_count": 0,
       "tables_referenced": [],
-      "loc": 30
+      "loc": 31
     },
     "auth_requirement": "anonymous",
     "role_required": null,
@@ -7262,6 +7262,124 @@
       "multi_club_organizer": 403,
       "cross_club_attacker": 403,
       "admin": 404,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 403,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 401
+    },
+    "findings": []
+  },
+  {
+    "id": "api.admin.ingestion",
+    "file": "src/app/api/admin/ingestion/route.ts",
+    "route": "/api/admin/ingestion",
+    "methods": [
+      "GET"
+    ],
+    "dynamic_segments": [],
+    "signals": {
+      "uses_cookie_client": false,
+      "uses_service_client": true,
+      "calls_verify_admin": true,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": true,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": false,
+      "has_zod": false,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": false,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [],
+      "loc": 17
+    },
+    "auth_requirement": "admin",
+    "role_required": "adminContext: active user + requireRole(admin) before elevated access",
+    "rls_reliance": "bypassed",
+    "service_role_justified": "M2 editorial writes/read drafts after authoritative active-admin guard; src/server/db/REGISTRY.md",
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 401,
+      "onboarded_student": 403,
+      "mid_onboarding_student": 403,
+      "club_member": 403,
+      "club_owner": 403,
+      "multi_club_organizer": 403,
+      "cross_club_attacker": 403,
+      "admin": 200,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 403,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 401
+    },
+    "findings": []
+  },
+  {
+    "id": "api.admin.ingestion.images",
+    "file": "src/app/api/admin/ingestion/images/route.ts",
+    "route": "/api/admin/ingestion/images",
+    "methods": [
+      "POST"
+    ],
+    "dynamic_segments": [],
+    "signals": {
+      "uses_cookie_client": false,
+      "uses_service_client": true,
+      "calls_verify_admin": true,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": true,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": true,
+      "has_zod": true,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": false,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [],
+      "loc": 16
+    },
+    "auth_requirement": "admin",
+    "role_required": "adminContext: active user + requireRole(admin) before elevated access",
+    "rls_reliance": "bypassed",
+    "service_role_justified": "M2 editorial writes/read drafts after authoritative active-admin guard; src/server/db/REGISTRY.md",
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 401,
+      "onboarded_student": 403,
+      "mid_onboarding_student": 403,
+      "club_member": 403,
+      "club_owner": 403,
+      "multi_club_organizer": 403,
+      "cross_club_attacker": 403,
+      "admin": 200,
       "banned_permanent": 403,
       "suspended_active": 403,
       "suspension_expired": 403,

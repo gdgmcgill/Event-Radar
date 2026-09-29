@@ -47,6 +47,17 @@ Deno.serve((req) => {
         .single();
       return { data, error };
     },
+    // M3 P1-07: one delivery row per signed request, same service-role client.
+    recordDelivery: async (row) => {
+      supabase ??= createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+      const { error } = await supabase.from("ingestion_deliveries").insert(row);
+      return { error };
+    },
   });
 });
 

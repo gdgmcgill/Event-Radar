@@ -617,3 +617,82 @@ Deno.test("Event tags and category are properly processed", async () => {
     await cleanupTestData(organizerName);
   }
 });
+
+// ─── M3 P1-07: the delivery log ──────────────────────────────────────────────
+
+async function deliveriesFor(runId: string): Promise<Array<Record<string, unknown>>> {
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const response = await fetch(
+    `${testUrl.origin}/rest/v1/ingestion_deliveries?run_id=eq.${runId}&order=received_at.asc`,
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+  );
+  assertEquals(response.status, 200);
+  return await response.json();
+}
+
+async function cleanupDeliveries(runId: string) {
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const response = await fetch(`${testUrl.origin}/rest/v1/ingestion_deliveries?run_id=eq.${runId}`, {
+    method: "DELETE",
+    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+  });
+  await response.body?.cancel();
+}
+
+Deno.test("M3 P1-07: heartbeat and failed runs are recorded; unsigned requests are not", async () => {
+  const secret = Deno.env.get("WEBHOOK_SECRET")!;
+  const runId = crypto.randomUUID();
+  const run = { id: runId, producer: "edge-test@1", status: "ok", items_seen: 0 };
+  try {
+    const unsigned = await fetch(createRequest({ event_count: 0, events: [], run }, "0".repeat(64)));
+    assertEquals(unsigned.status, 401);
+    await unsigned.body?.cancel();
+    assertEquals((await deliveriesFor(runId)).length, 0);
+
+    const heartbeat = { event_count: 0, events: [], run };
+    const ok = await fetch(createRequest(heartbeat, computeHMAC(JSON.stringify(heartbeat), secret)));
+    assertEquals(ok.status, 200);
+    assertEquals(await ok.json(), { recorded: true });
+
+    const failed = { event_count: 0, events: [], run: { ...run, status: "failed", error_code: "apify_http_401" } };
+    const failedResponse = await fetch(createRequest(failed, computeHMAC(JSON.stringify(failed), secret)));
+    assertEquals(failedResponse.status, 200);
+    await failedResponse.body?.cancel();
+
+    const rows = await deliveriesFor(runId);
+    assertEquals(rows.map((row) => [row.producer, row.outcome, row.error_code]), [
+      ["edge-test@1", "heartbeat", null],
+      ["edge-test@1", "failed", "apify_http_401"],
+    ]);
+  } finally {
+    await cleanupDeliveries(runId);
+  }
+});
+
+Deno.test("M3 P1-07: a replayed batch is recorded as duplicate", async () => {
+  const secret = Deno.env.get("WEBHOOK_SECRET")!;
+  const runId = crypto.randomUUID();
+  const organizerName = `Delivery Organizer ${Date.now()}`;
+  const payload = {
+    event_count: 1,
+    events: [{ title: "Delivery Event", description: "Replay", date: "2030-01-01", location: "Campus", organizer: organizerName }],
+    run: { id: runId, producer: "edge-test@1", status: "ok", items_seen: 1 },
+  };
+  try {
+    const signature = computeHMAC(JSON.stringify(payload), secret);
+    const first = await fetch(createRequest(payload, signature));
+    assertEquals(first.status, 200);
+    await first.body?.cancel();
+    const replay = await fetch(createRequest(payload, signature));
+    assertEquals(replay.status, 400);
+    await replay.body?.cancel();
+    const rows = await deliveriesFor(runId);
+    assertEquals(rows.map((row) => [row.outcome, row.inserted, row.duplicates, row.event_count]), [
+      ["succeeded", 1, 0, 1],
+      ["duplicate", 0, 1, 1],
+    ]);
+  } finally {
+    await cleanupTestData(organizerName);
+    await cleanupDeliveries(runId);
+  }
+});

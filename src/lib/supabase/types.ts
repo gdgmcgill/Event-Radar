@@ -849,6 +849,48 @@ export type Database = {
           },
         ]
       }
+      ingestion_deliveries: {
+        Row: {
+          duplicates: number
+          error_code: string | null
+          event_count: number
+          id: string
+          inserted: number
+          invalid: number
+          items_seen: number | null
+          outcome: string
+          producer: string
+          received_at: string
+          run_id: string | null
+        }
+        Insert: {
+          duplicates?: number
+          error_code?: string | null
+          event_count: number
+          id?: string
+          inserted?: number
+          invalid?: number
+          items_seen?: number | null
+          outcome: string
+          producer: string
+          received_at?: string
+          run_id?: string | null
+        }
+        Update: {
+          duplicates?: number
+          error_code?: string | null
+          event_count?: number
+          id?: string
+          inserted?: number
+          invalid?: number
+          items_seen?: number | null
+          outcome?: string
+          producer?: string
+          received_at?: string
+          run_id?: string | null
+        }
+        Relationships: []
+      }
       legacy_reminder_log: {
         Row: {
           event_id: string | null

@@ -26,8 +26,10 @@ export const M1_M2_ENDPOINTS = {
  '/api/admin/submissions/[id]': ['admin', 404],
  '/api/admin/listing-reports': ['admin', 200],
  '/api/admin/listing-reports/[id]': ['admin', 404],
+ '/api/admin/ingestion': ['admin', 200],
+ '/api/admin/ingestion/images': ['admin', 200],
 };
-export const M1_M2_PAGES = ['/discover', '/saved', '/opportunities/[id]', '/moderation/opportunities', '/resources', '/resources/[slug]', '/moderation/resources', '/submit', '/for-companies', '/moderation/submissions'];
+export const M1_M2_PAGES = ['/discover', '/saved', '/opportunities/[id]', '/moderation/opportunities', '/resources', '/resources/[slug]', '/moderation/resources', '/submit', '/for-companies', '/moderation/submissions', '/moderation/ingestion'];
 const personas = ['anonymous','onboarded_student','mid_onboarding_student','club_member','club_owner','multi_club_organizer','cross_club_attacker','admin','banned_permanent','suspended_active','suspension_expired','non_mcgill_signin','machine_no_credential'];
 export function updateM1M2Inventory() {
  const base = '.planning/audit/inventory/';

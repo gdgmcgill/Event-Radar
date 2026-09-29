@@ -179,7 +179,6 @@ describe("WebhookPayload", () => {
   it("a consistent payload parses", () => {
     expect(WebhookPayload.safeParse({ event_count: 2, events }).success).toBe(true);
     expect(webhookPayloadError({ event_count: 2, events })).toBeNull();
-    expect(webhookPayloadError({ event_count: 0, events: [] })).toBeNull();
   });
 
   it("event_count different from events.length yields today's mismatch message", () => {
@@ -205,5 +204,48 @@ describe("WebhookPayload", () => {
 
   it("the payload's events are not validated here (validateEvent runs per event after)", () => {
     expect(webhookPayloadError({ event_count: 1, events: [{}] })).toBeNull();
+  });
+});
+
+// ─── M3 P1-07: the producer run block ─────────────────────────────────────────
+
+describe("WebhookPayload run (M3 P1-07)", () => {
+  const RUN_ID = "3f1c2a4e-8b7d-4c1a-9e2f-0a1b2c3d4e5f";
+  const RUN = { id: RUN_ID, producer: "instagram-apify@1", status: "ok", items_seen: 12 };
+  const RUN_MESSAGE =
+    "run must be { id: uuid, producer, status: ok|failed, error_code?, items_seen? }";
+
+  it("an empty batch without run is refused with its own message", () => {
+    expect(webhookPayloadError({ event_count: 0, events: [] })).toBe(
+      "events must not be empty unless run is present"
+    );
+  });
+
+  it.each([
+    ["an ok heartbeat", RUN],
+    ["a failed run with a code", { ...RUN, status: "failed", error_code: "apify_http_401", items_seen: 0 }],
+    ["a run with no optional fields", { id: RUN_ID, producer: "unknown", status: "ok" }],
+  ])("an empty batch with %s parses", (_l, run) => {
+    expect(webhookPayloadError({ event_count: 0, events: [], run })).toBeNull();
+  });
+
+  it("a batch with events and a run parses, and the run is kept in the output", () => {
+    const parsed = WebhookPayload.safeParse({ event_count: 1, events: [VALID], run: RUN });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.run).toEqual(RUN);
+  });
+
+  it.each([
+    ["id not a uuid", { ...RUN, id: "not-a-uuid" }],
+    ["producer with capitals and spaces", { ...RUN, producer: "Not A Producer" }],
+    ["producer too long", { ...RUN, producer: "a".repeat(81) }],
+    ["status unknown", { ...RUN, status: "exploded" }],
+    ["error_code not snake_case", { ...RUN, error_code: "Bad Code" }],
+    ["error_code too long", { ...RUN, error_code: "a".repeat(65) }],
+    ["items_seen negative", { ...RUN, items_seen: -1 }],
+    ["items_seen fractional", { ...RUN, items_seen: 1.5 }],
+    ["run not an object", "ok"],
+  ])("%s yields the run message", (_l, run) => {
+    expect(webhookPayloadError({ event_count: 0, events: [], run })).toBe(RUN_MESSAGE);
   });
 });

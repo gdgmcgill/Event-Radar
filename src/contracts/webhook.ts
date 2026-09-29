@@ -7,8 +7,11 @@
  * app has no reason to verify webhook signatures or run the handler.
  */
 export {
+  ERROR_CODE_PATTERN,
+  PRODUCER_PATTERN,
   WEBHOOK_MESSAGES,
   WebhookEvent,
+  WebhookRun,
   WebhookPayload,
   webhookEventErrors,
   webhookPayloadError,
@@ -19,4 +22,6 @@ export type {
   WebhookEventOutput,
   WebhookPayloadInput,
   WebhookPayloadOutput,
+  WebhookRunInput,
+  WebhookRunOutput,
 } from "../../supabase/functions/_shared/webhook-contract";

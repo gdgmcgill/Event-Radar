@@ -23,6 +23,7 @@ export const MUTATIONS: Record<string, MutationProbe> = {
   "POST /api/listing-reports": { status: 404 },
   "PATCH /api/admin/submissions/[id]": { status: 400 },
   "PATCH /api/admin/listing-reports/[id]": { status: 400 },
+  "POST /api/admin/ingestion/images": { status: 400 },
   "POST /api/admin/calculate-popularity": { status: 200, isolated: "popularity" },
   "PATCH /api/admin/clubs/[id]": { status: 400 },
   "PATCH /api/admin/events/[id]/edits": { status: 400 },

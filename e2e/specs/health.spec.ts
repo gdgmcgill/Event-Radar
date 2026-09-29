@@ -70,7 +70,7 @@ test.describe("an admin", () => {
         auth: { status: string; latency_ms: number };
         storage: { status: string; latency_ms: number };
         pg_cron: { status: string; jobs: { jobname: string }[] };
-        webhook: { last_ingest_at: string | null };
+        webhook: { last_ingest_at: string | null } & Record<string, unknown>;
       };
     };
     expect(Object.keys(body).sort()).toEqual(["checks", "status", "ts", "version"]);
@@ -80,6 +80,11 @@ test.describe("an admin", () => {
     expect(body.checks.db.status).toBe("ok");
     expect(body.checks.pg_cron.jobs.map((j) => j.jobname).sort()).toEqual(JOBS);
     expect(body.checks.webhook.last_ingest_at).toBeNull();
+    // M3 P1-07: delivery freshness and the pending queue ride along.
+    expect(Object.keys(body.checks.webhook).sort()).toEqual([
+      "last_delivery_at", "last_error_code", "last_failure_at", "last_ingest_at",
+      "last_success_at", "pending_review", "stale_pending",
+    ]);
   });
 
   test("the /health page renders the overall status", async ({ page }) => {

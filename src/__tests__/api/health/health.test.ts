@@ -292,7 +292,7 @@ describe("the report: an active admin or the token bearer", () => {
 
   it("webhook.last_ingest_at is the newest instagram-sourced insert, read through the door", async () => {
     const result = await health({ persona: "admin" });
-    expect(result.body.checks.webhook).toEqual({ last_ingest_at: "2026-09-21T08:30:00.000Z" });
+    expect(result.body.checks.webhook.last_ingest_at).toBe("2026-09-21T08:30:00.000Z");
     const read = mockElevated.calls.find((c) => c.table === "events");
     expect(read?.filters).toEqual(expect.arrayContaining([{ op: "eq", column: "source", value: "instagram" }]));
   });
@@ -302,8 +302,56 @@ describe("the report: an active admin or the token bearer", () => {
       persona: "admin",
       elevated: (i) => { i.tables!.events = [{ id: "m", source: "manual", created_at: iso(HOUR) }]; },
     });
-    expect(result.body.checks.webhook).toEqual({ last_ingest_at: null });
+    expect(result.body.checks.webhook.last_ingest_at).toBeNull();
     expect(result.body.status).toBe("ok");
+  });
+
+  it("M3 P1-07: the webhook check carries delivery freshness and the pending queue for an admin", async () => {
+    const result = await health({
+      persona: "admin",
+      elevated: (i) => {
+        i.tables!.ingestion_deliveries = [
+          { id: "d1", producer: "instagram-apify@1", received_at: "2026-09-20T10:00:00.000Z", outcome: "succeeded", error_code: null },
+          { id: "d2", producer: "instagram-apify@1", received_at: "2026-09-21T10:00:00.000Z", outcome: "duplicate", error_code: null },
+          { id: "d3", producer: "instagram-apify@1", received_at: "2026-09-22T10:00:00.000Z", outcome: "failed", error_code: "apify_http_401" },
+        ];
+        i.tables!.events = [
+          { id: "e3", source: "instagram", status: "pending", deleted_at: null, created_at: "2026-09-21T08:30:00.000Z", start_date: "2020-01-01T00:00:00.000Z" },
+          { id: "e5", source: "manual", status: "pending", deleted_at: null, created_at: iso(HOUR), start_date: "2099-01-01T00:00:00.000Z" },
+          { id: "e6", source: "manual", status: "pending", deleted_at: iso(HOUR), created_at: iso(HOUR), start_date: "2099-01-01T00:00:00.000Z" },
+          { id: "e7", source: "manual", status: "approved", deleted_at: null, created_at: iso(HOUR), start_date: "2099-01-01T00:00:00.000Z" },
+        ];
+      },
+    });
+    expect(HealthReport.safeParse(result.body).success).toBe(true);
+    expect(result.body.checks.webhook).toEqual({
+      last_ingest_at: "2026-09-21T08:30:00.000Z",
+      last_delivery_at: "2026-09-22T10:00:00.000Z",
+      last_success_at: "2026-09-21T10:00:00.000Z",
+      last_failure_at: "2026-09-22T10:00:00.000Z",
+      last_error_code: "apify_http_401",
+      pending_review: 2,
+      // The fake records the stale `or` filter without evaluating it, so this
+      // counts every pending, non-deleted event; the filter itself is pinned below.
+      stale_pending: 2,
+    });
+    const staleRead = mockElevated.calls.filter((c) => c.table === "events" && c.filters.some((f) => f.op === "or"));
+    expect(staleRead).toHaveLength(1);
+    expect(String(staleRead[0].filters.find((f) => f.op === "or")?.value)).toMatch(/^created_at\.lt\.[^,]+,start_date\.lt\./);
+    expect(result.body.status).toBe("ok");
+  });
+
+  it("M3 P1-07: a failing summary read leaves the webhook fields unknown and the status unchanged", async () => {
+    const result = await health({
+      persona: "admin",
+      elevated: (i) => { i.errors = { ingestion_deliveries: { code: "42P01", message: `${SENTINEL} relation does not exist` } }; },
+    });
+    expect(result.body.checks.webhook).toEqual({
+      last_ingest_at: null, last_delivery_at: null, last_success_at: null, last_failure_at: null,
+      last_error_code: null, pending_review: null, stale_pending: null,
+    });
+    expect(result.body.status).toBe("ok");
+    expect(result.text).not.toContain(SENTINEL);
   });
 });
 

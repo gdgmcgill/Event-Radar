@@ -63,6 +63,18 @@ export const HealthWebhook = z.strictObject({
    * function (research C23).
    */
   last_ingest_at: z.string().nullable(),
+  /** M3 P1-07: the newest signed delivery the webhook recorded, any outcome. */
+  last_delivery_at: z.string().nullable(),
+  /** The newest succeeded, partial, duplicate or heartbeat delivery. */
+  last_success_at: z.string().nullable(),
+  /** The newest failed or rejected delivery. */
+  last_failure_at: z.string().nullable(),
+  /** That failure's short snake_case code; null when none. */
+  last_error_code: z.string().nullable(),
+  /** Pending, non-deleted events; null when the read failed. */
+  pending_review: z.number().int().nonnegative().nullable(),
+  /** Pending events created over 72 h ago or already past; null when unknown. */
+  stale_pending: z.number().int().nonnegative().nullable(),
 });
 
 export const HealthReport = z.strictObject({

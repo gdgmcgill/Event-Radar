@@ -44,6 +44,7 @@
 
 import { NextResponse } from "next/server";
 import type { z } from "zod";
+import { sniffImageType } from "@/lib/imageSniff";
 import { badRequest } from "@/server/errors";
 
 // Same typing as `Request.json()`'s `Promise<any>`, narrowed to an object.
@@ -277,15 +278,10 @@ export function checkFile(file: File, rule: FileRule): NextResponse | null {
  * This rejects renamed executable/HTML files; it is not a full image decoder.
  */
 export async function checkFileContent(file: File): Promise<NextResponse | null> {
-  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
-  const starts = (prefix: number[]) => prefix.every((value, index) => bytes[index] === value);
-  const signatures: Record<string, boolean> = {
-    "image/png": starts([137,80,78,71,13,10,26,10]),
-    "image/jpeg": starts([255,216,255]),
-    "image/gif": starts([71,73,70,56,55,97]) || starts([71,73,70,56,57,97]),
-    "image/webp": starts([82,73,70,70]) && [87,69,66,80].every((value,index) => bytes[index+8] === value),
-  };
-  return signatures[file.type] ? null : badRequest("File content does not match its image type");
+  const sniffed = sniffImageType(new Uint8Array(await file.slice(0, 12).arrayBuffer()));
+  return sniffed && file.type === `image/${sniffed}`
+    ? null
+    : badRequest("File content does not match its image type");
 }
 
 /**

@@ -279,6 +279,28 @@ export default function HealthPage() {
                     </div>
                   </div>
                 </div>
+                <dl className="mt-6 grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
+                  <div className="rounded-lg bg-secondary/30 p-4">
+                    <dt className="text-muted-foreground">Last successful delivery</dt>
+                    <dd className="mt-1 font-semibold" data-testid="health-webhook-last-success">
+                      {formatTime(report.checks.webhook.last_success_at)}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-secondary/30 p-4">
+                    <dt className="text-muted-foreground">Last failed delivery</dt>
+                    <dd className="mt-1 font-semibold" data-testid="health-webhook-last-failure">
+                      {formatTime(report.checks.webhook.last_failure_at)}
+                      {report.checks.webhook.last_error_code ? ` (${report.checks.webhook.last_error_code})` : ""}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-secondary/30 p-4">
+                    <dt className="text-muted-foreground">Stale pending events</dt>
+                    <dd className="mt-1 font-semibold" data-testid="health-webhook-stale-pending">
+                      {report.checks.webhook.stale_pending ?? "Unknown"}
+                      {report.checks.webhook.pending_review === null ? "" : ` of ${report.checks.webhook.pending_review} pending`}
+                    </dd>
+                  </div>
+                </dl>
               </CardContent>
             </Card>
 

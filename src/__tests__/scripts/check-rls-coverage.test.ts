@@ -25,7 +25,7 @@ function fails(fragment: string) {
   expect(result.stderr).toContain(fragment);
 }
 it("accepts complete real client-role coverage", () => {
-  expect(execFileSync(process.execPath, [script, dir], { encoding: "utf8" })).toContain("40 public tables");
+  expect(execFileSync(process.execPath, [script, dir], { encoding: "utf8" })).toContain("41 public tables");
 });
 it("rejects elevated impersonation in the matrix", () => {
   mutate(source => source.replace("SET LOCAL ROLE authenticated;", "SET LOCAL ROLE service_role;"));

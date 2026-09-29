@@ -79,7 +79,15 @@ this body: no dependency names, no configuration state, no error text, no memory
         }
       ]
     },
-    "webhook": { "last_ingest_at": "2026-09-16T21:40:03.000Z" }
+    "webhook": {
+      "last_ingest_at": "2026-09-16T21:40:03.000Z",
+      "last_delivery_at": "2026-09-27T14:00:02.118Z",
+      "last_success_at": "2026-09-27T14:00:02.118Z",
+      "last_failure_at": null,
+      "last_error_code": null,
+      "pending_review": 4,
+      "stale_pending": 0
+    }
   }
 }
 ```
@@ -102,7 +110,10 @@ A degraded example (storage timed out, one job stale), answered with HTTP 503:
           "last_start": "2026-09-26T22:00:00.010Z", "last_status": "succeeded", "stale": true }
       ]
     },
-    "webhook": { "last_ingest_at": null }
+    "webhook": {
+      "last_ingest_at": null, "last_delivery_at": null, "last_success_at": null,
+      "last_failure_at": null, "last_error_code": null, "pending_review": 0, "stale_pending": 0
+    }
   }
 }
 ```
@@ -115,7 +126,7 @@ A degraded example (storage timed out, one job stale), answered with HTTP 503:
 | `auth` | `GET <NEXT_PUBLIC_SUPABASE_URL>/auth/v1/health` with the anon key in the `apikey` header | Any status other than 200, or no answer within 3 seconds |
 | `storage` | `GET <NEXT_PUBLIC_SUPABASE_URL>/storage/v1/status` with the anon key | Any status other than 200, or no answer within 3 seconds |
 | `pg_cron` | `public.cron_job_status()` through the elevated door (service role only; REGISTRY row "Health diagnostics") | A known job's newest run started more than twice its schedule ago |
-| `webhook` | The newest `created_at` of an event with `source = 'instagram'`, through the elevated door | Never: informational |
+| `webhook` | `ingestionSummary()` (`src/server/ingestion/summary.ts`) through the elevated door: the newest `instagram` event, the newest deliveries in `ingestion_deliveries`, and the pending queue | Never: informational |
 
 `latency_ms` is the wall time of that probe in milliseconds.
 
@@ -149,6 +160,24 @@ It is the newest `created_at` among events whose `source` is `instagram`, insert
 manual repair. It is **not** proof that the edge function received and processed a delivery; nothing in
 the tree sends to the webhook today (research C1, C23). `null` means no scraper-sourced event exists,
 which is the state of the local seed. It has no threshold and never changes the overall status.
+
+### The other `webhook` fields (M3 P1-07)
+
+Since M3 the edge function records one row in `public.ingestion_deliveries` for every request whose
+signature verifies (counts, a run id and a short code only; never captions or payloads).
+
+| Field | Meaning |
+|---|---|
+| `last_delivery_at` | The newest recorded delivery, any outcome |
+| `last_success_at` | The newest `succeeded`, `partial`, `duplicate` or `heartbeat` delivery: the producer ran and the webhook accepted it |
+| `last_failure_at` | The newest `failed` or `rejected` delivery |
+| `last_error_code` | That failure's code, e.g. `apify_http_401`, `apify_timeout`, `invalid_events`, `insert_failed` |
+| `pending_review` | Pending, non-deleted events (any source) |
+| `stale_pending` | Of those, the ones created more than 72 hours ago or whose start date already passed |
+
+A failed read of any of these answers every field `null` (logged with its code) and still never
+changes the overall status. `/moderation/ingestion` shows the same summary with the delivery table
+and the stale queue; `docs/runbooks/ingestion.md` explains the outcomes and codes.
 
 ## Status rules and HTTP codes
 

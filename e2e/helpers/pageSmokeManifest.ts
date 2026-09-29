@@ -39,6 +39,7 @@ export const PAGE_SMOKES: Record<string, PageSmoke> = {
   "/submit": { ...publicPage, notFound: true },
   "/for-companies": { ...publicPage, notFound: true },
   "/moderation/submissions": moderationAdmin,
+  "/moderation/ingestion": moderationAdmin,
   "/events/[id]": { ...publicPage, path: `/events/${IDS.approvedEvent}`, text: "Seed Approved Event" },
   "/feedback": publicPage,
   "/friends": privatePage,

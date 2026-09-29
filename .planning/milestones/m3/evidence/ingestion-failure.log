@@ -1,0 +1,17 @@
+# M3 P1-07 Task 16 step 3: failure visibility (2026-09-29T21:46:09Z)
+# command: APIFY_API_TOKEN=invalid npx tsx scripts/ingest/run-local.ts --handles mcgillhacks,mcgillwics,mcgillesports --days 45
+local webhook: starting
+local webhook: ready
+run 28927ad6-7dc1-4465-9ee0-9d6d624655f4: handles=3 days=45
+apify: requesting profiles
+apify: failed code=apify_http_401
+failure report: status=200
+producer exit code: 1
+exit=1
+# the /api/admin/ingestion summary, read with ingestionSummary() (the function the route answers) against the local stack:
+# summary: {"last_ingest_at":"2026-09-29T21:45:17.762Z","last_delivery_at":"2026-09-29T21:46:13.280Z","last_success_at":"2026-09-29T21:45:58.222Z","last_failure_at":"2026-09-29T21:46:13.280Z","last_error_code":"apify_http_401","pending_review":7,"stale_pending":6}
+# delivery: producer=instagram-apify@1 outcome=failed event_count=0 inserted=0 duplicates=0 invalid=0 items_seen=0 error_code=apify_http_401
+# delivery: producer=instagram-apify@1 outcome=duplicate event_count=6 inserted=0 duplicates=6 invalid=0 items_seen=8 error_code=null
+# delivery: producer=instagram-apify@1 outcome=succeeded event_count=6 inserted=6 duplicates=0 invalid=0 items_seen=8 error_code=null
+# stale pending listed: 6
+# instagram pending events after the failed run = 6 (unchanged)
