@@ -2,7 +2,7 @@
 -- Owner writes below create fixtures only. Every policy assertion uses anon or
 -- authenticated roles; subject, unrelated caller and administrator have distinct JWTs.
 BEGIN;
-SELECT plan(239);
+SELECT plan(248);
 INSERT INTO auth.users(id,email) VALUES ('00000000-0000-4000-8000-000000100001','m0-00000000-0000-4000-8000-000000100001@example.invalid'),('00000000-0000-4000-8000-000000100002','m0-00000000-0000-4000-8000-000000100002@example.invalid'),('00000000-0000-4000-8000-000000100003','m0-00000000-0000-4000-8000-000000100003@example.invalid'),('00000000-0000-4000-8000-000000100004','m0-00000000-0000-4000-8000-000000100004@example.invalid');
 INSERT INTO public.users (id,email,name,roles) VALUES
  ('00000000-0000-4000-8000-000000100001','m0-00000000-0000-4000-8000-000000100001@example.invalid','M0 matrix','{user}'),
@@ -136,6 +136,11 @@ INSERT INTO public.opportunity_universities VALUES('00000000-0000-4000-8000-0000
 INSERT INTO public.event_discovery_metadata(event_id,updated_by) VALUES('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000100004'),('00000000-0000-4000-8000-000000101082','00000000-0000-4000-8000-000000100004');
 INSERT INTO public.event_discovery_universities VALUES('00000000-0000-4000-8000-000000101081','10000000-0000-4000-8000-000000000001'),('00000000-0000-4000-8000-000000101082','10000000-0000-4000-8000-000000000001');
 INSERT INTO public.saved_opportunities(user_id,opportunity_id) VALUES('00000000-0000-4000-8000-000000100001','00000000-0000-4000-8000-000000109991');
+INSERT INTO public.resources(id,slug,resource_type,title,summary,body_markdown,category,audience,author_name,status,reviewed_at,published_at,created_by,updated_by) VALUES
+ ('00000000-0000-4000-8000-000000109993','m3-matrix-resource','guide','M3 matrix resource','Public','Public body','career','Everyone','M3 matrix author','published',now(),now(),'00000000-0000-4000-8000-000000100004','00000000-0000-4000-8000-000000100004');
+INSERT INTO public.resources(id,slug,resource_type,title,summary,body_markdown,category,audience,author_name,status,created_by,updated_by) VALUES
+ ('00000000-0000-4000-8000-000000109994','m3-matrix-resource-draft','guide','M3 matrix resource draft','Private','Draft body','career','Everyone','M3 matrix author','draft','00000000-0000-4000-8000-000000100004','00000000-0000-4000-8000-000000100004');
+INSERT INTO public.resource_actions(resource_id,action) VALUES('00000000-0000-4000-8000-000000109993','outbound');
 
 -- CERT-07 assertion region start
 
@@ -146,6 +151,8 @@ SELECT is((SELECT count(*)::integer FROM public.opportunities WHERE id IN ('0000
 SELECT is((SELECT count(*)::integer FROM public.opportunity_universities WHERE opportunity_id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunity_universities anon read allow');
 SELECT is((SELECT count(*)::integer FROM public.event_discovery_metadata WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_metadata anon read allow');
 SELECT is((SELECT count(*)::integer FROM public.event_discovery_universities WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_universities anon read allow');
+SELECT is((SELECT count(*)::integer FROM public.resources WHERE id IN ('00000000-0000-4000-8000-000000109993','00000000-0000-4000-8000-000000109994')),1,'resources anon read allow');
+SELECT throws_ok('SELECT * FROM public.resource_actions','42501',NULL,'resource_actions anon read deny');
 SELECT throws_ok('SELECT * FROM public.saved_opportunities','42501',NULL,'saved_opportunities anon read deny');
 SELECT set_config('request.jwt.claims','{}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),0,'admin_audit_log anon read deny');
@@ -186,6 +193,8 @@ SELECT is((SELECT count(*)::integer FROM public.opportunities WHERE id IN ('0000
 SELECT is((SELECT count(*)::integer FROM public.opportunity_universities WHERE opportunity_id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunity_universities subject read allow');
 SELECT is((SELECT count(*)::integer FROM public.event_discovery_metadata WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_metadata subject read allow');
 SELECT is((SELECT count(*)::integer FROM public.event_discovery_universities WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_universities subject read allow');
+SELECT is((SELECT count(*)::integer FROM public.resources WHERE id IN ('00000000-0000-4000-8000-000000109993','00000000-0000-4000-8000-000000109994')),1,'resources subject read allow');
+SELECT is((SELECT count(*)::integer FROM public.resource_actions WHERE resource_id='00000000-0000-4000-8000-000000109993'),0,'resource_actions subject read deny');
 SELECT is((SELECT count(*)::integer FROM public.saved_opportunities WHERE user_id='00000000-0000-4000-8000-000000100001'),1,'saved_opportunities subject read allow');
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000100001","role":"authenticated"}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),0,'admin_audit_log subject read deny');
@@ -226,6 +235,8 @@ SELECT is((SELECT count(*)::integer FROM public.opportunities WHERE id IN ('0000
 SELECT is((SELECT count(*)::integer FROM public.opportunity_universities WHERE opportunity_id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunity_universities outsider read allow');
 SELECT is((SELECT count(*)::integer FROM public.event_discovery_metadata WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_metadata outsider read allow');
 SELECT is((SELECT count(*)::integer FROM public.event_discovery_universities WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_universities outsider read allow');
+SELECT is((SELECT count(*)::integer FROM public.resources WHERE id IN ('00000000-0000-4000-8000-000000109993','00000000-0000-4000-8000-000000109994')),1,'resources outsider read allow');
+SELECT is((SELECT count(*)::integer FROM public.resource_actions WHERE resource_id='00000000-0000-4000-8000-000000109993'),0,'resource_actions outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.saved_opportunities WHERE user_id='00000000-0000-4000-8000-000000100001'),0,'saved_opportunities outsider read deny');
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000100003","role":"authenticated"}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),0,'admin_audit_log outsider read deny');
@@ -266,6 +277,8 @@ SELECT is((SELECT count(*)::integer FROM public.opportunities WHERE id IN ('0000
 SELECT is((SELECT count(*)::integer FROM public.opportunity_universities WHERE opportunity_id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunity_universities admin read allow');
 SELECT is((SELECT count(*)::integer FROM public.event_discovery_metadata WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_metadata admin read allow');
 SELECT is((SELECT count(*)::integer FROM public.event_discovery_universities WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_universities admin read allow');
+SELECT is((SELECT count(*)::integer FROM public.resources WHERE id IN ('00000000-0000-4000-8000-000000109993','00000000-0000-4000-8000-000000109994')),1,'resources admin read allow');
+SELECT is((SELECT count(*)::integer FROM public.resource_actions WHERE resource_id='00000000-0000-4000-8000-000000109993'),1,'resource_actions admin read allow');
 SELECT is((SELECT count(*)::integer FROM public.saved_opportunities WHERE user_id='00000000-0000-4000-8000-000000100001'),0,'saved_opportunities admin read deny');
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000100004","role":"authenticated"}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),2,'admin_audit_log admin read allow');
@@ -359,6 +372,7 @@ SELECT throws_ok($q$INSERT INTO public.user_event_scores (user_id,event_id,score
 SELECT throws_ok($q$INSERT INTO public.feedback_request_log (user_id,event_id,request_type) VALUES ('00000000-0000-4000-8000-000000100001','00000000-0000-4000-8000-000000101082','post_event')$q$,'42501',NULL,'feedback_request_log subject write deny');
 SELECT throws_ok($q$INSERT INTO public.legacy_reminder_log (user_id,event_id,reminder_type) VALUES ('00000000-0000-4000-8000-000000100001','00000000-0000-4000-8000-000000101082','reminder_24h')$q$,'42501',NULL,'legacy_reminder_log subject write deny');
 SELECT throws_ok($q$INSERT INTO public.admin_audit_log (admin_user_id,action,target_type,target_id) VALUES ('00000000-0000-4000-8000-000000100001','approved','event','00000000-0000-4000-8000-000000101081')$q$,'42501',NULL,'admin_audit_log subject write deny');
+SELECT throws_ok($q$INSERT INTO public.resources (slug,resource_type,title,summary,body_markdown,category,audience,author_name) VALUES ('m3-matrix-forged','guide','Forged','Forged','Forged body','career','Everyone','Forger')$q$,'42501',NULL,'resources authenticated write deny');
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000100004',true);

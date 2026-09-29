@@ -102,3 +102,13 @@ than when the first row arrives.
 | `src/app/api/admin/opportunities/route.ts` | Bounded private list; `curate_opportunity` create | Active admin; server-derived actor; named curator check controls Pick changes; transaction writes audit. |
 | `src/app/api/admin/opportunities/[id]/route.ts` | `curate_opportunity` edit/publish/archive/merge | Active admin plus expected version; actor rechecked by RPC; only configured curator can change Picks. |
 | `src/app/api/admin/events/[id]/discovery/route.ts` | Event editorial metadata and duplicate reads; `curate_event_discovery`, `merge_event_discovery` | Active admin; expected version; RPC rechecks actor and commits audit atomically. |
+
+### M3 authored resources
+
+| Caller | Operations | Guard / reason |
+| --- | --- | --- |
+| `src/server/resources/service.ts` | Public `open` target resolution: reads the private `file_path`/`file_name` of a published template and issues a short signed URL from the private `resource-files` bucket; records `resource_actions` | The published check runs first against the cookie client (RLS-scoped, public columns only); `file_path` is never publicly granted, so a signed download needs the door. A failed action-log insert is logged and never blocks the redirect. |
+| `src/server/resources/admin.ts` | Private resource reads (draft/archived included); resource file upload to the private `resource-files` bucket | Called only after `adminContext` verifies active admin; public column grants exclude `file_path` and `status`. |
+| `src/app/api/admin/resources/route.ts` | Bounded private list; `curate_resource` create | Active admin; server-derived actor; RPC writes the audit row in the same transaction. |
+| `src/app/api/admin/resources/[id]/route.ts` | `curate_resource` edit/publish/archive | Active admin plus expected version; actor rechecked by the RPC. |
+| `src/app/api/admin/resources/[id]/file/route.ts` | Storage upload, then `curate_resource` edit with the resulting `file_path`/`file_name`/`file_size` | Active admin; size/type/content-sniff checks precede the upload; expected version guards the follow-up edit. |

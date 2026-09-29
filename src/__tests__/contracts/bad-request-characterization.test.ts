@@ -124,6 +124,9 @@ const PINNED_ELSEWHERE: Record<string, readonly string[]> = {
   discovery: ["src/__tests__/api/m2-route-boundaries.test.ts"],
   saved: ["src/__tests__/api/m2-route-boundaries.test.ts"],
   "saved/status": ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  resources: ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  "admin/resources": ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  "admin/resources/[id]": ["src/__tests__/api/m2-route-boundaries.test.ts"],
   "onboarding/complete": ["src/__tests__/api/m1-accounts.test.ts"],
   events: [
     "src/__tests__/api/events/events-list-characterization.test.ts",

@@ -7,7 +7,11 @@ import { M2_ARMS, M2_ID, m2Request } from "./m2RouteArms";
 let mockCtx: RequestContext;
 const mockFrom = jest.fn(() => { throw new Error("PRIVATE_DATABASE_SENTINEL"); });
 const mockRpc = jest.fn(() => { throw new Error("PRIVATE_DATABASE_SENTINEL"); });
-const mockDb = { from: mockFrom, rpc: mockRpc };
+// The resources file upload also touches Storage before its RPC call; a
+// harmless stub lets that arm's generic-500 assertion reach the RPC throw
+// below instead of an unrelated "storage undefined" crash.
+const mockStorage = { from: () => ({ upload: async () => ({ data: { path: "stub" }, error: null }), createSignedUrl: async () => ({ data: { signedUrl: "https://storage.example/stub" }, error: null }) }) };
+const mockDb = { from: mockFrom, rpc: mockRpc, storage: mockStorage };
 jest.mock("@/server/context", () => ({ createRequestContext: () => Promise.resolve(mockCtx) }));
 jest.mock("@/server/db/elevated", () => ({ getElevatedClient: () => mockDb }));
 jest.mock("@/lib/supabase/server", () => ({ createClient: () => Promise.resolve(mockDb) }));

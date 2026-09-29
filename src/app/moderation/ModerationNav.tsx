@@ -18,6 +18,7 @@ import {
   ScrollText,
   BarChart3,
   Flag,
+  BookOpen,
 } from "lucide-react";
 
 const contentItems = [
@@ -25,6 +26,7 @@ const contentItems = [
   { name: "Pending Review", path: "/moderation/pending", icon: ClipboardCheck },
   { name: "Event Queue", path: "/moderation/events", icon: CalendarClock },
   { name: "Opportunities", path: "/moderation/opportunities", icon: Star },
+  { name: "Resources", path: "/moderation/resources", icon: BookOpen },
   { name: "Club Approvals", path: "/moderation/clubs", icon: Building2 },
   { name: "Appeals", path: "/moderation/appeals", icon: MessageSquare },
   { name: "Reports", path: "/moderation/reports", icon: Flag },

@@ -20,6 +20,7 @@ const privilegedFunctional = new Set([
   "095-atomic-moderation-workflows.test.sql",
   "110-m1-account-affiliation.test.sql",
   "120-discovery-functional.test.sql",
+  "130-resources.test.sql",
 ]);
 const failures = [];
 const withoutComments = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--[^\n]*/g, "");

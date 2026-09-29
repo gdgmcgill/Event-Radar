@@ -74,7 +74,7 @@ describe("T1 (F-058 fixed): every admin arm wears withRoute with the private cla
   const adminArms = [...ADMIN_ARMS.filter((arm) => arm.id.startsWith("admin/")), ...M2_ARMS.filter(a => a.admin).map(a => ({ id: `${a.route} ${a.verb}` }))];
 
   it("covers the 40 admin arms", () => {
-    expect(adminArms).toHaveLength(40);
+    expect(adminArms).toHaveLength(45);
   });
 
   it.each(adminArms.map((arm): [string] => [arm.id]))("%s", (id) => {

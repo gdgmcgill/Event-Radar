@@ -1283,6 +1283,128 @@ export type Database = {
           },
         ]
       }
+      resource_actions: {
+        Row: {
+          action: string
+          created_at: string
+          id: number
+          resource_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: never
+          resource_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: never
+          resource_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_actions_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resources: {
+        Row: {
+          audience: string
+          author_name: string
+          author_url: string | null
+          body_markdown: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          external_url: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          published_at: string | null
+          resource_type: string
+          reviewed_at: string | null
+          slug: string
+          source_note: string | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          audience: string
+          author_name: string
+          author_url?: string | null
+          body_markdown?: string | null
+          category: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          external_url?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          published_at?: string | null
+          resource_type: string
+          reviewed_at?: string | null
+          slug: string
+          source_note?: string | null
+          status?: string
+          summary: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          audience?: string
+          author_name?: string
+          author_url?: string | null
+          body_markdown?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          external_url?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          published_at?: string | null
+          resource_type?: string
+          reviewed_at?: string | null
+          slug?: string
+          source_note?: string | null
+          status?: string
+          summary?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resources_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resources_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           comment: string | null
@@ -1769,6 +1891,16 @@ export type Database = {
           p_action: string
           p_actor: string
           p_can_pick?: boolean
+          p_data?: Json
+          p_expected?: string
+          p_id: string
+        }
+        Returns: Json
+      }
+      curate_resource: {
+        Args: {
+          p_action: string
+          p_actor: string
           p_data?: Json
           p_expected?: string
           p_id: string
