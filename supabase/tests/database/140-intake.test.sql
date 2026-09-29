@@ -24,7 +24,10 @@ INSERT INTO public.events(id,title,start_date,end_date,status) VALUES
 ('00000000-0000-4000-8000-000000014021','M3 intake event','2031-01-01T18:00:00Z','2031-01-01T20:00:00Z','approved');
 INSERT INTO public.submissions(id,kind,title,organization,source_url,details,contact_name,contact_email,submitter_user_id,client_hash) VALUES
 ('00000000-0000-4000-8000-000000014031','job','Research assistant','M3 Lab','https://example.invalid/ra','{"description":"Help with research","location":"Montreal"}',NULL,NULL,'00000000-0000-4000-8000-000000014002',repeat('1',64)),
-('00000000-0000-4000-8000-000000014032','company_request','Junior developer','Acme Robotics','https://example.invalid/acme','{"company_context":"Robots","duties":"Write code","must_have_skills":"TypeScript","why_worth_it":"Mentorship","work_mode":"hybrid","location":"Montreal"}','Pat Recruiter','hiring@acme.example',NULL,repeat('2',64)),
+('00000000-0000-4000-8000-000000014032','company_request','Junior developer','Acme Robotics','https://example.invalid/acme','{"company_context":"Robots","duties":"Write code","must_have_skills":"TypeScript","why_worth_it":"Mentorship","work_mode":"hybrid","location":"Montreal","hours":"20 hours a week","compensation":"$25/hour","start_date":"January 2027","employment_type":"part_time"}','Pat Recruiter','hiring@acme.example',NULL,repeat('2',64)),
+('00000000-0000-4000-8000-000000014036','hackathon','Winter hack','Hack org','https://example.invalid/hack','{"description":"Build things","starts_on":"2027-01-15","location":"Montreal"}','Hack Contact','hack-contact@example.invalid',NULL,repeat('6',64)),
+('00000000-0000-4000-8000-000000014037','job','Summer analyst','Bank org','https://example.invalid/analyst','{"description":"Analyse","deadline_on":"2027-02-01","location":"Montreal"}','Job Contact','job-contact@example.invalid',NULL,repeat('7',64)),
+('00000000-0000-4000-8000-000000014038','program','Impossible date program','Program org','https://example.invalid/impossible','{"description":"Apply","deadline_on":"2027-02-30"}',NULL,NULL,NULL,repeat('8',64)),
 ('00000000-0000-4000-8000-000000014033','resource','Resume guide','Career centre','https://example.invalid/resume','{"description":"How to write a resume","category":"career"}',NULL,NULL,NULL,repeat('3',64)),
 ('00000000-0000-4000-8000-000000014034','program','!!!','Program org','https://example.invalid/program','{}',NULL,NULL,NULL,repeat('4',64)),
 ('00000000-0000-4000-8000-000000014035','resource','Long-organization guide',repeat('o',150),'https://example.invalid/long-org','{}',NULL,NULL,NULL,repeat('5',64));
@@ -98,6 +101,25 @@ SELECT is((SELECT source_type FROM public.opportunities WHERE id=(SELECT (result
 SELECT is((SELECT listing_type FROM public.opportunities WHERE id=(SELECT (result->'target'->>'id')::uuid FROM m3_company)),'job','a converted company request becomes a job draft');
 SELECT is((SELECT array_agg(id::text || ':' || roles::text ORDER BY id) FROM public.users),(SELECT snap FROM m3_roles_before),'converting a company request changes no user role');
 SELECT is((SELECT count(*)::int FROM public.admin_audit_log WHERE action='submission_convert' AND target_id='00000000-0000-4000-8000-000000014032' AND metadata::text NOT LIKE '%acme.example%' AND metadata::text NOT LIKE '%Pat Recruiter%'),1,'the conversion audit row carries no private contact data');
+
+-- M3 final review: converted drafts carry the submitted details as labelled
+-- lines, and a valid ISO deadline, but never the contact fields.
+SELECT ok((SELECT description FROM public.opportunities WHERE id=(SELECT (result->'target'->>'id')::uuid FROM m3_company))
+  LIKE '%Hours: 20 hours a week%Compensation: $25/hour%Start date: January 2027%Employment type: part time%Company context: Robots%',
+  'a converted company request carries hours, compensation, start date, employment type and company context');
+CREATE TEMP TABLE m3_hack AS SELECT public.review_submission('00000000-0000-4000-8000-000000014001','00000000-0000-4000-8000-000000014036','convert',NULL,(SELECT updated_at FROM public.submissions WHERE id='00000000-0000-4000-8000-000000014036')) AS result;
+SELECT is((SELECT description FROM public.opportunities WHERE id=(SELECT (result->'target'->>'id')::uuid FROM m3_hack)),
+  E'Build things\n\nSubmitted start date: 2027-01-15','a converted hackathon draft carries the submitted start date after its description');
+SELECT is((SELECT deadline_precision FROM public.opportunities WHERE id=(SELECT (result->'target'->>'id')::uuid FROM m3_hack)),'none','a hackathon without a deadline converts without one');
+SELECT ok((SELECT position('hack-contact@example.invalid' in description)=0 AND position('Hack Contact' in description)=0 FROM public.opportunities WHERE id=(SELECT (result->'target'->>'id')::uuid FROM m3_hack)),'a converted hackathon never copies the contact name or email');
+CREATE TEMP TABLE m3_deadline AS SELECT public.review_submission('00000000-0000-4000-8000-000000014001','00000000-0000-4000-8000-000000014037','convert',NULL,(SELECT updated_at FROM public.submissions WHERE id='00000000-0000-4000-8000-000000014037')) AS result;
+SELECT is((SELECT deadline_precision||' '||deadline_date::text||' '||source_timezone||' '||timezone_assumed::text||' '||(deadline_at IS NULL)::text FROM public.opportunities WHERE id=(SELECT (result->'target'->>'id')::uuid FROM m3_deadline)),
+  'date 2027-02-01 America/Toronto true true','a converted job with an ISO deadline gets a date-precision deadline in Toronto, timezone assumed');
+SELECT ok((SELECT description LIKE '%Submitted deadline: 2027-02-01' AND position('job-contact@example.invalid' in description)=0 AND position('Job Contact' in description)=0 FROM public.opportunities WHERE id=(SELECT (result->'target'->>'id')::uuid FROM m3_deadline)),'a converted job carries the submitted deadline line and never the contact fields');
+CREATE TEMP TABLE m3_impossible AS SELECT public.review_submission('00000000-0000-4000-8000-000000014001','00000000-0000-4000-8000-000000014038','convert',NULL,(SELECT updated_at FROM public.submissions WHERE id='00000000-0000-4000-8000-000000014038')) AS result;
+SELECT is((SELECT deadline_precision FROM public.opportunities WHERE id=(SELECT (result->'target'->>'id')::uuid FROM m3_impossible)),'none','an impossible calendar deadline converts without a deadline instead of failing');
+SELECT ok((SELECT description LIKE '%Submitted deadline: 2027-02-30' FROM public.opportunities WHERE id=(SELECT (result->'target'->>'id')::uuid FROM m3_impossible)),'the impossible deadline is still shown to the editor as submitted text');
+SELECT is((SELECT count(*) FROM public.opportunities)-(SELECT n FROM m3_opportunity_count),5::bigint,'each converted opportunity submission created exactly one draft');
 
 CREATE TEMP TABLE m3_resource AS SELECT public.review_submission('00000000-0000-4000-8000-000000014001','00000000-0000-4000-8000-000000014033','convert',NULL,(SELECT updated_at FROM public.submissions WHERE id='00000000-0000-4000-8000-000000014033')) AS result;
 SELECT is((SELECT r.status FROM public.resources r WHERE r.id=(SELECT (result->'target'->>'id')::uuid FROM m3_resource)),'draft','a resource submission converts to a draft resource');
