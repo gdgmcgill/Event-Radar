@@ -1,0 +1,98 @@
+M3 final static guards — 2026-09-29T22:11:18Z
+
+$ node scripts/check-migration-filenames.mjs
+PASS: 25 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql
+
+Exit: 0
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+
+Exit: 0
+
+$ node scripts/check-contracts.mjs
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+
+Exit: 0
+
+$ node scripts/check-contracts.mjs --client
+client files=43 violations=0
+
+Exit: 0
+
+$ node scripts/check-server-console.mjs
+committed=1 live=1 delta=0
+PASS: the live census is within the committed allow-list
+
+Exit: 0
+
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE+DEFECT src/__tests__/api/admin/admin-arm-tree-defect.test.ts (F-058)
+ok   PRESERVE src/__tests__/api/admin/admin-guard-characterization.test.ts (F-058, F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-guard-defect.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-reports-defect.test.ts (F-092)
+ok   DEFECT   src/__tests__/api/admin/admin-users-patch-defect.test.ts (F-091)
+ok   PRESERVE+DEFECT src/__tests__/api/auth-ring/write-arm-tree-defect.test.ts (F-058)
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts (F-058)
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   DEFECT   src/__tests__/api/cache-headers-defect.test.ts (F-026, F-025)
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/error-text-defect.test.ts (F-059, F-029)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/events/ban-asymmetry-defect.test.ts (F-088, F-062, F-089)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071, F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   DEFECT   src/__tests__/api/events/pending-edits-defect.test.ts (F-086)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-011, F-079, F-080, F-085)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079, F-011)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/api/health/health-defect.test.ts (F-029)
+ok   PRESERVE src/__tests__/api/interactions/interactions-feedback-characterization.test.ts (F-094)
+ok   PRESERVE src/__tests__/api/notifications/notifications-characterization.test.ts (F-028, F-059)
+ok   DEFECT   src/__tests__/api/notifications/notifications-count-defect.test.ts (F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/recommendations/batch-error-text-defect.test.ts (F-059)
+ok   DEFECT   src/__tests__/api/recommendations/experiment-assignment-defect.test.ts (F-017)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-characterization.test.ts (F-017, F-041)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-family-characterization.test.ts (F-059)
+ok   PRESERVE+DEFECT src/__tests__/api/review05/club-links-defect.test.ts (F-094)
+ok   DEFECT   src/__tests__/api/slice6-malformed-input-defect.test.ts (F-094)
+ok   DEFECT   src/__tests__/api/uncaught-throw-defect.test.ts (F-058)
+ok   DEFECT   src/__tests__/config/csp-defect.test.ts (F-055)
+ok   DEFECT   src/__tests__/config/vercel-json-defect.test.ts (F-025, F-026)
+ok   PRESERVE src/__tests__/contracts/bad-request-characterization.test.ts
+ok   DEFECT   src/__tests__/contracts/malformed-input-defect.test.ts (F-094, F-058)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   DEFECT   src/__tests__/pages/docs-gate-defect.test.ts (F-054)
+ok   DEFECT   src/__tests__/pages/public-profile-defect.test.tsx (F-005)
+ok   PRESERVE src/__tests__/webhook/verify-signature.test.ts (F-039)
+ok   PRESERVE+DEFECT src/__tests__/webhook/webhook-handler.test.ts (F-039, F-094, F-059)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089, F-058)
+ok   PRESERVE+DEFECT src/proxy.test.ts (F-090)
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 57 files
+
+Exit: 0
+
+$ node scripts/check-rls-coverage.mjs
+RLS coverage: 41 public tables, 164 client-role read cases, executable allow/deny for every table; elevated functional controls excluded.
+
+Exit: 0
+
+All guards exit: 0

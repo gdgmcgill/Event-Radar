@@ -1,7 +1,7 @@
 # UNIVERSE Phase 1 — Milestone Roadmap
 
 **Scope:** Expanded §47 Build Now, confirmed by Ady on September 27, 2026.  
-**Status:** M0 owner-closed for product progression. M1–M2 implemented and in final local verification; M3–M8 not started. Deployment remains deferred. See the [M1–M2 report](../../.planning/milestones/m1-m2/REPORT.md).  
+**Status:** M0 owner-closed for product progression. M1–M2 implemented and verified locally. M3 implemented and verified locally (owner launch content still open); M4–M8 not started. Deployment remains deferred. See the [M1–M2 report](../../.planning/milestones/m1-m2/REPORT.md) and the [M3 report](../../.planning/milestones/m3/REPORT.md).  
 **Detailed specification:** [Phase 1 implementation plan](2026-09-27-universe-phase-1-implementation-plan.md).
 
 Eight product milestones follow one foundation prerequisite. **M4 releases discovery (P1-A); M8 completes the recruiting pilot and expanded Phase 1 (P1-B).** Talent, applications, recruiter pages, and private event feedback remain required within Phase 1.
@@ -115,7 +115,8 @@ Deliverables:
 **Outcome:** The product provides useful discovery, credible supply, and content beyond events.  
 **Packages:** P1-06, P1-07, P1-08, P1-09.  
 **Depends on:** M2.  
-**Estimate:** 12–18 days.
+**Estimate:** 12–18 days.  
+**Status:** Implemented and verified locally on `codex/m3-useful-discovery` (September 29, 2026); owner launch content, hosted producer schedule and deployment remain open. See the [M3 report](../../.planning/milestones/m3/REPORT.md).
 
 Deliverables:
 

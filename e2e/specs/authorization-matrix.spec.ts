@@ -7,7 +7,7 @@ import { BASE_URL } from "../../playwright.config";
 import { HealthReport } from "../../src/contracts/health";
 import { storageStateFor, type PersonaKey } from "../fixtures";
 import { assertInventoryCoverage, AUDIT_PERSONAS, liveEndpoints } from "../helpers/certificationInventory";
-import { expectedProbe, isAnonymous, MUTATIONS, probeUrl } from "../helpers/authorizationProbes";
+import { expectedProbe, isAnonymous, MUTATIONS, probeHeaders, probeUrl } from "../helpers/authorizationProbes";
 import { isolatedMutationProbe } from "../helpers/isolatedProbes";
 
 assertInventoryCoverage();
@@ -42,8 +42,8 @@ for (const who of AUDIT_PERSONAS) {
             method,
             maxRedirects: 0,
             ...(method === "GET" ? {} : MUTATIONS[`${method} ${row.route}`].body === "missing-file-form"
-              ? { multipart: { probe: "missing-file" } }
-              : { data: "{", headers: { "content-type": "application/json" } }),
+              ? { multipart: { probe: "missing-file" }, headers: probeHeaders(method, row.route, who) }
+              : { data: "{", headers: { "content-type": "application/json", ...probeHeaders(method, row.route, who) } }),
           });
           // Health may be degraded on an otherwise valid seeded local stack.
           // Assert its documented condition, not an observed status whitelist.

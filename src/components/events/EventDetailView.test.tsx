@@ -6,7 +6,7 @@
  * absent or present-but-not-closed, `rsvpSlot` renders unchanged.
  */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { Event } from "@/types";
 import type { DiscoveryItem } from "@/contracts/discovery";
 import { EventDetailView } from "./EventDetailView";
@@ -126,5 +126,19 @@ describe("EventDetailView — discovery-closed RSVP gating", () => {
     );
     expect(screen.getByText("RSVP control")).toBeInTheDocument();
     expect(screen.queryByText("This event has ended")).not.toBeInTheDocument();
+  });
+});
+
+describe("EventDetailView — hero image fallback (M3 acceptance)", () => {
+  it("swaps an expired external hero image for the placeholder", () => {
+    render(
+      <EventDetailView
+        event={{ ...baseEvent, image_url: "https://expired.cdninstagram.com/v/gone.jpg" }}
+      />
+    );
+    const hero = screen.getAllByRole("img", { name: "Test Event" })[0];
+    expect(hero.getAttribute("src")).toContain("expired.cdninstagram.com");
+    fireEvent.error(hero);
+    expect(screen.getAllByRole("img", { name: "Test Event" })[0].getAttribute("src")).toContain("placeholder-event.png");
   });
 });

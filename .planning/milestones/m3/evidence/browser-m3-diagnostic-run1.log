@@ -1,0 +1,359 @@
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 build
+[WebServer] > next build
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5 (Turbopack)
+[WebServer] - Environments: .env.local, .env
+[WebServer] ✓ Running next.config.js took 211ms
+[WebServer] - Experiments (use with caution):
+[WebServer]   · clientTraceMetadata
+[WebServer] 
+[WebServer]   Creating an optimized production build ...
+[WebServer] ✓ Compiled successfully in 5.3s
+[WebServer]   Running next.config.js provided runAfterProductionCompile ...
+[WebServer] ✓ Completed runAfterProductionCompile in 106ms
+[WebServer]   Running TypeScript ...
+[WebServer]   Finished TypeScript in 6.5s ...
+[WebServer]   Collecting page data using 9 workers ...
+[WebServer]   Generating static pages using 9 workers (0/121) ...
+[WebServer]   Generating static pages using 9 workers (30/121) 
+[WebServer]   Generating static pages using 9 workers (60/121) 
+[WebServer]   Generating static pages using 9 workers (90/121) 
+[WebServer] ✓ Generating static pages using 9 workers (121/121) in 343ms
+[WebServer]   Finalizing page optimization ...
+[WebServer] 
+[WebServer] Route (app)
+[WebServer] ┌ ƒ /
+[WebServer] ├ ○ /_not-found
+[WebServer] ├ ○ /about
+[WebServer] ├ ○ /admin-login
+[WebServer] ├ ƒ /admin/experiments
+[WebServer] ├ ƒ /admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/analytics/events
+[WebServer] ├ ƒ /api/admin/analytics/users
+[WebServer] ├ ƒ /api/admin/audit-log
+[WebServer] ├ ƒ /api/admin/calculate-popularity
+[WebServer] ├ ƒ /api/admin/clubs
+[WebServer] ├ ƒ /api/admin/clubs/[id]
+[WebServer] ├ ƒ /api/admin/events
+[WebServer] ├ ƒ /api/admin/events/[id]
+[WebServer] ├ ƒ /api/admin/events/[id]/discovery
+[WebServer] ├ ƒ /api/admin/events/[id]/edits
+[WebServer] ├ ƒ /api/admin/events/[id]/status
+[WebServer] ├ ƒ /api/admin/experiments
+[WebServer] ├ ƒ /api/admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/experiments/[id]/results
+[WebServer] ├ ƒ /api/admin/featured
+[WebServer] ├ ƒ /api/admin/featured/[id]
+[WebServer] ├ ƒ /api/admin/ingestion
+[WebServer] ├ ƒ /api/admin/ingestion/images
+[WebServer] ├ ƒ /api/admin/listing-reports
+[WebServer] ├ ƒ /api/admin/listing-reports/[id]
+[WebServer] ├ ƒ /api/admin/opportunities
+[WebServer] ├ ƒ /api/admin/opportunities/[id]
+[WebServer] ├ ƒ /api/admin/organizer-requests
+[WebServer] ├ ƒ /api/admin/organizer-requests/[id]
+[WebServer] ├ ƒ /api/admin/organizers
+[WebServer] ├ ƒ /api/admin/reports
+[WebServer] ├ ƒ /api/admin/reports/[id]
+[WebServer] ├ ƒ /api/admin/resources
+[WebServer] ├ ƒ /api/admin/resources/[id]
+[WebServer] ├ ƒ /api/admin/resources/[id]/file
+[WebServer] ├ ƒ /api/admin/stats
+[WebServer] ├ ƒ /api/admin/submissions
+[WebServer] ├ ƒ /api/admin/submissions/[id]
+[WebServer] ├ ƒ /api/admin/users
+[WebServer] ├ ƒ /api/admin/users/[id]
+[WebServer] ├ ƒ /api/admin/users/[id]/ban
+[WebServer] ├ ƒ /api/calendar/events
+[WebServer] ├ ƒ /api/clubs
+[WebServer] ├ ƒ /api/clubs/[id]
+[WebServer] ├ ƒ /api/clubs/[id]/analytics
+[WebServer] ├ ƒ /api/clubs/[id]/appeal
+[WebServer] ├ ƒ /api/clubs/[id]/events
+[WebServer] ├ ƒ /api/clubs/[id]/follow
+[WebServer] ├ ƒ /api/clubs/[id]/invites
+[WebServer] ├ ƒ /api/clubs/[id]/members
+[WebServer] ├ ƒ /api/clubs/[id]/members/role
+[WebServer] ├ ƒ /api/clubs/[id]/transfer
+[WebServer] ├ ƒ /api/clubs/banner
+[WebServer] ├ ƒ /api/clubs/featured
+[WebServer] ├ ƒ /api/clubs/friends
+[WebServer] ├ ƒ /api/clubs/logo
+[WebServer] ├ ƒ /api/clubs/new
+[WebServer] ├ ƒ /api/clubs/trending
+[WebServer] ├ ƒ /api/company-requests
+[WebServer] ├ ƒ /api/discovery
+[WebServer] ├ ƒ /api/events
+[WebServer] ├ ƒ /api/events/[id]
+[WebServer] ├ ƒ /api/events/[id]/analytics
+[WebServer] ├ ƒ /api/events/[id]/appeal
+[WebServer] ├ ƒ /api/events/[id]/friends
+[WebServer] ├ ƒ /api/events/[id]/invite
+[WebServer] ├ ƒ /api/events/[id]/report
+[WebServer] ├ ƒ /api/events/[id]/reviews
+[WebServer] ├ ƒ /api/events/[id]/rsvp
+[WebServer] ├ ƒ /api/events/[id]/save
+[WebServer] ├ ƒ /api/events/create
+[WebServer] ├ ƒ /api/events/export
+[WebServer] ├ ƒ /api/events/featured
+[WebServer] ├ ƒ /api/events/following
+[WebServer] ├ ƒ /api/events/friends-activity
+[WebServer] ├ ƒ /api/events/friends-organizing
+[WebServer] ├ ƒ /api/events/happening-now
+[WebServer] ├ ƒ /api/events/my-events
+[WebServer] ├ ƒ /api/events/new
+[WebServer] ├ ƒ /api/events/popular
+[WebServer] ├ ƒ /api/events/upload-image
+[WebServer] ├ ƒ /api/feedback
+[WebServer] ├ ƒ /api/health
+[WebServer] ├ ƒ /api/interactions
+[WebServer] ├ ƒ /api/listing-reports
+[WebServer] ├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+[WebServer] ├ ƒ /api/my-clubs
+[WebServer] ├ ƒ /api/notifications
+[WebServer] ├ ƒ /api/notifications/[id]
+[WebServer] ├ ƒ /api/notifications/count
+[WebServer] ├ ƒ /api/onboarding/complete
+[WebServer] ├ ƒ /api/opportunities/[id]
+[WebServer] ├ ƒ /api/opportunities/[id]/save
+[WebServer] ├ ƒ /api/organizer-requests
+[WebServer] ├ ƒ /api/profile/avatar
+[WebServer] ├ ƒ /api/profile/banner
+[WebServer] ├ ƒ /api/profile/inferred-tags
+[WebServer] ├ ƒ /api/profile/interests
+[WebServer] ├ ƒ /api/recommendations
+[WebServer] ├ ƒ /api/recommendations/analytics
+[WebServer] ├ ƒ /api/recommendations/batch
+[WebServer] ├ ƒ /api/recommendations/feedback
+[WebServer] ├ ƒ /api/resources
+[WebServer] ├ ƒ /api/resources/[slug]
+[WebServer] ├ ƒ /api/resources/[slug]/open
+[WebServer] ├ ƒ /api/saved
+[WebServer] ├ ƒ /api/saved/status
+[WebServer] ├ ƒ /api/submissions
+[WebServer] ├ ƒ /api/universities
+[WebServer] ├ ƒ /api/user/engagement
+[WebServer] ├ ƒ /api/user/following
+[WebServer] ├ ƒ /api/users/[id]
+[WebServer] ├ ƒ /api/users/[id]/follow
+[WebServer] ├ ƒ /api/users/me/friends
+[WebServer] ├ ƒ /api/users/me/requests
+[WebServer] ├ ƒ /api/users/me/suggestions
+[WebServer] ├ ƒ /api/users/saved-events
+[WebServer] ├ ƒ /api/users/search
+[WebServer] ├ ƒ /auth/callback
+[WebServer] ├ ƒ /auth/signout
+[WebServer] ├ ƒ /banned
+[WebServer] ├ ○ /calendar
+[WebServer] ├ ƒ /clubs
+[WebServer] ├ ƒ /clubs/[id]
+[WebServer] ├ ○ /clubs/create
+[WebServer] ├ ○ /contributors
+[WebServer] ├ ○ /create-event
+[WebServer] ├ ○ /discover
+[WebServer] ├ ƒ /docs
+[WebServer] ├ ƒ /events/[id]
+[WebServer] ├ ○ /feedback
+[WebServer] ├ ○ /for-companies
+[WebServer] ├ ○ /friends
+[WebServer] ├ ƒ /health
+[WebServer] ├ ○ /help
+[WebServer] ├ ƒ /invites/[token]
+[WebServer] ├ ○ /landing
+[WebServer] ├ ƒ /moderation
+[WebServer] ├ ƒ /moderation/appeals
+[WebServer] ├ ƒ /moderation/audit-log
+[WebServer] ├ ƒ /moderation/clubs
+[WebServer] ├ ƒ /moderation/events
+[WebServer] ├ ƒ /moderation/featured
+[WebServer] ├ ƒ /moderation/ingestion
+[WebServer] ├ ƒ /moderation/opportunities
+[WebServer] ├ ƒ /moderation/organizer-requests
+[WebServer] ├ ƒ /moderation/organizers
+[WebServer] ├ ƒ /moderation/pending
+[WebServer] ├ ƒ /moderation/reports
+[WebServer] ├ ƒ /moderation/resources
+[WebServer] ├ ƒ /moderation/stats
+[WebServer] ├ ƒ /moderation/submissions
+[WebServer] ├ ƒ /moderation/users
+[WebServer] ├ ƒ /my-clubs
+[WebServer] ├ ƒ /my-clubs/[id]
+[WebServer] ├ ○ /my-events
+[WebServer] ├ ○ /notifications
+[WebServer] ├ ƒ /onboarding
+[WebServer] ├ ƒ /opportunities/[id]
+[WebServer] ├ ○ /people
+[WebServer] ├ ○ /privacy
+[WebServer] ├ ƒ /profile
+[WebServer] ├ ƒ /resources
+[WebServer] ├ ƒ /resources/[slug]
+[WebServer] ├ ○ /robots.txt
+[WebServer] ├ ○ /saved
+[WebServer] ├ ○ /settings
+[WebServer] ├ ƒ /sitemap.xml
+[WebServer] ├ ○ /submit
+[WebServer] ├ ○ /terms
+[WebServer] └ ƒ /users/[id]
+[WebServer] 
+[WebServer] 
+[WebServer] ƒ Proxy (Middleware)
+[WebServer] 
+[WebServer] ○  (Static)   prerendered as static content
+[WebServer] ƒ  (Dynamic)  server-rendered on demand
+[WebServer] 
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 start
+[WebServer] > next start --hostname 127.0.0.1
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5
+[WebServer] - Local:         http://127.0.0.1:3000
+[WebServer] - Network:       http://127.0.0.1:3000
+[WebServer] ✓ Ready in 59ms
+[WebServer] ✓ Running next.config.js took 173ms
+[WebServer] {"ts":"2026-09-29T21:58:47.704Z","level":"info","msg":"Sentry disabled","scope":"Sentry","reason":"SENTRY_DSN is not set"}
+[WebServer] {"ts":"2026-09-29T21:58:48.109Z","level":"warn","msg":"Upstash not configured; using the in-memory store (not shared across instances)","requestId":"63b63b5b-f9ca-4f09-842f-d412bc1f5129","route":"/","scope":"RateLimit"}
+
+Running 21 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:61:8 › authenticate as onboarded_student (377ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:61:8 › authenticate as mid_onboarding_student (239ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:61:8 › authenticate as club_member (238ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:61:8 › authenticate as club_owner (243ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:61:8 › authenticate as multi_club_organizer (242ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:61:8 › authenticate as cross_club_attacker (228ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:61:8 › authenticate as admin (225ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:61:8 › authenticate as banned_permanent (212ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:61:8 › authenticate as suspended_active (205ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:61:8 › authenticate as suspension_expired (221ms)
+  ✓  11 [chromium] › e2e/specs/m3-acceptance.spec.ts:111:5 › guest home: editorial hero reaches discovery without sign-in and carries no future-milestone copy (220ms)
+  ✓  12 [chromium] › e2e/specs/m3-acceptance.spec.ts:122:5 › discover filters survive reload and browser back after opening a listing (667ms)
+  ✓  13 [chromium] › e2e/specs/m3-acceptance.spec.ts:148:5 › detail facts: a date-only deadline, eligibility and provenance; a closed listing has no action (467ms)
+  ✓  14 [chromium] › e2e/specs/m3-acceptance.spec.ts:165:5 › student saves the listing after sign-in; /saved shows it with the legacy saved event (797ms)
+  ✘  15 [chromium] › e2e/specs/m3-acceptance.spec.ts:180:5 › resources: published guide reflows at 360px; drafts stay private; unsafe Markdown is refused (306ms)
+  ✘  16 [chromium] › e2e/specs/m3-acceptance.spec.ts:215:5 › public submission becomes a published listing only through moderation; retries and bots add nothing (193ms)
+  ✓  17 [chromium] › e2e/specs/m3-acceptance.spec.ts:298:5 › guest report reaches the moderation queue and never appears publicly (1.2s)
+  ✓  18 [chromium] › e2e/specs/m3-acceptance.spec.ts:330:5 › company request converts to a partner job draft without leaking the contact or changing roles (1.3s)
+  ✓  19 [chromium] › e2e/specs/m3-acceptance.spec.ts:385:5 › private fields never reach public HTML or RSC payloads (52ms)
+  ✘  20 [chromium] › e2e/specs/m3-acceptance.spec.ts:407:5 › ingestion page shows deliveries to an admin and is closed to a student (1.2s)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070300-0000-4000-8000-000000000012',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✘  21 [chromium] › e2e/specs/m3-acceptance.spec.ts:426:5 › an unreachable event image on an allowed host falls back to the placeholder (15.2s)
+
+
+  1) [chromium] › e2e/specs/m3-acceptance.spec.ts:180:5 › resources: published guide reflows at 360px; drafts stay private; unsafe Markdown is refused 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 200
+
+      210 |   expect(sitemap).toContain(`/resources/${resourceSlug}`);
+      211 |   expect(sitemap).not.toContain(draftResourceSlug);
+    > 212 |   expect((await request.get(`/resources/${draftResourceSlug}`)).status()).toBe(404);
+          |                                                                           ^
+      213 | });
+      214 |
+      215 | test('public submission becomes a published listing only through moderation; retries and bots add nothing', async ({ page, browser, baseURL, request }) => {
+        at /Users/adyan/Documents/GitHub/Event-Radar/e2e/specs/m3-acceptance.spec.ts:212:75
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/specs-m3-acceptance-resour-443ae--unsafe-Markdown-is-refused-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/specs-m3-acceptance-resour-443ae--unsafe-Markdown-is-refused-chromium/error-context.md
+
+    Error Context: test-results/specs-m3-acceptance-resour-443ae--unsafe-Markdown-is-refused-chromium/error-context.md
+
+  2) [chromium] › e2e/specs/m3-acceptance.spec.ts:215:5 › public submission becomes a published listing only through moderation; retries and bots add nothing 
+
+    Error: expect(received).toBeNull()
+
+    Received: {"code": "PGRST116", "details": "The result contains 0 rows", "hint": null, "message": "Cannot coerce the result to a single JSON object"}
+
+      226 |   await expect(page.getByText('a person reviews every submission before anything is published')).toBeVisible();
+      227 |   const row = await db.from('submissions').select('id,status').eq('title', submissionTitle).single();
+    > 228 |   expect(row.error).toBeNull();
+          |                     ^
+      229 |   expect(row.data!.status).toBe('pending');
+      230 |   const receipt = await page.locator('body').innerText();
+      231 |   expect(receipt).not.toContain(row.data!.id);
+        at /Users/adyan/Documents/GitHub/Event-Radar/e2e/specs/m3-acceptance.spec.ts:228:21
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/specs-m3-acceptance-public-5f87b-etries-and-bots-add-nothing-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/specs-m3-acceptance-public-5f87b-etries-and-bots-add-nothing-chromium/error-context.md
+
+    Error Context: test-results/specs-m3-acceptance-public-5f87b-etries-and-bots-add-nothing-chromium/error-context.md
+
+  3) [chromium] › e2e/specs/m3-acceptance.spec.ts:407:5 › ingestion page shows deliveries to an admin and is closed to a student 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "/"
+    Received: "/moderation/ingestion"
+
+      419 |     const page = await studentContext.newPage();
+      420 |     await page.goto('/moderation/ingestion');
+    > 421 |     expect(new URL(page.url()).pathname).toBe('/');
+          |                                          ^
+      422 |     await expect(page.getByText(producer)).toHaveCount(0);
+      423 |   } finally { await studentContext.close(); }
+      424 | });
+        at /Users/adyan/Documents/GitHub/Event-Radar/e2e/specs/m3-acceptance.spec.ts:421:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/specs-m3-acceptance-ingest-2b9cc--and-is-closed-to-a-student-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/specs-m3-acceptance-ingest-2b9cc--and-is-closed-to-a-student-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/specs-m3-acceptance-ingest-2b9cc--and-is-closed-to-a-student-chromium/error-context.md
+
+    Error Context: test-results/specs-m3-acceptance-ingest-2b9cc--and-is-closed-to-a-student-chromium/error-context.md
+
+  4) [chromium] › e2e/specs/m3-acceptance.spec.ts:426:5 › an unreachable event image on an allowed host falls back to the placeholder 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: getByRole('img', { name: 'M3 acceptance event with an expired image', exact: true }).first()
+    Expected pattern: /placeholder-event\.png/
+    Received string:  "https://m3-unreachable.cdninstagram.com/v/expired-m3.jpg"
+    Timeout: 15000ms
+
+    Call log:
+      - Expect "toHaveAttribute" getByRole('img', { name: 'M3 acceptance event with an expired image', exact: true }).first() with timeout 15000ms
+      - waiting for getByRole('img', { name: 'M3 acceptance event with an expired image', exact: true }).first()
+        34 × locator resolved to <img decoding="async" data-nimg="fill" class="object-cover" alt="M3 acceptance event with an expired image" src="https://m3-unreachable.cdninstagram.com/v/expired-m3.jpg"/>
+           - unexpected value "https://m3-unreachable.cdninstagram.com/v/expired-m3.jpg"
+
+
+      428 |   const image = page.getByRole('img', { name: brokenImageTitle, exact: true }).first();
+      429 |   await expect(image).toBeVisible();
+    > 430 |   await expect(image).toHaveAttribute('src', /placeholder-event\.png/);
+          |                       ^
+      431 |   await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).complete && (element as HTMLImageElement).naturalWidth > 0)).toBe(true);
+      432 | });
+      433 |
+        at /Users/adyan/Documents/GitHub/Event-Radar/e2e/specs/m3-acceptance.spec.ts:430:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/specs-m3-acceptance-an-unr-0ae3e-lls-back-to-the-placeholder-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/specs-m3-acceptance-an-unr-0ae3e-lls-back-to-the-placeholder-chromium/error-context.md
+
+    Error Context: test-results/specs-m3-acceptance-an-unr-0ae3e-lls-back-to-the-placeholder-chromium/error-context.md
+
+  4 failed
+    [chromium] › e2e/specs/m3-acceptance.spec.ts:180:5 › resources: published guide reflows at 360px; drafts stay private; unsafe Markdown is refused 
+    [chromium] › e2e/specs/m3-acceptance.spec.ts:215:5 › public submission becomes a published listing only through moderation; retries and bots add nothing 
+    [chromium] › e2e/specs/m3-acceptance.spec.ts:407:5 › ingestion page shows deliveries to an admin and is closed to a student 
+    [chromium] › e2e/specs/m3-acceptance.spec.ts:426:5 › an unreachable event image on an allowed host falls back to the placeholder 
+  17 passed (46.2s)

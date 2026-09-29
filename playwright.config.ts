@@ -112,7 +112,8 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup"],
       testMatch: /specs\/.*\.spec\.ts/,
-      testIgnore: /specs\/m1-m2-acceptance\.spec\.ts/,
+      // Enabled-product acceptance specs run only under their own configs.
+      testIgnore: /specs\/(m1-m2|m3)-acceptance\.spec\.ts/,
     },
   ],
   webServer: {

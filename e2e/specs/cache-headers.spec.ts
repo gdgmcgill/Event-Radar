@@ -122,7 +122,22 @@ const MUTATION_STATUS_EXCEPTIONS: Record<string, { status: number; reason: strin
     reason:
       "sign-out is open to every caller by design (BAN_EXEMPT_PATHS in src/proxy.ts); an anonymous POST has no session to end and is redirected to / like a signed-in one",
   },
+  ...Object.fromEntries(
+    ["/api/submissions", "/api/company-requests", "/api/listing-reports"].map((route) => [
+      `POST ${route}`,
+      {
+        status: 404,
+        reason:
+          "M3 public intake accepts anonymous callers by design and is gated by discovery_ui, which this baseline harness keeps off, so the route answers 404 before any auth or validation",
+      },
+    ])
+  ),
 };
+
+/** Intake POSTs have a 5-per-minute budget per client address and path; the
+ * authorization matrix may already have spent the loopback address's budget,
+ * so this sweep probes them as its own documentation-range client. */
+const INTAKE_CLIENT = { "x-real-ip": "203.0.113.10" };
 
 const isPublic = (row: EndpointRow) => row.cache_policy_target.startsWith("public");
 
@@ -210,7 +225,8 @@ test.describe("mutations, anonymous and bodiless: refused, and private", () => {
     for (const method of row.methods.filter((m) => m !== "GET")) {
       test(`${method} ${row.route}`, async () => {
         const ctx = await contextFor("anonymous");
-        const res = await ctx.fetch(concrete(row.route), { method, maxRedirects: 0 });
+        const exceptionForIntake = MUTATION_STATUS_EXCEPTIONS[`${method} ${row.route}`]?.status === 404;
+        const res = await ctx.fetch(concrete(row.route), { method, maxRedirects: 0, ...(exceptionForIntake ? { headers: INTAKE_CLIENT } : {}) });
         record(row, "anonymous", method, res);
         const exception = MUTATION_STATUS_EXCEPTIONS[`${method} ${row.route}`];
         if (exception) {

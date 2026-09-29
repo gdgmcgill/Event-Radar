@@ -19,11 +19,17 @@ progress:
 
 # Project State
 
-## Current product work — M1–M2
+## Current product work — M3
+
+The owner authorized M3 after M1–M2 (`c5c1bc6`). P1-06–09 are implemented on `codex/m3-useful-discovery` and verified locally: editorial homepage and listing details, authored resources, public submissions/reports/company intake feeding moderation, and an observable McGill ingestion path with a real local producer run. All new public surfaces sit behind `discovery_ui`. Deployment remains deferred. See [M3 report](milestones/m3/REPORT.md) and [M3 decisions](milestones/m3/DECISIONS.md); the computer-use demo is recorded separately in `milestones/m3/COMPUTER-USE-VERIFICATION.md`.
+
+Next product milestone: M4 — launch discovery and the Weekly Drop. Owner launch content, the hosted producer schedule, `INTAKE_HASH_SECRET` in hosted environments and the M1–M2 hosted inputs remain assigned release dependencies.
+
+## Product work — M1–M2 (complete locally)
 
 The owner explicitly declared M0 complete and authorized M1–M2 on 2026-09-28. P1-00–05 are implemented on `codex/m1-m2-opportunity-platform` from `de0854b`; deployment remains deferred. See [implementation report](milestones/m1-m2/REPORT.md), [computer-use verification](milestones/m1-m2/COMPUTER-USE-VERIFICATION.md), and [execution decisions](milestones/m1-m2/DECISIONS.md). This supersedes the old product prerequisite status below without claiming unobserved hosted certification. The historical foundation phase bookkeeping is retained; M1/M2 are product milestones, not renamed foundation phases.
 
-Next product milestone: M3 — full discovery/homepage, real supply/ingestion, resources and submissions. Hosted provider/sender, real curator identity and owner content inputs remain assigned release dependencies, not claims of completed configuration.
+M3 followed; see above. Hosted provider/sender, real curator identity and owner content inputs remain assigned release dependencies, not claims of completed configuration.
 
 
 ## M0 continuation — 2026-09-27
@@ -39,7 +45,7 @@ Computer-use follow-up (2026-09-28): verified local discovery, admin gates/login
 See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Every critical workflow in the existing app is verified correct, secure, and reproducible across all user roles before any new product feature is started. If a foundation change breaks a workflow that worked before, the program has failed.
-**Current focus:** Product M1–M2 local completion; M3 follows. See [M1–M2 report](milestones/m1-m2/REPORT.md). The position and metrics below are historical foundation bookkeeping.
+**Current focus:** Product M3 local completion; M4 follows. See [M3 report](milestones/m3/REPORT.md). The position and metrics below are historical foundation bookkeeping.
 
 ## Current Position
 

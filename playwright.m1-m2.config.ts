@@ -9,7 +9,7 @@ if (!server) throw new Error('M1/M2 acceptance requires the guarded baseline ser
 export default defineConfig({
   ...baseline,
   projects: (baseline.projects ?? []).map(project => project.name === 'chromium'
-    ? { ...project, testIgnore: [], testMatch: /specs\/m1-m2-acceptance\.spec\.ts/ } : project),
+    ? { ...project, testIgnore: /specs\/m3-acceptance\.spec\.ts/, testMatch: /specs\/m1-m2-acceptance\.spec\.ts/ } : project),
   webServer: {
     ...server,
     env: { ...server.env, FEATURE_DISCOVERY_UI: 'true', FEATURE_DISCOVERY_ADMIN_PREVIEW: 'false', CURATOR_USER_ID: IDS.admin,

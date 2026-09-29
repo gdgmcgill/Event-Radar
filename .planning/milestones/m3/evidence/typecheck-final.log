@@ -1,0 +1,2 @@
+$ npx tsc --noEmit
+Exit: 0

@@ -1,9 +1,12 @@
 import { IDS, type PersonaKey } from "../fixtures";
-import { type AuditPersona, type EndpointRow } from "./certificationInventory";
+import { AUDIT_PERSONAS, type AuditPersona, type EndpointRow } from "./certificationInventory";
 import type { IsolatedProbe } from "./isolatedProbes";
 
 export const MISSING_ID = "5eed0000-0000-4000-8000-00000000c099";
-export interface MutationProbe { status: number; isolated?: IsolatedProbe; body?: "missing-file-form"; }
+/** `anonymousCapable`: a public intake write (M3 P1-09) that accepts anonymous
+ * and incomplete-profile callers by design, so every non-banned persona gets
+ * the same answer (404 while `discovery_ui` is off). */
+export interface MutationProbe { status: number; isolated?: IsolatedProbe; body?: "missing-file-form"; anonymousCapable?: true; }
 /** Exact outcome for an active, onboarded caller with the required global role.
  * Requests use malformed JSON (or a readable form without a file) and an
  * absent target id, except self-follow.
@@ -18,9 +21,9 @@ export const MUTATIONS: Record<string, MutationProbe> = {
   "POST /api/admin/resources": { status: 400 },
   "PATCH /api/admin/resources/[id]": { status: 400 },
   "POST /api/admin/resources/[id]/file": { status: 400, body: "missing-file-form" },
-  "POST /api/submissions": { status: 404 },
-  "POST /api/company-requests": { status: 404 },
-  "POST /api/listing-reports": { status: 404 },
+  "POST /api/submissions": { status: 404, anonymousCapable: true },
+  "POST /api/company-requests": { status: 404, anonymousCapable: true },
+  "POST /api/listing-reports": { status: 404, anonymousCapable: true },
   "PATCH /api/admin/submissions/[id]": { status: 400 },
   "PATCH /api/admin/listing-reports/[id]": { status: 400 },
   "POST /api/admin/ingestion/images": { status: 400 },
@@ -88,6 +91,15 @@ export const MUTATIONS: Record<string, MutationProbe> = {
 
 export const isAnonymous = (who: AuditPersona) => who === "anonymous" || who === "machine_no_credential";
 const isBanned = (who: AuditPersona) => who === "banned_permanent" || who === "suspended_active";
+/** Public intake writes have a 5-per-minute budget per client address and
+ * path (src/server/ratelimit/policy.ts). Thirteen personas probing from one
+ * loopback address would exhaust it and read 429, so each persona probes an
+ * intake route as its own documentation-range client address. */
+export function probeHeaders(method: string, route: string, who: AuditPersona): Record<string, string> {
+  if (!MUTATIONS[`${method} ${route}`]?.anonymousCapable) return {};
+  return { "x-real-ip": `198.51.100.${AUDIT_PERSONAS.indexOf(who) + 1}` };
+}
+
 export function probeUrl(row: EndpointRow, method: string, who: AuditPersona): string {
   let url = row.route.replace("[targetType]", "event").replace("[targetId]", IDS.approvedEvent);
   if (method !== "GET") {
@@ -107,6 +119,7 @@ export function expectedProbe(row: EndpointRow, method: string, who: AuditPerson
   if (method !== "GET") {
     const probe = MUTATIONS[`${method} ${row.route}`];
     if (!probe) throw new Error(`Unclassified mutation: ${method} ${row.route}`);
+    if (probe.anonymousCapable) return { status: probe.status };
     if (isAnonymous(who)) return { status: ["/api/feedback", "/api/interactions"].includes(row.route) ? 400 : 401 };
     if (row.auth_requirement === "admin" && who !== "admin") return { status: 403 };
     // P1-02: a cookie-only completion request cannot finish an incomplete

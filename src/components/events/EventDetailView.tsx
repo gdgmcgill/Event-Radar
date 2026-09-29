@@ -3,6 +3,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
+import { FallbackImage } from "@/components/ui/FallbackImage";
 import Link from "next/link";
 import { EventBadge } from "@/components/events/EventBadge";
 import { formatDate, formatTimeFromISO, cn } from "@/lib/utils";
@@ -136,7 +137,9 @@ export function EventDetailView({
       {/* ─── Full-Bleed Hero ─── */}
       <div className="relative w-full h-[55vh] min-h-[450px]">
         <div className="absolute inset-0">
-          <Image
+          {/* An expired external URL (e.g. a stale Instagram CDN link) falls
+              back to the placeholder instead of a broken hero (M3). */}
+          <FallbackImage
             src={event.image_url || "/placeholder-event.png"}
             alt={event.title}
             fill
