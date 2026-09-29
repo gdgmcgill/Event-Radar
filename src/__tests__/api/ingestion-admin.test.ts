@@ -4,6 +4,7 @@
 import { NextRequest } from "next/server";
 import type { RequestContext } from "@/server/context";
 import { createFakeSupabase, type FakeSupabase } from "../helpers/fakeSupabase";
+import { getESTNowISO } from "@/lib/timezone";
 
 type IngestionGET = (typeof import("@/app/api/admin/ingestion/route"))["GET"];
 type PersistPOST = (typeof import("@/app/api/admin/ingestion/images/route"))["POST"];
@@ -19,6 +20,9 @@ const USER_ID = "ad070002-0000-4000-8000-000000000001";
 const HOUR = 3_600_000;
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
 const ahead = (ms: number) => new Date(Date.now() + ms).toISOString();
+// DEC-80 (docs/time-semantics.md): a legacy start_date is Toronto wall-clock
+// labelled UTC, so "an hour ago" is an hour before the wall-clock now.
+const wallClockAgo = (ms: number) => new Date(Date.parse(getESTNowISO()) - ms).toISOString();
 
 function persona(kind: "anonymous" | "student" | "admin" | "banned-admin") {
   mockCtx = {
@@ -41,7 +45,7 @@ beforeEach(() => {
   mockElevated = createFakeSupabase({
     tables: {
       events: [
-        { id: "past", title: "Past pending", status: "pending", deleted_at: null, source: "instagram", source_url: "https://www.instagram.com/p/past/", created_at: ago(2 * HOUR), start_date: ago(HOUR) },
+        { id: "past", title: "Past pending", status: "pending", deleted_at: null, source: "instagram", source_url: "https://www.instagram.com/p/past/", created_at: ago(2 * HOUR), start_date: wallClockAgo(HOUR) },
         { id: "old", title: "Old pending", status: "pending", deleted_at: null, source: "instagram", source_url: null, created_at: ago(100 * HOUR), start_date: ahead(100 * HOUR) },
       ],
       ingestion_deliveries: [
@@ -83,7 +87,12 @@ describe("GET /api/admin/ingestion", () => {
     // A pending event whose date passed stays visible to moderators here.
     expect(result.body.stale.map((row: { id: string }) => row.id)).toContain("past");
     expect(result.body.stale.map((row: { id: string }) => row.id)).toEqual(["old", "past"]);
-    expect(Object.keys(result.body.stale[0]).sort()).toEqual(["created_at", "id", "source", "source_url", "start_date", "title"]);
+    expect(Object.keys(result.body.stale[0]).sort()).toEqual(["created_at", "id", "is_past", "source", "source_url", "start_date", "title"]);
+    // M3 final review: the server judges "past" with the wall-clock rule.
+    expect(result.body.stale.map((row: { id: string; is_past: boolean }) => [row.id, row.is_past])).toEqual([
+      ["old", false],
+      ["past", true],
+    ]);
   });
 
   it("a database error answers the wrapper's generic 500", async () => {

@@ -119,7 +119,7 @@ export async function createRequestContext(): Promise<RequestContext> {
   return { supabase, user, profile: profile ?? null, requestId };
 }
 
-type RenderPassMemo = <T extends () => unknown>(fn: T) => T;
+type RenderPassMemo = <T extends (...args: never[]) => unknown>(fn: T) => T;
 
 /**
  * React's `cache` memoizes per RENDER PASS, and is exported from `react` only
@@ -142,7 +142,7 @@ type RenderPassMemo = <T extends () => unknown>(fn: T) => T;
  * cache, which would be scoped to the process rather than the request and
  * would leak one user's profile into another user's response.
  */
-const memoizePerRenderPass: RenderPassMemo = (() => {
+export const memoizePerRenderPass: RenderPassMemo = (() => {
   const maybeCache: unknown = (ReactNamespace as Record<string, unknown>).cache;
   return typeof maybeCache === "function"
     ? (maybeCache as RenderPassMemo)

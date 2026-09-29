@@ -86,7 +86,14 @@ export type ResourceInput = z.input<typeof ResourceCreateBody>;
 export type ResourceData = z.output<typeof ResourceCreateBody>;
 
 export const ResourceMutationBody = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("edit"), expected_updated_at: z.iso.datetime({ offset: true }), data: ResourceFields.partial() }).strict(),
+  z.object({
+    action: z.literal("edit"),
+    expected_updated_at: z.iso.datetime({ offset: true }),
+    // An edit that changes nothing is refused rather than bumping updated_at.
+    data: ResourceFields.partial().refine((data) => Object.keys(data).length > 0, {
+      message: "Provide at least one field to change",
+    }),
+  }).strict(),
   z.object({ action: z.enum(["publish", "archive"]), expected_updated_at: z.iso.datetime({ offset: true }) }).strict(),
 ]);
 export type ResourceMutationInput = z.input<typeof ResourceMutationBody>;

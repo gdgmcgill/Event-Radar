@@ -3,18 +3,20 @@ import { notFound } from "next/navigation";
 import { ResourceSlugParams, type PublicResource } from "@/contracts/resources";
 import { ReportListingButton } from "@/components/intake/ReportListingButton";
 import { SafeMarkdown } from "@/lib/markdown/SafeMarkdown";
-import { getRequestContext } from "@/server/context";
+import { getRequestContext, memoizePerRenderPass } from "@/server/context";
 import { requireDiscoveryPage } from "@/server/discoveryAccess";
 import { resourceBySlug } from "@/server/resources/service";
 
-async function load(slug: string): Promise<PublicResource> {
+/** Memoized per render pass (React `cache`, see memoizePerRenderPass), so
+ * generateMetadata and the page share one load. */
+const load = memoizePerRenderPass(async (slug: string): Promise<PublicResource> => {
   await requireDiscoveryPage();
   const parsed = ResourceSlugParams.safeParse({ slug });
   if (!parsed.success) notFound();
   const item = await resourceBySlug(await getRequestContext(), parsed.data.slug);
   if (!item) notFound();
   return item;
-}
+});
 
 function actionLabel(item: PublicResource): string {
   if (item.resource_type === "external") return "Open resource";

@@ -93,6 +93,15 @@ describe("ResourceMutationBody", () => {
     }
   });
 
+  it("refuses an edit whose data is empty (M3 final review)", () => {
+    const result = ResourceMutationBody.safeParse({
+      action: "edit",
+      expected_updated_at: "2026-01-01T00:00:00Z",
+      data: {},
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("accepts publish and archive with only the expected version", () => {
     expect(
       ResourceMutationBody.safeParse({ action: "publish", expected_updated_at: "2026-01-01T00:00:00Z" }).success

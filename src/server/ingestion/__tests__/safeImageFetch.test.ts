@@ -171,6 +171,14 @@ describe("fetchIngestImage", () => {
     ) as unknown as Fetch;
     expect(await code(fetchIngestImage(IMAGE_URL, { lookup: publicLookup, fetchImpl, timeoutMs: 20 }))).toBe("timeout");
   });
+
+  it("a DNS lookup that never resolves is timeout, with no fetch (M3 final review)", async () => {
+    const lookup = jest.fn(() => new Promise<string[]>(() => undefined));
+    const fetchImpl = jest.fn() as unknown as Fetch;
+    expect(await code(fetchIngestImage(IMAGE_URL, { lookup, fetchImpl, timeoutMs: 20 }))).toBe("timeout");
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
 });
 
 describe("INGEST_IMAGE_HOSTS", () => {

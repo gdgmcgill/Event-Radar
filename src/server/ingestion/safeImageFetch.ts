@@ -11,7 +11,8 @@
  *   - redirects are followed by hand (`redirect: "manual"`), each Location
  *     resolved against the current URL and re-checked, at most 3 times;
  *   - the body is streamed and abandoned past the byte cap, the whole fetch
- *     is bounded by one timeout, and the bytes must sniff as an image.
+ *     is bounded by one timeout (DNS lookups included), and the bytes must
+ *     sniff as an image.
  *
  * Residual risk, accepted: the check resolves the host and fetch resolves it
  * again (DNS rebinding between the two). The allow-list limits that to
@@ -145,8 +146,32 @@ async function defaultLookup(host: string): Promise<string[]> {
   return answers.map((answer) => answer.address);
 }
 
-async function assertPublicHost(host: string, lookup: (host: string) => Promise<string[]>): Promise<void> {
-  const addresses = await lookup(host);
+/** Settles with `promise`, or rejects as `timeout` once `signal` aborts. A DNS
+ * lookup cannot be cancelled, so a hung resolver is abandoned, not awaited. */
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(new ImageFetchError("timeout"));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new ImageFetchError("timeout"));
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      }
+    );
+  });
+}
+
+async function assertPublicHost(
+  host: string,
+  lookup: (host: string) => Promise<string[]>,
+  signal: AbortSignal
+): Promise<void> {
+  const addresses = await untilAborted(lookup(host), signal);
   if (addresses.length === 0 || addresses.some(isPrivateAddress)) {
     throw new ImageFetchError("private_address");
   }
@@ -199,7 +224,7 @@ export async function fetchIngestImage(
   try {
     let current = allowedUrl(url);
     for (let hop = 0; ; hop++) {
-      await assertPublicHost(current.hostname, lookup);
+      await assertPublicHost(current.hostname, lookup, controller.signal);
       const response = await fetchImpl(current.toString(), { redirect: "manual", signal: controller.signal });
 
       if (response.status >= 300 && response.status < 400) {
