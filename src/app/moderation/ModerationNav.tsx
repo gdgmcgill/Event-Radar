@@ -19,6 +19,7 @@ import {
   BarChart3,
   Flag,
   BookOpen,
+  Inbox,
 } from "lucide-react";
 
 const contentItems = [
@@ -27,6 +28,7 @@ const contentItems = [
   { name: "Event Queue", path: "/moderation/events", icon: CalendarClock },
   { name: "Opportunities", path: "/moderation/opportunities", icon: Star },
   { name: "Resources", path: "/moderation/resources", icon: BookOpen },
+  { name: "Submissions", path: "/moderation/submissions", icon: Inbox },
   { name: "Club Approvals", path: "/moderation/clubs", icon: Building2 },
   { name: "Appeals", path: "/moderation/appeals", icon: MessageSquare },
   { name: "Reports", path: "/moderation/reports", icon: Flag },

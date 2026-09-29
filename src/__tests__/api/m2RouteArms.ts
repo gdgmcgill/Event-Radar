@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
 export const M2_ID = "ad080001-0000-4000-8000-000000000001";
 const params = () => ({ params: Promise.resolve({ id: M2_ID }) });
-export interface M2Arm { route: string; verb: string; admin?: boolean; active?: boolean; write?: boolean; body?: unknown; query?: string; form?: boolean; invoke(request: NextRequest): Promise<Response>; }
+/** `anonymousWrite`: a public intake write (M3 P1-09) that accepts anonymous
+ * callers, so it has no active/onboarded gate; it is still a `write` arm of
+ * the tree. */
+export interface M2Arm { route: string; verb: string; admin?: boolean; active?: boolean; write?: boolean; anonymousWrite?: boolean; body?: unknown; query?: string; form?: boolean; invoke(request: NextRequest): Promise<Response>; }
 /** Explicit descriptors; the legacy tree censuses combine these with their
  * preserved baseline descriptors. m2-route-boundaries.test.ts drives all arms. */
 export const M2_ARMS: M2Arm[] = [
@@ -28,6 +31,14 @@ export const M2_ARMS: M2Arm[] = [
  { route: "admin/resources/[id]", verb: "GET", admin: true, invoke: async r => (await import("@/app/api/admin/resources/[id]/route")).GET(r, params()) },
  { route: "admin/resources/[id]", verb: "PATCH", admin: true, body: { action: "archive",expected_updated_at: "2026-09-29T00:00:00Z" }, invoke: async r => (await import("@/app/api/admin/resources/[id]/route")).PATCH(r, params()) },
  { route: "admin/resources/[id]/file", verb: "POST", admin: true, form: true, invoke: async r => (await import("@/app/api/admin/resources/[id]/file/route")).POST(r, params()) },
+ { route: "submissions", verb: "POST", write: true, anonymousWrite: true, body: { kind: "job",title: "Test",organization: "Test",source_url: "https://example.org/test",description: "Test" }, invoke: async r => (await import("@/app/api/submissions/route")).POST(r) },
+ { route: "company-requests", verb: "POST", write: true, anonymousWrite: true, body: { company_name: "Test",company_context: "Test",role_title: "Test",duties: "Test",must_have_skills: "Test",hours: "10",compensation: "Paid",location: "Montréal",work_mode: "remote",start_date: "Soon",employment_type: "internship",why_worth_it: "Test",contact_name: "Test",contact_email: "test@example.org" }, invoke: async r => (await import("@/app/api/company-requests/route")).POST(r) },
+ { route: "listing-reports", verb: "POST", write: true, anonymousWrite: true, body: { kind: "event",id: M2_ID,reason: "other" }, invoke: async r => (await import("@/app/api/listing-reports/route")).POST(r) },
+ { route: "admin/submissions", verb: "GET", admin: true, query: "limit=abc", invoke: async r => (await import("@/app/api/admin/submissions/route")).GET(r) },
+ { route: "admin/submissions/[id]", verb: "GET", admin: true, invoke: async r => (await import("@/app/api/admin/submissions/[id]/route")).GET(r, params()) },
+ { route: "admin/submissions/[id]", verb: "PATCH", admin: true, body: { action: "spam",expected_updated_at: "2026-09-29T00:00:00Z" }, invoke: async r => (await import("@/app/api/admin/submissions/[id]/route")).PATCH(r, params()) },
+ { route: "admin/listing-reports", verb: "GET", admin: true, query: "limit=abc", invoke: async r => (await import("@/app/api/admin/listing-reports/route")).GET(r) },
+ { route: "admin/listing-reports/[id]", verb: "PATCH", admin: true, body: { action: "dismiss" }, invoke: async r => (await import("@/app/api/admin/listing-reports/[id]/route")).PATCH(r, params()) },
 ];
 export const m2ArmIds = (prefix = "") => M2_ARMS.map(a => `${prefix}${a.route} ${a.verb}`);
 /** A valid multipart body for a `form: true` arm: one signed PDF field plus

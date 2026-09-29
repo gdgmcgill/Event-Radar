@@ -32,6 +32,20 @@ export const HIGH_FREQUENCY_POST_PREFIXES = [
   "/api/recommendations/feedback",
 ] as const;
 
+/**
+ * Public intake writes (M3 P1-09): anonymous listing submissions, hiring
+ * requests and listing reports. POSTs here get `INTAKE_BUDGET` per minute
+ * per address per path, far below the ordinary mutation budget, so a script
+ * cannot flood the moderation queue. The database quotas keyed by a salted
+ * client hash are the second, longer-window line.
+ */
+export const INTAKE_POST_PREFIXES = [
+  "/api/submissions",
+  "/api/company-requests",
+  "/api/listing-reports",
+] as const;
+export const INTAKE_BUDGET = 5;
+
 /** Every path under this prefix gets the admin budgets, not the public ones. */
 export const ADMIN_PREFIX = "/api/admin";
 
@@ -112,11 +126,16 @@ export function rateLimitPolicy(req: NextRequest): RateLimitRule | null {
     const isHighFrequencyWrite =
       !isGet &&
       HIGH_FREQUENCY_POST_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    const isIntakeWrite =
+      method === "POST" &&
+      INTAKE_POST_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
     limit = isGet
       ? PUBLIC_BUDGETS.GET
-      : isHighFrequencyWrite
-        ? PUBLIC_BUDGETS.highFrequencyMutation
-        : PUBLIC_BUDGETS.mutation;
+      : isIntakeWrite
+        ? INTAKE_BUDGET
+        : isHighFrequencyWrite
+          ? PUBLIC_BUDGETS.highFrequencyMutation
+          : PUBLIC_BUDGETS.mutation;
   }
 
   // Scoped by path so analytics writes cannot starve RSVP and save endpoints.

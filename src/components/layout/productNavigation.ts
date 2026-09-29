@@ -10,8 +10,7 @@ export const productNavigation = [
 ] as const;
 
 /** Rendered as an outlined button in `EditorialShell`, desktop and mobile.
- * `/submit` (P1-09) is not yet built on this branch; the link is live now so
- * the nav does not need to change again once it ships. */
+ * `/submit` is the public submission form (P1-09). */
 export const secondaryAction = { label: "Submit", href: "/submit" } as const;
 
 export function shellBoundary(

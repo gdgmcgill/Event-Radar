@@ -89,6 +89,10 @@ export function OpportunityEditor({
         if (active) {
           setItems(list.items);
           setUniversities(catalog.universities);
+          // `?id=` opens one listing directly, e.g. the draft a converted
+          // public submission just created (M3 P1-09).
+          const preselect = new URLSearchParams(window.location.search).get("id");
+          if (preselect && list.items.some((item) => item.id === preselect)) void open(preselect);
         }
       })
       .catch((e) => {
@@ -100,6 +104,7 @@ export function OpportunityEditor({
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function field<K extends keyof OpportunityData>(

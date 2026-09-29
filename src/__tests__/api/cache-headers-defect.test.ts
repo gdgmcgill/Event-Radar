@@ -36,7 +36,8 @@
  * and `/api/health` are in the worklist too (46 drivable rows); both were
  * wrapped private by 06-14 and enter at C4/C5 without a C1/C2 history.
  *
- * M1/M2 adds eight private GETs; M3 P1-08 adds five more resources GETs (59 total), with explicit typed invokers.
+ * M1/M2 adds eight private GETs; M3 P1-08 adds five more resources GETs and
+ * M3 P1-09 three admin intake GETs (62 total), with explicit typed invokers.
  *
  * Moved so far (`ADOPTED` below): C4 and C5 pin the adopted arms at
  * `private, no-store` with a UUID `x-request-id`, signed in and anonymous
@@ -448,13 +449,13 @@ describe("C0: the worklist is the inventory", () => {
       (route) => !(route in GET_ARMS) && !(route in NOT_DRIVABLE)
     );
     expect(missing).toEqual([]);
-    expect(drivable).toHaveLength(59);
+    expect(drivable).toHaveLength(62);
   });
 
   it("every ADOPTED route is a drivable worklist row", () => {
     const routes = drivable.map(([route]) => route);
     expect([...ADOPTED].filter((r) => !routes.includes(r))).toEqual([]);
-    expect(pending.length + adopted.length).toBe(59);
+    expect(pending.length + adopted.length).toBe(62);
   });
 
   it("every NOT_DRIVABLE route is in the worklist", () => {

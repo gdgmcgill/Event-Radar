@@ -698,5 +698,47 @@
     "render_mode": "unknown",
     "dead_or_duplicate": false,
     "findings": []
+  },
+  {
+    "id": "submit",
+    "file": "src/app/submit/page.tsx",
+    "route": "/submit",
+    "component_type": "server",
+    "data_source": "api:discovery/saved/opportunities",
+    "middleware_protected": false,
+    "layout_guard": null,
+    "page_guard": "requireDiscoveryPage",
+    "effective_protection": "feature",
+    "render_mode": "unknown",
+    "dead_or_duplicate": false,
+    "findings": []
+  },
+  {
+    "id": "for-companies",
+    "file": "src/app/for-companies/page.tsx",
+    "route": "/for-companies",
+    "component_type": "server",
+    "data_source": "api:discovery/saved/opportunities",
+    "middleware_protected": false,
+    "layout_guard": null,
+    "page_guard": "requireDiscoveryPage",
+    "effective_protection": "feature",
+    "render_mode": "unknown",
+    "dead_or_duplicate": false,
+    "findings": []
+  },
+  {
+    "id": "moderation.submissions",
+    "file": "src/app/moderation/submissions/page.tsx",
+    "route": "/moderation/submissions",
+    "component_type": "server",
+    "data_source": "api:/api/admin/opportunities+/api/admin/events/[id]/discovery",
+    "middleware_protected": false,
+    "layout_guard": "src/app/moderation/layout.tsx",
+    "page_guard": "requireAdminPage",
+    "effective_protection": "admin",
+    "render_mode": "unknown",
+    "dead_or_duplicate": false,
+    "findings": []
   }
 ]

@@ -112,3 +112,12 @@ than when the first row arrives.
 | `src/app/api/admin/resources/route.ts` | Bounded private list; `curate_resource` create | Active admin; server-derived actor; RPC writes the audit row in the same transaction. |
 | `src/app/api/admin/resources/[id]/route.ts` | `curate_resource` edit/publish/archive | Active admin plus expected version; actor rechecked by the RPC. |
 | `src/app/api/admin/resources/[id]/file/route.ts` | Storage upload, then `curate_resource` edit with the resulting `file_path`/`file_name`/`file_size` | Active admin; size/type/content-sniff checks precede the upload; expected version guards the follow-up edit. |
+
+### M3 public intake and moderation queue
+
+| Caller | Operations | Guard / reason |
+| --- | --- | --- |
+| `src/server/intake/service.ts` | `intake_submission`, `intake_listing_report` | Public intake: server-fixed pending status, salted client hash, DB quotas. Discovery gate, strict contract and honeypot run first; the RPCs have no status/editorial parameter; a user id is attached only for an active user; reports reach only publicly visible targets (P0002 otherwise). |
+| `src/server/intake/admin.ts` | Private submission reads (including contact fields); listing-report reads with target titles | Called only after `adminContext` verifies active admin; browser roles have no table grant beyond the admin-only RLS read; the client hash and reporter id are never selected. |
+| `src/app/api/admin/submissions/[id]/route.ts` | `review_submission` convert/reject/spam | Active admin plus expected version; actor rechecked by the RPC; convert creates only a draft (unchecked) and never copies contact data; a retried convert returns the same target; audit row in the same transaction. |
+| `src/app/api/admin/listing-reports/[id]/route.ts` | `resolve_listing_report` resolve/dismiss | Active admin; actor rechecked by the RPC; only open reports change; audit row in the same transaction. |

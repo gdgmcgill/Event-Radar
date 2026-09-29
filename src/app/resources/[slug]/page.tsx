@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ResourceSlugParams, type PublicResource } from "@/contracts/resources";
+import { ReportListingButton } from "@/components/intake/ReportListingButton";
 import { SafeMarkdown } from "@/lib/markdown/SafeMarkdown";
 import { getRequestContext } from "@/server/context";
 import { requireDiscoveryPage } from "@/server/discoveryAccess";
@@ -91,6 +92,9 @@ export default async function ResourceDetailPage({
           )}
         </p>
         {item.source_note && <p className="mt-2">{item.source_note}</p>}
+        <div className="mt-4">
+          <ReportListingButton kind="resource" id={item.id} />
+        </div>
       </div>
     </div>
   );

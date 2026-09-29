@@ -881,6 +881,90 @@ export type Database = {
           },
         ]
       }
+      listing_reports: {
+        Row: {
+          client_hash: string
+          created_at: string
+          details: string | null
+          event_id: string | null
+          id: string
+          opportunity_id: string | null
+          reason: string
+          reporter_user_id: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resource_id: string | null
+          status: string
+        }
+        Insert: {
+          client_hash: string
+          created_at?: string
+          details?: string | null
+          event_id?: string | null
+          id?: string
+          opportunity_id?: string | null
+          reason: string
+          reporter_user_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resource_id?: string | null
+          status?: string
+        }
+        Update: {
+          client_hash?: string
+          created_at?: string
+          details?: string | null
+          event_id?: string | null
+          id?: string
+          opportunity_id?: string | null
+          reason?: string
+          reporter_user_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resource_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_reports_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_reporter_user_id_fkey"
+            columns: ["reporter_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       moderation_reviews: {
         Row: {
           action: string
@@ -1544,6 +1628,98 @@ export type Database = {
           },
         ]
       }
+      submissions: {
+        Row: {
+          client_hash: string
+          contact_email: string | null
+          contact_name: string | null
+          created_at: string
+          details: Json
+          id: string
+          kind: string
+          organization: string
+          review_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_url: string | null
+          status: string
+          submitter_user_id: string | null
+          target_opportunity_id: string | null
+          target_resource_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_hash: string
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          kind: string
+          organization: string
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_url?: string | null
+          status?: string
+          submitter_user_id?: string | null
+          target_opportunity_id?: string | null
+          target_resource_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_hash?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          kind?: string
+          organization?: string
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_url?: string | null
+          status?: string
+          submitter_user_id?: string | null
+          target_opportunity_id?: string | null
+          target_resource_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_submitter_user_id_fkey"
+            columns: ["submitter_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_target_opportunity_id_fkey"
+            columns: ["target_opportunity_id"]
+            isOneToOne: true
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_target_resource_id_fkey"
+            columns: ["target_resource_id"]
+            isOneToOne: true
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tag_interaction_counts: {
         Row: {
           click_count: number
@@ -1963,6 +2139,31 @@ export type Database = {
         Args: { p_club_id: string }
         Returns: boolean
       }
+      intake_listing_report: {
+        Args: {
+          p_client_hash: string
+          p_details: string
+          p_id: string
+          p_kind: string
+          p_reason: string
+          p_user: string
+        }
+        Returns: undefined
+      }
+      intake_submission: {
+        Args: {
+          p_client_hash: string
+          p_contact_email: string
+          p_contact_name: string
+          p_details: Json
+          p_kind: string
+          p_organization: string
+          p_source_url: string
+          p_title: string
+          p_user: string
+        }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
       is_club_member: { Args: { p_club_id: string }; Returns: boolean }
       is_club_owner: { Args: { p_club_id: string }; Returns: boolean }
@@ -1990,6 +2191,15 @@ export type Database = {
         Args: { p_after?: Json; p_as_of: string; p_limit?: number }
         Returns: Json[]
       }
+      resolve_listing_report: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_id: string
+          p_note: string
+        }
+        Returns: Json
+      }
       review_event_edits_atomic: {
         Args: {
           p_action: string
@@ -2003,6 +2213,16 @@ export type Database = {
       review_organizer_request_atomic: {
         Args: { p_actor_id: string; p_request_id: string; p_status: string }
         Returns: string
+      }
+      review_submission: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_expected: string
+          p_id: string
+          p_reason: string
+        }
+        Returns: Json
       }
       search_events_fuzzy: {
         Args: { result_limit?: number; search_term: string }

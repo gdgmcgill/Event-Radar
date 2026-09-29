@@ -1,0 +1,32 @@
+import type { NextRequest } from "next/server";
+import { SubmissionBody, toIntakeDetails } from "@/contracts/intake";
+import { getDiscoveryAccess } from "@/lib/features";
+import { parseBody } from "@/server/body";
+import { createRequestContext } from "@/server/context";
+import { forbidden, notFound } from "@/server/errors";
+import { clientHash } from "@/server/intake/clientHash";
+import { intakeQuotaExceeded, intakeReceived, intakeUserId, submitIntake } from "@/server/intake/service";
+import { withRoute } from "@/server/route";
+
+export const POST = withRoute({ cache: "private", action: "submit listing" }, async (request: NextRequest) => {
+  const ctx = await createRequestContext();
+  if (!getDiscoveryAccess(ctx).enabled) return notFound("Not found");
+  const parsed = await parseBody(request, SubmissionBody);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
+  if (body.website) return intakeReceived();
+  const result = await submitIntake({
+    kind: body.kind,
+    title: body.title,
+    organization: body.organization,
+    source_url: body.source_url,
+    details: toIntakeDetails(body),
+    contact_name: body.contact_name || null,
+    contact_email: body.contact_email || null,
+    user_id: intakeUserId(ctx),
+    client_hash: clientHash(request),
+  });
+  if (result === "quota") return intakeQuotaExceeded();
+  if (result === "forbidden") return forbidden("Account suspended");
+  return intakeReceived();
+});

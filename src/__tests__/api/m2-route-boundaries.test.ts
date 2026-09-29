@@ -46,7 +46,7 @@ for (const persona of ["anonymous","missing","banned","student"] as const) {
   expect(mockFrom).not.toHaveBeenCalled(); expect(mockRpc).not.toHaveBeenCalled();
  });
 }
-it.each(M2_ARMS.filter(a => a.write))("$verb $route: incomplete profile cannot mutate saves", async arm => {
+it.each(M2_ARMS.filter(a => a.write && !a.anonymousWrite))("$verb $route: incomplete profile cannot mutate saves", async arm => {
  mockCtx.profile!.onboarding_completed = false;
  expect((await arm.invoke(m2Request(arm))).status).toBe(403);
  expect(mockFrom).not.toHaveBeenCalled(); expect(mockRpc).not.toHaveBeenCalled();

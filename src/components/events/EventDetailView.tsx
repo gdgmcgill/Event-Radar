@@ -13,6 +13,7 @@ import type { DiscoveryItem } from "@/contracts/discovery";
 import { ScrollRow } from "@/components/events/ScrollRow";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import { ListingFacts } from "@/components/discovery/ListingFacts";
+import { ReportListingButton } from "@/components/intake/ReportListingButton";
 import {
   ArrowLeft,
   Calendar,
@@ -276,6 +277,9 @@ export function EventDetailView({
             {discovery && (
               <div className="rounded-xl border border-border p-6">
                 <ListingFacts item={discovery} />
+                <div className="mt-4 border-t border-border pt-4">
+                  <ReportListingButton kind="event" id={discovery.id} />
+                </div>
               </div>
             )}
 

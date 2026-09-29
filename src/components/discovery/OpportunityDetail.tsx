@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { publishSaveChange } from "./saveChanges";
 import { ListingFacts } from "./ListingFacts";
+import { ReportListingButton } from "@/components/intake/ReportListingButton";
 import { listingKey, listingLabels, readResponse } from "./presentation";
 
 function DetailSave({ item }: { item: DiscoveryItem }) {
@@ -192,6 +193,9 @@ export function OpportunityDetail({ item }: { item: DiscoveryItem }) {
           <p className="mt-6 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
             Confirm current details with the organizer.
           </p>
+          <div className="mt-3">
+            <ReportListingButton kind="opportunity" id={item.id} />
+          </div>
         </aside>
       </div>
     </div>
