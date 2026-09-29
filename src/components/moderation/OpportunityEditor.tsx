@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   OpportunityAdminRecord,
   OpportunityData,
@@ -65,7 +65,17 @@ export function OpportunityEditor({
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirtyState] = useState(false);
+  // `open` runs from effects and callbacks that captured an older render, so
+  // the unsaved-changes check reads a ref that is always current.
+  const dirtyRef = useRef(false);
+  const setDirty = (value: boolean) => {
+    dirtyRef.current = value;
+    setDirtyState(value);
+  };
+  // While a `?id=` listing is being opened the form stays disabled, so
+  // nothing typed into the blank draft can be overwritten when it arrives.
+  const [preselecting, setPreselecting] = useState(false);
   const [mergeTarget, setMergeTarget] = useState<string>("");
   const [mergeReason, setMergeReason] = useState("");
 
@@ -77,6 +87,16 @@ export function OpportunityEditor({
   }
   useEffect(() => {
     let active = true;
+    // `?id=` opens one listing directly, e.g. the draft a converted public
+    // submission just created (M3 P1-09). It is fetched by id, so it opens
+    // even when it is not among the 100 most recent listings.
+    const preselect = new URLSearchParams(window.location.search).get("id");
+    if (preselect) {
+      setPreselecting(true);
+      void open(preselect).finally(() => {
+        if (active) setPreselecting(false);
+      });
+    }
     Promise.all([
       fetch("/api/admin/opportunities?limit=100", { cache: "no-store" }).then(
         readResponse<{ items: OpportunityAdminRecord[] }>
@@ -89,10 +109,6 @@ export function OpportunityEditor({
         if (active) {
           setItems(list.items);
           setUniversities(catalog.universities);
-          // `?id=` opens one listing directly, e.g. the draft a converted
-          // public submission just created (M3 P1-09).
-          const preselect = new URLSearchParams(window.location.search).get("id");
-          if (preselect && list.items.some((item) => item.id === preselect)) void open(preselect);
         }
       })
       .catch((e) => {
@@ -126,7 +142,7 @@ export function OpportunityEditor({
   }
   async function open(id: string) {
     if (
-      dirty &&
+      dirtyRef.current &&
       !window.confirm("Discard the unsaved changes to this listing?")
     )
       return;
@@ -486,7 +502,7 @@ export function OpportunityEditor({
                 </p>
               </div>
             )}
-            <fieldset disabled={busy} className="space-y-6 disabled:opacity-70">
+            <fieldset disabled={busy || preselecting} className="space-y-6 disabled:opacity-70">
               <section className="space-y-5 rounded-xl border border-border bg-card p-5 sm:p-6">
                 <h3 className="font-semibold">The opportunity</h3>
                 <div className="grid gap-4 sm:grid-cols-2">

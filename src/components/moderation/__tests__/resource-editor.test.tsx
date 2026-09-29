@@ -1,14 +1,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ResourceEditor } from "../ResourceEditor";
 
+let mockSearch = new URLSearchParams();
 jest.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => mockSearch,
 }));
 
 const fetchMock = jest.fn();
 const response = (body: unknown) => ({ ok: true, json: async () => body }) as Response;
 
 beforeEach(() => {
+  mockSearch = new URLSearchParams();
   fetchMock.mockReset();
   fetchMock.mockResolvedValue(response({ items: [] }));
   global.fetch = fetchMock;
@@ -64,4 +66,56 @@ it("renders the preview pane through SafeMarkdown", async () => {
   });
   const preview = screen.getByLabelText("Draft preview");
   expect(preview.querySelector("strong")).toHaveTextContent("bold text");
+});
+
+it("?id= opens a resource absent from the list and keeps the form disabled until it loads (M3 final review, finding 2)", async () => {
+  const id = "20000000-0000-4000-8000-000000000042";
+  mockSearch = new URLSearchParams(`id=${id}`);
+  let release: (value: Response) => void = () => undefined;
+  const pending = new Promise<Response>((resolve) => {
+    release = resolve;
+  });
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === `/api/admin/resources/${id}`) return pending;
+    return response({ items: [] });
+  });
+  render(<ResourceEditor />);
+  // Disabled from the first render, before any fetch resolves.
+  expect(screen.getByLabelText("Title")).toBeDisabled();
+  await waitFor(() => expect(screen.queryByText(/Loading/)).toBeNull());
+  expect(screen.getByLabelText("Title")).toBeDisabled();
+  release(
+    response({
+      item: {
+        slug: "older-guide",
+        resource_type: "guide",
+        title: "Older guide",
+        summary: "A summary",
+        body_markdown: "Body.",
+        external_url: null,
+        category: "career",
+        audience: "Everyone",
+        author_name: "Ady",
+        author_url: null,
+        source_note: null,
+        id,
+        file_path: null,
+        file_name: null,
+        file_size: null,
+        status: "draft",
+        reviewed_at: null,
+        published_at: null,
+        created_at: "2026-09-29T00:00:00Z",
+        updated_at: "2026-09-29T00:00:00Z",
+        created_by: null,
+        updated_by: null,
+        deleted_at: null,
+      },
+    })
+  );
+  const title = await screen.findByDisplayValue("Older guide");
+  expect(title).not.toBeDisabled();
+  fireEvent.change(title, { target: { value: "Edited guide" } });
+  expect(screen.getByDisplayValue("Edited guide")).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledWith(`/api/admin/resources/${id}`, expect.objectContaining({ cache: "no-store" }));
 });

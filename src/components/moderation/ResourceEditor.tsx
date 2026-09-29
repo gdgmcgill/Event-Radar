@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { ResourceAdminRecord, ResourceData } from "@/contracts/resources";
 import {
@@ -53,7 +53,17 @@ export function ResourceEditor() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirtyState] = useState(false);
+  // `open` runs from the mount effect, which captured the first render, so
+  // the unsaved-changes check reads a ref that is always current.
+  const dirtyRef = useRef(false);
+  const setDirty = (value: boolean) => {
+    dirtyRef.current = value;
+    setDirtyState(value);
+  };
+  // While a `?id=` resource is being opened the form stays disabled, so
+  // nothing typed into the blank draft can be overwritten when it arrives.
+  const [preselecting, setPreselecting] = useState(() => Boolean(searchParams.get("id")));
 
   async function refresh() {
     const body = await readResponse<{ items: ResourceAdminRecord[] }>(
@@ -70,7 +80,7 @@ export function ResourceEditor() {
   }
 
   async function open(id: string) {
-    if (dirty && !window.confirm("Discard the unsaved changes to this resource?"))
+    if (dirtyRef.current && !window.confirm("Discard the unsaved changes to this resource?"))
       return;
     setBusy(true);
     setError(null);
@@ -89,14 +99,15 @@ export function ResourceEditor() {
 
   useEffect(() => {
     let active = true;
+    // `?id=` opens one resource directly. It is fetched by id, so it opens
+    // even when it is not among the 100 most recent resources.
+    const preselect = searchParams.get("id");
+    if (preselect) {
+      void open(preselect).finally(() => {
+        if (active) setPreselecting(false);
+      });
+    }
     refresh()
-      .then((list) => {
-        if (!active) return;
-        const preselect = searchParams.get("id");
-        if (preselect && list.some((item) => item.id === preselect)) {
-          void open(preselect);
-        }
-      })
       .catch((e) => {
         if (active) setError(e instanceof Error ? e.message : "Could not load resources.");
       })
@@ -270,7 +281,7 @@ export function ResourceEditor() {
                 {notice}
               </p>
             )}
-            <fieldset disabled={busy} className="space-y-6 disabled:opacity-70">
+            <fieldset disabled={busy || preselecting} className="space-y-6 disabled:opacity-70">
               <section className="space-y-5 rounded-xl border border-border bg-card p-5 sm:p-6">
                 <h3 className="font-semibold">The resource</h3>
                 <div className="grid gap-4 sm:grid-cols-2">

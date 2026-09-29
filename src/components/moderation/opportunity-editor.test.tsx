@@ -100,3 +100,49 @@ it("event enrichment saves the current field text when submitted without blur", 
     expect(sent).toMatchObject({ fields: ["science", "community"] })
   );
 });
+describe("?id= preselect (M3 final review, finding 2)", () => {
+  afterEach(() => window.history.replaceState({}, "", "/"));
+
+  it("opens a listing absent from the first 100 rows and keeps the form disabled until it loads", async () => {
+    const olderId = "10000000-0000-4000-8000-000000000099";
+    window.history.replaceState({}, "", `/moderation/opportunities?id=${olderId}`);
+    let release: (value: Response) => void = () => undefined;
+    const pending = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    let sent: Record<string, unknown> | undefined;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/universities") return response({ universities: [] });
+      if (url === `/api/admin/opportunities/${olderId}` && init?.method === "PATCH") {
+        sent = JSON.parse(String(init.body)).data;
+        return response({ item: { ...item, id: olderId, ...sent }, duplicates: [] });
+      }
+      if (url === `/api/admin/opportunities/${olderId}`) return pending;
+      // The list never contains the preselected listing.
+      return response({ items: [item] });
+    });
+    render(<OpportunityEditor canAssignPick />);
+    await screen.findByRole("button", { name: /Editor fixture/ });
+    // Nothing can be typed into the blank draft while the record is loading.
+    expect(screen.getByLabelText("Title")).toBeDisabled();
+    expect(screen.getByLabelText("Location")).toBeDisabled();
+    release(response({ item: { ...item, id: olderId, title: "Older draft" }, duplicates: [] }));
+    await screen.findByDisplayValue("Older draft");
+    const title = screen.getByLabelText("Title");
+    expect(title).not.toBeDisabled();
+    // An edit made after the load survives and is what Save sends.
+    fireEvent.change(title, { target: { value: "Edited title" } });
+    fireEvent.submit(title.closest("form")!);
+    await waitFor(() => expect(sent).toMatchObject({ title: "Edited title" }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/admin/opportunities/${olderId}`,
+      expect.objectContaining({ cache: "no-store" })
+    );
+  });
+
+  it("without ?id= the form is editable while the list is still loading", async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    render(<OpportunityEditor canAssignPick />);
+    expect(screen.getByLabelText("Title")).not.toBeDisabled();
+  });
+});
