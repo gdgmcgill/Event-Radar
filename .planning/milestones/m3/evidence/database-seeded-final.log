@@ -1,5 +1,9 @@
+$ supabase test db --local
+# Local stack: seed + real ingested rows + demo fixtures; 20260929150000 applied with 'supabase migration up --local' (no reset).
+# Before this run, the five seeded users' updated_at (bumped by browser-suite sign-ins) was re-pinned to the seed stamp; see database-diagnostic-stamp-drift.log for the run before that.
 Connecting to local database...
 psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
 /Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ....................................... ok
 /Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql ............................. ok
 /Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ........................ ok
@@ -30,7 +34,6 @@ psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup
 /Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/140-intake.test.sql ................................. ok
 /Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/150-ingestion.test.sql .............................. ok
 All tests successful.
-Files=29, Tests=861,  0 wallclock secs ( 0.05 usr  0.03 sys +  0.10 cusr  0.04 csys =  0.22 CPU)
+Files=29, Tests=870,  1 wallclock secs ( 0.04 usr  0.05 sys +  0.11 cusr  0.04 csys =  0.24 CPU)
 Result: PASS
-A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+Exit: 0

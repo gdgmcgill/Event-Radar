@@ -1,0 +1,12 @@
+$ supabase migration up --local   (run earlier in this wave; its output was:)
+Applying migration 20260929150000_m3_review_submission_details.sql...
+{"applied":[".../supabase/migrations/20260929150000_m3_review_submission_details.sql"],"message":"Migrations applied"}
+
+$ supabase migration list --local   (now)
+"local":"20260929021433","remote":"20260929021433"
+"local":"20260929120000","remote":"20260929120000"
+"local":"20260929120500","remote":"20260929120500"
+"local":"20260929130000","remote":"20260929130000"
+"local":"20260929140000","remote":"20260929140000"
+"local":"20260929150000","remote":"20260929150000"
+Exit: 0

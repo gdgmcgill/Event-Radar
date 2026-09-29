@@ -5,22 +5,22 @@ $ npm run build
 
 ▲ Next.js 16.3.5 (Turbopack)
 - Environments: .env.local, .env
-✓ Running next.config.js took 196ms
+✓ Running next.config.js took 248ms
 - Experiments (use with caution):
   · clientTraceMetadata
 
   Creating an optimized production build ...
-✓ Compiled successfully in 2.4s
+✓ Compiled successfully in 3.0s
   Running next.config.js provided runAfterProductionCompile ...
-✓ Completed runAfterProductionCompile in 77ms
+✓ Completed runAfterProductionCompile in 87ms
   Running TypeScript ...
-  Finished TypeScript in 1620ms ...
+  Finished TypeScript in 1608ms ...
   Collecting page data using 9 workers ...
   Generating static pages using 9 workers (0/121) ...
   Generating static pages using 9 workers (30/121) 
   Generating static pages using 9 workers (60/121) 
   Generating static pages using 9 workers (90/121) 
-✓ Generating static pages using 9 workers (121/121) in 324ms
+✓ Generating static pages using 9 workers (121/121) in 308ms
   Finalizing page optimization ...
 
 Route (app)

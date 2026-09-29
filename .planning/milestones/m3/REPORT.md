@@ -12,19 +12,18 @@ Scope: P1-06 through P1-09 of the expanded Phase 1 plan, the M3 "Make discovery 
 | P1-06 Homepage and details | `5dfd25a`, `0ccde0f` | A switch-aware homepage: the legacy home with the switch off, and with it on an editorial home with This week, Ady's Picks, Browse by type and Resources. Each section fails independently with an honest notice. Shared listing facts: occurrence, deadline with date-only and time-zone notes, eligibility, relevance, location, provenance, last checked. Closed listings show no action. `FallbackImage` replaces expired external images. A switch-aware About whose founder slot stays empty until the owner supplies copy. Also the `/landing` cutover, a metadata base, and sitemap and robots updates. |
 | P1-09 Intake | `75f23b5`, `f0d3a88` | `/submit`, `/for-companies` and "Report a problem" on listings, all usable anonymously. Strict contracts: unknown keys such as `status` or `is_pick` are a 400. Abuse controls: a honeypot, a 5-per-minute route budget, and database quotas keyed by a salted client hash (never the raw IP). `/moderation/submissions` shows private contacts to admins only. Submissions convert to **draft** opportunities or resources, idempotently on retry. Listing reports can be resolved or dismissed. A company request becomes a `partner` job draft and never grants a role. |
 | P1-07 McGill supply | `1ff6c1b` | A webhook delivery log (`ingestion_deliveries`) with run, heartbeat and failure records. Freshness fields in `/api/health` and on the health page. `/moderation/ingestion` shows deliveries and stale pending events, with "Reject as expired". Admin image persistence hardened against SSRF. The repo producer (`scripts/ingest/instagram.ts`) with a loopback-only runner and a [runbook](../../../docs/runbooks/ingestion.md). A real local run ingested six McGill events, a replay added none, and a forced failure was recorded. |
-| Verification | this commit | The M3 acceptance browser suite (`e2e/specs/m3-acceptance.spec.ts`, run by `playwright.m3.config.ts`), one product fix it exposed, two baseline-harness classifications the new intake routes needed, the full local gate below, and this report. |
+| Verification | `5a945fc` | The M3 acceptance browser suite (`e2e/specs/m3-acceptance.spec.ts`, run by `playwright.m3.config.ts`), one product fix it exposed, two baseline-harness classifications the new intake routes needed, the full local gate below, and this report. |
 
-All new public pages and APIs sit behind the existing `discovery_ui` switch. The computer-use walkthrough of the milestone demo is [recorded separately by the controller](COMPUTER-USE-VERIFICATION.md).
+| Final review fixes | `004e1c9`, `bf4994e`, `99eabf1`, `43c510a` | The whole-branch review and the controller's demo findings, fixed in one wave; see [Final review wave](#final-review-wave). |
+
+All new public pages and APIs sit behind the existing `discovery_ui` switch. The controller's scripted browser walkthrough of the milestone demo, with screenshots, is [recorded separately](COMPUTER-USE-VERIFICATION.md).
 
 ## Compatibility and security
 
 - **Switch off = old product.** With every `FEATURE_*` unset, `/` renders the legacy homepage, `/about` the legacy About and `/landing` the landing page. Every new page and API answers 404. The baseline browser suite runs with all switches off and passed (below). Admin moderation navigation (Resources, Submissions, Ingestion) follows the M2 precedent and is visible to admins regardless of the switch.
-- **Private data stays private.** Column grants, admin-only RLS and explicit projections exclude:
-  - submitter and company contacts;
-  - client hashes;
-  - reporter details;
-  - duplicate-review notes;
-  - draft resources.
+- **Private data stays private.** Different mechanisms keep each kind of private data out of public reads:
+  - **Admin-only RLS and app projections.** These hide submitter and company contacts, client hashes, submitter ids and reporter details. `submissions` and `listing_reports` have no public read path: browser roles read them only as an admin cookie session, and the admin projections leave out hashes and submitter ids. They are not column grants.
+  - **Column grants and the public projections.** These exclude duplicate-review notes and draft resources.
 
   The acceptance suite searches public HTML, the `RSC: 1` payload, `/api/discovery`, `/api/opportunities/<id>`, `/api/resources` and `/sitemap.xml` for seeded sentinel values.
 - **Double actions.** Converting a submission twice returns the same target and creates nothing (pgTAP and the browser suite). A replayed ingestion batch is recorded as `duplicate` and inserts nothing (real local replay and edge tests).
@@ -36,7 +35,7 @@ All new public pages and APIs sit behind the existing `discovery_ui` switch. The
 ## Found and fixed during verification
 
 1. **Product defect: broken event hero image.** The event detail hero rendered `event.image_url` through a plain `next/image`. An expired Instagram CDN URL therefore left a broken hero, although cards and the moderation queue already fell back (review focus 4). The hero now uses `FallbackImage` (`src/components/events/EventDetailView.tsx`). A new unit case in `EventDetailView.test.tsx` failed before the change and passes after it. The browser case "an unreachable event image on an allowed host falls back to the placeholder" also passes.
-2. **Baseline harness: intake routes were not classified.** P1-09 added `POST /api/submissions`, `/api/company-requests` and `/api/listing-reports` to the probe manifest as 404 but never ran the baseline suite. The first baseline run failed 23 of about 2,400 cases, [kept as a diagnostic](evidence/browser-baseline-diagnostic-run1.log). Every failure was one of two cases:
+2. **Baseline harness: intake routes were not classified.** P1-09 added `POST /api/submissions`, `/api/company-requests` and `/api/listing-reports` to the probe manifest as 404 but never ran the baseline suite. The first baseline run failed 23 of about 2,400 cases, [kept as a diagnostic](evidence/browser-baseline-diagnostic-run1.log). There were 22 failures in `authorization-matrix.spec.ts` and 1 in the anonymous sweep of `cache-headers.spec.ts`. Every failure had one of two causes:
    - The authorization matrix applied its generic rule (anonymous → 401, incomplete profile → 403) to routes that are anonymous by design. With the switch off, those routes correctly answer 404 to every non-banned caller.
    - Thirteen personas probing from one loopback address exhausted the intake budget of 5 per minute per address and path, so later probes read 429. That is the intended limiter behavior.
 
@@ -46,24 +45,56 @@ All new public pages and APIs sit behind the existing `discovery_ui` switch. The
    - Accept Next's streamed `notFound()` status (200 once the shell has flushed, as the page-smoke harness already does) while asserting the draft's content is absent.
    - Wait for the moderation layout's streamed redirect.
 
+## Final review wave
+
+The whole-branch review and the controller's browser demo ([COMPUTER-USE-VERIFICATION.md](COMPUTER-USE-VERIFICATION.md), screenshots in [evidence/demo/](evidence/demo/)) found the following. All of them were fixed in this wave.
+
+1. **Event times on M3 surfaces (DEC-80), `004e1c9`.** Demo finding 1. Legacy `events.start_date` holds Toronto wall-clock time labelled UTC. The convention, and which helpers honour it, is now in [docs/time-semantics.md](../../../docs/time-semantics.md).
+   - **Stale queue.** "Stale" and "past" now compare with `getESTNowISO()`, through one shared rule (`src/lib/ingest/staleness.ts`). The rule serves the ingestion summary, `/api/admin/ingestion` and the Pending Review stale banner. Before, an event later today counted as past for 4–5 hours.
+   - **Ingestion page.** `/api/admin/ingestion` returns a server-computed `is_past` per stale row. The page shows the stored start as Toronto time. It offers "Reject as expired" only for past rows. It no longer links past rows to Pending Review, which hides them.
+   - **Event detail sidebar.** With the discovery projection present, the sidebar date, time and past notice come from `starts_at` in America/Toronto. They now agree with ListingFacts: the Hackboard-like case shows 11:59 PM, never 7:59 PM. With the switch off, the rendered HTML is byte-identical to before, checked by a one-off comparison against the previous component.
+2. **Editors dropped early edits, `bf4994e`.** Demo finding 2. In the opportunity and resource editors, the `?id=` mount effect's `open` closed over `dirty=false`.
+   - The unsaved-changes check now reads a ref.
+   - The form stays disabled while the preselected record loads.
+   - `?id=` is fetched by id, so a record outside the first 100 list rows still opens.
+3. **Converted drafts dropped submission details, `99eabf1`.** Controller ruling. A new forward migration, `20260929150000_m3_review_submission_details.sql`, replaces `review_submission`. Behaviour, grants and `search_path` are identical, with two changes:
+   - An opportunity draft's description now ends with labelled lines for the non-empty submitted start date, deadline, hours, compensation, start date, employment type and company context. Contact fields are never included, and the description stays within 15,000 characters.
+   - A valid ISO `deadline_on` becomes a date-precision deadline (Toronto, timezone assumed). An impossible calendar date leaves the draft without a deadline instead of failing.
+
+   The function signature is unchanged, so the generated types are unchanged.
+4. **Minors, `43c510a`.**
+   - An empty resource edit is refused.
+   - `/resources/[slug]` loads once per render pass.
+   - The images route declares `maxDuration = 60`, and each DNS lookup is raced against the fetch timeout: a hung resolver is now `timeout`.
+   - The runbook corrections: `--dry-run` still bills Apify without `--fixture`, and how to see the function's output for `internal_error`.
+
+The migration was applied to the running local stack with `supabase migration up --local`. The stack was not reset, because it holds the real ingested rows and the demo fixtures.
+
 ## Verification
 
-Earlier diagnostic logs are kept separately and are not claimed as green. Files ending in `-final.log` record the final runs. The database runs started from `supabase db reset --local` and the guarded seed loader. The final browser runs used a second reset and seed, taken after the harness fix.
+Earlier diagnostic logs are kept separately and are not claimed as green. Files ending in `-final.log` record the final runs.
+
+- **Verification package (`5a945fc`).** The database runs started from `supabase db reset --local` and the guarded seed loader. The browser runs used a second reset and seed, taken after the harness fix.
+- **Final review wave.** The gates marked "wave" were re-run on the fixed tree without a reset, because the local stack holds the real ingested rows and the demo fixtures. The new migration was applied with `supabase migration up --local`.
+  - The first database run of the wave failed one assertion, the seed-determinism check in `040-seed-coverage`. Browser-suite sign-ins had bumped `updated_at` on five seeded users. The run is kept as [a diagnostic](evidence/database-diagnostic-stamp-drift.log).
+  - Those five stamps were then re-pinned to the seed value, locally only, and the suite passed.
 
 | Gate | Result | Evidence |
 |---|---|---|
-| Migration replay | 25 migrations, 4 of them M3, applied cleanly | [reset](evidence/db-reset-final.log), [seed](evidence/seed-final.log) |
-| Database suite (seeded) | **861 assertions across 29 files, PASS** | [log](evidence/database-seeded-final.log) |
-| Unit/UI suite (`npm run test:ci -- --runInBand`) | **4,380 passed, 1 skipped** (the credential-dependent Upstash suite); 181 suites passed, 1 skipped | [log](evidence/unit-tests-final.log) |
-| TypeScript (`tsc --noEmit`, includes e2e) | clean | [log](evidence/typecheck-final.log) |
-| ESLint | 0 errors, 15 warnings (all pre-existing) | [log](evidence/lint-final.log) |
-| Type drift (CLI 2.115.0) | generated public-schema types equal the committed file byte-for-byte | [log](evidence/type-drift-final.log) |
-| Static guards | all seven pass: 25 migration filenames; empty elevated ratchet; empty contracts census and 43 client senders with 0 violations; server console census; 57 characterization-tagged files; RLS coverage of 41 tables and 164 client-role read cases | [log](evidence/guards-final.log) |
-| Baseline browser suite (all switches off) | **2,251 passed, 151 skipped, 0 failed** | [log](evidence/browser-baseline-final.log) |
-| M1/M2 enabled browser suite | **15 passed** | [log](evidence/browser-m1-m2-final.log) |
-| M3 enabled browser suite | **21 passed**: 10 persona setups and 11 acceptance cases | [log](evidence/browser-m3-final.log) |
-| Local edge functions (`scripts/test-edge-local.ts`) | **21 passed**, 0 failed | [log](evidence/edge-local-final.log) |
-| Production build (`npm run build`) | exit 0 | [log](evidence/build-final.log) |
+| Migration replay | 25 migrations, 4 of them M3, replayed cleanly from a reset (verification package) | [reset](evidence/db-reset-final.log), [seed](evidence/seed-final.log) |
+| New migration (wave) | `20260929150000_m3_review_submission_details.sql` applied with `supabase migration up --local`; local and applied lists agree (26) | [log](evidence/migration-up-final.log) |
+| Database suite (wave) | **870 assertions across 29 files, PASS** (861 before the wave, plus 9 in `140-intake`) | [log](evidence/database-seeded-final.log) |
+| Unit/UI suite (`npm run test:ci -- --runInBand`, wave) | **4,395 passed, 1 skipped** (the credential-dependent Upstash suite); 184 suites passed, 1 skipped | [log](evidence/unit-tests-final.log) |
+| TypeScript (`tsc --noEmit`, includes e2e, wave) | clean | [log](evidence/typecheck-final.log) |
+| ESLint (wave) | 0 errors, 15 warnings (all pre-existing, none in files this wave touched) | [log](evidence/lint-final.log) |
+| Type drift (CLI 2.115.0, wave) | generated public-schema types equal the committed file byte-for-byte (the new migration changes a function body only) | [log](evidence/type-drift-final.log) |
+| Static guards (wave) | all seven pass: 26 migration filenames; empty elevated ratchet; empty contracts census and 43 client senders with 0 violations; server console census; 57 characterization-tagged files; RLS coverage of 41 tables and 164 client-role read cases | [log](evidence/guards-final.log) |
+| Baseline browser suite (all switches off) | **2,251 passed, 151 skipped, 0 failed** (verification package, full suite) | [log](evidence/browser-baseline-final.log) |
+| Baseline page-smoke and authorization matrices (wave) | **1,931 passed, 151 skipped, 0 failed** | [log](evidence/browser-baseline-smoke-authz-final.log) |
+| M1/M2 enabled browser suite | **15 passed** (verification package; not re-run) | [log](evidence/browser-m1-m2-final.log) |
+| M3 enabled browser suite (wave) | **21 passed**: 10 persona setups and 11 acceptance cases | [log](evidence/browser-m3-final.log) |
+| Local edge functions (`scripts/test-edge-local.ts`) | **21 passed**, 0 failed (verification package; the wave changed no edge code) | [log](evidence/edge-local-final.log) |
+| Production build (`npm run build`, wave) | exit 0 | [log](evidence/build-final.log) |
 
 The baseline run had `net.ipv4.tcp_tw_reuse=1` set inside the local auth container's network namespace; see the M1–M2 report for why.
 
@@ -83,7 +114,7 @@ The M3 acceptance cases, each an independent test with disposable rows in the `a
 
 The real ingestion evidence from P1-07 (Task 16) is in [ingestion-real-run.log](evidence/ingestion-real-run.log), [ingestion-replay.log](evidence/ingestion-replay.log) and [ingestion-failure.log](evidence/ingestion-failure.log).
 
-**Local demo data.** The six real ingested pending events and their three delivery rows were exported before the gate's reset. They were restored with `COPY` after all browser suites finished, because the baseline health spec expects no ingestion in the seed state. Row checksums match the export. The local database also keeps 16 synthetic delivery rows written by the edge-function test run (producer `unknown`), so the ingestion summary's latest timestamps reflect that test run rather than the real producer run.
+**Local demo data.** The six real ingested pending events and their three delivery rows were exported before the gate's reset. They were restored with `COPY` after all browser suites finished, because the baseline health spec expects no ingestion in the seed state. Row checksums match the export. The edge-function test run also wrote 16 synthetic delivery rows (producer `unknown`). The controller deleted them before the demo walkthrough, so the ingestion page shows only the real run. The demo also left local fixtures labelled "(local fixture)" and "Demo", and moderation decisions on the ingested rows ([COMPUTER-USE-VERIFICATION.md](COMPUTER-USE-VERIFICATION.md)).
 
 ## Reproduce locally
 
@@ -111,7 +142,7 @@ Run the browser configurations one after another: each builds and starts its own
 - **Owner content.** No real resources, founder story, picks or launch listings were supplied. The [launch-content checklist](../m1-m2/DECISIONS.md#launch-content-checklist) is therefore unchanged, and the editorial sections show honest empty states. The owner adds content through the admin editors before M4.
 - **Hosted producer schedule.** The producer is run by an operator. A scheduled hosted run needs a hosted secret and an owner decision (M4).
 - **CDN/shared caching.** Every new API answers `private, no-store`; shared caching of public reads is M4 work.
-- **Production migration and deployment.** The four M3 migrations exist only in local databases.
+- **Production migration and deployment.** The five M3 migrations exist only in local databases.
 - **Deno offline test and `npm audit`.** These CI steps were not in this gate's required list. The Deno handler test passed in P1-07.
 
 ## Remaining owner actions
@@ -149,21 +180,25 @@ These are deferred review minors and execution rulings from the M3 ledger. None 
 - The submit form can map a server field to a key it does not render.
 - The per-user quota is serialized only per client hash, so parallel requests from several addresses can slightly exceed 20 per day.
 - A banned signed-in caller is recorded as anonymous. The proxy ban ring is the primary block.
+- With the switch off, a sixth intake POST within a minute from one address answers 429 before the route's 404. The proxy's rate limiter runs before the route's feature gate.
 
 **Ingestion (P1-07)**
 - A batch in which every mapping fails is recorded as `failed` with a null `error_code`.
 - The newest-first persist limit can starve older rows after repeated non-404 failures.
-- The DNS lookup is not bounded by the 10 s timeout, and the images route has no `maxDuration`.
+- Each image fetch, DNS included, is bounded by 10 s, and the route declares `maxDuration = 60`. One call may still process 10 images one after another, and ten 10 s timeouts would exceed 60 s. A batch time budget is needed before a hosted schedule (M4).
 - `isPrivateAddress` misses `::/96`, `2002::/16`, `64:ff9b:1::/48` and Teredo; the host allow-list mitigates this.
 - There is a DNS-rebinding window between the check and the fetch.
-- Runbook: its `internal_error` advice does not match `run-local`, which discards serve output, and it says `--dry-run` sends nothing although `--dry-run` still calls Apify.
 - A failed health-summary read blanks `last_ingest_at`.
-- The producer's post-timestamp window admits past-dated events (5 of the 6 real ones).
-- The IngestionPanel "Review" link for past items goes to `/moderation/pending`, which hides them.
+- **Supply quality.** The producer's post-timestamp window admits past-dated events: 5 of the 6 real ones. The heuristic classifier also treats recruitment posts ("Apply by …") as events. Moderation handles both through the stale queue and "Reject as expired". This is a producer-quality limitation, not fixed in M3.
 - The summary type is duplicated between `IngestionSummaryRecord` and `HealthWebhook`.
 - The inventory tool has boilerplate ingestion rows.
 - A Deno test file lacks its final newline.
-- Ingested times are read as UTC, as before M3.
+- **Owner decision: switch-off legacy time formatting.** With the switch off, legacy surfaces still format event times with `formatDate`/`formatTimeFromISO`. These read the DEC-80 wall-clock value in the viewer's zone, so a Toronto viewer sees times 4–5 hours early. This is pre-existing and deliberately unchanged ([time-semantics.md](../../../docs/time-semantics.md)). The M3 surfaces now follow DEC-80.
+
+**Before any hosted deployment (M4)**
+- **Intake quotas.** The client hash (`clientIp`, DEC-50) keys on `x-real-ip`, falling back to the first `x-forwarded-for` hop. This assumes a host that sets `x-real-ip` to the connecting client and overwrites any client-supplied value, as Vercel does. On any other host a caller could choose its own quota key, so check the host first.
+- **`INTAKE_HASH_SECRET`.** It must be set in every hosted environment. Without it, intake answers 503.
+- **Images route duration.** Add a batch time budget, see Ingestion above.
 
 **Rulings recorded during execution**
 - Work ran on the branch in the main tree, with no worktree.
