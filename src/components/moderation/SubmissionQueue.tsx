@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type {
   ListingReportAdminRecord,
   ListingReportResolveInput,
@@ -349,12 +349,32 @@ function ReportsPanel() {
 
 /** Moderation queue for public intake (M3 P1-09): submissions (with their
  * private contact, admin only) and listing reports. */
+const TABS: ReadonlyArray<readonly [Tab, string]> = [
+  ["submissions", "Submissions"],
+  ["reports", "Listing reports"],
+];
+
 export function SubmissionQueue() {
   const [tab, setTab] = useState<Tab>("submissions");
-  const tabs: ReadonlyArray<readonly [Tab, string]> = [
-    ["submissions", "Submissions"],
-    ["reports", "Listing reports"],
-  ];
+  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ submissions: null, reports: null });
+  const tabs = TABS;
+
+  /** WAI-ARIA tabs: roving tabindex; Left/Right wrap, Home/End jump. Only the
+   * selected panel is rendered, so only the selected tab has aria-controls. */
+  function onTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const index = TABS.findIndex(([value]) => value === tab);
+    const next =
+      event.key === "ArrowRight" ? (index + 1) % TABS.length
+        : event.key === "ArrowLeft" ? (index - 1 + TABS.length) % TABS.length
+          : event.key === "Home" ? 0
+            : event.key === "End" ? TABS.length - 1
+              : null;
+    if (next === null) return;
+    event.preventDefault();
+    const value = TABS[next][0];
+    setTab(value);
+    tabRefs.current[value]?.focus();
+  }
   return (
     <div className="mx-auto max-w-6xl p-6 sm:p-8">
       <h1 className="mb-6 text-2xl font-semibold">Submissions and reports</h1>
@@ -362,11 +382,16 @@ export function SubmissionQueue() {
         {tabs.map(([value, label]) => (
           <button
             key={value}
+            ref={(node) => {
+              tabRefs.current[value] = node;
+            }}
             id={`tab-${value}`}
             type="button"
             role="tab"
             aria-selected={tab === value}
-            aria-controls={`panel-${value}`}
+            aria-controls={tab === value ? `panel-${value}` : undefined}
+            tabIndex={tab === value ? 0 : -1}
+            onKeyDown={onTabKeyDown}
             onClick={() => setTab(value)}
             className="rounded-full border border-border px-4 py-1.5 text-sm font-medium aria-selected:border-foreground aria-selected:bg-foreground aria-selected:text-background"
           >

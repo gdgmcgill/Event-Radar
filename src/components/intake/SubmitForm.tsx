@@ -129,7 +129,13 @@ export function SubmitForm() {
       const outcome = await sendIntake("/api/submissions", buildSubmission(kind, values));
       if (outcome.kind === "sent") setSent(true);
       else if (outcome.kind === "rate") setStatus(RATE_MESSAGE);
-      else if (outcome.kind === "rejected") setStatus(outcome.message);
+      else if (outcome.kind === "rejected") {
+        const field = outcome.field;
+        if (field && field in values) {
+          setErrors({ [field]: outcome.message });
+          setStatus("Check the highlighted fields.");
+        } else setStatus(outcome.message);
+      }
       else setStatus(NETWORK_MESSAGE);
     } catch {
       setStatus(NETWORK_MESSAGE);

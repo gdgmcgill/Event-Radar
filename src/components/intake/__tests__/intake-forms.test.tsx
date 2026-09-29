@@ -5,6 +5,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { SubmitForm } from "../SubmitForm";
 import { CompanyRequestForm } from "../CompanyRequestForm";
 import { ReportListingButton } from "../ReportListingButton";
+import { SubmissionQueue } from "@/components/moderation/SubmissionQueue";
 
 const fetchMock = jest.fn();
 const reply = (status: number, body: unknown = {}) =>
@@ -99,6 +100,35 @@ describe("SubmitForm", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("moves focus to the review promise after a 202", async () => {
+    fetchMock.mockResolvedValue(reply(202, { received: true }));
+    render(<SubmitForm />);
+    fillJob();
+    fireEvent.click(screen.getByRole("button", { name: "Send for review" }));
+    const thanks = await screen.findByText(THANKS);
+    await waitFor(() => expect(document.activeElement).toBe(thanks.closest("[tabindex='-1']")));
+  });
+
+  it("marks the input a server 400 names as its field", async () => {
+    fetchMock.mockResolvedValue(reply(400, { error: "URL must use http or https", field: "source_url" }));
+    render(<SubmitForm />);
+    fillJob();
+    fireEvent.click(screen.getByRole("button", { name: "Send for review" }));
+    const link = screen.getByLabelText("Link");
+    await waitFor(() => expect(link).toHaveAttribute("aria-invalid", "true"));
+    const ids = (link.getAttribute("aria-describedby") ?? "").split(" ");
+    expect(ids.some((id) => document.getElementById(id)?.textContent === "URL must use http or https")).toBe(true);
+    expect(screen.getByLabelText("Title")).toHaveValue("Research assistant");
+  });
+
+  it("gives each form instance its own honeypot id", () => {
+    const { container } = render(<><SubmitForm /><SubmitForm /></>);
+    const ids = [...container.querySelectorAll('input[name="website"]')].map((input) => input.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    for (const id of ids) expect(container.querySelector(`label[for="${id}"]`)).not.toBeNull();
+  });
+
   it("states that contact details stay private", () => {
     render(<SubmitForm />);
     expect(screen.getByText(/contact details stay private/i)).toBeInTheDocument();
@@ -156,6 +186,27 @@ describe("ReportListingButton", () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
+  it("links a missing-reason error to the reason group", async () => {
+    render(<ReportListingButton kind="event" id={ID} />);
+    fireEvent.click(screen.getByRole("button", { name: "Report a problem" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Send report" }));
+    const group = screen.getByRole("group", { name: "What's wrong?" });
+    await waitFor(() => expect(group).toHaveAttribute("aria-invalid", "true"));
+    const ids = (group.getAttribute("aria-describedby") ?? "").split(" ");
+    expect(ids.some((id) => document.getElementById(id)?.textContent?.includes("Choose what's wrong"))).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("moves focus to the thanks message after a 202", async () => {
+    fetchMock.mockResolvedValue(reply(202, { received: true }));
+    render(<ReportListingButton kind="event" id={ID} />);
+    fireEvent.click(screen.getByRole("button", { name: "Report a problem" }));
+    fireEvent.click(await screen.findByLabelText("Wrong date or time"));
+    fireEvent.click(screen.getByRole("button", { name: "Send report" }));
+    const thanks = await screen.findByText(/Thanks — we/);
+    await waitFor(() => expect(document.activeElement).toBe(thanks));
+  });
+
   it("sends the chosen reason for the listing", async () => {
     fetchMock.mockResolvedValue(reply(202, { received: true }));
     render(<ReportListingButton kind="opportunity" id={ID} />);
@@ -168,5 +219,28 @@ describe("ReportListingButton", () => {
     expect(url).toBe("/api/listing-reports");
     expect(JSON.parse(init.body)).toEqual({ kind: "opportunity", id: ID, reason: "dead_link", details: "Returns 404" });
     expect(await screen.findByText(/Thanks/)).toBeInTheDocument();
+  });
+});
+
+describe("SubmissionQueue tabs", () => {
+  it("moves between tabs with the arrow keys and references only the rendered panel", async () => {
+    fetchMock.mockResolvedValue(reply(200, { items: [] }));
+    render(<SubmissionQueue />);
+    const first = screen.getByRole("tab", { name: "Submissions" });
+    const second = screen.getByRole("tab", { name: "Listing reports" });
+    expect(first).toHaveAttribute("tabindex", "0");
+    expect(second).toHaveAttribute("tabindex", "-1");
+    expect(document.getElementById(first.getAttribute("aria-controls")!)).not.toBeNull();
+    expect(second).not.toHaveAttribute("aria-controls");
+    first.focus();
+    fireEvent.keyDown(first, { key: "ArrowRight" });
+    await waitFor(() => expect(second).toHaveAttribute("aria-selected", "true"));
+    expect(document.activeElement).toBe(second);
+    expect(document.getElementById(second.getAttribute("aria-controls")!)).not.toBeNull();
+    fireEvent.keyDown(second, { key: "ArrowRight" });
+    await waitFor(() => expect(first).toHaveAttribute("aria-selected", "true"));
+    fireEvent.keyDown(first, { key: "ArrowLeft" });
+    await waitFor(() => expect(second).toHaveAttribute("aria-selected", "true"));
+    await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
   });
 });

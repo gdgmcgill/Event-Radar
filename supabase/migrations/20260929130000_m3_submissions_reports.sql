@@ -112,6 +112,8 @@ GRANT EXECUTE ON FUNCTION public.intake_listing_report(text, uuid, text, text, u
 
 -- Editor review. Convert creates a DRAFT (never published, never checked) and
 -- never copies private contact data. A retried convert returns the same target.
+-- The returned submission omits contact fields, the client hash and the
+-- submitter id. resources.author_name is capped at 120, organization at 200.
 CREATE FUNCTION public.review_submission(p_actor uuid, p_id uuid, p_action text, p_reason text, p_expected timestamptz)
 RETURNS jsonb LANGUAGE plpgsql SET search_path = '' AS $$
 DECLARE
@@ -125,7 +127,7 @@ BEGIN
   SELECT * INTO v FROM public.submissions WHERE id = p_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Submission not found' USING ERRCODE = 'P0002'; END IF;
   IF p_action = 'convert' AND v.status = 'converted' THEN
-    RETURN jsonb_build_object('submission', to_jsonb(v) - 'contact_name' - 'contact_email',
+    RETURN jsonb_build_object('submission', to_jsonb(v) - 'contact_name' - 'contact_email' - 'client_hash' - 'submitter_user_id',
       'target', CASE WHEN v.target_opportunity_id IS NOT NULL THEN jsonb_build_object('kind', 'opportunity', 'id', v.target_opportunity_id)
         WHEN v.target_resource_id IS NOT NULL THEN jsonb_build_object('kind', 'resource', 'id', v.target_resource_id) END);
   END IF;
@@ -141,7 +143,7 @@ BEGIN
       END IF;
       INSERT INTO public.resources (slug, resource_type, title, summary, external_url, category, audience, author_name, source_note, created_by, updated_by)
       VALUES (v_slug, 'external', v.title, left(coalesce(nullif(trim(v.details->>'description'), ''), v.title), 500), v.source_url,
-        coalesce(v.details->>'category', 'career'), coalesce(nullif(trim(v.details->>'audience'), ''), 'Students'), v.organization,
+        coalesce(v.details->>'category', 'career'), coalesce(nullif(trim(v.details->>'audience'), ''), 'Students'), left(v.organization, 120),
         'Suggested through public submission', p_actor, p_actor)
       RETURNING id INTO v_target_id;
       v_target_kind := 'resource';
@@ -169,7 +171,7 @@ BEGIN
   INSERT INTO public.admin_audit_log (admin_user_id, action, target_type, target_id, metadata)
   VALUES (p_actor, 'submission_' || p_action, 'submission', v.id::text,
     jsonb_build_object('kind', v.kind, 'target_kind', v_target_kind, 'target_id', v_target_id));
-  RETURN jsonb_build_object('submission', to_jsonb(v) - 'contact_name' - 'contact_email',
+  RETURN jsonb_build_object('submission', to_jsonb(v) - 'contact_name' - 'contact_email' - 'client_hash' - 'submitter_user_id',
     'target', CASE WHEN v_target_id IS NOT NULL THEN jsonb_build_object('kind', v_target_kind, 'id', v_target_id) END);
 END $$;
 REVOKE ALL ON FUNCTION public.review_submission(uuid, uuid, text, text, timestamptz) FROM PUBLIC, anon, authenticated;

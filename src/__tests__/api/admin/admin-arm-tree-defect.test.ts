@@ -73,7 +73,7 @@ describe("T0 (F-058): the admin arm table equals the tree, in either export form
 describe("T1 (F-058 fixed): every admin arm wears withRoute with the private class", () => {
   const adminArms = [...ADMIN_ARMS.filter((arm) => arm.id.startsWith("admin/")), ...M2_ARMS.filter(a => a.admin).map(a => ({ id: `${a.route} ${a.verb}` }))];
 
-  it("covers the 40 admin arms", () => {
+  it("covers the 50 admin arms", () => {
     expect(adminArms).toHaveLength(50);
   });
 

@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { Flag } from "lucide-react";
 import type { ListingReportInput } from "@/contracts/intake";
 import {
@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { FormStatus, Honeypot, NETWORK_MESSAGE, RATE_MESSAGE, inputStyle, optional, sendIntake } from "./fields";
+import { FormStatus, Honeypot, NETWORK_MESSAGE, RATE_MESSAGE, inputStyle, optional, sendIntake, useFocusOnMount } from "./fields";
 
 type Reason = ListingReportInput["reason"];
 const REASONS: ReadonlyArray<readonly [Reason, string]> = [
@@ -24,13 +24,25 @@ const REASONS: ReadonlyArray<readonly [Reason, string]> = [
 /** "Report a problem" for a public listing (M3 P1-09). The dialog (Radix)
  * traps focus, closes on Escape and returns focus to the trigger. Anonymous
  * reports are allowed; nothing about the reporter is shown back. */
+function ReportThanks() {
+  const ref = useFocusOnMount<HTMLParagraphElement>();
+  return (
+    <p ref={ref} role="status" tabIndex={-1} className="text-sm outline-none">
+      Thanks — we&apos;ll take a look.
+    </p>
+  );
+}
+
 export function ReportListingButton({ kind, id }: { kind: ListingReportInput["kind"]; id: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<Reason | "">("");
   const [details, setDetails] = useState("");
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<string | null>(null);
+  const [reasonError, setReasonError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const reasonErrorId = `report-reason-error-${useId()}`;
+  const detailsId = `report-details-${useId()}`;
   const [sent, setSent] = useState(false);
 
   function onOpenChange(next: boolean) {
@@ -40,14 +52,17 @@ export function ReportListingButton({ kind, id }: { kind: ListingReportInput["ki
       setReason("");
       setDetails("");
     }
-    if (!next) setStatus(null);
+    if (!next) {
+      setStatus(null);
+      setReasonError(null);
+    }
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (sending) return;
     if (!reason) {
-      setStatus("Choose what's wrong with this listing.");
+      setReasonError("Choose what's wrong with this listing.");
       return;
     }
     setSending(true);
@@ -80,25 +95,41 @@ export function ReportListingButton({ kind, id }: { kind: ListingReportInput["ki
           <DialogDescription>A person reviews every report. You don&apos;t need an account.</DialogDescription>
         </DialogHeader>
         {sent ? (
-          <p role="status" className="text-sm">
-            Thanks — we&apos;ll take a look.
-          </p>
+          <ReportThanks />
         ) : (
           <form noValidate onSubmit={onSubmit} className="grid gap-4">
-            <fieldset className="grid gap-2">
+            <fieldset
+              className="grid gap-2"
+              aria-invalid={reasonError ? true : undefined}
+              aria-describedby={reasonError ? reasonErrorId : undefined}
+            >
               <legend className="mb-1 text-sm font-medium">What&apos;s wrong?</legend>
               {REASONS.map(([value, label]) => (
                 <label key={value} className="flex items-center gap-2 text-sm">
-                  <input type="radio" name="reason" value={value} checked={reason === value} onChange={() => setReason(value)} />
+                  <input
+                    type="radio"
+                    name="reason"
+                    value={value}
+                    checked={reason === value}
+                    onChange={() => {
+                      setReason(value);
+                      setReasonError(null);
+                    }}
+                  />
                   {label}
                 </label>
               ))}
+              {reasonError && (
+                <p id={reasonErrorId} className="text-xs text-destructive">
+                  {reasonError}
+                </p>
+              )}
             </fieldset>
             <div className="grid gap-1.5">
-              <label htmlFor="report-details" className="text-sm font-medium">
+              <label htmlFor={detailsId} className="text-sm font-medium">
                 Details (optional)
               </label>
-              <textarea id="report-details" value={details} maxLength={1000} rows={3} className={inputStyle} onChange={(event) => setDetails(event.target.value)} />
+              <textarea id={detailsId} value={details} maxLength={1000} rows={3} className={inputStyle} onChange={(event) => setDetails(event.target.value)} />
             </div>
             <Honeypot value={website} onChange={setWebsite} />
             {status && <FormStatus>{status}</FormStatus>}

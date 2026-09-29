@@ -86,6 +86,23 @@ describe("CompanyRequestBody", () => {
   it("rejects a forged status key", () => {
     expect(CompanyRequestBody.safeParse({ ...company, status: "published" }).success).toBe(false);
   });
+
+  it("rejects a multibyte request whose details exceed the stored byte budget", () => {
+    const euro = (n: number) => "€".repeat(n); // 1 UTF-16 unit, 3 UTF-8 bytes
+    const heavy = {
+      ...company,
+      company_context: euro(1000),
+      duties: euro(3000),
+      must_have_skills: euro(1000),
+      nice_to_have_skills: euro(1000),
+      why_worth_it: euro(1000),
+    };
+    const result = CompanyRequestBody.safeParse(heavy);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("Submission is too long.");
+    // The same characters in ASCII stay within budget.
+    expect(CompanyRequestBody.safeParse({ ...heavy, company_context: "a".repeat(1000), duties: "a".repeat(3000), must_have_skills: "a".repeat(1000), nice_to_have_skills: "a".repeat(1000), why_worth_it: "a".repeat(1000) }).success).toBe(true);
+  });
 });
 
 describe("ListingReportBody", () => {

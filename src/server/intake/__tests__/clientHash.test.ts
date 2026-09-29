@@ -1,13 +1,16 @@
 import { NextRequest } from "next/server";
-import { clientHash } from "../clientHash";
+import { IntakeNotConfigured, clientHash } from "../clientHash";
 
 const request = (ip: string) =>
   new NextRequest("http://localhost/api/submissions", { method: "POST", headers: { "x-real-ip": ip } });
 
 const original = process.env.INTAKE_HASH_SECRET;
+const originalVercel = process.env.VERCEL;
 afterEach(() => {
   if (original === undefined) delete process.env.INTAKE_HASH_SECRET;
   else process.env.INTAKE_HASH_SECRET = original;
+  if (originalVercel === undefined) delete process.env.VERCEL;
+  else process.env.VERCEL = originalVercel;
 });
 
 describe("clientHash", () => {
@@ -36,5 +39,17 @@ describe("clientHash", () => {
     delete process.env.INTAKE_HASH_SECRET;
     expect(clientHash(request("203.0.113.9"))).toMatch(/^[0-9a-f]{64}$/);
     expect(clientHash(request("203.0.113.9"))).not.toBe(clientHash(request("203.0.113.10")));
+  });
+
+  it("refuses to run on a hosted deploy without a secret instead of using the public salt", () => {
+    delete process.env.INTAKE_HASH_SECRET;
+    process.env.VERCEL = "1";
+    expect(() => clientHash(request("203.0.113.9"))).toThrow(IntakeNotConfigured);
+  });
+
+  it("uses the configured secret on a hosted deploy", () => {
+    process.env.INTAKE_HASH_SECRET = "hosted-secret";
+    process.env.VERCEL = "1";
+    expect(clientHash(request("203.0.113.9"))).toMatch(/^[0-9a-f]{64}$/);
   });
 });

@@ -45,6 +45,16 @@ const common = {
 const dated = { starts_on: IsoDate.optional(), location: optionalText(200) };
 const role = { deadline_on: IsoDate.optional(), location: optionalText(200), work_mode: WorkMode.optional() };
 
+/** Stored `details` must stay under the database's jsonb size check (16 KB).
+ * Contracts cap characters; this caps the serialized details in UTF-8 bytes,
+ * so a multibyte payload fails as a 400 instead of a database violation. */
+export const DETAILS_MAX_BYTES = 12000;
+function detailsWithinBudget(value: SubmissionData | CompanyRequestData, ctx: z.RefinementCtx) {
+  if (new TextEncoder().encode(JSON.stringify(toIntakeDetails(value))).length > DETAILS_MAX_BYTES) {
+    ctx.addIssue({ code: "custom", message: "Submission is too long." });
+  }
+}
+
 export const SubmissionKind = z.enum(["event", "hackathon", "job", "program", "resource"]);
 export const SubmissionBody = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("event"), ...common, ...dated }).strict(),
@@ -62,9 +72,25 @@ export const SubmissionBody = z.discriminatedUnion("kind", [
       audience: optionalText(200),
     })
     .strict(),
-]);
+]).superRefine(detailsWithinBudget);
 export type SubmissionInput = z.input<typeof SubmissionBody>;
 export type SubmissionData = z.output<typeof SubmissionBody>;
+/** Top-level keys a validation 400 names as `field`, so a form can mark the
+ * matching input. */
+export const SUBMISSION_FIELDS = [
+  "title",
+  "organization",
+  "source_url",
+  "description",
+  "starts_on",
+  "deadline_on",
+  "location",
+  "work_mode",
+  "category",
+  "audience",
+  "contact_name",
+  "contact_email",
+] as const;
 
 export const EmploymentType = z.enum(["internship", "part_time", "full_time", "contract"]);
 export const CompanyRequestBody = z
@@ -91,9 +117,28 @@ export const CompanyRequestBody = z
     contact_email: ContactEmail,
     website: Honeypot,
   })
-  .strict();
+  .strict()
+  .superRefine(detailsWithinBudget);
 export type CompanyRequestInput = z.input<typeof CompanyRequestBody>;
 export type CompanyRequestData = z.output<typeof CompanyRequestBody>;
+export const COMPANY_REQUEST_FIELDS = [
+  "company_name",
+  "company_context",
+  "role_title",
+  "duties",
+  "must_have_skills",
+  "nice_to_have_skills",
+  "hours",
+  "compensation",
+  "location",
+  "work_mode",
+  "start_date",
+  "employment_type",
+  "why_worth_it",
+  "source_url",
+  "contact_name",
+  "contact_email",
+] as const;
 
 export const ReportKind = z.enum(["event", "opportunity", "resource"]);
 export const ReportReason = z.enum(["wrong_date", "dead_link", "scam", "duplicate", "other"]);

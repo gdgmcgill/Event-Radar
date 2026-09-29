@@ -1,5 +1,5 @@
 "use client";
-import type { ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 /** Shared, accessible pieces of the public intake forms (M3 P1-09). */
 
@@ -15,7 +15,7 @@ export type SendOutcome =
   | { kind: "sent" }
   | { kind: "rate" }
   | { kind: "missing" }
-  | { kind: "rejected"; message: string };
+  | { kind: "rejected"; message: string; field?: string };
 
 /** POSTs a typed intake body. A network failure rejects (the caller keeps the
  * user's text); every HTTP answer maps to one outcome. Nothing from the
@@ -33,6 +33,7 @@ export async function sendIntake<T>(path: string, body: T): Promise<SendOutcome>
   return {
     kind: "rejected",
     message: typeof data?.error === "string" ? data.error : "Check the form and try again.",
+    field: typeof data?.field === "string" ? data.field : undefined,
   };
 }
 
@@ -144,12 +145,23 @@ export function SelectField({ id, label, value, onChange, options, error, requir
  * bot that fills every input fills this one, and the server then accepts the
  * request without storing anything. */
 export function Honeypot({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const id = `website-${useId()}`;
   return (
     <div aria-hidden="true" className="sr-only">
-      <label htmlFor="website">Website</label>
-      <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" value={value} onChange={(event) => onChange(event.target.value)} />
+      <label htmlFor={id}>Website</label>
+      <input id={id} name="website" type="text" tabIndex={-1} autoComplete="off" value={value} onChange={(event) => onChange(event.target.value)} />
     </div>
   );
+}
+
+/** Focus moves here once it renders, so keyboard and screen-reader users land
+ * on the outcome after the form they were in disappears. */
+export function useFocusOnMount<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+  return ref;
 }
 
 export function FormStatus({ children }: { children: ReactNode }) {
@@ -161,8 +173,9 @@ export function FormStatus({ children }: { children: ReactNode }) {
 }
 
 export function SentNotice() {
+  const ref = useFocusOnMount<HTMLDivElement>();
   return (
-    <div role="status" className="rounded-xl border border-border bg-card p-8">
+    <div ref={ref} role="status" tabIndex={-1} className="rounded-xl border border-border bg-card p-8 outline-none">
       <p className="text-lg font-semibold">{SENT_MESSAGE}</p>
       <p className="mt-2 text-sm text-muted-foreground">
         Nothing is posted automatically. If we need more detail we will use the contact you gave, and only for this submission.

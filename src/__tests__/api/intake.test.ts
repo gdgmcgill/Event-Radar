@@ -136,6 +136,27 @@ describe.each([
     expect(await response.json()).toEqual({ error: "Too many submissions. Try again later." });
   });
 
+  it("answers 503 with no DB call when a hosted deploy has no hash secret", async () => {
+    const secret = process.env.INTAKE_HASH_SECRET;
+    const vercel = process.env.VERCEL;
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      delete process.env.INTAKE_HASH_SECRET;
+      process.env.VERCEL = "1";
+      const response = await (await load())(post(path, body));
+      expect(response.status).toBe(503);
+      expect(response.headers.get("cache-control")).toBe("private, no-store");
+      expect(await response.json()).toEqual({ error: "Submissions are temporarily unavailable." });
+      expect(mockRpc).not.toHaveBeenCalled();
+      expect(errorSpy.mock.calls.flat().join(" ")).toContain("intake hash secret not configured");
+    } finally {
+      if (secret === undefined) delete process.env.INTAKE_HASH_SECRET;
+      else process.env.INTAKE_HASH_SECRET = secret;
+      if (vercel === undefined) delete process.env.VERCEL;
+      else process.env.VERCEL = vercel;
+    }
+  });
+
   it("turns an unexpected database error into the generic private 500", async () => {
     rpcResult = { data: null, error: { code: "XX000", message: "PRIVATE_DATABASE_SENTINEL" } };
     const response = await (await load())(post(path, body));
@@ -179,6 +200,19 @@ describe("POST /api/submissions", () => {
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
+  it("maps a database size violation (23514) to a 400, never a 500", async () => {
+    rpcResult = { data: null, error: { code: "23514", message: "violates check constraint" } };
+    const response = await (await submissions())(post("/api/submissions", submission));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Submission is too long." });
+  });
+
+  it("names the offending field in a validation 400", async () => {
+    const response = await (await submissions())(post("/api/submissions", { ...submission, source_url: "javascript:alert(1)" }));
+    expect(response.status).toBe(400);
+    expect((await response.json()).field).toBe("source_url");
+  });
+
   it("maps a database refusal of the submitter (42501) to 403", async () => {
     rpcResult = { data: null, error: { code: "42501", message: "Account suspended" } };
     const response = await (await submissions())(post("/api/submissions", submission));
@@ -204,6 +238,15 @@ describe("POST /api/company-requests", () => {
     expect(JSON.stringify(details)).not.toContain("hiring@acme.example");
     expect(details).not.toHaveProperty("company_name");
     expect(details).not.toHaveProperty("role_title");
+  });
+
+  it("refuses a multibyte request over the byte budget with 400 before any DB call", async () => {
+    const euro = (n: number) => "€".repeat(n);
+    const response = await (await companyRequests())(post("/api/company-requests", {
+      ...company, company_context: euro(1000), duties: euro(3000), must_have_skills: euro(1000), nice_to_have_skills: euro(1000), why_worth_it: euro(1000),
+    }));
+    expect(response.status).toBe(400);
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it("refuses a request without a contact email", async () => {

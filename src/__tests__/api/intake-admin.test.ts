@@ -152,7 +152,13 @@ describe("PATCH /api/admin/submissions/[id]", () => {
     });
   });
 
-  it("a retried convert returns the same target id", async () => {
+  // Pass-through only: the mocked RPC answers the same fixture twice, so this
+  // proves the route returns the RPC's target unchanged, not idempotency.
+  // Idempotency of a retried convert is proven in the database by
+  // supabase/tests/database/140-intake.test.sql ("a retried convert with a
+  // stale version returns the same target" / "a retried convert creates no
+  // second opportunity").
+  it("passes the RPC's target through unchanged on a retried convert", async () => {
     rpcResult = { data: { submission: { ...row, status: "converted" }, target: { kind: "opportunity", id: TARGET_ID } }, error: null };
     const first = await (await patch({ action: "convert", expected_updated_at: AT })).json();
     const second = await (await patch({ action: "convert", expected_updated_at: AT })).json();
@@ -212,18 +218,21 @@ describe("PATCH /api/admin/listing-reports/[id]", () => {
 describe("public intake never exposes what the admin queue shows", () => {
   it("no public intake response carries a contact email", async () => {
     const prior = process.env.FEATURE_DISCOVERY_UI;
-    process.env.FEATURE_DISCOVERY_UI = "true";
-    mockCtx.user = null;
-    rpcResult = { data: null, error: null };
-    const { POST } = await import("@/app/api/company-requests/route");
-    const response = await POST(json("/api/company-requests", "POST", {
-      company_name: "Acme Robotics", company_context: "Robots", role_title: "Dev", duties: "Code", must_have_skills: "TS",
-      hours: "10", compensation: "$20", location: "Montréal", work_mode: "remote", start_date: "Soon",
-      employment_type: "internship", why_worth_it: "Growth", contact_name: "Pat", contact_email: "hiring@acme.example",
-    }));
-    expect(response.status).toBe(202);
-    expect(await response.text()).not.toContain("hiring@acme.example");
-    if (prior === undefined) delete process.env.FEATURE_DISCOVERY_UI;
-    else process.env.FEATURE_DISCOVERY_UI = prior;
+    try {
+      process.env.FEATURE_DISCOVERY_UI = "true";
+      mockCtx.user = null;
+      rpcResult = { data: null, error: null };
+      const { POST } = await import("@/app/api/company-requests/route");
+      const response = await POST(json("/api/company-requests", "POST", {
+        company_name: "Acme Robotics", company_context: "Robots", role_title: "Dev", duties: "Code", must_have_skills: "TS",
+        hours: "10", compensation: "$20", location: "Montréal", work_mode: "remote", start_date: "Soon",
+        employment_type: "internship", why_worth_it: "Growth", contact_name: "Pat", contact_email: "hiring@acme.example",
+      }));
+      expect(response.status).toBe(202);
+      expect(await response.text()).not.toContain("hiring@acme.example");
+    } finally {
+      if (prior === undefined) delete process.env.FEATURE_DISCOVERY_UI;
+      else process.env.FEATURE_DISCOVERY_UI = prior;
+    }
   });
 });
