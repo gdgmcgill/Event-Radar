@@ -1,0 +1,45 @@
+BEGIN
+INSERT 0 1
+INSERT 0 10000
+ANALYZE
+SET
+                                                                       QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Function Scan on public.query_discovery  (cost=0.25..10.25 rows=1000 width=32) (actual time=16.965..16.966 rows=21 loops=1)
+   Output: query_discovery
+   Function Call: query_discovery('2030-01-01 00:00:00+00'::timestamp with time zone, '{"type": "job", "work_mode": "remote"}'::jsonb, NULL::jsonb, 21)
+   Buffers: shared hit=2535
+ Query Identifier: -4681333833998313734
+ Planning Time: 0.019 ms
+ Execution Time: 16.972 ms
+(7 rows)
+
+                                                                                                                                                                                                                                                                                                                                                                                                                              QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=3296.53..3296.54 rows=2 width=98) (actual time=2.632..2.633 rows=21 loops=1)
+   Buffers: shared hit=371
+   ->  Sort  (cost=3296.53..3296.54 rows=2 width=98) (actual time=2.632..2.633 rows=21 loops=1)
+         Sort Key: "*SELECT* 1".editorial_priority DESC, "*SELECT* 1".actionable_at, "*SELECT* 1".published_at DESC, "*SELECT* 1".kind, "*SELECT* 1".id
+         Sort Method: top-N heapsort  Memory: 29kB
+         Buffers: shared hit=371
+         ->  Subquery Scan on "*SELECT* 1"  (cost=0.00..3296.52 rows=2 width=98) (actual time=0.036..2.552 rows=833 loops=1)
+               Buffers: shared hit=371
+               ->  Seq Scan on opportunities o  (cost=0.00..3296.50 rows=2 width=856) (actual time=0.036..2.521 rows=833 loops=1)
+                     Filter: ((deleted_at IS NULL) AND (deleted_at IS NULL) AND (published_at <= '2030-01-01 00:00:00+00'::timestamp with time zone) AND (listing_type = 'job'::text) AND (work_mode = 'remote'::text) AND (relevance_scope = 'cross_campus'::text) AND ((status = 'published'::text) OR ((status = 'archived'::text) AND (published_at IS NOT NULL) AND (num_nonnulls(canonical_event_id, canonical_opportunity_id) = 1))) AND (COALESCE(canonical_event_id, canonical_opportunity_id) IS NULL) AND ((status = 'published'::text) OR ((status = 'archived'::text) AND (published_at IS NOT NULL) AND (num_nonnulls(canonical_event_id, canonical_opportunity_id) = 1))) AND (COALESCE(discovery_deadline(deadline_precision, deadline_at, deadline_date, source_timezone), ends_at, review_at) > '2030-01-01 00:00:00+00'::timestamp with time zone))
+                     Rows Removed by Filter: 9167
+                     Buffers: shared hit=371
+ Planning:
+   Buffers: shared hit=7
+ Planning Time: 0.187 ms
+ Execution Time: 2.648 ms
+(16 rows)
+
+                                                    QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------
+ Function Scan on query_discovery  (cost=0.25..10.25 rows=1000 width=32) (actual time=4.113..4.113 rows=2 loops=1)
+   Buffers: shared hit=393
+ Planning Time: 0.005 ms
+ Execution Time: 4.116 ms
+(4 rows)
+
+ROLLBACK

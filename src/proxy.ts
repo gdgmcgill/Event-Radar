@@ -50,15 +50,15 @@
  *     `/?error=profile_sync_failed`, carrying the sign-out's cookies.
  *   - banned (F-062): `/api/*` gets 403 `{"error":"Account suspended"}` as
  *     JSON; a page redirects to `/banned` with its query string preserved.
- *   - not onboarded (F-089): the database value decides, not the
- *     `needs_onboarding` cookie. The callback still sets that cookie as a hint
- *     and nothing here reads it, so deleting it no longer frees an
- *     un-onboarded account and a stale one no longer traps an onboarded one.
+ *   - not onboarded (P1-02): only student authoring pages redirect. Public
+ *     browsing and recruiter paths remain available. The database decides;
+ *     the advisory `needs_onboarding` cookie never grants or removes access.
  *   The exempt paths (`/banned`, `/auth/signout`, `/auth/callback`) get no
  *   users read, so a banned user can always reach the ban page and sign out.
  */
 
 import { createServerClient } from "@supabase/ssr";
+import { getDisabledRouteFeature } from "@/lib/features";
 import { NextResponse, type NextRequest } from "next/server";
 import * as env from "@/lib/env";
 import { isBanned } from "@/lib/ban";
@@ -133,6 +133,10 @@ async function ring(request: NextRequest) {
   // before any env read or session work. Requests carrying neither Origin nor
   // Sec-Fetch-Site (curl, cron, server-to-server) pass.
   if (isCrossSiteMutation(request)) return crossSiteBlocked();
+
+  if (getDisabledRouteFeature(request.nextUrl.pathname, request.method)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404, headers: { "Cache-Control": "private, no-store" } });
+  }
 
   try {
   // Validated reads (DEC-37). A missing variable throws MissingEnvError into
@@ -267,18 +271,15 @@ async function ring(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
-  // Onboarding guard: the database value from the read above decides (F-089).
-  // The needs_onboarding cookie is a hint the callback sets; it is not read.
-  if (
-    user &&
-    profile &&
-    profile.onboarding_completed !== true &&
-    path !== "/onboarding" &&
-    !isApi &&
-    !path.startsWith("/auth/")
-  ) {
+  // P1-02: incomplete onboarding never blocks public browsing or recruiter
+  // destinations. Only student authoring pages redirect; their API mutations
+  // independently enforce requireOnboarded against the authoritative profile.
+  const STUDENT_AUTHORING_ROUTES = ["/create-event", "/my-events", "/my-clubs"];
+  if (user && profile && profile.onboarding_completed !== true && !isApi &&
+      STUDENT_AUTHORING_ROUTES.some(route => path === route || path.startsWith(route + "/"))) {
     const onboardingUrl = request.nextUrl.clone();
     onboardingUrl.pathname = "/onboarding";
+    onboardingUrl.search = "";
     return NextResponse.redirect(onboardingUrl);
   }
 

@@ -135,6 +135,9 @@ export const UserUpdateBody = z
         { error: "Visibility must be 'public' or 'private'" }
       )
       .optional(),
+    university_id: z.uuid({ error: "Choose a valid university" }).nullable().optional(),
+    other_university: z.string().trim().min(1).max(120).nullable().optional(),
+    program: z.string().trim().max(120).nullable().optional(),
     onboarding_completed: z
       .custom<boolean>((value) => typeof value === "boolean", {
         error: "onboarding_completed must be a boolean",
@@ -142,6 +145,7 @@ export const UserUpdateBody = z
       .optional(),
   })
   .superRefine((body, ctx) => {
+    if (body.university_id && body.other_university) ctx.addIssue({ code: "custom", message: "Choose a university or Other, not both" });
     if (Object.keys(body).length === 0) {
       ctx.addIssue({ code: "custom", message: "No fields to update" });
     }

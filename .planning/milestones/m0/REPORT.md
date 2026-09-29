@@ -1,5 +1,7 @@
 # P1-M0 — Foundation implementation and certification report
 
+> Owner progression decision, 2026-09-28: M0 is complete for starting product M1–M2, per the owner’s explicit instruction. The report below is the historical certification snapshot; its unobserved hosted checks remain unclaimed. See [M1–M2 decisions](../m1-m2/DECISIONS.md).
+
 **Status: IN PROGRESS — local implementation and verification delivered; foundation NOT certified.**  
 **Prepared:** 2026-09-27.  
 **Workspace:** `codex/m0-foundation-certification`, based on `2e4c4ff32233e2a59d8258575d9c232bea9e3aa8`. The implementation commit is recorded in `evidence/environment.json`; the base SHA is not a tested M0 release SHA.  

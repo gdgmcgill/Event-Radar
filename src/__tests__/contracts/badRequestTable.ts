@@ -100,7 +100,7 @@ export interface BadRequestRow {
   form?: FormSpec;
   /** "shape" (a contract moves it) or "rule" (stays in the handler, C11). */
   kind: "shape" | "rule" | "order";
-  status: 400;
+  status: 400 | 404;
   expected: { error: string; field?: string };
 }
 
@@ -256,13 +256,13 @@ function row(
   head: Head,
   input: Input,
   error: string,
-  opts: { field?: string; kind?: BadRequestRow["kind"] } = {}
+  opts: { field?: string; kind?: BadRequestRow["kind"]; status?: 400 | 404 } = {}
 ): BadRequestRow {
   return {
     ...head,
     ...input,
     kind: opts.kind ?? "shape",
-    status: 400,
+    status: opts.status ?? 400,
     expected: opts.field === undefined ? { error } : { error, field: opts.field },
   };
 }
@@ -337,10 +337,10 @@ export const BAD_REQUEST_ROWS: readonly BadRequestRow[] = [
   row({ id: "rsvp DELETE: user_id missing", route: "events/[id]/rsvp", verb: "DELETE", persona: "student" }, { params: ev, body: {} }, "user_id is required"),
 
   // ── events/[id]/reviews POST ──
-  row({ id: "reviews: rating missing", route: "events/[id]/reviews", verb: "POST", persona: "student" }, { params: ev, body: { comment: "ok" } }, "Rating must be an integer between 1 and 5"),
-  row({ id: "reviews: rating 6", route: "events/[id]/reviews", verb: "POST", persona: "student" }, { params: ev, body: { rating: 6 } }, "Rating must be an integer between 1 and 5"),
-  row({ id: "reviews: rating 2.5", route: "events/[id]/reviews", verb: "POST", persona: "student" }, { params: ev, body: { rating: 2.5 } }, "Rating must be an integer between 1 and 5"),
-  row({ id: "reviews: event not ended", route: "events/[id]/reviews", verb: "POST", persona: "student" }, { params: ev, body: { rating: 5 } }, "Reviews can only be submitted after the event has ended", { kind: "rule" }),
+  row({ id: "reviews: rating missing", route: "events/[id]/reviews", verb: "POST", persona: "student" }, { params: ev, body: { comment: "ok" } }, "Legacy review submissions are closed", { status: 404 }),
+  row({ id: "reviews: rating 6", route: "events/[id]/reviews", verb: "POST", persona: "student" }, { params: ev, body: { rating: 6 } }, "Legacy review submissions are closed", { status: 404 }),
+  row({ id: "reviews: rating 2.5", route: "events/[id]/reviews", verb: "POST", persona: "student" }, { params: ev, body: { rating: 2.5 } }, "Legacy review submissions are closed", { status: 404 }),
+  row({ id: "reviews: event not ended", route: "events/[id]/reviews", verb: "POST", persona: "student" }, { params: ev, body: { rating: 5 } }, "Legacy review submissions are closed", { kind: "rule", status: 404 }),
 
   // ── events/[id]/invite, report, appeal, analytics ──
   row({ id: "invite: invitee_ids missing", route: "events/[id]/invite", verb: "POST", persona: "student" }, { params: ev, body: {} }, "No invitees provided"),
@@ -407,7 +407,7 @@ export const BAD_REQUEST_ROWS: readonly BadRequestRow[] = [
   row({ id: "member DELETE: self", route: "clubs/[id]/members", verb: "DELETE", persona: "owner" }, { params: club, body: { memberId: MEMBER_SELF } }, "You cannot remove yourself from the club", { kind: "rule" }),
   row({ id: "member DELETE: another owner", route: "clubs/[id]/members", verb: "DELETE", persona: "owner" }, { params: club, body: { memberId: MEMBER_OTHER_OWNER } }, "Cannot remove the club owner", { kind: "rule" }),
   row({ id: "invites: email missing", route: "clubs/[id]/invites", verb: "POST", persona: "owner" }, { params: club, body: {} }, "Email is required"),
-  row({ id: "invites: not McGill", route: "clubs/[id]/invites", verb: "POST", persona: "owner" }, { params: club, body: { email: "someone@gmail.com" } }, "Must be a McGill email"),
+  row({ id: "P1-02 invites: malformed address", route: "clubs/[id]/invites", verb: "POST", persona: "owner" }, { params: club, body: { email: "not-an-email" } }, "Enter a valid email address"),
   row({ id: "club appeal: message missing", route: "clubs/[id]/appeal", verb: "POST", persona: "student" }, { params: club, body: {} }, "Appeal message is required"),
   row({ id: "club appeal: message blank", route: "clubs/[id]/appeal", verb: "POST", persona: "student" }, { params: club, body: { message: " " } }, "Appeal message is required"),
 

@@ -600,5 +600,61 @@
     "render_mode": "dynamic",
     "dead_or_duplicate": false,
     "findings": []
+  },
+  {
+    "id": "discover",
+    "file": "src/app/discover/page.tsx",
+    "route": "/discover",
+    "component_type": "server",
+    "data_source": "api:discovery/saved/opportunities",
+    "middleware_protected": false,
+    "layout_guard": null,
+    "page_guard": "requireDiscoveryPage",
+    "effective_protection": "feature",
+    "render_mode": "unknown",
+    "dead_or_duplicate": false,
+    "findings": []
+  },
+  {
+    "id": "saved",
+    "file": "src/app/saved/page.tsx",
+    "route": "/saved",
+    "component_type": "server",
+    "data_source": "api:discovery/saved/opportunities",
+    "middleware_protected": false,
+    "layout_guard": null,
+    "page_guard": "requireDiscoveryPage",
+    "effective_protection": "feature",
+    "render_mode": "unknown",
+    "dead_or_duplicate": false,
+    "findings": []
+  },
+  {
+    "id": "opportunities.id",
+    "file": "src/app/opportunities/[id]/page.tsx",
+    "route": "/opportunities/[id]",
+    "component_type": "server",
+    "data_source": "api:discovery/saved/opportunities",
+    "middleware_protected": false,
+    "layout_guard": null,
+    "page_guard": "requireDiscoveryPage",
+    "effective_protection": "feature",
+    "render_mode": "unknown",
+    "dead_or_duplicate": false,
+    "findings": []
+  },
+  {
+    "id": "moderation.opportunities",
+    "file": "src/app/moderation/opportunities/page.tsx",
+    "route": "/moderation/opportunities",
+    "component_type": "server",
+    "data_source": "api:/api/admin/opportunities+/api/admin/events/[id]/discovery",
+    "middleware_protected": false,
+    "layout_guard": "src/app/moderation/layout.tsx",
+    "page_guard": "requireAdminPage",
+    "effective_protection": "admin",
+    "render_mode": "unknown",
+    "dead_or_duplicate": false,
+    "findings": []
   }
 ]

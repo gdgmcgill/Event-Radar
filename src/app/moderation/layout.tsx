@@ -39,12 +39,12 @@ export default async function ModerationLayout({
     .slice(0, 2);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background lg:flex-row">
       {/* Fixed sidebar */}
       <ModerationNav />
 
       {/* Main content area offset by sidebar width */}
-      <div className="flex flex-1 flex-col pl-60">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-60">
         {/* Header bar */}
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card/80 px-6 backdrop-blur-2xl">
           <div />

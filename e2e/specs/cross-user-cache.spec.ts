@@ -45,7 +45,7 @@
  *   The one write is A's save of `secondApprovedEvent`, made directly against
  *   the origin so the saved-events row has an A-only item; the describe's
  *   afterAll removes it and asserts it is gone. The stand-in listens on an ephemeral
- *   port on 127.0.0.1 (the persona cookies are host-only for 127.0.0.1, which
+ *   port on localhost (the persona cookies are host-only for localhost, which
  *   ignores the port) and is closed in afterAll with the negative control's
  *   upstream. No body is written to disk.
  */

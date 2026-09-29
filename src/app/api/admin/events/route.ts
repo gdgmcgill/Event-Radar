@@ -1,3 +1,4 @@
+import { isEventDuplicateReviewRequired, EVENT_DUPLICATE_REVIEW_MESSAGE } from "@/server/discovery/eventDuplicate";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
@@ -179,6 +180,7 @@ export const POST = withRoute({ cache: "private", action: "create event" }, asyn
     .single();
 
   if (error) {
+    if (isEventDuplicateReviewRequired(error)) return NextResponse.json({ error: EVENT_DUPLICATE_REVIEW_MESSAGE }, { status: 400 });
     logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

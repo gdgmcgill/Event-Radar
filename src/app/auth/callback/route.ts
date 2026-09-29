@@ -1,6 +1,6 @@
 /**
  * OAuth callback handler
- * Processes the OAuth callback from Supabase/Azure and creates user profile
+ * Processes OAuth or a verified email-OTP session and synchronizes the profile
  *
  * Uses the request/response cookie pattern (same as middleware) instead of
  * the cookies() API. Accumulates all cookies across multiple setAll calls
@@ -17,9 +17,8 @@
  *     the user out and redirects to `/?error=profile_sync_failed`.
  *   - `next` is honoured only when it stays on the request origin
  *     (`safeNextPath`); anything else lands on `/`.
- *   - Both service-role uses (deleting a rejected non-McGill auth user, and
- *     the profile upsert and read) go through `getElevatedClient()`, with a
- *     row each in `src/server/db/elevated/REGISTRY.md`.
+ *   - Profile synchronization uses the elevated door. P1-02 removes the
+ *     domain-rejection/account-deletion path; admission requires verified email.
  */
 
 import { createServerClient } from "@supabase/ssr";
@@ -27,10 +26,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
-import { isMcGillEmail } from "@/lib/utils";
 import { getElevatedClient } from "@/server/db/elevated";
 import { withRoute } from "@/server/route";
 import { log } from "@/server/log";
+import { readQuery } from "@/server/body";
+import { AuthCallbackQuery } from "@/contracts/auth";
 
 /**
  * The redirect target for `next`, or `/` when `next` could leave the origin
@@ -60,13 +60,11 @@ export const GET = withRoute({ cache: "private", action: "complete sign-in" }, a
   try {
   stage = "parse_request";
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
-  const next = safeNextPath(
-    requestUrl.searchParams.get("next"),
-    requestUrl.origin
-  );
-  const errorParam = requestUrl.searchParams.get("error");
-  const errorDescription = requestUrl.searchParams.get("error_description");
+  const query = readQuery(requestUrl.searchParams, AuthCallbackQuery);
+  const code = query.code;
+  const next = safeNextPath(query.next, requestUrl.origin);
+  const errorParam = query.error;
+  const errorDescription = query.error_description;
 
   // Handle OAuth provider errors
   if (errorParam) {
@@ -80,7 +78,10 @@ export const GET = withRoute({ cache: "private", action: "complete sign-in" }, a
     );
   }
 
-  if (!code) {
+  // Email OTP is verified by Supabase before this shared completion path.
+  // The marker is not proof: getUser + email_confirmed_at below are mandatory.
+  const verifiedOtpSession = query.verified;
+  if (!code && !verifiedOtpSession) {
     log.error("No code parameter found", { scope: "Callback" });
     return NextResponse.redirect(
       new URL(`/?error=no_code`, requestUrl.origin)
@@ -129,8 +130,9 @@ export const GET = withRoute({ cache: "private", action: "complete sign-in" }, a
     scope: "Callback",
     origin: requestUrl.origin,
   });
-  const { error: exchangeError } =
-    await supabase.auth.exchangeCodeForSession(code);
+  const { error: exchangeError } = code
+    ? await supabase.auth.exchangeCodeForSession(code)
+    : { error: null };
 
   if (exchangeError) {
     log.error("Code exchange failed", { scope: "Callback", error: exchangeError });
@@ -157,29 +159,11 @@ export const GET = withRoute({ cache: "private", action: "complete sign-in" }, a
 
   const email = user.email ?? "";
 
-  // Enforce McGill domain
-  if (!isMcGillEmail(email)) {
-    stage = "enforce_mcgill_email";
-    // Never the address itself (no PII in logs); the id names the row.
-    log.error("Not a McGill email", { scope: "Callback", userId: user.id });
+  // P1-02: any verified email may enter. Never delete an account because of
+  // its domain; user-editable metadata cannot establish email verification.
+  if (!email || !user.email_confirmed_at) {
     await supabase.auth.signOut();
-
-    // Delete the orphaned auth.users row — exchangeCodeForSession() already
-    // created it before we could check the email. Service role is required
-    // because the anon client cannot call auth admin methods (REGISTRY.md).
-    try {
-      await getElevatedClient().auth.admin.deleteUser(user.id);
-    } catch (err) {
-      log.error("Failed to delete non-McGill auth user", {
-        scope: "Callback",
-        userId: user.id,
-        error: err,
-      });
-    }
-
-    return NextResponse.redirect(
-      new URL(`/?error=not_mcgill`, requestUrl.origin)
-    );
+    return redirectWithCookies(new URL("/?error=email_not_verified", requestUrl.origin));
   }
 
   // Extract user metadata
@@ -212,7 +196,7 @@ export const GET = withRoute({ cache: "private", action: "complete sign-in" }, a
       upsertPayload,
       {
         onConflict: "id",
-        ignoreDuplicates: false,
+        ignoreDuplicates: true,
       }
     );
 
@@ -224,6 +208,13 @@ export const GET = withRoute({ cache: "private", action: "complete sign-in" }, a
       });
       throw new Error("profile upsert failed");
     }
+
+    // P1-02: an existing profile keeps its chosen name/avatar, roles, bans,
+    // completion and saved state. Only the authoritative verified address is
+    // synchronized; OAuth metadata never overwrites returning-user choices.
+    const { error: emailSyncError } = await elevated.from("users")
+      .update({ email, updated_at: new Date().toISOString() }).eq("id", user.id);
+    if (emailSyncError) throw new Error("profile email sync failed");
 
     // `roles` is read and unused; the column list is pinned (DEC-38 (e)).
     const { data: profile, error: profileError } = await elevated
@@ -256,7 +247,9 @@ export const GET = withRoute({ cache: "private", action: "complete sign-in" }, a
 
   // Build the final redirect response and attach ALL accumulated cookies
   stage = "build_redirect_response";
-  const redirectUrl = needsOnboarding
+  // A requested destination (including recruiter workspaces) is not trapped
+  // in student onboarding. Student mutations retain their own completion gate.
+  const redirectUrl = needsOnboarding && next === "/"
     ? new URL("/onboarding", requestUrl.origin)
     : new URL(next, requestUrl.origin);
 

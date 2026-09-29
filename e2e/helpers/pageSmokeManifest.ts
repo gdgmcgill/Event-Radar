@@ -8,6 +8,7 @@ export interface PageSmoke {
   anonymousSignIn?: boolean;
   fixture?: "experiment";
   text?: string;
+  notFound?: boolean;
 }
 const admin: PageSmoke = { persona: "admin", anonymousPath: "/" };
 const moderationAdmin: PageSmoke = { persona: "admin", anonymousPath: "/admin-login" };
@@ -28,6 +29,10 @@ export const PAGE_SMOKES: Record<string, PageSmoke> = {
   "/contributors": publicPage,
   "/create-event": { ...privatePage, persona: "club_owner" },
   "/docs": admin,
+  "/discover": { ...publicPage, notFound: true },
+  "/saved": { ...publicPage, notFound: true },
+  "/opportunities/[id]": { ...publicPage, path: `/opportunities/${MISSING_ID}`, notFound: true },
+  "/moderation/opportunities": moderationAdmin,
   "/events/[id]": { ...publicPage, path: `/events/${IDS.approvedEvent}`, text: "Seed Approved Event" },
   "/feedback": publicPage,
   "/friends": privatePage,

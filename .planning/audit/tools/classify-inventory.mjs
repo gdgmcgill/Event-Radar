@@ -48,6 +48,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { M1_M2_ENDPOINTS, updateM1M2Inventory } from './m1-m2-inventory.mjs';
 
 const ROOT = process.cwd();
 const INV = path.join(ROOT, '.planning/audit/inventory');
@@ -519,6 +520,7 @@ function main() {
   let changed = 0;
 
   for (const row of rows) {
+    if (row.route in M1_M2_ENDPOINTS) continue; // Reviewed current release overlay below.
     const v = VERDICTS[row.id];
     if (!v) { missing.push(row.id); continue; }
     // A row whose handler file has since been deleted keeps its audit-time
@@ -657,3 +659,4 @@ function main() {
 }
 
 main();
+if (!DRY) updateM1M2Inventory();

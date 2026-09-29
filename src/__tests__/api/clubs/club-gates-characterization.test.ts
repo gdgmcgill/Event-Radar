@@ -1,6 +1,9 @@
 /**
  * PRESERVE characterization — club membership decisions at the 17 sites of research § C (REFAC-12)
  *
+ * P1-03 intentional exception: legacy event reviews now expose author/admin
+ * history only. Organizer membership no longer confers comment access.
+ *
  * Written against the UNMODIFIED route handlers at 05-08's head (f1ab6a1),
  * before slice 4 collapses these hand-rolled `club_members` reads into
  * `requireClubRole` (05-10, DEC-40). This file must pass byte for byte,
@@ -791,28 +794,23 @@ describe("P6 #2 clubs/[id]/events GET: isOrganizer", () => {
   );
 });
 
-describe("P6 #14 events/[id]/reviews GET: isOrganizer", () => {
-  test.each(["owner", "organizer"] as const)(
-    "a member (%s) sees the anonymized comments",
+describe("P1-03 supersedes P6 #14: private legacy history", () => {
+  test.each(["owner", "organizer", "attacker"] as const)(
+    "%s cannot read another author's history or any aggregate",
     async (caller) => {
       const outcome = await runAs(caller, SITES[13]);
       expect(outcome.status).toBe(200);
-      expect(
-        (outcome.body as { aggregate: { comments: unknown } }).aggregate.comments
-      ).toEqual([REVIEW_COMMENT]);
+      expect(outcome.body).toEqual({ reviews: [] });
     }
   );
-
-  test.each(["attacker", "admin"] as const)(
-    "a non-member (%s) gets an empty comments array",
-    async (caller) => {
-      const outcome = await runAs(caller, SITES[13]);
-      expect(outcome.status).toBe(200);
-      expect(
-        (outcome.body as { aggregate: { comments: unknown } }).aggregate.comments
-      ).toEqual([]);
-    }
-  );
+  test("active admin retains original history without public aggregate fields", async () => {
+    const outcome = await runAs("admin", SITES[13]);
+    expect(outcome.status).toBe(200);
+    const body = outcome.body as { reviews: unknown[] };
+    expect(Object.keys(body)).toEqual(["reviews"]);
+    expect(body.reviews).toHaveLength(1);
+    expect(body.reviews[0]).toMatchObject(REVIEW_COMMENT);
+  });
 });
 
 describe("P6 #17 events/create POST: the auto-approve flag", () => {

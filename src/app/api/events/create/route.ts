@@ -1,3 +1,4 @@
+import { isEventDuplicateReviewRequired, EVENT_DUPLICATE_REVIEW_MESSAGE } from "@/server/discovery/eventDuplicate";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { computeEventContentHash } from "@/lib/contentHash";
@@ -168,6 +169,7 @@ export const POST = withRoute({ cache: "private", action: "create event" }, asyn
       .single();
 
     if (error) {
+      if (isEventDuplicateReviewRequired(error)) return NextResponse.json({ error: EVENT_DUPLICATE_REVIEW_MESSAGE }, { status: 400 });
       log.error("Error creating event", { error });
       return NextResponse.json({ error: "Failed to create event" }, { status: 500 });
     }

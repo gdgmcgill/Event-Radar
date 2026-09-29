@@ -1,0 +1,274 @@
+[WebServer]
+[WebServer] > uni-verse@0.1.0 build
+[WebServer] > next build
+[WebServer]
+[WebServer] ▲ Next.js 16.3.5 (Turbopack)
+[WebServer] - Environments: .env.local, .env
+[WebServer] (node:90076) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] ✓ Running next.config.js took 247ms
+[WebServer] - Experiments (use with caution):
+[WebServer]   · clientTraceMetadata
+[WebServer]
+[WebServer]   Creating an optimized production build ...
+[WebServer] (node:90076) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90084) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] ✓ Compiled successfully in 2.6s
+[WebServer]   Running next.config.js provided runAfterProductionCompile ...
+[WebServer] ✓ Completed runAfterProductionCompile in 78ms
+[WebServer]   Running TypeScript ...
+[WebServer]   Finished TypeScript in 2.7s ...
+[WebServer]   Collecting page data using 9 workers ...
+[WebServer] (node:90096) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90093) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90100) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90098) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90097) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90099) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90092) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90095) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90094) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]   Generating static pages using 9 workers (0/106) ...
+[WebServer]   Generating static pages using 9 workers (26/106)
+[WebServer]   Generating static pages using 9 workers (52/106)
+[WebServer]   Generating static pages using 9 workers (79/106)
+[WebServer] ✓ Generating static pages using 9 workers (106/106) in 362ms
+[WebServer]   Finalizing page optimization ...
+[WebServer]
+[WebServer] Route (app)
+[WebServer] ┌ ○ /
+[WebServer] ├ ○ /_not-found
+[WebServer] ├ ○ /about
+[WebServer] ├ ○ /admin-login
+[WebServer] ├ ƒ /admin/experiments
+[WebServer] ├ ƒ /admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/analytics/events
+[WebServer] ├ ƒ /api/admin/analytics/users
+[WebServer] ├ ƒ /api/admin/audit-log
+[WebServer] ├ ƒ /api/admin/calculate-popularity
+[WebServer] ├ ƒ /api/admin/clubs
+[WebServer] ├ ƒ /api/admin/clubs/[id]
+[WebServer] ├ ƒ /api/admin/events
+[WebServer] ├ ƒ /api/admin/events/[id]
+[WebServer] ├ ƒ /api/admin/events/[id]/discovery
+[WebServer] ├ ƒ /api/admin/events/[id]/edits
+[WebServer] ├ ƒ /api/admin/events/[id]/status
+[WebServer] ├ ƒ /api/admin/experiments
+[WebServer] ├ ƒ /api/admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/experiments/[id]/results
+[WebServer] ├ ƒ /api/admin/featured
+[WebServer] ├ ƒ /api/admin/featured/[id]
+[WebServer] ├ ƒ /api/admin/opportunities
+[WebServer] ├ ƒ /api/admin/opportunities/[id]
+[WebServer] ├ ƒ /api/admin/organizer-requests
+[WebServer] ├ ƒ /api/admin/organizer-requests/[id]
+[WebServer] ├ ƒ /api/admin/organizers
+[WebServer] ├ ƒ /api/admin/reports
+[WebServer] ├ ƒ /api/admin/reports/[id]
+[WebServer] ├ ƒ /api/admin/stats
+[WebServer] ├ ƒ /api/admin/users
+[WebServer] ├ ƒ /api/admin/users/[id]
+[WebServer] ├ ƒ /api/admin/users/[id]/ban
+[WebServer] ├ ƒ /api/calendar/events
+[WebServer] ├ ƒ /api/clubs
+[WebServer] ├ ƒ /api/clubs/[id]
+[WebServer] ├ ƒ /api/clubs/[id]/analytics
+[WebServer] ├ ƒ /api/clubs/[id]/appeal
+[WebServer] ├ ƒ /api/clubs/[id]/events
+[WebServer] ├ ƒ /api/clubs/[id]/follow
+[WebServer] ├ ƒ /api/clubs/[id]/invites
+[WebServer] ├ ƒ /api/clubs/[id]/members
+[WebServer] ├ ƒ /api/clubs/[id]/members/role
+[WebServer] ├ ƒ /api/clubs/[id]/transfer
+[WebServer] ├ ƒ /api/clubs/banner
+[WebServer] ├ ƒ /api/clubs/featured
+[WebServer] ├ ƒ /api/clubs/friends
+[WebServer] ├ ƒ /api/clubs/logo
+[WebServer] ├ ƒ /api/clubs/new
+[WebServer] ├ ƒ /api/clubs/trending
+[WebServer] ├ ƒ /api/discovery
+[WebServer] ├ ƒ /api/events
+[WebServer] ├ ƒ /api/events/[id]
+[WebServer] ├ ƒ /api/events/[id]/analytics
+[WebServer] ├ ƒ /api/events/[id]/appeal
+[WebServer] ├ ƒ /api/events/[id]/friends
+[WebServer] ├ ƒ /api/events/[id]/invite
+[WebServer] ├ ƒ /api/events/[id]/report
+[WebServer] ├ ƒ /api/events/[id]/reviews
+[WebServer] ├ ƒ /api/events/[id]/rsvp
+[WebServer] ├ ƒ /api/events/[id]/save
+[WebServer] ├ ƒ /api/events/create
+[WebServer] ├ ƒ /api/events/export
+[WebServer] ├ ƒ /api/events/featured
+[WebServer] ├ ƒ /api/events/following
+[WebServer] ├ ƒ /api/events/friends-activity
+[WebServer] ├ ƒ /api/events/friends-organizing
+[WebServer] ├ ƒ /api/events/happening-now
+[WebServer] ├ ƒ /api/events/my-events
+[WebServer] ├ ƒ /api/events/new
+[WebServer] ├ ƒ /api/events/popular
+[WebServer] ├ ƒ /api/events/upload-image
+[WebServer] ├ ƒ /api/feedback
+[WebServer] ├ ƒ /api/health
+[WebServer] ├ ƒ /api/interactions
+[WebServer] ├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+[WebServer] ├ ƒ /api/my-clubs
+[WebServer] ├ ƒ /api/notifications
+[WebServer] ├ ƒ /api/notifications/[id]
+[WebServer] ├ ƒ /api/notifications/count
+[WebServer] ├ ƒ /api/onboarding/complete
+[WebServer] ├ ƒ /api/opportunities/[id]
+[WebServer] ├ ƒ /api/opportunities/[id]/save
+[WebServer] ├ ƒ /api/organizer-requests
+[WebServer] ├ ƒ /api/profile/avatar
+[WebServer] ├ ƒ /api/profile/banner
+[WebServer] ├ ƒ /api/profile/inferred-tags
+[WebServer] ├ ƒ /api/profile/interests
+[WebServer] ├ ƒ /api/recommendations
+[WebServer] ├ ƒ /api/recommendations/analytics
+[WebServer] ├ ƒ /api/recommendations/batch
+[WebServer] ├ ƒ /api/recommendations/feedback
+[WebServer] ├ ƒ /api/saved
+[WebServer] ├ ƒ /api/saved/status
+[WebServer] ├ ƒ /api/universities
+[WebServer] ├ ƒ /api/user/engagement
+[WebServer] ├ ƒ /api/user/following
+[WebServer] ├ ƒ /api/users/[id]
+[WebServer] ├ ƒ /api/users/[id]/follow
+[WebServer] ├ ƒ /api/users/me/friends
+[WebServer] ├ ƒ /api/users/me/requests
+[WebServer] ├ ƒ /api/users/me/suggestions
+[WebServer] ├ ƒ /api/users/saved-events
+[WebServer] ├ ƒ /api/users/search
+[WebServer] ├ ƒ /auth/callback
+[WebServer] ├ ƒ /auth/signout
+[WebServer] ├ ƒ /banned
+[WebServer] ├ ○ /calendar
+[WebServer] ├ ƒ /clubs
+[WebServer] ├ ƒ /clubs/[id]
+[WebServer] ├ ○ /clubs/create
+[WebServer] ├ ○ /contributors
+[WebServer] ├ ○ /create-event
+[WebServer] ├ ○ /discover
+[WebServer] ├ ƒ /docs
+[WebServer] ├ ƒ /events/[id]
+[WebServer] ├ ○ /feedback
+[WebServer] ├ ○ /friends
+[WebServer] ├ ƒ /health
+[WebServer] ├ ○ /help
+[WebServer] ├ ƒ /invites/[token]
+[WebServer] ├ ○ /landing
+[WebServer] ├ ƒ /moderation
+[WebServer] ├ ƒ /moderation/appeals
+[WebServer] ├ ƒ /moderation/audit-log
+[WebServer] ├ ƒ /moderation/clubs
+[WebServer] ├ ƒ /moderation/events
+[WebServer] ├ ƒ /moderation/featured
+[WebServer] ├ ƒ /moderation/opportunities
+[WebServer] ├ ƒ /moderation/organizer-requests
+[WebServer] ├ ƒ /moderation/organizers
+[WebServer] ├ ƒ /moderation/pending
+[WebServer] ├ ƒ /moderation/reports
+[WebServer] ├ ƒ /moderation/stats
+[WebServer] ├ ƒ /moderation/users
+[WebServer] ├ ƒ /my-clubs
+[WebServer] ├ ƒ /my-clubs/[id]
+[WebServer] ├ ○ /my-events
+[WebServer] ├ ○ /notifications
+[WebServer] ├ ƒ /onboarding
+[WebServer] ├ ƒ /opportunities/[id]
+[WebServer] ├ ○ /people
+[WebServer] ├ ○ /privacy
+[WebServer] ├ ƒ /profile
+[WebServer] ├ ○ /robots.txt
+[WebServer] ├ ○ /saved
+[WebServer] ├ ○ /settings
+[WebServer] ├ ƒ /sitemap.xml
+[WebServer] ├ ○ /terms
+[WebServer] └ ƒ /users/[id]
+[WebServer]
+[WebServer]
+[WebServer] ƒ Proxy (Middleware)
+[WebServer]
+[WebServer] ○  (Static)   prerendered as static content
+[WebServer] ƒ  (Dynamic)  server-rendered on demand
+[WebServer]
+[WebServer]
+[WebServer] > uni-verse@0.1.0 start
+[WebServer] > next start --hostname 127.0.0.1
+[WebServer]
+[WebServer] (node:90168) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] ▲ Next.js 16.3.5
+[WebServer] - Local:         http://127.0.0.1:3000
+[WebServer] - Network:       http://127.0.0.1:3000
+[WebServer] ✓ Ready in 58ms
+[WebServer] ✓ Running next.config.js took 99ms
+[WebServer] {"ts":"2026-09-29T02:40:40.447Z","level":"info","msg":"Sentry disabled","scope":"Sentry","reason":"SENTRY_DSN is not set"}
+[WebServer] {"ts":"2026-09-29T02:40:41.279Z","level":"warn","msg":"Upstash not configured; using the in-memory store (not shared across instances)","requestId":"c546dc14-bbb1-451e-a9c9-c8cc4770a685","route":"/","scope":"RateLimit"}
+
+Running 12 tests using 1 worker
+
+(node:90172) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [setup] › e2e/auth.setup.ts:61:8 › authenticate as onboarded_student (417ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:61:8 › authenticate as mid_onboarding_student (224ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:61:8 › authenticate as club_member (239ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:61:8 › authenticate as club_owner (231ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:61:8 › authenticate as multi_club_organizer (231ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:61:8 › authenticate as cross_club_attacker (227ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:61:8 › authenticate as admin (220ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:61:8 › authenticate as banned_permanent (251ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:61:8 › authenticate as suspended_active (218ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:61:8 › authenticate as suspension_expired (230ms)
+(node:90208) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  11 [chromium] › e2e/specs/m1-m2-acceptance.spec.ts:42:5 › anonymous and mid-onboarding users can browse; future feature families remain closed (512ms)
+[WebServer] {"ts":"2026-09-29T02:40:47.147Z","level":"info","msg":"Exchanging code for session","requestId":"4e557f82-f380-4a08-b3a4-0bc5d60c07d8","route":"/auth/callback","scope":"Callback","origin":"http://localhost:3000"}
+[WebServer] {"ts":"2026-09-29T02:40:47.173Z","level":"info","msg":"Redirecting","requestId":"4e557f82-f380-4a08-b3a4-0bc5d60c07d8","route":"/auth/callback","scope":"Callback","needsOnboarding":true,"accumulatedCookies":0,"cookieNames":[]}
+[WebServer] {"ts":"2026-09-29T02:40:47.174Z","level":"info","msg":"Response cookies","requestId":"4e557f82-f380-4a08-b3a4-0bc5d60c07d8","route":"/auth/callback","scope":"Callback","count":0,"cookieNames":[]}
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070100-0000-4000-8000-000000000001',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070100-0000-4000-8000-000000000001',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] {"ts":"2026-09-29T02:40:47.857Z","level":"info","msg":"Exchanging code for session","requestId":"63905a6f-cda5-4954-a966-d1612cbbbf06","route":"/auth/callback","scope":"Callback","origin":"http://localhost:3000"}
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070100-0000-4000-8000-000000000001',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: '5eed0000-0000-4000-8000-0000000000e1',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+[WebServer] {"ts":"2026-09-29T02:40:47.905Z","level":"info","msg":"Redirecting","requestId":"63905a6f-cda5-4954-a966-d1612cbbbf06","route":"/auth/callback","scope":"Callback","needsOnboarding":false,"accumulatedCookies":0,"cookieNames":[]}
+[WebServer] {"ts":"2026-09-29T02:40:47.905Z","level":"info","msg":"Response cookies","requestId":"63905a6f-cda5-4954-a966-d1612cbbbf06","route":"/auth/callback","scope":"Callback","count":0,"cookieNames":[]}
+[WebServer] ⨯ Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '3371026682'
+[WebServer] }
+  ✓  12 [chromium] › e2e/specs/m1-m2-acceptance.spec.ts:56:5 › verified non-campus account completes short setup, saves both kinds, and signout clears the shortlist (2.1s)
+
+  12 passed (17.9s)

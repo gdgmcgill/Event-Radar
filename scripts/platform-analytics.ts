@@ -20,11 +20,16 @@ if (!url || !key) {
 
 const supabase = createClient<Database>(url, key);
 
-async function count(
-  table: keyof Database["public"]["Tables"],
-  filter?: (q: ReturnType<typeof supabase.from>) => ReturnType<typeof supabase.from>
+type TableName = keyof Database["public"]["Tables"];
+function countQuery<T extends TableName>(table: T) {
+  return supabase.from(table).select("*", { count: "exact", head: true });
+}
+
+async function count<T extends TableName>(
+  table: T,
+  filter?: (q: ReturnType<typeof countQuery<T>>) => ReturnType<typeof countQuery<T>>
 ) {
-  let q = supabase.from(table).select("*", { count: "exact", head: true });
+  let q = countQuery(table);
   if (filter) q = filter(q);
   const { count: n, error } = await q;
   if (error) throw new Error(`${String(table)}: ${error.message}`);

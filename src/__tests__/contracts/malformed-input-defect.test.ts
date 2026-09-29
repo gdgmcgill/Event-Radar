@@ -264,7 +264,7 @@ const NOT_JSON: Record<string, Expected> = {
   "events/[id] PATCH": err(400, "Invalid JSON body"),
   "events/[id]/rsvp POST": err(400, "Invalid JSON body"),
   "events/[id]/rsvp DELETE": err(400, "Invalid JSON body"),
-  "events/[id]/reviews POST": err(400, "Invalid JSON body"),
+  "events/[id]/reviews POST": err(404, "Legacy review submissions are closed"),
   "events/create POST": err(400, "Invalid JSON body"),
   // Moved in 06-09 (F-094): 500 "Failed to update club", 500 "Failed to
   // remove member" and 500 "Failed to create invitation" (the raw read threw
@@ -296,7 +296,7 @@ const ARRAY: Record<string, Expected> = {
   "events/[id] PATCH": err(400, "Request body must be a JSON object"),
   "events/[id]/rsvp POST": err(400, "Request body must be a JSON object"),
   "events/[id]/rsvp DELETE": err(400, "Request body must be a JSON object"),
-  "events/[id]/reviews POST": err(400, "Request body must be a JSON object"),
+  "events/[id]/reviews POST": err(404, "Legacy review submissions are closed"),
   "events/create POST": err(400, "Request body must be a JSON object"),
   // Moved in 06-09 (F-094): "No valid fields to update", "memberId is
   // required" and "Email is required" (an array read as an object with no
@@ -360,7 +360,7 @@ const NON_STRING: Record<string, { body: Record<string, unknown>; expected: Expe
     expected: err(400, "Invalid status. Must be one of: going, interested"),
   },
   "events/[id]/rsvp DELETE": { body: { user_id: 5 }, expected: err(403, "user_id does not match authenticated user") },
-  "events/[id]/reviews POST": { body: { rating: "5" }, expected: err(400, "Rating must be an integer between 1 and 5") },
+  "events/[id]/reviews POST": { body: { rating: "5" }, expected: err(404, "Legacy review submissions are closed") },
   // Moved in 06-08 (F-094): was 201 with the title coerced to "5".
   "events/create POST": { body: { ...CREATE, title: 5 }, expected: err(400, "Title is required") },
 
@@ -470,7 +470,9 @@ describe("D0: the site lists are the tree", () => {
     expect(adopted).toHaveLength(31);
     for (const route of adopted) {
       const source = sources.get(route) ?? "";
-      expect([route, /parseBody\(request, /.test(source)]).toEqual([route, true]);
+      // P1-03 permanently retired new legacy rating writes. It rejects before
+      // reading any body; the executable malformed cases above now pin 404.
+      expect([route, /parseBody\(request, /.test(source)]).toEqual([route, route !== "events/[id]/reviews"]);
       expect([route, /(?:request|req)\.json\(\)|readJsonObject\(/.test(source)]).toEqual([route, false]);
     }
   });

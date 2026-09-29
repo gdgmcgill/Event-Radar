@@ -797,6 +797,15 @@ describe("E0: the rows plus NOT_DRIVEN are census C7", () => {
       const file = site.replace(/:\d+$/, "");
       listed[file] = (listed[file] ?? 0) + 1;
     }
+    // M2 cursor arms now return a literal public validation message, so they
+    // contribute zero live .message sites. Behavioral fault injection remains
+    // in m2-route-boundaries; reintroducing a dynamic message fails this census.
+    for (const route of ["discovery", "saved"]) {
+      const file = `src/app/api/${route}/route.ts`;
+      const source = readFileSync(file, "utf8");
+      expect(source).toContain('if (error instanceof InvalidCursor) return badRequest("Invalid or expired cursor; restart this view")');
+      expect(source).not.toMatch(/\.message\b/);
+    }
     expect(listed).toEqual(censusC7());
     expect(LIVE_SITES).toHaveLength(0);
     expect(LIVE_NOT_DRIVEN).toHaveLength(0);

@@ -35,8 +35,8 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p className="text-muted-foreground leading-relaxed">
               UNI-VERSE (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) is a
-              campus event discovery platform built by GDG McGill for students at
-              McGill University. This Privacy Policy explains how we collect,
+              opportunity discovery platform built by GDG McGill for the wider
+              student community. This Privacy Policy explains how we collect,
               use, and protect your personal information when you use our
               platform.
             </p>
@@ -52,7 +52,7 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
               <li>
                 <strong className="text-foreground">Account information:</strong>{" "}
-                Your McGill email address, name, and profile avatar when you sign
+                Your verified email address, name, and profile avatar when you sign
                 in through our authentication system.
               </li>
               <li>
@@ -78,7 +78,7 @@ export default function PrivacyPolicyPage() {
               3. How We Use Your Information
             </h2>
             <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
-              <li>To authenticate your McGill student identity</li>
+              <li>To authenticate your account through verified email</li>
               <li>
                 To provide personalized event recommendations based on your
                 interests and saved events
@@ -107,17 +107,15 @@ export default function PrivacyPolicyPage() {
 
           <div>
             <h2 className="text-xl font-bold text-foreground mb-3">
-              5. McGill Email Requirement
+              5. Email Verification and Affiliation
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              UNI-VERSE requires a valid McGill email address (
-              <span className="font-medium text-foreground">@mcgill.ca</span> or{" "}
-              <span className="font-medium text-foreground">
-                @mail.mcgill.ca
-              </span>
-              ) to create an account. This ensures that only McGill community
-              members can access authenticated features such as saving events,
-              RSVPs, and personalized recommendations.
+              Accounts may use any email address they can verify. University
+              and program are optional profile information for discovery and
+              are self-declared. Historical McGill affiliation may be suggested
+              from a verified email and can be corrected in profile settings.
+              Affiliation is not proof of enrollment and does not grant
+              organization or recruiter access.
             </p>
           </div>
 

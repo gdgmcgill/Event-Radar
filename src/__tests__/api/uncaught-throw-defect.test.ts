@@ -41,6 +41,7 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { M2_ARMS } from "./m2RouteArms";
 import { NextRequest } from "next/server";
 import {
   createFakeSupabase,
@@ -329,10 +330,15 @@ describe("U0: the arm list is the tree", () => {
   it("the files are exactly the 27 route files with no try, each verb once", () => {
     const listed: Record<string, string[]> = {};
     for (const arm of ARMS) (listed[arm.file] ??= []).push(arm.verb);
+    // M1 retirement is fault-injected in events/reviews.test.ts; every M2
+    // arm below is fault-injected in m2-route-boundaries.test.ts.
+    listed["api/events/[id]/reviews"] = ["GET", "POST"];
+    for (const arm of M2_ARMS.filter(a => !["discovery", "saved", "events/[id]/save"].includes(a.route)))
+      (listed[`api/${arm.route}`] ??= []).push(arm.verb);
     for (const verbs of Object.values(listed)) verbs.sort();
     const tree = noTryRouteFiles();
     expect(listed).toEqual(tree);
-    expect(Object.keys(tree)).toHaveLength(27);
+    expect(Object.keys(tree)).toHaveLength(35);
     expect(ARMS).toHaveLength(31);
   });
 

@@ -18,6 +18,8 @@ const privilegedFunctional = new Set([
   "080-interaction-popularity-write-boundary.test.sql",
   "090-client-destructive-grants.test.sql",
   "095-atomic-moderation-workflows.test.sql",
+  "110-m1-account-affiliation.test.sql",
+  "120-discovery-functional.test.sql",
 ]);
 const failures = [];
 const withoutComments = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--[^\n]*/g, "");
@@ -56,6 +58,18 @@ for (const match of assertions.matchAll(reads)) {
   entry.roles.add(role);
   entry.allow ||= Number(count) > 0;
   entry.deny ||= Number(count) === 0;
+  covered.set(table, entry);
+}
+// Revoked SELECT is stronger than a zero-row RLS result. Recognize only a
+// literal SELECT on the named table with PostgreSQL's insufficient_privilege
+// code, so a comment or assertion on another object cannot satisfy coverage.
+const deniedReads = /SELECT throws_ok\('SELECT \* FROM public\.(\w+)','42501',NULL,'(\w+) (anon|subject|outsider|admin) read deny'\);/g;
+for (const [, table, label, role] of assertions.matchAll(deniedReads)) {
+  if (table !== label) failures.push(`${table}: privilege-denial label disagrees with queried table`);
+  const entry = covered.get(table) ?? { roles: new Set(), allow: false, deny: false };
+  if (entry.roles.has(role)) failures.push(`${table}: duplicate ${role} read case`);
+  entry.roles.add(role);
+  entry.deny = true;
   covered.set(table, entry);
 }
 for (const [table, entry] of covered) {

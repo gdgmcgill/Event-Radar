@@ -1,380 +1,81 @@
-/**
- * Tests for /api/events/:id/reviews
- *
- * These tests mock the Supabase client to unit-test the API route handlers
- * without requiring a live database connection.
+/** P1-03 intentionally replaces public aggregate/new-rating preservation with
+ * author/admin history. SQL role tests prove RLS independently of these mocks.
  */
+import { GET, POST } from '@/app/api/events/[id]/reviews/route';
+import { createRequestContext } from '@/server/context';
 
-// A module, not a script: without this its top-level names collide with every
-// other script-style suite once tsc type-checks test files (DI-24).
-export {};
-
-// ── Mocks ──────────────────────────────────────────────────────────────────
-
-// Mock chainable Supabase query builder
-function createMockQueryBuilder(resolvedValue: { data: unknown; error: unknown }) {
-  const builder: Record<string, unknown> = {};
-  const methods = ["select", "insert", "update", "delete", "eq", "neq", "maybeSingle", "single", "gte", "lte", "limit", "order"];
-  for (const method of methods) {
-    builder[method] = jest.fn().mockReturnValue(builder);
-  }
-  builder.from = jest.fn().mockReturnValue(builder);
-  // Make builder thenable so `await builder` resolves to the value
-  // (Supabase PostgREST builders are thenable)
-  builder.then = (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
-    Promise.resolve(resolvedValue).then(resolve, reject);
-  // Terminal methods also resolve the value
-  builder.maybeSingle = jest.fn().mockResolvedValue(resolvedValue);
-  builder.single = jest.fn().mockResolvedValue(resolvedValue);
-  // select after insert/update should still chain
-  const selectAfterMutation = {
-    single: jest.fn().mockResolvedValue(resolvedValue),
-    maybeSingle: jest.fn().mockResolvedValue(resolvedValue),
-    then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
-      Promise.resolve(resolvedValue).then(resolve, reject),
-  };
-  builder.select = jest.fn().mockReturnValue({ ...builder, ...selectAfterMutation });
-  return builder;
+jest.mock('@/server/context', () => ({ createRequestContext: jest.fn() }));
+const contextMock = jest.mocked(createRequestContext);
+const row = { id: 'review-1', event_id: 'event-1', user_id: 'author-1', rating: 5, comment: 'Private history', created_at: '2026-01-01T00:00:00Z' };
+let result: { data: unknown; error: unknown };
+const query = { select: jest.fn(), eq: jest.fn(), order: jest.fn(), range: jest.fn() };
+const from = jest.fn((_table: string) => query);
+function arrange(role: 'author' | 'admin' | 'outsider' | 'banned' | 'anonymous' | 'missing' = 'author') {
+  const userId = role === 'author' ? 'author-1' : role;
+  contextMock.mockResolvedValue({
+    user: role === 'anonymous' ? null : { id: userId },
+    profile: ['anonymous', 'missing'].includes(role) ? null : { id: userId, roles: role === 'admin' || role === 'banned' ? ['user', 'admin'] : ['user'], banned_at: role === 'banned' ? '2026-01-01' : null, ban_expires_at: null, onboarding_completed: true },
+    supabase: { from }, requestId: 'test',
+  } as never);
 }
-
-let mockUser: { id: string } | null = null;
-let mockAuthError: { message: string } | null = null;
-// Per-table mock results with array support for ordered calls
-let mockQueryResults: Map<string, { data: unknown; error: unknown }>;
-// Call counters for tables that need different results on different calls
-let mockCallCounters: Map<string, number>;
-
-const mockSupabase = {
-  auth: {
-    getUser: jest.fn(() =>
-      Promise.resolve({
-        data: { user: mockUser },
-        error: mockAuthError,
-      })
-    ),
-  },
-  from: jest.fn((table: string) => {
-    const defaultResult = { data: null, error: null };
-    const result = mockQueryResults.get(table) ?? defaultResult;
-    const builder = createMockQueryBuilder(result);
-    return builder;
-  }),
-};
-
-jest.mock("@/lib/supabase/server", () => ({
-  createClient: jest.fn(() => Promise.resolve(mockSupabase)),
-}));
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function createMockRequest(method: string, body?: Record<string, unknown>): Request {
-  const init: RequestInit = {
-    method,
-    headers: { "Content-Type": "application/json" },
-  };
-  if (body) {
-    init.body = JSON.stringify(body);
-  }
-  return new Request("http://localhost:3000/api/events/test-event-id/reviews", init);
-}
-
-function createRouteContext(eventId = "test-event-id") {
-  return { params: Promise.resolve({ id: eventId }) };
-}
-
-// ── Tests ──────────────────────────────────────────────────────────────────
-
-// Each reference carries the handler's own type: (Request, { params: Promise<{ id }> }).
-type ReviewsRoute = typeof import("@/app/api/events/[id]/reviews/route");
-let GET: ReviewsRoute["GET"], POST: ReviewsRoute["POST"];
-
-beforeEach(async () => {
-  jest.resetModules();
-  jest.clearAllMocks();
-  mockUser = null;
-  mockAuthError = null;
-  mockQueryResults = new Map();
-  mockCallCounters = new Map();
-
-  // Default: event exists with a past date
-  mockQueryResults.set("events", {
-    data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
-    error: null,
-  });
-  // Default: the caller's profile row, active and onboarded (05-06: the
-  // request context reads it for the ban and onboarding guards)
-  mockQueryResults.set("users", {
-    data: { onboarding_completed: true, banned_at: null, ban_expires_at: null },
-    error: null,
-  });
-
-  const routeModule = await import("@/app/api/events/[id]/reviews/route");
-  GET = routeModule.GET;
-  POST = routeModule.POST;
+const params = { params: Promise.resolve({ id: 'event-1' }) };
+const req = (queryString = '') => new Request(`http://localhost/api/events/event-1/reviews${queryString}`);
+beforeEach(() => {
+  jest.clearAllMocks(); result = { data: [row], error: null };
+  query.select.mockReturnValue(query); query.eq.mockReturnValue(query); query.order.mockReturnValue(query);
+  query.range.mockImplementation(() => Promise.resolve(result)); arrange();
 });
 
-// ── POST Tests ─────────────────────────────────────────────────────────────
-
-describe("POST /api/events/:id/reviews", () => {
-  it("returns 401 when not authenticated", async () => {
-    const req = createMockRequest("POST", { rating: 5 });
-    const res = await POST(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(401);
-    expect(json.error).toBe("Unauthorized");
-  });
-
-  it("returns 400 when rating is out of range (too low)", async () => {
-    mockUser = { id: "user-123" };
-
-    const req = createMockRequest("POST", { rating: 0 });
-    const res = await POST(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(400);
-    expect(json.error).toContain("Rating must be");
-  });
-
-  it("returns 400 when rating is out of range (too high)", async () => {
-    mockUser = { id: "user-123" };
-
-    const req = createMockRequest("POST", { rating: 6 });
-    const res = await POST(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(400);
-    expect(json.error).toContain("Rating must be");
-  });
-
-  it("returns 400 when event has not ended yet", async () => {
-    mockUser = { id: "user-123" };
-    // Set event date to the future
-    mockQueryResults.set("events", {
-      data: { id: "test-event-id", start_date: "2099-12-31", club_id: "club-1" },
-      error: null,
-    });
-
-    const req = createMockRequest("POST", { rating: 4 });
-    const res = await POST(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(400);
-    expect(json.error).toContain("after the event has ended");
-  });
-
-  it("returns 403 when user did not RSVP going", async () => {
-    mockUser = { id: "user-123" };
-    // Event in the past
-    mockQueryResults.set("events", {
-      data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
-      error: null,
-    });
-    // No RSVP found
-    mockQueryResults.set("rsvps", { data: null, error: null });
-
-    const req = createMockRequest("POST", { rating: 4 });
-    const res = await POST(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(403);
-    expect(json.error).toContain("RSVP");
-  });
-
-  it("returns 409 when user already reviewed", async () => {
-    mockUser = { id: "user-123" };
-    mockQueryResults.set("events", {
-      data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
-      error: null,
-    });
-    mockQueryResults.set("rsvps", {
-      data: { id: "rsvp-1", status: "going" },
-      error: null,
-    });
-    // Existing review
-    mockQueryResults.set("reviews", {
-      data: { id: "review-1", rating: 5 },
-      error: null,
-    });
-
-    const req = createMockRequest("POST", { rating: 4 });
-    const res = await POST(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(409);
-    expect(json.error).toContain("already reviewed");
-  });
-
-  it("returns 201 and creates review on valid submission", async () => {
-    mockUser = { id: "user-123" };
-    mockQueryResults.set("events", {
-      data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
-      error: null,
-    });
-    mockQueryResults.set("rsvps", {
-      data: { id: "rsvp-1", status: "going" },
-      error: null,
-    });
-    // No existing review -- use null for reviews so the "already reviewed" check sees no existing
-    mockQueryResults.set("reviews", {
-      data: null,
-      error: null,
-    });
-
-    const req = createMockRequest("POST", { rating: 4, comment: "Great event!" });
-    const res = await POST(req, createRouteContext());
-
-    // The insert mock returns the same result, so we just check status
-    expect(res.status).toBe(201);
-  });
+it.each([['anonymous', 401], ['missing', 403], ['banned', 403]] as const)('refuses %s before reading any history', async (role, status) => {
+  arrange(role); const response = await GET(req(), params);
+  expect(response.status).toBe(status); expect(from).not.toHaveBeenCalled();
+  expect(response.headers.get('cache-control')).toBe('private, no-store');
+});
+it('scopes authors explicitly, preserves original fields, and sends no aggregate or eligibility', async () => {
+  const response = await GET(req(), params);
+  expect(response.status).toBe(200); expect(await response.json()).toEqual({ reviews: [row] });
+  expect(query.eq).toHaveBeenCalledWith('user_id', 'author-1');
+  expect(query.eq).toHaveBeenCalledWith('event_id', 'event-1');
+  expect(query.range).toHaveBeenCalledWith(0, 24);
+  expect(from.mock.calls.map(call => call[0])).toEqual(['reviews']);
+});
+it('an organizer or unrelated caller has only their own history, even with a forged query subject', async () => {
+  arrange('outsider'); result.data = [];
+  const response = await GET(req('?user_id=author-1&is_admin=true'), params);
+  expect(await response.json()).toEqual({ reviews: [] });
+  expect(query.eq).toHaveBeenCalledWith('user_id', 'outsider');
+  expect(query.eq).not.toHaveBeenCalledWith('user_id', 'author-1');
+});
+it('active admins can page retained history without elevating the database client', async () => {
+  arrange('admin'); const response = await GET(req('?offset=25&limit=50'), params);
+  expect(response.status).toBe(200); expect(query.range).toHaveBeenCalledWith(25, 74);
+  expect(query.eq.mock.calls).toEqual([['event_id', 'event-1']]);
+});
+it('invalid pagination is rejected before a history query', async () => {
+  expect((await GET(req('?limit=101'), params)).status).toBe(400); expect(from).not.toHaveBeenCalled();
+});
+it('database failures are private errors, not empty successful history', async () => {
+  result = { data: null, error: new Error('backend unavailable') };
+  const response = await GET(req(), params); expect(response.status).toBe(500);
+  expect(response.headers.get('cache-control')).toBe('private, no-store');
+});
+it('all legacy writes stay retired even when the future feedback flag is enabled', async () => {
+  const previous = process.env.FEATURE_NEW_FEEDBACK_WRITES;
+  try {
+    process.env.FEATURE_NEW_FEEDBACK_WRITES = 'true';
+    const response = await POST(new Request('http://localhost/api/events/event-1/reviews', { method: 'POST', body: 'not json' }), params);
+    expect(response.status).toBe(404); expect(await response.json()).toEqual({ error: 'Legacy review submissions are closed' });
+    expect(from).not.toHaveBeenCalled();
+  } finally { if (previous === undefined) delete process.env.FEATURE_NEW_FEEDBACK_WRITES; else process.env.FEATURE_NEW_FEEDBACK_WRITES = previous; }
 });
 
-// ── GET Tests ──────────────────────────────────────────────────────────────
-
-describe("GET /api/events/:id/reviews", () => {
-  it("returns 401 when not authenticated", async () => {
-    const req = createMockRequest("GET");
-    const res = await GET(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(401);
-    expect(json.error).toBe("Unauthorized");
-  });
-
-  it("returns aggregate with empty data for no reviews", async () => {
-    mockUser = { id: "user-123" };
-    mockQueryResults.set("reviews", { data: [], error: null });
-    mockQueryResults.set("club_members", { data: null, error: null });
-    mockQueryResults.set("rsvps", { data: null, error: null });
-
-    const req = createMockRequest("GET");
-    const res = await GET(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.aggregate.total_reviews).toBe(0);
-    expect(json.aggregate.average_rating).toBe(0);
-  });
-
-  it("returns correct aggregate calculation", async () => {
-    mockUser = { id: "user-123" };
-    mockQueryResults.set("reviews", {
-      data: [
-        { id: "r1", user_id: "u1", rating: 3, comment: null, created_at: "2020-01-02" },
-        { id: "r2", user_id: "u2", rating: 4, comment: "Good", created_at: "2020-01-03" },
-        { id: "r3", user_id: "u3", rating: 5, comment: "Great", created_at: "2020-01-04" },
-      ],
-      error: null,
-    });
-    mockQueryResults.set("club_members", { data: null, error: null });
-    mockQueryResults.set("rsvps", { data: null, error: null });
-
-    const req = createMockRequest("GET");
-    const res = await GET(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.aggregate.total_reviews).toBe(3);
-    expect(json.aggregate.average_rating).toBe(4.0);
-  });
-
-  it("includes anonymized comments for organizer", async () => {
-    mockUser = { id: "user-123" };
-    mockQueryResults.set("reviews", {
-      data: [
-        { id: "r1", user_id: "u1", rating: 4, comment: "Nice event", created_at: "2020-01-02" },
-      ],
-      error: null,
-    });
-    // User is a club member (organizer)
-    mockQueryResults.set("club_members", {
-      data: { id: "cm-1", user_id: "user-123", club_id: "club-1", role: "organizer" },
-      error: null,
-    });
-    mockQueryResults.set("rsvps", { data: null, error: null });
-
-    const req = createMockRequest("GET");
-    const res = await GET(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.aggregate.comments.length).toBe(1);
-    expect(json.aggregate.comments[0].comment).toBe("Nice event");
-    // Should NOT contain user_id
-    expect(json.aggregate.comments[0]).not.toHaveProperty("user_id");
-  });
-
-  it("excludes comments for non-organizer", async () => {
-    mockUser = { id: "user-123" };
-    mockQueryResults.set("reviews", {
-      data: [
-        { id: "r1", user_id: "u1", rating: 4, comment: "Nice event", created_at: "2020-01-02" },
-      ],
-      error: null,
-    });
-    // User is NOT a club member
-    mockQueryResults.set("club_members", { data: null, error: null });
-    mockQueryResults.set("rsvps", { data: null, error: null });
-
-    const req = createMockRequest("GET");
-    const res = await GET(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.aggregate.comments).toEqual([]);
-  });
-
-  it("returns can_review and user_review fields", async () => {
-    mockUser = { id: "user-123" };
-    mockQueryResults.set("reviews", { data: [], error: null });
-    mockQueryResults.set("club_members", { data: null, error: null });
-    // User RSVP'd going
-    mockQueryResults.set("rsvps", {
-      data: { id: "rsvp-1", status: "going" },
-      error: null,
-    });
-    // Event is in the past
-    mockQueryResults.set("events", {
-      data: { id: "test-event-id", start_date: "2020-01-01", club_id: "club-1" },
-      error: null,
-    });
-
-    const req = createMockRequest("GET");
-    const res = await GET(req, createRouteContext());
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty("can_review");
-    expect(json).toHaveProperty("user_review");
-  });
-});
-
-// M0 review-window regression: both POST eligibility and GET affordance must
-// use the actual end, falling back to start only for legacy end-less rows.
-describe("M0 review eligibility respects event end", () => {
-  it.each([
-    ["ongoing event", "2020-01-01T00:00:00Z", "2099-01-01T00:00:00Z", false],
-    ["ended event", "2020-01-01T00:00:00Z", "2020-01-02T00:00:00Z", true],
-    ["legacy past event", "2020-01-01T00:00:00Z", null, true],
-    ["legacy future event", "2099-01-01T00:00:00Z", null, false],
-  ])("GET can_review for %s", async (_label, start_date, end_date, expected) => {
-    mockUser = { id: "user-123" };
-    mockQueryResults.set("events", { data: { id: "test-event-id", start_date, end_date, club_id: "club-1" }, error: null });
-    mockQueryResults.set("reviews", { data: [], error: null });
-    mockQueryResults.set("club_members", { data: null, error: null });
-    mockQueryResults.set("rsvps", { data: { id: "rsvp-1", status: "going" }, error: null });
-    const response = await GET(createMockRequest("GET"), createRouteContext());
-    expect(response.status).toBe(200);
-    expect((await response.json()).can_review).toBe(expected);
-  });
-
-  it("POST denies a going attendee until the event ends, before reading/writing reviews", async () => {
-    mockUser = { id: "user-123" };
-    mockQueryResults.set("events", { data: { id: "test-event-id", start_date: "2020-01-01", end_date: "2099-01-01", club_id: "club-1" }, error: null });
-    mockQueryResults.set("rsvps", { data: { id: "rsvp-1", status: "going" }, error: null });
-    const response = await POST(createMockRequest("POST", { rating: 4 }), createRouteContext());
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Reviews can only be submitted after the event has ended" });
-    expect(mockCallCounters.get("reviews") ?? 0).toBe(0);
-  });
+it.each([['GET', GET], ['POST', POST]] as const)('%s context transport exceptions remain generic private failures', async (_verb, handler) => {
+  const quiet = jest.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    contextMock.mockRejectedValueOnce(new Error('PRIVATE_CONTEXT_SENTINEL'));
+    const response = await handler(req(), params);
+    expect(response.status).toBe(500);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(await response.text()).not.toContain('PRIVATE_CONTEXT_SENTINEL');
+  } finally { quiet.mockRestore(); }
 });

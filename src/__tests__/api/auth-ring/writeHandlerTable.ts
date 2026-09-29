@@ -550,6 +550,7 @@ export const WRITE_ARMS: readonly WriteArm[] = [
     makeRequest: () =>
       json(`users/${CALLER.id}`, "PATCH", {
         name: "Ring Caller",
+        other_university: "Prefer not to specify", // P1-02 required explicit choice
         onboarding_completed: true,
       }),
     legacyBan: false,

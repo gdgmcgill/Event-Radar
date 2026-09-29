@@ -215,6 +215,147 @@ export type Database = {
         }
         Relationships: []
       }
+      event_discovery_metadata: {
+        Row: {
+          canonical_event_id: string | null
+          canonical_opportunity_id: string | null
+          checked_at: string | null
+          curator_note: string | null
+          deadline_at: string | null
+          deadline_date: string | null
+          deadline_precision: string
+          duplicate_review_note: string | null
+          editorial_priority: number
+          eligibility_text: string | null
+          event_id: string
+          fields: string[]
+          is_pick: boolean
+          listing_type: string
+          organizer_university_id: string | null
+          pick_reason: string | null
+          relevance_scope: string
+          review_at: string | null
+          source_timezone: string
+          timezone_assumed: boolean
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          canonical_event_id?: string | null
+          canonical_opportunity_id?: string | null
+          checked_at?: string | null
+          curator_note?: string | null
+          deadline_at?: string | null
+          deadline_date?: string | null
+          deadline_precision?: string
+          duplicate_review_note?: string | null
+          editorial_priority?: number
+          eligibility_text?: string | null
+          event_id: string
+          fields?: string[]
+          is_pick?: boolean
+          listing_type?: string
+          organizer_university_id?: string | null
+          pick_reason?: string | null
+          relevance_scope?: string
+          review_at?: string | null
+          source_timezone?: string
+          timezone_assumed?: boolean
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          canonical_event_id?: string | null
+          canonical_opportunity_id?: string | null
+          checked_at?: string | null
+          curator_note?: string | null
+          deadline_at?: string | null
+          deadline_date?: string | null
+          deadline_precision?: string
+          duplicate_review_note?: string | null
+          editorial_priority?: number
+          eligibility_text?: string | null
+          event_id?: string
+          fields?: string[]
+          is_pick?: boolean
+          listing_type?: string
+          organizer_university_id?: string | null
+          pick_reason?: string | null
+          relevance_scope?: string
+          review_at?: string | null
+          source_timezone?: string
+          timezone_assumed?: boolean
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_discovery_metadata_canonical_event_id_fkey"
+            columns: ["canonical_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_discovery_metadata_canonical_opportunity_id_fkey"
+            columns: ["canonical_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_discovery_metadata_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_discovery_metadata_organizer_university_id_fkey"
+            columns: ["organizer_university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_discovery_metadata_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_discovery_universities: {
+        Row: {
+          event_id: string
+          university_id: string
+        }
+        Insert: {
+          event_id: string
+          university_id: string
+        }
+        Update: {
+          event_id?: string
+          university_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_discovery_universities_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_discovery_universities_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_invites: {
         Row: {
           created_at: string | null
@@ -824,6 +965,204 @@ export type Database = {
           },
         ]
       }
+      opportunities: {
+        Row: {
+          action_note: string | null
+          action_url: string | null
+          application_mode: string
+          canonical_event_id: string | null
+          canonical_opportunity_id: string | null
+          checked_at: string | null
+          created_at: string
+          created_by: string
+          curator_note: string | null
+          deadline_at: string | null
+          deadline_date: string | null
+          deadline_precision: string
+          deleted_at: string | null
+          description: string
+          duplicate_review_note: string | null
+          editorial_priority: number
+          eligibility_text: string | null
+          ends_at: string | null
+          fields: string[]
+          id: string
+          is_pick: boolean
+          listing_type: string
+          location: string
+          organization: string
+          organizer_university_id: string | null
+          pick_reason: string | null
+          published_at: string | null
+          relevance_scope: string
+          review_at: string | null
+          slug: string
+          source_timezone: string
+          source_type: string
+          source_url: string | null
+          starts_at: string | null
+          status: string
+          subtype: string | null
+          timezone_assumed: boolean
+          title: string
+          updated_at: string
+          updated_by: string
+          work_mode: string
+        }
+        Insert: {
+          action_note?: string | null
+          action_url?: string | null
+          application_mode?: string
+          canonical_event_id?: string | null
+          canonical_opportunity_id?: string | null
+          checked_at?: string | null
+          created_at?: string
+          created_by: string
+          curator_note?: string | null
+          deadline_at?: string | null
+          deadline_date?: string | null
+          deadline_precision?: string
+          deleted_at?: string | null
+          description: string
+          duplicate_review_note?: string | null
+          editorial_priority?: number
+          eligibility_text?: string | null
+          ends_at?: string | null
+          fields?: string[]
+          id?: string
+          is_pick?: boolean
+          listing_type: string
+          location?: string
+          organization: string
+          organizer_university_id?: string | null
+          pick_reason?: string | null
+          published_at?: string | null
+          relevance_scope?: string
+          review_at?: string | null
+          slug: string
+          source_timezone?: string
+          source_type?: string
+          source_url?: string | null
+          starts_at?: string | null
+          status?: string
+          subtype?: string | null
+          timezone_assumed?: boolean
+          title: string
+          updated_at?: string
+          updated_by: string
+          work_mode?: string
+        }
+        Update: {
+          action_note?: string | null
+          action_url?: string | null
+          application_mode?: string
+          canonical_event_id?: string | null
+          canonical_opportunity_id?: string | null
+          checked_at?: string | null
+          created_at?: string
+          created_by?: string
+          curator_note?: string | null
+          deadline_at?: string | null
+          deadline_date?: string | null
+          deadline_precision?: string
+          deleted_at?: string | null
+          description?: string
+          duplicate_review_note?: string | null
+          editorial_priority?: number
+          eligibility_text?: string | null
+          ends_at?: string | null
+          fields?: string[]
+          id?: string
+          is_pick?: boolean
+          listing_type?: string
+          location?: string
+          organization?: string
+          organizer_university_id?: string | null
+          pick_reason?: string | null
+          published_at?: string | null
+          relevance_scope?: string
+          review_at?: string | null
+          slug?: string
+          source_timezone?: string
+          source_type?: string
+          source_url?: string | null
+          starts_at?: string | null
+          status?: string
+          subtype?: string | null
+          timezone_assumed?: boolean
+          title?: string
+          updated_at?: string
+          updated_by?: string
+          work_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_canonical_event_id_fkey"
+            columns: ["canonical_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_canonical_opportunity_id_fkey"
+            columns: ["canonical_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_organizer_university_id_fkey"
+            columns: ["organizer_university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_universities: {
+        Row: {
+          opportunity_id: string
+          university_id: string
+        }
+        Insert: {
+          opportunity_id: string
+          university_id: string
+        }
+        Update: {
+          opportunity_id?: string
+          university_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_universities_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_universities_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizer_requests: {
         Row: {
           club_id: string
@@ -1050,6 +1389,39 @@ export type Database = {
           },
         ]
       }
+      saved_opportunities: {
+        Row: {
+          created_at: string
+          opportunity_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          opportunity_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          opportunity_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_opportunities_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_opportunities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tag_interaction_counts: {
         Row: {
           click_count: number
@@ -1074,6 +1446,30 @@ export type Database = {
           tag?: string
           user_id?: string
           view_count?: number
+        }
+        Relationships: []
+      }
+      universities: {
+        Row: {
+          active: boolean
+          city: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          active?: boolean
+          city: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          active?: boolean
+          city?: string
+          id?: string
+          name?: string
+          slug?: string
         }
         Relationships: []
       }
@@ -1195,6 +1591,7 @@ export type Database = {
       }
       users: {
         Row: {
+          affiliation_source: string | null
           avatar_url: string | null
           ban_expires_at: string | null
           ban_reason: string | null
@@ -1209,16 +1606,20 @@ export type Database = {
           interest_tags: string[] | null
           name: string | null
           onboarding_completed: boolean | null
+          other_university: string | null
           pinned_contracts: string[] | null
+          program: string | null
           pronouns: string | null
           roles: Database["public"]["Enums"]["user_role"][]
           saved_events_count: number
           total_habits_completed: number | null
+          university_id: string | null
           updated_at: string | null
           visibility: string
           year: string | null
         }
         Insert: {
+          affiliation_source?: string | null
           avatar_url?: string | null
           ban_expires_at?: string | null
           ban_reason?: string | null
@@ -1233,16 +1634,20 @@ export type Database = {
           interest_tags?: string[] | null
           name?: string | null
           onboarding_completed?: boolean | null
+          other_university?: string | null
           pinned_contracts?: string[] | null
+          program?: string | null
           pronouns?: string | null
           roles?: Database["public"]["Enums"]["user_role"][]
           saved_events_count?: number
           total_habits_completed?: number | null
+          university_id?: string | null
           updated_at?: string | null
           visibility?: string
           year?: string | null
         }
         Update: {
+          affiliation_source?: string | null
           avatar_url?: string | null
           ban_expires_at?: string | null
           ban_reason?: string | null
@@ -1257,20 +1662,73 @@ export type Database = {
           interest_tags?: string[] | null
           name?: string | null
           onboarding_completed?: boolean | null
+          other_university?: string | null
           pinned_contracts?: string[] | null
+          program?: string | null
           pronouns?: string | null
           roles?: Database["public"]["Enums"]["user_role"][]
           saved_events_count?: number
           total_habits_completed?: number | null
+          university_id?: string | null
           updated_at?: string | null
           visibility?: string
           year?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      discovery_public: {
+        Row: {
+          action_note: string | null
+          action_url: string | null
+          actionable_at: string | null
+          application_mode: string | null
+          canonical_id: string | null
+          canonical_kind: string | null
+          checked_at: string | null
+          curator_note: string | null
+          deadline_at: string | null
+          deadline_date: string | null
+          deadline_precision: string | null
+          description: string | null
+          editorial_priority: number | null
+          eligibility_text: string | null
+          ends_at: string | null
+          expires_at: string | null
+          fields: string[] | null
+          id: string | null
+          is_pick: boolean | null
+          kind: string | null
+          listing_type: string | null
+          location: string | null
+          organization: string | null
+          organizer_university_id: string | null
+          pick_reason: string | null
+          published_at: string | null
+          relevance_scope: string | null
+          review_at: string | null
+          slug: string | null
+          source_timezone: string | null
+          source_type: string | null
+          source_url: string | null
+          starts_at: string | null
+          subtype: string | null
+          timezone_assumed: boolean | null
+          title: string | null
+          university_ids: string[] | null
+          work_mode: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       club_invitation_unchanged_except_status: {
@@ -1296,6 +1754,49 @@ export type Database = {
           schedule: string
         }[]
       }
+      curate_event_discovery: {
+        Args: {
+          p_actor: string
+          p_can_pick?: boolean
+          p_data: Json
+          p_expected?: string
+          p_id: string
+        }
+        Returns: Json
+      }
+      curate_opportunity: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_can_pick?: boolean
+          p_data?: Json
+          p_expected?: string
+          p_id: string
+        }
+        Returns: Json
+      }
+      discovery_deadline: {
+        Args: {
+          p_at: string
+          p_date: string
+          p_precision: string
+          p_timezone: string
+        }
+        Returns: string
+      }
+      discovery_duplicate_candidates: {
+        Args: { p_id: string; p_kind: string }
+        Returns: Json
+      }
+      discovery_require_editor: {
+        Args: { p_actor: string }
+        Returns: undefined
+      }
+      discovery_validate_metadata: {
+        Args: { p_data: Json }
+        Returns: undefined
+      }
+      discovery_validate_publish: { Args: { p_id: string }; Returns: undefined }
       get_event_ids_by_time_filter: {
         Args: { day_type?: string; time_of_day?: string }
         Returns: {
@@ -1333,6 +1834,30 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_club_member: { Args: { p_club_id: string }; Returns: boolean }
       is_club_owner: { Args: { p_club_id: string }; Returns: boolean }
+      merge_event_discovery: {
+        Args: {
+          p_actor: string
+          p_canonical_id: string
+          p_canonical_kind: string
+          p_expected?: string
+          p_id: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      query_discovery: {
+        Args: {
+          p_after?: Json
+          p_as_of: string
+          p_filters?: Json
+          p_limit?: number
+        }
+        Returns: Json[]
+      }
+      query_saved_discovery: {
+        Args: { p_after?: Json; p_as_of: string; p_limit?: number }
+        Returns: Json[]
+      }
       review_event_edits_atomic: {
         Args: {
           p_action: string

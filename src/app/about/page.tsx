@@ -57,7 +57,7 @@ const FEATURES = [
 const STEPS = [
   {
     number: "01",
-    title: "Sign in with McGill",
+    title: "Sign in with your email",
     description: "Use your @mcgill.ca or @mail.mcgill.ca email. That's it, no extra accounts.",
   },
   {
@@ -262,7 +262,7 @@ export default function AboutPage() {
             {[
               { icon: Zap, title: "Recommendations that learn", desc: "Our engine tracks what you save and engage with, then surfaces events you\u2019d actually attend \u2014 not just what\u2019s popular." },
               { icon: Globe, title: "Every club, one place", desc: "No more checking ten different platforms. If a McGill club is hosting it, it\u2019s here \u2014 searchable, categorized, and ready." },
-              { icon: Shield, title: "McGill-verified only", desc: "Every event goes through a moderation pipeline. McGill email required to post or interact. No spam, no noise." },
+              { icon: Shield, title: "Verified accounts, reviewed listings", desc: "Every event goes through a moderation pipeline. Verify your email before you post or interact. University affiliation does not grant publishing rights." },
             ].map((item) => {
               const Icon = item.icon;
               return (
@@ -291,7 +291,7 @@ export default function AboutPage() {
             Ready to see what&apos;s happening?
           </h2>
           <p className="text-lg text-muted-foreground leading-relaxed mb-10 max-w-xl mx-auto">
-            Sign in with your McGill email and start exploring. Your personalized campus feed is
+            Sign in with any verified email and start exploring. Your personalized campus feed is
             one click away.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

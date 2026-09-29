@@ -1,3 +1,7 @@
+## Current product execution (2026-09-28)
+
+The owner has closed M0 as the prerequisite and authorized M1–M2 of the expanded Phase 1 product direction. See `.planning/milestones/m1-m2/DECISIONS.md`. The foundation history below remains provenance; new product decisions supersede its McGill-only admission and public-review preservation rules. Admit any verified email, never delete accounts based on domain, keep affiliation separate from permissions, and preserve legacy reviews as owner/admin history only. All new release switches default off. Do not deploy until requested; `.env.local` remains untouched.
+
 <!-- GSD:project-start source:PROJECT.md -->
 
 ## Project
@@ -14,7 +18,7 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 - **Behavior preservation**: Every Validated requirement above must still work after each stage — that is the core value
 - **No production data injection**: Synthetic datasets go to local and staging only
 - **Tech stack**: Stay on Next.js App Router, Supabase, Vercel — the program stabilizes the stack, it does not replace it
-- **Security**: Never modify `.env.local`; McGill email enforcement stays in place
+- **Security**: Never modify `.env.local`; preserve verified-session admission and all role/ban boundaries
 - **Refactor style**: Tested vertical slices, bottom-up (schema → types → auth → services → validation → endpoints → routing → pages → performance → observability)
 
 <!-- GSD:project-end -->
@@ -348,7 +352,7 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 - Responsibilities: Event discovery hub - search, filters, happening now, popular/recommended events, paginated event grid
 - Location: `src/app/auth/callback/route.ts`
 - Triggers: OAuth redirect from Supabase/Azure
-- Responsibilities: Session exchange, McGill email enforcement, user profile upsert through the elevated door (fails closed), validated `next` redirect, onboarding redirect from database truth (no role assignment at sign-in since Phase 5)
+- Responsibilities: Session exchange, verified-email admission, profile synchronization through the elevated door (fails closed), validated `next` redirect, onboarding redirect from database truth (no role assignment at sign-in since Phase 5)
 - Location: `src/app/auth/signout/route.ts`
 - Triggers: POST from `useAuthStore.signOut()`
 - Responsibilities: Server-side sign out to properly clear cookies

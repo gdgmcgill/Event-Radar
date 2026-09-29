@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { AppShell } from "@/components/layout/AppShell";
+import { discoverySurface } from "@/server/discoveryAccess";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -27,11 +28,11 @@ const themeScript = `
 
 export const metadata: Metadata = {
   title: {
-    default: "UNI-VERSE | McGill Campus Events",
+    default: "UNI-VERSE | Opportunities for Montreal students",
     template: "%s | UNI-VERSE",
   },
   description:
-    "Discover workshops, hackathons, and social events happening at McGill University. Save events, get personalized recommendations, and never miss what's happening on campus.",
+    "Discover events, hackathons, jobs, and programs for Montreal students. Find your next opportunity with UNI-VERSE.",
   keywords: [
     "McGill",
     "university events",
@@ -44,15 +45,15 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_CA",
     siteName: "UNI-VERSE",
-    title: "UNI-VERSE | McGill Campus Events",
+    title: "UNI-VERSE | Opportunities for Montreal students",
     description:
-      "Discover workshops, hackathons, and social events happening at McGill University.",
+      "Events, hackathons, jobs, and programs for Montreal students.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "UNI-VERSE | McGill Campus Events",
+    title: "UNI-VERSE | Opportunities for Montreal students",
     description:
-      "Discover workshops, hackathons, and social events happening at McGill University.",
+      "Events, hackathons, jobs, and programs for Montreal students.",
   },
   robots: {
     index: true,
@@ -64,11 +65,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const discovery = await discoverySurface();
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -76,7 +78,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
         <AuthProvider>
-          <AppShell>{children}</AppShell>
+          <AppShell discovery={discovery}>{children}</AppShell>
         </AuthProvider>
         {process.env.VERCEL === "1" && <Analytics />}
         {process.env.VERCEL === "1" && <SpeedInsights />}

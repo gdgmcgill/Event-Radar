@@ -21,8 +21,8 @@ SELECT is((SELECT count(*)::int FROM information_schema.role_table_grants
 SELECT is((SELECT string_agg(column_name::text, ',' ORDER BY column_name)::text
  FROM information_schema.column_privileges
  WHERE table_schema='public' AND table_name='users' AND grantee='authenticated' AND privilege_type='UPDATE'),
- 'avatar_url,banner_url,faculty,inferred_tags,interest_tags,name,pronouns,updated_at,visibility,year'::text,
- 'the complete client UPDATE column set is pinned, including absence of onboarding');
+ 'avatar_url,banner_url,faculty,inferred_tags,interest_tags,name,program,pronouns,updated_at,visibility,year'::text,
+ 'the complete client UPDATE column set is pinned, P1-02 optional program included; onboarding and affiliation remain absent');
 SET LOCAL ROLE service_role;
 SELECT results_eq($$UPDATE public.users SET onboarding_completed=true
  WHERE id='00000000-0000-4000-8000-000000009001' RETURNING id$$,

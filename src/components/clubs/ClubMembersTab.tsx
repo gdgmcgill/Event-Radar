@@ -28,7 +28,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useClubMembers, useClubInvites } from "@/hooks/useClubs";
-import { isMcGillEmail } from "@/lib/utils";
 import type {
   ClubInviteBodyInput,
   ClubMemberBodyInput,
@@ -149,7 +148,7 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
     setInviteLink(null);
     const email = inviteEmail.trim().toLowerCase();
     if (!email) { setInviteError("Please enter an email address."); return; }
-    if (!isMcGillEmail(email)) { setInviteError("Only McGill email addresses are accepted."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setInviteError("Enter a valid email address."); return; }
     setInviteLoading(true);
     try {
       const res = await fetch(`/api/clubs/${clubId}/invites`, {

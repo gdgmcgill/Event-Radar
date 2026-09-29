@@ -7,6 +7,9 @@ const common = {
   preset: 'ts-jest',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Next enforces this poison-pill import at build time. Unit tests run
+    // server modules outside React's server condition, using its empty target.
+    '^server-only$': '<rootDir>/node_modules/next/dist/compiled/server-only/empty.js',
   },
   // sanitize-html 2.17.7 (batch 4, plan 02-07) depends on htmlparser2 ^12, which is
   // pure ESM ("type": "module", no CommonJS build). Node 24 loads it from CommonJS

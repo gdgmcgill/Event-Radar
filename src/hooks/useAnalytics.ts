@@ -1,10 +1,11 @@
 "use client";
 
 import useSWR from "swr";
-import type { EventAnalytics, ClubAnalytics, ReviewAggregate, Review } from "@/types";
+import type { EventAnalytics, ClubAnalytics } from "@/types";
 import type {
   EventAnalyticsResponse,
   EventReviewsResponse,
+  EventReviewsResponseBody,
 } from "@/contracts/events";
 import type { ClubAnalyticsResponse } from "@/contracts/clubs";
 import { checkResponseInDev } from "@/lib/contractCheck";
@@ -81,18 +82,10 @@ export function useClubAnalytics(clubId: string) {
   );
 }
 
-interface EventReviewsResponse {
-  aggregate: ReviewAggregate;
-  user_review: Review | null;
-  can_review: boolean;
-}
-
-/**
- * Fetch review aggregate, user review status, and eligibility for an event.
- */
-export function useEventReviews(eventId: string) {
-  return useSWR<EventReviewsResponse>(
-    eventId ? `/api/events/${eventId}/reviews` : null,
-    fetchEventReviews
+/** Private immutable history, with cache identity scoped to the current user. */
+export function useEventReviews(eventId: string, userId?: string) {
+  return useSWR<EventReviewsResponseBody>(
+    eventId && userId ? [`/api/events/${eventId}/reviews`, userId] : null,
+    ([url]: [string, string]) => fetchEventReviews(url)
   );
 }

@@ -15,6 +15,8 @@ import { notFound, serverError } from "@/server/errors";
 import { ok } from "@/server/http";
 import type { NextRequest } from "next/server";
 import { withRoute } from "@/server/route";
+import { parseWith } from "@/server/body";
+import { DetailParams } from "@/contracts/discovery";
 import { log } from "@/server/log";
 
 interface RouteContext {
@@ -125,4 +127,19 @@ export const POST = withRoute({ cache: "private", action: "save event" }, async 
     log.error("Unexpected error saving event", { error });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
+});
+
+/** Idempotent counterpart for discovery cards; the legacy POST toggle remains. */
+export const PUT = withRoute({ cache: "private", action: "save event" }, async (_request: NextRequest, { params }: RouteContext) => {
+  const ctx = await createRequestContext();
+  const active = requireActiveUser(ctx); if (!active.ok) return active.response;
+  const onboarded = requireOnboarded(ctx); if (!onboarded.ok) return onboarded.response;
+  const parsed = parseWith(DetailParams, await params); if (!parsed.ok) return parsed.response;
+  const { id } = parsed.data;
+  const { data: event, error } = await ctx.supabase.from("events").select("id").eq("id", id).eq("status", "approved").is("deleted_at", null).maybeSingle();
+  if (error) throw error;
+  if (!event) return notFound("Event not found");
+  const { error: saveError } = await ctx.supabase.from("saved_events").upsert({ user_id: active.user.id, event_id: id }, { onConflict: "user_id,event_id", ignoreDuplicates: true });
+  if (saveError) throw saveError;
+  return ok({ saved: true });
 });

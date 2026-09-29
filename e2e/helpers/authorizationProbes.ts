@@ -9,6 +9,12 @@ export interface MutationProbe { status: number; isolated?: IsolatedProbe; body?
  * absent target id, except self-follow.
  * These are authorization/validation probes, never successful workflow tests. */
 export const MUTATIONS: Record<string, MutationProbe> = {
+  "POST /api/admin/opportunities": { status: 400 },
+  "PATCH /api/admin/opportunities/[id]": { status: 400 },
+  "PUT /api/admin/events/[id]/discovery": { status: 400 },
+  "PATCH /api/admin/events/[id]/discovery": { status: 400 },
+  "PUT /api/opportunities/[id]/save": { status: 404 },
+  "DELETE /api/opportunities/[id]/save": { status: 404 },
   "POST /api/admin/calculate-popularity": { status: 200, isolated: "popularity" },
   "PATCH /api/admin/clubs/[id]": { status: 400 },
   "PATCH /api/admin/events/[id]/edits": { status: 400 },
@@ -42,11 +48,12 @@ export const MUTATIONS: Record<string, MutationProbe> = {
   "POST /api/events/[id]/appeal": { status: 400 },
   "POST /api/events/[id]/invite": { status: 400 },
   "POST /api/events/[id]/report": { status: 400 },
-  "POST /api/events/[id]/reviews": { status: 400 },
+  "POST /api/events/[id]/reviews": { status: 404 },
   "PATCH /api/events/[id]": { status: 404 },
   "DELETE /api/events/[id]": { status: 404 },
   "POST /api/events/[id]/rsvp": { status: 400 },
   "DELETE /api/events/[id]/rsvp": { status: 400 },
+  "PUT /api/events/[id]/save": { status: 404 },
   "POST /api/events/[id]/save": { status: 404 },
   "DELETE /api/events/[id]/save": { status: 200 },
   "POST /api/events/create": { status: 400 },
@@ -84,7 +91,7 @@ export function probeUrl(row: EndpointRow, method: string, who: AuditPersona): s
   return url;
 }
 export function expectedProbe(row: EndpointRow, method: string, who: AuditPersona): { status: number; skip?: string; isolated?: IsolatedProbe } {
-  if (who === "non_mcgill_signin") return { status: 0, skip: "OAuth admission case: covered by auth callback unit contract; no non-McGill account is seeded or injected." };
+  if (who === "non_mcgill_signin") return { status: 0, skip: "External OAuth persona is not part of the baseline seed; verified non-campus admission is covered by M1 callback contracts and a separate disposable-user local workflow." };
   if (row.route === "/auth/callback") return { status: 307 };
   if (row.route === "/auth/signout") return isAnonymous(who) ? { status: 302 } : { status: 302, isolated: "signout" };
   if (isBanned(who)) return { status: 403 };
@@ -93,6 +100,9 @@ export function expectedProbe(row: EndpointRow, method: string, who: AuditPerson
     if (!probe) throw new Error(`Unclassified mutation: ${method} ${row.route}`);
     if (isAnonymous(who)) return { status: ["/api/feedback", "/api/interactions"].includes(row.route) ? 400 : 401 };
     if (row.auth_requirement === "admin" && who !== "admin") return { status: 403 };
+    // P1-02: a cookie-only completion request cannot finish an incomplete
+    // authoritative profile. Completed personas retain their idempotent 200.
+    if (who === "mid_onboarding_student" && row.route === "/api/onboarding/complete") return { status: 400 };
     if (who === "mid_onboarding_student" && row.route !== "/api/onboarding/complete") return { status: 403 };
     return { status: probe.status, isolated: probe.isolated };
   }

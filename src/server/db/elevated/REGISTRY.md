@@ -11,7 +11,6 @@ exception that nobody wrote down is indistinguishable from an oversight.
 
 | Operation | Calling module | Why RLS cannot express it | Phase added |
 | --------- | -------------- | ------------------------- | ----------- |
-| Delete the orphaned auth.users row of a rejected non-McGill sign-in (auth.admin.deleteUser) | `src/app/auth/callback/route.ts` | auth.users is owned by GoTrue; its admin API needs the service role and no RLS policy can grant it | 05 |
 | Upsert and read the signing-in user's own public.users row at sign-in | `src/app/auth/callback/route.ts` | The row may not exist yet, the upsert writes email (withheld from authenticated by the F-006 column grant) and INSERT on users is revoked from authenticated by DEC-47; the callback is the only writer | 05 |
 | Owner edits club details or soft-deletes the club | `src/app/api/clubs/[id]/route.ts` | clubs has no owner UPDATE policy; an owner policy needs status immutability and is deferred to Phase 7's per-table RLS work (DEC-41); the handler's column whitelist keeps status, created_by and id unwritable | 05 |
 | Owner changes a member's role or transfers ownership | `src/app/api/clubs/[id]/members/role/route.ts`, `src/app/api/clubs/[id]/transfer/route.ts` | club_members UPDATE is admin-only; an owner UPDATE policy is deferred with the clubs policy (DEC-41) | 05 |
@@ -91,6 +90,15 @@ than when the first row arrives.
    migration retires a legacy callsite. The list may only shrink;
    `scripts/check-elevated-ratchet.mjs` enforces that.
 
-| Validated self-profile onboarding transition | `src/app/api/users/[id]/route.ts` | DI-72 revokes client UPDATE on onboarding_completed; active-user and exact self-id checks plus the profile schema precede elevation. Payload is whitelisted and filtered to the authenticated subject. Ordinary profile writes remain on the cookie client. | M0 |
+| Validated self-profile onboarding and affiliation transition | `src/app/api/users/[id]/route.ts` | DI-72 revokes client UPDATE on onboarding_completed; P1-02 also keeps university/provenance writes server-owned; active-user and exact self-id checks plus the profile schema precede elevation. Payload is whitelisted and filtered to the authenticated subject. Ordinary profile writes remain on the cookie client. University IDs must name active catalog rows; provenance is assigned by the server, never accepted from metadata. | M0 |
 
 | Display name in a newly established friendship notification | `src/app/api/users/[id]/follow/route.ts` | DI-65: after a successful new follow and reciprocal-follow check, read only the exact peer's name for the caller's notification. No profile details or arbitrary target enumeration. | M0 |
+
+### M2 editorial discovery
+
+| Caller | Operations | Guard / reason |
+| --- | --- | --- |
+| `src/server/opportunities/admin.ts` | Private opportunity + university joins; duplicate candidates | Called only after `adminContext` verifies active admin; public column grants deliberately exclude draft and review notes. |
+| `src/app/api/admin/opportunities/route.ts` | Bounded private list; `curate_opportunity` create | Active admin; server-derived actor; named curator check controls Pick changes; transaction writes audit. |
+| `src/app/api/admin/opportunities/[id]/route.ts` | `curate_opportunity` edit/publish/archive/merge | Active admin plus expected version; actor rechecked by RPC; only configured curator can change Picks. |
+| `src/app/api/admin/events/[id]/discovery/route.ts` | Event editorial metadata and duplicate reads; `curate_event_discovery`, `merge_event_discovery` | Active admin; expected version; RPC rechecks actor and commits audit atomically. |

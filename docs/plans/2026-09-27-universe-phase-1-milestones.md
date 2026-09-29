@@ -1,7 +1,7 @@
 # UNIVERSE Phase 1 — Milestone Roadmap
 
 **Scope:** Expanded §47 Build Now, confirmed by Ady on September 27, 2026.  
-**Status:** M0 local implementation and verification delivered; foundation certification pending; M1–M8 not started.  
+**Status:** M0 owner-closed for product progression. M1–M2 implemented and in final local verification; M3–M8 not started. Deployment remains deferred. See the [M1–M2 report](../../.planning/milestones/m1-m2/REPORT.md).  
 **Detailed specification:** [Phase 1 implementation plan](2026-09-27-universe-phase-1-implementation-plan.md).
 
 Eight product milestones follow one foundation prerequisite. **M4 releases discovery (P1-A); M8 completes the recruiting pilot and expanded Phase 1 (P1-B).** Talent, applications, recruiter pages, and private event feedback remain required within Phase 1.
@@ -52,7 +52,7 @@ The sequence assumes one implementer. Instrument analytics and add tests as each
 ## M0 — Finish the foundation
 
 **Purpose:** Establish a trustworthy starting point for the revamp.  
-**Status:** Local implementation and verification delivered on `codex/m0-foundation-certification`. Deployed checks and operational sign-off remain pending; see [M0 report](../../.planning/milestones/m0/REPORT.md).  
+**Status:** Owner declared M0 complete for progression on September 28, 2026. Local implementation and verification were delivered on `codex/m0-foundation-certification`. Historical deployed/operational evidence gaps remain recorded in the [M0 report](../../.planning/milestones/m0/REPORT.md); owner progression does not manufacture that evidence.  
 **Work:** F0 in the implementation plan, using the existing foundation tracking records.  
 **Dependency:** None. Scope/provider/content preparation can proceed while this closes.
 
@@ -68,6 +68,8 @@ Deliverables:
 **Demo/evidence:** A verification report links the tested commit, CI results, database checks, and live Sentry/CDN/webhook checks.
 
 ## M1 — Open the platform
+
+**Implementation status:** P1-00–03 delivered locally; final regression checks recorded in the [M1–M2 report](../../.planning/milestones/m1-m2/REPORT.md). Hosted identity/email inputs have accountable owners and block their dependent release only.
 
 **Outcome:** UNIVERSE admits students beyond McGill and presents the new product structure without exposing old public-review data.  
 **Packages:** P1-00, P1-01, P1-02, P1-03.  
@@ -88,6 +90,8 @@ Deliverables:
 **Demo:** Sign in with McGill and non-McGill test users, complete onboarding, navigate on mobile, and demonstrate that legacy saves remain and public review access is denied.
 
 ## M2 — Build the opportunity core
+
+**Implementation status:** P1-04–05 delivered locally; manual curation/save demo and final checks recorded in the [M1–M2 report](../../.planning/milestones/m1-m2/REPORT.md). New public discovery remains off by default.
 
 **Outcome:** One discovery model supports the broader product, and Ady can populate it through a small admin workflow.  
 **Packages:** P1-04, P1-05.  

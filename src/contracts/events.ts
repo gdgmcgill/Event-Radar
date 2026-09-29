@@ -657,31 +657,16 @@ export const EventAnalyticsResponse = z.looseObject({
 
 export type EventAnalyticsResponseBody = z.infer<typeof EventAnalyticsResponse>;
 
-/** GET /api/events/[id]/reviews, 200: the aggregate, the caller's review, eligibility. */
-export const EventReviewsResponse = z.looseObject({
-  aggregate: z.looseObject({
-    average_rating: z.number(),
-    total_reviews: z.number(),
-    distribution: z.array(
-      z.looseObject({ rating: z.number(), count: z.number() })
-    ),
-    comments: z.array(
-      z.looseObject({
-        rating: z.number(),
-        comment: z.string(),
-        created_at: z.string(),
-      })
-    ),
-  }),
-  user_review: z
-    .looseObject({
-      id: z.string(),
-      rating: z.number(),
-      comment: z.string().nullable(),
-      created_at: z.string(),
-    })
-    .nullable(),
-  can_review: z.boolean(),
+/** Immutable legacy history: no aggregate, public comments or write eligibility. */
+export const LegacyReviewHistoryQuery = z.object({
+  offset: z.coerce.number().int().min(0).max(100000).default(0),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+export const EventReviewsResponse = z.object({
+  reviews: z.array(z.object({
+    id: z.string(), event_id: z.string(), user_id: z.string(),
+    rating: z.number(), comment: z.string().nullable(), created_at: z.string(),
+  })),
 });
 
 export type EventReviewsResponseBody = z.infer<typeof EventReviewsResponse>;

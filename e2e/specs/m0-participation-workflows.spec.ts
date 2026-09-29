@@ -110,45 +110,42 @@ test('RSVP interested → going → cancelled persists after reload and changes 
   expect(active.error).toBeNull(); expect(active.count).toBe(1);
 });
 
-test('past attendee submits review through UI; organizer gets exact anonymous aggregate, others cannot submit without attending', async ({ page, request }) => {
-  await rsvp(request, past, IDS.onboarded_student, 'going');
-  await rsvp(attendee, past, IDS.club_member, 'going');
-  expect((await reviews(request, past)).can_review).toBe(true);
-  expect((await outsider.post(`/api/events/${past}/reviews`, { data: { rating: 1, comment: 'not an attendee' } })).status()).toBe(403);
-  expect((await reviews(outsider, past)).can_review).toBe(false);
-  await page.goto(`/events/${past}`);
-  await page.getByRole('button', { name: '5 stars', exact: true }).click();
-  await page.getByPlaceholder('Share your experience (optional)').fill('M0 thoughtful event');
-  const [submitted] = await Promise.all([
-    page.waitForResponse(r => r.url().endsWith(`/api/events/${past}/reviews`) && r.request().method() === 'POST'),
-    page.getByRole('button', { name: 'Submit Review', exact: true }).click(),
-  ]);
-  expect(submitted.status()).toBe(201);
-  await page.reload();
-  await expect(page.getByText('Your rating:', { exact: true })).toBeVisible();
-  expect((await attendee.post(`/api/events/${past}/reviews`, { data: { rating: 3, comment: 'M0 useful feedback' } })).status()).toBe(201);
-  expect((await request.post(`/api/events/${past}/reviews`, { data: { rating: 1, comment: 'duplicate' } })).status()).toBe(409);
-  const own = await reviews(request, past);
-  expect(own.can_review).toBe(false);
-  expect(own.user_review).toMatchObject({ user_id: IDS.onboarded_student, event_id: past, rating: 5, comment: 'M0 thoughtful event' });
-  expect(own.aggregate.comments).toEqual([]);
-  const organized = await reviews(owner, past);
-  expect(organized.aggregate).toMatchObject({ average_rating: 4, total_reviews: 2, distribution: [{ rating: 1, count: 0 }, { rating: 2, count: 0 }, { rating: 3, count: 1 }, { rating: 4, count: 0 }, { rating: 5, count: 1 }] });
-  expect(organized.aggregate.comments.map((row: { comment: string }) => row.comment).sort()).toEqual(['M0 thoughtful event', 'M0 useful feedback']);
-  for (const comment of organized.aggregate.comments) expect(Object.keys(comment).sort()).toEqual(['comment', 'created_at', 'rating']);
-  const persisted = await db.from('reviews').select('user_id,rating').eq('event_id', past);
-  expect(persisted.error).toBeNull(); expect(persisted.data).toHaveLength(2);
-  await page.reload();
-  await expect(page.getByText('4.0 / 5', { exact: true })).toBeVisible();
+// P1-03 intentionally supersedes M0's public stars/organizer aggregates.
+// Service setup represents retained old data; no legacy write is a workflow.
+test('legacy review history stays private to author and admin; organizers and strangers get none', async ({ page, request, playwright, baseURL }) => {
+  expect((await db.from('reviews').insert([
+    { event_id: past, user_id: IDS.onboarded_student, rating: 5, comment: 'Private author history' },
+    { event_id: past, user_id: IDS.club_member, rating: 3, comment: 'Other private history' },
+  ])).error).toBeNull();
+  const administrator = await playwright.request.newContext({ baseURL, storageState: storageStateFor('admin') });
+  const anonymous = await playwright.request.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+  try {
+    expect((await anonymous.get(`/api/events/${past}/reviews`)).status()).toBe(401);
+    const own = await reviews(request, past);
+    expect(Object.keys(own)).toEqual(['reviews']);
+    expect(own.reviews).toHaveLength(1);
+    expect(own.reviews[0]).toMatchObject({ user_id: IDS.onboarded_student, rating: 5, comment: 'Private author history' });
+    expect(await reviews(owner, past)).toEqual({ reviews: [] });
+    expect(await reviews(outsider, past)).toEqual({ reviews: [] });
+    expect((await reviews(administrator, past)).reviews).toHaveLength(2);
+    await page.goto(`/events/${past}`);
+    const history = page.getByRole('region', { name: 'Private legacy review history' });
+    await expect(history).toContainText('Private author history');
+    await expect(page.getByText('Other private history', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Submit Review', exact: true })).toHaveCount(0);
+    expect((await request.post(`/api/events/${past}/reviews`, { data: { rating: 1, comment: 'new legacy write' } })).status()).toBe(404);
+    await page.reload();
+    await expect(history).toContainText('Legacy rating: 5/5');
+  } finally { await administrator.dispose(); await anonymous.dispose(); }
 });
 
-test('future and ongoing events do not offer or accept reviews even for a going attendee', async ({ request, page }) => {
+test('legacy writes remain retired for future and ongoing events even for a going attendee', async ({ request, page }) => {
   for (const eventId of [future, ongoing]) {
     await rsvp(request, eventId, IDS.onboarded_student, 'going');
-    expect((await reviews(request, eventId)).can_review).toBe(false);
+    expect(await reviews(request, eventId)).toEqual({ reviews: [] });
     const response = await request.post(`/api/events/${eventId}/reviews`, { data: { rating: 5 } });
-    expect(response.status()).toBe(400);
-    expect(await response.json()).toEqual({ error: 'Reviews can only be submitted after the event has ended' });
+    expect(response.status()).toBe(404);
+    expect(await response.json()).toEqual({ error: 'Legacy review submissions are closed' });
   }
   await page.goto(`/events/${ongoing}`);
   await expect(page.getByRole('heading', { name: 'M0 Participation 2', exact: true })).toBeVisible();

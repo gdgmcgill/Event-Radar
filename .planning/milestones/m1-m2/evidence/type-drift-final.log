@@ -1,0 +1,1 @@
+PASS: supabase gen types typescript --local --schema public matches src/lib/supabase/types.ts byte-for-byte.

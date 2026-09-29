@@ -19,14 +19,11 @@ import { SignInButton } from "@/components/auth/SignInButton";
 import { EventDetailView } from "@/components/events/EventDetailView";
 import { CreateEventForm } from "@/components/events/CreateEventForm";
 import { RsvpButton } from "@/components/events/RsvpButton";
-import { ReviewPrompt } from "@/components/events/ReviewPrompt";
 import { EventReviewsSection } from "@/components/events/EventReviewsSection";
-import { StarRating } from "@/components/events/StarRating";
 import { FriendsGoing } from "@/components/events/FriendsGoing";
 import { InviteFriendsModal } from "@/components/events/InviteFriendsModal";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useEventReviews } from "@/hooks/useAnalytics";
-import type { Event, ReviewAggregate, RejectionCategory } from "@/types";
+import type { Event, RejectionCategory } from "@/types";
 import { REJECTION_CATEGORIES } from "@/types";
 import { AppealForm } from "@/components/AppealForm";
 import { ReviewThread } from "@/components/moderation/ReviewThread";
@@ -61,17 +58,6 @@ export default function EventDetailClient() {
     message: string;
     created_at: string;
   } | null>(null);
-  const { data: reviewData, mutate: mutateReviews } = useEventReviews(
-    // Review aggregates include caller eligibility and require authentication.
-    // A null SWR key avoids anonymous 401 requests and automatic retries.
-    user ? id ?? "" : ""
-  );
-
-  // Build ReviewAggregate for EventDetailView
-  const reviewAggregate: ReviewAggregate | undefined =
-    reviewData?.aggregate && reviewData.aggregate.total_reviews > 0
-      ? reviewData.aggregate
-      : undefined;
 
   useEffect(() => {
     if (!id) return;
@@ -305,7 +291,6 @@ export default function EventDetailClient() {
         onLike={handleLike}
         onShare={handleShare}
         onEventClick={handleEventClick}
-        reviews={reviewAggregate}
         backHref={backHref}
         backLabel={backLabel}
         isCreator={isCreator}
@@ -328,26 +313,9 @@ export default function EventDetailClient() {
             </Button>
           )}
 
-          {/* Reviews */}
-          {user && reviewData?.can_review && !reviewData.user_review && (
-            <ReviewPrompt
-              eventId={event.id}
-              onReviewSubmitted={() => mutateReviews()}
-            />
-          )}
-          {user && reviewData?.user_review && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Your rating:</span>
-              <StarRating
-                value={reviewData.user_review.rating}
-                readonly
-                size="sm"
-              />
-            </div>
-          )}
-          {reviewData && reviewData.aggregate.total_reviews > 0 && (
-            <EventReviewsSection eventId={event.id} isOrganizer={false} />
-          )}
+          {/* Historical ratings are visible only to their author or admin. */}
+          {user && <EventReviewsSection eventId={event.id} />}
+
         </div>
       </EventDetailView>
 
@@ -364,7 +332,7 @@ export default function EventDetailClient() {
           <DialogHeader>
             <DialogTitle>Sign in to save events</DialogTitle>
             <DialogDescription>
-              Create an account or sign in with your McGill email to save events
+              Create an account or sign in with your email to save events
               and get personalised recommendations.
             </DialogDescription>
           </DialogHeader>

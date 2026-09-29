@@ -353,10 +353,14 @@ describe("ClubInviteBody (clubs/[id]/invites POST)", () => {
   it.each([
     [{}, "Email is required"],
     [{ email: "" }, "Email is required"],
-    [{ email: "someone@gmail.com" }, "Must be a McGill email"],
-    [{ email: "   " }, "Must be a McGill email"],
+    [{ email: "not-an-email" }, "Enter a valid email address"],
+    [{ email: "   " }, "Enter a valid email address"],
   ])("%j answers %p", async (body, error) => {
     await expect(refused(ClubInviteBody, body)).resolves.toEqual({ error });
+  });
+
+  it.each(["person@gmail.com", "person@concordia.ca"])("P1-02 permits invitation to %s without granting authority", async email => {
+    await expect(accepted(ClubInviteBody, { email })).resolves.toEqual({ email });
   });
 
   it("F-094: a non-string email answers the required text (was a 500 on .trim())", async () => {

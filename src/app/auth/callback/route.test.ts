@@ -12,7 +12,7 @@
  *   - the inbound provider-error parameter passing through, before any exchange
  *   - the absent `code` parameter redirecting with error=no_code
  *   - a failed code-for-session exchange redirecting with error=auth_failed
- *   - a non-McGill address: sign-out, orphaned auth user deleted by id, error=not_mcgill
+ *   - P1-02: all verified domains admitted; unverified fail closed, no deletion
  *   - a new McGill user: profile upsert payload, /onboarding, needs_onboarding=1
  *   - an already-onboarded McGill user routing to the `next` destination instead
  *   - the sign-in admin grant and the absent-service-key path: moved to
@@ -169,7 +169,7 @@ function location(res: Response): URL {
 function signedInAs(id: string, email: string, metadata: Record<string, unknown> = {}) {
   mockExchangeCodeForSession.mockResolvedValue({ error: null });
   mockGetUser.mockResolvedValue({
-    data: { user: { id, email, user_metadata: metadata } },
+    data: { user: { id, email, email_confirmed_at: "2026-01-01T00:00:00Z", user_metadata: metadata } },
     error: null,
   });
 }
@@ -273,20 +273,46 @@ describe("GET /auth/callback (PRESERVE — REFAC-08)", () => {
     expect(mockGetUser).not.toHaveBeenCalled();
   });
 
-  // ── 4. McGill enforcement (route.ts:113-134) ───────────────────────────────
-  it("rejects a non-McGill address, signs it out, and deletes the orphaned auth user", async () => {
-    signedInAs("u-non-mcgill", NON_MCGILL_EMAIL);
+  // P1-02 intentional product change: any verified email, no deletion.
+  it.each([NON_MCGILL_EMAIL, "person@concordia.ca", MCGILL_EMAIL])("admits verified %s without account deletion or role claims", async email => {
+    signedInAs("u-verified", email, { roles: ["admin"] });
     const GET = await loadRoute();
-
     const res = await GET(callbackRequest("?code=abc"));
+    expect(location(res).pathname).toBe(ONBOARDING_PATH);
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+    expect(mockUpsert.mock.calls[0][0]).not.toHaveProperty("roles");
+    expect(mockUpdate.mock.calls[0][0]).toEqual({ email, updated_at: expect.any(String) });
+  });
 
-    expect(location(res).pathname).toBe("/");
-    expect(location(res).searchParams.get("error")).toBe("not_mcgill");
+  it("rejects unverified email even when editable metadata claims verification", async () => {
+    signedInAs("u-unverified", NON_MCGILL_EMAIL);
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-unverified", email: NON_MCGILL_EMAIL, email_confirmed_at: null, user_metadata: { email_verified: true } } }, error: null });
+    const GET = await loadRoute();
+    const res = await GET(callbackRequest("?code=abc"));
+    expect(location(res).searchParams.get("error")).toBe("email_not_verified");
     expect(mockSignOut).toHaveBeenCalled();
-    expect(mockDeleteUser).toHaveBeenCalledWith("u-non-mcgill");
-    // The rejected address must never reach the profile table.
+    expect(mockDeleteUser).not.toHaveBeenCalled();
     expect(mockUpsert).not.toHaveBeenCalled();
-    expect(res.cookies.get(ONBOARDING_COOKIE)).toBeUndefined();
+  });
+
+  it("completes an email OTP session through the same verified profile path, preserving recruiter destination", async () => {
+    signedInAs("u-otp", NON_MCGILL_EMAIL);
+    const GET = await loadRoute();
+    const res = await GET(callbackRequest("?verified=1&next=%2Frecruiting%2Froles"));
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
+    expect(mockGetUser).toHaveBeenCalled();
+    expect(mockUpsert).toHaveBeenCalled();
+    expect(location(res).pathname).toBe("/recruiting/roles");
+  });
+
+  it("a forged OTP marker without a verified session grants no access", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+    const GET = await loadRoute();
+    const res = await GET(callbackRequest("?verified=1"));
+    expect(location(res).searchParams.get("error")).toBe("not_authenticated");
+    expect(mockUpsert).not.toHaveBeenCalled();
+    expect(mockDeleteUser).not.toHaveBeenCalled();
   });
 
   // ── 5. New McGill user (route.ts:148-154, 165-183, 203-231) ────────────────
@@ -304,7 +330,7 @@ describe("GET /auth/callback (PRESERVE — REFAC-08)", () => {
         name: "Student One",
         avatar_url: "https://img.test/a.png",
       }),
-      { onConflict: "id", ignoreDuplicates: false }
+      { onConflict: "id", ignoreDuplicates: true }
     );
     expect(mockSelect).toHaveBeenCalledWith(PROFILE_COLUMNS);
     expect(mockSelectEq).toHaveBeenCalledWith("id", "u-new");

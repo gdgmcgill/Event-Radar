@@ -1,306 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import InterestTagSelector from "@/components/profile/InterestTagSelector";
-import { PRONOUNS, YEARS, FACULTIES } from "@/lib/constants";
-import { ChevronRight, ChevronLeft, Sparkles, Check } from "lucide-react";
-import type {
-  OnboardingCompleteRequestInit,
-  UserUpdateBodyInput,
-} from "@/contracts/users";
+import { useAuthStore } from "@/store/useAuthStore";
+import type { UserUpdateBodyInput } from "@/contracts/users";
 
-type OnboardingWizardProps = {
-  userId: string;
-  initialName: string;
-  avatarUrl: string | null;
-};
+type University = { id: string; name: string };
+type OnboardingWizardProps = { userId: string; initialName: string; avatarUrl: string | null };
 
-export function OnboardingWizard({
-  userId,
-  initialName,
-  avatarUrl,
-}: OnboardingWizardProps) {
+export function OnboardingWizard({ userId, initialName }: OnboardingWizardProps) {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const updateUser = useAuthStore(state => state.updateUser);
   const [name, setName] = useState(initialName);
-  const [pronouns, setPronouns] = useState("");
+  const [university, setUniversity] = useState("");
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [other, setOther] = useState("");
+  const [program, setProgram] = useState("");
   const [year, setYear] = useState("");
-  const [faculty, setFaculty] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const totalSteps = 4;
-  const firstName = name.split(" ")[0] || "there";
-
-  const canProceed = () => {
-    switch (step) {
-      case 0:
-        return true;
-      case 1:
-        return name.trim().length >= 2;
-      case 2:
-        return tags.length >= 3;
-      case 3:
-        return true;
-      default:
-        return false;
-    }
-  };
-
-  const handleNext = async () => {
-    if (step < 3) {
-      setStep(step + 1);
-      return;
-    }
-
-    // Final step — save everything
-    setSaving(true);
-    setError(null);
-
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let live = true;
+    fetch('/api/universities').then(async response => {
+      if (!response.ok) throw new Error('Universities could not be loaded. You can choose Other or prefer not to specify.');
+      const data = await response.json();
+      if (live) setUniversities(data.universities);
+    }).catch(error => { if (live) setError(error.message); });
+    return () => { live = false; };
+  }, []);
+  const complete = async (event: React.FormEvent) => {
+    event.preventDefault(); setSaving(true); setError("");
+    const affiliation = university === 'other' || university === 'unspecified'
+      ? { university_id: null, other_university: university === 'unspecified' ? 'Prefer not to specify' : other.trim() || 'Other' }
+      : { university_id: university, other_university: null };
+    const payload = { name: name.trim(), ...affiliation, program: program.trim() || null, year: year.trim() || null, interest_tags: tags, onboarding_completed: true } satisfies UserUpdateBodyInput;
     try {
-      const res = await fetch(`/api/users/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          pronouns: pronouns || null,
-          year: year || null,
-          faculty: faculty || null,
-          interest_tags: tags,
-          onboarding_completed: true,
-        } satisfies UserUpdateBodyInput),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save profile");
-      }
-
-      const onboardingCompleteRes = await fetch("/api/onboarding/complete", {
-        method: "POST",
-      } satisfies OnboardingCompleteRequestInit);
-
-      if (!onboardingCompleteRes.ok) {
-        const data = await onboardingCompleteRes.json().catch(() => ({}));
-        throw new Error(data.error || "Profile saved, but failed to finish onboarding");
-      }
-
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-      setSaving(false);
-    }
+      const response = await fetch(`/api/users/${userId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not save your profile');
+      const finished = await fetch('/api/onboarding/complete', { method: 'POST' });
+      if (!finished.ok) throw new Error('Profile saved. Please try finishing again.');
+      updateUser({ ...payload, affiliation_source: 'self_declared' });
+      router.push('/'); router.refresh();
+    } catch (error) { setError(error instanceof Error ? error.message : 'Could not save your profile'); setSaving(false); }
   };
-
-  const selectClass =
-    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-background px-4 py-6 sm:px-6">
-      <div className="mx-auto w-full max-w-lg space-y-6 pb-6">
-        {/* Progress indicator */}
-        <div className="flex items-center justify-center gap-2">
-          {Array.from({ length: totalSteps }).map((_, i) => (
-            <div
-              key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i <= step
-                  ? "w-8 bg-[#ED1B2F]"
-                  : "w-2 bg-muted-foreground/20"
-              }`}
-            />
-          ))}
-        </div>
-        <p className="text-center text-sm text-muted-foreground">
-          Step {step + 1} of {totalSteps}
-        </p>
-
-        {/* Step 0: Welcome */}
-        {step === 0 && (
-          <div className="text-center space-y-6">
-            {avatarUrl && (
-              <img
-                src={avatarUrl}
-                alt="Your avatar"
-                className="mx-auto h-24 w-24 rounded-full border-4 border-[#ED1B2F]/20"
-              />
-            )}
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight">
-                Welcome to UNI-VERSE{firstName !== "there" ? `, ${firstName}` : ""}!
-              </h1>
-              <p className="text-muted-foreground">
-                Let&apos;s set up your profile so you can discover the best events on campus.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Step 1: Basics */}
-        {step === 1 && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold tracking-tight">
-                The basics
-              </h2>
-              <p className="text-muted-foreground">
-                Tell us a bit about yourself.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="ob-name" className="text-sm font-medium">
-                  Display Name
-                </label>
-                <Input
-                  id="ob-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                />
-                {name.trim().length > 0 && name.trim().length < 2 && (
-                  <p className="text-sm text-red-500">Name must be at least 2 characters.</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="ob-pronouns" className="text-sm font-medium">
-                  Pronouns
-                </label>
-                <select
-                  id="ob-pronouns"
-                  value={pronouns}
-                  onChange={(e) => setPronouns(e.target.value)}
-                  className={selectClass}
-                >
-                  <option value="">Select pronouns...</option>
-                  {PRONOUNS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="ob-year" className="text-sm font-medium">
-                  Year
-                </label>
-                <select
-                  id="ob-year"
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                  className={selectClass}
-                >
-                  <option value="">Select year...</option>
-                  {YEARS.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="ob-faculty" className="text-sm font-medium">
-                  Faculty <span className="text-muted-foreground">(optional)</span>
-                </label>
-                <select
-                  id="ob-faculty"
-                  value={faculty}
-                  onChange={(e) => setFaculty(e.target.value)}
-                  className={selectClass}
-                >
-                  <option value="">Select faculty...</option>
-                  {FACULTIES.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Interests */}
-        {step === 2 && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold tracking-tight flex items-center justify-center gap-2">
-                <Sparkles className="h-6 w-6 text-[#ED1B2F]" />
-                Your interests
-              </h2>
-              <p className="text-muted-foreground">
-                Pick 3-5 interests so we can show you the most relevant events.
-              </p>
-            </div>
-
-            <InterestTagSelector
-              selected={tags}
-              onChange={setTags}
-              min={3}
-            />
-          </div>
-        )}
-
-        {/* Step 3: Done */}
-        {step === 3 && (
-          <div className="text-center space-y-6">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-              <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold tracking-tight">
-                You&apos;re all set!
-              </h2>
-              <p className="text-muted-foreground">
-                Your profile is ready. Start discovering events on campus.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Error message */}
-        {error && (
-          <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg border border-destructive/20">
-            {error}
-          </div>
-        )}
-
-        {/* Navigation buttons */}
-        <div className="flex gap-3">
-          {step > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setStep(step - 1)}
-              disabled={saving}
-              className="flex-1"
-            >
-              <ChevronLeft className="mr-1 h-4 w-4" />
-              Back
-            </Button>
-          )}
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed() || saving}
-            className={`flex-1 bg-[#ED1B2F] hover:bg-[#ED1B2F]/90 text-white ${step === 0 ? "w-full" : ""}`}
-          >
-            {saving
-              ? "Saving..."
-              : step === 3
-                ? "Browse Events"
-                : "Continue"}
-            {!saving && step < 3 && <ChevronRight className="ml-1 h-4 w-4" />}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+  const selectClass = 'h-11 w-full rounded-md border border-input bg-background px-3 text-sm';
+  return <main className="mx-auto max-w-xl px-4 py-12">
+    <h1 className="text-3xl font-semibold tracking-tight">Make UNI-VERSE yours</h1>
+    <p className="mt-3 text-muted-foreground">A name and university choice are all you need. Interests help tailor discovery and are optional.</p>
+    <form onSubmit={complete} className="mt-8 space-y-6">
+      <div className="space-y-2"><label htmlFor="ob-name">Display name</label><Input id="ob-name" value={name} onChange={e => setName(e.target.value)} minLength={2} maxLength={50} required autoComplete="name" /></div>
+      <div className="space-y-2"><label htmlFor="ob-university">University</label><select id="ob-university" value={university} onChange={e => setUniversity(e.target.value)} required className={selectClass}><option value="">Choose a university</option>{universities.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}<option value="other">Other</option><option value="unspecified">Prefer not to specify</option></select><p className="text-xs text-muted-foreground">Self-declared affiliation does not verify enrollment or grant organizer access.</p></div>
+      {university === 'other' && <div className="space-y-2"><label htmlFor="ob-other">University name (optional)</label><Input id="ob-other" value={other} onChange={e => setOther(e.target.value)} maxLength={120} /></div>}
+      <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><label htmlFor="ob-program">Program (optional)</label><Input id="ob-program" value={program} onChange={e => setProgram(e.target.value)} maxLength={120} /></div><div className="space-y-2"><label htmlFor="ob-year">Year (optional)</label><Input id="ob-year" value={year} onChange={e => setYear(e.target.value)} maxLength={30} /></div></div>
+      <details className="rounded-lg border p-4"><summary className="cursor-pointer font-medium">Interests (optional)</summary><div className="pt-4"><InterestTagSelector selected={tags} onChange={setTags} min={0} /></div></details>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      <Button type="submit" disabled={saving || name.trim().length < 2 || !university} className="w-full">{saving ? 'Saving…' : 'Finish setup'}</Button>
+      <p className="text-sm text-muted-foreground">Talent enrollment is separate. Completing this profile does not share a resume or opt you into recruiting.</p>
+    </form>
+    <Link href="/" className="mt-6 inline-block text-sm underline">Keep browsing for now</Link>
+  </main>;
 }

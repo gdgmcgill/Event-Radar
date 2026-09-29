@@ -514,3 +514,40 @@ a full regeneration byte-for-byte.
 ---
 
 *Requirement: AUDIT-03, AUDIT-04 · Plan: 01-11 · Phase: 01-read-only-foundation-audit*
+
+## M1–M2 current-release overlay
+
+The Phase-1 audit remains historical. `tools/m1-m2-inventory.mjs` owns the nine
+new API rows and four new pages, and `classify-inventory.mjs` preserves then
+reapplies this reviewed overlay. Run it with `--write` to refresh only these
+rows; regenerate the CSV afterwards. Render mode stays `unknown` until the
+current build produces evidence rather than inferring it from source.
+
+Baseline Playwright explicitly disables all five release switches and the
+admin discovery preview. Discovery/detail reads therefore expect 404; saved
+reads and saves authenticate first, then require the feature. Save mutations
+also enforce completed onboarding. Banned API callers remain 403 at the proxy.
+Universities are a public active-only catalogue. New editorial API verbs are
+active-admin guarded; GET detail uses an absent opportunity while event metadata
+uses the existing approved event. Malformed mutation probes explicitly expect
+400 after authorization, including event metadata PUT and merge PATCH. New
+verbs are enumerated in `e2e/helpers/authorizationProbes.ts`; unlisted verbs fail
+the census instead of receiving an implicit expectation.
+
+`requireDiscoveryPage` is recorded as `feature` protection: disabled pages
+return 404, global enablement admits everyone, and the separate preview admits
+only an active authoritative admin. `/moderation/opportunities` retains the
+moderation layout and an independent page-level admin guard. Feature-enabled
+happy workflows are certified separately from this baseline-denial matrix.
+
+The historical `non_mcgill_signin` column remains an explicitly unseeded OAuth
+flow case, not a denied domain rule. M1 allows verified non-campus accounts;
+callback contract tests and a disposable-account local workflow verify that
+admission independently. No unseeded persona cell counts as an executed probe.
+
+For disabled pages, `notFound()` has Next's documented streaming semantics:
+HTTP 200 after shell streaming begins, otherwise HTTP 404. The page matrix
+requires the not-found heading, injected `robots=noindex`, and no discovery or
+saved-data client requests in either case. This does not change API 404 contracts
+or excuse unrelated browser errors. Source: installed Next
+`dist/docs/01-app/03-api-reference/{03-file-conventions,04-functions}/not-found.md`.

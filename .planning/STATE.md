@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: verifying
-stopped_at: M0 implementation delivered; local verification passed; external certification and stated requirement gaps pending
-last_updated: "2026-09-28T23:58:39.693558+00:00"
-last_activity: 2026-09-28
-last_activity_desc: M0 computer-use verification and UI fixes
+stopped_at: M1–M2 implemented and locally verified (baseline 2,003 and enabled 15 browser tests green); awaiting owner commit; deployment deferred
+last_updated: "2026-09-29T05:30:00+00:00"
+last_activity: 2026-09-29
+last_activity_desc: M1–M2 final baseline browser gate green after page-smoke redirect-fetch fix; local GoTrue TIME_WAIT exhaustion diagnosed
 progress:
   total_phases: 8
   completed_phases: 6
@@ -18,6 +18,13 @@ progress:
 ---
 
 # Project State
+
+## Current product work — M1–M2
+
+The owner explicitly declared M0 complete and authorized M1–M2 on 2026-09-28. P1-00–05 are implemented on `codex/m1-m2-opportunity-platform` from `de0854b`; deployment remains deferred. See [implementation report](milestones/m1-m2/REPORT.md), [computer-use verification](milestones/m1-m2/COMPUTER-USE-VERIFICATION.md), and [execution decisions](milestones/m1-m2/DECISIONS.md). This supersedes the old product prerequisite status below without claiming unobserved hosted certification. The historical foundation phase bookkeeping is retained; M1/M2 are product milestones, not renamed foundation phases.
+
+Next product milestone: M3 — full discovery/homepage, real supply/ingestion, resources and submissions. Hosted provider/sender, real curator identity and owner content inputs remain assigned release dependencies, not claims of completed configuration.
+
 
 ## M0 continuation — 2026-09-27
 
@@ -32,7 +39,7 @@ Computer-use follow-up (2026-09-28): verified local discovery, admin gates/login
 See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Every critical workflow in the existing app is verified correct, secure, and reproducible across all user roles before any new product feature is started. If a foundation change breaks a workflow that worked before, the program has failed.
-**Current focus:** Product M0 — Phase6 gap/review closure plus Foundation7–8 certification. See [M0 report](milestones/m0/REPORT.md).
+**Current focus:** Product M1–M2 local completion; M3 follows. See [M1–M2 report](milestones/m1-m2/REPORT.md). The position and metrics below are historical foundation bookkeeping.
 
 ## Current Position
 

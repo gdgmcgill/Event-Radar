@@ -8,7 +8,7 @@ import { EventBadge } from "@/components/events/EventBadge";
 import { formatDate, formatTimeFromISO, cn } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { exportEventIcal } from "@/lib/exportUtils";
-import type { Event, EventTag, ReviewAggregate } from "@/types";
+import type { Event, EventTag } from "@/types";
 import { ScrollRow } from "@/components/events/ScrollRow";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
 import {
@@ -18,7 +18,6 @@ import {
   Bookmark,
   Heart,
   Share2,
-  Star,
   ExternalLink,
   Flame,
   ArrowRight,
@@ -39,7 +38,6 @@ interface EventDetailViewProps {
   onLike?: () => void;
   onShare?: (platform: string) => void;
   onEventClick?: (eventId: string) => void;
-  reviews?: ReviewAggregate;
   children?: React.ReactNode;
   backHref?: string;
   backLabel?: string;
@@ -56,7 +54,6 @@ export function EventDetailView({
   onLike,
   onShare,
   onEventClick,
-  reviews,
   children,
   backHref = "/",
   backLabel = "Back to Events",
@@ -285,47 +282,6 @@ export function EventDetailView({
                 </div>
               )}
             </div>
-
-            {/* Reviews */}
-            {reviews && reviews.total_reviews > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-foreground">Reviews</h3>
-                  <div className="flex items-center gap-1 text-primary">
-                    <Star className="h-5 w-5 fill-current" />
-                    <span className="font-bold">
-                      {reviews.average_rating.toFixed(1)}
-                    </span>
-                    <span className="text-muted-foreground text-sm">
-                      ({reviews.total_reviews} review
-                      {reviews.total_reviews !== 1 ? "s" : ""})
-                    </span>
-                  </div>
-                </div>
-                {reviews.comments.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {reviews.comments.slice(0, 4).map((review, idx) => (
-                      <div
-                        key={idx}
-                        className="p-4 rounded-xl bg-black/[0.02] border border-black/10 dark:bg-white/[0.05] dark:border-white/10"
-                      >
-                        <p className="italic text-sm text-muted-foreground">
-                          &ldquo;{review.comment}&rdquo;
-                        </p>
-                        <div className="flex items-center gap-1 mt-2">
-                          {Array.from({ length: review.rating }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className="h-3 w-3 text-primary fill-current"
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
             {children}
           </div>

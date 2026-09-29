@@ -286,10 +286,10 @@ function Hero() {
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5 text-primary font-bold">
               <Zap className="w-4 h-4" />
-              Free for all McGill students
+              Free for students
             </div>
             <span className="text-border">·</span>
-            <span>McGill email required</span>
+            <span>Any verified email welcome</span>
           </div>
         </div>
 
@@ -640,7 +640,7 @@ function HowItWorks() {
   const steps = [
     {
       step: "01",
-      title: "Sign up with your McGill email",
+      title: "Sign up with your email",
       description:
         "Create your account in seconds using your @mcgill.ca or @mail.mcgill.ca email. Pick your interests and you're in.",
     },

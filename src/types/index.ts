@@ -100,6 +100,10 @@ export interface User {
   faculty?: string | null;
   visibility?: "public" | "private";
   onboarding_completed?: boolean;
+  university_id?: string | null;
+  other_university?: string | null;
+  program?: string | null;
+  affiliation_source?: "self_declared" | "verified_email" | null;
   banned_at?: string | null;
   ban_expires_at?: string | null;
   ban_reason?: string | null;
@@ -335,12 +339,7 @@ export interface Review {
   created_at: string;
 }
 
-export interface ReviewAggregate {
-  average_rating: number;
-  total_reviews: number;
-  distribution: { rating: number; count: number }[];
-  comments: { rating: number; comment: string; created_at: string }[];
-}
+
 
 // ── Featured Events Types ─────────────────────────────────────────────
 

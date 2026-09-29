@@ -79,13 +79,16 @@ export default async function ProfilePage() {
     pronouns: profile?.pronouns ?? null,
     year: profile?.year ?? null,
     faculty: profile?.faculty ?? null,
+    university_id: profile?.university_id ?? null,
+    other_university: profile?.other_university ?? null,
+    program: profile?.program ?? null,
     visibility: profile?.visibility ?? "public",
     created_at: user.created_at,
   };
 
   const subtitleParts: string[] = [];
   if (displayData.faculty) subtitleParts.push(displayData.faculty);
-  if (displayData.year) subtitleParts.push(`McGill '${displayData.year}`);
+  if (displayData.year) subtitleParts.push(displayData.year);
 
   return (
     <ProfileClient

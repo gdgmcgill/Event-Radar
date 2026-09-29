@@ -63,7 +63,7 @@ export const GET = withRoute({ cache: "private", action: "fetch invitations" }, 
 
 /**
  * POST /api/clubs/[id]/invites
- * Create an invitation for a McGill email. Owner-only.
+ * Create an invitation for an email address. Owner-only; acceptance requires the verified recipient session.
  */
 export const POST = withRoute({ cache: "private", action: "create invitation" }, async (request: NextRequest, { params }: RouteParams) => {
   try {

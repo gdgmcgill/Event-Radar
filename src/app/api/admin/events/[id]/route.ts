@@ -1,3 +1,4 @@
+import { isEventDuplicateReviewRequired, EVENT_DUPLICATE_REVIEW_MESSAGE } from "@/server/discovery/eventDuplicate";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
@@ -49,6 +50,7 @@ export const PUT = withRoute({ cache: "private", action: "update event" }, async
     .single();
 
   if (error) {
+    if (isEventDuplicateReviewRequired(error)) return NextResponse.json({ error: EVENT_DUPLICATE_REVIEW_MESSAGE }, { status: 400 });
     if (error.code === "PGRST116") {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }

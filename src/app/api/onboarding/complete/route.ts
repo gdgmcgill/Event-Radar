@@ -11,6 +11,9 @@ export const POST = withRoute({ cache: "private", action: "complete onboarding" 
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
 
+  if (!ctx.profile?.onboarding_completed) {
+    return NextResponse.json({ error: "Complete your profile first" }, { status: 400 });
+  }
   const cookieStore = await cookies();
 
   cookieStore.set("needs_onboarding", "", {

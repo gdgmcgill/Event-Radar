@@ -53,7 +53,7 @@ import type { AddressInfo, Socket } from "node:net";
 export type SimCacheResult = "HIT" | "MISS" | "BYPASS";
 
 export interface SharedCacheProxy {
-  /** `http://127.0.0.1:<port>`, the base URL to send requests through. */
+  /** `http://localhost:<port>`, matching the browser persona cookie host. */
   url: string;
   /** Upstream requests made, and hits served, since start. */
   stats(): { upstream: number; hits: number };
@@ -269,7 +269,7 @@ export async function startSharedCacheProxy(
   const { port } = server.address() as AddressInfo;
 
   return {
-    url: `http://127.0.0.1:${port}`,
+    url: `http://localhost:${port}`,
     stats: () => ({ upstream: upstreamCount, hits: hitCount }),
     close: () =>
       new Promise<void>((resolve) => {

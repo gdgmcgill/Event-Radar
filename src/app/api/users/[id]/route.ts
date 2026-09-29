@@ -39,15 +39,29 @@ export const PATCH = withRoute({ cache: "private", action: "update profile" }, a
     // trimmed (a blank or null image URL clears it), the rest as sent.
     const parsed = await parseBody(request, UserUpdateBody);
     if (!parsed.ok) return parsed.response;
+    const affiliationChanged = parsed.data.university_id !== undefined || parsed.data.other_university !== undefined;
+    // New student completion has required basics. Legacy completed profiles
+    // keep their state even when their historical fields are incomplete.
+    if (parsed.data.onboarding_completed === true && !ctx.profile?.onboarding_completed) {
+      if (!parsed.data.name || (!parsed.data.university_id && !parsed.data.other_university)) {
+        return NextResponse.json({ error: "Name and university choice are required to complete onboarding" }, { status: 400 });
+      }
+    }
+    if (parsed.data.university_id) {
+      const { data: university, error } = await ctx.supabase.from("universities").select("id").eq("id", parsed.data.university_id).eq("active", true).maybeSingle();
+      if (error) throw error;
+      if (!university) return NextResponse.json({ error: "Choose an active university" }, { status: 400 });
+    }
     const updatePayload = {
       updated_at: new Date().toISOString(),
       ...parsed.data,
+      ...(affiliationChanged ? { affiliation_source: "self_declared", university_id: parsed.data.university_id ?? null, other_university: parsed.data.other_university ?? null } : {}),
     } as Database["public"]["Tables"]["users"]["Update"];
 
     // DI-72: clients cannot set onboarding_completed directly through Data API.
     // This validated self-only path owns that transition; ordinary profile
     // changes continue through the caller's RLS policy.
-    const database = parsed.data.onboarding_completed === undefined
+    const database = parsed.data.onboarding_completed === undefined && !affiliationChanged
       ? ctx.supabase : getElevatedClient();
     const { data, error } = await database
       .from("users")

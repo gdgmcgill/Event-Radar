@@ -52,7 +52,6 @@ import {
   type BodilessRequestInit,
 } from "@/contracts/common";
 import { sanitizeText } from "@/lib/sanitize";
-import { isMcGillEmail } from "@/lib/utils";
 import type { FormOptions } from "@/server/body";
 
 // ─── Shared ──────────────────────────────────────────────────────────────────
@@ -361,7 +360,7 @@ export type ClubDeleteBodyOutput = z.infer<typeof ClubDeleteBody>;
 /**
  * email: a non-empty string ("Email is required"; a number threw on `.trim()`,
  * F-094), then, trimmed and lower-cased as the handler normalized it, a
- * McGill address. The output is the normalized email the handler used.
+ * valid email. P1-02 expands admission, not owner-only invitation authority.
  */
 export const ClubInviteBody = z.object({
   email: z
@@ -371,10 +370,7 @@ export const ClubInviteBody = z.object({
     )
     .transform((value) => value.trim().toLowerCase())
     .pipe(
-      z.custom<string>(
-        (value) => typeof value === "string" && isMcGillEmail(value),
-        { error: "Must be a McGill email" }
-      )
+      z.email({ error: "Enter a valid email address" }).max(254)
     ),
 });
 

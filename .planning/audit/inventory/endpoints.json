@@ -3335,7 +3335,8 @@
     "route": "/api/events/[id]/save",
     "methods": [
       "DELETE",
-      "POST"
+      "POST",
+      "PUT"
     ],
     "dynamic_segments": [
       "[id]"
@@ -5927,6 +5928,563 @@
       "suspension_expired": 302,
       "non_mcgill_signin": "n/a",
       "machine_no_credential": 302
+    },
+    "findings": []
+  },
+  {
+    "id": "api.universities",
+    "file": "src/app/api/universities/route.ts",
+    "route": "/api/universities",
+    "methods": [
+      "GET"
+    ],
+    "dynamic_segments": [],
+    "signals": {
+      "uses_cookie_client": true,
+      "uses_service_client": false,
+      "calls_verify_admin": false,
+      "calls_get_user": false,
+      "calls_get_session": false,
+      "calls_check_ban": false,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": false,
+      "has_zod": false,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": false,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [],
+      "loc": 11
+    },
+    "auth_requirement": "anonymous",
+    "role_required": null,
+    "rls_reliance": "primary",
+    "service_role_justified": null,
+    "personalized": false,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "none",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 200,
+      "onboarded_student": 200,
+      "mid_onboarding_student": 200,
+      "club_member": 200,
+      "club_owner": 200,
+      "multi_club_organizer": 200,
+      "cross_club_attacker": 200,
+      "admin": 200,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 200,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 200
+    },
+    "findings": []
+  },
+  {
+    "id": "api.discovery",
+    "file": "src/app/api/discovery/route.ts",
+    "route": "/api/discovery",
+    "methods": [
+      "GET"
+    ],
+    "dynamic_segments": [],
+    "signals": {
+      "uses_cookie_client": true,
+      "uses_service_client": false,
+      "calls_verify_admin": false,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": false,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": false,
+      "has_zod": true,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": true,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [],
+      "loc": 17
+    },
+    "auth_requirement": "anonymous",
+    "role_required": null,
+    "rls_reliance": "primary",
+    "service_role_justified": null,
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 404,
+      "onboarded_student": 404,
+      "mid_onboarding_student": 404,
+      "club_member": 404,
+      "club_owner": 404,
+      "multi_club_organizer": 404,
+      "cross_club_attacker": 404,
+      "admin": 404,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 404,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 404
+    },
+    "findings": []
+  },
+  {
+    "id": "api.opportunities.id",
+    "file": "src/app/api/opportunities/[id]/route.ts",
+    "route": "/api/opportunities/[id]",
+    "methods": [
+      "GET"
+    ],
+    "dynamic_segments": [
+      "id"
+    ],
+    "signals": {
+      "uses_cookie_client": true,
+      "uses_service_client": false,
+      "calls_verify_admin": false,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": false,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": false,
+      "has_zod": true,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": false,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [],
+      "loc": 16
+    },
+    "auth_requirement": "anonymous",
+    "role_required": null,
+    "rls_reliance": "primary",
+    "service_role_justified": null,
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 404,
+      "onboarded_student": 404,
+      "mid_onboarding_student": 404,
+      "club_member": 404,
+      "club_owner": 404,
+      "multi_club_organizer": 404,
+      "cross_club_attacker": 404,
+      "admin": 404,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 404,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 404
+    },
+    "findings": []
+  },
+  {
+    "id": "api.opportunities.id.save",
+    "file": "src/app/api/opportunities/[id]/save/route.ts",
+    "route": "/api/opportunities/[id]/save",
+    "methods": [
+      "PUT",
+      "DELETE"
+    ],
+    "dynamic_segments": [
+      "id"
+    ],
+    "signals": {
+      "uses_cookie_client": true,
+      "uses_service_client": false,
+      "calls_verify_admin": false,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": true,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": false,
+      "has_zod": true,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": false,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [
+        "opportunities",
+        "saved_opportunities",
+        "saved_opportunities"
+      ],
+      "loc": 25
+    },
+    "auth_requirement": "authenticated",
+    "role_required": null,
+    "rls_reliance": "primary",
+    "service_role_justified": null,
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 401,
+      "onboarded_student": 404,
+      "mid_onboarding_student": 404,
+      "club_member": 404,
+      "club_owner": 404,
+      "multi_club_organizer": 404,
+      "cross_club_attacker": 404,
+      "admin": 404,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 404,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 401
+    },
+    "findings": []
+  },
+  {
+    "id": "api.saved",
+    "file": "src/app/api/saved/route.ts",
+    "route": "/api/saved",
+    "methods": [
+      "GET"
+    ],
+    "dynamic_segments": [],
+    "signals": {
+      "uses_cookie_client": true,
+      "uses_service_client": false,
+      "calls_verify_admin": false,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": true,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": false,
+      "has_zod": true,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": true,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [],
+      "loc": 18
+    },
+    "auth_requirement": "authenticated",
+    "role_required": null,
+    "rls_reliance": "primary",
+    "service_role_justified": null,
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 401,
+      "onboarded_student": 404,
+      "mid_onboarding_student": 404,
+      "club_member": 404,
+      "club_owner": 404,
+      "multi_club_organizer": 404,
+      "cross_club_attacker": 404,
+      "admin": 404,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 404,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 401
+    },
+    "findings": []
+  },
+  {
+    "id": "api.saved.status",
+    "file": "src/app/api/saved/status/route.ts",
+    "route": "/api/saved/status",
+    "methods": [
+      "GET"
+    ],
+    "dynamic_segments": [],
+    "signals": {
+      "uses_cookie_client": true,
+      "uses_service_client": false,
+      "calls_verify_admin": false,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": true,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": false,
+      "has_zod": true,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": false,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [
+        "saved_events",
+        "saved_opportunities"
+      ],
+      "loc": 20
+    },
+    "auth_requirement": "authenticated",
+    "role_required": null,
+    "rls_reliance": "primary",
+    "service_role_justified": null,
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 401,
+      "onboarded_student": 404,
+      "mid_onboarding_student": 404,
+      "club_member": 404,
+      "club_owner": 404,
+      "multi_club_organizer": 404,
+      "cross_club_attacker": 404,
+      "admin": 404,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 404,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 401
+    },
+    "findings": []
+  },
+  {
+    "id": "api.admin.opportunities",
+    "file": "src/app/api/admin/opportunities/route.ts",
+    "route": "/api/admin/opportunities",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "dynamic_segments": [],
+    "signals": {
+      "uses_cookie_client": false,
+      "uses_service_client": true,
+      "calls_verify_admin": true,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": true,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": true,
+      "has_zod": true,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": false,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [
+        "opportunities"
+      ],
+      "loc": 23
+    },
+    "auth_requirement": "admin",
+    "role_required": "adminContext: active user + requireRole(admin) before elevated access",
+    "rls_reliance": "bypassed",
+    "service_role_justified": "M2 editorial writes/read drafts after authoritative active-admin guard; src/server/db/REGISTRY.md",
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 401,
+      "onboarded_student": 403,
+      "mid_onboarding_student": 403,
+      "club_member": 403,
+      "club_owner": 403,
+      "multi_club_organizer": 403,
+      "cross_club_attacker": 403,
+      "admin": 200,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 403,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 401
+    },
+    "findings": []
+  },
+  {
+    "id": "api.admin.opportunities.id",
+    "file": "src/app/api/admin/opportunities/[id]/route.ts",
+    "route": "/api/admin/opportunities/[id]",
+    "methods": [
+      "GET",
+      "PATCH"
+    ],
+    "dynamic_segments": [
+      "id"
+    ],
+    "signals": {
+      "uses_cookie_client": false,
+      "uses_service_client": true,
+      "calls_verify_admin": true,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": true,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": true,
+      "has_zod": true,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": false,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [],
+      "loc": 26
+    },
+    "auth_requirement": "admin",
+    "role_required": "adminContext: active user + requireRole(admin) before elevated access",
+    "rls_reliance": "bypassed",
+    "service_role_justified": "M2 editorial writes/read drafts after authoritative active-admin guard; src/server/db/REGISTRY.md",
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 401,
+      "onboarded_student": 403,
+      "mid_onboarding_student": 403,
+      "club_member": 403,
+      "club_owner": 403,
+      "multi_club_organizer": 403,
+      "cross_club_attacker": 403,
+      "admin": 404,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 403,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 401
+    },
+    "findings": []
+  },
+  {
+    "id": "api.admin.events.id.discovery",
+    "file": "src/app/api/admin/events/[id]/discovery/route.ts",
+    "route": "/api/admin/events/[id]/discovery",
+    "methods": [
+      "GET",
+      "PUT",
+      "PATCH"
+    ],
+    "dynamic_segments": [
+      "id"
+    ],
+    "signals": {
+      "uses_cookie_client": false,
+      "uses_service_client": true,
+      "calls_verify_admin": true,
+      "calls_get_user": true,
+      "calls_get_session": false,
+      "calls_check_ban": true,
+      "inline_role_check": false,
+      "references_club_members": false,
+      "parses_body": true,
+      "has_zod": true,
+      "sets_cache_control": true,
+      "cache_control_values": [
+        "private, no-store"
+      ],
+      "env_vars_referenced": [],
+      "env_gated_auth": false,
+      "has_try_catch": false,
+      "catch_any_count": 0,
+      "console_count": 0,
+      "as_any_count": 0,
+      "tables_referenced": [
+        "events",
+        "event_discovery_metadata",
+        "event_discovery_universities"
+      ],
+      "loc": 39
+    },
+    "auth_requirement": "admin",
+    "role_required": "adminContext: active user + requireRole(admin) before elevated access",
+    "rls_reliance": "bypassed",
+    "service_role_justified": "M2 editorial writes/read drafts after authoritative active-admin guard; src/server/db/REGISTRY.md",
+    "personalized": true,
+    "cache_policy_today": "private, no-store",
+    "cache_policy_target": "private, no-store",
+    "input_validation": "zod",
+    "test_present": true,
+    "dead_or_duplicate": false,
+    "expected_status": {
+      "anonymous": 401,
+      "onboarded_student": 403,
+      "mid_onboarding_student": 403,
+      "club_member": 403,
+      "club_owner": 403,
+      "multi_club_organizer": 403,
+      "cross_club_attacker": 403,
+      "admin": 200,
+      "banned_permanent": 403,
+      "suspended_active": 403,
+      "suspension_expired": 403,
+      "non_mcgill_signin": "n/a",
+      "machine_no_credential": 401
     },
     "findings": []
   }

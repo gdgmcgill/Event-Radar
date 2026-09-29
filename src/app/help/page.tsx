@@ -51,14 +51,9 @@ const SECTIONS: Section[] = [
         question: "Who can sign up for UNI-VERSE?",
         answer: (
           <p>
-            UNI-VERSE is open to all McGill University community members. You
-            must have a valid McGill email address ending in{" "}
-            <code className="bg-muted px-1 rounded text-sm">@mcgill.ca</code>{" "}
-            or{" "}
-            <code className="bg-muted px-1 rounded text-sm">
-              @mail.mcgill.ca
-            </code>{" "}
-            to create an account.
+            Anyone with an email address they can verify can create an account.
+            You can browse public opportunities without signing in. University
+            affiliation is self-declared, with Other and prefer-not-to-specify options.
           </p>
         ),
       },
@@ -66,22 +61,19 @@ const SECTIONS: Section[] = [
         question: "How do I sign in?",
         answer: (
           <p>
-            Click the <strong>Sign In</strong> button in the top-right corner
-            (or in the sidebar on desktop). You&apos;ll be redirected to
-            McGill&apos;s Microsoft login page. Enter your McGill credentials
-            and you&apos;ll be signed in automatically, no separate password
-            needed for UNI-VERSE.
+            Click <strong>Sign In</strong> and choose Google or an email code.
+            For email sign-in, enter the code from your inbox in the same sign-in
+            window. No separate UNI-VERSE password is needed.
           </p>
         ),
       },
       {
-        question: "Why do I need a McGill email?",
+        question: "Does choosing a university verify my enrollment?",
         answer: (
           <p>
-            The McGill email requirement ensures that only current McGill
-            students, staff, and faculty can access features like saving events,
-            RSVPs, and personalised recommendations. It also keeps the community
-            relevant and safe for everyone on campus.
+            No. Your university choice helps tailor discovery and can be corrected
+            in profile settings. It does not verify enrollment or give you club,
+            administrator, or recruiter permissions.
           </p>
         ),
       },

@@ -328,16 +328,16 @@ describe("proxy ring (PRESERVE — REFAC-11)", () => {
 
   // ── 7. Onboarding guard ───────────────────────────────────────────────────
   describe("7. onboarding guard", () => {
-    it("an un-onboarded user carrying needs_onboarding=1 on / → 307 to /onboarding", async () => {
+    it("P1-02: an un-onboarded user may browse the public home despite the advisory cookie", async () => {
       signedInAs("unonboarded");
 
       const res = await proxy(req("/", { cookie: "needs_onboarding=1" }));
 
-      expect(res.status).toBe(REDIRECT_STATUS);
-      expect(location(res)?.pathname).toBe("/onboarding");
+      expect(res.status).toBe(200);
+      expect(location(res)).toBeNull();
     });
 
-    it.each(["/onboarding", "/api/events", "/auth/signout"])(
+    it.each(["/onboarding", "/events", "/clubs", "/resources", "/api/events", "/auth/signout"])(
       "the same user on %s is not sent to /onboarding",
       async (route) => {
         signedInAs("unonboarded");

@@ -71,7 +71,9 @@ import { assertSeedTargetAllowed } from "./scripts/seed/guard";
 import { localStackEnv } from "./e2e/env";
 import { LOCAL_HEALTH_TOKEN } from "./e2e/helpers/healthCredential";
 
-export const BASE_URL = "http://127.0.0.1:3000";
+// NextURL normalizes loopback IP origins to localhost, including callbacks.
+// Keep browser cookies and redirects on the same host; Supabase stays127.0.0.1.
+export const BASE_URL = "http://localhost:3000";
 
 const stack = localStackEnv();
 
@@ -110,10 +112,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup"],
       testMatch: /specs\/.*\.spec\.ts/,
+      testIgnore: /specs\/m1-m2-acceptance\.spec\.ts/,
     },
   ],
   webServer: {
-    command: "npm run build && npm run start",
+    // Match request.url callback origins to BASE_URL and cookie scope.
+    command: "npm run build && npm run start -- --hostname 127.0.0.1",
     url: BASE_URL,
     // NEVER REUSE. `reuseExistingServer: !process.env.CI` was 03-REVIEW.md
     // WR-03: a developer machine with `npm run dev` already on port 3000 — the
@@ -149,6 +153,14 @@ export default defineConfig({
       // The local server has no /_vercel/* script endpoints. Explicitly blank
       // deployment detection instead of inheriting a shell or .env value.
       VERCEL: "",
+      // Release switches must not leak in from local shell/.env files. The
+      // baseline harness verifies the fail-closed deployment configuration.
+      FEATURE_DISCOVERY_UI: "false",
+      FEATURE_DISCOVERY_ADMIN_PREVIEW: "false",
+      FEATURE_NATIVE_APPLICATIONS: "false",
+      FEATURE_RECRUITER_ACCESS: "false",
+      FEATURE_RESUME_PARSING: "false",
+      FEATURE_NEW_FEEDBACK_WRITES: "false",
       // The rate-limit store (plan 05-18, DEC-50, research C8/C13). All four
       // Upstash names are set to the empty string, never left unset: Next's
       // env loader (@next/env) never overrides a variable that is already

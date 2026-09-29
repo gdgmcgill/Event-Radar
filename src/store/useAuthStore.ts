@@ -33,8 +33,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       user_metadata?: Record<string, unknown>;
       created_at: string;
       updated_at?: string;
-    }) => {
-      // Set user immediately so the UI renders without waiting for DB
+    }, requestId: number) => {
+      // Admission is complete only after the server has synchronized a profile.
+      // Publishing the OTP Auth user earlier renders authenticated Next Links;
+      // their prefetch can hit the missing-profile ring and revoke the session.
       const basicUser: AppUser = {
         id: authUser.id,
         email: authUser.email ?? "",
@@ -51,15 +53,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         updated_at: authUser.updated_at ?? authUser.created_at,
       };
 
-      set({ user: basicUser, loading: false });
+      set(state => ({ user: state.user?.id === authUser.id ? state.user : null, loading: true }));
 
       // Fetch roles, interest_tags, and club membership
       try {
         const profileResult = await supabase
           .from("users")
-          .select("roles, interest_tags, inferred_tags, faculty, year, avatar_url")
+          .select("roles, name, onboarding_completed, university_id, other_university, program, affiliation_source, interest_tags, inferred_tags, faculty, year, avatar_url")
           .eq("id", authUser.id)
           .single();
+        if (requestId !== authRequestId) return;
+        if (profileResult.error || !profileResult.data) {
+          // OTP completion owns profile creation. Leave the browser session
+          // intact and the UI anonymous until its callback navigation finishes.
+          set({ user: null, loading: false, hasClubs: false });
+          return;
+        }
 
         const clubResult = await supabase
           .from("club_members")
@@ -77,41 +86,52 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           ? (clubResult.count ?? 0) > 0
           : isOrganizerFromProfile;
 
-        set((state) => ({
+        if (requestId !== authRequestId) return;
+        set(() => ({
+          loading: false,
           hasClubs,
-          user: state.user && profile
+          user: profile
             ? {
-                ...state.user,
+                ...basicUser,
                 roles,
+                name: (profile.name as string) ?? basicUser.name,
+                onboarding_completed: profile.onboarding_completed === true,
+                university_id: (profile.university_id as string) ?? null,
+                other_university: (profile.other_university as string) ?? null,
+                program: (profile.program as string) ?? null,
+                affiliation_source: (profile.affiliation_source as AppUser["affiliation_source"]) ?? null,
                 interest_tags: (profile.interest_tags as string[]) ?? [],
                 inferred_tags: (profile.inferred_tags as string[]) ?? [],
                 faculty: (profile.faculty as string) ?? null,
                 year: (profile.year as string) ?? null,
-                avatar_url: (profile.avatar_url as string) ?? state.user.avatar_url,
+                avatar_url: (profile.avatar_url as string) ?? basicUser.avatar_url,
               }
-            : state.user,
+            : null,
         }));
       } catch (err) {
         console.error("[AuthStore] Profile/club fetch failed:", err);
+        if (requestId === authRequestId) set({ user: null, loading: false, hasClubs: false });
       }
     };
 
     // Initial fetch
     const initialFetch = async () => {
+      const requestId = ++authRequestId;
       try {
         const {
           data: { user: authUser },
           error,
         } = await supabase.auth.getUser();
 
+        if (requestId !== authRequestId) return;
         if (error || !authUser) {
           set({ user: null, loading: false });
           return;
         }
 
-        await fetchAndSetUser(authUser);
+        await fetchAndSetUser(authUser, requestId);
       } catch {
-        set({ user: null, loading: false });
+        if (requestId === authRequestId) set({ user: null, loading: false });
       }
     };
 
@@ -133,7 +153,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       setTimeout(() => {
         // Ignore stale jobs that were superseded by newer auth events.
         if (requestId !== authRequestId) return;
-        void fetchAndSetUser(authUser);
+        void fetchAndSetUser(authUser, requestId);
       }, 0);
     };
 

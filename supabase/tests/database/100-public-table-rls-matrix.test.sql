@@ -2,7 +2,7 @@
 -- Owner writes below create fixtures only. Every policy assertion uses anon or
 -- authenticated roles; subject, unrelated caller and administrator have distinct JWTs.
 BEGIN;
-SELECT plan(210);
+SELECT plan(239);
 INSERT INTO auth.users(id,email) VALUES ('00000000-0000-4000-8000-000000100001','m0-00000000-0000-4000-8000-000000100001@example.invalid'),('00000000-0000-4000-8000-000000100002','m0-00000000-0000-4000-8000-000000100002@example.invalid'),('00000000-0000-4000-8000-000000100003','m0-00000000-0000-4000-8000-000000100003@example.invalid'),('00000000-0000-4000-8000-000000100004','m0-00000000-0000-4000-8000-000000100004@example.invalid');
 INSERT INTO public.users (id,email,name,roles) VALUES
  ('00000000-0000-4000-8000-000000100001','m0-00000000-0000-4000-8000-000000100001@example.invalid','M0 matrix','{user}'),
@@ -129,10 +129,24 @@ SELECT is((SELECT count(*)::integer FROM public.users WHERE id IN ('00000000-000
 
 SELECT is((SELECT count(*)::integer FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND NOT c.relrowsecurity),0,'every public table has RLS enabled');
 
+INSERT INTO public.opportunities(id,slug,listing_type,title,description,organization,relevance_scope,status,published_at,created_by,updated_by) VALUES
+ ('00000000-0000-4000-8000-000000109991','m2-matrix-public','job','M2 matrix','Public','M2','specific','published',now(),'00000000-0000-4000-8000-000000100004','00000000-0000-4000-8000-000000100004'),
+ ('00000000-0000-4000-8000-000000109992','m2-matrix-draft','job','M2 matrix','Private','M2','specific','draft',NULL,'00000000-0000-4000-8000-000000100004','00000000-0000-4000-8000-000000100004');
+INSERT INTO public.opportunity_universities VALUES('00000000-0000-4000-8000-000000109991','10000000-0000-4000-8000-000000000001'),('00000000-0000-4000-8000-000000109992','10000000-0000-4000-8000-000000000001');
+INSERT INTO public.event_discovery_metadata(event_id,updated_by) VALUES('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000100004'),('00000000-0000-4000-8000-000000101082','00000000-0000-4000-8000-000000100004');
+INSERT INTO public.event_discovery_universities VALUES('00000000-0000-4000-8000-000000101081','10000000-0000-4000-8000-000000000001'),('00000000-0000-4000-8000-000000101082','10000000-0000-4000-8000-000000000001');
+INSERT INTO public.saved_opportunities(user_id,opportunity_id) VALUES('00000000-0000-4000-8000-000000100001','00000000-0000-4000-8000-000000109991');
+
 -- CERT-07 assertion region start
 
 SET LOCAL ROLE anon;
 SELECT set_config('request.jwt.claim.sub','',true);
+SELECT is((SELECT count(*)::integer FROM public.universities WHERE id='10000000-0000-4000-8000-000000000001'),1,'universities anon read allow');
+SELECT is((SELECT count(*)::integer FROM public.opportunities WHERE id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunities anon read allow');
+SELECT is((SELECT count(*)::integer FROM public.opportunity_universities WHERE opportunity_id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunity_universities anon read allow');
+SELECT is((SELECT count(*)::integer FROM public.event_discovery_metadata WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_metadata anon read allow');
+SELECT is((SELECT count(*)::integer FROM public.event_discovery_universities WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_universities anon read allow');
+SELECT throws_ok('SELECT * FROM public.saved_opportunities','42501',NULL,'saved_opportunities anon read deny');
 SELECT set_config('request.jwt.claims','{}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),0,'admin_audit_log anon read deny');
 SELECT is((SELECT count(*)::integer FROM public.club_followers WHERE id IN ('00000000-0000-4000-8000-000000101011','00000000-0000-4000-8000-000000101012')),2,'club_followers anon read allow');
@@ -156,7 +170,7 @@ SELECT is((SELECT count(*)::integer FROM public.notifications WHERE id IN ('0000
 SELECT is((SELECT count(*)::integer FROM public.organizer_requests WHERE id IN ('00000000-0000-4000-8000-000000101191','00000000-0000-4000-8000-000000101192')),0,'organizer_requests anon read deny');
 SELECT is((SELECT count(*)::integer FROM public.recommendation_explicit_feedback WHERE id IN ('00000000-0000-4000-8000-000000101201','00000000-0000-4000-8000-000000101202')),0,'recommendation_explicit_feedback anon read deny');
 SELECT is((SELECT count(*)::integer FROM public.recommendation_feedback WHERE id IN ('00000000-0000-4000-8000-000000101211','00000000-0000-4000-8000-000000101212')),0,'recommendation_feedback anon read deny');
-SELECT is((SELECT count(*)::integer FROM public.reviews WHERE id IN ('00000000-0000-4000-8000-000000101221','00000000-0000-4000-8000-000000101222')),2,'reviews anon read allow');
+SELECT throws_ok('SELECT * FROM public.reviews','42501',NULL,'reviews anon read deny');
 SELECT is((SELECT count(*)::integer FROM public.rsvps WHERE id IN ('00000000-0000-4000-8000-000000101231','00000000-0000-4000-8000-000000101232')),0,'rsvps anon read deny');
 SELECT is((SELECT count(*)::integer FROM public.saved_events WHERE id IN ('00000000-0000-4000-8000-000000101241','00000000-0000-4000-8000-000000101242')),0,'saved_events anon read deny');
 SELECT is((SELECT count(*)::integer FROM public.tag_interaction_counts WHERE tag='m0_rls_matrix' AND user_id IN ('00000000-0000-4000-8000-000000100001','00000000-0000-4000-8000-000000100002')),0,'tag_interaction_counts anon read deny');
@@ -167,6 +181,12 @@ SELECT is((SELECT count(*)::integer FROM public.users WHERE id IN ('00000000-000
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000100001',true);
+SELECT is((SELECT count(*)::integer FROM public.universities WHERE id='10000000-0000-4000-8000-000000000001'),1,'universities subject read allow');
+SELECT is((SELECT count(*)::integer FROM public.opportunities WHERE id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunities subject read allow');
+SELECT is((SELECT count(*)::integer FROM public.opportunity_universities WHERE opportunity_id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunity_universities subject read allow');
+SELECT is((SELECT count(*)::integer FROM public.event_discovery_metadata WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_metadata subject read allow');
+SELECT is((SELECT count(*)::integer FROM public.event_discovery_universities WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_universities subject read allow');
+SELECT is((SELECT count(*)::integer FROM public.saved_opportunities WHERE user_id='00000000-0000-4000-8000-000000100001'),1,'saved_opportunities subject read allow');
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000100001","role":"authenticated"}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),0,'admin_audit_log subject read deny');
 SELECT is((SELECT count(*)::integer FROM public.club_followers WHERE id IN ('00000000-0000-4000-8000-000000101011','00000000-0000-4000-8000-000000101012')),2,'club_followers subject read allow');
@@ -190,7 +210,7 @@ SELECT is((SELECT count(*)::integer FROM public.notifications WHERE id IN ('0000
 SELECT is((SELECT count(*)::integer FROM public.organizer_requests WHERE id IN ('00000000-0000-4000-8000-000000101191','00000000-0000-4000-8000-000000101192')),1,'organizer_requests subject read allow');
 SELECT is((SELECT count(*)::integer FROM public.recommendation_explicit_feedback WHERE id IN ('00000000-0000-4000-8000-000000101201','00000000-0000-4000-8000-000000101202')),1,'recommendation_explicit_feedback subject read allow');
 SELECT is((SELECT count(*)::integer FROM public.recommendation_feedback WHERE id IN ('00000000-0000-4000-8000-000000101211','00000000-0000-4000-8000-000000101212')),1,'recommendation_feedback subject read allow');
-SELECT is((SELECT count(*)::integer FROM public.reviews WHERE id IN ('00000000-0000-4000-8000-000000101221','00000000-0000-4000-8000-000000101222')),2,'reviews subject read allow');
+SELECT is((SELECT count(*)::integer FROM public.reviews WHERE id IN ('00000000-0000-4000-8000-000000101221','00000000-0000-4000-8000-000000101222')),1,'reviews subject read allow');
 SELECT is((SELECT count(*)::integer FROM public.rsvps WHERE id IN ('00000000-0000-4000-8000-000000101231','00000000-0000-4000-8000-000000101232')),1,'rsvps subject read allow');
 SELECT is((SELECT count(*)::integer FROM public.saved_events WHERE id IN ('00000000-0000-4000-8000-000000101241','00000000-0000-4000-8000-000000101242')),1,'saved_events subject read allow');
 SELECT is((SELECT count(*)::integer FROM public.tag_interaction_counts WHERE tag='m0_rls_matrix' AND user_id IN ('00000000-0000-4000-8000-000000100001','00000000-0000-4000-8000-000000100002')),1,'tag_interaction_counts subject read allow');
@@ -201,6 +221,12 @@ SELECT is((SELECT count(*)::integer FROM public.users WHERE id IN ('00000000-000
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000100003',true);
+SELECT is((SELECT count(*)::integer FROM public.universities WHERE id='10000000-0000-4000-8000-000000000001'),1,'universities outsider read allow');
+SELECT is((SELECT count(*)::integer FROM public.opportunities WHERE id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunities outsider read allow');
+SELECT is((SELECT count(*)::integer FROM public.opportunity_universities WHERE opportunity_id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunity_universities outsider read allow');
+SELECT is((SELECT count(*)::integer FROM public.event_discovery_metadata WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_metadata outsider read allow');
+SELECT is((SELECT count(*)::integer FROM public.event_discovery_universities WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_universities outsider read allow');
+SELECT is((SELECT count(*)::integer FROM public.saved_opportunities WHERE user_id='00000000-0000-4000-8000-000000100001'),0,'saved_opportunities outsider read deny');
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000100003","role":"authenticated"}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),0,'admin_audit_log outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.club_followers WHERE id IN ('00000000-0000-4000-8000-000000101011','00000000-0000-4000-8000-000000101012')),2,'club_followers outsider read allow');
@@ -224,7 +250,7 @@ SELECT is((SELECT count(*)::integer FROM public.notifications WHERE id IN ('0000
 SELECT is((SELECT count(*)::integer FROM public.organizer_requests WHERE id IN ('00000000-0000-4000-8000-000000101191','00000000-0000-4000-8000-000000101192')),0,'organizer_requests outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.recommendation_explicit_feedback WHERE id IN ('00000000-0000-4000-8000-000000101201','00000000-0000-4000-8000-000000101202')),0,'recommendation_explicit_feedback outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.recommendation_feedback WHERE id IN ('00000000-0000-4000-8000-000000101211','00000000-0000-4000-8000-000000101212')),0,'recommendation_feedback outsider read deny');
-SELECT is((SELECT count(*)::integer FROM public.reviews WHERE id IN ('00000000-0000-4000-8000-000000101221','00000000-0000-4000-8000-000000101222')),2,'reviews outsider read allow');
+SELECT is((SELECT count(*)::integer FROM public.reviews WHERE id IN ('00000000-0000-4000-8000-000000101221','00000000-0000-4000-8000-000000101222')),0,'reviews outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.rsvps WHERE id IN ('00000000-0000-4000-8000-000000101231','00000000-0000-4000-8000-000000101232')),0,'rsvps outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.saved_events WHERE id IN ('00000000-0000-4000-8000-000000101241','00000000-0000-4000-8000-000000101242')),0,'saved_events outsider read deny');
 SELECT is((SELECT count(*)::integer FROM public.tag_interaction_counts WHERE tag='m0_rls_matrix' AND user_id IN ('00000000-0000-4000-8000-000000100001','00000000-0000-4000-8000-000000100002')),0,'tag_interaction_counts outsider read deny');
@@ -235,6 +261,12 @@ SELECT is((SELECT count(*)::integer FROM public.users WHERE id IN ('00000000-000
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000100004',true);
+SELECT is((SELECT count(*)::integer FROM public.universities WHERE id='10000000-0000-4000-8000-000000000001'),1,'universities admin read allow');
+SELECT is((SELECT count(*)::integer FROM public.opportunities WHERE id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunities admin read allow');
+SELECT is((SELECT count(*)::integer FROM public.opportunity_universities WHERE opportunity_id IN ('00000000-0000-4000-8000-000000109991','00000000-0000-4000-8000-000000109992')),1,'opportunity_universities admin read allow');
+SELECT is((SELECT count(*)::integer FROM public.event_discovery_metadata WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_metadata admin read allow');
+SELECT is((SELECT count(*)::integer FROM public.event_discovery_universities WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')),1,'event_discovery_universities admin read allow');
+SELECT is((SELECT count(*)::integer FROM public.saved_opportunities WHERE user_id='00000000-0000-4000-8000-000000100001'),0,'saved_opportunities admin read deny');
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000100004","role":"authenticated"}',true);
 SELECT is((SELECT count(*)::integer FROM public.admin_audit_log WHERE id IN ('00000000-0000-4000-8000-000000101001','00000000-0000-4000-8000-000000101002')),2,'admin_audit_log admin read allow');
 SELECT is((SELECT count(*)::integer FROM public.club_followers WHERE id IN ('00000000-0000-4000-8000-000000101011','00000000-0000-4000-8000-000000101012')),2,'club_followers admin read allow');
@@ -275,7 +307,7 @@ WITH changed AS (UPDATE public.events SET description='forged' WHERE id IN ('000
 WITH changed AS (UPDATE public.club_followers SET user_id='00000000-0000-4000-8000-000000100001' WHERE id IN ('00000000-0000-4000-8000-000000101011','00000000-0000-4000-8000-000000101012') RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),0,'club_followers anon write deny');
 WITH changed AS (UPDATE public.featured_clubs SET priority=99 WHERE id IN ('00000000-0000-4000-8000-000000101121','00000000-0000-4000-8000-000000101122') RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),0,'featured_clubs anon write deny');
 WITH changed AS (UPDATE public.featured_events SET priority=99 WHERE id IN ('00000000-0000-4000-8000-000000101131','00000000-0000-4000-8000-000000101132') RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),0,'featured_events anon write deny');
-WITH changed AS (UPDATE public.reviews SET rating=1 WHERE id IN ('00000000-0000-4000-8000-000000101221','00000000-0000-4000-8000-000000101222') RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),0,'reviews anon write deny');
+SELECT throws_ok($q$UPDATE public.reviews SET rating=1 WHERE id IN ('00000000-0000-4000-8000-000000101221','00000000-0000-4000-8000-000000101222')$q$,'42501',NULL,'reviews anon write deny');
 WITH changed AS (UPDATE public.user_follows SET follower_id='00000000-0000-4000-8000-000000100001' WHERE id IN ('00000000-0000-4000-8000-000000101271','00000000-0000-4000-8000-000000101272') RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),0,'user_follows anon write deny');
 SELECT throws_ok($q$UPDATE public.event_popularity_scores SET popularity_score=999 WHERE event_id IN ('00000000-0000-4000-8000-000000101081','00000000-0000-4000-8000-000000101082')$q$,'42501',NULL,'event_popularity_scores anon write deny');
 
@@ -297,8 +329,8 @@ WITH changed AS (UPDATE public.users SET name='M0 edited' WHERE id='00000000-000
 WITH changed AS (UPDATE public.users SET name='M0 edited' WHERE id='00000000-0000-4000-8000-000000100002' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),0,'users subject write deny');
 WITH changed AS (UPDATE public.events SET description='M0 edited' WHERE id='00000000-0000-4000-8000-000000101081' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),1,'events subject write allow');
 WITH changed AS (UPDATE public.events SET description='M0 edited' WHERE id='00000000-0000-4000-8000-000000101082' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),0,'events subject write deny');
-WITH changed AS (UPDATE public.reviews SET rating=4 WHERE id='00000000-0000-4000-8000-000000101221' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),1,'reviews subject write allow');
-WITH changed AS (UPDATE public.reviews SET rating=4 WHERE id='00000000-0000-4000-8000-000000101222' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),0,'reviews subject write deny');
+SELECT throws_ok($q$UPDATE public.reviews SET rating=4 WHERE id='00000000-0000-4000-8000-000000101221'$q$,'42501',NULL,'reviews subject write deny');
+SELECT throws_ok($q$UPDATE public.reviews SET rating=4 WHERE id='00000000-0000-4000-8000-000000101222'$q$,'42501',NULL,'reviews subject write deny');
 WITH changed AS (UPDATE public.recommendation_explicit_feedback SET feedback_type='negative' WHERE id='00000000-0000-4000-8000-000000101201' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),1,'recommendation_explicit_feedback subject write allow');
 WITH changed AS (UPDATE public.recommendation_explicit_feedback SET feedback_type='negative' WHERE id='00000000-0000-4000-8000-000000101202' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),0,'recommendation_explicit_feedback subject write deny');
 WITH changed AS (UPDATE public.notifications SET read=true WHERE id='00000000-0000-4000-8000-000000101181' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),1,'notifications subject write allow');
@@ -337,6 +369,11 @@ WITH changed AS (UPDATE public.featured_events SET priority=2 WHERE id='00000000
 WITH changed AS (UPDATE public.experiments SET description='Admin edited' WHERE id='00000000-0000-4000-8000-000000101111' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),1,'experiments admin write allow');
 WITH changed AS (UPDATE public.experiment_variants SET name='Admin edited' WHERE id='00000000-0000-4000-8000-000000101101' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),1,'experiment_variants admin write allow');
 WITH changed AS (UPDATE public.experiment_assignments SET assigned_at=now() WHERE id='00000000-0000-4000-8000-000000101091' RETURNING 1) SELECT is((SELECT count(*)::integer FROM changed),1,'experiment_assignments admin write allow');
+SELECT throws_ok('DELETE FROM public.universities WHERE false','42501',NULL,'universities admin write deny');
+SELECT throws_ok('DELETE FROM public.opportunities WHERE false','42501',NULL,'opportunities admin write deny');
+SELECT throws_ok('DELETE FROM public.opportunity_universities WHERE false','42501',NULL,'opportunity_universities admin write deny');
+SELECT throws_ok('DELETE FROM public.event_discovery_metadata WHERE false','42501',NULL,'event_discovery_metadata admin write deny');
+SELECT throws_ok('DELETE FROM public.event_discovery_universities WHERE false','42501',NULL,'event_discovery_universities admin write deny');
 -- CERT-07 assertion region end
 SELECT tests.act_as_owner();
 SELECT * FROM finish();

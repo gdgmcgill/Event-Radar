@@ -263,14 +263,14 @@ describe("P3 un-onboarded caller on the two onboarding exemptions", () => {
       as("unonboarded");
       const outcome = await runArm(arm);
       expect(refusedWith(outcome, 403, "Onboarding required")).toBe(false);
-      expect(outcome.status).toBe(200);
+      expect(outcome.status).toBe(arm.id === "onboarding/complete POST" ? 400 : 200);
     }
   );
 
-  test("P3 onboarding/complete POST answers 200 {success:true}", async () => {
+  test("P1-02 onboarding/complete cannot substitute for completed profile", async () => {
     as("unonboarded");
     const arm = WRITE_ARMS.find((a) => a.id === "onboarding/complete POST")!;
-    expect(await runArm(arm)).toEqual({ status: 200, body: { success: true } });
+    expect(await runArm(arm)).toEqual({ status: 400, body: { error: "Complete your profile first" } });
   });
 
   test("P3 users/[id] PATCH (self) stores onboarding_completed true", async () => {

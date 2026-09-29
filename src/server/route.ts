@@ -45,9 +45,10 @@
  */
 
 import type { NextResponse } from "next/server";
+import { getDisabledRouteFeature, isFeatureEnabled, type FeatureName } from "@/lib/features";
 import { unstable_rethrow } from "next/navigation";
 import { currentRequestError, log, runWithRequest } from "./log";
-import { serverError } from "./errors";
+import { notFound, serverError } from "./errors";
 import { applyCachePolicy, type CacheClass } from "./http";
 import { captureServerError } from "./observability/sentry";
 
@@ -56,6 +57,8 @@ export type RouteOptions = {
   cache: CacheClass;
   /** The verb phrase for the uncaught-throw 500: "Failed to <action>". */
   action?: string;
+  /** Optional explicit gate in addition to the registered route families. */
+  feature?: FeatureName;
 };
 
 /** The request header the proxy stamps and the wrapper echoes. */
@@ -123,7 +126,9 @@ export function withRoute<A extends unknown[]>(
     return runWithRequest({ requestId, route }, async () => {
       let response: Response;
       try {
-        response = await fn(...args);
+        const disabled = (opts.feature && !isFeatureEnabled(opts.feature)) ||
+          (route && getDisabledRouteFeature(route, method));
+        response = disabled ? notFound("Not found") : await fn(...args);
       } catch (error) {
         unstable_rethrow(error);
         log.error("unhandled route error", { error, method });

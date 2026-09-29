@@ -1,3 +1,4 @@
+import { isEventDuplicateReviewRequired, EVENT_DUPLICATE_REVIEW_MESSAGE } from "@/server/discovery/eventDuplicate";
 /**
  * GET /api/events/:id - Fetch a single event by ID
  * PATCH /api/events/:id - Edit an event (role-based permissions)
@@ -298,6 +299,7 @@ export const PATCH = withRoute({ cache: "private", action: "update event" }, asy
       .single();
 
     if (error) {
+      if (isEventDuplicateReviewRequired(error)) return NextResponse.json({ error: EVENT_DUPLICATE_REVIEW_MESSAGE }, { status: 400 });
       log.error("Error updating event", { eventId: id, error });
       return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
     }

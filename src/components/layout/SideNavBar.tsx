@@ -187,7 +187,7 @@ export function SideNavBar({ forceCollapsed = false }: { forceCollapsed?: boolea
               UNI-VERSE
             </h1>
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mt-1">
-              McGill University
+              Montreal students
             </p>
           </div>
         </Link>

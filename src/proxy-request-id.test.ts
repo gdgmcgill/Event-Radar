@@ -302,14 +302,14 @@ describe("proxy request id (DEC-74, C19)", () => {
     expect(page.headers.get("x-request-id")).toMatch(UUID);
   });
 
-  it("onboarding redirect carries the id", async () => {
+  it("student authoring onboarding redirect carries the id", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
     mockSingle.mockResolvedValue({
       data: { banned_at: null, ban_expires_at: null, onboarding_completed: false },
       error: null,
     });
 
-    const res = await proxy(req("/"));
+    const res = await proxy(req("/my-events"));
     expect(res.status).toBe(307);
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("location")).toContain("/onboarding");

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Uni-Verse** is a campus event discovery platform for McGill University. Students can discover, filter, and save events happening on campus.
+**Uni-Verse** is becoming an opportunity platform for Montreal students. The confirmed Phase 1 scope is expanded §47 Build Now. M0 is owner-closed for M1–M2 implementation; historical hosted certification gaps remain documented. See `.planning/milestones/m1-m2/DECISIONS.md`. Deployment remains deferred until requested.
 
 ## Tech Stack
 
@@ -127,7 +127,9 @@ Optional, used in deployed environments (see `docs/observability.md` and `docs/h
 ## Important Notes
 
 - Never modify `.env.local` — contains actual Supabase credentials
-- McGill email validation is required for authentication
+- Admit any verified email; never delete accounts because of their domain. School affiliation never grants roles. Retain active-user, ban, role, and student-write onboarding guards.
+- Legacy reviews are private owner/admin history. Do not restore public ratings or aggregates.
+- Release switches in `src/lib/features.ts` are server-authoritative and default off. Preserve legacy event storage, URLs, and saves.
 - Types in `src/types/index.ts` define all data structures — keep them in sync with the DB schema
 - Test files (`*.test.ts`, `*.test.tsx`) are type-checked by the main tsconfig (`npx tsc --noEmit` and the `next build` type-check both cover them) and run by Jest's two projects (`node` and `jsdom`). Type a dynamically imported route handler as the handler's own type, e.g. `(typeof import("@/app/api/.../route"))["GET"]`, and call it with a request and a `{ params: Promise<...> }` context; never widen a route signature to make a test compile
 

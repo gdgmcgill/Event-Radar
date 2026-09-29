@@ -23,6 +23,7 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { M2_ARMS } from "../m2RouteArms";
 import { WRITE_ARMS } from "./writeHandlerTable";
 
 const API_DIR = join(process.cwd(), "src", "app", "api");
@@ -47,7 +48,7 @@ function enumerateWriteArms(): string[] {
 describe("T0 (F-058): the write-arm table equals the tree, in either export form", () => {
   it("every write arm under src/app/api has exactly one descriptor (39)", () => {
     const ids = WRITE_ARMS.map((arm) => arm.id);
-    expect([...ids].sort()).toEqual(enumerateWriteArms());
+    expect([...ids, ...M2_ARMS.filter(a => a.write).map(a => `${a.route} ${a.verb}`)].sort()).toEqual(enumerateWriteArms());
     expect(ids).toHaveLength(39);
   });
 });

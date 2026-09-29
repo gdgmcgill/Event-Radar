@@ -36,6 +36,8 @@
  * and `/api/health` are in the worklist too (46 drivable rows); both were
  * wrapped private by 06-14 and enter at C4/C5 without a C1/C2 history.
  *
+ * M1/M2 adds eight private GETs (54 total), with explicit typed invokers.
+ *
  * Moved so far (`ADOPTED` below): C4 and C5 pin the adopted arms at
  * `private, no-store` with a UUID `x-request-id`, signed in and anonymous
  * (06-13: the admin and moderation arms; the club, organizer-request and
@@ -52,6 +54,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { M2_ARMS, M2_ID } from "./m2RouteArms";
 import {
   createFakeSupabase,
   type FakeSupabase,
@@ -110,6 +113,11 @@ const idOf = (id: string) => ({ params: Promise.resolve({ id }) });
 
 /** Keyed by the inventory's `route` field. */
 const GET_ARMS: Record<string, { path: string; invoke: GetInvoke }> = {
+  // M1/M2: typed, explicit descriptors also driven through validation,
+  // authorization and injected backend faults in m2-route-boundaries.test.ts.
+  ...Object.fromEntries(M2_ARMS.filter(arm => arm.verb === "GET").map(arm => [
+    `/api/${arm.route}`, { path: arm.route.replace("[id]", M2_ID), invoke: arm.invoke },
+  ])),
   "/api/admin/analytics/events": {
     path: "admin/analytics/events",
     invoke: async () => (await import("@/app/api/admin/analytics/events/route")).GET(),
@@ -372,6 +380,7 @@ async function cacheControl(route: string, auth: string, who: Who): Promise<stri
  * per moved row). Only ever grows, until C1 and C2 are empty (06-14).
  */
 const ADOPTED: ReadonlySet<string> = new Set([
+  ...M2_ARMS.filter(arm => arm.verb === "GET").map(arm => `/api/${arm.route}`),
   // 06-13 Task 1: admin and moderation
   "/api/admin/analytics/events",
   "/api/admin/analytics/users",
@@ -439,13 +448,13 @@ describe("C0: the worklist is the inventory", () => {
       (route) => !(route in GET_ARMS) && !(route in NOT_DRIVABLE)
     );
     expect(missing).toEqual([]);
-    expect(drivable).toHaveLength(46);
+    expect(drivable).toHaveLength(54);
   });
 
   it("every ADOPTED route is a drivable worklist row", () => {
     const routes = drivable.map(([route]) => route);
     expect([...ADOPTED].filter((r) => !routes.includes(r))).toEqual([]);
-    expect(pending.length + adopted.length).toBe(46);
+    expect(pending.length + adopted.length).toBe(54);
   });
 
   it("every NOT_DRIVABLE route is in the worklist", () => {

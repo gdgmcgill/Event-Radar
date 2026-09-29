@@ -22,6 +22,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { M2_ARMS } from "../m2RouteArms";
 import { ADMIN_ARMS } from "./adminArmTable";
 
 const API_DIR = join(process.cwd(), "src", "app", "api");
@@ -64,16 +65,16 @@ function treeArms(): string[] {
 
 describe("T0 (F-058): the admin arm table equals the tree, in either export form", () => {
   it("holds exactly the exported verbs of the admin family (35 arms)", () => {
-    expect(ADMIN_ARMS.map((arm) => arm.id).sort()).toEqual(treeArms());
+    expect([...ADMIN_ARMS.map((arm) => arm.id), ...M2_ARMS.filter(a => a.admin).map(a => `${a.route} ${a.verb}`)].sort()).toEqual(treeArms());
     expect(ADMIN_ARMS).toHaveLength(35);
   });
 });
 
 describe("T1 (F-058 fixed): every admin arm wears withRoute with the private class", () => {
-  const adminArms = ADMIN_ARMS.filter((arm) => arm.id.startsWith("admin/"));
+  const adminArms = [...ADMIN_ARMS.filter((arm) => arm.id.startsWith("admin/")), ...M2_ARMS.filter(a => a.admin).map(a => ({ id: `${a.route} ${a.verb}` }))];
 
-  it("covers the 33 admin arms", () => {
-    expect(adminArms).toHaveLength(33);
+  it("covers the 40 admin arms", () => {
+    expect(adminArms).toHaveLength(40);
   });
 
   it.each(adminArms.map((arm): [string] => [arm.id]))("%s", (id) => {

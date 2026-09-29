@@ -1,4 +1,6 @@
 /**
+ * P1-03 intentional exception: legacy reviews always return 404 closed; historical
+ * payload probes remain present with that explicit retirement outcome.
  * PRESERVE characterization — every slice-7 shape-400, in today's check order
  * (plan 06-07, REFAC-15)
  *
@@ -116,6 +118,13 @@ const CAN_ANSWER_400 =
  * 06-04.
  */
 const PINNED_ELSEWHERE: Record<string, readonly string[]> = {
+  "admin/events/[id]/discovery": ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  "admin/opportunities": ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  "admin/opportunities/[id]": ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  discovery: ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  saved: ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  "saved/status": ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  "onboarding/complete": ["src/__tests__/api/m1-accounts.test.ts"],
   events: [
     "src/__tests__/api/events/events-list-characterization.test.ts",
     "src/app/api/events/route.test.ts",

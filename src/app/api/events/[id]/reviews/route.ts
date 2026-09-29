@@ -1,225 +1,43 @@
+/** P1-03: immutable legacy review history, scoped to its author or an active
+ * administrator. Public aggregates and new legacy rating writes are retired.
+ */
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
-import type { Review } from "@/types";
-import { parseBody } from "@/server/body";
-import { ReviewBody } from "@/contracts/events";
-import { logRouteError, withRoute } from "@/server/route";
+import { parseQuery } from "@/server/body";
+import { LegacyReviewHistoryQuery } from "@/contracts/events";
+import { withRoute } from "@/server/route";
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
+interface RouteContext { params: Promise<{ id: string }> }
 
-/**
- * POST /api/events/:id/reviews
- * Submit a review for a past event. Requires authentication, valid rating (1-5),
- * event must have ended, user must have RSVP'd going, and no prior review.
- */
-export const POST = withRoute({ cache: "private", action: "create review" }, async (request: Request, context: RouteContext) => {
-  try {
-    const ctx = await createRequestContext();
-    const active = requireActiveUser(ctx);
-    if (!active.ok) return active.response;
-    const onboarded = requireOnboarded(ctx);
-    if (!onboarded.ok) return onboarded.response;
-    const supabase = ctx.supabase;
-
-    const userId = active.user.id;
-    const { id: eventId } = await context.params;
-
-    // The contract (plan 06-08, REFAC-15): "Invalid JSON body" and the
-    // rating rule keep their bytes. F-094: a non-object body is a 400
-    // (INTENTIONAL BEHAVIOUR CHANGE). The "after the event has ended" rule
-    // needs the event row and stays below.
-    const parsed = await parseBody(request, ReviewBody);
-    if (!parsed.ok) return parsed.response;
-    const { rating, comment } = parsed.data;
-
-    // Check 1: Event exists and has ended
-    const { data: event, error: eventError } = await supabase
-      .from("events")
-      .select("id, start_date, end_date, club_id")
-      .eq("id", eventId)
-      .single();
-
-    if (eventError || !event) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-
-    // M0 review-window finding: a started event may still be in progress.
-    // Legacy rows without an end retain their start-time fallback.
-    if (new Date(event.end_date ?? event.start_date) >= new Date()) {
-      return NextResponse.json(
-        { error: "Reviews can only be submitted after the event has ended" },
-        { status: 400 }
-      );
-    }
-
-    // Check 2: User RSVP'd going
-    const { data: rsvp } = await supabase
-      .from("rsvps")
-      .select("id, status")
-      .eq("event_id", eventId)
-      .eq("user_id", userId)
-      .eq("status", "going")
-      .maybeSingle();
-
-    if (!rsvp) {
-      return NextResponse.json(
-        { error: "Only attendees who RSVP'd going can review" },
-        { status: 403 }
-      );
-    }
-
-    // Check 3: No existing review
-    const { data: existingReview } = await supabase
-      .from("reviews")
-      .select("id")
-      .eq("event_id", eventId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (existingReview) {
-      return NextResponse.json(
-        { error: "You have already reviewed this event" },
-        { status: 409 }
-      );
-    }
-
-    // Insert review
-    const { data: review, error: insertError } = await supabase
-      .from("reviews")
-      .insert({
-        user_id: userId,
-        event_id: eventId,
-        rating,
-        comment: comment || null,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      logRouteError(insertError);
-      return NextResponse.json(
-        { error: "Failed to create review" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ review }, { status: 201 });
-  } catch (error) {
-    logRouteError(error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
+// Permanently retired, including when the separate future feedback switch is
+// enabled. The migration also removes client write privileges and policies.
+export const POST = withRoute({ cache: "private", action: "create legacy review" }, async (_request: Request, _context: RouteContext) => {
+  const ctx = await createRequestContext();
+  const active = requireActiveUser(ctx);
+  if (!active.ok) return active.response;
+  const onboarded = requireOnboarded(ctx);
+  if (!onboarded.ok) return onboarded.response;
+  return NextResponse.json({ error: "Legacy review submissions are closed" }, { status: 404 });
 });
 
-/**
- * GET /api/events/:id/reviews
- * Returns aggregate review data, user's review (if any), and can_review eligibility.
- * Organizers see anonymized comments; non-organizers get empty comments array.
- */
-export const GET = withRoute({ cache: "private", action: "fetch reviews" }, async (request: Request, context: RouteContext) => {
-  try {
-    const supabase = await createClient();
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authData.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = authData.user.id;
-    const { id: eventId } = await context.params;
-
-    // Get event info (for club_id to check organizer status)
-    const { data: event } = await supabase
-      .from("events")
-      .select("id, start_date, end_date, club_id")
-      .eq("id", eventId)
-      .single();
-
-    // Check if user is an organizer (club member)
-    let isOrganizer = false;
-    if (event?.club_id) {
-      isOrganizer = (
-        await requireClubRole(supabase, event.club_id, userId, CLUB_ROLES)
-      ).ok;
-    }
-
-    // Fetch all reviews for this event
-    const { data: reviews } = await supabase
-      .from("reviews")
-      .select("id, user_id, event_id, rating, comment, created_at")
-      .eq("event_id", eventId);
-
-    const allReviews = (reviews || []) as unknown as Review[];
-
-    // Calculate aggregate
-    const totalReviews = allReviews.length;
-    const averageRating =
-      totalReviews > 0
-        ? Math.round(
-            (allReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews) *
-              10
-          ) / 10
-        : 0;
-
-    // Distribution: count per rating 1-5
-    const distribution = [1, 2, 3, 4, 5].map((rating) => ({
-      rating,
-      count: allReviews.filter((r) => r.rating === rating).length,
-    }));
-
-    // Anonymized comments (only for organizers, only non-null comments)
-    const comments = isOrganizer
-      ? allReviews
-          .filter((r) => r.comment)
-          .map((r) => ({
-            rating: r.rating,
-            comment: r.comment as string,
-            created_at: r.created_at,
-          }))
-      : [];
-
-    // User's own review
-    const userReview = allReviews.find((r) => r.user_id === userId) || null;
-
-    // Can user review? Must have RSVP'd going, event ended, no existing review
-    let canReview = false;
-    if (!userReview && event) {
-      const eventEnded = new Date(event.end_date ?? event.start_date) < new Date();
-      if (eventEnded) {
-        const { data: rsvp } = await supabase
-          .from("rsvps")
-          .select("id")
-          .eq("event_id", eventId)
-          .eq("user_id", userId)
-          .eq("status", "going")
-          .maybeSingle();
-        canReview = !!rsvp;
-      }
-    }
-
-    return NextResponse.json({
-      aggregate: {
-        average_rating: averageRating,
-        total_reviews: totalReviews,
-        distribution,
-        comments,
-      },
-      user_review: userReview,
-      can_review: canReview,
-    });
-  } catch (error) {
-    logRouteError(error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
+export const GET = withRoute({ cache: "private", action: "fetch legacy review history" }, async (request: Request, context: RouteContext) => {
+  const ctx = await createRequestContext();
+  const active = requireActiveUser(ctx);
+  if (!active.ok) return active.response;
+  const query = parseQuery(new URL(request.url).searchParams, LegacyReviewHistoryQuery);
+  if (!query.ok) return query.response;
+  const { id } = await context.params;
+  const admin = ctx.profile?.roles?.includes("admin") === true;
+  let history = ctx.supabase.from("reviews")
+    .select("id,event_id,user_id,rating,comment,created_at")
+    .eq("event_id", id);
+  // The explicit subject condition is independent defense; RLS enforces the
+  // same boundary even through the Data API. Event ownership grants nothing.
+  if (!admin) history = history.eq("user_id", active.user.id);
+  const { data, error } = await history.order("created_at", { ascending: false })
+    .order("id", { ascending: false }).range(query.data.offset, query.data.offset + query.data.limit - 1);
+  if (error) throw error;
+  return NextResponse.json({ reviews: data ?? [] });
 });

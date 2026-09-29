@@ -79,7 +79,7 @@ test.describe("actual onboarding transition", () => {
 
   test("interests persist and completion unlocks a personal event submission, edit and delete", async ({ page, playwright, baseURL }) => {
     const snapshot = await db.from("users")
-      .select("name,pronouns,year,faculty,interest_tags,onboarding_completed")
+      .select("name,pronouns,year,faculty,interest_tags,onboarding_completed,university_id,other_university,affiliation_source,program")
       .eq("id", IDS.mid_onboarding_student).single();
     expect(snapshot.error).toBeNull();
     expect(snapshot.data?.onboarding_completed).toBe(false);
@@ -95,7 +95,7 @@ test.describe("actual onboarding transition", () => {
       // completion; the second clears its advisory cookie only.
       const profile = {
         name: "M0 Completed Student", pronouns: "they/them", year: "U2", faculty: "Engineering",
-        interest_tags: ["tech", "academic"], onboarding_completed: true,
+        interest_tags: ["tech", "academic"], other_university: "Other", university_id: null, onboarding_completed: true,
       } satisfies UserUpdateBodyInput;
       const updated = await page.request.patch(`/api/users/${IDS.mid_onboarding_student}`, { data: profile });
       expect(updated.status()).toBe(200);
@@ -139,7 +139,7 @@ test.describe("actual onboarding transition", () => {
         try {
           expect((await db.from("users").update(original).eq("id", IDS.mid_onboarding_student)).error).toBeNull();
           const restored = await db.from("users")
-            .select("name,pronouns,year,faculty,interest_tags,onboarding_completed")
+            .select("name,pronouns,year,faculty,interest_tags,onboarding_completed,university_id,other_university,affiliation_source,program")
             .eq("id", IDS.mid_onboarding_student).single();
           expect(restored.error).toBeNull();
           expect(restored.data, "restore every profile field changed by the wizard").toEqual(original);
