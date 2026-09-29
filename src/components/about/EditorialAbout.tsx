@@ -38,9 +38,13 @@ export function EditorialAbout() {
         <p>
           Every public submission — an opportunity or a company&apos;s hiring
           request — is reviewed by a person before it can appear. Have an
-          opportunity or a role to share?{" "}
+          opportunity to share?{" "}
           <Link href="/submit" className="font-medium underline">
             Submit it here
+          </Link>
+          . Hiring, or have a role to share?{" "}
+          <Link href="/for-companies" className="font-medium underline">
+            Tell us about it
           </Link>
           .
         </p>

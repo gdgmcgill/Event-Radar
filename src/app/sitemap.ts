@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getFeatureFlags } from "@/lib/features";
+import { log } from "@/server/log";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://universeapp.ca";
@@ -100,12 +101,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // `discovery_public` has no `updated_at` column (deviation from the
     // brief, which named that column); `published_at` is the closest
     // freshness signal the public projection actually carries.
-    const { data: opportunities } = await supabase
+    const now = new Date().toISOString();
+    const { data: opportunities, error: opportunitiesError } = await supabase
       .from("discovery_public")
       .select("id, published_at")
       .eq("kind", "opportunity")
       .is("canonical_id", null)
+      .lte("published_at", now)
       .limit(500);
+    if (opportunitiesError) {
+      log.warn("sitemap query failed", { scope: "sitemap", section: "opportunities" });
+    }
 
     const opportunityPages: MetadataRoute.Sitemap = (opportunities ?? [])
       .filter((row): row is { id: string; published_at: string | null } => !!row.id)
@@ -116,12 +122,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.6,
       }));
 
-    const { data: resources } = await supabase
+    const { data: resources, error: resourcesError } = await supabase
       .from("resources")
       .select("slug, reviewed_at")
       .eq("status", "published")
       .is("deleted_at", null)
       .limit(500);
+    if (resourcesError) {
+      log.warn("sitemap query failed", { scope: "sitemap", section: "resources" });
+    }
 
     const resourcePages: MetadataRoute.Sitemap = (resources ?? []).map((row) => ({
       url: `${baseUrl}/resources/${row.slug}`,

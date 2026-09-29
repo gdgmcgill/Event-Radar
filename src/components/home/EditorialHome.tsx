@@ -116,10 +116,16 @@ export async function EditorialHome() {
         )}
       </SectionShell>
 
-      {picks.status === "ok" && picks.items.length > 0 && (
+      {picks.status === "error" ? (
         <SectionShell title="Ady’s Picks">
-          <ListingGrid items={picks.items} />
+          <SectionErrorNotice />
         </SectionShell>
+      ) : (
+        picks.items.length > 0 && (
+          <SectionShell title="Ady’s Picks">
+            <ListingGrid items={picks.items} />
+          </SectionShell>
+        )
       )}
 
       <SectionShell title="Browse by type">

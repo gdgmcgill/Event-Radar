@@ -27,6 +27,11 @@ const themeScript = `
 `;
 
 export const metadata: Metadata = {
+  // The sitemap (`src/app/sitemap.ts`) already hard-codes this base; setting
+  // it here too makes every relative canonical/OG/Twitter URL emitted from
+  // `generateMetadata` (events, opportunities, resources) resolve to an
+  // absolute URL instead of a bare path.
+  metadataBase: new URL("https://universeapp.ca"),
   title: {
     default: "UNI-VERSE | Opportunities for Montreal students",
     template: "%s | UNI-VERSE",

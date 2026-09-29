@@ -41,6 +41,11 @@ interface EventDetailViewProps {
   onShare?: (platform: string) => void;
   onEventClick?: (eventId: string) => void;
   children?: React.ReactNode;
+  /** The in-app RSVP control (and nothing else — Friends Going, Invite,
+   * Reviews stay in `children`). Rendered only when the event is not a
+   * closed discovery listing, so the caller never has to duplicate that
+   * gate itself. */
+  rsvpSlot?: React.ReactNode;
   backHref?: string;
   backLabel?: string;
   isCreator?: boolean;
@@ -60,6 +65,7 @@ export function EventDetailView({
   onShare,
   onEventClick,
   children,
+  rsvpSlot,
   backHref = "/",
   backLabel = "Back to Events",
   isCreator = false,
@@ -296,6 +302,7 @@ export function EventDetailView({
               )}
             </div>
 
+            {!discovery?.closed && rsvpSlot}
             {children}
           </div>
 

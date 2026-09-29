@@ -94,6 +94,29 @@ describe("ListingFacts", () => {
     expect(queryByText("Deadline")).not.toBeInTheDocument();
   });
 
+  it("omits the When fact when there is no starts_at", () => {
+    const { queryByText } = render(<ListingFacts item={BASE_ITEM} />);
+    expect(queryByText("When")).not.toBeInTheDocument();
+  });
+
+  it("shows the occurrence under When and the deadline under Deadline without repeating either, for a listing with both", () => {
+    const item: DiscoveryItem = {
+      ...BASE_ITEM,
+      starts_at: "2026-10-01T18:00:00Z",
+      ends_at: "2026-10-01T20:00:00Z",
+      deadline_at: "2026-09-25T23:59:00Z",
+      deadline_precision: "datetime",
+    };
+    const { getByText, container } = render(<ListingFacts item={item} />);
+    expect(getByText("When")).toBeInTheDocument();
+    expect(getByText("Deadline")).toBeInTheDocument();
+    // "When" is the occurrence (Oct 1), "Deadline" the application cutoff
+    // (Sep 25) — the two must not show the same date.
+    expect(container.textContent).toMatch(/When[\s\S]*Oct 1, 2026/);
+    expect(container.textContent).toMatch(/Deadline[\s\S]*Sep 25, 2026/);
+    expect(container.textContent).not.toContain("Apply by");
+  });
+
   it("shows the pick reason only for an editorial pick", () => {
     const notPicked = render(<ListingFacts item={BASE_ITEM} />);
     expect(notPicked.queryByText("Pick reason")).not.toBeInTheDocument();

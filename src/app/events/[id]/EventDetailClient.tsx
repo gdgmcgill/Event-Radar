@@ -303,11 +303,12 @@ export default function EventDetailClient({
         isCreator={isCreator}
         onEdit={() => setEditModalOpen(true)}
         discovery={discovery}
+        rsvpSlot={<RsvpButton eventId={event.id} userId={user?.id ?? null} />}
       >
-        {/* RSVP, Friends Going, Invite — rendered inside left column */}
+        {/* Friends Going, Invite — rendered inside left column. The native
+            RSVP control itself is `rsvpSlot`, which EventDetailView hides
+            for a closed discovery listing. */}
         <div className="space-y-4">
-          <RsvpButton eventId={event.id} userId={user?.id ?? null} />
-
           {user && id && <FriendsGoing eventId={id} />}
 
           {user && (

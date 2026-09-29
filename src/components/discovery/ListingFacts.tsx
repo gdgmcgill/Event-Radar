@@ -1,5 +1,5 @@
 import type { DiscoveryItem } from "@/contracts/discovery";
-import { actionDate, provenanceLabel } from "./presentation";
+import { provenanceLabel } from "./presentation";
 
 const LAST_CHECKED_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   month: "short",
@@ -7,6 +7,28 @@ const LAST_CHECKED_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   year: "numeric",
   timeZone: "America/Toronto",
 });
+
+const WHEN_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "America/Toronto",
+  timeZoneName: "short",
+});
+
+/** "When" is the occurrence (`starts_at`/`ends_at`), never the deadline —
+ * `actionDate()` (used by cards) prefers the deadline when one exists, which
+ * would make a listing with both repeat the same "Apply by …" text under
+ * both "When" and "Deadline". Omitted entirely when there is no `starts_at`
+ * (e.g. a rolling-deadline opportunity with no fixed occurrence). */
+function whenFact(item: DiscoveryItem): string | null {
+  if (!item.starts_at) return null;
+  const start = WHEN_FORMATTER.format(new Date(item.starts_at));
+  if (!item.ends_at) return start;
+  return `${start} – ${WHEN_FORMATTER.format(new Date(item.ends_at))}`;
+}
 
 /** The Deadline fact is distinct from "When": it exists only for listings
  * that carry an application/registration deadline separate from the
@@ -73,10 +95,11 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  * pages. No fact here ever says "Verified" — provenance says where a
  * listing came from, never that anyone confirmed every detail. */
 export function ListingFacts({ item }: { item: DiscoveryItem }) {
+  const when = whenFact(item);
   const deadline = deadlineFact(item);
   return (
     <dl className="grid gap-5 text-sm sm:grid-cols-2">
-      <Fact label="When">{actionDate(item)}</Fact>
+      {when && <Fact label="When">{when}</Fact>}
       {deadline && <Fact label="Deadline">{deadline}</Fact>}
       <Fact label="Eligibility">
         {item.eligibility_text ?? "Check eligibility with organizer"}
