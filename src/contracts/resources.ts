@@ -26,23 +26,43 @@ export const SafeMarkdownBody = z
     if (reason) ctx.addIssue({ code: "custom", message: reason });
   });
 
+/**
+ * The base shape carries NO defaults on its nullable fields. Fix round 1,
+ * IMPORTANT: `.partial()` in zod 4 still applies a field's `.default()` when
+ * that field is absent from the input (partial makes a key optional, not
+ * default-free), so `ResourceFields.partial()` would silently turn `{title:
+ * "x"}` into `{title:"x", body_markdown:null, external_url:null,
+ * author_url:null, source_note:null}` — and the RPC's `p_data ? 'key'`
+ * presence check would then null out every field the caller never touched.
+ * `ResourceFields` (this shape) is what `.partial()` uses for an edit, so an
+ * untouched field is simply ABSENT from its output. `ResourceCreateBody`
+ * layers the create-only null defaults back on for a full create/replace
+ * submission, where every field is expected to be present one way or another.
+ */
 export const ResourceFields = z
   .object({
     slug: text(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
     resource_type: ResourceType,
     title: text(200),
     summary: text(500),
-    body_markdown: SafeMarkdownBody.nullable().default(null),
-    external_url: SafeHttpsUrl.nullable().default(null),
+    body_markdown: SafeMarkdownBody.nullable(),
+    external_url: SafeHttpsUrl.nullable(),
     category: ResourceCategory,
     audience: text(200),
     author_name: text(120),
-    author_url: SafeHttpsUrl.nullable().default(null),
-    source_note: nullableText(500).default(null),
+    author_url: SafeHttpsUrl.nullable(),
+    source_note: nullableText(500),
   })
   .strict();
 
-function shapeRules(value: z.output<typeof ResourceFields>, ctx: z.RefinementCtx) {
+const ResourceFieldsWithCreateDefaults = ResourceFields.extend({
+  body_markdown: SafeMarkdownBody.nullable().default(null),
+  external_url: SafeHttpsUrl.nullable().default(null),
+  author_url: SafeHttpsUrl.nullable().default(null),
+  source_note: nullableText(500).default(null),
+}).strict();
+
+function shapeRules(value: z.output<typeof ResourceFieldsWithCreateDefaults>, ctx: z.RefinementCtx) {
   if (value.resource_type === "guide") {
     if (!value.body_markdown || !value.body_markdown.trim()) {
       ctx.addIssue({ code: "custom", message: "A guide needs body text", path: ["body_markdown"] });
@@ -61,7 +81,7 @@ function shapeRules(value: z.output<typeof ResourceFields>, ctx: z.RefinementCtx
   }
 }
 
-export const ResourceCreateBody = ResourceFields.superRefine(shapeRules);
+export const ResourceCreateBody = ResourceFieldsWithCreateDefaults.superRefine(shapeRules);
 export type ResourceInput = z.input<typeof ResourceCreateBody>;
 export type ResourceData = z.output<typeof ResourceCreateBody>;
 

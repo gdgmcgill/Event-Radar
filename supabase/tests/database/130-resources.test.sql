@@ -1,6 +1,11 @@
 -- M3 P1-08: authored resources. Admin-authored only; public reads published rows.
+-- Transaction-local Storage metadata fixtures; no real blob is created/removed
+-- (same pattern as 085-club-storage-owner-policies.test.sql). The deletion
+-- flag models the Storage API's own SQL session so RLS, rather than the
+-- service's direct-SQL deletion guard, is the boundary under test.
 BEGIN;
 SELECT no_plan();
+SET LOCAL storage.allow_delete_query = 'true';
 INSERT INTO auth.users(id,email) VALUES('00000000-0000-4000-8000-000000013001','m3-resource-admin@example.invalid'),('00000000-0000-4000-8000-000000013002','m3-resource-student@example.invalid');
 INSERT INTO public.users(id,email,name,roles,onboarding_completed) VALUES
 ('00000000-0000-4000-8000-000000013001','m3-resource-admin@example.invalid','M3 resource admin','{user,admin}',true),
@@ -13,15 +18,36 @@ INSERT INTO public.resources(id,slug,resource_type,title,summary,body_markdown,c
 INSERT INTO public.resources(id,slug,resource_type,title,summary,body_markdown,category,audience,author_name,status,reviewed_at,published_at,created_by,updated_by,deleted_at) VALUES
 ('00000000-0000-4000-8000-000000013014','m3-deleted-guide','guide','M3 deleted guide','A published then deleted guide','Body content here.','career','Everyone','M3 author','published',now(),now(),'00000000-0000-4000-8000-000000013001','00000000-0000-4000-8000-000000013001',now());
 INSERT INTO public.resource_actions(resource_id,action) VALUES('00000000-0000-4000-8000-000000013011','outbound');
+-- Fix round 1, CRITICAL: the private resource-files bucket must be
+-- unreachable through the generic baseline storage policies. A fixture
+-- object as owner (bypassing RLS) proves neither anon nor an ordinary
+-- authenticated caller can see, insert, update or delete it.
+INSERT INTO storage.objects(bucket_id,name,metadata) VALUES('resource-files','00000000-0000-4000-8000-000000013011/guide.pdf','{"marker":"m3-fixture"}');
 
 SELECT tests.act_as_anon();
 SELECT is((SELECT count(*)::int FROM public.resources WHERE id::text LIKE '%0000000130%'),1,'anonymous sees only the published, non-deleted resource in the namespace');
 SELECT throws_ok('SELECT created_by FROM public.resources','42501',NULL,'private author identity is inaccessible through raw Data API');
 SELECT throws_ok($$INSERT INTO public.resources(slug,resource_type,title,summary,body_markdown,category,audience,author_name) VALUES('m3-anon-forge','guide','x','x','x','career','x','x')$$,'42501',NULL,'anonymous cannot insert a resource');
 SELECT throws_ok($$SELECT public.curate_resource('00000000-0000-4000-8000-000000013001',NULL,'create')$$,'42501',NULL,'anonymous cannot invoke server authoring RPC');
+SELECT is((SELECT count(*)::int FROM storage.objects WHERE bucket_id='resource-files'),0,'anonymous sees no resource-files storage objects');
+SELECT throws_ok($$INSERT INTO storage.objects(bucket_id,name) VALUES('resource-files','00000000-0000-4000-8000-000000013011/anon.pdf')$$,'42501',NULL,'anonymous cannot upload into resource-files');
+WITH changed AS (
+ UPDATE storage.objects SET metadata='{"marker":"anon-attack"}' WHERE bucket_id='resource-files' RETURNING id
+) SELECT is((SELECT count(*)::int FROM changed),0,'anonymous cannot update a resource-files object');
+WITH removed AS (
+ DELETE FROM storage.objects WHERE bucket_id='resource-files' RETURNING id
+) SELECT is((SELECT count(*)::int FROM removed),0,'anonymous cannot delete a resource-files object');
 
 SELECT tests.act_as('00000000-0000-4000-8000-000000013002');
 SELECT is((SELECT count(*)::int FROM public.resource_actions),0,'ordinary student cannot read resource action analytics');
+SELECT is((SELECT count(*)::int FROM storage.objects WHERE bucket_id='resource-files'),0,'an ordinary authenticated caller sees no resource-files storage objects');
+SELECT throws_ok($$INSERT INTO storage.objects(bucket_id,name) VALUES('resource-files','00000000-0000-4000-8000-000000013002/student.pdf')$$,'42501',NULL,'an ordinary authenticated caller cannot upload into resource-files, even into a path keyed by their own id');
+WITH changed AS (
+ UPDATE storage.objects SET metadata='{"marker":"student-attack"}' WHERE bucket_id='resource-files' RETURNING id
+) SELECT is((SELECT count(*)::int FROM changed),0,'an ordinary authenticated caller cannot update a resource-files object');
+WITH removed AS (
+ DELETE FROM storage.objects WHERE bucket_id='resource-files' RETURNING id
+) SELECT is((SELECT count(*)::int FROM removed),0,'an ordinary authenticated caller cannot delete a resource-files object');
 
 SELECT tests.act_as('00000000-0000-4000-8000-000000013001');
 SELECT throws_ok($$SELECT public.curate_resource('00000000-0000-4000-8000-000000013001',NULL,'create')$$,'42501',NULL,'admin browser session must use the guarded server door, not the raw RPC');

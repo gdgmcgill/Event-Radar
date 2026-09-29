@@ -115,9 +115,32 @@ export function ResourceEditor() {
     setNotice(null);
   }
 
+  /** Fix round 1, minor: switching type left the OTHER type's field behind
+   * in form state (hidden from the UI, but still present), which silently
+   * failed the shape rule and disabled Save with no visible reason. Clearing
+   * the fields the new type does not use keeps the form and the validation
+   * it is judged against in agreement. */
+  function changeType(nextType: ResourceData["resource_type"]) {
+    setForm((old) => ({
+      ...old,
+      resource_type: nextType,
+      body_markdown: nextType === "guide" ? old.body_markdown : null,
+      external_url: nextType === "external" ? old.external_url : null,
+    }));
+    setDirty(true);
+    setNotice(null);
+  }
+
   const bodyIssue =
     form.resource_type === "guide" ? findUnsafeMarkdown(form.body_markdown ?? "") : null;
   const validation = ResourceCreateBody.safeParse(form);
+  // Fix round 1, minor: a shape-rule failure (e.g. a stale external_url left
+  // over from a previous type) must be visible, not just a disabled button.
+  const validationMessage = !validation.success
+    ? validation.error.issues
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join(" · ")
+    : null;
 
   async function persist(action: "edit" | "publish" | "archive") {
     setBusy(true);
@@ -273,7 +296,7 @@ export function ResourceEditor() {
                       className={inputStyle}
                       value={form.resource_type}
                       onChange={(e) =>
-                        field("resource_type", e.target.value as ResourceData["resource_type"])
+                        changeType(e.target.value as ResourceData["resource_type"])
                       }
                     >
                       <option value="guide">Guide</option>
@@ -317,7 +340,7 @@ export function ResourceEditor() {
                       onChange={(e) => field("body_markdown", e.target.value)}
                     />
                     {bodyIssue && (
-                      <span role="alert" className="block text-xs font-normal text-destructive">
+                      <span className="block text-xs font-normal text-destructive">
                         {bodyIssue}
                       </span>
                     )}
@@ -398,6 +421,11 @@ export function ResourceEditor() {
                   </label>
                 </div>
               </section>
+              {validationMessage && (
+                <p role="alert" className="text-xs text-destructive">
+                  Cannot save yet: {validationMessage}
+                </p>
+              )}
               <div className="flex flex-wrap items-center gap-3 border-t border-border py-5">
                 <button
                   type="submit"

@@ -81,6 +81,18 @@ describe("ResourceMutationBody", () => {
     expect(result.success).toBe(true);
   });
 
+  it("a partial edit never fills in unsent fields with defaulted nulls (fix round 1, IMPORTANT)", () => {
+    const result = ResourceMutationBody.safeParse({
+      action: "edit",
+      expected_updated_at: "2026-01-01T00:00:00Z",
+      data: { title: "Updated title" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.action === "edit") {
+      expect(result.data.data).toEqual({ title: "Updated title" });
+    }
+  });
+
   it("accepts publish and archive with only the expected version", () => {
     expect(
       ResourceMutationBody.safeParse({ action: "publish", expected_updated_at: "2026-01-01T00:00:00Z" }).success

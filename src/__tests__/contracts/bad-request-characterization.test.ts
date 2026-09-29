@@ -127,6 +127,9 @@ const PINNED_ELSEWHERE: Record<string, readonly string[]> = {
   resources: ["src/__tests__/api/m2-route-boundaries.test.ts"],
   "admin/resources": ["src/__tests__/api/m2-route-boundaries.test.ts"],
   "admin/resources/[id]": ["src/__tests__/api/m2-route-boundaries.test.ts"],
+  // Fix round 1: the fresh-path upload fix added a badRequest( call for the
+  // non-template rejection; its 400s are pinned in resources.test.ts.
+  "admin/resources/[id]/file": ["src/__tests__/api/resources.test.ts"],
   "onboarding/complete": ["src/__tests__/api/m1-accounts.test.ts"],
   events: [
     "src/__tests__/api/events/events-list-characterization.test.ts",

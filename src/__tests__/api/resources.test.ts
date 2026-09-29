@@ -42,6 +42,7 @@ let signedUrlResult: { data: { signedUrl: string } | null; error: unknown } = {
   error: null,
 };
 let uploadResult: { data: unknown; error: unknown } = { data: {}, error: null };
+let removeResult: { data: unknown; error: unknown } = { data: {}, error: null };
 
 const mockFrom = jest.fn((table: string) => {
   const next = fromQueue.shift();
@@ -49,10 +50,17 @@ const mockFrom = jest.fn((table: string) => {
   return next;
 });
 const mockRpc = jest.fn(async () => rpcResult);
+// Stable spies shared across every `.storage.from(...)` call (the route may
+// call `.storage.from("resource-files")` more than once per request), so a
+// test can assert on `uploadMock`/`removeMock` directly.
+const createSignedUrlMock = jest.fn(async () => signedUrlResult);
+const uploadMock = jest.fn(async () => uploadResult);
+const removeMock = jest.fn(async () => removeResult);
 const mockStorage = {
   from: jest.fn(() => ({
-    createSignedUrl: jest.fn(async () => signedUrlResult),
-    upload: jest.fn(async () => uploadResult),
+    createSignedUrl: createSignedUrlMock,
+    upload: uploadMock,
+    remove: removeMock,
   })),
 };
 const mockDb = { from: mockFrom, rpc: mockRpc, storage: mockStorage };
@@ -72,6 +80,7 @@ beforeEach(() => {
   rpcResult = { data: null, error: null };
   signedUrlResult = { data: { signedUrl: "https://storage.example/signed" }, error: null };
   uploadResult = { data: {}, error: null };
+  removeResult = { data: {}, error: null };
   mockCtx = {
     user: { id: RESOURCE_ID },
     profile: { id: RESOURCE_ID, roles: ["user", "admin"], onboarding_completed: true, banned_at: null, ban_expires_at: null },
@@ -211,44 +220,151 @@ describe("PATCH /api/admin/resources/[id]: RPC error mapping", () => {
     const { PATCH } = await import("@/app/api/admin/resources/[id]/route");
     expect((await PATCH(body(), params)).status).toBe(404);
   });
+
+  it("a partial edit sends the RPC p_data with exactly the sent keys (fix round 1, IMPORTANT)", async () => {
+    rpcResult = { data: { id: RESOURCE_ID }, error: null };
+    fromQueue.push(qbuilder({ data: { id: RESOURCE_ID }, error: null }));
+    const { PATCH } = await import("@/app/api/admin/resources/[id]/route");
+    await PATCH(
+      new NextRequest(`http://localhost/api/admin/resources/${RESOURCE_ID}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          action: "edit",
+          expected_updated_at: "2026-01-01T00:00:00Z",
+          data: { title: "Updated title" },
+        }),
+        headers: { "content-type": "application/json" },
+      }),
+      params
+    );
+    expect(mockRpc).toHaveBeenCalledWith(
+      "curate_resource",
+      expect.objectContaining({ p_data: { title: "Updated title" } })
+    );
+  });
 });
 
 describe("POST /api/admin/resources/[id]/file", () => {
   const params = { params: Promise.resolve({ id: RESOURCE_ID }) };
-  function formRequest(file: File, fields: Record<string, string> = { expected_updated_at: "2026-01-01T00:00:00Z" }) {
+  const EXPECTED = "2026-01-01T00:00:00Z";
+  const FILE_PATH_RE = /^[0-9a-f-]{36}\/[a-z0-9-]{1,80}\.(pdf|docx|xlsx|pptx)$/;
+  const pdfFile = (name = "template.pdf") =>
+    new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 1, 2, 3])], name, { type: "application/pdf" });
+  function formRequest(file: File, fields: Record<string, string> = { expected_updated_at: EXPECTED }) {
     const form = new FormData();
     form.append("file", file);
     for (const [key, value] of Object.entries(fields)) form.append(key, value);
     return new NextRequest(`http://localhost/api/admin/resources/${RESOURCE_ID}/file`, { method: "POST", body: form });
   }
+  const existingTemplate = (overrides: Record<string, unknown> = {}) => ({
+    id: RESOURCE_ID,
+    resource_type: "template",
+    status: "draft",
+    deleted_at: null,
+    updated_at: EXPECTED,
+    file_path: null,
+    ...overrides,
+  });
 
-  it("400s a .pdf whose bytes do not start with the PDF signature", async () => {
+  it("400s a .pdf whose bytes do not start with the PDF signature, before touching the DB or storage", async () => {
     const file = new File([new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3, 4])], "fake.pdf", { type: "application/pdf" });
     const { POST } = await import("@/app/api/admin/resources/[id]/file/route");
     const response = await POST(formRequest(file), params);
     expect(response.status).toBe(400);
+    expect(mockFrom).not.toHaveBeenCalled();
     expect(mockRpc).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
   });
 
-  it("400s a file over the 10MB limit", async () => {
+  it("400s a file over the 10MB limit, before touching the DB or storage", async () => {
     const file = new File([new Uint8Array(10 * 1024 * 1024 + 1)], "big.pdf", { type: "application/pdf" });
     const { POST } = await import("@/app/api/admin/resources/[id]/file/route");
     const response = await POST(formRequest(file), params);
     expect(response.status).toBe(400);
+    expect(mockFrom).not.toHaveBeenCalled();
     expect(mockRpc).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
   });
 
-  it("accepts a correctly signed PDF and updates the resource's file fields", async () => {
-    const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 1, 2, 3]);
-    const file = new File([pdfBytes], "template.pdf", { type: "application/pdf" });
-    rpcResult = { data: { id: RESOURCE_ID }, error: null };
-    fromQueue.push(qbuilder({ data: { id: RESOURCE_ID }, error: null }));
+  it("404s a missing resource without ever calling storage (fix round 1, IMPORTANT)", async () => {
+    fromQueue.push(qbuilder({ data: null, error: null }));
     const { POST } = await import("@/app/api/admin/resources/[id]/file/route");
-    const response = await POST(formRequest(file), params);
+    const response = await POST(formRequest(pdfFile()), params);
+    expect(response.status).toBe(404);
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it("400s a non-template resource without ever calling storage (fix round 1, IMPORTANT)", async () => {
+    fromQueue.push(qbuilder({ data: existingTemplate({ resource_type: "guide" }), error: null }));
+    const { POST } = await import("@/app/api/admin/resources/[id]/file/route");
+    const response = await POST(formRequest(pdfFile()), params);
+    expect(response.status).toBe(400);
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it("409s a stale expected version without ever calling storage (fix round 1, IMPORTANT)", async () => {
+    fromQueue.push(qbuilder({ data: existingTemplate({ updated_at: "2020-01-01T00:00:00Z" }), error: null }));
+    const { POST } = await import("@/app/api/admin/resources/[id]/file/route");
+    const response = await POST(formRequest(pdfFile()), params);
+    expect(response.status).toBe(409);
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it("removes the uploaded object when the follow-up RPC fails (fix round 1, IMPORTANT)", async () => {
+    fromQueue.push(qbuilder({ data: existingTemplate(), error: null }));
+    rpcResult = { data: null, error: { code: "40001", message: "stale resource" } };
+    const { POST } = await import("@/app/api/admin/resources/[id]/file/route");
+    const response = await POST(formRequest(pdfFile()), params);
+    expect(response.status).toBe(409);
+    expect(uploadMock).toHaveBeenCalledTimes(1);
+    expect(removeMock).toHaveBeenCalledTimes(1);
+    const uploadedPath = (uploadMock.mock.calls[0] as unknown as [string])[0];
+    const removedPaths = (removeMock.mock.calls[0] as unknown as [string[]])[0];
+    expect(removedPaths).toEqual([uploadedPath]);
+  });
+
+  it("accepts a correctly signed PDF, uploads to a fresh path matching the DB CHECK, and updates the resource", async () => {
+    fromQueue.push(qbuilder({ data: existingTemplate(), error: null }));
+    rpcResult = { data: { id: RESOURCE_ID }, error: null };
+    fromQueue.push(qbuilder({ data: existingTemplate(), error: null }));
+    const { POST } = await import("@/app/api/admin/resources/[id]/file/route");
+    const response = await POST(formRequest(pdfFile()), params);
     expect(response.status).toBe(200);
     expect(mockRpc).toHaveBeenCalledWith(
       "curate_resource",
       expect.objectContaining({ p_action: "edit", p_id: RESOURCE_ID })
     );
+    const callArgs = (mockRpc.mock.calls[0] as unknown as [string, { p_data: { file_path: string } }])[1];
+    expect(callArgs.p_data.file_path).toMatch(FILE_PATH_RE);
+    expect(uploadMock).toHaveBeenCalledTimes(1);
+    const uploadOptions = (uploadMock.mock.calls[0] as unknown as [string, File, { upsert: boolean }])[2];
+    expect(uploadOptions.upsert).toBe(false);
+    // No previous file_path on this fixture, so no removal is attempted.
+    expect(removeMock).not.toHaveBeenCalled();
+  });
+
+  it("removes the previous file after a successful replace", async () => {
+    fromQueue.push(qbuilder({ data: existingTemplate({ file_path: `${RESOURCE_ID}/old-file.pdf` }), error: null }));
+    rpcResult = { data: { id: RESOURCE_ID }, error: null };
+    fromQueue.push(qbuilder({ data: existingTemplate({ file_path: `${RESOURCE_ID}/old-file.pdf` }), error: null }));
+    const { POST } = await import("@/app/api/admin/resources/[id]/file/route");
+    const response = await POST(formRequest(pdfFile()), params);
+    expect(response.status).toBe(200);
+    expect(removeMock).toHaveBeenCalledTimes(1);
+    const removedPaths = (removeMock.mock.calls[0] as unknown as [string[]])[0];
+    expect(removedPaths).toEqual([`${RESOURCE_ID}/old-file.pdf`]);
+  });
+
+  it("derives the stored extension from the sniffed type, not a mismatched file name", async () => {
+    fromQueue.push(qbuilder({ data: existingTemplate(), error: null }));
+    rpcResult = { data: { id: RESOURCE_ID }, error: null };
+    fromQueue.push(qbuilder({ data: existingTemplate(), error: null }));
+    const { POST } = await import("@/app/api/admin/resources/[id]/file/route");
+    // The name claims .exe; the bytes and declared type are a valid PDF.
+    const response = await POST(formRequest(pdfFile("payload.exe")), params);
+    expect(response.status).toBe(200);
+    const uploadedPath = (uploadMock.mock.calls[0] as unknown as [string])[0];
+    expect(uploadedPath).toMatch(FILE_PATH_RE);
+    expect(uploadedPath.endsWith(".pdf")).toBe(true);
   });
 });
