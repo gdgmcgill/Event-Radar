@@ -11,7 +11,7 @@ import { permanentRedirect } from "next/navigation";
 import { discoverySurface } from "@/server/discoveryAccess";
 import { getRequestContext } from "@/server/context";
 import { publicDetail } from "@/server/discovery/service";
-import { UUID } from "@/contracts/discovery";
+import { UUID, type DiscoveryItem } from "@/contracts/discovery";
 
 export async function generateMetadata({
   params,
@@ -58,13 +58,15 @@ export async function generateMetadata({
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  let discovery: DiscoveryItem | null = null;
   if ((await discoverySurface()).enabled && UUID.safeParse(id).success) {
     const item = await publicDetail(await getRequestContext(), "event", id);
     if (item?.canonical_id && item.canonical_kind) permanentRedirect(`/${item.canonical_kind === "event" ? "events" : "opportunities"}/${item.canonical_id}`);
+    discovery = item;
   }
   return (
     <Suspense>
-      <EventDetailClient />
+      <EventDetailClient discovery={discovery} />
     </Suspense>
   );
 }

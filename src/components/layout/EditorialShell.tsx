@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { Footer } from "./Footer";
 import ThemeToggle from "./ThemeToggle";
-import { productNavigation, shellBoundary } from "./productNavigation";
+import { productNavigation, secondaryAction, shellBoundary } from "./productNavigation";
 
 export function EditorialShell({
   children,
@@ -65,6 +65,12 @@ export function EditorialShell({
             {renderLinks()}
           </nav>
           <div className="flex items-center gap-2">
+            <Link
+              href={secondaryAction.href}
+              className="hidden items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted md:inline-flex"
+            >
+              {secondaryAction.label}
+            </Link>
             <ThemeToggle />
             {!user && <SignInButton variant="default" compact />}
             {user?.roles?.includes("admin") && (
@@ -94,6 +100,13 @@ export function EditorialShell({
             className="flex flex-col border-t border-border px-4 py-3 md:hidden"
           >
             {renderLinks()}
+            <Link
+              href={secondaryAction.href}
+              onClick={() => setOpen(false)}
+              className="mt-2 inline-flex items-center justify-center rounded-md border border-border px-3 py-2 text-sm font-medium"
+            >
+              {secondaryAction.label}
+            </Link>
             {user?.roles?.includes("admin") && (
               <Link
                 onClick={() => setOpen(false)}

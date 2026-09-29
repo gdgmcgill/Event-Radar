@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { FallbackImage } from "@/components/ui/FallbackImage";
 import {
   Card,
   CardContent,
@@ -193,7 +194,7 @@ export function EventCard({
         {/* Image Section */}
         <div className="relative h-56 w-full overflow-hidden bg-muted">
           {event.image_url ? (
-            <Image
+            <FallbackImage
               src={event.image_url}
               alt={event.title}
               fill

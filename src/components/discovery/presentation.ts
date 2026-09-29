@@ -25,6 +25,18 @@ export function actionDate(item: DiscoveryItem) {
   return `${item.deadline_at ? "Apply by " : ""}${new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: item.source_timezone, timeZoneName: "short" }).format(new Date(date))}${item.timezone_assumed ? " (timezone assumed)" : ""}`;
 }
 
+const PROVENANCE_LABELS: Record<DiscoveryItem["source_type"], string> = {
+  manual: "Added by the Uni-Verse team",
+  indexed: "Automatically indexed",
+  partner: "Submitted by the organizer",
+};
+
+/** No provenance label ever says "Verified": these describe where a listing
+ * came from, not that anyone confirmed its details. */
+export function provenanceLabel(source_type: DiscoveryItem["source_type"]): string {
+  return PROVENANCE_LABELS[source_type];
+}
+
 export async function readResponse<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => null);
   if (!response.ok) {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { FallbackImage } from "@/components/ui/FallbackImage";
 import { type Event } from "@/types";
 import { formatDate, formatTimeFromISO } from "@/lib/utils";
 import { getESTNow } from "@/lib/timezone";
@@ -33,7 +34,7 @@ export function DiscoveryCard({ event, onClick, badge, badgeVariant = "default" 
       <div className="relative aspect-[16/10] rounded-2xl overflow-hidden group">
         {/* Full Image */}
         {event.image_url ? (
-          <Image
+          <FallbackImage
             src={event.image_url}
             alt={event.title}
             fill

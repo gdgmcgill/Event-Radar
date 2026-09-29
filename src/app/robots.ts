@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/moderation/", "/admin-login"],
+      disallow: ["/api/", "/moderation/", "/admin-login", "/saved"],
     },
     sitemap: "https://universeapp.ca/sitemap.xml",
   };

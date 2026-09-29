@@ -6,12 +6,8 @@ import type { DiscoveryItem } from "@/contracts/discovery";
 import { useAuthStore } from "@/store/useAuthStore";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { publishSaveChange } from "./saveChanges";
-import {
-  actionDate,
-  listingKey,
-  listingLabels,
-  readResponse,
-} from "./presentation";
+import { ListingFacts } from "./ListingFacts";
+import { listingKey, listingLabels, readResponse } from "./presentation";
 
 function DetailSave({ item }: { item: DiscoveryItem }) {
   const user = useAuthStore((s) => s.user);
@@ -168,23 +164,7 @@ export function OpportunityDetail({ item }: { item: DiscoveryItem }) {
         </article>
         <aside className="h-fit rounded-xl border border-border bg-card p-6 lg:sticky lg:top-28">
           <h2 className="mb-5 text-sm font-semibold">The essentials</h2>
-          <dl className="space-y-5 text-sm">
-            <div>
-              <dt className="mb-1 text-xs text-muted-foreground">
-                Date / deadline
-              </dt>
-              <dd>{actionDate(item)}</dd>
-            </div>
-            <div>
-              <dt className="mb-1 text-xs text-muted-foreground">Location</dt>
-              <dd>
-                {item.work_mode === "remote"
-                  ? "Remote"
-                  : item.location || "To be confirmed"}
-                {item.work_mode === "hybrid" && " · Hybrid"}
-              </dd>
-            </div>
-          </dl>
+          <ListingFacts item={item} />
           {item.closed ? (
             <p className="mt-6 rounded-lg bg-muted p-4 text-sm">
               This opportunity has closed. Explore the feed for what’s next.
@@ -209,34 +189,9 @@ export function OpportunityDetail({ item }: { item: DiscoveryItem }) {
             </p>
           )}
           <DetailSave key={`${userId ?? "guest"}:${listingKey(item)}`} item={item} />
-          <div className="mt-6 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
-            <p>
-              {item.source_type === "indexed"
-                ? "Indexed from a public source"
-                : item.source_type === "partner"
-                  ? "Shared by a partner"
-                  : "Manually curated"}
-            </p>
-            {item.source_url && (
-              <a
-                href={item.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-block underline"
-              >
-                View original source ↗
-              </a>
-            )}
-            {item.checked_at && (
-              <p className="mt-2">
-                Last checked{" "}
-                {new Date(item.checked_at).toLocaleDateString("en-CA", {
-                  timeZone: "America/Toronto",
-                })}
-              </p>
-            )}
-            <p className="mt-2">Confirm current details with the organizer.</p>
-          </div>
+          <p className="mt-6 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
+            Confirm current details with the organizer.
+          </p>
         </aside>
       </div>
     </div>

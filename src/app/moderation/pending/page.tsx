@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Image from "next/image";
+import { FallbackImage } from "@/components/ui/FallbackImage";
 import { createClient } from "@/lib/supabase/client";
 import { getESTNowISO } from "@/lib/timezone";
 import { Badge } from "@/components/ui/badge";
@@ -307,8 +307,8 @@ export default function ModerationPendingEventsPage() {
               <div className="flex">
               {/* Image */}
               <div className="relative w-48 shrink-0">
-                <Image
-                  src={event.image_url || "/placeholder-event.png"}
+                <FallbackImage
+                  src={event.image_url ?? ""}
                   alt={event.title}
                   fill
                   className="object-cover"

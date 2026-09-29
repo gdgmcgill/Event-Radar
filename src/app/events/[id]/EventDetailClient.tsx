@@ -30,8 +30,15 @@ import { ReviewThread } from "@/components/moderation/ReviewThread";
 import { Loader2, UserPlus, AlertTriangle } from "lucide-react";
 import type { EventSaveRequestInit } from "@/contracts/events";
 import type { ThumbsFeedbackBodyInput } from "@/contracts/recommendations";
+import type { DiscoveryItem } from "@/contracts/discovery";
 
-export default function EventDetailClient() {
+export default function EventDetailClient({
+  discovery = null,
+}: {
+  /** The public discovery projection of this event, when the discovery
+   * switch is on. Absent (switch off), rendering is unchanged. */
+  discovery?: DiscoveryItem | null;
+} = {}) {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
@@ -295,6 +302,7 @@ export default function EventDetailClient() {
         backLabel={backLabel}
         isCreator={isCreator}
         onEdit={() => setEditModalOpen(true)}
+        discovery={discovery}
       >
         {/* RSVP, Friends Going, Invite — rendered inside left column */}
         <div className="space-y-4">

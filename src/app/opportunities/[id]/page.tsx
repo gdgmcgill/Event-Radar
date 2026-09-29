@@ -20,10 +20,22 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const item = await load((await params).id);
+  const description = item.description.slice(0, 160);
   return {
     title: item.title,
-    description: item.description.slice(0, 160),
+    description,
     alternates: { canonical: `/opportunities/${item.id}` },
+    openGraph: {
+      type: "article",
+      title: item.title,
+      description,
+      url: `/opportunities/${item.id}`,
+    },
+    twitter: {
+      card: "summary",
+      title: item.title,
+      description,
+    },
   };
 }
 export default async function OpportunityPage({

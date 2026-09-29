@@ -1,11 +1,18 @@
 /** One definition for mobile and desktop. Only shipped destinations belong here. */
 export const productNavigation = [
   { label: "Discover", href: "/discover", audience: "public" },
+  { label: "Resources", href: "/resources", audience: "public" },
+  { label: "For companies", href: "/for-companies", audience: "public" },
   { label: "Clubs", href: "/clubs", audience: "public" },
   { label: "About", href: "/about", audience: "public" },
   { label: "Saved", href: "/saved", audience: "account" },
   { label: "Profile", href: "/profile", audience: "account" },
 ] as const;
+
+/** Rendered as an outlined button in `EditorialShell`, desktop and mobile.
+ * `/submit` (P1-09) is not yet built on this branch; the link is live now so
+ * the nav does not need to change again once it ships. */
+export const secondaryAction = { label: "Submit", href: "/submit" } as const;
 
 export function shellBoundary(
   pathname: string

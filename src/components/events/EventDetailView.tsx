@@ -9,8 +9,10 @@ import { formatDate, formatTimeFromISO, cn } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { exportEventIcal } from "@/lib/exportUtils";
 import type { Event, EventTag } from "@/types";
+import type { DiscoveryItem } from "@/contracts/discovery";
 import { ScrollRow } from "@/components/events/ScrollRow";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
+import { ListingFacts } from "@/components/discovery/ListingFacts";
 import {
   ArrowLeft,
   Calendar,
@@ -43,6 +45,9 @@ interface EventDetailViewProps {
   backLabel?: string;
   isCreator?: boolean;
   onEdit?: () => void;
+  /** The public discovery projection of this event, when the discovery
+   * switch is on. Absent (switch off), rendering is unchanged. */
+  discovery?: DiscoveryItem | null;
 }
 
 export function EventDetailView({
@@ -59,6 +64,7 @@ export function EventDetailView({
   backLabel = "Back to Events",
   isCreator = false,
   onEdit,
+  discovery = null,
 }: EventDetailViewProps) {
   const [saved, setSaved] = useState(isSaved);
   const [liked, setLiked] = useState(isLiked);
@@ -260,6 +266,13 @@ export function EventDetailView({
               </div>
             )}
 
+            {/* Discovery listing facts (switch on only) */}
+            {discovery && (
+              <div className="rounded-xl border border-border p-6">
+                <ListingFacts item={discovery} />
+              </div>
+            )}
+
             {/* About this event */}
             <div className="space-y-6 text-muted-foreground text-lg leading-relaxed">
               <h2 className="text-2xl font-bold text-foreground mb-2">
@@ -412,44 +425,55 @@ export function EventDetailView({
                   </button>
                 </div>
 
-                {/* Registration */}
-                <div className="flex items-end justify-between mb-5">
-                  <div className="flex flex-col">
-                    <span className="text-muted-foreground text-sm font-medium mb-1">
-                      Registration
-                    </span>
-                    <span className="text-3xl font-black text-foreground truncate max-w-[180px]" title={event.is_free ? "Free" : event.price || "Paid"}>
-                      {event.is_free ? "Free" : event.price || "Paid"}
-                    </span>
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-black/[0.05] text-muted-foreground text-xs font-bold uppercase tracking-wider dark:bg-white/10">
-                    McGill ID Req.
-                  </span>
-                </div>
-
-                {/* Register Now CTA */}
-                {event.rsvp_link ? (
-                  <a
-                    href={event.rsvp_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-4 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(237,29,49,0.25)] hover:shadow-[0_0_35px_rgba(237,29,49,0.4)] flex items-center justify-center gap-2"
-                  >
-                    Register Now
-                    <ExternalLink className="h-5 w-5" />
-                  </a>
-                ) : (
-                  <button
-                    disabled
-                    className="w-full bg-muted text-muted-foreground font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed"
-                  >
-                    No Registration Link
-                  </button>
-                )}
-                {event.rsvp_link && (
-                  <p className="text-center text-muted-foreground text-xs mt-4">
-                    Opens external registration page.
+                {discovery?.closed ? (
+                  /* Discovery-driven closed state: no registration action. */
+                  <p className="rounded-xl bg-muted p-4 text-center text-sm font-semibold text-muted-foreground">
+                    This event has ended
                   </p>
+                ) : (
+                  <>
+                    {/* Registration */}
+                    <div className="flex items-end justify-between mb-5">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground text-sm font-medium mb-1">
+                          Registration
+                        </span>
+                        <span className="text-3xl font-black text-foreground truncate max-w-[180px]" title={event.is_free ? "Free" : event.price || "Paid"}>
+                          {event.is_free ? "Free" : event.price || "Paid"}
+                        </span>
+                      </div>
+                      <span className="px-3 py-1 rounded-full bg-black/[0.05] text-muted-foreground text-xs font-bold uppercase tracking-wider dark:bg-white/10">
+                        McGill ID Req.
+                      </span>
+                    </div>
+
+                    {/* Register Now CTA — primary CTA is "Register on organizer
+                        site" when discovery is present; native RSVP (children,
+                        below) stays secondary either way. */}
+                    {event.rsvp_link ? (
+                      <a
+                        href={event.rsvp_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-4 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(237,29,49,0.25)] hover:shadow-[0_0_35px_rgba(237,29,49,0.4)] flex items-center justify-center gap-2"
+                      >
+                        {discovery ? "Register on organizer site" : "Register Now"}
+                        <ExternalLink className="h-5 w-5" />
+                      </a>
+                    ) : (
+                      <button
+                        disabled
+                        className="w-full bg-muted text-muted-foreground font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed"
+                      >
+                        No Registration Link
+                      </button>
+                    )}
+                    {event.rsvp_link && (
+                      <p className="text-center text-muted-foreground text-xs mt-4">
+                        Opens external registration page.
+                      </p>
+                    )}
+                  </>
                 )}
 
                 {/* Report link */}
