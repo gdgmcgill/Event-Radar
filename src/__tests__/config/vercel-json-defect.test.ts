@@ -20,9 +20,15 @@
  *   - V2 no value anywhere in the file names `s-maxage` (a rule cannot come
  *     back under another key such as `routes`);
  *   - V3 the deploy settings are unchanged: `$schema`, `buildCommand`,
- *     `framework` and `regions` keep their values, and they are the only
- *     keys.
+ *     `framework` and `regions` keep their values, and the only other key is
+ *     the M3 preview guard below.
  * The change takes effect on the owner's next deploy.
+ *
+ * INTENTIONAL CHANGE (M3, owner decision 2026-10-01): `git.deploymentEnabled`
+ * turns off Vercel Git deployments for `codex/*` branches. The Preview
+ * environment shares the production Supabase project, which does not have the
+ * M1–M3 migrations, so a pushed review branch must not build a live preview.
+ * `main` stays unspecified and therefore keeps deploying.
  */
 
 import { readFileSync } from "node:fs";
@@ -45,12 +51,13 @@ describe("vercel.json: no blanket /api cache rule (F-025, F-026 fixed)", () => {
     expect(raw()).not.toMatch(/s-maxage/i);
   });
 
-  it("V3 keeps the deploy settings, and only them", () => {
+  it("V3 keeps the deploy settings and adds only the codex/* preview guard", () => {
     expect(vercelJson()).toEqual({
       $schema: "https://openapi.vercel.sh/vercel.json",
       buildCommand: "npm run build",
       framework: "nextjs",
       regions: ["iad1"],
+      git: { deploymentEnabled: { "codex/*": false } },
     });
   });
 });
